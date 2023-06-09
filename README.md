@@ -33,11 +33,19 @@ To setup,
 
 
 
+To run the current whisper-jax real time trial,
+
+You need to run one additional step which is 
+
+``` pip install -r requirements.txt```
+
+
+
 NEXT STEPS:
 
 1) Run this demo on a local Mac M1 to test flow and observe the performance
 2) Create a pipeline using microphone to listen to audio chunks to perform transcription realtime (and also efficiently
- summarize it as well)
+ summarize it as well) -> *done as part of whisjax_realtime_trial.py*
 3) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
 4) Perform Speaker Diarization using Whisper-JAX
 5) Based on feasibility of above points, explore suitable visualizations for transcription & summarization.
