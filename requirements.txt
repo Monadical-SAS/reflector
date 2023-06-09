@@ -1,0 +1,4 @@
+pyaudio==0.2.13
+keyboard==0.13.5
+pynput==1.7.6
+wave==0.0.2

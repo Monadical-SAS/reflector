@@ -160,6 +160,8 @@ cython_debug/
 #.idea/
 
 *.mp4
-*.txt
-config.ini
+summary.txt
+transcript.txt
+*.ini
 test_samples/
+*.wav
