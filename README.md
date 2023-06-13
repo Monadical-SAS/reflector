@@ -25,20 +25,21 @@ To setup,
 
    cuda12 -> JAX CUDA 12.x version (Core Weave has CUDA 12 version, can check with ```nvidia-smi```)
 
-    sh setup_dependencies.sh cuda12
+    ```sh setup_dependencies.sh cuda12```
 
-4) Run the Whisper-JAX pipeline. Currently, the repo takes a Youtube video and transcribes/summarizes it.
+4) ``` pip install -r requirements.txt```
+
+
+5) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
 
 ``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ" --transcript transcript.txt summary.txt ```
 
-You can even run it on local file or a file in your configured S3 bucket
+You can even run it on local file or a file in your configured S3 bucket.
 
 ``` python3 whisjax.py "startup.mp4" --transcript transcript.txt summary.txt ```
 
 The script will take care of a few cases like youtube file, local file, video file, audio-only file, 
-file in S3, etc.
-
-5) ``` pip install -r requirements.txt```
+file in S3, etc. If local file is not present, it can automatically take the file from S3.
 
 
 **S3 bucket:**
@@ -49,10 +50,11 @@ script is run.  You need AWS_ACCESS_KEY / AWS_SECRET_KEY to authenticate your ca
 For AWS S3 Web UI,
 1) Login to AWS management console.
 2) Search for S3 in the search bar at the top.
-3) Navigate to list buckets, if needed and choose your bucket (reflector-bucket)
-4) You should be able to see items in the bucket. You can upload/download here.
+3) Navigate to list the buckets under the current account, if needed and choose your bucket [```reflector-bucket```]
+4) You should be able to see items in the bucket. You can upload/download here directly.
 
-Through CLI, 
+
+For CLI, 
 Refer to the FILE UTIL section below.
 
 
