@@ -1,0 +1,47 @@
+AGENDA:  Most important things to look for in a start up
+
+TAM: Make sure the market is sufficiently large than once they win they can get rewarded
+- Medium sized markets that should be winner take all can work
+- TAM needs to be realistic of direct market size
+
+Product market fit: Being in a good market with a product than can satisfy that market
+- Solves a problem
+- Builds a solution a customer wants to buy
+- Either saves the customer something (time/money/pain) or gives them something (revenue/enjoyment)
+
+Unit economics: Profit for delivering all-in cost must be attractive (% or $ amount)
+- Revenue minus direct costs
+- Raw input costs (materials, variable labour), direct cost of delivering and servicing the sale
+- Attractive as a % of sales so it can contribute to fixed overhead
+- Look for high incremental contribution margin
+
+LTV CAC: Life-time value (revenue contribution) vs cost to acquire customer must be healthy
+- LTV = Purchase value x number of purchases x customer lifespan
+- CAC = All-in costs of sales + marketing over number of new customer additions
+- Strong reputation leads to referrals leads to lower CAC. Want customers evangelizing product/service
+- Rule of thumb higher than 3
+
+Churn: Fits into LTV, low churn leads to higher LTV and helps keep future CAC down
+- Selling to replenish revenue every year is hard
+- Can run through entire customer base over time
+- Low churn builds strong net dollar retention
+
+Business: Must have sufficient barriers to entry to ward off copy-cats once established
+- High switching costs (lock-in)
+- Addictive
+- Steep learning curve once adopted (form of switching cost)
+- Two sided liquidity
+- Patents, IP, Branding
+- No hyper-scaler who can roll over you quickly
+- Scale could be a barrier to entry but works against most start-ups, not for them
+- Once developed, answer question: Could a well funded competitor starting up today easily duplicate this business or is it cheaper to buy the start up?
+
+Founders: Must be religious about their product. Believe they will change the world against all odds.
+- Just money in the bank is not enough to build a successful company. Just good tech not enough
+to build a successful company
+- Founders must be motivated to build something, not (all) about money. They would be doing
+this for free because they believe in it. Not looking for quick score
+- Founders must be persuasive. They will be asking others to sacrifice to make their dream come
+to life. They will need to convince investors this company can work and deserves funding.
+- Must understand who the customer is and what problem they are helping to solve.
+- Founders aren’t expected to know all the preceding points in this document but have an understanding of most of this, and be able to offer a vision.
