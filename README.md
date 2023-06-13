@@ -10,7 +10,7 @@ To setup,
 2) Run ``` export KMP_DUPLICATE_LIB_OK=True``` in Terminal. [This is taken care of in code, but not reflecting, Will fix this issue later.]
 3) Run the script setup_depedencies.sh.
 
-    ``` chmod +x setup_dependecies.sh ```
+    ``` chmod +x setup_dependencies.sh ```
 
     ``` sh setup_dependencies.sh  <ENV>```
 
@@ -31,13 +31,15 @@ To setup,
 
 ``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ" --transcript transcript.txt summary.txt ```
 
+5) ``` pip install -r requirements.txt```
+
 
 
 NEXT STEPS:
 
 1) Run this demo on a local Mac M1 to test flow and observe the performance
 2) Create a pipeline using microphone to listen to audio chunks to perform transcription realtime (and also efficiently
- summarize it as well)
+ summarize it as well) -> *done as part of whisjax_realtime_trial.py*
 3) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
 4) Perform Speaker Diarization using Whisper-JAX
 5) Based on feasibility of above points, explore suitable visualizations for transcription & summarization.
