@@ -43,15 +43,16 @@ file in S3, etc. If local file is not present, it can automatically take the fil
 
 
 **S3 bucket:**
+Everything you need for S3 is already configured in config.ini. Only edit it if you need to change it deliberately.
 
 S3 bucket name is mentioned in config.ini. All transfers will happen between this bucket and the local computer where the
-script is run.  You need AWS_ACCESS_KEY / AWS_SECRET_KEY to authenticate your calls to S3 (config.ini).
+script is run.  You need AWS_ACCESS_KEY / AWS_SECRET_KEY to authenticate your calls to S3 (done in config.ini).
 
 For AWS S3 Web UI,
 1) Login to AWS management console.
 2) Search for S3 in the search bar at the top.
 3) Navigate to list the buckets under the current account, if needed and choose your bucket [```reflector-bucket```]
-4) You should be able to see items in the bucket. You can upload/download here directly.
+4) You should be able to see items in the bucket. You can upload/download files here directly.
 
 
 For CLI, 
@@ -61,8 +62,7 @@ Refer to the FILE UTIL section below.
 **FILE UTIL MDOULE:**
 
 A file_util module has been created to upload/download files with AWS S3 bucket pre-configured using config.ini. 
-If you need to upload / download file, separately on your own, apart from the pipeline workflow in the script,
-you can do so by :
+Though not needed for the workflow, if you need to upload / download file, separately on your own, apart from the pipeline workflow in the script, you can do so by :
 
 Upload:
 
@@ -75,27 +75,27 @@ Download:
 
 **WORKFLOW:**
 
-1) Specify the input source file from local, youtube link or upload to S3 if needed and pass it as an input to the script.
+1) Specify the input source file from a local, youtube link or upload to S3 if needed and pass it as input to the script.
 2) Keep the agenda header topics in a local file named "agenda-headers.txt". This needs to be present where the script is run.
-3) Run the script. The script automatically creates a scatter plot of words and topics in the form of an interactive
+3) Run the script. The script automatically transcribes, summarizes and creates a scatter plot of words & topics in the form of an interactive
 HTML file, a sample word cloud and uploads them to the S3 bucket
 4) Additional artefacts pushed to S3:
    1) HTML visualiztion file
-   2) pandas df in pickle format for others to colloborate and make their own visualizations
-   3) Summary, transcript and transcript with timestamps file in txt format.
+   2) pandas df in pickle format for others to collaborate and make their own visualizations
+   3) Summary, transcript and transcript with timestamps file in text format.
 
     The script also creates 2 types of mappings.
    1) Timestamp -> The top 2 matched agenda topic
    2) Topic -> All matched timestamps in the transcription
 
-Further visualizations can be planned based on available artefacts or new ones can be created.
+Other visualizations can be planned based on available artefacts or new ones can be created.
 
 
 NEXT STEPS:
 
 1) Run this demo on a local Mac M1 to test flow and observe the performance
-2) Create a pipeline using microphone to listen to audio chunks to perform transcription realtime (and also efficiently
+2) Create a pipeline using a microphone to listen to audio chunks to perform transcription realtime (and also efficiently
  summarize it as well) -> *done as part of whisjax_realtime_trial.py*
 3) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
 4) Perform Speaker Diarization using Whisper-JAX
-5) Based on feasibility of above points, explore suitable visualizations for transcription & summarization.
+5) Based on the feasibility of the above points, explore suitable visualizations for transcription & summarization.
