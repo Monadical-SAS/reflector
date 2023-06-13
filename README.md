@@ -6,7 +6,7 @@ The target deliverable is a local-first live transcription and visualization too
 
 To setup, 
 
-1) Check values in config.ini file. Specifically add your OPENAI_APIKEY.
+1) Check values in config.ini file. Specifically add your OPENAI_APIKEY if you plan to use OpenAI API requests.
 2) Run ``` export KMP_DUPLICATE_LIB_OK=True``` in Terminal. [This is taken care of in code, but not reflecting, Will fix this issue later.]
 3) Run the script setup_depedencies.sh.
 
@@ -31,8 +31,62 @@ To setup,
 
 ``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ" --transcript transcript.txt summary.txt ```
 
+You can even run it on local file or a file in your configured S3 bucket
+
+``` python3 whisjax.py "startup.mp4" --transcript transcript.txt summary.txt ```
+
+The script will take care of a few cases like youtube file, local file, video file, audio-only file, 
+file in S3, etc.
+
 5) ``` pip install -r requirements.txt```
 
+
+**S3 bucket:**
+
+S3 bucket name is mentioned in config.ini. All transfers will happen between this bucket and the local computer where the
+script is run.  You need AWS_ACCESS_KEY / AWS_SECRET_KEY to authenticate your calls to S3 (config.ini).
+
+For AWS S3 Web UI,
+1) Login to AWS management console.
+2) Search for S3 in the search bar at the top.
+3) Navigate to list buckets, if needed and choose your bucket (reflector-bucket)
+4) You should be able to see items in the bucket. You can upload/download here.
+
+Through CLI, 
+Refer to the FILE UTIL section below.
+
+
+**FILE UTIL MDOULE:**
+
+A file_util module has been created to upload/download files with AWS S3 bucket pre-configured using config.ini. 
+If you need to upload / download file, separately on your own, apart from the pipeline workflow in the script,
+you can do so by :
+
+Upload:
+
+``` python3 file_util.py upload <object_name_in_S3_bucket>```
+
+Download:
+
+``` python3 file_util.py download <object_name_in_S3_bucket>```
+
+
+**WORKFLOW:**
+
+1) Specify the input source file from local, youtube link or upload to S3 if needed and pass it as an input to the script.
+2) Keep the agenda header topics in a local file named "agenda-headers.txt". This needs to be present where the script is run.
+3) Run the script. The script automatically creates a scatter plot of words and topics in the form of an interactive
+HTML file, a sample word cloud and uploads them to the S3 bucket
+4) Additional artefacts pushed to S3:
+   1) HTML visualiztion file
+   2) pandas df in pickle format for others to colloborate and make their own visualizations
+   3) Summary, transcript and transcript with timestamps file in txt format.
+
+    The script also creates 2 types of mappings.
+   1) Timestamp -> The top 2 matched agenda topic
+   2) Topic -> All matched timestamps in the transcription
+
+Further visualizations can be planned based on available artefacts or new ones can be created.
 
 
 NEXT STEPS:
