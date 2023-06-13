@@ -43,6 +43,7 @@ file in S3, etc. If local file is not present, it can automatically take the fil
 
 
 **S3 bucket:**
+
 Everything you need for S3 is already configured in config.ini. Only edit it if you need to change it deliberately.
 
 S3 bucket name is mentioned in config.ini. All transfers will happen between this bucket and the local computer where the
@@ -59,7 +60,7 @@ For CLI,
 Refer to the FILE UTIL section below.
 
 
-**FILE UTIL MDOULE:**
+**FILE UTIL MODULE:**
 
 A file_util module has been created to upload/download files with AWS S3 bucket pre-configured using config.ini. 
 Though not needed for the workflow, if you need to upload / download file, separately on your own, apart from the pipeline workflow in the script, you can do so by :
