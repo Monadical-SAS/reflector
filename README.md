@@ -10,7 +10,7 @@ To setup,
 2) Run ``` export KMP_DUPLICATE_LIB_OK=True``` in Terminal. [This is taken care of in code, but not reflecting, Will fix this issue later.]
 3) Run the script setup_depedencies.sh.
 
-    ``` chmod +x setup_dependecies.sh ```
+    ``` chmod +x setup_dependencies.sh ```
 
     ``` sh setup_dependencies.sh  <ENV>```
 
@@ -31,13 +31,7 @@ To setup,
 
 ``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ" --transcript transcript.txt summary.txt ```
 
-
-
-To run the current whisper-jax real time trial,
-
-You need to run one additional step which is 
-
-``` pip install -r requirements.txt```
+5) ``` pip install -r requirements.txt```
 
 
 
