@@ -28,3 +28,6 @@ subprocess.run(["python3", "1-transcript-generator.py", input_file, f"{input_fil
 
 # Run the second script to compare the transcript to the agenda
 subprocess.run(["python3", "2-agenda-transcript-diff.py", agenda_file, f"{input_file}_transcript.txt"])
+
+# Run the third script to summarize the transcript
+subprocess.run(["python3", "3-transcript-summarizer.py", f"{input_file}_transcript.txt", f"{input_file}_summary.txt"])
