@@ -6,6 +6,7 @@
 
 import argparse
 import ast
+import collections
 import configparser
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -159,8 +160,8 @@ def create_talk_diff_scatter_viz():
     ts_to_topic_mapping_top_2 = {}
 
     # Also create a mapping of the different timestamps in which each topic was covered
-    topic_to_ts_mapping_top_1 = {}
-    topic_to_ts_mapping_top_2 = {}
+    topic_to_ts_mapping_top_1 = collections.defaultdict(list)
+    topic_to_ts_mapping_top_2 = collections.defaultdict(list)
 
     similarity_threshold = 0.7
 
@@ -181,11 +182,11 @@ def create_talk_diff_scatter_viz():
             # top1 match
             if i == 0:
                 ts_to_topic_mapping_top_1[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]] = c["timestamp"]
+                topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
             # top2 match
             else:
                 ts_to_topic_mapping_top_2[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]] = c["timestamp"]
+                topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
 
     def create_new_columns(record):
         """
