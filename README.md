@@ -73,23 +73,42 @@ Download:
 
 ``` python3 file_util.py download <object_name_in_S3_bucket>```
 
+If you want to access the S3 artefacts, from another machine, you can either use the python file_util with the commands
+mentioned above or simply use the GUI of AWS Management Console.
 
 **WORKFLOW:**
 
-1) Specify the input source file from a local, youtube link or upload to S3 if needed and pass it as input to the script.
-2) Keep the agenda header topics in a local file named "agenda-headers.txt". This needs to be present where the script is run.
-3) Run the script. The script automatically transcribes, summarizes and creates a scatter plot of words & topics in the form of an interactive
+1) Specify the input source file from a local, youtube link or upload to S3 if needed and pass it as input to the script.If the source file is in
+   ```.m4a``` format, it will get converted to ```.mp4``` automatically.
+2) Keep the agenda header topics in a local file named ```agenda-headers.txt```. This needs to be present where the script is run.
+   This version of the pipeline compares covered agenda topics using agenda headers in the following format.
+   1) ```agenda_topic : <short description>```
+3) Check all the values in ```config.ini```. You need to predefine 2 categories for which you need to scatter plot the 
+   topic modelling visualization in the config file. This is the default visualization. But, from the dataframe artefact called
+   ```df.pkl``` , you can load the df and choose different topics to plot. You can filter using certain words to search for the
+   transcriptions and you can see the top influencers and characteristic in each topic we have chosen to plot in the
+   interactive HTML document. I have added a new jupyter notebook that gives the base template to play around with, named
+   ```Viz_experiments.ipynb```.
+4) Run the script. The script automatically transcribes, summarizes and creates a scatter plot of words & topics in the form of an interactive
 HTML file, a sample word cloud and uploads them to the S3 bucket
-4) Additional artefacts pushed to S3:
-   1) HTML visualiztion file
+5) Additional artefacts pushed to S3:
+   1) HTML visualization file
    2) pandas df in pickle format for others to collaborate and make their own visualizations
    3) Summary, transcript and transcript with timestamps file in text format.
 
     The script also creates 2 types of mappings.
    1) Timestamp -> The top 2 matched agenda topic
    2) Topic -> All matched timestamps in the transcription
+   
+Other visualizations can be planned based on available artefacts or new ones can be created. Refer the section ```Viz-experiments```.
 
-Other visualizations can be planned based on available artefacts or new ones can be created.
+
+
+**Visualization experiments:**
+
+This is a jupyter notebook playground with template instructions on handling the metadata and data artefacts generated from the
+pipeline. Follow the instructions given and tweak your own logic into it or use it as a playground to experiment libraries and
+visualizations on top of the metadata.
 
 
 NEXT STEPS:
