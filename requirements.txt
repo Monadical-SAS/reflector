@@ -45,3 +45,4 @@ wordcloud
 spacy
 scattertext
 pandas
+jupyter
