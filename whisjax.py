@@ -6,6 +6,7 @@
 
 import argparse
 import ast
+import collections
 import configparser
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -13,7 +14,9 @@ import moviepy.editor
 import moviepy.editor
 import nltk
 import os
+import subprocess
 import pandas as pd
+import pickle
 import re
 import scattertext as st
 import spacy
@@ -34,6 +37,7 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
+
 
 def init_argparse() -> argparse.ArgumentParser:
     """
@@ -156,8 +160,8 @@ def create_talk_diff_scatter_viz():
     ts_to_topic_mapping_top_2 = {}
 
     # Also create a mapping of the different timestamps in which each topic was covered
-    topic_to_ts_mapping_top_1 = {}
-    topic_to_ts_mapping_top_2 = {}
+    topic_to_ts_mapping_top_1 = collections.defaultdict(list)
+    topic_to_ts_mapping_top_2 = collections.defaultdict(list)
 
     similarity_threshold = 0.7
 
@@ -178,12 +182,11 @@ def create_talk_diff_scatter_viz():
             # top1 match
             if i == 0:
                 ts_to_topic_mapping_top_1[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]] = c["timestamp"]
+                topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
             # top2 match
             else:
                 ts_to_topic_mapping_top_2[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]] = c["timestamp"]
-
+                topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
 
     def create_new_columns(record):
         """
@@ -210,8 +213,14 @@ def create_talk_diff_scatter_viz():
             print("❌ ", item)
     print("📊 Coverage: {:.2f}%".format(percentage_covered))
 
-    # Save df for further experimentation
+    # Save df, mappings for further experimentation
     df.to_pickle("df.pkl")
+
+    my_mappings = [ts_to_topic_mapping_top_1, ts_to_topic_mapping_top_2,
+                   topic_to_ts_mapping_top_1, topic_to_ts_mapping_top_2]
+    pickle.dump(my_mappings, open("mappings.pkl", "wb"))
+
+    # to load,  my_mappings = pickle.load( open ("mappings.pkl", "rb") )
 
     # Scatter plot of topics
     df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
@@ -220,12 +229,15 @@ def create_talk_diff_scatter_viz():
     ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
     html = st.produce_scattertext_explorer(
         corpus,
-        category='TAM', category_name='TAM', not_category_name='Churn',
+        category=config["DEFAULT"]["CATEGORY_1"],
+        category_name=config["DEFAULT"]["CATEGORY_1_NAME"],
+        not_category_name=config["DEFAULT"]["CATEGORY_2_NAME"],
         minimum_term_frequency=0, pmi_threshold_coefficient=0,
         width_in_pixels=1000,
         transform=st.Scalers.dense_rank
     )
     open('./demo_compact.html', 'w').write(html)
+
 
 def main():
     parser = init_argparse()
@@ -261,6 +273,10 @@ def main():
         # If file is not present locally, take it from S3 bucket
         if not os.path.exists(media_file):
             download_files([media_file])
+
+        if media_file.endswith(".m4a"):
+            subprocess.run(["ffmpeg", "-i", media_file, f"{media_file}.mp4"])
+            input_file = f"{media_file}.mp4"
     else:
         print("Unsupported URL scheme: " + url.scheme)
         quit()
@@ -291,7 +307,7 @@ def main():
     if args.transcript:
         logger.info(f"Saving transcript to: {args.transcript}")
         transcript_file = open(args.transcript, "w")
-        transcript_file_timestamps = open(args.transcript[0:len(args.transcript)-4] + "_timestamps.txt", "w")
+        transcript_file_timestamps = open(args.transcript[0:len(args.transcript) - 4] + "_timestamps.txt", "w")
         transcript_file.write(whisper_result["text"])
         transcript_file_timestamps.write(str(whisper_result))
         transcript_file.close()
@@ -306,7 +322,7 @@ def main():
     # S3 : Push artefacts to S3 bucket
     files_to_upload = ["transcript.txt", "transcript_timestamps.txt",
                        "demo_compact.html", "df.pkl",
-                       "wordcloud.png"]
+                       "wordcloud.png", "mappings.pkl"]
     upload_files(files_to_upload)
 
     # Summarize the generated transcript using the BART model

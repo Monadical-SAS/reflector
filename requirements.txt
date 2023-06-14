@@ -45,3 +45,6 @@ wordcloud
 spacy
 scattertext
 pandas
+jupyter
+seaborn
+matplotlib
