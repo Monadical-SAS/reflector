@@ -222,6 +222,18 @@ def create_talk_diff_scatter_viz():
 
     # to load,  my_mappings = pickle.load( open ("mappings.pkl", "rb") )
 
+    # pick the 2 most matched topic to be used for plotting
+    topic_times = collections.defaultdict(int)
+    for key in ts_to_topic_mapping_top_1.keys():
+        duration = key[1] - key[0]
+        topic_times[ts_to_topic_mapping_top_1[key]] += duration
+
+    topic_times = sorted(topic_times.items(), key=lambda x: x[1], reverse=True)
+
+    cat_1 = topic_times[0][0]
+    cat_1_name = topic_times[0][0]
+    cat_2_name = topic_times[1][0]
+
     # Scatter plot of topics
     df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
     corpus = st.CorpusFromParsedDocuments(
@@ -229,9 +241,9 @@ def create_talk_diff_scatter_viz():
     ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
     html = st.produce_scattertext_explorer(
         corpus,
-        category=config["DEFAULT"]["CATEGORY_1"],
-        category_name=config["DEFAULT"]["CATEGORY_1_NAME"],
-        not_category_name=config["DEFAULT"]["CATEGORY_2_NAME"],
+        category=cat_1,
+        category_name=cat_1_name,
+        not_category_name=cat_2_name,
         minimum_term_frequency=0, pmi_threshold_coefficient=0,
         width_in_pixels=1000,
         transform=st.Scalers.dense_rank
