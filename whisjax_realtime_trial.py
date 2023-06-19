@@ -11,13 +11,12 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
-OPENAI_APIKEY = config['DEFAULT']["OPENAI_APIKEY"]
 
 FRAMES_PER_BUFFER = 8000
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
-RECORD_SECONDS = 10
+RECORD_SECONDS = 5
 
 
 def main():
@@ -49,7 +48,7 @@ def main():
 
     listener = keyboard.Listener(on_press=on_press)
     listener.start()
-
+    print("Listening...")
 
     while proceed:
         try:
@@ -57,7 +56,6 @@ def main():
             for i in range(0, int(RATE / FRAMES_PER_BUFFER * RECORD_SECONDS)):
                 data = stream.read(FRAMES_PER_BUFFER, exception_on_overflow=False)
                 frames.append(data)
-            print("Collected Input", len(frames))
 
             wf = wave.open(TEMP_AUDIO_FILE, 'wb')
             wf.setnchannels(CHANNELS)
@@ -70,14 +68,12 @@ def main():
             print(whisper_result['text'])
 
             transcription += whisper_result['text']
-            if len(transcription) > 10:
-                transcription += "\n"
-                transcript_file.write(transcription)
-                transcription = ""
 
         except Exception as e:
             print(e)
-            break
+        finally:
+            with open("real_time_transcription.txt", "w") as f:
+                transcript_file.write(transcription)
 
 
 if __name__ == "__main__":
