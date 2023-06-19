@@ -168,3 +168,5 @@ transcript_timestamps.txt
 *.ini
 test_samples/
 *.wav
+
+.vscode/
