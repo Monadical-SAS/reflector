@@ -6,6 +6,7 @@
 
 import argparse
 import ast
+import torch
 import collections
 import configparser
 import jax.numpy as jnp
@@ -27,10 +28,15 @@ from transformers import BartTokenizer, BartForConditionalGeneration
 from urllib.parse import urlparse
 from whisper_jax import FlaxWhisperPipline
 from wordcloud import WordCloud, STOPWORDS
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from nltk.tokenize import word_tokenize
+from sklearn.metrics.pairwise import cosine_similarity
 
 from file_util import upload_files, download_files
 
 nltk.download('punkt')
+nltk.download('stopwords')
 
 # Configurations can be found in config.ini. Set them properly before executing
 config = configparser.ConfigParser()
@@ -52,16 +58,13 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument("-l", "--language", help="Language that the summary should be written in", type=str,
                         default="english", choices=['english', 'spanish', 'french', 'german', 'romanian'])
     parser.add_argument("-t", "--transcript", help="Save a copy of the intermediary transcript file", type=str)
-    parser.add_argument(
-        "-m", "--model_name", help="Name or path of the BART model",
-        type=str, default="facebook/bart-base")
     parser.add_argument("location")
     parser.add_argument("output")
 
     return parser
 
 
-def chunk_text(txt, max_chunk_length=500):
+def chunk_text(txt, max_chunk_length=int(config["DEFAULT"]["MAX_CHUNK_LENGTH"])):
     """
     Split text into smaller chunks.
     :param txt: Text to be chunked
@@ -89,13 +92,17 @@ def summarize_chunks(chunks, tokenizer, model):
     :param model:
     :return:
     """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     summaries = []
     for c in chunks:
         input_ids = tokenizer.encode(c, return_tensors='pt')
-        summary_ids = model.generate(
-            input_ids, num_beams=4, length_penalty=2.0, max_length=1024, no_repeat_ngram_size=3)
-        summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-        summaries.append(summary)
+        input_ids = input_ids.to(device)
+        with torch.no_grad():
+            summary_ids = model.generate(input_ids,
+                               num_beams=int(config["DEFAULT"]["BEAM_SIZE"]), length_penalty=2.0,
+                               max_length=int(config["DEFAULT"]["MAX_LENGTH"]), early_stopping=True)
+            summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+            summaries.append(summary)
     return summaries
 
 
@@ -223,33 +230,137 @@ def create_talk_diff_scatter_viz():
     # to load,  my_mappings = pickle.load( open ("mappings.pkl", "rb") )
 
     # pick the 2 most matched topic to be used for plotting
-    # topic_times = collections.defaultdict(int)
-    # for key in ts_to_topic_mapping_top_1.keys():
-    #     duration = key[1] - key[0]
-    #     topic_times[ts_to_topic_mapping_top_1[key]] += duration
-    #
-    # topic_times = sorted(topic_times.items(), key=lambda x: x[1], reverse=True)
-    #
-    # cat_1 = topic_times[0][0]
-    # cat_1_name = topic_times[0][0]
-    # cat_2_name = topic_times[1][0]
-    #
-    # # Scatter plot of topics
-    # df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
-    # corpus = st.CorpusFromParsedDocuments(
-    #     df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
-    # ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
-    # html = st.produce_scattertext_explorer(
-    #     corpus,
-    #     category=cat_1,
-    #     category_name=cat_1_name,
-    #     not_category_name=cat_2_name,
-    #     minimum_term_frequency=0, pmi_threshold_coefficient=0,
-    #     width_in_pixels=1000,
-    #     transform=st.Scalers.dense_rank
-    # )
-    # open('./demo_compact.html', 'w').write(html)
+    topic_times = collections.defaultdict(int)
+    for key in ts_to_topic_mapping_top_1.keys():
+        if key[0] is None or key[1] is None:
+            continue
+        duration = key[1] - key[0]
+        topic_times[ts_to_topic_mapping_top_1[key]] += duration
 
+    topic_times = sorted(topic_times.items(), key=lambda x: x[1], reverse=True)
+
+    cat_1 = topic_times[0][0]
+    cat_1_name = topic_times[0][0]
+    cat_2_name = topic_times[1][0]
+
+    # Scatter plot of topics
+    df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
+    corpus = st.CorpusFromParsedDocuments(
+        df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
+    ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
+    html = st.produce_scattertext_explorer(
+        corpus,
+        category=cat_1,
+        category_name=cat_1_name,
+        not_category_name=cat_2_name,
+        minimum_term_frequency=0, pmi_threshold_coefficient=0,
+        width_in_pixels=1000,
+        transform=st.Scalers.dense_rank
+    )
+    open('./demo_compact.html', 'w').write(html)
+
+def preprocess_sentence(sentence):
+    stop_words = set(stopwords.words('english'))
+    tokens = word_tokenize(sentence.lower())
+    tokens = [token for token in tokens if token.isalnum() and token not in stop_words]
+    return ' '.join(tokens)
+
+def compute_similarity(sent1, sent2):
+    tfidf_vectorizer = TfidfVectorizer()
+    tfidf_matrix = tfidf_vectorizer.fit_transform([sent1, sent2])
+    return cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
+
+def remove_almost_alike_sentences(sentences, threshold=0.7):
+    num_sentences = len(sentences)
+    removed_indices = set()
+
+    for i in range(num_sentences):
+        if i not in removed_indices:
+            for j in range(i + 1, num_sentences):
+                if j not in removed_indices:
+                    sentence1 = preprocess_sentence(sentences[i])
+                    sentence2 = preprocess_sentence(sentences[j])
+                    similarity = compute_similarity(sentence1, sentence2)
+
+                    if similarity >= threshold:
+                        removed_indices.add(max(i, j))
+
+    filtered_sentences = [sentences[i] for i in range(num_sentences) if i not in removed_indices]
+    return filtered_sentences
+
+def remove_outright_duplicate_sentences_from_chunk(chunk):
+    chunk_text = chunk["text"]
+    sentences = nltk.sent_tokenize(chunk_text)
+    nonduplicate_sentences = list(dict.fromkeys(sentences))
+    return nonduplicate_sentences
+
+def remove_whisper_repititive_hallucination(nonduplicate_sentences):
+    chunk_sentences = []
+
+    for sent in nonduplicate_sentences:
+        temp_result = ""
+        seen = {}
+        words = nltk.word_tokenize(sent)
+        n_gram_filter = 3
+        for i in range(len(words)):
+            if str(words[i:i + n_gram_filter]) in seen and seen[str(words[i:i + n_gram_filter])] == words[
+                                                                                                    i + 1:i + n_gram_filter + 2]:
+                pass
+            else:
+                seen[str(words[i:i + n_gram_filter])] = words[i + 1:i + n_gram_filter + 2]
+                temp_result += words[i]
+                temp_result += " "
+        chunk_sentences.append(temp_result)
+    return chunk_sentences
+
+def remove_duplicates_from_transcript_chunk(whisper_result):
+    for chunk in whisper_result["chunks"]:
+        nonduplicate_sentences = remove_outright_duplicate_sentences_from_chunk(chunk)
+        chunk_sentences = remove_whisper_repititive_hallucination(nonduplicate_sentences)
+        similarity_matched_sentences = remove_almost_alike_sentences(chunk_sentences)
+        chunk["text"] = " ".join(similarity_matched_sentences)
+    return whisper_result
+
+def summarize(transcript_text, output_file,
+              summarize_using_chunks=config["DEFAULT"]["SUMMARIZE_USING_CHUNKS"]):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    summary_model = config["DEFAULT"]["SUMMARY_MODEL"]
+    if not summary_model:
+        summary_model = "facebook/bart-large-cnn"
+
+    # Summarize the generated transcript using the BART model
+    logger.info(f"Loading BART model: {summary_model}")
+    tokenizer = BartTokenizer.from_pretrained(summary_model)
+    model = BartForConditionalGeneration.from_pretrained(summary_model)
+    model = model.to(device)
+
+    if summarize_using_chunks != "YES":
+        inputs = tokenizer.batch_encode_plus([transcript_text], truncation=True, padding='longest',
+                                             max_length=int(config["DEFAULT"]["INPUT_ENCODING_MAX_LENGTH"]),
+                                             return_tensors='pt')
+        inputs = inputs.to(device)
+
+        with torch.no_grad():
+            summaries = model.generate(inputs['input_ids'],
+                                       num_beams=int(config["DEFAULT"]["BEAM_SIZE"]), length_penalty=2.0,
+                                       max_length=int(config["DEFAULT"]["MAX_LENGTH"]), early_stopping=True)
+
+        decoded_summaries = [tokenizer.decode(summary, skip_special_tokens=True, clean_up_tokenization_spaces=False) for
+                             summary in summaries]
+        summary = " ".join(decoded_summaries)
+        with open(output_file, 'w') as f:
+            f.write(summary.strip() + "\n\n")
+    else:
+        logger.info("Breaking transcript into smaller chunks")
+        chunks = chunk_text(transcript_text)
+
+        logger.info(f"Transcript broken into {len(chunks)} chunks of at most 500 words")  # TODO fix variable
+
+        logger.info(f"Writing summary text to: {output_file}")
+        with open(output_file, 'w') as f:
+            summaries = summarize_chunks(chunks, tokenizer, model)
+            for summary in summaries:
+                f.write(summary.strip() + " ")
 
 def main():
     parser = init_argparse()
@@ -314,13 +425,19 @@ def main():
     whisper_result = pipeline(audio_filename, return_timestamps=True)
     logger.info("Finished transcribing file")
 
+    whisper_result = remove_duplicates_from_transcript_chunk(whisper_result)
+
+    transcript_text = ""
+    for chunk in whisper_result["chunks"]:
+        transcript_text += chunk["text"]
+
     # If we got the transcript parameter on the command line,
     # save the transcript to the specified file.
     if args.transcript:
         logger.info(f"Saving transcript to: {args.transcript}")
         transcript_file = open(args.transcript, "w")
         transcript_file_timestamps = open(args.transcript[0:len(args.transcript) - 4] + "_timestamps.txt", "w")
-        transcript_file.write(whisper_result["text"])
+        transcript_file.write(transcript_text)
         transcript_file_timestamps.write(str(whisper_result))
         transcript_file.close()
         transcript_file_timestamps.close()
@@ -337,23 +454,7 @@ def main():
                        "wordcloud.png", "mappings.pkl"]
     upload_files(files_to_upload)
 
-    # Summarize the generated transcript using the BART model
-    logger.info(f"Loading BART model: {args.model_name}")
-    tokenizer = BartTokenizer.from_pretrained(args.model_name)
-    model = BartForConditionalGeneration.from_pretrained(args.model_name)
-
-    logger.info("Breaking transcript into smaller chunks")
-    chunks = chunk_text(whisper_result['text'])
-
-    logger.info(
-        f"Transcript broken into {len(chunks)} chunks of at most 500 words")  # TODO fix variable
-
-    logger.info(f"Writing summary text in {args.language} to: {args.output}")
-    with open(args.output, 'w') as f:
-        f.write('Summary of: ' + args.location + "\n\n")
-        summaries = summarize_chunks(chunks, tokenizer, model)
-        for summary in summaries:
-            f.write(summary.strip() + "\n\n")
+    summarize(transcript_text, args.output)
 
     logger.info("Summarization completed")
 
