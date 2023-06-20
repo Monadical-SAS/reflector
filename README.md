@@ -110,12 +110,35 @@ This is a jupyter notebook playground with template instructions on handling the
 pipeline. Follow the instructions given and tweak your own logic into it or use it as a playground to experiment libraries and
 visualizations on top of the metadata.
 
+**WHISPER-JAX REALTIME TRANSCRIPTION PIPELINE:**
+
+We also support a provision to perform real-time transcripton using whisper-jax pipeline. But, there are 
+a few pre-requisites before you run it on your local machine. The instructions are for 
+configuring on a MacOS.
+
+We need to way to route audio from an application opened via the browser, ex. "Whereby" and audio from your local
+microphone input which you will be using for speaking. We use [Blackhole](https://github.com/ExistentialAudio/BlackHole).
+
+1) Install Blackhole-2ch (2 ch is enough) by 1 of 2 options listed.
+2) Setup [Aggregare device](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and
+   local microphone input.
+
+   Be sure to mirror the settings given ![here](./images/aggregate_input.png) (including the name)
+3) Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
+   Refer ![here](./images/multi-output.png)
+
+From the reflector root folder, 
+
+run ```python3 whisjax_realtime_trial.py```
+
+**Permissions:**
+
+You may have to add permission for Terminal/Code Editor microphone access to record audio and in
+```System Preferences -> Privacy & Security -> Accessibility``` as well.
 
 NEXT STEPS:
 
-1) Run this demo on a local Mac M1 to test flow and observe the performance
-2) Create a pipeline using a microphone to listen to audio chunks to perform transcription realtime (and also efficiently
- summarize it as well) -> *done as part of whisjax_realtime_trial.py*
-3) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
-4) Perform Speaker Diarization using Whisper-JAX
-5) Based on the feasibility of the above points, explore suitable visualizations for transcription & summarization.
+
+1) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
+2) Perform Speaker Diarization using Whisper-JAX
+3) Based on the feasibility of the above points, explore suitable visualizations for transcription & summarization.
