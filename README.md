@@ -128,6 +128,10 @@ microphone input which you will be using for speaking. We use [Blackhole](https:
    
    Refer ![here](./images/multi-output.png)
 
+
+Then goto ``` System Preferences -> Sound ``` and choose the devices created from the Output and
+Input tabs.
+
 From the reflector root folder, 
 
 run ```python3 whisjax_realtime_trial.py```
