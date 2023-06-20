@@ -120,11 +120,12 @@ We need to way to route audio from an application opened via the browser, ex. "W
 microphone input which you will be using for speaking. We use [Blackhole](https://github.com/ExistentialAudio/BlackHole).
 
 1) Install Blackhole-2ch (2 ch is enough) by 1 of 2 options listed.
-2) Setup [Aggregare device](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and
+2) Setup [Aggregate device](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and
    local microphone input.
 
-   Be sure to mirror the settings given ![here](./images/aggregate_input.png) (including the name)
+   Be sure to mirror the settings given (including the name) ![here](./images/aggregate_input.png) 
 3) Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
+   
    Refer ![here](./images/multi-output.png)
 
 From the reflector root folder, 
@@ -133,11 +134,12 @@ run ```python3 whisjax_realtime_trial.py```
 
 **Permissions:**
 
-You may have to add permission for Terminal/Code Editor microphone access to record audio and in
-```System Preferences -> Privacy & Security -> Accessibility``` as well.
+You may have to add permission for "Terminal"/Code Editors [Pycharm/VSCode, etc.] microphone access to record audio in 
+```System Preferences -> Privacy & Security -> Microphone``` and in
+```System Preferences -> Privacy & Security -> Accessibility```.
+
 
 NEXT STEPS:
-
 
 1) Create a RunPod setup for this feature (mentioned in 1 & 2) and test it end-to-end
 2) Perform Speaker Diarization using Whisper-JAX
