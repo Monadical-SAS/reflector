@@ -70,7 +70,12 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                 agenda_topics.append(line.split(":")[0])
 
     # Load the transcription with timestamp
-    with open("transcript_with_timestamp_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt") as f:
+    filename = ""
+    if real_time:
+        filename = "real_time_transcript_with_timestamp_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+    else:
+        filename = "transcript_with_timestamp_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+    with open(filename) as f:
         transcription_timestamp_text = f.read()
 
     res = ast.literal_eval(transcription_timestamp_text)

@@ -74,6 +74,47 @@ def post_process_transcription(whisper_result):
         chunk["text"] = " ".join(similarity_matched_sentences)
     return whisper_result
 
+
+def summarize_chunks(chunks, tokenizer, model):
+    """
+    Summarize each chunk using a summarizer model
+    :param chunks:
+    :param tokenizer:
+    :param model:
+    :return:
+    """
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    summaries = []
+    for c in chunks:
+        input_ids = tokenizer.encode(c, return_tensors='pt')
+        input_ids = input_ids.to(device)
+        with torch.no_grad():
+            summary_ids = model.generate(input_ids,
+                               num_beams=int(config["DEFAULT"]["BEAM_SIZE"]), length_penalty=2.0,
+                               max_length=int(config["DEFAULT"]["MAX_LENGTH"]), early_stopping=True)
+            summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+            summaries.append(summary)
+    return summaries
+
+def chunk_text(text, max_chunk_length=int(config["DEFAULT"]["MAX_CHUNK_LENGTH"])):
+    """
+    Split text into smaller chunks.
+    :param txt: Text to be chunked
+    :param max_chunk_length: length of chunk
+    :return: chunked texts
+    """
+    sentences = nltk.sent_tokenize(text)
+    chunks = []
+    current_chunk = ""
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) < max_chunk_length:
+            current_chunk += f" {sentence.strip()}"
+        else:
+            chunks.append(current_chunk.strip())
+            current_chunk = f"{sentence.strip()}"
+    chunks.append(current_chunk.strip())
+    return chunks
+
 def summarize(transcript_text, timestamp,
               real_time=False, summarize_using_chunks=config["DEFAULT"]["SUMMARIZE_USING_CHUNKS"]):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -118,43 +159,3 @@ def summarize(transcript_text, timestamp,
             summaries = summarize_chunks(chunks, tokenizer, model)
             for summary in summaries:
                 f.write(summary.strip() + " ")
-
-def summarize_chunks(chunks, tokenizer, model):
-    """
-    Summarize each chunk using a summarizer model
-    :param chunks:
-    :param tokenizer:
-    :param model:
-    :return:
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    summaries = []
-    for c in chunks:
-        input_ids = tokenizer.encode(c, return_tensors='pt')
-        input_ids = input_ids.to(device)
-        with torch.no_grad():
-            summary_ids = model.generate(input_ids,
-                               num_beams=int(config["DEFAULT"]["BEAM_SIZE"]), length_penalty=2.0,
-                               max_length=int(config["DEFAULT"]["MAX_LENGTH"]), early_stopping=True)
-            summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-            summaries.append(summary)
-    return summaries
-
-def chunk_text(text, max_chunk_length=int(config["DEFAULT"]["MAX_CHUNK_LENGTH"])):
-    """
-    Split text into smaller chunks.
-    :param txt: Text to be chunked
-    :param max_chunk_length: length of chunk
-    :return: chunked texts
-    """
-    sentences = nltk.sent_tokenize(text)
-    chunks = []
-    current_chunk = ""
-    for sentence in sentences:
-        if len(current_chunk) + len(sentence) < max_chunk_length:
-            current_chunk += f" {sentence.strip()}"
-        else:
-            chunks.append(current_chunk.strip())
-            current_chunk = f"{sentence.strip()}"
-    chunks.append(current_chunk.strip())
-    return chunks
