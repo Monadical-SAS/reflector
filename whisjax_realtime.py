@@ -11,7 +11,8 @@ from file_utilities import upload_files
 from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from text_utilities import summarize, post_process_transcription
 from loguru import logger
-
+import nltk
+nltk.download('stopwords')
 
 config = configparser.ConfigParser()
 config.read('config.ini')
