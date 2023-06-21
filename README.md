@@ -32,11 +32,11 @@ To setup,
 
 5) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
 
-``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ" --transcript transcript.txt summary.txt ```
+``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ"```
 
 You can even run it on local file or a file in your configured S3 bucket.
 
-``` python3 whisjax.py "startup.mp4" --transcript transcript.txt summary.txt ```
+``` python3 whisjax.py "startup.mp4"```
 
 The script will take care of a few cases like youtube file, local file, video file, audio-only file, 
 file in S3, etc. If local file is not present, it can automatically take the file from S3.
@@ -85,7 +85,7 @@ mentioned above or simply use the GUI of AWS Management Console.
    1) ```agenda_topic : <short description>```
 3) Check all the values in ```config.ini```. You need to predefine 2 categories for which you need to scatter plot the 
    topic modelling visualization in the config file. This is the default visualization. But, from the dataframe artefact called
-   ```df.pkl``` , you can load the df and choose different topics to plot. You can filter using certain words to search for the
+   ```df_<timestamp>.pkl``` , you can load the df and choose different topics to plot. You can filter using certain words to search for the
    transcriptions and you can see the top influencers and characteristic in each topic we have chosen to plot in the
    interactive HTML document. I have added a new jupyter notebook that gives the base template to play around with, named
    ```Viz_experiments.ipynb```.
@@ -123,24 +123,32 @@ microphone input which you will be using for speaking. We use [Blackhole](https:
 2) Setup [Aggregate device](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and
    local microphone input.
 
-   Be sure to mirror the settings given (including the name) ![here](./images/aggregate_input.png) 
+   Be sure to mirror the settings given ![here](./images/aggregate_input.png) 
 3) Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
    
    Refer ![here](./images/multi-output.png)
 
+4) Set the aggregator input device name created in step 2 in config.ini as ```BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME```
 
-Then goto ``` System Preferences -> Sound ``` and choose the devices created from the Output and
+5) Then goto ``` System Preferences -> Sound ``` and choose the devices created from the Output and
 Input tabs.
 
-From the reflector root folder, 
-
-run ```python3 whisjax_realtime_trial.py```
+6) The input from your local microphone, the browser run meeting should be aggregated into one virtual stream to listen to
+and the output should be fed back to your specified output devices if everything is configured properly. Check this
+before trying out the trial.
 
 **Permissions:**
 
 You may have to add permission for "Terminal"/Code Editors [Pycharm/VSCode, etc.] microphone access to record audio in 
-```System Preferences -> Privacy & Security -> Microphone``` and in
-```System Preferences -> Privacy & Security -> Accessibility```.
+```System Preferences -> Privacy & Security -> Microphone```,
+```System Preferences -> Privacy & Security -> Accessibility```,
+```System Preferences -> Privacy & Security -> Input Monitoring```.
+
+From the reflector root folder, 
+
+run ```python3 whisjax_realtime.py```
+
+The transcription text should be written to ```real_time_transcription_<timestamp>.txt```.
 
 
 NEXT STEPS:
