@@ -123,24 +123,32 @@ microphone input which you will be using for speaking. We use [Blackhole](https:
 2) Setup [Aggregate device](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and
    local microphone input.
 
-   Be sure to mirror the settings given (including the name) ![here](./images/aggregate_input.png) 
+   Be sure to mirror the settings given ![here](./images/aggregate_input.png) 
 3) Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
    
    Refer ![here](./images/multi-output.png)
 
+4) Set the aggregator input device name created in step 2 in config.ini as ```BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME```
 
-Then goto ``` System Preferences -> Sound ``` and choose the devices created from the Output and
+5) Then goto ``` System Preferences -> Sound ``` and choose the devices created from the Output and
 Input tabs.
 
-From the reflector root folder, 
-
-run ```python3 whisjax_realtime_trial.py```
+6) The input from your local microphone, the browser run meeting should be aggregated into one virtual stream to listen to
+and the output should be fed back to your specified output devices if everything is configured properly. Check this
+before trying out the trial.
 
 **Permissions:**
 
 You may have to add permission for "Terminal"/Code Editors [Pycharm/VSCode, etc.] microphone access to record audio in 
-```System Preferences -> Privacy & Security -> Microphone``` and in
-```System Preferences -> Privacy & Security -> Accessibility```.
+```System Preferences -> Privacy & Security -> Microphone```,
+```System Preferences -> Privacy & Security -> Accessibility```,
+```System Preferences -> Privacy & Security -> Input Monitoring```.
+
+From the reflector root folder, 
+
+run ```python3 whisjax_realtime.py```
+
+The transcription text should be written to ```real_time_transcription_<timestamp>.txt```.
 
 
 NEXT STEPS:
