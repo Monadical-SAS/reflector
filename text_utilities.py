@@ -20,8 +20,11 @@ def preprocess_sentence(sentence):
 
 def compute_similarity(sent1, sent2):
     tfidf_vectorizer = TfidfVectorizer()
-    tfidf_matrix = tfidf_vectorizer.fit_transform([sent1, sent2])
-    return cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
+    print("semt1", sent1, sent2)
+    if sent1 is not None and sent2 is not None:
+        tfidf_matrix = tfidf_vectorizer.fit_transform([sent1, sent2])
+        return cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
+    return 0.0
 
 def remove_almost_alike_sentences(sentences, threshold=0.7):
     num_sentences = len(sentences)
@@ -31,12 +34,21 @@ def remove_almost_alike_sentences(sentences, threshold=0.7):
         if i not in removed_indices:
             for j in range(i + 1, num_sentences):
                 if j not in removed_indices:
-                    sentence1 = preprocess_sentence(sentences[i])
-                    sentence2 = preprocess_sentence(sentences[j])
-                    similarity = compute_similarity(sentence1, sentence2)
+                    l_i = len(sentences[i])
+                    l_j = len(sentences[j])
+                    if l_i == 0 or l_j == 0:
+                        if l_i == 0:
+                            removed_indices.add(i)
+                        if l_j == 0:
+                            removed_indices.add(j)
+                    else:
+                        sentence1 = preprocess_sentence(sentences[i])
+                        sentence2 = preprocess_sentence(sentences[j])
+                        if len(sentence1) != 0 and len(sentence2) != 0:
+                            similarity = compute_similarity(sentence1, sentence2)
 
-                    if similarity >= threshold:
-                        removed_indices.add(max(i, j))
+                            if similarity >= threshold:
+                                removed_indices.add(max(i, j))
 
     filtered_sentences = [sentences[i] for i in range(num_sentences) if i not in removed_indices]
     return filtered_sentences
@@ -67,11 +79,14 @@ def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
     return chunk_sentences
 
 def post_process_transcription(whisper_result):
+    transcript_text = ""
     for chunk in whisper_result["chunks"]:
         nonduplicate_sentences = remove_outright_duplicate_sentences_from_chunk(chunk)
         chunk_sentences = remove_whisper_repetitive_hallucination(nonduplicate_sentences)
         similarity_matched_sentences = remove_almost_alike_sentences(chunk_sentences)
         chunk["text"] = " ".join(similarity_matched_sentences)
+        transcript_text += chunk["text"]
+    whisper_result["text"] = transcript_text
     return whisper_result
 
 

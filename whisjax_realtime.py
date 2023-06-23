@@ -106,10 +106,6 @@ def main():
 
     transcript_with_timestamp = post_process_transcription(transcript_with_timestamp)
 
-    transcript_text = ""
-    for chunk in transcript_with_timestamp["chunks"]:
-        transcript_text += chunk["text"]
-
     logger.info("Creating word cloud")
     create_wordcloud(NOW, True)
 
@@ -125,7 +121,7 @@ def main():
                        "real_time_mappings_" + suffix + ".pkl"]
     upload_files(files_to_upload)
 
-    summarize(transcript_text, NOW, True, True)
+    summarize(transcript_with_timestamp["text"], NOW, True, True)
 
     logger.info("Summarization completed")
 
