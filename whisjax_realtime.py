@@ -124,7 +124,7 @@ def main():
     # S3 : Push artefacts to S3 bucket
     suffix = NOW.strftime("%m-%d-%Y_%H:%M:%S")
     files_to_upload = ["real_time_transcript_" + suffix + ".txt",
-                       "real_time_transcript_with_timestamp" + suffix + ".txt",
+                       "real_time_transcript_with_timestamp_" + suffix + ".txt",
                        "real_time_df_" + suffix + ".pkl",
                        "real_time_wordcloud_" + suffix + ".png",
                        "real_time_mappings_" + suffix + ".pkl",
