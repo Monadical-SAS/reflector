@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
+from nltk.corpus import stopwords as nltk_stopwords
 import collections
 import spacy
 import pickle
@@ -11,6 +12,10 @@ import configparser
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+en = spacy.load('en_core_web_md')
+spacy_stopwords = en.Defaults.stop_words
+
+STOPWORDS = set(STOPWORDS).union(set(nltk_stopwords)).union(set(spacy_stopwords))
 
 def create_wordcloud(timestamp, real_time=False):
     """
@@ -26,13 +31,11 @@ def create_wordcloud(timestamp, real_time=False):
     with open(filename, "r") as f:
         transcription_text = f.read()
 
-    stopwords = set(STOPWORDS)
-
     # python_mask = np.array(PIL.Image.open("download1.png"))
 
     wordcloud = WordCloud(height=800, width=800,
                           background_color='white',
-                          stopwords=stopwords,
+                          stopwords=STOPWORDS,
                           min_font_size=8).generate(transcription_text)
 
     # Plot wordcloud and save image
