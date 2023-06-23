@@ -12,7 +12,10 @@ from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from text_utilities import summarize, post_process_transcription
 from loguru import logger
 import nltk
-nltk.download('stopwords')
+import time
+from termcolor import colored
+
+nltk.download('stopwords', quiet=True)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -68,9 +71,11 @@ def main():
     try:
         while proceed:
             frames = []
+            start_time = time.time()
             for i in range(0, int(RATE / FRAMES_PER_BUFFER * RECORD_SECONDS)):
                 data = stream.read(FRAMES_PER_BUFFER, exception_on_overflow=False)
                 frames.append(data)
+            end_time = time.time()
 
             wf = wave.open(TEMP_AUDIO_FILE, 'wb')
             wf.setnchannels(CHANNELS)
@@ -80,8 +85,6 @@ def main():
             wf.close()
 
             whisper_result = pipeline(TEMP_AUDIO_FILE, return_timestamps=True)
-            print(whisper_result['text'])
-
             timestamp = whisper_result["chunks"][0]["timestamp"]
             start = timestamp[0]
             end = timestamp[1]
@@ -89,11 +92,17 @@ def main():
                 end = start + 15.0
             duration = end - start
             item = {'timestamp': (last_transcribed_time, last_transcribed_time + duration),
-                    'text': whisper_result['text']}
+                    'text': whisper_result['text'],
+                    'stats': (str(end_time - start_time), str(duration))
+                    }
             last_transcribed_time = last_transcribed_time + duration
             transcript_with_timestamp["chunks"].append(item)
-
             transcription += whisper_result['text']
+
+            print(colored("<START>", "yellow"))
+            print(colored(whisper_result['text'], 'green'))
+            print(colored("<END> Recorded duration: " + str(end_time - start_time) + " | Transcribed duration: " +
+                          str(duration), "yellow"))
 
     except Exception as e:
         print(e)
@@ -105,10 +114,6 @@ def main():
             f.write(str(transcript_with_timestamp))
 
     transcript_with_timestamp = post_process_transcription(transcript_with_timestamp)
-
-    transcript_text = ""
-    for chunk in transcript_with_timestamp["chunks"]:
-        transcript_text += chunk["text"]
 
     logger.info("Creating word cloud")
     create_wordcloud(NOW, True)
@@ -122,10 +127,11 @@ def main():
                        "real_time_transcript_with_timestamp" + suffix + ".txt",
                        "real_time_df_" + suffix + ".pkl",
                        "real_time_wordcloud_" + suffix + ".png",
-                       "real_time_mappings_" + suffix + ".pkl"]
+                       "real_time_mappings_" + suffix + ".pkl",
+                       "real_time_scatter_" + suffix + ".html"]
     upload_files(files_to_upload)
 
-    summarize(transcript_text, NOW, True, True)
+    summarize(transcript_with_timestamp["text"], NOW, True, True)
 
     logger.info("Summarization completed")
 

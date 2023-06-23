@@ -48,3 +48,4 @@ pandas
 jupyter
 seaborn
 matplotlib
+termcolor

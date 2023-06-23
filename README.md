@@ -27,10 +27,8 @@ To setup,
 
     ```sh setup_dependencies.sh cuda12```
 
-4) ``` pip install -r requirements.txt```
 
-
-5) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
+4) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
 
 ``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ"```
 

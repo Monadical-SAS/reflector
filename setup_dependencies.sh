@@ -1,4 +1,4 @@
-# Upgrade pip
+ Upgrade pip
 pip install --upgrade pip
 
 # Default to CPU Installation of JAX
@@ -23,4 +23,11 @@ pip install git+https://github.com/sanchit-gandhi/whisper-jax.git
 
 # Update to latest version
 pip install --upgrade --no-deps --force-reinstall git+https://github.com/sanchit-gandhi/whisper-jax.git
+
+pip install -r requirements.txt
+
+# download spacy models
+export KMP_DUPLICATE_LIB_OK=True
+python -m spacy download en_core_web_sm
+python -m spacy download en_core_web_md
 
