@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
-from nltk.corpus import stopwords as nltk_stopwords
+from nltk.corpus import stopwords
 import collections
 import spacy
 import pickle
@@ -15,7 +15,7 @@ config.read('config.ini')
 en = spacy.load('en_core_web_md')
 spacy_stopwords = en.Defaults.stop_words
 
-STOPWORDS = set(STOPWORDS).union(set(nltk_stopwords)).union(set(spacy_stopwords))
+STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))).union(set(spacy_stopwords))
 
 def create_wordcloud(timestamp, real_time=False):
     """
@@ -195,4 +195,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
         width_in_pixels=1000,
         transform=st.Scalers.dense_rank
     )
-    open('./scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+    if real_time:
+        open('./real_time_scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+    else:
+        open('./scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)

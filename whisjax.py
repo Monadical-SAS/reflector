@@ -26,8 +26,8 @@ from file_utilities import upload_files, download_files
 from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from text_utilities import summarize, post_process_transcription
 
-nltk.download('punkt')
-nltk.download('stopwords')
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
 
 # Configurations can be found in config.ini. Set them properly before executing
 config = configparser.ConfigParser()
@@ -141,7 +141,8 @@ def main():
                        "transcript_with_timestamp_" + suffix + ".txt",
                        "df_" + suffix + ".pkl",
                        "wordcloud_" + suffix + ".png",
-                       "mappings_" + suffix + ".pkl"]
+                       "mappings_" + suffix + ".pkl",
+                       "scatter_" + suffix + ".html"]
     upload_files(files_to_upload)
 
     summarize(transcript_text, NOW, False, False)

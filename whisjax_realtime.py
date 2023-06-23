@@ -12,7 +12,7 @@ from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from text_utilities import summarize, post_process_transcription
 from loguru import logger
 import nltk
-nltk.download('stopwords')
+nltk.download('stopwords', quiet=True)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -118,7 +118,8 @@ def main():
                        "real_time_transcript_with_timestamp" + suffix + ".txt",
                        "real_time_df_" + suffix + ".pkl",
                        "real_time_wordcloud_" + suffix + ".png",
-                       "real_time_mappings_" + suffix + ".pkl"]
+                       "real_time_mappings_" + suffix + ".pkl",
+                       "real_time_scatter_" + suffix + ".html"]
     upload_files(files_to_upload)
 
     summarize(transcript_with_timestamp["text"], NOW, True, True)
