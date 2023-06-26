@@ -4,41 +4,6 @@ This is the code base for the Reflector demo (formerly called agenda-talk-diff) 
 
 The target deliverable is a local-first live transcription and visualization tool to compare a discussion's target agenda/objectives to the actual discussion live.
 
-To setup, 
-
-1) Check values in config.ini file. Specifically add your OPENAI_APIKEY if you plan to use OpenAI API requests.
-2) Run ``` export KMP_DUPLICATE_LIB_OK=True``` in Terminal. [This is taken care of in code, but not reflecting, Will fix this issue later.]
-3) Run the script setup_depedencies.sh.
-
-    ``` chmod +x setup_dependencies.sh ```
-
-    ``` sh setup_dependencies.sh  <ENV>```
-
-    
-   ENV refers to the intended environment for JAX. JAX is available in several variants, [CPU | GPU | Colab TPU | Google Cloud TPU]
-   
-   ```ENV``` is :
-   
-   cpu -> JAX CPU installation
-
-   cuda11 -> JAX CUDA 11.x version
-
-   cuda12 -> JAX CUDA 12.x version (Core Weave has CUDA 12 version, can check with ```nvidia-smi```)
-
-    ```sh setup_dependencies.sh cuda12```
-
-
-4) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
-
-``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ"```
-
-You can even run it on local file or a file in your configured S3 bucket.
-
-``` python3 whisjax.py "startup.mp4"```
-
-The script will take care of a few cases like youtube file, local file, video file, audio-only file, 
-file in S3, etc. If local file is not present, it can automatically take the file from S3.
-
 
 **S3 bucket:**
 
@@ -74,9 +39,52 @@ Download:
 If you want to access the S3 artefacts, from another machine, you can either use the python file_util with the commands
 mentioned above or simply use the GUI of AWS Management Console.
 
-**WORKFLOW:**
 
-1) Specify the input source file from a local, youtube link or upload to S3 if needed and pass it as input to the script.If the source file is in
+To setup, 
+
+1) Check values in config.ini file. Specifically add your OPENAI_APIKEY if you plan to use OpenAI API requests.
+2) Run ``` export KMP_DUPLICATE_LIB_OK=True``` in Terminal. [This is taken care of in code, but not reflecting, Will fix this issue later.]
+
+NOTE: If you don't have portaudio installed already, run ```brew install portaudio```
+
+3) Run the script setup_depedencies.sh.
+
+    ``` chmod +x setup_dependencies.sh ```
+
+    ``` sh setup_dependencies.sh  <ENV>```
+
+    
+   ENV refers to the intended environment for JAX. JAX is available in several variants, [CPU | GPU | Colab TPU | Google Cloud TPU]
+   
+   ```ENV``` is :
+   
+   cpu -> JAX CPU installation
+
+   cuda11 -> JAX CUDA 11.x version
+
+   cuda12 -> JAX CUDA 12.x version (Core Weave has CUDA 12 version, can check with ```nvidia-smi```)
+
+    ```sh setup_dependencies.sh cuda12```
+
+4) If not already done, install ffmpeg. ```brew install ffmpeg```
+
+For NLTK SSL error, check [here](https://stackoverflow.com/questions/38916452/nltk-download-ssl-certificate-verify-failed)
+
+
+5) Run the Whisper-JAX pipeline. Currently, the repo can take a Youtube video and transcribes/summarizes it.
+
+``` python3 whisjax.py "https://www.youtube.com/watch?v=ihf0S97oxuQ"```
+
+You can even run it on local file or a file in your configured S3 bucket.
+
+``` python3 whisjax.py "startup.mp4"```
+
+The script will take care of a few cases like youtube file, local file, video file, audio-only file, 
+file in S3, etc. If local file is not present, it can automatically take the file from S3.
+
+**OFFLINE WORKFLOW:**
+
+1) Specify the input source file] from a local, youtube link or upload to S3 if needed and pass it as input to the script.If the source file is in
    ```.m4a``` format, it will get converted to ```.mp4``` automatically.
 2) Keep the agenda header topics in a local file named ```agenda-headers.txt```. This needs to be present where the script is run.
    This version of the pipeline compares covered agenda topics using agenda headers in the following format.
@@ -99,7 +107,6 @@ HTML file, a sample word cloud and uploads them to the S3 bucket
    2) Topic -> All matched timestamps in the transcription
    
 Other visualizations can be planned based on available artefacts or new ones can be created. Refer the section ```Viz-experiments```.
-
 
 
 **Visualization experiments:**

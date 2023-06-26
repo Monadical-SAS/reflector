@@ -6,7 +6,7 @@ from loguru import logger
 from transformers import BartTokenizer, BartForConditionalGeneration
 import whisper
 import nltk
-nltk.download('punkt')
+nltk.download('punkt', quiet=True)
 
 WHISPER_MODEL_SIZE = "base"
 
