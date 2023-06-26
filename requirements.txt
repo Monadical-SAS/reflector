@@ -49,3 +49,4 @@ jupyter
 seaborn
 matplotlib
 termcolor
+ffmpeg

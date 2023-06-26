@@ -11,11 +11,8 @@ from file_utilities import upload_files
 from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from text_utilities import summarize, post_process_transcription
 from loguru import logger
-import nltk
 import time
 from termcolor import colored
-
-nltk.download('stopwords', quiet=True)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -25,7 +22,7 @@ WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 FRAMES_PER_BUFFER = 8000
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
-RATE = 44100
+RATE = 96000
 RECORD_SECONDS = 15
 NOW = datetime.now()
 
@@ -43,7 +40,7 @@ def main():
         rate=RATE,
         input=True,
         frames_per_buffer=FRAMES_PER_BUFFER,
-        input_device_index=audio_devices['index']
+        input_device_index=int(audio_devices['index'])
     )
 
     pipeline = FlaxWhisperPipline("openai/whisper-" + config["DEFAULT"]["WHISPER_REAL_TIME_MODEL_SIZE"],
@@ -124,7 +121,7 @@ def main():
     # S3 : Push artefacts to S3 bucket
     suffix = NOW.strftime("%m-%d-%Y_%H:%M:%S")
     files_to_upload = ["real_time_transcript_" + suffix + ".txt",
-                       "real_time_transcript_with_timestamp" + suffix + ".txt",
+                       "real_time_transcript_with_timestamp_" + suffix + ".txt",
                        "real_time_df_" + suffix + ".pkl",
                        "real_time_wordcloud_" + suffix + ".png",
                        "real_time_mappings_" + suffix + ".pkl",

@@ -7,7 +7,7 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.tokenize import word_tokenize
 from sklearn.metrics.pairwise import cosine_similarity
-
+nltk.download('punkt', quiet=True)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -20,7 +20,6 @@ def preprocess_sentence(sentence):
 
 def compute_similarity(sent1, sent2):
     tfidf_vectorizer = TfidfVectorizer()
-    print("semt1", sent1, sent2)
     if sent1 is not None and sent2 is not None:
         tfidf_matrix = tfidf_vectorizer.fit_transform([sent1, sent2])
         return cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
