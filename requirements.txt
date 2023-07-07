@@ -49,3 +49,4 @@ jupyter
 seaborn
 matplotlib
 termcolor
+https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz
