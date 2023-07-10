@@ -7,7 +7,7 @@ directory="."
 text_file_pattern="transcript_*.txt"
 pickle_file_pattern="*.pkl"
 html_file_pattern="*.html"
-png_file_pattern="*.png"
+png_file_pattern="wordcloud*.png"
 
 find "$directory" -type f -name "$text_file_pattern" -delete
 find "$directory" -type f -name "$pickle_file_pattern" -delete
