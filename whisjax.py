@@ -16,7 +16,7 @@ import subprocess
 import re
 import tempfile
 from loguru import logger
-from pytube import YouTube
+import yt_dlp as youtube_dl
 
 from urllib.parse import urlparse
 from whisper_jax import FlaxWhisperPipline
@@ -73,9 +73,21 @@ def main():
             # It will be saved to the current directory.
             logger.info("Downloading YouTube video at url: " + args.location)
 
-            youtube = YouTube(args.location)
-            media_file = youtube.streams.filter(progressive=True, file_extension='mp4').order_by(
-                'resolution').asc().first().download()
+            # Create options for the download
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'outtmpl': 'audio',  # Specify the output file path and name
+            }
+
+            # Download the audio
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([args.location])
+            media_file = "audio.mp3"
 
             logger.info("Saved downloaded YouTube video to: " + media_file)
         else:
@@ -96,16 +108,19 @@ def main():
         quit()
 
     # Handle video
-    try:
-        video = moviepy.editor.VideoFileClip(media_file)
-        audio_filename = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
-        video.audio.write_audiofile(audio_filename, logger=None)
-        logger.info(f"Extracting audio to: {audio_filename}")
-    # Handle audio only file
-    except:
-        audio = moviepy.editor.AudioFileClip(media_file)
-        audio_filename = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
-        audio.write_audiofile(audio_filename, logger=None)
+    if not media_file.endswith(".mp3"):
+        try:
+            video = moviepy.editor.VideoFileClip(media_file)
+            audio_filename = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
+            video.audio.write_audiofile(audio_filename, logger=None)
+            logger.info(f"Extracting audio to: {audio_filename}")
+        # Handle audio only file
+        except:
+            audio = moviepy.editor.AudioFileClip(media_file)
+            audio_filename = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False).name
+            audio.write_audiofile(audio_filename, logger=None)
+    else:
+        audio_filename = media_file
 
     logger.info("Finished extracting audio")
 
