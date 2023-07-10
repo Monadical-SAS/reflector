@@ -15,7 +15,7 @@ from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
 from whisper_jax import FlaxWhisperPipline
 
-from reflector.utils.server_utils import run_in_executor
+from utils.server_utils import run_in_executor
 
 logger = logging.getLogger(__name__)
 
