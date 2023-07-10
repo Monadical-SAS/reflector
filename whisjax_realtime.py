@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
 import configparser
-import pyaudio
-from whisper_jax import FlaxWhisperPipline
-from pynput import keyboard
-import jax.numpy as jnp
+import time
 import wave
 from datetime import datetime
-from utils.file_utilities import upload_files
-from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
-from utils.text_utilities import summarize, post_process_transcription
+
+import jax.numpy as jnp
+import pyaudio
 from loguru import logger
-import time
+from pynput import keyboard
 from termcolor import colored
+from whisper_jax import FlaxWhisperPipline
+
+from utils.file_utilities import upload_files
+from utils.text_utilities import summarize, post_process_transcription
+from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 
 config = configparser.ConfigParser()
 config.read('config.ini')
