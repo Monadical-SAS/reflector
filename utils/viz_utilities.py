@@ -19,6 +19,7 @@ spacy_stopwords = en.Defaults.stop_words
 
 STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))).union(set(spacy_stopwords))
 
+
 def create_wordcloud(timestamp, real_time=False):
     """
     Create a basic word cloud visualization of transcribed text

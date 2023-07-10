@@ -19,6 +19,9 @@ def preprocess_sentence(sentence):
     return ' '.join(tokens)
 
 def compute_similarity(sent1, sent2):
+    """
+    Compute the similarity
+    """
     tfidf_vectorizer = TfidfVectorizer()
     if sent1 is not None and sent2 is not None:
         tfidf_matrix = tfidf_vectorizer.fit_transform([sent1, sent2])

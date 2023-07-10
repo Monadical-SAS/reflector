@@ -167,7 +167,7 @@ transcript_timestamps.txt
 *.pkl
 transcript_*.txt
 test_*.txt
-*.png
+wordcloud*.png
 *.ini
 test_samples/
 *.wav
