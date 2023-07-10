@@ -66,7 +66,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     agenda_topics = []
     agenda = []
     # Load the agenda
-    with open("agenda-headers.txt", "r") as f:
+    with open("../agenda-headers.txt", "r") as f:
         for line in f.readlines():
             if line.strip():
                 agenda.append(line.strip())
