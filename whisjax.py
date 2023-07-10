@@ -137,10 +137,10 @@ def main():
     for chunk in whisper_result["chunks"]:
         transcript_text += chunk["text"]
 
-    with open("transcript_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file:
+    with open("./artefacts/transcript_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file:
         transcript_file.write(transcript_text)
 
-    with open("transcript_with_timestamp_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file_timestamps:
+    with open("./artefacts/transcript_with_timestamp_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file_timestamps:
         transcript_file_timestamps.write(str(whisper_result))
 
 

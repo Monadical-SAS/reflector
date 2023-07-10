@@ -11,9 +11,10 @@ import ast
 import stamina
 from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
+from utils.server_utils import Mutex
 
 logger = logging.getLogger("pc")
-file_lock = threading.Lock()
+file_lock = Mutex(open("test_sm_6.txt", "a"))
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -24,8 +25,7 @@ class StreamClient:
         signaling,
         url="http://127.0.0.1:1250",
         play_from=None,
-        ping_pong=False,
-        audio_stream=None
+        ping_pong=False
     ):
         self.signaling = signaling
         self.server_url = url
@@ -36,7 +36,6 @@ class StreamClient:
         self.pc = RTCPeerConnection()
 
         self.loop = asyncio.get_event_loop()
-        # self.loop = asyncio.new_event_loop()
         self.relay = None
         self.pcs = set()
         self.time_start = None
@@ -68,7 +67,6 @@ class StreamClient:
         channel.send(message)
 
     def current_stamp(self):
-
         if self.time_start is None:
             self.time_start = time.time()
             return 0
@@ -94,9 +92,7 @@ class StreamClient:
         @pc.on("track")
         def on_track(track):
             print("Sending %s" % track.kind)
-            # Trials
             self.pc.addTrack(track)
-            # self.pc.addTrack(self.microphone)
 
             @track.on("ended")
             async def on_ended():
@@ -104,7 +100,6 @@ class StreamClient:
 
         self.pc.addTrack(audio)
 
-        # DataChannel
         channel = pc.createDataChannel("data-channel")
         self.channel_log(channel, "-", "created by local party")
 
@@ -155,14 +150,12 @@ class StreamClient:
         while True:
             msg = await self.queue.get()
             msg = ast.literal_eval(msg)
-            with file_lock:
-                with open("test_sm_6.txt", "a") as f:
-                    f.write(msg["text"])
+            with file_lock.lock() as file:
+                file.write(msg["text"])
             yield msg["text"]
             self.queue.task_done()
 
     async def start(self):
-        print("Starting stream client")
         coro = self.run_offer(self.pc, self.signaling)
         task = asyncio.create_task(coro)
         await task
