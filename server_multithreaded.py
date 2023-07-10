@@ -47,8 +47,6 @@ total_bytes_handled = 0
 executor = ThreadPoolExecutor()
 
 frame_lock = threading.Lock()
-file_lock = threading.Lock()
-
 total_bytes_handled_lock = threading.Lock()
 
 def channel_log(channel, t, message):
