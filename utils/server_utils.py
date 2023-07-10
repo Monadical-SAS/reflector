@@ -1,8 +1,9 @@
 import asyncio
-from functools import partial
 import contextlib
+from functools import partial
 from threading import Lock
 from typing import ContextManager, Generic, TypeVar
+
 
 def run_in_executor(func, *args, executor=None, **kwargs):
     callback = partial(func, *args, **kwargs)
@@ -11,6 +12,8 @@ def run_in_executor(func, *args, executor=None, **kwargs):
 
 
 T = TypeVar("T")
+
+
 class Mutex(Generic[T]):
     def __init__(self, value: T):
         self.__value = value
