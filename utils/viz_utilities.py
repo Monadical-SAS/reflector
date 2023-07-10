@@ -30,7 +30,7 @@ def create_wordcloud(timestamp, real_time=False):
     else:
         filename += "_" +  timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
 
-    with open(filename, "r") as f:
+    with open("./artefacts/" + filename, "r") as f:
         transcription_text = f.read()
 
     # python_mask = np.array(PIL.Image.open("download1.png"))
@@ -199,6 +199,6 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
         transform=st.Scalers.dense_rank
     )
     if real_time:
-        open('./real_time_scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        open('./artefacts/real_time_scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
     else:
-        open('./scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        open('./artefacts/scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
