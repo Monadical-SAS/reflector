@@ -7,9 +7,9 @@ from pynput import keyboard
 import jax.numpy as jnp
 import wave
 from datetime import datetime
-from file_utilities import upload_files
-from viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
-from text_utilities import summarize, post_process_transcription
+from reflector.utils.file_utilities import upload_files
+from reflector.utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
+from reflector.utils.text_utilities import summarize, post_process_transcription
 from loguru import logger
 import time
 from termcolor import colored
