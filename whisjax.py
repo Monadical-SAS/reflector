@@ -22,9 +22,9 @@ from urllib.parse import urlparse
 from whisper_jax import FlaxWhisperPipline
 
 from datetime import datetime
-from reflector.utils.file_utilities import upload_files, download_files
-from reflector.utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
-from reflector.utils.text_utilities import summarize, post_process_transcription
+from utils.file_utilities import upload_files, download_files
+from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
+from utils.text_utilities import summarize, post_process_transcription
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
