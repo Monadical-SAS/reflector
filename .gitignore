@@ -165,8 +165,13 @@ transcript.txt
 transcript_timestamps.txt
 *.html
 *.pkl
+transcript_*.txt
+test_*.txt
+*.png
 *.ini
 test_samples/
 *.wav
-
+*.mp3
+*.m4a
+.DS_Store/
 .vscode/

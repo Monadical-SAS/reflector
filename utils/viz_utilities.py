@@ -3,6 +3,8 @@ from wordcloud import WordCloud, STOPWORDS
 from nltk.corpus import stopwords
 import collections
 import spacy
+import os
+from pathlib import Path
 import pickle
 import ast
 import pandas as pd
@@ -66,7 +68,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     agenda_topics = []
     agenda = []
     # Load the agenda
-    with open("../agenda-headers.txt", "r") as f:
+    path = Path(__file__)
+    with open(os.path.join(os.getcwd(), "agenda-headers.txt"), "r") as f:
         for line in f.readlines():
             if line.strip():
                 agenda.append(line.strip())
