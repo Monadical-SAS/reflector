@@ -6,25 +6,24 @@
 
 import argparse
 import configparser
-import jax.numpy as jnp
+import os
+import re
+import subprocess
+import tempfile
+from datetime import datetime
+from urllib.parse import urlparse
 
+import jax.numpy as jnp
 import moviepy.editor
 import moviepy.editor
 import nltk
-import os
-import subprocess
-import re
-import tempfile
-from loguru import logger
 import yt_dlp as youtube_dl
-
-from urllib.parse import urlparse
+from loguru import logger
 from whisper_jax import FlaxWhisperPipline
 
-from datetime import datetime
 from utils.file_utilities import upload_files, download_files
-from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 from utils.text_utilities import summarize, post_process_transcription
+from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
@@ -35,6 +34,7 @@ config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 NOW = datetime.now()
+
 
 def init_argparse() -> argparse.ArgumentParser:
     """
@@ -50,7 +50,6 @@ def init_argparse() -> argparse.ArgumentParser:
                         default="english", choices=['english', 'spanish', 'french', 'german', 'romanian'])
     parser.add_argument("location")
     return parser
-
 
 
 def main():
@@ -140,9 +139,9 @@ def main():
     with open("./artefacts/transcript_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file:
         transcript_file.write(transcript_text)
 
-    with open("./artefacts/transcript_with_timestamp_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as transcript_file_timestamps:
+    with open("./artefacts/transcript_with_timestamp_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt",
+              "w") as transcript_file_timestamps:
         transcript_file_timestamps.write(str(whisper_result))
-
 
     logger.info("Creating word cloud")
     create_wordcloud(NOW)

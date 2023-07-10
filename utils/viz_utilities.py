@@ -1,15 +1,16 @@
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud, STOPWORDS
-from nltk.corpus import stopwords
-import collections
-import spacy
-import os
-from pathlib import Path
-import pickle
 import ast
+import collections
+import configparser
+import os
+import pickle
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import scattertext as st
-import configparser
+import spacy
+from nltk.corpus import stopwords
+from wordcloud import WordCloud, STOPWORDS
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -29,7 +30,7 @@ def create_wordcloud(timestamp, real_time=False):
     if real_time:
         filename = "real_time_" + filename + "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
-        filename += "_" +  timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
 
     with open("./artefacts/" + filename, "r") as f:
         transcription_text = f.read()
