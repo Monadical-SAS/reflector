@@ -14,15 +14,11 @@ from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
-
 from utils.run_utils import run_in_executor
-
-transcription = ""
 
 pcs = set()
 relay = MediaRelay()
 data_channel = None
-total_bytes_handled = 0
 pipeline = FlaxWhisperPipline("openai/whisper-tiny",
                               dtype=jnp.float16,
                               batch_size=16)
@@ -30,7 +26,6 @@ pipeline = FlaxWhisperPipline("openai/whisper-tiny",
 CHANNELS = 2
 RATE = 48000
 audio_buffer = AudioFifo()
-start_time = datetime.datetime.now()
 executor = ThreadPoolExecutor()
 
 
@@ -40,15 +35,8 @@ def channel_log(channel, t, message):
 
 def channel_send(channel, message):
     # channel_log(channel, ">", message)
-    global start_time
     if channel:
         channel.send(message)
-        print(
-                "Bytes handled :",
-                total_bytes_handled,
-                " Time : ",
-                datetime.datetime.now() - start_time,
-        )
 
 
 def get_transcription(frames):
@@ -61,8 +49,6 @@ def get_transcription(frames):
     for frame in frames:
         wf.writeframes(b"".join(frame.to_ndarray()))
     wf.close()
-    global total_bytes_handled
-    total_bytes_handled += sys.getsizeof(wf)
     whisper_result = pipeline(out_file.getvalue(), return_timestamps=True)
     with open("test_exec.txt", "a") as f:
         f.write(whisper_result["text"])
@@ -111,10 +97,9 @@ async def offer(request):
 
     @pc.on("datachannel")
     def on_datachannel(channel):
-        global data_channel, start_time
+        global data_channel
         data_channel = channel
         channel_log(channel, "-", "created by remote party")
-        start_time = datetime.datetime.now()
 
         @channel.on("message")
         def on_message(message):

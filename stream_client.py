@@ -17,7 +17,6 @@ from utils.run_utils import Mutex
 file_lock = Mutex(open("test_sm_6.txt", "a"))
 
 
-
 class StreamClient:
     def __init__(
             self,
@@ -46,7 +45,6 @@ class StreamClient:
         self.loop.run_until_complete(self.signaling.close())
         self.loop.run_until_complete(self.pc.close())
         # self.loop.close()
-        print("ended")
 
     def create_local_tracks(self, play_from):
         if play_from:
@@ -55,7 +53,6 @@ class StreamClient:
         else:
             if self.relay is None:
                 self.relay = MediaRelay()
-            print("Created local track from microphone stream")
             return self.relay.subscribe(self.player.audio), None
 
     def channel_log(self, channel, t, message):
