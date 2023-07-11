@@ -1,5 +1,3 @@
-import configparser
-
 import nltk
 import torch
 from nltk.corpus import stopwords
@@ -7,11 +5,11 @@ from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import BartForConditionalGeneration, BartTokenizer
-from run_utils import config
+
 from log_utils import logger
+from run_utils import config
 
 nltk.download('punkt', quiet=True)
-
 
 
 def preprocess_sentence(sentence):

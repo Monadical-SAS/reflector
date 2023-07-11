@@ -5,7 +5,6 @@
 # summarize podcast.mp3 summary.txt
 
 import argparse
-import configparser
 import os
 import re
 import subprocess

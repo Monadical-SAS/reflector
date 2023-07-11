@@ -1,10 +1,10 @@
-import configparser
 import sys
 
 import boto3
 import botocore
-from run_utils import config
+
 from log_utils import logger
+from run_utils import config
 
 BUCKET_NAME = config["DEFAULT"]["BUCKET_NAME"]
 
