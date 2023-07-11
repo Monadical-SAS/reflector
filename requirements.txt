@@ -26,7 +26,7 @@ networkx==3.1
 numba==0.57.0
 numpy==1.24.3
 openai==0.27.7
-openai-whisper @ git+https://github.com/openai/whisper.git@248b6cb124225dd263bb9bd32d060b6517e067f8
+openai-whisper@ git+https://github.com/openai/whisper.git@248b6cb124225dd263bb9bd32d060b6517e067f8
 Pillow==9.5.0
 proglog==0.1.10
 pytube==15.0.0
@@ -56,5 +56,4 @@ cached_property==1.5.2
 stamina==23.1.0
 httpx==0.24.1
 sortedcontainers==2.4.0
-openai-whisper @ git+https://github.com/openai/whisper.git@248b6cb124225dd263bb9bd32d060b6517e067f8
 https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz
