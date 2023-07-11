@@ -174,4 +174,5 @@ test_samples/
 *.mp3
 *.m4a
 .DS_Store/
+.DS_Store
 .vscode/

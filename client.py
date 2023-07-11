@@ -1,15 +1,11 @@
 import argparse
 import asyncio
-import logging
 import signal
 
 from aiortc.contrib.signaling import (add_signaling_arguments,
                                       create_signaling)
 
 from stream_client import StreamClient
-
-logger = logging.getLogger("pc")
-
 
 async def main():
     parser = argparse.ArgumentParser(description="Data channels ping/pong")

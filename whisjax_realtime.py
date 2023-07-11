@@ -7,12 +7,12 @@ from datetime import datetime
 
 import jax.numpy as jnp
 import pyaudio
-from loguru import logger
+from utils.log_utils import logger
 from pynput import keyboard
 from termcolor import colored
 from whisper_jax import FlaxWhisperPipline
 
-from utils.file_utilities import upload_files
+from utils.file_utils import upload_files
 from utils.text_utilities import summarize, post_process_transcription
 from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 

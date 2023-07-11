@@ -3,7 +3,7 @@ import configparser
 import datetime
 import io
 import json
-import logging
+from utils.log_utils import logger
 import os
 import threading
 import uuid
@@ -11,7 +11,6 @@ import wave
 from concurrent.futures import ThreadPoolExecutor
 
 import jax.numpy as jnp
-from aiohttp import webq
 
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import (MediaRelay)
@@ -27,8 +26,6 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
-
-logger = logging.getLogger("pc")
 pcs = set()
 relay = MediaRelay()
 data_channel = None

@@ -1,7 +1,7 @@
 import ast
 import asyncio
 import configparser
-import logging
+from utils.log_utils import logger
 import time
 import uuid
 
@@ -14,7 +14,6 @@ from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
 from utils.server_utils import Mutex
 
-logger = logging.getLogger("pc")
 file_lock = Mutex(open("test_sm_6.txt", "a"))
 
 config = configparser.ConfigParser()

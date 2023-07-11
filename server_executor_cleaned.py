@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import io
 import json
-import logging
+from loguru import logger
 import sys
 import uuid
 import wave
@@ -16,8 +16,6 @@ from av import AudioFifo
 from whisper_jax import FlaxWhisperPipline
 
 from utils.server_utils import run_in_executor
-
-logger = logging.getLogger(__name__)
 
 transcription = ""
 
