@@ -74,7 +74,8 @@ class AudioStreamTrack(MediaStreamTrack):
                     get_transcription, local_frames, executor=executor
             )
             whisper_result.add_done_callback(
-                    lambda f: channel_send(data_channel, str(whisper_result.result()))
+                    lambda f: channel_send(data_channel,
+                                           str(whisper_result.result()))
                     if (f.result())
                     else None
             )
@@ -126,7 +127,8 @@ async def offer(request):
     return web.Response(
             content_type="application/json",
             text=json.dumps(
-                    {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+                    {"sdp": pc.localDescription.sdp,
+                     "type": pc.localDescription.type}
             ),
     )
 

@@ -37,8 +37,10 @@ class StreamClient:
         self.pcs = set()
         self.time_start = None
         self.queue = asyncio.Queue()
-        self.player = MediaPlayer(':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
-                                  format='avfoundation', options={'channels': '2'})
+        self.player = MediaPlayer(
+                ':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
+                format='avfoundation',
+                options={'channels': '2'})
 
     def stop(self):
         self.loop.run_until_complete(self.signaling.close())
@@ -115,7 +117,8 @@ class StreamClient:
                 self.channel_log(channel, "<", message)
 
                 if isinstance(message, str) and message.startswith("pong"):
-                    elapsed_ms = (self.current_stamp() - int(message[5:])) / 1000
+                    elapsed_ms = (self.current_stamp() - int(message[5:]))\
+                                 / 1000
                     print(" RTT %.2f ms" % elapsed_ms)
 
         await pc.setLocalDescription(await pc.createOffer())
@@ -135,7 +138,7 @@ class StreamClient:
         answer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
         await pc.setRemoteDescription(answer)
 
-        self.reader = self.worker(f"worker", self.queue)
+        self.reader = self.worker(f'{"worker"}', self.queue)
 
     def get_reader(self):
         return self.reader

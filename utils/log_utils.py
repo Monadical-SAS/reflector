@@ -1,4 +1,4 @@
-from loguru import logger
+import loguru
 
 
 class SingletonLogger:
@@ -11,7 +11,7 @@ class SingletonLogger:
         :return: SingletonLogger instance
         """
         if not SingletonLogger.__instance:
-            SingletonLogger.__instance = logger
+            SingletonLogger.__instance = loguru.logger
         return SingletonLogger.__instance
 
 
