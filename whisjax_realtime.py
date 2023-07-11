@@ -30,7 +30,8 @@ def main():
     p = pyaudio.PyAudio()
     AUDIO_DEVICE_ID = -1
     for i in range(p.get_device_count()):
-        if p.get_device_info_by_index(i)["name"] == config["DEFAULT"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
+        if p.get_device_info_by_index(i)["name"] == \
+                config["DEFAULT"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
             AUDIO_DEVICE_ID = i
     audio_devices = p.get_device_info_by_index(AUDIO_DEVICE_ID)
     stream = p.open(
@@ -42,7 +43,8 @@ def main():
             input_device_index=int(audio_devices['index'])
     )
 
-    pipeline = FlaxWhisperPipline("openai/whisper-" + config["DEFAULT"]["WHISPER_REAL_TIME_MODEL_SIZE"],
+    pipeline = FlaxWhisperPipline("openai/whisper-" +
+                                  config["DEFAULT"]["WHISPER_REAL_TIME_MODEL_SIZE"],
                                   dtype=jnp.float16,
                                   batch_size=16)
 
@@ -69,7 +71,8 @@ def main():
             frames = []
             start_time = time.time()
             for i in range(0, int(RATE / FRAMES_PER_BUFFER * RECORD_SECONDS)):
-                data = stream.read(FRAMES_PER_BUFFER, exception_on_overflow=False)
+                data = stream.read(FRAMES_PER_BUFFER,
+                                   exception_on_overflow=False)
                 frames.append(data)
             end_time = time.time()
 
@@ -87,7 +90,8 @@ def main():
             if end is None:
                 end = start + 15.0
             duration = end - start
-            item = {'timestamp': (last_transcribed_time, last_transcribed_time + duration),
+            item = {'timestamp': (last_transcribed_time,
+                                  last_transcribed_time + duration),
                     'text': whisper_result['text'],
                     'stats': (str(end_time - start_time), str(duration))
                     }
@@ -97,15 +101,19 @@ def main():
 
             print(colored("<START>", "yellow"))
             print(colored(whisper_result['text'], 'green'))
-            print(colored("<END> Recorded duration: " + str(end_time - start_time) + " | Transcribed duration: " +
+            print(colored("<END> Recorded duration: " +
+                          str(end_time - start_time) +
+                          " | Transcribed duration: " +
                           str(duration), "yellow"))
 
     except Exception as e:
         print(e)
     finally:
-        with open("real_time_transcript_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
+        with open("real_time_transcript_" +
+                  NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
             f.write(transcription)
-        with open("real_time_transcript_with_timestamp_" + NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
+        with open("real_time_transcript_with_timestamp_" +
+                  NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
             transcript_with_timestamp["text"] = transcription
             f.write(str(transcript_with_timestamp))
 

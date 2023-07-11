@@ -2,7 +2,6 @@ import ast
 import collections
 import os
 import pickle
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -14,7 +13,8 @@ from wordcloud import STOPWORDS, WordCloud
 en = spacy.load('en_core_web_md')
 spacy_stopwords = en.Defaults.stop_words
 
-STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))).union(set(spacy_stopwords))
+STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))).\
+    union(set(spacy_stopwords))
 
 
 def create_wordcloud(timestamp, real_time=False):
@@ -24,7 +24,8 @@ def create_wordcloud(timestamp, real_time=False):
     """
     filename = "transcript"
     if real_time:
-        filename = "real_time_" + filename + "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = "real_time_" + filename + "_" +\
+                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
         filename += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
 
@@ -46,7 +47,8 @@ def create_wordcloud(timestamp, real_time=False):
 
     wordcloud_name = "wordcloud"
     if real_time:
-        wordcloud_name = "real_time_" + wordcloud_name + "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
+        wordcloud_name = "real_time_" + wordcloud_name + "_" +\
+                         timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
     else:
         wordcloud_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
@@ -66,7 +68,6 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     agenda_topics = []
     agenda = []
     # Load the agenda
-    path = Path(__file__)
     with open(os.path.join(os.getcwd(), "agenda-headers.txt"), "r") as f:
         for line in f.readlines():
             if line.strip():
@@ -76,9 +77,11 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Load the transcription with timestamp
     filename = ""
     if real_time:
-        filename = "real_time_transcript_with_timestamp_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = "real_time_transcript_with_timestamp_" +\
+                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
-        filename = "transcript_with_timestamp_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = "transcript_with_timestamp_" +\
+                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     with open(filename) as f:
         transcription_timestamp_text = f.read()
 
@@ -94,7 +97,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     ts_to_topic_mapping_top_1 = {}
     ts_to_topic_mapping_top_2 = {}
 
-    # Also create a mapping of the different timestamps in which each topic was covered
+    # Also create a mapping of the different timestamps
+    # in which each topic was covered
     topic_to_ts_mapping_top_1 = collections.defaultdict(list)
     topic_to_ts_mapping_top_2 = collections.defaultdict(list)
 
@@ -105,7 +109,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
         topic_similarities = []
         for item in range(len(agenda)):
             item_doc = nlp(agenda[item])
-            # if not doc_transcription or not all(token.has_vector for token in doc_transcription):
+            # if not doc_transcription or not all
+            # (token.has_vector for token in doc_transcription):
             if not doc_transcription:
                 continue
             similarity = doc_transcription.similarity(item_doc)
@@ -129,8 +134,10 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
         :param record:
         :return:
         """
-        record["ts_to_topic_mapping_top_1"] = ts_to_topic_mapping_top_1[record["timestamp"]]
-        record["ts_to_topic_mapping_top_2"] = ts_to_topic_mapping_top_2[record["timestamp"]]
+        record["ts_to_topic_mapping_top_1"] = \
+            ts_to_topic_mapping_top_1[record["timestamp"]]
+        record["ts_to_topic_mapping_top_2"] = \
+            ts_to_topic_mapping_top_2[record["timestamp"]]
         return record
 
     df = df.apply(create_new_columns, axis=1)
@@ -151,7 +158,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Save df, mappings for further experimentation
     df_name = "df"
     if real_time:
-        df_name = "real_time_" + df_name + "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
+        df_name = "real_time_" + df_name + "_" +\
+                  timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         df_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     df.to_pickle(df_name)
@@ -161,7 +169,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
     mappings_name = "mappings"
     if real_time:
-        mappings_name = "real_time_" + mappings_name + "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
+        mappings_name = "real_time_" + mappings_name + "_" +\
+                        timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         mappings_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     pickle.dump(my_mappings, open(mappings_name, "wb"))
@@ -197,6 +206,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
             transform=st.Scalers.dense_rank
     )
     if real_time:
-        open('./artefacts/real_time_scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        open('./artefacts/real_time_scatter_' +
+             timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
     else:
-        open('./artefacts/scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        open('./artefacts/scatter_' +
+             timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
