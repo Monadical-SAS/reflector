@@ -160,9 +160,6 @@ cython_debug/
 #.idea/
 
 *.mp4
-summary.txt
-transcript.txt
-transcript_timestamps.txt
 *.html
 *.pkl
 transcript_*.txt
@@ -176,3 +173,4 @@ test_samples/
 .DS_Store/
 .DS_Store
 .vscode/
+artefacts/

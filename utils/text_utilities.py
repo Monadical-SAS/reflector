@@ -6,8 +6,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import BartForConditionalGeneration, BartTokenizer
 
-from log_utils import logger
-from run_utils import config
+from utils.log_utils import logger
+from utils.run_utils import config
 
 nltk.download('punkt', quiet=True)
 
@@ -186,7 +186,7 @@ def summarize(transcript_text, timestamp,
         decoded_summaries = [tokenizer.decode(summary, skip_special_tokens=True, clean_up_tokenization_spaces=False)
                              for summary in summaries]
         summary = " ".join(decoded_summaries)
-        with open(output_filename, 'w') as f:
+        with open("./artefacts/" + output_filename, 'w') as f:
             f.write(summary.strip() + "\n")
     else:
         logger.info("Breaking transcript into smaller chunks")

@@ -127,7 +127,7 @@ def main():
         audio_filename = media_file
 
     logger.info("Finished extracting audio")
-
+    logger.info("Transcribing")
     # Convert the audio to text using the OpenAI Whisper model
     pipeline = FlaxWhisperPipline("openai/whisper-" + WHISPER_MODEL_SIZE,
                                   dtype=jnp.float16,
@@ -157,13 +157,14 @@ def main():
     create_talk_diff_scatter_viz(NOW)
 
     # S3 : Push artefacts to S3 bucket
+    prefix = "./artefacts/"
     suffix = NOW.strftime("%m-%d-%Y_%H:%M:%S")
-    files_to_upload = ["transcript_" + suffix + ".txt",
-                       "transcript_with_timestamp_" + suffix + ".txt",
-                       "df_" + suffix + ".pkl",
-                       "wordcloud_" + suffix + ".png",
-                       "mappings_" + suffix + ".pkl",
-                       "scatter_" + suffix + ".html"]
+    files_to_upload = [prefix + "transcript_" + suffix + ".txt",
+                       prefix + "transcript_with_timestamp_" + suffix + ".txt",
+                       prefix + "df_" + suffix + ".pkl",
+                       prefix + "wordcloud_" + suffix + ".png",
+                       prefix + "mappings_" + suffix + ".pkl",
+                       prefix + "scatter_" + suffix + ".html"]
     upload_files(files_to_upload)
 
     summarize(transcript_text, NOW, False, False)

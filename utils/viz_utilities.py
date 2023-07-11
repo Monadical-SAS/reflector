@@ -52,7 +52,7 @@ def create_wordcloud(timestamp, real_time=False):
     else:
         wordcloud_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
-    plt.savefig(wordcloud_name)
+    plt.savefig("./artefacts/" + wordcloud_name)
 
 
 def create_talk_diff_scatter_viz(timestamp, real_time=False):
@@ -77,10 +77,10 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Load the transcription with timestamp
     filename = ""
     if real_time:
-        filename = "real_time_transcript_with_timestamp_" +\
+        filename = "./artefacts/real_time_transcript_with_timestamp_" +\
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
-        filename = "transcript_with_timestamp_" +\
+        filename = "./artefacts/transcript_with_timestamp_" +\
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     with open(filename) as f:
         transcription_timestamp_text = f.read()
@@ -162,7 +162,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         df_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
-    df.to_pickle(df_name)
+    df.to_pickle("./artefacts/" + df_name)
 
     my_mappings = [ts_to_topic_mapping_top_1, ts_to_topic_mapping_top_2,
                    topic_to_ts_mapping_top_1, topic_to_ts_mapping_top_2]
@@ -173,7 +173,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                         timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         mappings_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
-    pickle.dump(my_mappings, open(mappings_name, "wb"))
+    pickle.dump(my_mappings, open("./artefacts/" + mappings_name, "wb"))
 
     # to load,  my_mappings = pickle.load( open ("mappings.pkl", "rb") )
 
@@ -187,27 +187,28 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
     topic_times = sorted(topic_times.items(), key=lambda x: x[1], reverse=True)
 
-    cat_1 = topic_times[0][0]
-    cat_1_name = topic_times[0][0]
-    cat_2_name = topic_times[1][0]
+    if len(topic_times) > 1:
+        cat_1 = topic_times[0][0]
+        cat_1_name = topic_times[0][0]
+        cat_2_name = topic_times[1][0]
 
-    # Scatter plot of topics
-    df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
-    corpus = st.CorpusFromParsedDocuments(
-            df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
-    ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
-    html = st.produce_scattertext_explorer(
-            corpus,
-            category=cat_1,
-            category_name=cat_1_name,
-            not_category_name=cat_2_name,
-            minimum_term_frequency=0, pmi_threshold_coefficient=0,
-            width_in_pixels=1000,
-            transform=st.Scalers.dense_rank
-    )
-    if real_time:
-        open('./artefacts/real_time_scatter_' +
-             timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
-    else:
-        open('./artefacts/scatter_' +
-             timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        # Scatter plot of topics
+        df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
+        corpus = st.CorpusFromParsedDocuments(
+                df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
+        ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
+        html = st.produce_scattertext_explorer(
+                corpus,
+                category=cat_1,
+                category_name=cat_1_name,
+                not_category_name=cat_2_name,
+                minimum_term_frequency=0, pmi_threshold_coefficient=0,
+                width_in_pixels=1000,
+                transform=st.Scalers.dense_rank
+        )
+        if real_time:
+            open('./artefacts/real_time_scatter_' +
+                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+        else:
+            open('./artefacts/scatter_' +
+                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
