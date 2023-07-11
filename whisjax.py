@@ -18,10 +18,10 @@ import moviepy.editor
 import moviepy.editor
 import nltk
 import yt_dlp as youtube_dl
-from utils.log_utils import logger
 from whisper_jax import FlaxWhisperPipline
 
 from utils.file_utils import upload_files, download_files
+from utils.log_utils import logger
 from utils.text_utilities import summarize, post_process_transcription
 from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
 

@@ -2,12 +2,13 @@ import configparser
 
 import nltk
 import torch
-from log_utils import logger
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import BartTokenizer, BartForConditionalGeneration
+
+from log_utils import logger
 
 nltk.download('punkt', quiet=True)
 

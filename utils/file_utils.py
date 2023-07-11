@@ -2,6 +2,7 @@ import configparser
 
 import boto3
 import botocore
+
 from log_utils import logger
 
 config = configparser.ConfigParser()
