@@ -15,7 +15,7 @@ from av import AudioFifo
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
 
-from utils.server_utils import run_in_executor
+from utils.run_utils import run_in_executor
 
 transcription = ""
 
@@ -44,10 +44,10 @@ def channel_send(channel, message):
     if channel:
         channel.send(message)
         print(
-            "Bytes handled :",
-            total_bytes_handled,
-            " Time : ",
-            datetime.datetime.now() - start_time,
+                "Bytes handled :",
+                total_bytes_handled,
+                " Time : ",
+                datetime.datetime.now() - start_time,
         )
 
 
@@ -86,12 +86,12 @@ class AudioStreamTrack(MediaStreamTrack):
         audio_buffer.write(frame)
         if local_frames := audio_buffer.read_many(256 * 960, partial=False):
             whisper_result = run_in_executor(
-                get_transcription, local_frames, executor=executor
+                    get_transcription, local_frames, executor=executor
             )
             whisper_result.add_done_callback(
-                lambda f: channel_send(data_channel, str(whisper_result.result()))
-                if (f.result())
-                else None
+                    lambda f: channel_send(data_channel, str(whisper_result.result()))
+                    if (f.result())
+                    else None
             )
         return frame
 
@@ -140,10 +140,10 @@ async def offer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return web.Response(
-        content_type="application/json",
-        text=json.dumps(
-            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
-        ),
+            content_type="application/json",
+            text=json.dumps(
+                    { "sdp": pc.localDescription.sdp, "type": pc.localDescription.type }
+            ),
     )
 
 

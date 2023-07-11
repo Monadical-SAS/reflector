@@ -13,11 +13,10 @@ from whisper_jax import FlaxWhisperPipline
 
 from utils.file_utils import upload_files
 from utils.log_utils import logger
-from utils.text_utilities import summarize, post_process_transcription
-from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
+from utils.run_utils import config
+from utils.text_utilities import post_process_transcription, summarize
+from utils.viz_utilities import create_talk_diff_scatter_viz, create_wordcloud
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 
@@ -37,12 +36,12 @@ def main():
             AUDIO_DEVICE_ID = i
     audio_devices = p.get_device_info_by_index(AUDIO_DEVICE_ID)
     stream = p.open(
-        format=FORMAT,
-        channels=CHANNELS,
-        rate=RATE,
-        input=True,
-        frames_per_buffer=FRAMES_PER_BUFFER,
-        input_device_index=int(audio_devices['index'])
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            frames_per_buffer=FRAMES_PER_BUFFER,
+            input_device_index=int(audio_devices['index'])
     )
 
     pipeline = FlaxWhisperPipline("openai/whisper-" + config["DEFAULT"]["WHISPER_REAL_TIME_MODEL_SIZE"],
@@ -60,7 +59,7 @@ def main():
             global proceed
             proceed = False
 
-    transcript_with_timestamp = {"text": "", "chunks": []}
+    transcript_with_timestamp = { "text": "", "chunks": [] }
     last_transcribed_time = 0.0
 
     listener = keyboard.Listener(on_press=on_press)
@@ -90,10 +89,10 @@ def main():
             if end is None:
                 end = start + 15.0
             duration = end - start
-            item = {'timestamp': (last_transcribed_time, last_transcribed_time + duration),
-                    'text': whisper_result['text'],
-                    'stats': (str(end_time - start_time), str(duration))
-                    }
+            item = { 'timestamp': (last_transcribed_time, last_transcribed_time + duration),
+                     'text': whisper_result['text'],
+                     'stats': (str(end_time - start_time), str(duration))
+                     }
             last_transcribed_time = last_transcribed_time + duration
             transcript_with_timestamp["chunks"].append(item)
             transcription += whisper_result['text']

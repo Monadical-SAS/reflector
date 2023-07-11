@@ -20,17 +20,14 @@ import nltk
 import yt_dlp as youtube_dl
 from whisper_jax import FlaxWhisperPipline
 
-from utils.file_utils import upload_files, download_files
+from utils.file_utils import download_files, upload_files
 from utils.log_utils import logger
-from utils.text_utilities import summarize, post_process_transcription
-from utils.viz_utilities import create_wordcloud, create_talk_diff_scatter_viz
+from utils.run_utils import config
+from utils.text_utilities import post_process_transcription, summarize
+from utils.viz_utilities import create_talk_diff_scatter_viz, create_wordcloud
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
-
-# Configurations can be found in config.ini. Set them properly before executing
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 NOW = datetime.now()
@@ -42,8 +39,8 @@ def init_argparse() -> argparse.ArgumentParser:
     :return: parser object
     """
     parser = argparse.ArgumentParser(
-        usage="%(prog)s [OPTIONS] <LOCATION> <OUTPUT>",
-        description="Creates a transcript of a video or audio file, then summarizes it using ChatGPT."
+            usage="%(prog)s [OPTIONS] <LOCATION> <OUTPUT>",
+            description="Creates a transcript of a video or audio file, then summarizes it using ChatGPT."
     )
 
     parser.add_argument("-l", "--language", help="Language that the summary should be written in", type=str,
@@ -74,13 +71,13 @@ def main():
 
             # Create options for the download
             ydl_opts = {
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'outtmpl': 'audio',  # Specify the output file path and name
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                            'key': 'FFmpegExtractAudio',
+                            'preferredcodec': 'mp3',
+                            'preferredquality': '192',
+                    }],
+                    'outtmpl': 'audio',  # Specify the output file path and name
             }
 
             # Download the audio

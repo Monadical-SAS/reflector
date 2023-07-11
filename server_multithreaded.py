@@ -1,5 +1,5 @@
 import asyncio
-import configparser
+from utils.run_utils import config
 import datetime
 import io
 import json
@@ -8,9 +8,9 @@ import threading
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
-from aiohttp import web
 
 import jax.numpy as jnp
+from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import (MediaRelay)
 from av import AudioFifo
@@ -18,12 +18,9 @@ from sortedcontainers import SortedDict
 from whisper_jax import FlaxWhisperPipline
 
 from utils.log_utils import logger
-from utils.server_utils import Mutex
+from utils.run_utils import Mutex
 
 ROOT = os.path.dirname(__file__)
-
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 pcs = set()
@@ -91,10 +88,10 @@ def get_transcription():
                 wf.close()
 
                 whisper_result = pipeline(out_file.getvalue())
-                item = {'text': whisper_result["text"],
-                        'start_time': str(frames[0].time),
-                        'time': str(datetime.datetime.now())
-                        }
+                item = { 'text': whisper_result["text"],
+                         'start_time': str(frames[0].time),
+                         'time': str(datetime.datetime.now())
+                         }
                 sorted_message_queue[frames[0].time] = str(item)
                 start_messaging_thread()
             except Exception as e:
@@ -177,10 +174,10 @@ async def offer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return web.Response(
-        content_type="application/json",
-        text=json.dumps(
-            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
-        ),
+            content_type="application/json",
+            text=json.dumps(
+                    { "sdp": pc.localDescription.sdp, "type": pc.localDescription.type }
+            ),
     )
 
 
@@ -196,5 +193,5 @@ if __name__ == "__main__":
     start_transcription_thread(6)
     app.router.add_post("/offer", offer)
     web.run_app(
-        app, access_log=None, host="127.0.0.1", port=1250
+            app, access_log=None, host="127.0.0.1", port=1250
     )
