@@ -12,37 +12,27 @@ from concurrent.futures import ThreadPoolExecutor
 import jax.numpy as jnp
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import (MediaRelay)
+from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
 from sortedcontainers import SortedDict
 from whisper_jax import FlaxWhisperPipline
-
 from utils.log_utils import logger
 from utils.run_utils import Mutex
 
-ROOT = os.path.dirname(__file__)
-
-WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_REAL_TIME_MODEL_SIZE"]
 pcs = set()
 relay = MediaRelay()
 data_channel = None
 sorted_message_queue = SortedDict()
-
 CHANNELS = 2
 RATE = 44100
 CHUNK_SIZE = 256
-
-audio_buffer = AudioFifo()
 pipeline = FlaxWhisperPipline("openai/whisper-" + WHISPER_MODEL_SIZE,
                               dtype=jnp.float16,
                               batch_size=16)
-
-transcription = ""
 start_time = datetime.datetime.now()
-total_bytes_handled = 0
-
 executor = ThreadPoolExecutor()
-
+audio_buffer = AudioFifo()
 frame_lock = Mutex(audio_buffer)
 
 
