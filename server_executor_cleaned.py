@@ -39,6 +39,7 @@ def channel_send(channel, message):
 
 
 def get_transcription(frames):
+    print("Transcribing..")
     out_file = io.BytesIO()
     wf = wave.open(out_file, "wb")
     wf.setnchannels(CHANNELS)
@@ -93,7 +94,7 @@ async def offer(request):
     def log_info(msg, *args):
         logger.info(pc_id + " " + msg, *args)
 
-    log_info("Created for %s", request.remote)
+    log_info("Created for " + request.remote)
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -110,14 +111,14 @@ async def offer(request):
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
-        log_info("Connection state is %s", pc.connectionState)
+        log_info("Connection state is " + pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
 
     @pc.on("track")
     def on_track(track):
-        log_info("Track %s received", track.kind)
+        log_info("Track " + track.kind + " received")
         pc.addTrack(AudioStreamTrack(relay.subscribe(track)))
 
     await pc.setRemoteDescription(offer)
