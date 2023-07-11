@@ -30,6 +30,9 @@ nltk.download('stopwords', quiet=True)
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 NOW = datetime.now()
 
+if not os.path.exists('./artefacts'):
+    os.makedirs('./artefacts')
+
 
 def init_argparse() -> argparse.ArgumentParser:
     """
