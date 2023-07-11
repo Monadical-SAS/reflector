@@ -1,9 +1,7 @@
 import asyncio
-from utils.run_utils import config
 import datetime
 import io
 import json
-import os
 import threading
 import uuid
 import wave
@@ -16,8 +14,9 @@ from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
 from sortedcontainers import SortedDict
 from whisper_jax import FlaxWhisperPipline
+
 from utils.log_utils import logger
-from utils.run_utils import Mutex
+from utils.run_utils import config, Mutex
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_REAL_TIME_MODEL_SIZE"]
 pcs = set()
