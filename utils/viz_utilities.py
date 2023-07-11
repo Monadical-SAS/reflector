@@ -1,6 +1,5 @@
 import ast
 import collections
-import configparser
 import os
 import pickle
 from pathlib import Path
@@ -10,10 +9,7 @@ import pandas as pd
 import scattertext as st
 import spacy
 from nltk.corpus import stopwords
-from wordcloud import WordCloud, STOPWORDS
-
-config = configparser.ConfigParser()
-config.read('config.ini')
+from wordcloud import STOPWORDS, WordCloud
 
 en = spacy.load('en_core_web_md')
 spacy_stopwords = en.Defaults.stop_words
@@ -92,11 +88,11 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # create df for processing
     df = pd.DataFrame.from_dict(res["chunks"])
 
-    covered_items = {}
+    covered_items = { }
     # ts: timestamp
     # Map each timestamped chunk with top1 and top2 matched agenda
-    ts_to_topic_mapping_top_1 = {}
-    ts_to_topic_mapping_top_2 = {}
+    ts_to_topic_mapping_top_1 = { }
+    ts_to_topic_mapping_top_2 = { }
 
     # Also create a mapping of the different timestamps in which each topic was covered
     topic_to_ts_mapping_top_1 = collections.defaultdict(list)
@@ -189,16 +185,16 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Scatter plot of topics
     df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
     corpus = st.CorpusFromParsedDocuments(
-        df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
+            df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
     ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
     html = st.produce_scattertext_explorer(
-        corpus,
-        category=cat_1,
-        category_name=cat_1_name,
-        not_category_name=cat_2_name,
-        minimum_term_frequency=0, pmi_threshold_coefficient=0,
-        width_in_pixels=1000,
-        transform=st.Scalers.dense_rank
+            corpus,
+            category=cat_1,
+            category_name=cat_1_name,
+            not_category_name=cat_2_name,
+            minimum_term_frequency=0, pmi_threshold_coefficient=0,
+            width_in_pixels=1000,
+            transform=st.Scalers.dense_rank
     )
     if real_time:
         open('./artefacts/real_time_scatter_' + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)

@@ -1,6 +1,6 @@
 import ast
 import asyncio
-import configparser
+from utils.run_utils import config
 import time
 import uuid
 
@@ -12,12 +12,10 @@ from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
 from utils.log_utils import logger
-from utils.server_utils import Mutex
+from utils.run_utils import Mutex
 
 file_lock = Mutex(open("test_sm_6.txt", "a"))
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 
 class StreamClient:
@@ -42,7 +40,7 @@ class StreamClient:
         self.time_start = None
         self.queue = asyncio.Queue()
         self.player = MediaPlayer(':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
-                                  format='avfoundation', options={'channels': '2'})
+                                  format='avfoundation', options={ 'channels': '2' })
 
     def stop(self):
         self.loop.run_until_complete(self.signaling.close())
@@ -127,8 +125,8 @@ class StreamClient:
         await pc.setLocalDescription(await pc.createOffer())
 
         sdp = {
-            "sdp": pc.localDescription.sdp,
-            "type": pc.localDescription.type
+                "sdp": pc.localDescription.sdp,
+                "type": pc.localDescription.type
         }
 
         @stamina.retry(on=httpx.HTTPError, attempts=5)

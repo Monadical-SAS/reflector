@@ -6,14 +6,12 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from transformers import BartTokenizer, BartForConditionalGeneration
-
+from transformers import BartForConditionalGeneration, BartTokenizer
+from run_utils import config
 from log_utils import logger
 
 nltk.download('punkt', quiet=True)
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 
 def preprocess_sentence(sentence):
@@ -74,7 +72,7 @@ def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
 
     for sent in nonduplicate_sentences:
         temp_result = ""
-        seen = {}
+        seen = { }
         words = nltk.word_tokenize(sent)
         n_gram_filter = 3
         for i in range(len(words)):
