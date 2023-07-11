@@ -38,7 +38,7 @@ class StreamClient:
         self.time_start = None
         self.queue = asyncio.Queue()
         self.player = MediaPlayer(':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
-                                  format='avfoundation', options={ 'channels': '2' })
+                                  format='avfoundation', options={'channels': '2'})
 
     def stop(self):
         self.loop.run_until_complete(self.signaling.close())

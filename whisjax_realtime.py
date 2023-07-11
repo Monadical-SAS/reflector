@@ -57,7 +57,7 @@ def main():
             global proceed
             proceed = False
 
-    transcript_with_timestamp = { "text": "", "chunks": [] }
+    transcript_with_timestamp = {"text": "", "chunks": []}
     last_transcribed_time = 0.0
 
     listener = keyboard.Listener(on_press=on_press)
@@ -87,10 +87,10 @@ def main():
             if end is None:
                 end = start + 15.0
             duration = end - start
-            item = { 'timestamp': (last_transcribed_time, last_transcribed_time + duration),
-                     'text': whisper_result['text'],
-                     'stats': (str(end_time - start_time), str(duration))
-                     }
+            item = {'timestamp': (last_transcribed_time, last_transcribed_time + duration),
+                    'text': whisper_result['text'],
+                    'stats': (str(end_time - start_time), str(duration))
+                    }
             last_transcribed_time = last_transcribed_time + duration
             transcript_with_timestamp["chunks"].append(item)
             transcription += whisper_result['text']
