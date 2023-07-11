@@ -1,7 +1,6 @@
 import ast
 import asyncio
 import configparser
-from utils.log_utils import logger
 import time
 import uuid
 
@@ -12,6 +11,7 @@ import stamina
 from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
+from utils.log_utils import logger
 from utils.server_utils import Mutex
 
 file_lock = Mutex(open("test_sm_6.txt", "a"))

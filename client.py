@@ -1,11 +1,13 @@
 import argparse
 import asyncio
 import signal
+from utils.log_utils import logger
 
 from aiortc.contrib.signaling import (add_signaling_arguments,
                                       create_signaling)
 
 from stream_client import StreamClient
+
 
 async def main():
     parser = argparse.ArgumentParser(description="Data channels ping/pong")
@@ -35,17 +37,17 @@ async def main():
 
     async def shutdown(signal, loop):
         """Cleanup tasks tied to the service's shutdown."""
-        logging.info(f"Received exit signal {signal.name}...")
-        logging.info("Closing database connections")
-        logging.info("Nacking outstanding messages")
+        logger.info(f"Received exit signal {signal.name}...")
+        logger.info("Closing database connections")
+        logger.info("Nacking outstanding messages")
         tasks = [t for t in asyncio.all_tasks() if t is not
                  asyncio.current_task()]
 
         [task.cancel() for task in tasks]
 
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
+        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
-        logging.info(f"Flushing metrics")
+        logger.info(f"Flushing metrics")
         loop.stop()
 
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)

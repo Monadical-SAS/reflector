@@ -1,14 +1,17 @@
 import argparse
 import os
 import tempfile
+
 import moviepy.editor
+import nltk
+import whisper
 from loguru import logger
 from transformers import BartTokenizer, BartForConditionalGeneration
-import whisper
-import nltk
+
 nltk.download('punkt', quiet=True)
 
 WHISPER_MODEL_SIZE = "base"
+
 
 def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -30,6 +33,7 @@ def init_argparse() -> argparse.ArgumentParser:
 
     return parser
 
+
 # NLTK chunking function
 def chunk_text(txt, max_chunk_length=500):
     "Split text into smaller chunks."
@@ -45,6 +49,7 @@ def chunk_text(txt, max_chunk_length=500):
     chunks.append(current_chunk.strip())
     return chunks
 
+
 # BART summary function
 def summarize_chunks(chunks, tokenizer, model):
     summaries = []
@@ -55,6 +60,7 @@ def summarize_chunks(chunks, tokenizer, model):
         summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
         summaries.append(summary)
     return summaries
+
 
 def main():
     import sys
@@ -103,7 +109,7 @@ def main():
     chunks = chunk_text(whisper_result['text'])
 
     logger.info(
-        f"Transcript broken into {len(chunks)} chunks of at most 500 words") # TODO fix variable
+        f"Transcript broken into {len(chunks)} chunks of at most 500 words")  # TODO fix variable
 
     logger.info(f"Writing summary text in {args.language} to: {args.output}")
     with open(args.output, 'w') as f:
@@ -113,6 +119,7 @@ def main():
             f.write(summary.strip() + "\n\n")
 
     logger.info("Summarization completed")
+
 
 if __name__ == "__main__":
     main()
