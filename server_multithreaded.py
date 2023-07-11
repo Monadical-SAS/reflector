@@ -8,6 +8,7 @@ import wave
 from concurrent.futures import ThreadPoolExecutor
 
 import jax.numpy as jnp
+import requests
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
@@ -77,10 +78,11 @@ def get_transcription():
                 wf.close()
 
                 whisper_result = pipeline(out_file.getvalue())
-                item = { 'text': whisper_result["text"],
-                         'start_time': str(frames[0].time),
-                         'time': str(datetime.datetime.now())
-                         }
+                item = {
+                        'text': whisper_result["text"],
+                        'start_time': str(frames[0].time),
+                        'time': str(datetime.datetime.now())
+                }
                 sorted_message_queue[frames[0].time] = str(item)
                 start_messaging_thread()
             except Exception as e:
@@ -89,7 +91,7 @@ def get_transcription():
 
 class AudioStreamTrack(MediaStreamTrack):
     """
-    A video stream track that transforms frames from an another track.
+    An audio stream track to send audio frames.
     """
 
     kind = "audio"
@@ -109,15 +111,13 @@ def start_messaging_thread():
     message_thread.start()
 
 
-def start_transcription_thread(max_threads):
-    t_threads = []
+def start_transcription_thread(max_threads: int):
     for i in range(max_threads):
         t_thread = threading.Thread(target=get_transcription, args=(i,))
-        t_threads.append(t_thread)
         t_thread.start()
 
 
-async def offer(request):
+async def offer(request: requests.Request):
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -125,7 +125,7 @@ async def offer(request):
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
 
-    def log_info(msg, *args):
+    def log_info(msg: str, *args):
         logger.info(pc_id + " " + msg, *args)
 
     log_info("Created for %s", request.remote)
@@ -138,7 +138,7 @@ async def offer(request):
         start_time = datetime.datetime.now()
 
         @channel.on("message")
-        def on_message(message):
+        def on_message(message: str):
             channel_log(channel, "<", message)
             if isinstance(message, str) and message.startswith("ping"):
                 # reply
@@ -164,13 +164,14 @@ async def offer(request):
     await pc.setLocalDescription(answer)
     return web.Response(
             content_type="application/json",
-            text=json.dumps(
-                    { "sdp": pc.localDescription.sdp, "type": pc.localDescription.type }
-            ),
+            text=json.dumps({
+                    "sdp": pc.localDescription.sdp,
+                    "type": pc.localDescription.type
+            }),
     )
 
 
-async def on_shutdown(app):
+async def on_shutdown(app: web.Application):
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()

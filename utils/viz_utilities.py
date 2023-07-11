@@ -88,11 +88,11 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # create df for processing
     df = pd.DataFrame.from_dict(res["chunks"])
 
-    covered_items = { }
+    covered_items = {}
     # ts: timestamp
     # Map each timestamped chunk with top1 and top2 matched agenda
-    ts_to_topic_mapping_top_1 = { }
-    ts_to_topic_mapping_top_2 = { }
+    ts_to_topic_mapping_top_1 = {}
+    ts_to_topic_mapping_top_2 = {}
 
     # Also create a mapping of the different timestamps in which each topic was covered
     topic_to_ts_mapping_top_1 = collections.defaultdict(list)

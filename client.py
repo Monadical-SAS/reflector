@@ -64,7 +64,6 @@ async def main():
             ping_pong=args.ping_pong
     )
     await sc.start()
-    print("Stream client started")
     async for msg in sc.get_reader():
         print(msg)
 

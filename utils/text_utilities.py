@@ -70,7 +70,7 @@ def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
 
     for sent in nonduplicate_sentences:
         temp_result = ""
-        seen = { }
+        seen = {}
         words = nltk.word_tokenize(sent)
         n_gram_filter = 3
         for i in range(len(words)):
