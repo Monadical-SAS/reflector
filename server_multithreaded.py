@@ -65,6 +65,7 @@ def get_transcription():
                 transcribe = True
 
         if transcribe:
+            print("Transcribing..")
             try:
                 sorted_message_queue[frames[0].time] = None
                 out_file = io.BytesIO()
@@ -113,7 +114,7 @@ def start_messaging_thread():
 
 def start_transcription_thread(max_threads: int):
     for i in range(max_threads):
-        t_thread = threading.Thread(target=get_transcription, args=(i,))
+        t_thread = threading.Thread(target=get_transcription)
         t_thread.start()
 
 
@@ -128,7 +129,7 @@ async def offer(request: requests.Request):
     def log_info(msg: str, *args):
         logger.info(pc_id + " " + msg, *args)
 
-    log_info("Created for %s", request.remote)
+    log_info("Created for " + request.remote)
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -146,14 +147,14 @@ async def offer(request: requests.Request):
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
-        log_info("Connection state is %s", pc.connectionState)
+        log_info("Connection state is " + pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
 
     @pc.on("track")
     def on_track(track):
-        log_info("Track %s received", track.kind)
+        log_info("Track " + track.kind + " received")
         pc.addTrack(AudioStreamTrack(relay.subscribe(track)))
 
     # handle offer

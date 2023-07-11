@@ -6,18 +6,18 @@ from threading import Lock
 from typing import ContextManager, Generic, TypeVar
 
 
-class ConfigParser:
-    __config = configparser.ConfigParser()
-
-    def __init__(self, config_file='../config.ini'):
-        self.__config.read(config_file)
+class ReflectorConfig:
+    __config = None
 
     @staticmethod
     def get_config():
-        return ConfigParser.__config
+        if ReflectorConfig.__config is None:
+            ReflectorConfig.__config = configparser.ConfigParser()
+            ReflectorConfig.__config.read('utils/config.ini')
+        return ReflectorConfig.__config
 
 
-config = ConfigParser.get_config()
+config = ReflectorConfig.get_config()
 
 
 def run_in_executor(func, *args, executor=None, **kwargs):
