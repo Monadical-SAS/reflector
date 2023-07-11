@@ -1,13 +1,12 @@
-import configparser
+import sys
 
 import boto3
 import botocore
-from loguru import logger
 
-config = configparser.ConfigParser()
-config.read('config.ini')
+from .log_utils import logger
+from .run_utils import config
 
-BUCKET_NAME = 'reflector-bucket'
+BUCKET_NAME = config["DEFAULT"]["BUCKET_NAME"]
 
 s3 = boto3.client('s3',
                   aws_access_key_id=config["DEFAULT"]["AWS_ACCESS_KEY"],
@@ -17,8 +16,8 @@ s3 = boto3.client('s3',
 def upload_files(files_to_upload):
     """
     Upload a list of files to the configured S3 bucket
-    :param files_to_upload:
-    :return:
+    :param files_to_upload: List of files to upload
+    :return: None
     """
     for KEY in files_to_upload:
         logger.info("Uploading file " + KEY)
@@ -31,8 +30,8 @@ def upload_files(files_to_upload):
 def download_files(files_to_download):
     """
     Download a list of files from the configured S3 bucket
-    :param files_to_download:
-    :return:
+    :param files_to_download: List of files to download
+    :return: None
     """
     for KEY in files_to_download:
         logger.info("Downloading file " + KEY)
@@ -46,8 +45,6 @@ def download_files(files_to_download):
 
 
 if __name__ == "__main__":
-    import sys
-
     if sys.argv[1] == "download":
         download_files([sys.argv[2]])
     elif sys.argv[1] == "upload":

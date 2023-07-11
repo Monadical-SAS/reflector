@@ -1,7 +1,5 @@
 import ast
 import asyncio
-import configparser
-import logging
 import time
 import uuid
 
@@ -12,13 +10,10 @@ import stamina
 from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
-from utils.server_utils import Mutex
+from utils.log_utils import logger
+from utils.run_utils import config, Mutex
 
-logger = logging.getLogger("pc")
 file_lock = Mutex(open("test_sm_6.txt", "a"))
-
-config = configparser.ConfigParser()
-config.read('config.ini')
 
 
 class StreamClient:
@@ -42,14 +37,15 @@ class StreamClient:
         self.pcs = set()
         self.time_start = None
         self.queue = asyncio.Queue()
-        self.player = MediaPlayer(':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
-                                  format='avfoundation', options={'channels': '2'})
+        self.player = MediaPlayer(
+                ':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
+                format='avfoundation',
+                options={'channels': '2'})
 
     def stop(self):
         self.loop.run_until_complete(self.signaling.close())
         self.loop.run_until_complete(self.pc.close())
         # self.loop.close()
-        print("ended")
 
     def create_local_tracks(self, play_from):
         if play_from:
@@ -58,7 +54,6 @@ class StreamClient:
         else:
             if self.relay is None:
                 self.relay = MediaRelay()
-            print("Created local track from microphone stream")
             return self.relay.subscribe(self.player.audio), None
 
     def channel_log(self, channel, t, message):
@@ -122,14 +117,15 @@ class StreamClient:
                 self.channel_log(channel, "<", message)
 
                 if isinstance(message, str) and message.startswith("pong"):
-                    elapsed_ms = (self.current_stamp() - int(message[5:])) / 1000
+                    elapsed_ms = (self.current_stamp() - int(message[5:]))\
+                                 / 1000
                     print(" RTT %.2f ms" % elapsed_ms)
 
         await pc.setLocalDescription(await pc.createOffer())
 
         sdp = {
-            "sdp": pc.localDescription.sdp,
-            "type": pc.localDescription.type
+                "sdp": pc.localDescription.sdp,
+                "type": pc.localDescription.type
         }
 
         @stamina.retry(on=httpx.HTTPError, attempts=5)
@@ -142,7 +138,7 @@ class StreamClient:
         answer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
         await pc.setRemoteDescription(answer)
 
-        self.reader = self.worker(f"worker", self.queue)
+        self.reader = self.worker(f'{"worker"}', self.queue)
 
     def get_reader(self):
         return self.reader

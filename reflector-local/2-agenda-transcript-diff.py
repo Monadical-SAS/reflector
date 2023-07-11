@@ -1,6 +1,8 @@
 import argparse
+
 import spacy
 from loguru import logger
+
 
 # Define the paths for agenda and transcription files
 def init_argparse() -> argparse.ArgumentParser:
@@ -11,6 +13,8 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument("agenda", help="Location of the agenda file")
     parser.add_argument("transcription", help="Location of the transcription file")
     return parser
+
+
 args = init_argparse().parse_args()
 agenda_path = args.agenda
 transcription_path = args.transcription
@@ -19,7 +23,7 @@ transcription_path = args.transcription
 spaCy_model = "en_core_web_md"
 nlp = spacy.load(spaCy_model)
 nlp.add_pipe('sentencizer')
-logger.info("Loaded spaCy model " + spaCy_model )
+logger.info("Loaded spaCy model " + spaCy_model)
 
 # Load the agenda
 with open(agenda_path, "r") as f:

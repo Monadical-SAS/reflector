@@ -1,10 +1,13 @@
 import argparse
+
 import nltk
+
 nltk.download('stopwords')
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 from heapq import nlargest
 from loguru import logger
+
 
 # Function to initialize the argument parser
 def init_argparse():
@@ -17,11 +20,13 @@ def init_argparse():
     parser.add_argument("--num_sentences", type=int, default=5, help="Number of sentences to include in the summary")
     return parser
 
+
 # Function to read the input transcript file
 def read_transcript(file_path):
     with open(file_path, "r") as file:
         transcript = file.read()
     return transcript
+
 
 # Function to preprocess the text by removing stop words and special characters
 def preprocess_text(text):
@@ -29,6 +34,7 @@ def preprocess_text(text):
     words = word_tokenize(text)
     words = [w.lower() for w in words if w.isalpha() and w.lower() not in stop_words]
     return words
+
 
 # Function to score each sentence based on the frequency of its words and return the top sentences
 def summarize_text(text, num_sentences):
@@ -61,6 +67,7 @@ def summarize_text(text, num_sentences):
 
     return " ".join(summary)
 
+
 def main():
     # Initialize the argument parser and parse the arguments
     parser = init_argparse()
@@ -81,6 +88,7 @@ def main():
         f.write(summary)
 
     logger.info("Summarization completed")
+
 
 if __name__ == "__main__":
     main()
