@@ -175,7 +175,7 @@ def main():
     logger.info("Summarization completed")
 
     # Summarization takes a lot of time, so do this separately at the end
-    files_to_upload = ["summary_" + suffix + ".txt"]
+    files_to_upload = [prefix + "summary_" + suffix + ".txt"]
     upload_files(files_to_upload)
 
 
