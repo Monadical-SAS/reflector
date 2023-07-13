@@ -85,13 +85,13 @@ def main():
                             'preferredcodec': 'mp3',
                             'preferredquality': '192',
                     }],
-                    'outtmpl': 'audio',  # Specify output file path and name
+                    'outtmpl': './artefacts/audio',  # Specify output file path and name
             }
 
             # Download the audio
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([args.location])
-            media_file = "audio.mp3"
+            media_file = "./artefacts/audio.mp3"
 
             logger.info("Saved downloaded YouTube video to: " + media_file)
         else:
@@ -106,8 +106,8 @@ def main():
             download_files([media_file])
 
         if media_file.endswith(".m4a"):
-            subprocess.run(["ffmpeg", "-i", media_file, f"{media_file}.mp4"])
-            media_file = f"{media_file}.mp4"
+            subprocess.run(["ffmpeg", "-i", media_file, f"./artefacts/{media_file}.mp4"])
+            media_file = f"./artefacts/{media_file}.mp4"
     else:
         print("Unsupported URL scheme: " + url.scheme)
         quit()
