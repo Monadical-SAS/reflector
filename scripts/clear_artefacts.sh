@@ -16,9 +16,15 @@ summary_file_pattern="summary_*.txt"
 pickle_file_pattern="*.pkl"
 html_file_pattern="*.html"
 png_file_pattern="wordcloud*.png"
+mp3_file_pattern="*.mp3"
+mp4_file_pattern="*.mp4"
+m4a_file_pattern="*.m4a"
 
 find "$directory" -type f -name "$transcript_file_pattern" -delete
 find "$directory" -type f -name "$summary_file_pattern" -delete
 find "$directory" -type f -name "$pickle_file_pattern" -delete
 find "$directory" -type f -name "$html_file_pattern" -delete
 find "$directory" -type f -name "$png_file_pattern" -delete
+find "$directory" -type f -name "$mp3_file_pattern" -delete
+find "$directory" -type f -name "$mp4_file_pattern" -delete
+find "$directory" -type f -name "$m4a_file_pattern" -delete
