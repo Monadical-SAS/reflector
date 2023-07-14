@@ -3,7 +3,7 @@
 
 import openai
 
-openai.api_key = "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"
+openai.api_key = ""
 
 # to caption, user prompt used : "caption this conversation"
 #             max_tokens=20
@@ -21,10 +21,16 @@ conversation = [
      "content": "summarize this conversation in a few sentences by taking key points"}
 ]
 
-response = openai.ChatCompletion.create(model="gpt-3.5-turbo",
+model = "gpt-3.5-turbo"
+response = openai.ChatCompletion.create(model=model,
                                         messages=conversation,
                                         n=1,
                                         max_tokens=300)
 
-caption = response.choices[0].message.content.strip()
+# Try finetuned model
+# model = "davinci:ft-personal-2023-07-14-10-43-51"
+# response = openai.Completion.create(model=model,
+#                                         prompt=sample_chunks[0] + " -> ")
+
+caption = response.choices[0]
 print(caption)
