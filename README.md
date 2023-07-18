@@ -1,34 +1,73 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Reflector React App
 
-## Getting Started
+Reflector is a React application that uses WebRTC to stream audio from the browser to a server and receive live transcription and topics from the server.
 
-First, run the development server:
+## Table of Contents
+
+- [Reflector React App](#reflector-react-app)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Run the Application](#run-the-application)
+  - [WebRTC Integration](#webrtc-integration)
+  - [Contribution Guidelines](#contribution-guidelines)
+
+## Installation
+
+To install the application, run:
+
+```bash
+npm install
+```
+
+## Run the Application
+
+To run the application in development mode, run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## WebRTC Integration
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+The main part of the WebRTC integration is located in the `useWebRTC` hook in the `hooks/useWebRTC.js` file. This hook initiates a WebRTC connection when an audio stream is available, sends signal data to the server, and listens for data from the server.
 
-## Learn More
+To connect the application with your server, you need to implement the following:
 
-To learn more about Next.js, take a look at the following resources:
+1. **Signal Data Sending**: In the `useWebRTC` hook, when a `'signal'` event is emitted, the hook logs the signal data to the console. You should replace this logging with sending the data to the server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```jsx
+peer.on('signal', data => {
+  // This is where you send the signal data to the server.
+});
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+2. **Data Receiving**: The `useWebRTC` hook listens for `'data'` event and when it is emitted, it sets the received data to the `data` state:
 
-## Deploy on Vercel
+```jsx
+peer.on('data', data => {
+  // Received data from the server.
+  const serverData = JSON.parse(data.toString());
+  setData(serverData);
+});
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The received data is expected to be a JSON object containing the live transcription and topics:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+```json
+{
+  "transcription": "live transcription...",
+  "topics": [
+    { "title": "topic 1", "description": "description 1" },
+    { "title": "topic 2", "description": "description 2" },
+    // ...
+  ]
+}
+```
+
+This data is then returned from the `useWebRTC` hook and can be used in your components.
+
+## Contribution Guidelines
+
+All new contributions should be made to the `development` branch. Before any code is merged into `master`, it requires a code review by Andreas.
