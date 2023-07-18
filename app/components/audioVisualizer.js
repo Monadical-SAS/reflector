@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 
-function AudioVisualizer() {
+function AudioVisualizer(props) {
     const canvasRef = useRef(null);
 
     useEffect(() => {
@@ -29,6 +29,8 @@ function AudioVisualizer() {
                     analyser.getByteFrequencyData(dataArray);
                     context.fillStyle = '#000';
                     context.fillRect(0, 0, canvas.width, canvas.height);
+
+
                     for (let i = 0; i < bufferLength; i++) {
                         barHeight = dataArray[i];
 
@@ -49,7 +51,10 @@ function AudioVisualizer() {
         return () => cancelAnimationFrame(animationFrameId);
     }, []);
 
-    return <canvas className='w-full h-16' ref={canvasRef} />;
+    return <>
+        <p>Is recording: {props.isRecording ? "true" : "false"}</p>
+        <canvas className='w-full h-16' ref={canvasRef} />
+            </>;
 }
 
 export default AudioVisualizer;
