@@ -57,3 +57,4 @@ stamina==23.1.0
 httpx==0.24.1
 sortedcontainers==2.4.0
 https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz
+gpt4all==1.0.5
