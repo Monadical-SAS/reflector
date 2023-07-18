@@ -38,7 +38,7 @@ To connect the application with your server, you need to implement the following
 1. **Signal Data Sending**: In the `useWebRTC` hook, when a `'signal'` event is emitted, the hook logs the signal data to the console. You should replace this logging with sending the data to the server:
 
 ```jsx
-peer.on('signal', data => {
+peer.on("signal", (data) => {
   // This is where you send the signal data to the server.
 });
 ```
@@ -46,7 +46,7 @@ peer.on('signal', data => {
 2. **Data Receiving**: The `useWebRTC` hook listens for `'data'` event and when it is emitted, it sets the received data to the `data` state:
 
 ```jsx
-peer.on('data', data => {
+peer.on("data", (data) => {
   // Received data from the server.
   const serverData = JSON.parse(data.toString());
   setData(serverData);
@@ -60,7 +60,7 @@ The received data is expected to be a JSON object containing the live transcript
   "transcription": "live transcription...",
   "topics": [
     { "title": "topic 1", "description": "description 1" },
-    { "title": "topic 2", "description": "description 2" },
+    { "title": "topic 2", "description": "description 2" }
     // ...
   ]
 }

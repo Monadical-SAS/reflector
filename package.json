@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "autoprefixer": "10.4.14",
@@ -17,5 +18,12 @@
     "simple-peer": "^9.11.1",
     "supports-color": "^9.4.0",
     "tailwindcss": "^3.3.2"
+  },
+  "main": "index.js",
+  "repository": "https://github.com/Monadical-SAS/reflector-ui.git",
+  "author": "Koper <andreas@monadical.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.0.0"
   }
 }
