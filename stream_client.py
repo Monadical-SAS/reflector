@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import time
 import uuid
@@ -11,9 +10,7 @@ from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
 from utils.log_utils import logger
-from utils.run_utils import config, Mutex
-
-file_lock = Mutex(open("test_sm_6.txt", "a"))
+from utils.run_utils import config
 
 
 class StreamClient:
@@ -146,10 +143,7 @@ class StreamClient:
     async def worker(self, name, queue):
         while True:
             msg = await self.queue.get()
-            msg = ast.literal_eval(msg)
-            with file_lock.lock() as file:
-                file.write(msg["text"])
-            yield msg["text"]
+            yield msg
             self.queue.task_done()
 
     async def start(self):
