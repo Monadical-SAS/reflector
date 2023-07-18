@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import time
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +13,7 @@ from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
-
+from gpt4all import GPT4All
 from utils.run_utils import run_in_executor
 
 pcs = set()
@@ -26,6 +27,28 @@ CHANNELS = 2
 RATE = 48000
 audio_buffer = AudioFifo()
 executor = ThreadPoolExecutor()
+transcription_text = ""
+llm = GPT4All("/Users/gokulmohanarangan/Library/Application Support/nomic.ai/GPT4All/ggml-vicuna-13b-1.1-q4_2.bin")
+
+
+def get_title_and_summary():
+    global transcription_text
+    output = None
+    if len(transcription_text) > 1000:
+        print("Generating title and summary")
+        prompt = f"""
+        ### Human:
+        Create a JSON object having 2 fields: title and summary. For the title field generate a short title for the given
+         text and for the summary field, summarize the given text by creating 3 key points.
+
+        {transcription_text}
+        
+        ### Assistant:
+        """
+        transcription_text = ""
+        output = llm.generate(prompt)
+        return str(output)
+    return output
 
 
 def channel_log(channel, t, message):
@@ -34,8 +57,8 @@ def channel_log(channel, t, message):
 
 def channel_send(channel, message):
     # channel_log(channel, ">", message)
-    if channel:
-        channel.send(message)
+    if channel and message:
+        channel.send(str(message))
 
 
 def get_transcription(frames):
@@ -50,9 +73,9 @@ def get_transcription(frames):
         wf.writeframes(b"".join(frame.to_ndarray()))
     wf.close()
     whisper_result = pipeline(out_file.getvalue(), return_timestamps=True)
-    with open("test_exec.txt", "a") as f:
-        f.write(whisper_result["text"])
-    whisper_result['start_time'] = [f.time for f in frames]
+    # whisper_result['start_time'] = [f.time for f in frames]
+    global transcription_text
+    transcription_text += whisper_result["text"]
     return whisper_result
 
 
@@ -75,9 +98,15 @@ class AudioStreamTrack(MediaStreamTrack):
                     get_transcription, local_frames, executor=executor
             )
             whisper_result.add_done_callback(
-                    lambda f: channel_send(data_channel,
-                                           str(whisper_result.result()))
-                    if (f.result())
+                    lambda f: channel_send(data_channel, whisper_result.result())
+                    if f.result()
+                    else None
+            )
+            llm_result = run_in_executor(get_title_and_summary,
+                                         executor=executor)
+            llm_result.add_done_callback(
+                    lambda f: channel_send(data_channel, llm_result.result())
+                    if f.result()
                     else None
             )
         return frame
