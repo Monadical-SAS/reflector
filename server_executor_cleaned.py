@@ -58,7 +58,7 @@ def channel_log(channel, t, message):
 def channel_send(channel, message):
     # channel_log(channel, ">", message)
     if channel and message:
-        channel.send(str(message))
+        channel.send(json.dumps(message))
 
 
 def get_transcription(frames):
