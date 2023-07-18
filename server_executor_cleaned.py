@@ -5,6 +5,7 @@ import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
 
+import aiohttp_cors
 import jax.numpy as jnp
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
@@ -14,14 +15,12 @@ from gpt4all import GPT4All
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
 
-from utils.run_utils import run_in_executor, config
+from utils.run_utils import config, run_in_executor
 
 pcs = set()
 relay = MediaRelay()
 data_channel = None
-pipeline = FlaxWhisperPipline("openai/whisper-tiny",
-                              dtype=jnp.float16,
-                              batch_size=16)
+pipeline = FlaxWhisperPipline("openai/whisper-tiny", dtype=jnp.float16, batch_size=16)
 
 CHANNELS = 2
 RATE = 48000
@@ -96,19 +95,18 @@ class AudioStreamTrack(MediaStreamTrack):
         audio_buffer.write(frame)
         if local_frames := audio_buffer.read_many(256 * 960, partial=False):
             whisper_result = run_in_executor(
-                    get_transcription, local_frames, executor=executor
+                get_transcription, local_frames, executor=executor
             )
             whisper_result.add_done_callback(
-                    lambda f: channel_send(data_channel, whisper_result.result())
-                    if f.result()
-                    else None
+                lambda f: channel_send(data_channel, whisper_result.result())
+                if f.result()
+                else None
             )
-            llm_result = run_in_executor(get_title_and_summary,
-                                         executor=executor)
+            llm_result = run_in_executor(get_title_and_summary, executor=executor)
             llm_result.add_done_callback(
-                    lambda f: channel_send(data_channel, llm_result.result())
-                    if f.result()
-                    else None
+                lambda f: channel_send(data_channel, llm_result.result())
+                if f.result()
+                else None
             )
         return frame
 
@@ -156,11 +154,10 @@ async def offer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return web.Response(
-            content_type="application/json",
-            text=json.dumps(
-                    {"sdp": pc.localDescription.sdp,
-                     "type": pc.localDescription.type}
-            ),
+        content_type="application/json",
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
     )
 
 
@@ -172,6 +169,17 @@ async def on_shutdown(app):
 
 if __name__ == "__main__":
     app = web.Application()
+
+    cors = aiohttp_cors.setup(
+        app,
+        defaults={
+            "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True, expose_headers="*", allow_headers="*"
+            )
+        },
+    )
+
+    offer_resource = cors.add(app.router.add_resource("/offer"))
+    cors.add(offer_resource.add_route("POST", offer))
     app.on_shutdown.append(on_shutdown)
-    app.router.add_post("/offer", offer)
     web.run_app(app, access_log=None, host="127.0.0.1", port=1250)
