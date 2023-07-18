@@ -11,24 +11,35 @@ const App = () => {
   
   
   const handleRecord = (recording) => {
+    console.log("handleRecord", recording);
+
     setIsRecording(recording);
     setSplashScreen(false);
+
+    if (recording)
+    {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(setStream)
+        .catch(err => console.error(err));
+    } else if (!recording) {
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        setStream(null);
+      }
+
+      setIsRecording(false);
+    }
   };
   
   const [stream, setStream] = useState(null);
   const serverData = useWebRTC(stream);
   console.log(serverData);
 
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(setStream)
-      .catch(err => console.error(err));
-  }, []);
-  
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
         {splashScreen && <Record isRecording={isRecording} onRecord={(recording) => handleRecord(recording)} /> }
-        {!splashScreen && <Dashboard />}
+        {!splashScreen && <Dashboard isRecording={isRecording} onRecord={(recording) => handleRecord(recording)} />}
       </div>
     );
 
