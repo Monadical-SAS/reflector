@@ -1,7 +1,6 @@
 import asyncio
 import io
 import json
-import time
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
@@ -11,9 +10,10 @@ from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
+from gpt4all import GPT4All
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
-from gpt4all import GPT4All
+
 from utils.run_utils import run_in_executor
 
 pcs = set()
