@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import Record from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
+import "../public/button.css";
 
 const App = () => {
   const [isRecording, setIsRecording] = useState(false);
