@@ -2,7 +2,7 @@ import { Mulberry32 } from '../utils.js'
 import React, { useState, useEffect } from 'react';
 import AudioVisualizer from './audioVisualizer.js';
 
-export function Dashboard()
+export function Dashboard(props)
 {
     const [openIndex, setOpenIndex] = useState(null);
     const [liveTranscript, setLiveTranscript] = useState("");
@@ -107,7 +107,15 @@ export function Dashboard()
                     {liveTranscript}
                 </div>
             </div>
-                <AudioVisualizer />
+                <AudioVisualizer isRecording={props.isRecording} />
+
+                <button
+                    onClick={() => props.onRecord(!props.isRecording)}
+                    className={`px-4 py-2 mb-4 text-2xl font-bold rounded ${props.isRecording ? 'bg-red-500' : 'bg-blue-500'}`}
+                >
+                    {props.isRecording ? 'STOP' : 'RESUME'}
+                </button>
+
         </div>
     </>
 );
