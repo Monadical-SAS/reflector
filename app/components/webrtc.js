@@ -40,7 +40,7 @@ const useWebRTC = (stream) => {
     peer.on("data", (data) => {
       // Received data from the server.
       console.log(data.toString())
-      const serverData = JSON.parse(data.toString().replace(/&quot;/ig,'"'));
+      const serverData = JSON.parse(data.toString());
       setData(serverData);
     });
 
