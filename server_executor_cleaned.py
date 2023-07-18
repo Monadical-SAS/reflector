@@ -28,6 +28,7 @@ RATE = 48000
 audio_buffer = AudioFifo()
 executor = ThreadPoolExecutor()
 transcription_text = ""
+# Load your locally downloaded Vicuna model and load it here. Set this path in the config.ini file
 llm = GPT4All(config["DEFAULT"]["LLM_PATH"])
 
 
