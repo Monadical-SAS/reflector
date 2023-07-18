@@ -56,10 +56,7 @@ function AudioVisualizer(props) {
   }, []);
 
   return (
-    <>
-      <p>Is recording: {props.isRecording ? "true" : "false"}</p>
-      <canvas className="w-full h-16" ref={canvasRef} />
-    </>
+    <canvas className="w-full h-16" ref={canvasRef} />
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Record from "./components/record.js";
+import Recorder from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
 import "../public/button.css";
@@ -36,19 +36,27 @@ const App = () => {
   console.log(serverData);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      {splashScreen && (
-        <Record
-          isRecording={isRecording}
-          onRecord={(recording) => handleRecord(recording)}
-        />
-      )}
+    <div className="flex flex-col items-center h-[100svh]">
+      <div className="text-center py-6 mt-10">
+        <h1 className="text-5xl font-bold text-blue-500">Reflector</h1>
+        <p className="text-gray-500">Capture The Signal, Not The Noise</p>
+      </div>
+
+      <Recorder
+        isRecording={isRecording}
+        onRecord={(recording) => handleRecord(recording)}
+      />
+
       {!splashScreen && (
         <Dashboard
           isRecording={isRecording}
           onRecord={(recording) => handleRecord(recording)}
         />
       )}
+
+      <footer className="w-full bg-gray-800 text-center py-4 mt-auto text-white">
+        Reflector © 2023 Monadical
+      </footer>
     </div>
   );
 };
