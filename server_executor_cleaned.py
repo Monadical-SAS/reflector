@@ -14,7 +14,7 @@ from gpt4all import GPT4All
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
 
-from utils.run_utils import run_in_executor
+from utils.run_utils import run_in_executor, config
 
 pcs = set()
 relay = MediaRelay()
@@ -28,7 +28,8 @@ RATE = 48000
 audio_buffer = AudioFifo()
 executor = ThreadPoolExecutor()
 transcription_text = ""
-llm = GPT4All("/Users/gokulmohanarangan/Library/Application Support/nomic.ai/GPT4All/ggml-vicuna-13b-1.1-q4_2.bin")
+# Load your locally downloaded Vicuna model and load it here. Set this path in the config.ini file
+llm = GPT4All(config["DEFAULT"]["LLM_PATH"])
 
 
 def get_title_and_summary():
