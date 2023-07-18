@@ -1,12 +1,9 @@
 import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
-import AudioVisualizer from "./audioVisualizer.js";
 
 export function Dashboard(props) {
   const [openIndex, setOpenIndex] = useState(null);
   const [liveTranscript, setLiveTranscript] = useState("");
-
-  const [fakeTranscriptIndex, setFakeTranscriptIndex] = useState(0);
 
   const fakeTranscripts = [
     "This is the first transcript. We are discussing the current situation of our company. We are currently leading the market with a significant margin, and our future outlook is also very promising...",
@@ -104,11 +101,7 @@ export function Dashboard(props) {
 
   return (
     <>
-      <div className="w-3/4 py-4">
-        <div className="text-center py-6">
-          <h1 className="text-4xl font-bold text-blue-500">Reflector</h1>
-          <p className="text-gray-500">Capture The Signal, Not The Noise</p>
-        </div>
+      <div className="p-4">
         <div className="flex justify-between border-b-2">
           <div className="w-1/4">Timestamp</div>
           <div className="w-1/4">Topic</div>
@@ -136,11 +129,11 @@ export function Dashboard(props) {
               </div>
             </div>
             {openIndex === index && (
-              <div className="mt-2 p-2 bg-white">{item.transcript}</div>
+              <div className="mt-2 p-2">{item.transcript}</div>
             )}
           </div>
         ))}
-        <div className="border-b-2 py-2">
+        <div className="border-b-2 py-2 w-[90vw] max-w-[1280px]">
           <div className="flex justify-between">
             <div className="w-1/4">Live</div>
             <div className="w-1/4">Transcript</div>
@@ -148,21 +141,9 @@ export function Dashboard(props) {
               {generateDecibelGraph(generateDecibelData())}
             </div>
           </div>
-          <div className="mt-2 p-2 bg-white">{liveTranscript}</div>
+          <div className="mt-2 p-2">{liveTranscript}</div>
         </div>
-        <AudioVisualizer isRecording={props.isRecording} />
 
-        <button
-          className="mx-auto mt-6 mb-9"
-          onClick={() => props.onRecord(!props.isRecording)}
-          data-color={props.isRecording ? "red" : "blue"}
-        >
-          {props.isRecording ? "STOP" : "RESUME"}
-        </button>
-
-        <footer className="w-full bg-gray-800 text-center py-4 mt-4 text-white">
-          Reflector © 2023 Monadical
-        </footer>
       </div>
     </>
   );
