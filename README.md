@@ -70,4 +70,4 @@ This data is then returned from the `useWebRTC` hook and can be used in your com
 
 ## Contribution Guidelines
 
-All new contributions should be made in a separate branch. Before any code is merged into `master`, it requires a code review by Andreas.
+All new contributions should be made in a separate branch. Before any code is merged into `master`, it requires a code review.
