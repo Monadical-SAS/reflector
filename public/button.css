@@ -1,0 +1,123 @@
+/* Define basic button styles */
+input[type="button"],
+button {
+  /* Reset default button styles */
+  border: none;
+  background-color: transparent;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  /* Visual */
+  background-color: #3e68ff;
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18);
+  /* Size */
+  padding: 0.25em 0.75em;
+  min-width: 10ch;
+  min-height: 44px;
+  /* Text */
+  text-align: center;
+  line-height: 1.1;
+  /* Display */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  /* Optional - see "Gotchas" */
+  /* Animation */
+  transition: 220ms all ease-in-out;
+  display: block;
+}
+
+/* Button modifiers */
+input[type="button"].small,
+button.small {
+  font-size: 1.15rem;
+}
+
+input[type="button"].block,
+button.block {
+  width: 100%;
+}
+
+/* Disabled styles */
+input[type="button"][disabled],
+button[disabled] {
+  border-color: #ccc;
+  background-color: #eee;
+  cursor: not-allowed;
+}
+
+input[type="button"][disabled]:hover,
+button[disabled]:hover {
+  background: #b8b8b8 !important;
+  cursor: not-allowed !important;
+}
+
+/* Custom button properties */
+input[type="button"],
+button {
+  width: 243px;
+  border: solid 1px #dadada;
+}
+
+/* Red button states */
+input[type="button"][data-color="red"],
+button[data-color="red"],
+input[type="button"][data-color="red"]:hover,
+button[data-color="red"]:hover,
+input[type="button"][data-color="red"]:active,
+button[data-color="red"]:active {
+  background-color: #cc3347;
+}
+
+/* Green button states */
+input[type="button"][data-color="green"],
+button[data-color="green"],
+input[type="button"][data-color="green"]:hover,
+button[data-color="green"]:hover,
+input[type="button"][data-color="green"]:active,
+button[data-color="green"]:active {
+  background-color: #33cc47;
+}
+
+/* Blue button states */
+input[type="button"][data-color="blue"],
+button[data-color="blue"],
+input[type="button"][data-color="blue"]:hover,
+button[data-color="blue"]:hover,
+input[type="button"][data-color="blue"]:active,
+button[data-color="blue"]:active {
+  background-color: #3347cc;
+}
+
+/* Orange button states */
+input[type="button"][data-color="orange"],
+button[data-color="orange"],
+input[type="button"][data-color="orange"]:hover,
+button[data-color="orange"]:hover,
+input[type="button"][data-color="orange"]:active,
+button[data-color="orange"]:active {
+  background-color: #ff7f00;
+}
+
+/* Purple button states */
+input[type="button"][data-color="purple"],
+button[data-color="purple"],
+input[type="button"][data-color="purple"]:hover,
+button[data-color="purple"]:hover,
+input[type="button"][data-color="purple"]:active,
+button[data-color="purple"]:active {
+  background-color: #800080;
+}
+
+/* Yellow button states */
+input[type="button"][data-color="yellow"],
+button[data-color="yellow"],
+input[type="button"][data-color="yellow"]:hover,
+button[data-color="yellow"]:hover,
+input[type="button"][data-color="yellow"]:active,
+button[data-color="yellow"]:active {
+  background-color: #ffff00;
+}

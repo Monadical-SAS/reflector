@@ -153,13 +153,16 @@ export function Dashboard(props) {
         <AudioVisualizer isRecording={props.isRecording} />
 
         <button
+          className="mx-auto mt-6 mb-9"
           onClick={() => props.onRecord(!props.isRecording)}
-          className={`px-4 py-2 mb-4 text-2xl font-bold rounded ${
-            props.isRecording ? "bg-red-500" : "bg-blue-500"
-          }`}
+          data-color={props.isRecording ? "red" : "blue"}
         >
           {props.isRecording ? "STOP" : "RESUME"}
         </button>
+
+        <footer className="w-full bg-gray-800 text-center py-4 mt-4 text-white">
+          Reflector © 2023 Monadical
+        </footer>
       </div>
     </>
   );
