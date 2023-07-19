@@ -3,16 +3,17 @@ import Peer from "simple-peer";
 
 const WebRTC_SERVER_URL = "http://127.0.0.1:1250/offer";
 
-const useWebRTC = (stream) => {
-  const [data, setData] = useState(null);
+const useWebRTC = (stream, setIsRecording) => {
+  const [data, setData] = useState({});
 
   useEffect(() => {
+    if (!stream) {
+      return;
+    }
+
     let peer = new Peer({ initiator: true, stream: stream });
 
     peer.on("signal", (data) => {
-      // This is where you'd send the signal data to the server.
-      // The server would then send it back to other peers who would then
-      // use `peer.signal()` method to continue the connection negotiation.
       if ("sdp" in data) {
         fetch(WebRTC_SERVER_URL, {
           body: JSON.stringify({
@@ -24,13 +25,9 @@ const useWebRTC = (stream) => {
           },
           method: "POST",
         })
-          .then(function (response) {
-            return response.json();
-          })
-          .then(function (answer) {
-            return peer.signal(answer);
-          })
-          .catch(function (e) {
+          .then((response) => response.json())
+          .then((answer) => peer.signal(answer))
+          .catch((e) => {
             alert(e);
           });
       }
@@ -41,17 +38,40 @@ const useWebRTC = (stream) => {
     });
 
     peer.on("data", (data) => {
-      // Received data from the server.
-      console.log(data.toString());
       const serverData = JSON.parse(data.toString());
-      setData(serverData);
+
+      switch (serverData.cmd) {
+        case "SHOW_TRANSCRIPTION":
+          setData((prevData) => ({
+            ...prevData,
+            text: serverData.text,
+          }));
+          break;
+        case "UPDATE_TOPICS":
+          setData((prevData) => ({
+            ...prevData,
+            topics: serverData.topics,
+          }));
+          break;
+        case "DISPLAY_FINAL_SUMMARY":
+          setData((prevData) => ({
+            ...prevData,
+            finalSummary: {
+              duration: serverData.duration,
+              summary: serverData.summary,
+            },
+          }));
+          setIsRecording(false);
+          break;
+        default:
+          console.error(`Unknown command ${serverData.cmd}`);
+      }
     });
 
-    // Clean up
     return () => {
       peer.destroy();
     };
-  }, [stream]);
+  }, [stream, setIsRecording]);
 
   return data;
 };
