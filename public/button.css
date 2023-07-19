@@ -45,7 +45,7 @@ button.block {
 input[type="button"][disabled],
 button[disabled] {
   border-color: #ccc;
-  background-color: #eee;
+  background: #b8b8b8 !important;
   cursor: not-allowed;
 }
 

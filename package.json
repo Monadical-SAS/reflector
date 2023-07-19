@@ -15,9 +15,11 @@
     "postcss": "8.4.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-dropdown": "^1.11.0",
     "simple-peer": "^9.11.1",
     "supports-color": "^9.4.0",
-    "tailwindcss": "^3.3.2"
+    "tailwindcss": "^3.3.2",
+    "wavesurfer.js": "^7.0.3"
   },
   "main": "index.js",
   "repository": "https://github.com/Monadical-SAS/reflector-ui.git",
