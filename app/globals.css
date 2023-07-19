@@ -27,3 +27,9 @@ body {
 
   font-family: "Roboto", sans-serif;
 }
+
+.temp-transcription
+{
+  background: beige;
+  border-radius: 5px;
+}
