@@ -29,7 +29,6 @@ const App = () => {
   };
 
   const serverData = useWebRTC(stream, setIsRecording);
-  const text = serverData?.text ?? "";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -43,7 +42,7 @@ const App = () => {
         <Dashboard
           isRecording={isRecording}
           onRecord={(recording) => handleRecord(recording)}
-          transcriptionText={text ?? "(No transcription text)"}
+          transcriptionText={serverData.text ?? "(No transcription text)"}
           finalSummary={serverData.finalSummary}
           topics={serverData.topics ?? []}
           stream={stream}
