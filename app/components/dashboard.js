@@ -141,7 +141,7 @@ export function Dashboard(props) {
               {generateDecibelGraph(generateDecibelData())}
             </div>
           </div>
-          <div className="mt-2 p-2">{liveTranscript}</div>
+          <div className="mt-2 p-2 bg-white temp-transcription">{props.transcriptionText}</div>
         </div>
 
       </div>
