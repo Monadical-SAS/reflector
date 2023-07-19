@@ -6,10 +6,15 @@ Reflector is a React application that uses WebRTC to stream audio from the brows
 
 - [Reflector React App](#reflector-react-app)
   - [Table of Contents](#table-of-contents)
+  - [Project Architecture](#project-architecture)
   - [Installation](#installation)
   - [Run the Application](#run-the-application)
   - [WebRTC Integration](#webrtc-integration)
   - [Contribution Guidelines](#contribution-guidelines)
+
+## Project Architecture
+
+![Project Architecture](ProjectArchitecture.jpg)
 
 ## Installation
 
