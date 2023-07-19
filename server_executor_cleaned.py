@@ -1,17 +1,18 @@
 import asyncio
+import datetime
 import io
 import json
 import uuid
 import wave
-import requests
 from concurrent.futures import ThreadPoolExecutor
+
 import aiohttp_cors
 import jax.numpy as jnp
+import requests
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
-import datetime
 from loguru import logger
 from whisper_jax import FlaxWhisperPipline
 
@@ -32,7 +33,6 @@ transcription_text = ""
 last_transcribed_time = 0.0
 LLM_MACHINE_IP = "216.153.52.83"
 LLM_MACHINE_PORT = "5000"
-
 LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 
 
