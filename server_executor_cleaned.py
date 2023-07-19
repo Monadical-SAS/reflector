@@ -169,7 +169,7 @@ class AudioStreamTrack(MediaStreamTrack):
                     else None
             )
 
-        if len(transcription_text) > 100:
+        if len(transcription_text) > 1500:
             llm_input_text = transcription_text
             transcription_text = ""
             llm_result = run_in_executor(get_title_and_summary,
