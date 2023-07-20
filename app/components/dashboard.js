@@ -13,31 +13,6 @@ export function Dashboard({
   const [openIndex, setOpenIndex] = useState(null);
   const [liveTranscript, setLiveTranscript] = useState("");
 
-  topics = topics.map((topic, i) => {
-    topic["decibel"] = generateDecibelData(i + 1 + 333); // for looks only
-    return topic;
-  });
-
-  const generateDecibelData = (x) => {
-    let data = [];
-    let random = Mulberry32(123456789 + x);
-    for (let i = 0; i < 50; i++) {
-      data.push(Math.floor(random() * 30) + 10); // generate random values between 10 and 40
-    }
-    return data;
-  };
-  const generateDecibelGraph = (decibelData) => {
-    return decibelData.map((decibel, i) => (
-      <div
-        key={i}
-        className="w-1 bg-blue-500 mr-0.5"
-        style={{ height: `${decibel}px` }}
-      >
-        &nbsp;
-      </div>
-    ));
-  };
-
   return (
     <>
       <div className="w-3/4 py-4">
@@ -69,7 +44,6 @@ export function Dashboard({
                 </span>
               </div>
               <div className="w-1/4 flex flex-row space-x-0.5">
-                {generateDecibelGraph(item.decibel)}
               </div>
             </div>
             {openIndex === index && (
@@ -83,7 +57,6 @@ export function Dashboard({
             <div className="w-1/4">Live</div>
             <div className="w-1/4">Transcript</div>
             <div className="w-1/4 flex flex-row space-x-0.5">
-              {generateDecibelGraph(generateDecibelData())}
             </div>
           </div>
           <div className="mt-2 p-2 bg-white temp-transcription">
