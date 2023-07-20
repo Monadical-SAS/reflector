@@ -10,7 +10,7 @@ const App = () => {
 
   // This is where you'd send the stream and receive the data from the server.
   // transcription, summary, etc
-  const serverData = useWebRTC(stream);
+  const serverData = useWebRTC(stream, () => {});
   const text = serverData?.text ?? "";
 
   return (
@@ -20,10 +20,12 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder setStream={setStream}/>
+      <Recorder setStream={setStream} onStop={() => serverData.peer.send(JSON.stringify({ cmd: 'STOP' }))}/>
       <Dashboard
-        serverData={serverData}
-        transcriptionText={`[${serverData?.timestamp?.substring(2) ?? "??"}] ${text}`}
+        transcriptionText={serverData.text ?? "(No transcription text)"}
+        finalSummary={serverData.finalSummary}
+        topics={serverData.topics ?? []}
+        stream={stream}
       />
 
       <footer className="w-full bg-gray-800 text-center py-4 mt-auto text-white">
