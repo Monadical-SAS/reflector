@@ -17,7 +17,7 @@
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: black;
   background: linear-gradient(
       to bottom,
       transparent,
@@ -28,8 +28,7 @@ body {
   font-family: "Roboto", sans-serif;
 }
 
-.temp-transcription
-{
+.temp-transcription {
   background: beige;
   border-radius: 5px;
 }
