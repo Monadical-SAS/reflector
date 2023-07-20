@@ -39,6 +39,7 @@ const useWebRTC = (stream, setIsRecording) => {
 
     peer.on("data", (data) => {
       const serverData = JSON.parse(data.toString());
+      console.log(serverData);
 
       switch (serverData.cmd) {
         case "SHOW_TRANSCRIPTION":
