@@ -47,7 +47,7 @@ export function Dashboard({
               </div>
             </div>
             {openIndex === index && (
-              <div className="mt-2 p-2 bg-white">{item.description}</div>
+              <div className="mt-2 p-2 bg-white">{item.transcript}</div>
             )}
           </div>
         ))}
