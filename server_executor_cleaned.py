@@ -38,7 +38,8 @@ incremental_responses = []
 sorted_transcripts = SortedDict()
 
 blacklisted_messages = [" Thank you.", " See you next time!",
-                        " Thank you for watching!", " Bye!"]
+                        " Thank you for watching!", " Bye!",
+                        " And that's what I'm talking about."]
 
 
 def get_title_and_summary(llm_input_text, last_timestamp):
@@ -71,6 +72,7 @@ def get_title_and_summary(llm_input_text, last_timestamp):
         response = requests.post(LLM_URL, headers=headers, json=data)
         output = json.loads(response.json()["results"][0]["text"])
         output["description"] = output.pop("summary")
+        output["transcript"] = llm_input_text
         output["timestamp"] =\
             str(datetime.timedelta(seconds=round(last_timestamp)))
         incremental_responses.append(output)
@@ -189,7 +191,7 @@ class AudioStreamTrack(MediaStreamTrack):
                     else None
             )
 
-        if len(transcription_text) > 25:
+        if len(transcription_text) > 500:
             llm_input_text = transcription_text
             transcription_text = ""
             llm_result = run_in_executor(get_title_and_summary,
