@@ -37,6 +37,9 @@ LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 incremental_responses = []
 sorted_transcripts = SortedDict()
 
+blacklisted_messages = [" Thank you.", " See you next time!",
+                        " Thank you for watching!", " Bye!"]
+
 
 def get_title_and_summary(llm_input_text, last_timestamp):
     print("Generating title and summary")
@@ -143,6 +146,22 @@ def get_transcription(frames):
     return result
 
 
+def get_final_summary_response():
+    final_summary = ""
+
+    # Collate inc summaries
+    for topic in incremental_responses:
+        final_summary += topic["description"]
+
+    response = {
+            "cmd": "DISPLAY_FINAL_SUMMARY",
+            "duration": str(datetime.timedelta(
+                    seconds=round(last_transcribed_time))),
+            "summary": final_summary
+    }
+    return response
+
+
 class AudioStreamTrack(MediaStreamTrack):
     """
     An audio stream track.
@@ -207,9 +226,17 @@ async def offer(request):
         @channel.on("message")
         def on_message(message):
             channel_log(channel, "<", message)
+            if json.loads(message)["cmd"] == "STOP":
+                # Place holder final summary
+                response = get_final_summary_response()
+                channel_send_increment(data_channel, response)
+                # To-do Add code to stop connection from server side here
+                # But have to handshake with client once
+                # pc.close()
 
             if isinstance(message, str) and message.startswith("ping"):
                 channel_send(channel, "pong" + message[4:])
+
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
