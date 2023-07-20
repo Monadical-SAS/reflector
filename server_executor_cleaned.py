@@ -106,7 +106,8 @@ def channel_send_transcript(channel):
             message = sorted_transcripts[least_time]
             if message:
                 del sorted_transcripts[least_time]
-                channel.send(json.dumps(message))
+                if message["text"] not in blacklisted_messages:
+                    channel.send(json.dumps(message))
         except Exception as e:
             print("Exception", str(e))
             pass
@@ -188,7 +189,7 @@ class AudioStreamTrack(MediaStreamTrack):
                     else None
             )
 
-        if len(transcription_text) > 1500:
+        if len(transcription_text) > 25:
             llm_input_text = transcription_text
             transcription_text = ""
             llm_result = run_in_executor(get_title_and_summary,
