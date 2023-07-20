@@ -4,7 +4,9 @@ import Peer from "simple-peer";
 const WebRTC_SERVER_URL = "http://127.0.0.1:1250/offer";
 
 const useWebRTC = (stream, setIsRecording) => {
-  const [data, setData] = useState({});
+  const [data, setData] = useState({
+    peer: null,
+  });
 
   useEffect(() => {
     if (!stream) {
@@ -35,6 +37,7 @@ const useWebRTC = (stream, setIsRecording) => {
 
     peer.on("connect", () => {
       console.log("WebRTC connected");
+      setData(prevData => ({ ...prevData, peer: peer }));
     });
 
     peer.on("data", (data) => {
