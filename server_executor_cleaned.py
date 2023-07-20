@@ -110,6 +110,11 @@ def channel_send_transcript(channel):
                 del sorted_transcripts[least_time]
                 if message["text"] not in blacklisted_messages:
                     channel.send(json.dumps(message))
+            # Due to exceptions if one of the earlier batches can't return
+            # a transcript, we don't want to be stuck waiting for the result
+            # With the threshold size of 3, we pop the first(lost) element
+            elif len(sorted_transcripts) >= 3:
+                del sorted_transcripts[least_time]
         except Exception as e:
             print("Exception", str(e))
             pass
