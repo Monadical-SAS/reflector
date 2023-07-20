@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Record from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
@@ -8,10 +8,9 @@ import "../public/button.css";
 const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [splashScreen, setSplashScreen] = useState(true);
+  const [stream, setStream] = useState(null);
 
   const handleRecord = (recording) => {
-    console.log("handleRecord", recording);
-
     setIsRecording(recording);
     setSplashScreen(false);
 
@@ -26,14 +25,10 @@ const App = () => {
         tracks.forEach((track) => track.stop());
         setStream(null);
       }
-
-      setIsRecording(false);
     }
   };
 
-  const [stream, setStream] = useState(null);
-  const serverData = useWebRTC(stream);
-  const text = serverData?.text ?? "";
+  const serverData = useWebRTC(stream, setIsRecording);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -47,7 +42,10 @@ const App = () => {
         <Dashboard
           isRecording={isRecording}
           onRecord={(recording) => handleRecord(recording)}
-          transcriptionText={`[${serverData?.timestamp?.substring(2) ?? "??"}] ${text}`}
+          transcriptionText={serverData.text ?? "(No transcription text)"}
+          finalSummary={serverData.finalSummary}
+          topics={serverData.topics ?? []}
+          stream={stream}
         />
       )}
     </div>
