@@ -19,14 +19,11 @@ const App = () => {
         .getUserMedia({ audio: true })
         .then(setStream)
         .catch((err) => console.error(err));
-    } else if (!recording) {
-      if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop());
-        setStream(null);
-      }
+    } else if (!recording && serverData.peer) {
+      serverData.peer.send(JSON.stringify({ cmd: 'STOP' }));
     }
   };
+
 
   const serverData = useWebRTC(stream, setIsRecording);
 
