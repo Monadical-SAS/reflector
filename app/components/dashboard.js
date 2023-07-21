@@ -12,7 +12,6 @@ export function Dashboard({
   stream,
 }) {
   const [openIndex, setOpenIndex] = useState(null);
-  const [liveTranscript, setLiveTranscript] = useState("");
 
   topics = [{timestamp: '[00:00]', transcript: 'Abcdef', title: 'This is the title'}];
 
