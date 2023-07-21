@@ -48,25 +48,18 @@ export function Dashboard({
         ))}
 
 
-        <div className="border-b-2 py-2">
-          <div className="flex justify-between">
-            <div className="w-1/4">Live</div>
-            <div className="w-1/4">Transcript</div>
-            <div className="w-1/4 flex flex-row space-x-0.5"></div>
-          </div>
-          <div className="mt-2 p-2 bg-white temp-transcription rounded">
-            {transcriptionText}
-          </div>
-        </div>
-
         {finalSummary && (
-          <div>
+          <div className="mt-2 p-2 bg-white temp-transcription rounded">
             <h2>Final Summary</h2>
             <p>Duration: {finalSummary.duration}</p>
             <p>{finalSummary.summary}</p>
           </div>
         )}
       </div>
+
+      <footer className="w-full bg-gray-800 text-white text-center py-4 fixed inset-x-0 bottom-0">
+        {transcriptionText}
+      </footer>
     </>
   );
 }

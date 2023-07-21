@@ -20,9 +20,6 @@ export default function RootLayout({ children }) {
         <main className="flex-grow">
           {children}
         </main>
-        <footer className="w-full bg-gray-800 text-white text-center py-4 fixed inset-x-0 bottom-0">
-          © 2023 Reflector, a product of Monadical
-        </footer>
         </body>
 
     </html>
