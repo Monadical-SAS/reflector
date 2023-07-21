@@ -6,12 +6,24 @@ import useWebRTC from "./components/webrtc.js";
 import "../public/button.css";
 
 const App = () => {
+  const [isRecording, setIsRecording] = useState(false);
   const [stream, setStream] = useState(null);
 
-  // This is where you'd send the stream and receive the data from the server.
-  // transcription, summary, etc
-  const serverData = useWebRTC(stream);
-  const text = serverData?.text ?? "";
+  const handleRecord = (recording) => {
+    setIsRecording(recording);
+
+    if (recording) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then(setStream)
+        .catch((err) => console.error(err));
+    } else if (!recording && serverData.peer) {
+      serverData.peer.send(JSON.stringify({ cmd: 'STOP' }));
+    }
+  };
+
+
+  const serverData = useWebRTC(stream, setIsRecording);
 
   return (
     <div className="flex flex-col items-center h-[100svh]">
@@ -20,15 +32,15 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder setStream={setStream}/>
+      <Recorder setStream={setStream} />
       <Dashboard
-        serverData={serverData}
-        transcriptionText={`[${serverData?.timestamp?.substring(2) ?? "??"}] ${text}`}
+        isRecording={isRecording}
+        onRecord={(recording) => handleRecord(recording)}
+        transcriptionText={serverData.text ?? "(No transcription text)"}
+        finalSummary={serverData.finalSummary}
+        topics={serverData.topics ?? []}
+        stream={stream}
       />
-
-      <footer className="w-full bg-gray-800 text-center py-4 mt-auto text-white">
-        Reflector © 2023 Monadical
-      </footer>
     </div>
   );
 };
