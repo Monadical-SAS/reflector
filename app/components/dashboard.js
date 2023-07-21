@@ -15,7 +15,7 @@ export function Dashboard({
 
   return (
     <>
-      <div className="w-3/4 py-4">
+      <div className="flex-grow w-3/4 py-4">
         <div className="text-center py-6">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>
@@ -57,7 +57,7 @@ export function Dashboard({
         )}
       </div>
 
-      <footer className="w-full bg-gray-800 text-white text-center py-4 fixed inset-x-0 bottom-0 text-2xl">
+      <footer className="w-full bg-gray-800 text-white text-center py-4 text-2xl">
         {transcriptionText}
       </footer>
     </>
