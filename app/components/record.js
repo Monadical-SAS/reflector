@@ -88,7 +88,7 @@ export default function Recorder(props) {
 
 
   return (
-    <div className="flex flex-col items-center justify-center max-w-[90vw] w-full">
+    <div className="flex flex-col items-center justify-center max-w-[75vw] w-full">
       <div className="flex my-2 mx-auto">
         <Dropdown options={ddOptions} onChange={handleDropdownChange} value={ddOptions[0]} />
         &nbsp;
