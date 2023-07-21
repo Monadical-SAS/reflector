@@ -13,8 +13,6 @@ export function Dashboard({
 }) {
   const [openIndex, setOpenIndex] = useState(null);
 
-  topics = [{timestamp: '[00:00]', transcript: 'Abcdef', title: 'This is the title'}];
-
   return (
     <>
       <div className="w-3/4 py-4">
