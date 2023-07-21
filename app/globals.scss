@@ -8,14 +8,6 @@
   --background-end-rgb: 255, 255, 255;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 32, 32, 32;
-    --background-end-rgb: 32, 32, 32;
-  }
-}
-
 body {
   background: linear-gradient(
       to bottom,
@@ -25,6 +17,7 @@ body {
     rgb(var(--background-start-rgb));
 
   font-family: "Roboto", sans-serif;
+  color: var(--foreground-rgb);
 }
 
 .temp-transcription {
