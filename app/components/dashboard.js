@@ -16,8 +16,7 @@ export function Dashboard({
     <>
       <div className="w-3/4 py-4">
         <div className="text-center py-6">
-          <h1 className="text-4xl font-bold text-blue-500">Reflector</h1>
-          <p className="text-gray-500">Capture The Signal, Not The Noise</p>
+          <h1 className="text-2xl font-bold text-blue-500">Meeting Topics</h1>
         </div>
         <div className="flex justify-between border-b-2">
           <div className="w-1/4">Timestamp</div>
