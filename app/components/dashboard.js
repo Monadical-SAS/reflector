@@ -16,7 +16,7 @@ export function Dashboard({
     <>
       <div className="w-3/4 py-4">
         <div className="text-center py-6">
-          <h1 className="text-2xl font-bold text-blue-500">Meeting Topics</h1>
+          <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>
         <div className="flex justify-between border-b-2">
           <div className="w-1/4">Timestamp</div>
