@@ -14,7 +14,10 @@ export function Dashboard({
 
   return (
     <>
-      <div className="p-4">
+      <div className="w-3/4 py-4">
+        <div className="text-center py-6">
+          <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
+        </div>
         <div className="flex justify-between border-b-2">
           <div className="w-1/4">Timestamp</div>
           <div className="w-1/4">Topic</div>
@@ -38,21 +41,19 @@ export function Dashboard({
                   {">"}
                 </span>
               </div>
-              <div className="w-1/4 flex flex-row space-x-0.5">
-              </div>
+              <div className="w-1/4 flex flex-row space-x-0.5"></div>
             </div>
             {openIndex === index && (
-              <div className="mt-2 p-2">{item.transcript}</div>
+              <div className="mt-2 p-2 bg-white">{item.transcript}</div>
             )}
           </div>
         ))}
 
-        <div className="border-b-2 py-2 w-[90vw] max-w-[1280px]">
+        <div className="border-b-2 py-2">
           <div className="flex justify-between">
             <div className="w-1/4">Live</div>
             <div className="w-1/4">Transcript</div>
-            <div className="w-1/4 flex flex-row space-x-0.5">
-            </div>
+            <div className="w-1/4 flex flex-row space-x-0.5"></div>
           </div>
           <div className="mt-2 p-2 bg-white temp-transcription">
             {transcriptionText}
@@ -66,7 +67,6 @@ export function Dashboard({
             <p>{finalSummary.summary}</p>
           </div>
         )}
-
       </div>
     </>
   );

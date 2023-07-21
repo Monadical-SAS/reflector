@@ -11,7 +11,6 @@ const App = () => {
   // This is where you'd send the stream and receive the data from the server.
   // transcription, summary, etc
   const serverData = useWebRTC(stream, () => {});
-  const text = serverData?.text ?? "";
 
   return (
     <div className="flex flex-col items-center h-[100svh]">
@@ -22,15 +21,11 @@ const App = () => {
 
       <Recorder setStream={setStream} onStop={() => serverData.peer.send(JSON.stringify({ cmd: 'STOP' }))}/>
       <Dashboard
-        transcriptionText={serverData.text ?? "(No transcription text)"}
+        transcriptionText={serverData.text ?? "..."}
         finalSummary={serverData.finalSummary}
         topics={serverData.topics ?? []}
         stream={stream}
       />
-
-      <footer className="w-full bg-gray-800 text-center py-4 mt-auto text-white">
-        Reflector © 2023 Monadical
-      </footer>
     </div>
   );
 };
