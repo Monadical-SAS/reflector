@@ -100,7 +100,6 @@ export default function Recorder(props) {
       record.stopRecording();
       setIsRecording(false);
       document.getElementById("play-btn").disabled = false;
-      props.onStop()
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { deviceId },
