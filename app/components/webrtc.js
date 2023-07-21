@@ -37,7 +37,7 @@ const useWebRTC = (stream, setIsRecording) => {
 
     peer.on("connect", () => {
       console.log("WebRTC connected");
-      setData(prevData => ({ ...prevData, peer: peer }));
+      setData((prevData) => ({ ...prevData, peer: peer }));
     });
 
     peer.on("data", (data) => {

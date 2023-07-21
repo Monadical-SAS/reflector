@@ -1,6 +1,5 @@
 import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
-import AudioVisualizer from "./audioVisualizer.js";
 
 export function Dashboard({
   isRecording,
@@ -17,8 +16,7 @@ export function Dashboard({
     <>
       <div className="w-3/4 py-4">
         <div className="text-center py-6">
-          <h1 className="text-4xl font-bold text-blue-500">Reflector</h1>
-          <p className="text-gray-500">Capture The Signal, Not The Noise</p>
+          <h1 className="text-2xl font-bold text-blue-500">Meeting Topics</h1>
         </div>
         <div className="flex justify-between border-b-2">
           <div className="w-1/4">Timestamp</div>
@@ -43,8 +41,7 @@ export function Dashboard({
                   {">"}
                 </span>
               </div>
-              <div className="w-1/4 flex flex-row space-x-0.5">
-              </div>
+              <div className="w-1/4 flex flex-row space-x-0.5"></div>
             </div>
             {openIndex === index && (
               <div className="mt-2 p-2 bg-white">{item.transcript}</div>
@@ -56,34 +53,12 @@ export function Dashboard({
           <div className="flex justify-between">
             <div className="w-1/4">Live</div>
             <div className="w-1/4">Transcript</div>
-            <div className="w-1/4 flex flex-row space-x-0.5">
-            </div>
+            <div className="w-1/4 flex flex-row space-x-0.5"></div>
           </div>
           <div className="mt-2 p-2 bg-white temp-transcription">
             {transcriptionText}
           </div>
         </div>
-        <AudioVisualizer isRecording={isRecording} />
-
-        <button
-          className="mx-auto mt-6 mb-9"
-          onClick={() => onRecord(!isRecording)}
-          data-color={isRecording ? "red" : "blue"}
-        >
-          {isRecording ? "STOP" : "RESUME"}
-        </button>
-
-        {finalSummary && (
-          <div>
-            <h2>Final Summary</h2>
-            <p>Duration: {finalSummary.duration}</p>
-            <p>{finalSummary.summary}</p>
-          </div>
-        )}
-
-        <footer className="w-full bg-gray-800 text-center py-4 mt-4 text-white">
-          Reflector © 2023 Monadical
-        </footer>
       </div>
     </>
   );
