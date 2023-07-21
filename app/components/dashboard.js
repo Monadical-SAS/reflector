@@ -1,5 +1,7 @@
 import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons'
 
 export function Dashboard({
   isRecording,
@@ -11,6 +13,8 @@ export function Dashboard({
 }) {
   const [openIndex, setOpenIndex] = useState(null);
   const [liveTranscript, setLiveTranscript] = useState("");
+
+  topics = [{timestamp: '[00:00]', transcript: 'Abcdef', title: 'This is the title'}];
 
   return (
     <>
@@ -27,27 +31,25 @@ export function Dashboard({
         {topics.map((item, index) => (
           <div key={index} className="border-b-2 py-2">
             <div
-              className="flex justify-between cursor-pointer"
+              className="flex justify-between items-center cursor-pointer"
               onClick={() => setOpenIndex(openIndex === index ? null : index)}
             >
               <div className="w-1/4">{item.timestamp}</div>
-              <div className="w-1/4">
-                {item.title}{" "}
-                <span
-                  className={`inline-block transform transition-transform duration-200 ${
-                    openIndex === index ? "rotate-90" : ""
-                  }`}
-                >
-                  {">"}
-                </span>
+              <div className="w-1/4 flex justify-between items-center">
+                {item.title}
+                <FontAwesomeIcon
+                  className={`transform transition-transform duration-200`}
+                  icon={openIndex === index ? faChevronDown : faChevronRight}
+                />
               </div>
               <div className="w-1/4 flex flex-row space-x-0.5"></div>
             </div>
             {openIndex === index && (
-              <div className="mt-2 p-2 bg-white">{item.transcript}</div>
+              <div className="mt-2 p-2 bg-white rounded">{item.transcript}</div>
             )}
           </div>
         ))}
+
 
         <div className="border-b-2 py-2">
           <div className="flex justify-between">
@@ -55,7 +57,7 @@ export function Dashboard({
             <div className="w-1/4">Transcript</div>
             <div className="w-1/4 flex flex-row space-x-0.5"></div>
           </div>
-          <div className="mt-2 p-2 bg-white temp-transcription">
+          <div className="mt-2 p-2 bg-white temp-transcription rounded">
             {transcriptionText}
           </div>
         </div>
