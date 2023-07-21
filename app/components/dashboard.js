@@ -34,14 +34,14 @@ export function Dashboard({
               <div className="w-1/4">
                 {item.title}{" "}
                 <span
-                  className={`inline-block transform transition-transform duration-200 ${openIndex === index ? "rotate-90" : ""
-                    }`}
+                  className={`inline-block transform transition-transform duration-200 ${
+                    openIndex === index ? "rotate-90" : ""
+                  }`}
                 >
                   {">"}
                 </span>
               </div>
-              <div className="w-1/4 flex flex-row space-x-0.5">
-              </div>
+              <div className="w-1/4 flex flex-row space-x-0.5"></div>
             </div>
             {openIndex === index && (
               <div className="mt-2 p-2 bg-white">{item.transcript}</div>
@@ -53,8 +53,7 @@ export function Dashboard({
           <div className="flex justify-between">
             <div className="w-1/4">Live</div>
             <div className="w-1/4">Transcript</div>
-            <div className="w-1/4 flex flex-row space-x-0.5">
-            </div>
+            <div className="w-1/4 flex flex-row space-x-0.5"></div>
           </div>
           <div className="mt-2 p-2 bg-white temp-transcription">
             {transcriptionText}

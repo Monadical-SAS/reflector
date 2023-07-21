@@ -18,10 +18,9 @@ const App = () => {
         .then(setStream)
         .catch((err) => console.error(err));
     } else if (!recording && serverData.peer) {
-      serverData.peer.send(JSON.stringify({ cmd: 'STOP' }));
+      serverData.peer.send(JSON.stringify({ cmd: "STOP" }));
     }
   };
-
 
   const serverData = useWebRTC(stream, setIsRecording);
 
