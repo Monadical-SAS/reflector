@@ -59,6 +59,14 @@ export function Dashboard({
             {transcriptionText}
           </div>
         </div>
+
+        {finalSummary && (
+          <div>
+            <h2>Final Summary</h2>
+            <p>Duration: {finalSummary.duration}</p>
+            <p>{finalSummary.summary}</p>
+          </div>
+        )}
       </div>
     </>
   );
