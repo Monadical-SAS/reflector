@@ -95,6 +95,8 @@ export default function Recorder(props) {
     if (!record) return console.log("no record");
 
     if (record?.isRecording()) {
+
+      props.serverData.peer.send(JSON.stringify({ cmd: "STOP" }));
       record.stopRecording();
       setIsRecording(false);
       document.getElementById("play-btn").disabled = false;
