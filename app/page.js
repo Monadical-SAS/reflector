@@ -31,7 +31,7 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder setStream={setStream} />
+      <Recorder setStream={setStream} serverData={serverData} />
       <Dashboard
         isRecording={isRecording}
         onRecord={(recording) => handleRecord(recording)}

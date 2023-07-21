@@ -64,6 +64,7 @@ const useWebRTC = (stream, setIsRecording) => {
               duration: serverData.duration,
               summary: serverData.summary,
             },
+            text: ''
           }));
           setIsRecording(false);
           break;
