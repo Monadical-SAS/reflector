@@ -1,11 +1,13 @@
 import asyncio
 import datetime
+import os
 import io
+import numpy as np
 import json
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
-
+from faster_whisper import WhisperModel
 import aiohttp_cors
 import jax.numpy as jnp
 import requests
@@ -21,9 +23,9 @@ from sortedcontainers import SortedDict
 pcs = set()
 relay = MediaRelay()
 data_channel = None
-pipeline = FlaxWhisperPipline("openai/whisper-tiny",
-                              dtype=jnp.float16,
-                              batch_size=16)
+model = WhisperModel("tiny", device="cpu",
+                     compute_type="float32",
+                     num_workers=12)
 
 CHANNELS = 2
 RATE = 48000
@@ -80,6 +82,7 @@ def get_title_and_summary(llm_input_text, last_timestamp):
                 "cmd": "UPDATE_TOPICS",
                 "topics": incremental_responses,
         }
+
     except Exception as e:
         print("Exception" + str(e))
         result = None
@@ -113,18 +116,21 @@ def channel_send_transcript(channel):
             # Due to exceptions if one of the earlier batches can't return
             # a transcript, we don't want to be stuck waiting for the result
             # With the threshold size of 3, we pop the first(lost) element
-            elif len(sorted_transcripts) >= 3:
-                del sorted_transcripts[least_time]
+            else:
+                if len(sorted_transcripts) >= 3:
+                    del sorted_transcripts[least_time]
         except Exception as e:
             print("Exception", str(e))
             pass
 
 
 def get_transcription(frames):
+    print(type(frames))
+    print(type(frames[0]))
     print("Transcribing..")
     sorted_transcripts[frames[0].time] = None
-    out_file = io.BytesIO()
-    wf = wave.open(out_file, "wb")
+    audiofilename = "test" + str(datetime.datetime.now())
+    wf = wave.open(audiofilename, "wb")
     wf.setnchannels(CHANNELS)
     wf.setframerate(RATE)
     wf.setsampwidth(2)
@@ -133,22 +139,48 @@ def get_transcription(frames):
         wf.writeframes(b"".join(frame.to_ndarray()))
     wf.close()
 
-    # To-Do: Look into WhisperTimeStampLogitsProcessor exception
-    try:
-        whisper_result = pipeline(out_file.getvalue(), return_timestamps=True)
-    except Exception as e:
-        return
+    result_text = ""
 
-    global transcription_text, last_transcribed_time
-    transcription_text += whisper_result["text"]
-    duration = whisper_result["chunks"][0]["timestamp"][1]
-    if not duration:
-        duration = 5.0
-    last_transcribed_time += duration
+    try:
+        segments, _ = model.transcribe(audiofilename,
+                                       language="en",
+                                       beam_size=5,
+                                       vad_filter=True,
+                                       vad_parameters=dict(min_silence_duration_ms=500)
+                                       )
+        segments = list(segments)
+        result_text = ""
+        duration = 0.0
+        for segment in segments:
+            result_text += segment.text
+            start_time = segment.start
+            end_time = segment.end
+            if not segment.start:
+                start_time = 0.0
+            if not segment.end:
+                end_time = 5.5
+            duration += (end_time - start_time)
+
+        global last_transcribed_time
+        last_transcribed_time += duration
+
+    except Exception as e:
+        print("Exception" + str(e))
+        pass
+
+    #
+    try:
+        os.remove(audiofilename)
+    except Exception as e:
+        print("Exception :", str(e))
+        pass
+
+    global transcription_text
+    transcription_text += result_text
 
     result = {
             "cmd": "SHOW_TRANSCRIPTION",
-            "text": whisper_result["text"]
+            "text": result_text
     }
     sorted_transcripts[frames[0].time] = result
     return result
@@ -167,6 +199,9 @@ def get_final_summary_response():
                     seconds=round(last_transcribed_time))),
             "summary": final_summary
     }
+
+    with open("meeting_titles_and_summaries.txt", "a") as f:
+        f.write(json.dumps(incremental_responses))
     return response
 
 
@@ -196,7 +231,7 @@ class AudioStreamTrack(MediaStreamTrack):
                     else None
             )
 
-        if len(transcription_text) > 500:
+        if len(transcription_text) > 750:
             llm_input_text = transcription_text
             transcription_text = ""
             llm_result = run_in_executor(get_title_and_summary,
