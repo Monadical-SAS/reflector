@@ -1,8 +1,10 @@
+import spacy
+import sys
+
+
 # Observe the incremental summaries by performing summaries in chunks
 with open("transcript.txt") as f:
     transcription = f.read()
-
-import spacy
 
 
 def split_text_file(filename, token_count):
@@ -26,8 +28,9 @@ def split_text_file(filename, token_count):
 
     return parts
 
+
 # Set the chunk length here to split the transcript and test
-MAX_CHUNK_LENGTH=1000
+MAX_CHUNK_LENGTH = 1000
 
 chunks = split_text_file("transcript.txt", MAX_CHUNK_LENGTH)
 print("Number of chunks", len(chunks))
@@ -41,19 +44,17 @@ with open("chunks" + str(MAX_CHUNK_LENGTH) + ".txt", "a") as f:
 # ex. python incsum.py 1 => will run approach 1
 # If no input, will run all approaches
 
-import sys
 try:
     index = sys.argv[1]
 except:
     index = None
 
-
 # Approach 1 : facebook/bart-large-cnn
 if index == "1" or index is None:
-    SUMMARY_MODEL="facebook/bart-large-cnn"
-    MIN_LENGTH=5
-    MAX_LENGTH=10
-    BEAM_SIZE=2
+    SUMMARY_MODEL = "facebook/bart-large-cnn"
+    MIN_LENGTH = 5
+    MAX_LENGTH = 10
+    BEAM_SIZE = 2
 
     print("Performing chunk summary : " + SUMMARY_MODEL)
 
@@ -81,7 +82,6 @@ if index == "1" or index is None:
         for summary in summaries:
             f.write(summary + "\n\n")
 
-
 # Approach 2
 if index == "2" or index is None:
     print("Performing chunk summary : " + "gpt-neo-1.3B")
@@ -108,14 +108,14 @@ if index == "2" or index is None:
                                 max_length=max_length,
                                 attention_mask=attention_mask,
                                 pad_token_id=model.config.eos_token_id,
-                                 num_beams=4,
-                                 length_penalty=2.0,
-                                 early_stopping=True)
+                                num_beams=4,
+                                length_penalty=2.0,
+                                early_stopping=True)
         summary_ids = output[0, input_length:]
         summary = tokenizer.decode(summary_ids, skip_special_tokens=True)
         summaries.append(summary)
         with open("gptneo1.3B-summaries.txt", "a") as f:
-                f.write(summary + "\n\n")
+            f.write(summary + "\n\n")
 
 # Approach 3
 if index == "3" or index is None:
@@ -155,4 +155,3 @@ if index == "3" or index is None:
     with open("mpt-7b-summaries.txt", "a") as f:
         for summary in summaries:
             f.write(summary + "\n\n")
-

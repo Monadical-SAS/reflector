@@ -17,7 +17,7 @@ class StreamClient:
     def __init__(
             self,
             signaling,
-            url="http://127.0.0.1:1250",
+            url="http://0.0.0.0:1250",
             play_from=None,
             ping_pong=False
     ):
@@ -114,7 +114,7 @@ class StreamClient:
                 self.channel_log(channel, "<", message)
 
                 if isinstance(message, str) and message.startswith("pong"):
-                    elapsed_ms = (self.current_stamp() - int(message[5:]))\
+                    elapsed_ms = (self.current_stamp() - int(message[5:])) \
                                  / 1000
                     print(" RTT %.2f ms" % elapsed_ms)
 
