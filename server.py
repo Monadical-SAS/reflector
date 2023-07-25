@@ -53,11 +53,11 @@ def get_title_and_summary(llm_input_text, last_timestamp):
 
     prompt = f"""
         ### Human:
-        Create a JSON object as response. The JSON object must have 2 fields: 
-        i) title and ii) summary. For the title field,generate a short title 
-        for the given text. For the summary field, summarize the given text 
+        Create a JSON object as response. The JSON object must have 2 fields:
+        i) title and ii) summary. For the title field,generate a short title
+        for the given text. For the summary field, summarize the given text
         in three sentences.
-        
+
         {llm_input_text}
 
         ### Assistant:
@@ -144,12 +144,12 @@ def get_transcription(frames):
     result_text = ""
 
     try:
-        segments, _ = model.transcribe(audiofilename,
-                                       language="en",
-                                       beam_size=5,
-                                       vad_filter=True,
-                                       vad_parameters=dict(min_silence_duration_ms=500)
-                                       )
+        segments, _ = \
+            model.transcribe(audiofilename,
+                             language="en",
+                             beam_size=5,
+                             vad_filter=True,
+                             vad_parameters=dict(min_silence_duration_ms=500))
         os.remove(audiofilename)
         segments = list(segments)
         result_text = ""

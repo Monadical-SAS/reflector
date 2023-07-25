@@ -45,14 +45,14 @@ def create_wordcloud(timestamp, real_time=False):
     plt.axis("off")
     plt.tight_layout(pad=0)
 
-    wordcloud_name = "wordcloud"
+    wordcloud = "wordcloud"
     if real_time:
-        wordcloud_name = "real_time_" + wordcloud_name + "_" + \
+        wordcloud = "real_time_" + wordcloud + "_" + \
                          timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
     else:
-        wordcloud_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
+        wordcloud += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
-    plt.savefig("./artefacts/" + wordcloud_name)
+    plt.savefig("./artefacts/" + wordcloud)
 
 
 def create_talk_diff_scatter_viz(timestamp, real_time=False):
