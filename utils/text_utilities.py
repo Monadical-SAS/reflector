@@ -6,8 +6,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import BartForConditionalGeneration, BartTokenizer
 
-from utils.log_utils import logger
-from utils.run_utils import config
+from log_utils import logger
+from run_utils import config
 
 nltk.download('punkt', quiet=True)
 
@@ -171,7 +171,7 @@ def summarize(transcript_text, timestamp,
         output_filename = "real_time_" + output_filename
 
     if summarize_using_chunks != "YES":
-        inputs = tokenizer.\
+        inputs = tokenizer. \
             batch_encode_plus([transcript_text], truncation=True,
                               padding='longest',
                               max_length=int(config["DEFAULT"]["INPUT_ENCODING_MAX_LENGTH"]),
