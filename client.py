@@ -5,7 +5,7 @@ import signal
 from aiortc.contrib.signaling import (add_signaling_arguments,
                                       create_signaling)
 
-from ..utils.log_utils import logger
+from utils.log_utils import logger
 from stream_client import StreamClient
 
 
