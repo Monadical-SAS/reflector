@@ -125,10 +125,13 @@ def channel_send_transcript(channel):
 
 
 def get_transcription(frames):
-    print(type(frames))
-    print(type(frames[0]))
     print("Transcribing..")
     sorted_transcripts[frames[0].time] = None
+
+    # Passing IO objects instead of temporary files throws an error
+    # Passing ndarrays (typecasted with float) does not give any
+    # transcription. Refer issue
+    # https://github.com/guillaumekln/faster-whisper/issues/369
     audiofilename = "test" + str(datetime.datetime.now())
     wf = wave.open(audiofilename, "wb")
     wf.setnchannels(CHANNELS)
@@ -148,6 +151,7 @@ def get_transcription(frames):
                                        vad_filter=True,
                                        vad_parameters=dict(min_silence_duration_ms=500)
                                        )
+        os.remove(audiofilename)
         segments = list(segments)
         result_text = ""
         duration = 0.0
@@ -161,22 +165,13 @@ def get_transcription(frames):
                 end_time = 5.5
             duration += (end_time - start_time)
 
-        global last_transcribed_time
+        global last_transcribed_time, transcription_text
         last_transcribed_time += duration
+        transcription_text += result_text
 
     except Exception as e:
         print("Exception" + str(e))
         pass
-
-    #
-    try:
-        os.remove(audiofilename)
-    except Exception as e:
-        print("Exception :", str(e))
-        pass
-
-    global transcription_text
-    transcription_text += result_text
 
     result = {
             "cmd": "SHOW_TRANSCRIPTION",
