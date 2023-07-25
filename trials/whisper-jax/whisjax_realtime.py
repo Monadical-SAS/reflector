@@ -13,8 +13,8 @@ from whisper_jax import FlaxWhisperPipline
 from ...utils.file_utils import upload_files
 from ...utils.log_utils import logger
 from ...utils.run_utils import config
-from ...utils.text_utilities import post_process_transcription, summarize
-from ...utils.viz_utilities import create_talk_diff_scatter_viz, create_wordcloud
+from ...utils.text_utils import post_process_transcription, summarize
+from ...utils.viz_utils import create_talk_diff_scatter_viz, create_wordcloud
 
 WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
 
