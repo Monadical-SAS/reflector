@@ -1,4 +1,11 @@
 #!/bin/sh
 
 pip install --upgrade pip
-pip install -r ../server-requirements.txt
+
+cwd=$(pwd)
+last_component="${cwd##*/}"
+if [ "$last_component" = "reflector" ]; then
+    pip install -r server-requirements.txt
+elif [ "$last_component" = "scripts" ]; then
+    pip install -r ../server-requirements.txt
+fi
