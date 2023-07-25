@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import datetime
 import json
@@ -16,7 +17,7 @@ from faster_whisper import WhisperModel
 from loguru import logger
 from sortedcontainers import SortedDict
 
-from utils.run_utils import run_in_executor
+from utils.run_utils import run_in_executor, config
 
 pcs = set()
 relay = MediaRelay()
@@ -31,8 +32,8 @@ audio_buffer = AudioFifo()
 executor = ThreadPoolExecutor()
 transcription_text = ""
 last_transcribed_time = 0.0
-LLM_MACHINE_IP = "216.153.52.83"
-LLM_MACHINE_PORT = "5000"
+LLM_MACHINE_IP = config["DEFAULT"]["LLM_MACHINE_IP"]
+LLM_MACHINE_PORT = config["DEFAULT"]["LLM_MACHINE_PORT"]
 LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 incremental_responses = []
 sorted_transcripts = SortedDict()
@@ -43,7 +44,7 @@ blacklisted_messages = [" Thank you.", " See you next time!",
 
 
 def get_title_and_summary(llm_input_text, last_timestamp):
-    ("Generating title and summary")
+    logger.info("Generating title and summary")
     # output = llm.generate(prompt)
 
     # Use monadical-ml to fire this query to an LLM and get result
@@ -306,6 +307,16 @@ async def on_shutdown(app):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+            description="WebRTC based server for Reflector"
+    )
+    parser.add_argument(
+            "--host", default="0.0.0.0", help="Server host IP (def: 0.0.0.0)"
+    )
+    parser.add_argument(
+            "--port", type=int, default=1250, help="Server port (def: 1250)"
+    )
+    args = parser.parse_args()
     app = web.Application()
     cors = aiohttp_cors.setup(
             app,
@@ -321,4 +332,4 @@ if __name__ == "__main__":
     offer_resource = cors.add(app.router.add_resource("/offer"))
     cors.add(offer_resource.add_route("POST", offer))
     app.on_shutdown.append(on_shutdown)
-    web.run_app(app, access_log=None, host="127.0.0.1", port=1250)
+    web.run_app(app, access_log=None,  host=args.host, port=args.port)

@@ -9,15 +9,15 @@ import stamina
 from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
-from utils.log_utils import logger
-from utils.run_utils import config
+from ..utils.log_utils import logger
+from ..utils.run_utils import config
 
 
 class StreamClient:
     def __init__(
             self,
             signaling,
-            url="http://127.0.0.1:1250",
+            url="http://0.0.0.0:1250",
             play_from=None,
             ping_pong=False
     ):

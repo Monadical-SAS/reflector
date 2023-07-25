@@ -5,15 +5,15 @@ import signal
 from aiortc.contrib.signaling import (add_signaling_arguments,
                                       create_signaling)
 
+from ..utils.log_utils import logger
 from stream_client import StreamClient
-from utils.log_utils import logger
 
 
 async def main():
     parser = argparse.ArgumentParser(description="Data channels ping/pong")
 
     parser.add_argument(
-            "--url", type=str, nargs="?", default="http://127.0.0.1:1250/offer"
+            "--url", type=str, nargs="?", default="http://0.0.0.0:1250/offer"
     )
 
     parser.add_argument(
