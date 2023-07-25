@@ -1,24 +1,22 @@
 import asyncio
 import datetime
-import os
-import io
-import numpy as np
 import json
+import os
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
-from faster_whisper import WhisperModel
+
 import aiohttp_cors
-import jax.numpy as jnp
 import requests
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from av import AudioFifo
+from faster_whisper import WhisperModel
 from loguru import logger
-from whisper_jax import FlaxWhisperPipline
-from utils.run_utils import run_in_executor
 from sortedcontainers import SortedDict
+
+from utils.run_utils import run_in_executor
 
 pcs = set()
 relay = MediaRelay()
@@ -45,7 +43,7 @@ blacklisted_messages = [" Thank you.", " See you next time!",
 
 
 def get_title_and_summary(llm_input_text, last_timestamp):
-    print("Generating title and summary")
+    ("Generating title and summary")
     # output = llm.generate(prompt)
 
     # Use monadical-ml to fire this query to an LLM and get result
@@ -69,13 +67,13 @@ def get_title_and_summary(llm_input_text, last_timestamp):
             "prompt": prompt
     }
 
-    # To-do: Handle unexpected output formats from the model
+    # TODO : Handle unexpected output formats from the model
     try:
         response = requests.post(LLM_URL, headers=headers, json=data)
         output = json.loads(response.json()["results"][0]["text"])
         output["description"] = output.pop("summary")
         output["transcript"] = llm_input_text
-        output["timestamp"] =\
+        output["timestamp"] = \
             str(datetime.timedelta(seconds=round(last_timestamp)))
         incremental_responses.append(output)
         result = {
@@ -84,13 +82,13 @@ def get_title_and_summary(llm_input_text, last_timestamp):
         }
 
     except Exception as e:
-        print("Exception" + str(e))
+        logger.info("Exception" + str(e))
         result = None
     return result
 
 
 def channel_log(channel, t, message):
-    print("channel(%s) %s %s" % (channel.label, t, message))
+    logger.info("channel(%s) %s %s" % (channel.label, t, message))
 
 
 def channel_send(channel, message):
@@ -120,17 +118,18 @@ def channel_send_transcript(channel):
                 if len(sorted_transcripts) >= 3:
                     del sorted_transcripts[least_time]
         except Exception as e:
-            print("Exception", str(e))
+            logger.info("Exception", str(e))
             pass
 
 
 def get_transcription(frames):
-    print("Transcribing..")
+    logger.info("Transcribing..")
     sorted_transcripts[frames[0].time] = None
 
+    # TODO:
     # Passing IO objects instead of temporary files throws an error
     # Passing ndarrays (typecasted with float) does not give any
-    # transcription. Refer issue
+    # transcription. Refer issue,
     # https://github.com/guillaumekln/faster-whisper/issues/369
     audiofilename = "test" + str(datetime.datetime.now())
     wf = wave.open(audiofilename, "wb")
@@ -170,7 +169,7 @@ def get_transcription(frames):
         transcription_text += result_text
 
     except Exception as e:
-        print("Exception" + str(e))
+        logger.info("Exception" + str(e))
         pass
 
     result = {
@@ -195,7 +194,7 @@ def get_final_summary_response():
             "summary": final_summary
     }
 
-    with open("meeting_titles_and_summaries.txt", "a") as f:
+    with open("./artefacts/meeting_titles_and_summaries.txt", "a") as f:
         f.write(json.dumps(incremental_responses))
     return response
 
@@ -274,7 +273,6 @@ async def offer(request):
 
             if isinstance(message, str) and message.startswith("ping"):
                 channel_send(channel, "pong" + message[4:])
-
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():

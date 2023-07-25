@@ -114,7 +114,7 @@ class StreamClient:
                 self.channel_log(channel, "<", message)
 
                 if isinstance(message, str) and message.startswith("pong"):
-                    elapsed_ms = (self.current_stamp() - int(message[5:]))\
+                    elapsed_ms = (self.current_stamp() - int(message[5:])) \
                                  / 1000
                     print(" RTT %.2f ms" % elapsed_ms)
 
