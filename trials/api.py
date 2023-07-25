@@ -1,11 +1,13 @@
 import requests
 import spacy
 
+# Enter the Machine where the LLM is hosted
+LLM_MACHINE_IP = ""
 # This is the URL of text-generation-webui
-URL = "http://216.153.52.83:5000/api/v1/generate"
+URL = f"http://{LLM_MACHINE_IP}:5000/api/v1/generate"
 
 headers = {
-    "Content-Type": "application/json"
+        "Content-Type": "application/json"
 }
 
 
@@ -23,7 +25,7 @@ def split_text_file(filename, token_count):
 
     while start_index < total_tokens:
         end_index = start_index + token_count
-        part_tokens = doc[start_index:end_index-5]
+        part_tokens = doc[start_index:end_index - 5]
         part = ' '.join(token.text for token in part_tokens)
         parts.append(part)
         start_index = end_index
@@ -33,7 +35,6 @@ def split_text_file(filename, token_count):
 
 final_summary = ""
 parts = split_text_file("transcript.txt", 1600)
-previous_summary = ""
 
 for part in parts:
     prompt = f"""
@@ -52,5 +53,5 @@ for part in parts:
     except Exception as e:
         print(str(e))
 
-with open("sum.txt", "w") as sum:
+with open("summary.txt", "w") as sum:
     sum.write(" ".join(final_summary))
