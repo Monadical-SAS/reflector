@@ -13,7 +13,7 @@ from wordcloud import STOPWORDS, WordCloud
 en = spacy.load('en_core_web_md')
 spacy_stopwords = en.Defaults.stop_words
 
-STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))).\
+STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))). \
     union(set(spacy_stopwords))
 
 
@@ -24,7 +24,7 @@ def create_wordcloud(timestamp, real_time=False):
     """
     filename = "transcript"
     if real_time:
-        filename = "real_time_" + filename + "_" +\
+        filename = "real_time_" + filename + "_" + \
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
         filename += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
@@ -45,24 +45,24 @@ def create_wordcloud(timestamp, real_time=False):
     plt.axis("off")
     plt.tight_layout(pad=0)
 
-    wordcloud_name = "wordcloud"
+    wordcloud = "wordcloud"
     if real_time:
-        wordcloud_name = "real_time_" + wordcloud_name + "_" +\
+        wordcloud = "real_time_" + wordcloud + "_" + \
                          timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
     else:
-        wordcloud_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
+        wordcloud += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
-    plt.savefig("./artefacts/" + wordcloud_name)
+    plt.savefig("./artefacts/" + wordcloud)
 
 
 def create_talk_diff_scatter_viz(timestamp, real_time=False):
     """
-    Perform agenda vs transription diff to see covered topics.
+    Perform agenda vs transcription diff to see covered topics.
     Create a scatter plot of words in topics.
     :return: None. Saved locally.
     """
-    spaCy_model = "en_core_web_md"
-    nlp = spacy.load(spaCy_model)
+    spacy_model = "en_core_web_md"
+    nlp = spacy.load(spacy_model)
     nlp.add_pipe('sentencizer')
 
     agenda_topics = []
@@ -75,12 +75,11 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                 agenda_topics.append(line.split(":")[0])
 
     # Load the transcription with timestamp
-    filename = ""
     if real_time:
-        filename = "./artefacts/real_time_transcript_with_timestamp_" +\
+        filename = "./artefacts/real_time_transcript_with_timestamp_" + \
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     else:
-        filename = "./artefacts/transcript_with_timestamp_" +\
+        filename = "./artefacts/transcript_with_timestamp_" + \
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
     with open(filename) as f:
         transcription_timestamp_text = f.read()
@@ -142,7 +141,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
     df = df.apply(create_new_columns, axis=1)
 
-    # Count the number of items covered and calculatre the percentage
+    # Count the number of items covered and calculate the percentage
     num_covered_items = sum(covered_items.values())
     percentage_covered = num_covered_items / len(agenda) * 100
 
@@ -158,7 +157,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Save df, mappings for further experimentation
     df_name = "df"
     if real_time:
-        df_name = "real_time_" + df_name + "_" +\
+        df_name = "real_time_" + df_name + "_" + \
                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         df_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
@@ -169,7 +168,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
     mappings_name = "mappings"
     if real_time:
-        mappings_name = "real_time_" + mappings_name + "_" +\
+        mappings_name = "real_time_" + mappings_name + "_" + \
                         timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     else:
         mappings_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
