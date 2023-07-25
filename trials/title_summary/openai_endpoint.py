@@ -28,7 +28,7 @@ response = openai.ChatCompletion.create(model=model,
                                         n=1,
                                         max_tokens=300)
 
-# Try finetuned model
+# Try fine tuned model
 # model = "davinci:ft-personal-2023-07-14-10-43-51"
 # response = openai.Completion.create(model=model,
 #                                         prompt=sample_chunks[0] + " -> ")
