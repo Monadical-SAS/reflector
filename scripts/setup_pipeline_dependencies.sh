@@ -26,7 +26,13 @@ pip install git+https://github.com/sanchit-gandhi/whisper-jax.git
 # Update to latest version
 pip install --upgrade --no-deps --force-reinstall git+https://github.com/sanchit-gandhi/whisper-jax.git
 
-pip install -r ../server-requirements.txt
+cwd=$(pwd)
+last_component="${cwd##*/}"
+if [ "$last_component" = "reflector" ]; then
+    pip install -r pipeline-requirements.txt
+elif [ "$last_component" = "scripts" ]; then
+    pip install -r ../pipeline-requirements.txt
+fi
 
 # download spacy models
 spacy download en_core_web_sm
