@@ -7,47 +7,6 @@ import "react-dropdown/style.css";
 
 import CustomRecordPlugin from "./CustomRecordPlugin";
 
-const queryAndPromptAudio = async () => {
-  const permissionStatus = await navigator.permissions.query({name: 'microphone'})
-  if (permissionStatus.state == 'prompt') {
-    await navigator.mediaDevices.getUserMedia({ audio: true })
-  }
-}
-
-const AudioInputsDropdown = (props) => {
-  const [ddOptions, setDdOptions] = useState([]);
-
-  useEffect(() => {
-    const init = async () => {
-      await queryAndPromptAudio()
-
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const audioDevices = devices
-        .filter((d) => d.kind === "audioinput" && d.deviceId != "")
-        .map((d) => ({ value: d.deviceId, label: d.label }))
-
-      if (audioDevices.length < 1) return console.log("no audio input devices")
-
-      setDdOptions(audioDevices)
-      props.setDeviceId(audioDevices[0].value)
-    }
-    init()
-  }, [])
-
-  const handleDropdownChange = (e) => {
-    props.setDeviceId(e.value);
-  };
-
-  return (
-    <Dropdown
-      options={ddOptions}
-      onChange={handleDropdownChange}
-      value={ddOptions[0]}
-      disabled={props.disabled}
-    />
-  )
-}
-
 export default function Recorder(props) {
   const waveformRef = useRef();
   const [wavesurfer, setWavesurfer] = useState(null);
@@ -55,9 +14,21 @@ export default function Recorder(props) {
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [deviceId, setDeviceId] = useState(null);
+  const [ddOptions, setDdOptions] = useState([]);
 
   useEffect(() => {
     document.getElementById("play-btn").disabled = true;
+
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      const audioDevices = devices
+        .filter((d) => d.kind === "audioinput")
+        .map((d) => ({ value: d.deviceId, label: d.label }));
+
+      if (audioDevices.length < 1) return console.log("no audio input devices");
+
+      setDdOptions(audioDevices);
+      setDeviceId(audioDevices[0].value);
+    });
 
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
@@ -114,15 +85,22 @@ export default function Recorder(props) {
     wavesurfer?.playPause();
   };
 
+  const handleDropdownChange = (e) => {
+    setDeviceId(e.value);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center max-w-[75vw] w-full">
       <div className="flex my-2 mx-auto">
-        <AudioInputsDropdown setDeviceId={setDeviceId} disabled={isRecording} />
+        <Dropdown
+          options={ddOptions}
+          onChange={handleDropdownChange}
+          value={ddOptions[0]}
+        />
         &nbsp;
         <button
           onClick={handleRecClick}
           data-color={isRecording ? "red" : "blue"}
-          disabled={!deviceId}
         >
           {isRecording ? "Stop" : "Record"}
         </button>
