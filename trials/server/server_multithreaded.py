@@ -19,7 +19,7 @@ from whisper_jax import FlaxWhisperPipline
 from reflector.utils.log_utils import logger
 from reflector.utils.run_utils import config, Mutex
 
-WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_REAL_TIME_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_REAL_TIME_MODEL_SIZE"]
 pcs = set()
 relay = MediaRelay()
 data_channel = None

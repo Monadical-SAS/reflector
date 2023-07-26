@@ -6,11 +6,11 @@ import botocore
 from .log_utils import logger
 from .run_utils import config
 
-BUCKET_NAME = config["DEFAULT"]["BUCKET_NAME"]
+BUCKET_NAME = config["AWS"]["BUCKET_NAME"]
 
 s3 = boto3.client('s3',
-                  aws_access_key_id=config["DEFAULT"]["AWS_ACCESS_KEY"],
-                  aws_secret_access_key=config["DEFAULT"]["AWS_SECRET_KEY"])
+                  aws_access_key_id=config["AWS"]["AWS_ACCESS_KEY"],
+                  aws_secret_access_key=config["AWS"]["AWS_SECRET_KEY"])
 
 
 def upload_files(files_to_upload):

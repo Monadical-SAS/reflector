@@ -16,7 +16,7 @@ from ...utils.run_utils import config
 from ...utils.text_utils import post_process_transcription, summarize
 from ...utils.viz_utils import create_talk_diff_scatter_viz, create_wordcloud
 
-WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_MODEL_SIZE"]
 
 FRAMES_PER_BUFFER = 8000
 FORMAT = pyaudio.paInt16
@@ -31,7 +31,7 @@ def main():
     AUDIO_DEVICE_ID = -1
     for i in range(p.get_device_count()):
         if p.get_device_info_by_index(i)["name"] == \
-                config["DEFAULT"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
+                config["AUDIO"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
             AUDIO_DEVICE_ID = i
     audio_devices = p.get_device_info_by_index(AUDIO_DEVICE_ID)
     stream = p.open(
@@ -44,7 +44,7 @@ def main():
     )
 
     pipeline = FlaxWhisperPipline("openai/whisper-" +
-                                  config["DEFAULT"]["WHISPER_REAL_TIME_MODEL_SIZE"],
+                                  config["WHISPER"]["WHISPER_REAL_TIME_MODEL_SIZE"],
                                   dtype=jnp.float16,
                                   batch_size=16)
 

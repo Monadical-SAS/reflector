@@ -31,7 +31,7 @@ class TitleSummaryInput:
 
 
 @dataclass
-class IncrementalResponse:
+class IncrementalResult:
     title = str
     description = str
     transcript = str
@@ -45,12 +45,12 @@ class IncrementalResponse:
 @dataclass
 class TitleSummaryOutput:
     cmd = str
-    topics = List[IncrementalResponse]
+    topics = List[IncrementalResult]
 
     def __init__(self, inc_responses):
         self.topics = inc_responses
 
-    def get_response(self):
+    def get_result(self):
         return {
                 "cmd": self.cmd,
                 "topics": self.topics
@@ -93,7 +93,7 @@ class TranscriptionOutput:
         self.cmd = "SHOW_TRANSCRIPTION"
         self.result_text = result_text
 
-    def get_response(self):
+    def get_result(self):
         return {
                 "cmd": self.cmd,
                 "text": self.result_text
@@ -101,7 +101,7 @@ class TranscriptionOutput:
 
 
 @dataclass
-class FinalSummaryResponse:
+class FinalSummaryResult:
     cmd = str
     final_summary = str
     duration = str
@@ -111,7 +111,7 @@ class FinalSummaryResponse:
         self.final_summary = final_summary
         self.cmd = ""
 
-    def get_response(self):
+    def get_result(self):
         return {
                 "cmd": self.cmd,
                 "duration": self.duration,
