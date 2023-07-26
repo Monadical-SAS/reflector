@@ -16,10 +16,10 @@ from av import AudioFifo
 from sortedcontainers import SortedDict
 from whisper_jax import FlaxWhisperPipline
 
-from reflector.utils.log_utils import logger
-from reflector.utils.run_utils import config, Mutex
+from reflector.utils.log_utils import LOGGER
+from reflector.utils.run_utils import CONFIG, Mutex
 
-WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_REAL_TIME_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = CONFIG['WHISPER']["WHISPER_REAL_TIME_MODEL_SIZE"]
 pcs = set()
 relay = MediaRelay()
 data_channel = None
@@ -127,7 +127,7 @@ async def offer(request: requests.Request):
     pcs.add(pc)
 
     def log_info(msg: str, *args):
-        logger.info(pc_id + " " + msg, *args)
+        LOGGER.info(pc_id + " " + msg, *args)
 
     log_info("Created for " + request.remote)
 

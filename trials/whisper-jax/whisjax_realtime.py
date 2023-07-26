@@ -11,12 +11,12 @@ from termcolor import colored
 from whisper_jax import FlaxWhisperPipline
 
 from ...utils.file_utils import upload_files
-from ...utils.log_utils import logger
-from ...utils.run_utils import config
+from ...utils.log_utils import LOGGER
+from ...utils.run_utils import CONFIG
 from ...utils.text_utils import post_process_transcription, summarize
 from ...utils.viz_utils import create_talk_diff_scatter_viz, create_wordcloud
 
-WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = CONFIG['WHISPER']["WHISPER_MODEL_SIZE"]
 
 FRAMES_PER_BUFFER = 8000
 FORMAT = pyaudio.paInt16
@@ -31,7 +31,7 @@ def main():
     AUDIO_DEVICE_ID = -1
     for i in range(p.get_device_count()):
         if p.get_device_info_by_index(i)["name"] == \
-                config["AUDIO"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
+                CONFIG["AUDIO"]["BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME"]:
             AUDIO_DEVICE_ID = i
     audio_devices = p.get_device_info_by_index(AUDIO_DEVICE_ID)
     stream = p.open(
@@ -44,7 +44,7 @@ def main():
     )
 
     pipeline = FlaxWhisperPipline("openai/whisper-" +
-                                  config["WHISPER"]["WHISPER_REAL_TIME_MODEL_SIZE"],
+                                  CONFIG["WHISPER"]["WHISPER_REAL_TIME_MODEL_SIZE"],
                                   dtype=jnp.float16,
                                   batch_size=16)
 
@@ -106,23 +106,26 @@ def main():
                           " | Transcribed duration: " +
                           str(duration), "yellow"))
 
-    except Exception as e:
-        print(e)
+    except Exception as exception:
+        print(str(exception))
     finally:
-        with open("real_time_transcript_" +
-                  NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
-            f.write(transcription)
+        with open("real_time_transcript_" + NOW.strftime("%m-%d-%Y_%H:%M:%S")
+                  + ".txt", "w", encoding="utf-8") as file:
+            file.write(transcription)
+
         with open("real_time_transcript_with_timestamp_" +
-                  NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w") as f:
+                  NOW.strftime("%m-%d-%Y_%H:%M:%S") + ".txt", "w",
+                  encoding="utf-8") as file:
             transcript_with_timestamp["text"] = transcription
-            f.write(str(transcript_with_timestamp))
+            file.write(str(transcript_with_timestamp))
 
-    transcript_with_timestamp = post_process_transcription(transcript_with_timestamp)
+    transcript_with_timestamp = \
+        post_process_transcription(transcript_with_timestamp)
 
-    logger.info("Creating word cloud")
+    LOGGER.info("Creating word cloud")
     create_wordcloud(NOW, True)
 
-    logger.info("Performing talk-diff and talk-diff visualization")
+    LOGGER.info("Performing talk-diff and talk-diff visualization")
     create_talk_diff_scatter_viz(NOW, True)
 
     # S3 : Push artefacts to S3 bucket
@@ -137,7 +140,7 @@ def main():
 
     summarize(transcript_with_timestamp["text"], NOW, True, True)
 
-    logger.info("Summarization completed")
+    LOGGER.info("Summarization completed")
 
     # Summarization takes a lot of time, so do this separately at the end
     files_to_upload = ["real_time_summary_" + suffix + ".txt"]

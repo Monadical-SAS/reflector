@@ -19,15 +19,15 @@ import yt_dlp as youtube_dl
 from whisper_jax import FlaxWhisperPipline
 
 from ...utils.file_utils import download_files, upload_files
-from ...utils.log_utils import logger
-from ...utils.run_utils import config
+from ...utils.log_utils import LOGGER
+from ...utils.run_utils import CONFIG
 from ...utils.text_utils import post_process_transcription, summarize
 from ...utils.viz_utils import create_talk_diff_scatter_viz, create_wordcloud
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 
-WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = CONFIG['WHISPER']["WHISPER_MODEL_SIZE"]
 NOW = datetime.now()
 
 if not os.path.exists('../../artefacts'):
@@ -75,7 +75,7 @@ def main():
             # Download the lowest resolution YouTube video
             # (since we're just interested in the audio).
             # It will be saved to the current directory.
-            logger.info("Downloading YouTube video at url: " + args.location)
+            LOGGER.info("Downloading YouTube video at url: " + args.location)
 
             # Create options for the download
             ydl_opts = {
@@ -93,12 +93,12 @@ def main():
                 ydl.download([args.location])
             media_file = "../artefacts/audio.mp3"
 
-            logger.info("Saved downloaded YouTube video to: " + media_file)
+            LOGGER.info("Saved downloaded YouTube video to: " + media_file)
         else:
             # XXX - Download file using urllib, check if file is
             # audio/video using python-magic
-            logger.info(f"Downloading file at url: {args.location}")
-            logger.info("  XXX - This method hasn't been implemented yet.")
+            LOGGER.info(f"Downloading file at url: {args.location}")
+            LOGGER.info("  XXX - This method hasn't been implemented yet.")
     elif url.scheme == '':
         media_file = url.path
         # If file is not present locally, take it from S3 bucket
@@ -119,7 +119,7 @@ def main():
             audio_filename = tempfile.NamedTemporaryFile(suffix=".mp3",
                                                          delete=False).name
             video.audio.write_audiofile(audio_filename, logger=None)
-            logger.info(f"Extracting audio to: {audio_filename}")
+            LOGGER.info(f"Extracting audio to: {audio_filename}")
         # Handle audio only file
         except Exception:
             audio = moviepy.editor.AudioFileClip(media_file)
@@ -129,14 +129,14 @@ def main():
     else:
         audio_filename = media_file
 
-    logger.info("Finished extracting audio")
-    logger.info("Transcribing")
+    LOGGER.info("Finished extracting audio")
+    LOGGER.info("Transcribing")
     # Convert the audio to text using the OpenAI Whisper model
     pipeline = FlaxWhisperPipline("openai/whisper-" + WHISPER_MODEL_SIZE,
                                   dtype=jnp.float16,
                                   batch_size=16)
     whisper_result = pipeline(audio_filename, return_timestamps=True)
-    logger.info("Finished transcribing file")
+    LOGGER.info("Finished transcribing file")
 
     whisper_result = post_process_transcription(whisper_result)
 
@@ -153,10 +153,10 @@ def main():
               "w") as transcript_file_timestamps:
         transcript_file_timestamps.write(str(whisper_result))
 
-    logger.info("Creating word cloud")
+    LOGGER.info("Creating word cloud")
     create_wordcloud(NOW)
 
-    logger.info("Performing talk-diff and talk-diff visualization")
+    LOGGER.info("Performing talk-diff and talk-diff visualization")
     create_talk_diff_scatter_viz(NOW)
 
     # S3 : Push artefacts to S3 bucket
@@ -172,7 +172,7 @@ def main():
 
     summarize(transcript_text, NOW, False, False)
 
-    logger.info("Summarization completed")
+    LOGGER.info("Summarization completed")
 
     # Summarization takes a lot of time, so do this separately at the end
     files_to_upload = [prefix + "summary_" + suffix + ".txt"]

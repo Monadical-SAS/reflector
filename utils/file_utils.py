@@ -1,16 +1,21 @@
+"""
+Utility file for file handling related functions, including file downloads and
+uploads to cloud storage
+"""
+
 import sys
 
 import boto3
 import botocore
 
-from .log_utils import logger
-from .run_utils import config
+from .log_utils import LOGGER
+from .run_utils import CONFIG
 
-BUCKET_NAME = config["AWS"]["BUCKET_NAME"]
+BUCKET_NAME = CONFIG["AWS"]["BUCKET_NAME"]
 
 s3 = boto3.client('s3',
-                  aws_access_key_id=config["AWS"]["AWS_ACCESS_KEY"],
-                  aws_secret_access_key=config["AWS"]["AWS_SECRET_KEY"])
+                  aws_access_key_id=CONFIG["AWS"]["AWS_ACCESS_KEY"],
+                  aws_secret_access_key=CONFIG["AWS"]["AWS_SECRET_KEY"])
 
 
 def upload_files(files_to_upload):
@@ -19,12 +24,12 @@ def upload_files(files_to_upload):
     :param files_to_upload: List of files to upload
     :return: None
     """
-    for KEY in files_to_upload:
-        logger.info("Uploading file " + KEY)
+    for key in files_to_upload:
+        LOGGER.info("Uploading file " + key)
         try:
-            s3.upload_file(KEY, BUCKET_NAME, KEY)
-        except botocore.exceptions.ClientError as e:
-            print(e.response)
+            s3.upload_file(key, BUCKET_NAME, key)
+        except botocore.exceptions.ClientError as exception:
+            print(exception.response)
 
 
 def download_files(files_to_download):
@@ -33,12 +38,12 @@ def download_files(files_to_download):
     :param files_to_download: List of files to download
     :return: None
     """
-    for KEY in files_to_download:
-        logger.info("Downloading file " + KEY)
+    for key in files_to_download:
+        LOGGER.info("Downloading file " + key)
         try:
-            s3.download_file(BUCKET_NAME, KEY, KEY)
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == "404":
+            s3.download_file(BUCKET_NAME, key, key)
+        except botocore.exceptions.ClientError as exception:
+            if exception.response['Error']['Code'] == "404":
                 print("The object does not exist.")
             else:
                 raise

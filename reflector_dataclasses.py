@@ -1,3 +1,8 @@
+"""
+Collection of data classes for streamlining and rigidly structuring
+the input and output parameters of functions
+"""
+
 import datetime
 from dataclasses import dataclass
 from typing import List
@@ -7,6 +12,10 @@ import av
 
 @dataclass
 class TitleSummaryInput:
+    """
+    Data class for the input to generate title and summaries.
+    The outcome will be used to send query to the LLM for processing.
+    """
     input_text = str
     transcribed_time = float
     prompt = str
@@ -15,23 +24,28 @@ class TitleSummaryInput:
     def __init__(self, transcribed_time, input_text=""):
         self.input_text = input_text
         self.transcribed_time = transcribed_time
-        self.prompt = f"""
-                    ### Human:
-                    Create a JSON object as response. The JSON object must have 2 fields:
-                    i) title and ii) summary. For the title field,generate a short title
-                    for the given text. For the summary field, summarize the given text
-                    in three sentences.
+        self.prompt = \
+            f"""
+            ### Human:
+            Create a JSON object as response.The JSON object must have 2 fields:
+            i) title and ii) summary.For the title field,generate a short title
+            for the given text. For the summary field, summarize the given text
+            in three sentences.
 
-                    {self.input_text}
+            {self.input_text}
 
-                    ### Assistant:
-                    """
+            ### Assistant:
+            """
         self.data = {"data": self.prompt}
         self.headers = {"Content-Type": "application/json"}
 
 
 @dataclass
 class IncrementalResult:
+    """
+    Data class for the result of generating one title and summaries.
+    Defines how a single "topic" looks like.
+    """
     title = str
     description = str
     transcript = str
@@ -44,6 +58,10 @@ class IncrementalResult:
 
 @dataclass
 class TitleSummaryOutput:
+    """
+    Data class for the result of all generated titles and summaries.
+    The result will be sent back to the client
+    """
     cmd = str
     topics = List[IncrementalResult]
 
@@ -59,6 +77,10 @@ class TitleSummaryOutput:
 
 @dataclass
 class ParseLLMResult:
+    """
+    Data class to parse the result returned by the LLM while generating title
+    and summaries. The result will be sent back to the client.
+    """
     description = str
     transcript = str
     timestamp = str
@@ -66,7 +88,8 @@ class ParseLLMResult:
     def __init__(self, param: TitleSummaryInput, output: dict):
         self.transcript = param.input_text
         self.description = output.pop("summary")
-        self.timestamp = str(datetime.timedelta(seconds=round(param.transcribed_time)))
+        self.timestamp = \
+            str(datetime.timedelta(seconds=round(param.transcribed_time)))
 
     def get_result(self):
         return {
@@ -78,6 +101,10 @@ class ParseLLMResult:
 
 @dataclass
 class TranscriptionInput:
+    """
+    Data class to define the input to the transcription function
+    AudioFrames -> input
+    """
     frames = List[av.audio.frame.AudioFrame]
 
     def __init__(self, frames):
@@ -86,6 +113,10 @@ class TranscriptionInput:
 
 @dataclass
 class TranscriptionOutput:
+    """
+    Dataclass to define the result of the transcription function.
+    The result will be sent back to the client
+    """
     cmd = str
     result_text = str
 
@@ -102,6 +133,10 @@ class TranscriptionOutput:
 
 @dataclass
 class FinalSummaryResult:
+    """
+    Dataclass to define the result of the final summary function.
+    The result will be sent back to the client.
+    """
     cmd = str
     final_summary = str
     duration = str
@@ -117,3 +152,13 @@ class FinalSummaryResult:
                 "duration": self.duration,
                 "summary": self.final_summary
         }
+
+
+class BlackListedMessages:
+    """
+    Class to hold the blacklisted messages. These messages should be filtered
+    out and not sent back to the client as part of the transcription.
+    """
+    messages = [" Thank you.", " See you next time!",
+                " Thank you for watching!", " Bye!",
+                " And that's what I'm talking about."]
