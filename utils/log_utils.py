@@ -1,7 +1,15 @@
+"""
+Utility file for logging
+"""
+
 import loguru
 
 
 class SingletonLogger:
+    """
+    Use Singleton design pattern to create a logger object and share it
+    across the entire project
+    """
     __instance = None
 
     @staticmethod
@@ -15,4 +23,4 @@ class SingletonLogger:
         return SingletonLogger.__instance
 
 
-logger = SingletonLogger.get_logger()
+LOGGER = SingletonLogger.get_logger()
