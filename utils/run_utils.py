@@ -1,3 +1,7 @@
+"""
+Utility file for server side asynchronous task running and config objects
+"""
+
 import asyncio
 import configparser
 import contextlib
@@ -7,6 +11,9 @@ from typing import ContextManager, Generic, TypeVar
 
 
 class ReflectorConfig:
+    """
+    Create a single config object to share across the project
+    """
     __config = None
 
     @staticmethod
@@ -17,7 +24,7 @@ class ReflectorConfig:
         return ReflectorConfig.__config
 
 
-config = ReflectorConfig.get_config()
+CONFIG = ReflectorConfig.get_config()
 
 
 def run_in_executor(func, *args, executor=None, **kwargs):

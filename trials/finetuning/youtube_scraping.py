@@ -93,6 +93,6 @@ def generate_finetuning_dataset(video_ids):
 video_ids = ["yTnSEZIwnkU"]
 dataset = generate_finetuning_dataset(video_ids)
 
-with open("finetuning_dataset.jsonl", "w") as f:
+with open("finetuning_dataset.jsonl", "w", encoding="utf-8") as file:
     for example in dataset:
-        f.write(json.dumps(example) + "\n")
+        file.write(json.dumps(example) + "\n")

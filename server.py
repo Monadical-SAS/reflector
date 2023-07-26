@@ -6,18 +6,22 @@ import os
 import uuid
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from typing import Union, NoReturn
 
 import aiohttp_cors
+import av
 import requests
 from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
-from av import AudioFifo
 from faster_whisper import WhisperModel
-from loguru import logger
 from sortedcontainers import SortedDict
 
-from utils.run_utils import run_in_executor, config
+from reflector_dataclasses import FinalSummaryResult, ParseLLMResult,\
+    TitleSummaryInput, TitleSummaryOutput, TranscriptionInput,\
+    TranscriptionOutput, BlackListedMessages
+from utils.run_utils import CONFIG, run_in_executor
+from utils.log_utils import LOGGER
 
 pcs = set()
 relay = MediaRelay()
@@ -28,89 +32,68 @@ model = WhisperModel("tiny", device="cpu",
 
 CHANNELS = 2
 RATE = 48000
-audio_buffer = AudioFifo()
+audio_buffer = av.AudioFifo()
 executor = ThreadPoolExecutor()
 transcription_text = ""
 last_transcribed_time = 0.0
-LLM_MACHINE_IP = config["DEFAULT"]["LLM_MACHINE_IP"]
-LLM_MACHINE_PORT = config["DEFAULT"]["LLM_MACHINE_PORT"]
+LLM_MACHINE_IP = CONFIG["LLM"]["LLM_MACHINE_IP"]
+LLM_MACHINE_PORT = CONFIG["LLM"]["LLM_MACHINE_PORT"]
 LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 incremental_responses = []
 sorted_transcripts = SortedDict()
 
-blacklisted_messages = [" Thank you.", " See you next time!",
-                        " Thank you for watching!", " Bye!",
-                        " And that's what I'm talking about."]
+
+def parse_llm_output(param: TitleSummaryInput, response: requests.Response) -> Union[None, ParseLLMResult]:
+    try:
+        output = json.loads(response.json()["results"][0]["text"])
+        return ParseLLMResult(param, output)
+    except Exception as e:
+        LOGGER.info("Exception" + str(e))
+        return None
 
 
-def get_title_and_summary(llm_input_text, last_timestamp):
-    logger.info("Generating title and summary")
-    # output = llm.generate(prompt)
-
-    # Use monadical-ml to fire this query to an LLM and get result
-    headers = {
-            "Content-Type": "application/json"
-    }
-
-    prompt = f"""
-        ### Human:
-        Create a JSON object as response. The JSON object must have 2 fields:
-        i) title and ii) summary. For the title field,generate a short title
-        for the given text. For the summary field, summarize the given text
-        in three sentences.
-
-        {llm_input_text}
-
-        ### Assistant:
-        """
-
-    data = {
-            "prompt": prompt
-    }
+def get_title_and_summary(param: TitleSummaryInput) -> Union[None, TitleSummaryOutput]:
+    LOGGER.info("Generating title and summary")
 
     # TODO : Handle unexpected output formats from the model
     try:
-        response = requests.post(LLM_URL, headers=headers, json=data)
-        output = json.loads(response.json()["results"][0]["text"])
-        output["description"] = output.pop("summary")
-        output["transcript"] = llm_input_text
-        output["timestamp"] = \
-            str(datetime.timedelta(seconds=round(last_timestamp)))
-        incremental_responses.append(output)
-        result = {
-                "cmd": "UPDATE_TOPICS",
-                "topics": incremental_responses,
-        }
-
+        response = requests.post(LLM_URL,
+                                 headers=param.headers,
+                                 json=param.data)
+        output = parse_llm_output(param, response)
+        if output:
+            result = output.get_result()
+            incremental_responses.append(result)
+            return TitleSummaryOutput(incremental_responses)
     except Exception as e:
-        logger.info("Exception" + str(e))
-        result = None
-    return result
+        LOGGER.info("Exception" + str(e))
+        return None
 
 
-def channel_log(channel, t, message):
-    logger.info("channel(%s) %s %s" % (channel.label, t, message))
+def channel_log(channel, t: str, message: str) -> NoReturn:
+    LOGGER.info("channel(%s) %s %s" % (channel.label, t, message))
 
 
-def channel_send(channel, message):
+def channel_send(channel, message: str) -> NoReturn:
     if channel:
         channel.send(message)
 
 
-def channel_send_increment(channel, message):
-    if channel and message:
+def channel_send_increment(channel, param: Union[FinalSummaryResult, TitleSummaryOutput]) -> NoReturn:
+    if channel and param:
+        message = param.get_result()
         channel.send(json.dumps(message))
 
 
-def channel_send_transcript(channel):
+def channel_send_transcript(channel) -> NoReturn:
     # channel_log(channel, ">", message)
     if channel:
         try:
-            least_time = sorted_transcripts.keys()[0]
-            message = sorted_transcripts[least_time]
+            least_time = next(iter(sorted_transcripts))
+            message = sorted_transcripts[least_time].get_result()
             if message:
                 del sorted_transcripts[least_time]
-                if message["text"] not in blacklisted_messages:
+                if message["text"] not in BlackListedMessages.messages:
                     channel.send(json.dumps(message))
             # Due to exceptions if one of the earlier batches can't return
             # a transcript, we don't want to be stuck waiting for the result
@@ -118,27 +101,26 @@ def channel_send_transcript(channel):
             else:
                 if len(sorted_transcripts) >= 3:
                     del sorted_transcripts[least_time]
-        except Exception as e:
-            logger.info("Exception", str(e))
-            pass
+        except Exception as exception:
+            LOGGER.info("Exception", str(exception))
 
 
-def get_transcription(frames):
-    logger.info("Transcribing..")
-    sorted_transcripts[frames[0].time] = None
+def get_transcription(input_frames: TranscriptionInput) -> Union[None, TranscriptionOutput]:
+    LOGGER.info("Transcribing..")
+    sorted_transcripts[input_frames.frames[0].time] = None
 
-    # TODO:
+    # TODO: Find cleaner way, watch "no transcription" issue below
     # Passing IO objects instead of temporary files throws an error
-    # Passing ndarrays (typecasted with float) does not give any
+    # Passing ndarray (type casted with float) does not give any
     # transcription. Refer issue,
     # https://github.com/guillaumekln/faster-whisper/issues/369
-    audiofilename = "test" + str(datetime.datetime.now())
-    wf = wave.open(audiofilename, "wb")
+    audio_file = "test" + str(datetime.datetime.now())
+    wf = wave.open(audio_file, "wb")
     wf.setnchannels(CHANNELS)
     wf.setframerate(RATE)
     wf.setsampwidth(2)
 
-    for frame in frames:
+    for frame in input_frames.frames:
         wf.writeframes(b"".join(frame.to_ndarray()))
     wf.close()
 
@@ -146,12 +128,12 @@ def get_transcription(frames):
 
     try:
         segments, _ = \
-            model.transcribe(audiofilename,
+            model.transcribe(audio_file,
                              language="en",
                              beam_size=5,
                              vad_filter=True,
-                             vad_parameters=dict(min_silence_duration_ms=500))
-        os.remove(audiofilename)
+                             vad_parameters={"min_silence_duration_ms": 500})
+        os.remove(audio_file)
         segments = list(segments)
         result_text = ""
         duration = 0.0
@@ -169,34 +151,32 @@ def get_transcription(frames):
         last_transcribed_time += duration
         transcription_text += result_text
 
-    except Exception as e:
-        logger.info("Exception" + str(e))
-        pass
+    except Exception as exception:
+        LOGGER.info("Exception" + str(exception))
 
-    result = {
-            "cmd": "SHOW_TRANSCRIPTION",
-            "text": result_text
-    }
-    sorted_transcripts[frames[0].time] = result
+    result = TranscriptionOutput(result_text)
+    sorted_transcripts[input_frames.frames[0].time] = result
     return result
 
 
-def get_final_summary_response():
+def get_final_summary_response() -> FinalSummaryResult:
+    """
+    Collate the incremental summaries generated so far and return as the final
+    summary
+    :return:
+    """
     final_summary = ""
 
     # Collate inc summaries
     for topic in incremental_responses:
         final_summary += topic["description"]
 
-    response = {
-            "cmd": "DISPLAY_FINAL_SUMMARY",
-            "duration": str(datetime.timedelta(
-                    seconds=round(last_transcribed_time))),
-            "summary": final_summary
-    }
+    response = FinalSummaryResult(final_summary, last_transcribed_time)
 
-    with open("./artefacts/meeting_titles_and_summaries.txt", "a") as f:
-        f.write(json.dumps(incremental_responses))
+    with open("./artefacts/meeting_titles_and_summaries.txt", "a",
+              encoding="utf-8") as file:
+        file.write(json.dumps(incremental_responses))
+
     return response
 
 
@@ -211,14 +191,16 @@ class AudioStreamTrack(MediaStreamTrack):
         super().__init__()
         self.track = track
 
-    async def recv(self):
+    async def recv(self) -> av.audio.frame.AudioFrame:
         global transcription_text
         frame = await self.track.recv()
         audio_buffer.write(frame)
 
         if local_frames := audio_buffer.read_many(256 * 960, partial=False):
             whisper_result = run_in_executor(
-                    get_transcription, local_frames, executor=executor
+                    get_transcription,
+                    TranscriptionInput(local_frames),
+                    executor=executor
             )
             whisper_result.add_done_callback(
                     lambda f: channel_send_transcript(data_channel)
@@ -226,12 +208,13 @@ class AudioStreamTrack(MediaStreamTrack):
                     else None
             )
 
-        if len(transcription_text) > 750:
+        if len(transcription_text) > 25:
             llm_input_text = transcription_text
             transcription_text = ""
+            param = TitleSummaryInput(input_text=llm_input_text,
+                                      transcribed_time=last_transcribed_time)
             llm_result = run_in_executor(get_title_and_summary,
-                                         llm_input_text,
-                                         last_transcribed_time,
+                                         param,
                                          executor=executor)
             llm_result.add_done_callback(
                     lambda f: channel_send_increment(data_channel,
@@ -242,7 +225,12 @@ class AudioStreamTrack(MediaStreamTrack):
         return frame
 
 
-async def offer(request):
+async def offer(request: requests.Request) -> web.Response:
+    """
+    Establish the WebRTC connection with the client
+    :param request:
+    :return:
+    """
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -250,40 +238,39 @@ async def offer(request):
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
 
-    def log_info(msg, *args):
-        logger.info(pc_id + " " + msg, *args)
+    def log_info(msg, *args) -> NoReturn:
+        LOGGER.info(pc_id + " " + msg, *args)
 
     log_info("Created for " + request.remote)
 
     @pc.on("datachannel")
-    def on_datachannel(channel):
+    def on_datachannel(channel) -> NoReturn:
         global data_channel
         data_channel = channel
         channel_log(channel, "-", "created by remote party")
 
         @channel.on("message")
-        def on_message(message):
+        def on_message(message: str) -> NoReturn:
             channel_log(channel, "<", message)
             if json.loads(message)["cmd"] == "STOP":
-                # Place holder final summary
+                # Placeholder final summary
                 response = get_final_summary_response()
                 channel_send_increment(data_channel, response)
                 # To-do Add code to stop connection from server side here
                 # But have to handshake with client once
-                # pc.close()
 
             if isinstance(message, str) and message.startswith("ping"):
                 channel_send(channel, "pong" + message[4:])
 
     @pc.on("connectionstatechange")
-    async def on_connectionstatechange():
+    async def on_connectionstatechange() -> NoReturn:
         log_info("Connection state is " + pc.connectionState)
         if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
 
     @pc.on("track")
-    def on_track(track):
+    def on_track(track) -> NoReturn:
         log_info("Track " + track.kind + " received")
         pc.addTrack(AudioStreamTrack(relay.subscribe(track)))
 
@@ -294,15 +281,17 @@ async def offer(request):
     return web.Response(
             content_type="application/json",
             text=json.dumps(
-                    {"sdp": pc.localDescription.sdp,
-                     "type": pc.localDescription.type}
+                    {
+                            "sdp": pc.localDescription.sdp,
+                            "type": pc.localDescription.type
+                    }
             ),
     )
 
 
-async def on_shutdown(app):
-    coros = [pc.close() for pc in pcs]
-    await asyncio.gather(*coros)
+async def on_shutdown(application: web.Application) -> NoReturn:
+    coroutines = [pc.close() for pc in pcs]
+    await asyncio.gather(*coroutines)
     pcs.clear()
 
 
@@ -332,4 +321,4 @@ if __name__ == "__main__":
     offer_resource = cors.add(app.router.add_resource("/offer"))
     cors.add(offer_resource.add_route("POST", offer))
     app.on_shutdown.append(on_shutdown)
-    web.run_app(app, access_log=None,  host=args.host, port=args.port)
+    web.run_app(app, access_log=None, host=args.host, port=args.port)

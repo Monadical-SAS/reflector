@@ -1,13 +1,24 @@
+"""
+Utility function to format the artefacts created during Reflector run
+"""
+
 import json
 
-with open("../artefacts/meeting_titles_and_summaries.txt", "r") as f:
+with open("../artefacts/meeting_titles_and_summaries.txt", "r",
+          encoding='utf-8') as f:
     outputs = f.read()
 
 outputs = json.loads(outputs)
 
-transcript_file = open("../artefacts/meeting_transcript.txt", "a")
-title_desc_file = open("../artefacts/meeting_title_description.txt", "a")
-summary_file = open("../artefacts/meeting_summary.txt", "a")
+transcript_file = open("../artefacts/meeting_transcript.txt",
+                       "a",
+                       encoding='utf-8')
+title_desc_file = open("../artefacts/meeting_title_description.txt",
+                       "a",
+                       encoding='utf-8')
+summary_file = open("../artefacts/meeting_summary.txt",
+                    "a",
+                    encoding='utf-8')
 
 for item in outputs["topics"]:
     transcript_file.write(item["transcript"])

@@ -9,8 +9,8 @@ import stamina
 from aiortc import (RTCPeerConnection, RTCSessionDescription)
 from aiortc.contrib.media import (MediaPlayer, MediaRelay)
 
-from utils.log_utils import logger
-from utils.run_utils import config
+from utils.log_utils import LOGGER
+from utils.run_utils import CONFIG
 
 
 class StreamClient:
@@ -35,7 +35,7 @@ class StreamClient:
         self.time_start = None
         self.queue = asyncio.Queue()
         self.player = MediaPlayer(
-                ':' + str(config['DEFAULT']["AV_FOUNDATION_DEVICE_ID"]),
+                ':' + str(CONFIG['AUDIO']["AV_FOUNDATION_DEVICE_ID"]),
                 format='avfoundation',
                 options={'channels': '2'})
 
@@ -74,7 +74,7 @@ class StreamClient:
         self.pcs.add(pc)
 
         def log_info(msg, *args):
-            logger.info(pc_id + " " + msg, *args)
+            LOGGER.info(pc_id + " " + msg, *args)
 
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
