@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  background: white;
+
+  font-family: "Roboto", sans-serif;
+}
+
+.temp-transcription {
+  background: beige;
+  border-radius: 5px;
+}
