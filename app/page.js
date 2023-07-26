@@ -6,23 +6,11 @@ import useWebRTC from "./components/webrtc.js";
 import "../public/button.css";
 
 const App = () => {
-  const [isRecording, setIsRecording] = useState(false);
   const [stream, setStream] = useState(null);
 
-  const handleRecord = (recording) => {
-    setIsRecording(recording);
-
-    if (recording) {
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(setStream)
-        .catch((err) => console.error(err));
-    } else if (!recording && serverData.peer) {
-      serverData.peer.send(JSON.stringify({ cmd: "STOP" }));
-    }
-  };
-
-  const serverData = useWebRTC(stream, setIsRecording);
+  // This is where you'd send the stream and receive the data from the server.
+  // transcription, summary, etc
+  const serverData = useWebRTC(stream, () => {});
 
   return (
     <div className="flex flex-col items-center h-[100svh]">
@@ -33,8 +21,6 @@ const App = () => {
 
       <Recorder setStream={setStream} serverData={serverData} />
       <Dashboard
-        isRecording={isRecording}
-        onRecord={(recording) => handleRecord(recording)}
         transcriptionText={serverData.text ?? "..."}
         finalSummary={serverData.finalSummary}
         topics={serverData.topics ?? []}
