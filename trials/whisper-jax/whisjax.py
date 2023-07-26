@@ -27,7 +27,7 @@ from ...utils.viz_utils import create_talk_diff_scatter_viz, create_wordcloud
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 
-WHISPER_MODEL_SIZE = config['DEFAULT']["WHISPER_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = config['WHISPER']["WHISPER_MODEL_SIZE"]
 NOW = datetime.now()
 
 if not os.path.exists('../../artefacts'):
