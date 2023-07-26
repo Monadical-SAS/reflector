@@ -10,7 +10,7 @@ const App = () => {
 
   // This is where you'd send the stream and receive the data from the server.
   // transcription, summary, etc
-    const serverData = useWebRTC(stream, setIsRecording);
+  const serverData = useWebRTC(stream, () => { });
 
   return (
     <div className="flex flex-col items-center h-[100svh]">
