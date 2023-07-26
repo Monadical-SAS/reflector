@@ -35,7 +35,7 @@ const App = () => {
       <Dashboard
         isRecording={isRecording}
         onRecord={(recording) => handleRecord(recording)}
-        transcriptionText={serverData.text ?? "..."}
+        transcriptionText={serverData.text ?? "(No transcription yet)"}
         finalSummary={serverData.finalSummary}
         topics={serverData.topics ?? []}
         stream={stream}

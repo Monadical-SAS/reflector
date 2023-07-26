@@ -57,8 +57,8 @@ export function Dashboard({
         )}
       </div>
 
-      <footer className="w-full bg-gray-800 text-white text-center py-4 text-2xl">
-        {transcriptionText}
+      <footer className="w-full bg-gray-800 text-white text-center py-4 text-2xl mt-8 h-32">
+        &nbsp;{transcriptionText}&nbsp;
       </footer>
     </>
   );
