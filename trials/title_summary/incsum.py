@@ -3,14 +3,14 @@ import sys
 
 
 # Observe the incremental summaries by performing summaries in chunks
-with open("transcript.txt") as f:
-    transcription = f.read()
+with open("transcript.txt", "r", encoding="utf-8") as file:
+    transcription = file.read()
 
 
 def split_text_file(filename, token_count):
     nlp = spacy.load('en_core_web_md')
 
-    with open(filename, 'r') as file:
+    with open(filename, 'r', encoding="utf-8") as file:
         text = file.read()
 
     doc = nlp(text)
@@ -36,9 +36,9 @@ chunks = split_text_file("transcript.txt", MAX_CHUNK_LENGTH)
 print("Number of chunks", len(chunks))
 
 # Write chunks to file to refer to input vs output, separated by blank lines
-with open("chunks" + str(MAX_CHUNK_LENGTH) + ".txt", "a") as f:
+with open("chunks" + str(MAX_CHUNK_LENGTH) + ".txt", "a", encoding="utf-8") as file:
     for c in chunks:
-        f.write(c + "\n\n")
+        file.write(c + "\n\n")
 
 # If we want to run only a certain model, type the option while running
 # ex. python incsum.py 1 => will run approach 1
@@ -78,9 +78,9 @@ if index == "1" or index is None:
         summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
         summaries.append(summary)
 
-    with open("bart-summaries.txt", "a") as f:
+    with open("bart-summaries.txt", "a", encoding="utf-8") as file:
         for summary in summaries:
-            f.write(summary + "\n\n")
+            file.write(summary + "\n\n")
 
 # Approach 2
 if index == "2" or index is None:
@@ -114,8 +114,8 @@ if index == "2" or index is None:
         summary_ids = output[0, input_length:]
         summary = tokenizer.decode(summary_ids, skip_special_tokens=True)
         summaries.append(summary)
-        with open("gptneo1.3B-summaries.txt", "a") as f:
-            f.write(summary + "\n\n")
+        with open("gptneo1.3B-summaries.txt", "a", encoding="utf-8") as file:
+            file.write(summary + "\n\n")
 
 # Approach 3
 if index == "3" or index is None:
@@ -152,6 +152,6 @@ if index == "3" or index is None:
                                    skip_special_tokens=True)
         summaries.append(summary)
 
-    with open("mpt-7b-summaries.txt", "a") as f:
+    with open("mpt-7b-summaries.txt", "a", encoding="utf-8") as file:
         for summary in summaries:
-            f.write(summary + "\n\n")
+            file.write(summary + "\n\n")

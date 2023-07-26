@@ -1,3 +1,7 @@
+"""
+Utility file for all visualization related functions
+"""
+
 import ast
 import collections
 import os
@@ -81,8 +85,8 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     else:
         filename = "./artefacts/transcript_with_timestamp_" + \
                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
-    with open(filename) as f:
-        transcription_timestamp_text = f.read()
+    with open(filename) as file:
+        transcription_timestamp_text = file.read()
 
     res = ast.literal_eval(transcription_timestamp_text)
     chunks = res["chunks"]
