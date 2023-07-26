@@ -1,0 +1,36 @@
+{
+  "name": "reflector-ui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "autoprefixer": "10.4.14",
+    "fontawesome": "^5.6.3",
+    "next": "^13.4.9",
+    "postcss": "8.4.25",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropdown": "^1.11.0",
+    "sass": "^1.63.6",
+    "simple-peer": "^9.11.1",
+    "supports-color": "^9.4.0",
+    "tailwindcss": "^3.3.2",
+    "wavesurfer.js": "^7.0.3"
+  },
+  "main": "index.js",
+  "repository": "https://github.com/Monadical-SAS/reflector-ui.git",
+  "author": "Koper <andreas@monadical.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  }
+}
