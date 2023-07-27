@@ -29,8 +29,8 @@ COPY --link  . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-# RUN yarn build
-RUN npm run build
+RUN yarn build
+# RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
