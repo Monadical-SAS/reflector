@@ -6,8 +6,8 @@ import httpx
 import pyaudio
 import requests
 import stamina
-from aiortc import (RTCPeerConnection, RTCSessionDescription)
-from aiortc.contrib.media import (MediaPlayer, MediaRelay)
+from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 
 from utils.log_utils import LOGGER
 from utils.run_utils import CONFIG
@@ -15,11 +15,7 @@ from utils.run_utils import CONFIG
 
 class StreamClient:
     def __init__(
-            self,
-            signaling,
-            url="http://0.0.0.0:1250",
-            play_from=None,
-            ping_pong=False
+        self, signaling, url="http://0.0.0.0:1250", play_from=None, ping_pong=False
     ):
         self.signaling = signaling
         self.server_url = url
@@ -35,9 +31,10 @@ class StreamClient:
         self.time_start = None
         self.queue = asyncio.Queue()
         self.player = MediaPlayer(
-                ':' + str(CONFIG['AUDIO']["AV_FOUNDATION_DEVICE_ID"]),
-                format='avfoundation',
-                options={'channels': '2'})
+            ":" + str(CONFIG["AUDIO"]["AV_FOUNDATION_DEVICE_ID"]),
+            format="avfoundation",
+            options={"channels": "2"},
+        )
 
     def stop(self):
         self.loop.run_until_complete(self.signaling.close())
@@ -114,16 +111,12 @@ class StreamClient:
                 self.channel_log(channel, "<", message)
 
                 if isinstance(message, str) and message.startswith("pong"):
-                    elapsed_ms = (self.current_stamp() - int(message[5:])) \
-                                 / 1000
+                    elapsed_ms = (self.current_stamp() - int(message[5:])) / 1000
                     print(" RTT %.2f ms" % elapsed_ms)
 
         await pc.setLocalDescription(await pc.createOffer())
 
-        sdp = {
-                "sdp": pc.localDescription.sdp,
-                "type": pc.localDescription.type
-        }
+        sdp = {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
         @stamina.retry(on=httpx.HTTPError, attempts=5)
         def connect_to_server():

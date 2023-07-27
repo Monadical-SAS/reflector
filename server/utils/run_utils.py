@@ -14,6 +14,7 @@ class ReflectorConfig:
     """
     Create a single config object to share across the project
     """
+
     __config = None
     __secrets = None
 
@@ -25,7 +26,7 @@ class ReflectorConfig:
         """
         if ReflectorConfig.__config is None:
             ReflectorConfig.__config = configparser.ConfigParser()
-            ReflectorConfig.__config.read('utils/config.ini')
+            ReflectorConfig.__config.read("utils/config.ini")
         return ReflectorConfig.__config
 
     @staticmethod
@@ -36,7 +37,7 @@ class ReflectorConfig:
         """
         if ReflectorConfig.__secrets is None:
             ReflectorConfig.__secrets = configparser.ConfigParser()
-            ReflectorConfig.__secrets.read('utils/secrets.ini')
+            ReflectorConfig.__secrets.read("utils/secrets.ini")
         return ReflectorConfig.__secrets
 
 
