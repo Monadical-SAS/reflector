@@ -30,7 +30,7 @@ const useWebRTC = (stream, setIsRecording) => {
           .then((response) => response.json())
           .then((answer) => peer.signal(answer))
           .catch((e) => {
-            alert(e);
+            console.log("Error signaling:", e);
           });
       }
     });

@@ -7,19 +7,14 @@ import "react-dropdown/style.css";
 
 import CustomRecordPlugin from "./CustomRecordPlugin";
 
-const queryAndPromptAudio = async () => {
-  const permissionStatus = await navigator.permissions.query({ name: 'microphone' })
-  if (permissionStatus.state == 'prompt') {
-    await navigator.mediaDevices.getUserMedia({ audio: true })
-  }
-}
 
 const AudioInputsDropdown = (props) => {
   const [ddOptions, setDdOptions] = useState([]);
 
   useEffect(() => {
     const init = async () => {
-      await queryAndPromptAudio()
+      // Request permission to use audio inputs
+      await navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => stream.getTracks().forEach((t) => t.stop()))
 
       const devices = await navigator.mediaDevices.enumerateDevices()
       const audioDevices = devices
@@ -62,8 +57,8 @@ export default function Recorder(props) {
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        waveColor: "#cc3347",
-        progressColor: "#0178FFπ",
+        waveColor: "#777",
+        progressColor: "#222",
         cursorColor: "OrangeRed",
         hideScrollbar: true,
         autoCenter: true,
@@ -95,8 +90,7 @@ export default function Recorder(props) {
     if (!record) return console.log("no record");
 
     if (record?.isRecording()) {
-
-      props.serverData.peer.send(JSON.stringify({ cmd: "STOP" }));
+      props.onStop();
       record.stopRecording();
       setIsRecording(false);
       document.getElementById("play-btn").disabled = false;
