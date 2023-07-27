@@ -3,46 +3,10 @@ Utility file for server side asynchronous task running and config objects
 """
 
 import asyncio
-import configparser
 import contextlib
 from functools import partial
 from threading import Lock
 from typing import ContextManager, Generic, TypeVar
-
-
-class ReflectorConfig:
-    """
-    Create a single config object to share across the project
-    """
-
-    __config = None
-    __secrets = None
-
-    @staticmethod
-    def get_config():
-        """
-        Load the configurations from the local config.ini file
-        :return:
-        """
-        if ReflectorConfig.__config is None:
-            ReflectorConfig.__config = configparser.ConfigParser()
-            ReflectorConfig.__config.read("utils/config.ini")
-        return ReflectorConfig.__config
-
-    @staticmethod
-    def get_secrets():
-        """
-        Load the configurations from the local config.ini file
-        :return:
-        """
-        if ReflectorConfig.__secrets is None:
-            ReflectorConfig.__secrets = configparser.ConfigParser()
-            ReflectorConfig.__secrets.read("utils/secrets.ini")
-        return ReflectorConfig.__secrets
-
-
-CONFIG = ReflectorConfig.get_config()
-SECRETS = ReflectorConfig.get_secrets()
 
 
 def run_in_executor(func, *args, executor=None, **kwargs):
