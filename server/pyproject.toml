@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "reflector-server"
+version = "0.1.0"
+description = ""
+authors = ["Monadical team <ops@monadical.com>"]
+readme = "README.md"
+packages = [{include = "reflector_server"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiohttp = "^3.8.5"
+aiohttp-cors = "^0.7.0"
+av = "^10.0.0"
+requests = "^2.31.0"
+aiortc = "^1.5.0"
+faster-whisper = "^0.7.1"
+sortedcontainers = "^2.4.0"
+loguru = "^0.7.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
