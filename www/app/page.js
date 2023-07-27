@@ -12,6 +12,8 @@ const App = () => {
   // transcription, summary, etc
   const serverData = useWebRTC(stream, () => { });
 
+  const sendStopCmd = () => serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }))
+
   return (
     <div className="flex flex-col items-center h-[100svh]">
       <div className="text-center py-6 mt-10">
@@ -19,7 +21,7 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder setStream={setStream} serverData={serverData} />
+      <Recorder setStream={setStream} onStop={sendStopCmd} />
       <Dashboard
         transcriptionText={serverData.text ?? "(No transcription yet)"}
         finalSummary={serverData.finalSummary}

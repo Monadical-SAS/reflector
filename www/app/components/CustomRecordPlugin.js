@@ -45,7 +45,7 @@ class CustomRecordPlugin extends RecordPlugin {
 
       analyser.getByteTimeDomainData(dataArray)
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height)
-      canvasCtx.fillStyle = 'black'
+      canvasCtx.fillStyle = '#cc3347'
 
       if (previousTimeStamp === undefined) {
         previousTimeStamp = timeStamp
