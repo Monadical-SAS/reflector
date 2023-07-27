@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "reflector-server"
+version = "0.1.0"
+description = ""
+authors = ["Monadical team <ops@monadical.com>"]
+readme = "README.md"
+packages = []
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiohttp = "^3.8.5"
+aiohttp-cors = "^0.7.0"
+av = "^10.0.0"
+requests = "^2.31.0"
+aiortc = "^1.5.0"
+faster-whisper = "^0.7.1"
+sortedcontainers = "^2.4.0"
+loguru = "^0.7.0"
+pydantic-settings = "^2.0.2"
+structlog = "^23.1.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+
+
+[tool.poetry.group.client.dependencies]
+httpx = "^0.24.1"
+pyaudio = "^0.2.13"
+stamina = "^23.1.0"
+
+
+[tool.poetry.group.tests.dependencies]
+pytest-aiohttp = "^1.0.4"
+pytest-asyncio = "^0.21.1"
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

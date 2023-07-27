@@ -21,7 +21,7 @@ Reflector is a React application that uses WebRTC to stream audio from the brows
 To install the application, run:
 
 ```bash
-npm install
+yarn install
 ```
 
 ## Run the Application
@@ -29,7 +29,7 @@ npm install
 To run the application in development mode, run:
 
 ```bash
-npm run dev
+yarn run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) to view it in the browser.

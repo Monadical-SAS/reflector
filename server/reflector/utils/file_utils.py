@@ -4,21 +4,24 @@ uploads to cloud storage
 """
 
 import sys
+from typing import List, NoReturn
 
 import boto3
 import botocore
 
 from .log_utils import LOGGER
-from .run_utils import CONFIG
+from .run_utils import SECRETS
 
-BUCKET_NAME = CONFIG["AWS"]["BUCKET_NAME"]
+BUCKET_NAME = SECRETS["AWS-S3"]["BUCKET_NAME"]
 
-s3 = boto3.client('s3',
-                  aws_access_key_id=CONFIG["AWS"]["AWS_ACCESS_KEY"],
-                  aws_secret_access_key=CONFIG["AWS"]["AWS_SECRET_KEY"])
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=SECRETS["AWS-S3"]["AWS_ACCESS_KEY"],
+    aws_secret_access_key=SECRETS["AWS-S3"]["AWS_SECRET_KEY"],
+)
 
 
-def upload_files(files_to_upload):
+def upload_files(files_to_upload: List[str]) -> NoReturn:
     """
     Upload a list of files to the configured S3 bucket
     :param files_to_upload: List of files to upload
@@ -32,7 +35,7 @@ def upload_files(files_to_upload):
             print(exception.response)
 
 
-def download_files(files_to_download):
+def download_files(files_to_download: List[str]) -> NoReturn:
     """
     Download a list of files from the configured S3 bucket
     :param files_to_download: List of files to download
@@ -43,7 +46,7 @@ def download_files(files_to_download):
         try:
             s3.download_file(BUCKET_NAME, key, key)
         except botocore.exceptions.ClientError as exception:
-            if exception.response['Error']['Code'] == "404":
+            if exception.response["Error"]["Code"] == "404":
                 print("The object does not exist.")
             else:
                 raise

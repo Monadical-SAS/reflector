@@ -1,6 +1,8 @@
 """
 Utility file for all text processing related functionalities
 """
+import datetime
+from typing import List
 
 import nltk
 import torch
@@ -13,18 +15,22 @@ from transformers import BartForConditionalGeneration, BartTokenizer
 from log_utils import LOGGER
 from run_utils import CONFIG
 
-nltk.download('punkt', quiet=True)
+nltk.download("punkt", quiet=True)
 
 
-def preprocess_sentence(sentence):
-    stop_words = set(stopwords.words('english'))
+def preprocess_sentence(sentence: str) -> str:
+    """
+    Filter out undesirable tokens from thr sentence
+    :param sentence:
+    :return:
+    """
+    stop_words = set(stopwords.words("english"))
     tokens = word_tokenize(sentence.lower())
-    tokens = [token for token in tokens
-              if token.isalnum() and token not in stop_words]
-    return ' '.join(tokens)
+    tokens = [token for token in tokens if token.isalnum() and token not in stop_words]
+    return " ".join(tokens)
 
 
-def compute_similarity(sent1, sent2):
+def compute_similarity(sent1: str, sent2: str) -> float:
     """
     Compute the similarity
     """
@@ -35,7 +41,7 @@ def compute_similarity(sent1, sent2):
     return 0.0
 
 
-def remove_almost_alike_sentences(sentences, threshold=0.7):
+def remove_almost_alike_sentences(sentences: List[str], threshold=0.7) -> List[str]:
     """
     Filter sentences that are similar beyond a set threshold
     :param sentences:
@@ -60,18 +66,18 @@ def remove_almost_alike_sentences(sentences, threshold=0.7):
                         sentence1 = preprocess_sentence(sentences[i])
                         sentence2 = preprocess_sentence(sentences[j])
                         if len(sentence1) != 0 and len(sentence2) != 0:
-                            similarity = compute_similarity(sentence1,
-                                                            sentence2)
+                            similarity = compute_similarity(sentence1, sentence2)
 
                             if similarity >= threshold:
                                 removed_indices.add(max(i, j))
 
-    filtered_sentences = [sentences[i] for i in range(num_sentences)
-                          if i not in removed_indices]
+    filtered_sentences = [
+        sentences[i] for i in range(num_sentences) if i not in removed_indices
+    ]
     return filtered_sentences
 
 
-def remove_outright_duplicate_sentences_from_chunk(chunk):
+def remove_outright_duplicate_sentences_from_chunk(chunk: str) -> List[str]:
     """
     Remove repetitive sentences
     :param chunk:
@@ -83,7 +89,9 @@ def remove_outright_duplicate_sentences_from_chunk(chunk):
     return nonduplicate_sentences
 
 
-def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
+def remove_whisper_repetitive_hallucination(
+    nonduplicate_sentences: List[str],
+) -> List[str]:
     """
     Remove sentences that are repeated as a result of Whisper
     hallucinations
@@ -98,20 +106,23 @@ def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
         words = nltk.word_tokenize(sent)
         n_gram_filter = 3
         for i in range(len(words)):
-            if str(words[i:i + n_gram_filter]) in seen and \
-                    seen[str(words[i:i + n_gram_filter])] == \
-                    words[i + 1:i + n_gram_filter + 2]:
+            if (
+                str(words[i : i + n_gram_filter]) in seen
+                and seen[str(words[i : i + n_gram_filter])]
+                == words[i + 1 : i + n_gram_filter + 2]
+            ):
                 pass
             else:
-                seen[str(words[i:i + n_gram_filter])] = \
-                    words[i + 1:i + n_gram_filter + 2]
+                seen[str(words[i : i + n_gram_filter])] = words[
+                    i + 1 : i + n_gram_filter + 2
+                ]
                 temp_result += words[i]
                 temp_result += " "
         chunk_sentences.append(temp_result)
     return chunk_sentences
 
 
-def post_process_transcription(whisper_result):
+def post_process_transcription(whisper_result: dict) -> dict:
     """
     Parent function to perform post-processing on the transcription result
     :param whisper_result:
@@ -119,19 +130,18 @@ def post_process_transcription(whisper_result):
     """
     transcript_text = ""
     for chunk in whisper_result["chunks"]:
-        nonduplicate_sentences = \
-            remove_outright_duplicate_sentences_from_chunk(chunk)
-        chunk_sentences = \
-            remove_whisper_repetitive_hallucination(nonduplicate_sentences)
-        similarity_matched_sentences = \
-            remove_almost_alike_sentences(chunk_sentences)
+        nonduplicate_sentences = remove_outright_duplicate_sentences_from_chunk(chunk)
+        chunk_sentences = remove_whisper_repetitive_hallucination(
+            nonduplicate_sentences
+        )
+        similarity_matched_sentences = remove_almost_alike_sentences(chunk_sentences)
         chunk["text"] = " ".join(similarity_matched_sentences)
         transcript_text += chunk["text"]
     whisper_result["text"] = transcript_text
     return whisper_result
 
 
-def summarize_chunks(chunks, tokenizer, model):
+def summarize_chunks(chunks: List[str], tokenizer, model) -> List[str]:
     """
     Summarize each chunk using a summarizer model
     :param chunks:
@@ -142,23 +152,24 @@ def summarize_chunks(chunks, tokenizer, model):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     summaries = []
     for c in chunks:
-        input_ids = tokenizer.encode(c, return_tensors='pt')
+        input_ids = tokenizer.encode(c, return_tensors="pt")
         input_ids = input_ids.to(device)
         with torch.no_grad():
-            summary_ids = \
-                model.generate(input_ids,
-                               num_beams=int(CONFIG["SUMMARIZER"]["BEAM_SIZE"]),
-                               length_penalty=2.0,
-                               max_length=int(CONFIG["SUMMARIZER"]["MAX_LENGTH"]),
-                               early_stopping=True)
-            summary = tokenizer.decode(summary_ids[0],
-                                       skip_special_tokens=True)
+            summary_ids = model.generate(
+                input_ids,
+                num_beams=int(CONFIG["SUMMARIZER"]["BEAM_SIZE"]),
+                length_penalty=2.0,
+                max_length=int(CONFIG["SUMMARIZER"]["MAX_LENGTH"]),
+                early_stopping=True,
+            )
+            summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
             summaries.append(summary)
     return summaries
 
 
-def chunk_text(text,
-               max_chunk_length=int(CONFIG["SUMMARIZER"]["MAX_CHUNK_LENGTH"])):
+def chunk_text(
+    text: str, max_chunk_length: int = int(CONFIG["SUMMARIZER"]["MAX_CHUNK_LENGTH"])
+) -> List[str]:
     """
     Split text into smaller chunks.
     :param text: Text to be chunked
@@ -178,9 +189,12 @@ def chunk_text(text,
     return chunks
 
 
-def summarize(transcript_text, timestamp,
-              real_time=False,
-              chunk_summarize=CONFIG["SUMMARIZER"]["SUMMARIZE_USING_CHUNKS"]):
+def summarize(
+    transcript_text: str,
+    timestamp: datetime.datetime.timestamp,
+    real_time: bool = False,
+    chunk_summarize: str = CONFIG["SUMMARIZER"]["SUMMARIZE_USING_CHUNKS"],
+):
     """
     Summarize the given text either as a whole or as chunks as needed
     :param transcript_text:
@@ -206,39 +220,45 @@ def summarize(transcript_text, timestamp,
 
     if chunk_summarize != "YES":
         max_length = int(CONFIG["SUMMARIZER"]["INPUT_ENCODING_MAX_LENGTH"])
-        inputs = tokenizer. \
-            batch_encode_plus([transcript_text], truncation=True,
-                              padding='longest',
-                              max_length=max_length,
-                              return_tensors='pt')
+        inputs = tokenizer.batch_encode_plus(
+            [transcript_text],
+            truncation=True,
+            padding="longest",
+            max_length=max_length,
+            return_tensors="pt",
+        )
         inputs = inputs.to(device)
 
         with torch.no_grad():
             num_beans = int(CONFIG["SUMMARIZER"]["BEAM_SIZE"])
             max_length = int(CONFIG["SUMMARIZER"]["MAX_LENGTH"])
-            summaries = model.generate(inputs['input_ids'],
-                                       num_beams=num_beans,
-                                       length_penalty=2.0,
-                                       max_length=max_length,
-                                       early_stopping=True)
+            summaries = model.generate(
+                inputs["input_ids"],
+                num_beams=num_beans,
+                length_penalty=2.0,
+                max_length=max_length,
+                early_stopping=True,
+            )
 
-        decoded_summaries = \
-            [tokenizer.decode(summary,
-                              skip_special_tokens=True,
-                              clean_up_tokenization_spaces=False)
-             for summary in summaries]
+        decoded_summaries = [
+            tokenizer.decode(
+                summary, skip_special_tokens=True, clean_up_tokenization_spaces=False
+            )
+            for summary in summaries
+        ]
         summary = " ".join(decoded_summaries)
-        with open("./artefacts/" + output_file, 'w', encoding="utf-8") as file:
+        with open("./artefacts/" + output_file, "w", encoding="utf-8") as file:
             file.write(summary.strip() + "\n")
     else:
         LOGGER.info("Breaking transcript into smaller chunks")
         chunks = chunk_text(transcript_text)
 
-        LOGGER.info(f"Transcript broken into {len(chunks)} "
-                    f"chunks of at most 500 words")
+        LOGGER.info(
+            f"Transcript broken into {len(chunks)} " f"chunks of at most 500 words"
+        )
 
         LOGGER.info(f"Writing summary text to: {output_file}")
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             summaries = summarize_chunks(chunks, tokenizer, model)
             for summary in summaries:
                 f.write(summary.strip() + " ")
