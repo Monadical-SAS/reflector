@@ -20,7 +20,7 @@ from sortedcontainers import SortedDict
 from reflector_dataclasses import BlackListedMessages, FinalSummaryResult, ParseLLMResult, TitleSummaryInput, \
     TitleSummaryOutput, TranscriptionInput, TranscriptionOutput
 from utils.log_utils import LOGGER
-from utils.run_utils import CONFIG, run_in_executor
+from utils.run_utils import CONFIG, run_in_executor, SECRETS
 
 # WebRTC components
 pcs = set()
@@ -43,8 +43,8 @@ transcription_text = ""
 last_transcribed_time = 0.0
 
 # LLM
-LLM_MACHINE_IP = CONFIG["LLM"]["LLM_MACHINE_IP"]
-LLM_MACHINE_PORT = CONFIG["LLM"]["LLM_MACHINE_PORT"]
+LLM_MACHINE_IP = SECRETS["LLM"]["LLM_MACHINE_IP"]
+LLM_MACHINE_PORT = SECRETS["LLM"]["LLM_MACHINE_PORT"]
 LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 
 # Topic and summary responses
