@@ -14,7 +14,11 @@ from reflector.settings import settings
 
 class StreamClient:
     def __init__(
-        self, signaling, url="http://0.0.0.0:1250/offer", play_from=None, ping_pong=False
+        self,
+        signaling,
+        url="http://0.0.0.0:1250/offer",
+        play_from=None,
+        ping_pong=False,
     ):
         self.signaling = signaling
         self.server_url = url

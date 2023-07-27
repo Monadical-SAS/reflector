@@ -61,6 +61,3 @@ async def test_basic_rtc_server(aiohttp_server, event_loop):
         # stop the server
         await server.close()
         await client.stop()
-
-
-
