@@ -18,6 +18,10 @@ class ReflectorConfig:
 
     @staticmethod
     def get_config():
+        """
+        Load the configurations from the local config.ini file
+        :return:
+        """
         if ReflectorConfig.__config is None:
             ReflectorConfig.__config = configparser.ConfigParser()
             ReflectorConfig.__config.read('utils/config.ini')

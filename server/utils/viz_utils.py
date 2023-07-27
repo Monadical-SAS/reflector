@@ -4,8 +4,10 @@ Utility file for all visualization related functions
 
 import ast
 import collections
+import datetime
 import os
 import pickle
+from typing import NoReturn
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -21,7 +23,8 @@ STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))). \
     union(set(spacy_stopwords))
 
 
-def create_wordcloud(timestamp, real_time=False):
+def create_wordcloud(timestamp: datetime.datetime.timestamp,
+                     real_time: bool = False) -> NoReturn:
     """
     Create a basic word cloud visualization of transcribed text
     :return: None. The wordcloud image is saved locally
@@ -52,14 +55,15 @@ def create_wordcloud(timestamp, real_time=False):
     wordcloud = "wordcloud"
     if real_time:
         wordcloud = "real_time_" + wordcloud + "_" + \
-                         timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
+                    timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
     else:
         wordcloud += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
     plt.savefig("./artefacts/" + wordcloud)
 
 
-def create_talk_diff_scatter_viz(timestamp, real_time=False):
+def create_talk_diff_scatter_viz(timestamp: datetime.datetime.timestamp,
+                                 real_time: bool = False) -> NoReturn:
     """
     Perform agenda vs transcription diff to see covered topics.
     Create a scatter plot of words in topics.
@@ -124,14 +128,16 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                 covered_items[agenda[topic_similarities[i][0]]] = True
             # top1 match
             if i == 0:
-                ts_to_topic_mapping_top_1[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
+                ts_to_topic_mapping_top_1[c["timestamp"]] = \
+                    agenda_topics[topic_similarities[i][0]]
                 topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
             # top2 match
             else:
-                ts_to_topic_mapping_top_2[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
+                ts_to_topic_mapping_top_2[c["timestamp"]] = \
+                    agenda_topics[topic_similarities[i][0]]
                 topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
 
-    def create_new_columns(record):
+    def create_new_columns(record: dict) -> dict:
         """
         Accumulate the mapping information into the df
         :param record:
@@ -210,8 +216,10 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                 transform=st.Scalers.dense_rank
         )
         if real_time:
-            open('./artefacts/real_time_scatter_' +
-                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+            with open('./artefacts/real_time_scatter_' +
+                      timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w') as file:
+                file.write(html)
         else:
-            open('./artefacts/scatter_' +
-                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+            with open('./artefacts/scatter_' +
+                      timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w') as file:
+                file.write(html)
