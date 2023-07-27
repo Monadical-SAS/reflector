@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  server:
+    build:
+      context: server
+    ports:
+      - 1250:1250
+    environment:
+      LLM_URL: "${LLM_URL}"
+    volumes:
+      - model-cache:/root/.cache
+  web:
+    build:
+      context: www
+    ports:
+      - 3000:3000
+
+volumes:
+  model-cache:
+

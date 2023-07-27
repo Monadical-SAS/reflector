@@ -4,8 +4,10 @@ Utility file for all visualization related functions
 
 import ast
 import collections
+import datetime
 import os
 import pickle
+from typing import NoReturn
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -14,22 +16,30 @@ import spacy
 from nltk.corpus import stopwords
 from wordcloud import STOPWORDS, WordCloud
 
-en = spacy.load('en_core_web_md')
+en = spacy.load("en_core_web_md")
 spacy_stopwords = en.Defaults.stop_words
 
-STOPWORDS = set(STOPWORDS).union(set(stopwords.words("english"))). \
-    union(set(spacy_stopwords))
+STOPWORDS = (
+    set(STOPWORDS).union(set(stopwords.words("english"))).union(set(spacy_stopwords))
+)
 
 
-def create_wordcloud(timestamp, real_time=False):
+def create_wordcloud(
+    timestamp: datetime.datetime.timestamp, real_time: bool = False
+) -> NoReturn:
     """
     Create a basic word cloud visualization of transcribed text
     :return: None. The wordcloud image is saved locally
     """
     filename = "transcript"
     if real_time:
-        filename = "real_time_" + filename + "_" + \
-                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = (
+            "real_time_"
+            + filename
+            + "_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".txt"
+        )
     else:
         filename += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
 
@@ -38,10 +48,13 @@ def create_wordcloud(timestamp, real_time=False):
 
     # python_mask = np.array(PIL.Image.open("download1.png"))
 
-    wordcloud = WordCloud(height=800, width=800,
-                          background_color='white',
-                          stopwords=STOPWORDS,
-                          min_font_size=8).generate(transcription_text)
+    wordcloud = WordCloud(
+        height=800,
+        width=800,
+        background_color="white",
+        stopwords=STOPWORDS,
+        min_font_size=8,
+    ).generate(transcription_text)
 
     # Plot wordcloud and save image
     plt.figure(facecolor=None)
@@ -51,15 +64,22 @@ def create_wordcloud(timestamp, real_time=False):
 
     wordcloud = "wordcloud"
     if real_time:
-        wordcloud = "real_time_" + wordcloud + "_" + \
-                         timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
+        wordcloud = (
+            "real_time_"
+            + wordcloud
+            + "_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".png"
+        )
     else:
         wordcloud += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".png"
 
     plt.savefig("./artefacts/" + wordcloud)
 
 
-def create_talk_diff_scatter_viz(timestamp, real_time=False):
+def create_talk_diff_scatter_viz(
+    timestamp: datetime.datetime.timestamp, real_time: bool = False
+) -> NoReturn:
     """
     Perform agenda vs transcription diff to see covered topics.
     Create a scatter plot of words in topics.
@@ -67,7 +87,7 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     """
     spacy_model = "en_core_web_md"
     nlp = spacy.load(spacy_model)
-    nlp.add_pipe('sentencizer')
+    nlp.add_pipe("sentencizer")
 
     agenda_topics = []
     agenda = []
@@ -80,11 +100,17 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
     # Load the transcription with timestamp
     if real_time:
-        filename = "./artefacts/real_time_transcript_with_timestamp_" + \
-                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = (
+            "./artefacts/real_time_transcript_with_timestamp_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".txt"
+        )
     else:
-        filename = "./artefacts/transcript_with_timestamp_" + \
-                   timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".txt"
+        filename = (
+            "./artefacts/transcript_with_timestamp_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".txt"
+        )
     with open(filename) as file:
         transcription_timestamp_text = file.read()
 
@@ -124,23 +150,33 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
                 covered_items[agenda[topic_similarities[i][0]]] = True
             # top1 match
             if i == 0:
-                ts_to_topic_mapping_top_1[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_1[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
+                ts_to_topic_mapping_top_1[c["timestamp"]] = agenda_topics[
+                    topic_similarities[i][0]
+                ]
+                topic_to_ts_mapping_top_1[
+                    agenda_topics[topic_similarities[i][0]]
+                ].append(c["timestamp"])
             # top2 match
             else:
-                ts_to_topic_mapping_top_2[c["timestamp"]] = agenda_topics[topic_similarities[i][0]]
-                topic_to_ts_mapping_top_2[agenda_topics[topic_similarities[i][0]]].append(c["timestamp"])
+                ts_to_topic_mapping_top_2[c["timestamp"]] = agenda_topics[
+                    topic_similarities[i][0]
+                ]
+                topic_to_ts_mapping_top_2[
+                    agenda_topics[topic_similarities[i][0]]
+                ].append(c["timestamp"])
 
-    def create_new_columns(record):
+    def create_new_columns(record: dict) -> dict:
         """
         Accumulate the mapping information into the df
         :param record:
         :return:
         """
-        record["ts_to_topic_mapping_top_1"] = \
-            ts_to_topic_mapping_top_1[record["timestamp"]]
-        record["ts_to_topic_mapping_top_2"] = \
-            ts_to_topic_mapping_top_2[record["timestamp"]]
+        record["ts_to_topic_mapping_top_1"] = ts_to_topic_mapping_top_1[
+            record["timestamp"]
+        ]
+        record["ts_to_topic_mapping_top_2"] = ts_to_topic_mapping_top_2[
+            record["timestamp"]
+        ]
         return record
 
     df = df.apply(create_new_columns, axis=1)
@@ -161,19 +197,33 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
     # Save df, mappings for further experimentation
     df_name = "df"
     if real_time:
-        df_name = "real_time_" + df_name + "_" + \
-                  timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
+        df_name = (
+            "real_time_"
+            + df_name
+            + "_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".pkl"
+        )
     else:
         df_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     df.to_pickle("./artefacts/" + df_name)
 
-    my_mappings = [ts_to_topic_mapping_top_1, ts_to_topic_mapping_top_2,
-                   topic_to_ts_mapping_top_1, topic_to_ts_mapping_top_2]
+    my_mappings = [
+        ts_to_topic_mapping_top_1,
+        ts_to_topic_mapping_top_2,
+        topic_to_ts_mapping_top_1,
+        topic_to_ts_mapping_top_2,
+    ]
 
     mappings_name = "mappings"
     if real_time:
-        mappings_name = "real_time_" + mappings_name + "_" + \
-                        timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
+        mappings_name = (
+            "real_time_"
+            + mappings_name
+            + "_"
+            + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+            + ".pkl"
+        )
     else:
         mappings_name += "_" + timestamp.strftime("%m-%d-%Y_%H:%M:%S") + ".pkl"
     pickle.dump(my_mappings, open("./artefacts/" + mappings_name, "wb"))
@@ -197,21 +247,37 @@ def create_talk_diff_scatter_viz(timestamp, real_time=False):
 
         # Scatter plot of topics
         df = df.assign(parse=lambda df: df.text.apply(st.whitespace_nlp_with_sentences))
-        corpus = st.CorpusFromParsedDocuments(
-                df, category_col='ts_to_topic_mapping_top_1', parsed_col='parse'
-        ).build().get_unigram_corpus().compact(st.AssociationCompactor(2000))
+        corpus = (
+            st.CorpusFromParsedDocuments(
+                df, category_col="ts_to_topic_mapping_top_1", parsed_col="parse"
+            )
+            .build()
+            .get_unigram_corpus()
+            .compact(st.AssociationCompactor(2000))
+        )
         html = st.produce_scattertext_explorer(
-                corpus,
-                category=cat_1,
-                category_name=cat_1_name,
-                not_category_name=cat_2_name,
-                minimum_term_frequency=0, pmi_threshold_coefficient=0,
-                width_in_pixels=1000,
-                transform=st.Scalers.dense_rank
+            corpus,
+            category=cat_1,
+            category_name=cat_1_name,
+            not_category_name=cat_2_name,
+            minimum_term_frequency=0,
+            pmi_threshold_coefficient=0,
+            width_in_pixels=1000,
+            transform=st.Scalers.dense_rank,
         )
         if real_time:
-            open('./artefacts/real_time_scatter_' +
-                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+            with open(
+                "./artefacts/real_time_scatter_"
+                + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+                + ".html",
+                "w",
+            ) as file:
+                file.write(html)
         else:
-            open('./artefacts/scatter_' +
-                 timestamp.strftime("%m-%d-%Y_%H:%M:%S") + '.html', 'w').write(html)
+            with open(
+                "./artefacts/scatter_"
+                + timestamp.strftime("%m-%d-%Y_%H:%M:%S")
+                + ".html",
+                "w",
+            ) as file:
+                file.write(html)

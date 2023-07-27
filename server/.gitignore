@@ -165,9 +165,9 @@ cython_debug/
 transcript_*.txt
 test_*.txt
 wordcloud*.png
-utils/config.ini
+utils/secrets.ini
 test_samples/
-*.wav
+# *.wav
 *.mp3
 *.m4a
 .DS_Store/
