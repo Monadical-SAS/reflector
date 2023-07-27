@@ -36,7 +36,7 @@ class TitleSummaryInput:
 
             ### Assistant:
             """
-        self.data = {"data": self.prompt}
+        self.data = {"prompt": self.prompt}
         self.headers = {"Content-Type": "application/json"}
 
 
@@ -49,11 +49,13 @@ class IncrementalResult:
     title = str
     description = str
     transcript = str
+    timestamp = str
 
-    def __init__(self, title, desc, transcript):
+    def __init__(self, title, desc, transcript, timestamp):
         self.title = title
         self.description = desc
         self.transcript = transcript
+        self.timestamp = timestamp
 
 
 @dataclass
@@ -67,8 +69,13 @@ class TitleSummaryOutput:
 
     def __init__(self, inc_responses):
         self.topics = inc_responses
+        self.cmd = "UPDATE_TOPICS"
 
-    def get_result(self):
+    def get_result(self) -> dict:
+        """
+        Return the result dict for displaying the transcription
+        :return:
+        """
         return {
                 "cmd": self.cmd,
                 "topics": self.topics
@@ -81,18 +88,25 @@ class ParseLLMResult:
     Data class to parse the result returned by the LLM while generating title
     and summaries. The result will be sent back to the client.
     """
+    title = str
     description = str
     transcript = str
     timestamp = str
 
     def __init__(self, param: TitleSummaryInput, output: dict):
+        self.title = output["title"]
         self.transcript = param.input_text
         self.description = output.pop("summary")
         self.timestamp = \
             str(datetime.timedelta(seconds=round(param.transcribed_time)))
 
-    def get_result(self):
+    def get_result(self) -> dict:
+        """
+        Return the result dict after parsing the response from LLM
+        :return:
+        """
         return {
+                "title": self.title,
                 "description": self.description,
                 "transcript": self.transcript,
                 "timestamp": self.timestamp
@@ -124,7 +138,11 @@ class TranscriptionOutput:
         self.cmd = "SHOW_TRANSCRIPTION"
         self.result_text = result_text
 
-    def get_result(self):
+    def get_result(self) -> dict:
+        """
+        Return the result dict for displaying the transcription
+        :return:
+        """
         return {
                 "cmd": self.cmd,
                 "text": self.result_text
@@ -144,9 +162,13 @@ class FinalSummaryResult:
     def __init__(self, final_summary, time):
         self.duration = str(datetime.timedelta(seconds=round(time)))
         self.final_summary = final_summary
-        self.cmd = ""
+        self.cmd = "DISPLAY_FINAL_SUMMARY"
 
-    def get_result(self):
+    def get_result(self) -> dict:
+        """
+        Return the result dict for displaying the final summary
+        :return:
+        """
         return {
                 "cmd": self.cmd,
                 "duration": self.duration,

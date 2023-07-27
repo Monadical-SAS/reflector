@@ -4,6 +4,7 @@ uploads to cloud storage
 """
 
 import sys
+from typing import List, NoReturn
 
 import boto3
 import botocore
@@ -18,7 +19,7 @@ s3 = boto3.client('s3',
                   aws_secret_access_key=CONFIG["AWS"]["AWS_SECRET_KEY"])
 
 
-def upload_files(files_to_upload):
+def upload_files(files_to_upload: List[str]) -> NoReturn:
     """
     Upload a list of files to the configured S3 bucket
     :param files_to_upload: List of files to upload
@@ -32,7 +33,7 @@ def upload_files(files_to_upload):
             print(exception.response)
 
 
-def download_files(files_to_download):
+def download_files(files_to_download: List[str]) -> NoReturn:
     """
     Download a list of files from the configured S3 bucket
     :param files_to_download: List of files to download
