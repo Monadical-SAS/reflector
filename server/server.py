@@ -15,35 +15,40 @@ from aiohttp import web
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from faster_whisper import WhisperModel
-from sortedcontainers import SortedDict
 
-from reflector_dataclasses import FinalSummaryResult, ParseLLMResult,\
-    TitleSummaryInput, TitleSummaryOutput, TranscriptionInput,\
-    TranscriptionOutput, BlackListedMessages
+from reflector_dataclasses import (FinalSummaryResult, ParseLLMResult,
+                                   TitleSummaryInput, TitleSummaryOutput,
+                                   TranscriptionInput, TranscriptionOutput,
+                                   BlackListedMessages, TranscriptionContext)
 from utils.run_utils import CONFIG, run_in_executor
 from utils.log_utils import LOGGER
 
 pcs = set()
 relay = MediaRelay()
-data_channel = None
-model = WhisperModel("tiny", device="cpu",
+model = WhisperModel("tiny",
+                     device="cpu",
                      compute_type="float32",
                      num_workers=12)
 
 CHANNELS = 2
 RATE = 48000
-audio_buffer = av.AudioFifo()
+AUDIO_BUFFER_SIZE = 256 * 960
 executor = ThreadPoolExecutor()
-transcription_text = ""
-last_transcribed_time = 0.0
-LLM_MACHINE_IP = CONFIG["LLM"]["LLM_MACHINE_IP"]
-LLM_MACHINE_PORT = CONFIG["LLM"]["LLM_MACHINE_PORT"]
-LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
-incremental_responses = []
-sorted_transcripts = SortedDict()
+
+# FIXME: This is a hack to get the server to work.
+# The configuration is going to change with the next server version
+LLM_URL = os.environ.get("LLM_URL")
+if LLM_URL:
+    LOGGER.info(f"Using LLM from environment: {LLM_URL}")
+else:
+    LLM_MACHINE_IP = CONFIG["LLM"]["LLM_MACHINE_IP"]
+    LLM_MACHINE_PORT = CONFIG["LLM"]["LLM_MACHINE_PORT"]
+    LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
 
 
-def parse_llm_output(param: TitleSummaryInput, response: requests.Response) -> Union[None, ParseLLMResult]:
+def parse_llm_output(
+        param: TitleSummaryInput,
+        response: requests.Response) -> Union[None, ParseLLMResult]:
     try:
         output = json.loads(response.json()["results"][0]["text"])
         return ParseLLMResult(param, output)
@@ -52,7 +57,9 @@ def parse_llm_output(param: TitleSummaryInput, response: requests.Response) -> U
         return None
 
 
-def get_title_and_summary(param: TitleSummaryInput) -> Union[None, TitleSummaryOutput]:
+def get_title_and_summary(
+        ctx: TranscriptionContext,
+        param: TitleSummaryInput) -> Union[None, TitleSummaryOutput]:
     LOGGER.info("Generating title and summary")
 
     # TODO : Handle unexpected output formats from the model
@@ -63,8 +70,8 @@ def get_title_and_summary(param: TitleSummaryInput) -> Union[None, TitleSummaryO
         output = parse_llm_output(param, response)
         if output:
             result = output.get_result()
-            incremental_responses.append(result)
-            return TitleSummaryOutput(incremental_responses)
+            ctx.incremental_responses.append(result)
+            return TitleSummaryOutput(ctx.incremental_responses)
     except Exception as e:
         LOGGER.info("Exception" + str(e))
         return None
@@ -79,35 +86,39 @@ def channel_send(channel, message: str) -> NoReturn:
         channel.send(message)
 
 
-def channel_send_increment(channel, param: Union[FinalSummaryResult, TitleSummaryOutput]) -> NoReturn:
+def channel_send_increment(
+        channel, param: Union[FinalSummaryResult,
+                              TitleSummaryOutput]) -> NoReturn:
     if channel and param:
         message = param.get_result()
         channel.send(json.dumps(message))
 
 
-def channel_send_transcript(channel) -> NoReturn:
+def channel_send_transcript(ctx: TranscriptionContext, channel) -> NoReturn:
     # channel_log(channel, ">", message)
     if channel:
         try:
-            least_time = next(iter(sorted_transcripts))
-            message = sorted_transcripts[least_time].get_result()
+            least_time = next(iter(ctx.sorted_transcripts))
+            message = ctx.sorted_transcripts[least_time].get_result()
             if message:
-                del sorted_transcripts[least_time]
+                del ctx.sorted_transcripts[least_time]
                 if message["text"] not in BlackListedMessages.messages:
                     channel.send(json.dumps(message))
             # Due to exceptions if one of the earlier batches can't return
             # a transcript, we don't want to be stuck waiting for the result
             # With the threshold size of 3, we pop the first(lost) element
             else:
-                if len(sorted_transcripts) >= 3:
-                    del sorted_transcripts[least_time]
+                if len(ctx.sorted_transcripts) >= 3:
+                    del ctx.sorted_transcripts[least_time]
         except Exception as exception:
             LOGGER.info("Exception", str(exception))
 
 
-def get_transcription(input_frames: TranscriptionInput) -> Union[None, TranscriptionOutput]:
+def get_transcription(
+        ctx: TranscriptionContext,
+        input_frames: TranscriptionInput) -> Union[None, TranscriptionOutput]:
     LOGGER.info("Transcribing..")
-    sorted_transcripts[input_frames.frames[0].time] = None
+    ctx.sorted_transcripts[input_frames.frames[0].time] = None
 
     # TODO: Find cleaner way, watch "no transcription" issue below
     # Passing IO objects instead of temporary files throws an error
@@ -147,19 +158,19 @@ def get_transcription(input_frames: TranscriptionInput) -> Union[None, Transcrip
                 end_time = 5.5
             duration += (end_time - start_time)
 
-        global last_transcribed_time, transcription_text
-        last_transcribed_time += duration
-        transcription_text += result_text
+        ctx.last_transcribed_time += duration
+        ctx.transcription_text += result_text
 
     except Exception as exception:
         LOGGER.info("Exception" + str(exception))
 
     result = TranscriptionOutput(result_text)
-    sorted_transcripts[input_frames.frames[0].time] = result
+    ctx.sorted_transcripts[input_frames.frames[0].time] = result
     return result
 
 
-def get_final_summary_response() -> FinalSummaryResult:
+def get_final_summary_response(
+        ctx: TranscriptionContext) -> FinalSummaryResult:
     """
     Collate the incremental summaries generated so far and return as the final
     summary
@@ -168,14 +179,15 @@ def get_final_summary_response() -> FinalSummaryResult:
     final_summary = ""
 
     # Collate inc summaries
-    for topic in incremental_responses:
+    for topic in ctx.incremental_responses:
         final_summary += topic["description"]
 
-    response = FinalSummaryResult(final_summary, last_transcribed_time)
+    response = FinalSummaryResult(final_summary, ctx.last_transcribed_time)
 
-    with open("./artefacts/meeting_titles_and_summaries.txt", "a",
+    with open("./artefacts/meeting_titles_and_summaries.txt",
+              "a",
               encoding="utf-8") as file:
-        file.write(json.dumps(incremental_responses))
+        file.write(json.dumps(ctx.incremental_responses))
 
     return response
 
@@ -187,41 +199,40 @@ class AudioStreamTrack(MediaStreamTrack):
 
     kind = "audio"
 
-    def __init__(self, track):
+    def __init__(self, ctx: TranscriptionContext, track):
         super().__init__()
+        self.ctx = ctx
         self.track = track
+        self.audio_buffer = av.AudioFifo()
 
     async def recv(self) -> av.audio.frame.AudioFrame:
-        global transcription_text
+        ctx = self.ctx
+        audio_buffer = self.audio_buffer
+        data_channel = ctx.data_channel
         frame = await self.track.recv()
         audio_buffer.write(frame)
 
-        if local_frames := audio_buffer.read_many(256 * 960, partial=False):
-            whisper_result = run_in_executor(
-                    get_transcription,
-                    TranscriptionInput(local_frames),
-                    executor=executor
-            )
-            whisper_result.add_done_callback(
-                    lambda f: channel_send_transcript(data_channel)
-                    if f.result()
-                    else None
-            )
+        if local_frames := audio_buffer.read_many(AUDIO_BUFFER_SIZE,
+                                                  partial=False):
+            whisper_result = run_in_executor(get_transcription,
+                                             ctx,
+                                             TranscriptionInput(local_frames),
+                                             executor=executor)
+            whisper_result.add_done_callback(lambda f: channel_send_transcript(
+                ctx, data_channel) if f.result() else None)
 
-        if len(transcription_text) > 25:
-            llm_input_text = transcription_text
-            transcription_text = ""
-            param = TitleSummaryInput(input_text=llm_input_text,
-                                      transcribed_time=last_transcribed_time)
+        if len(self.ctx.transcription_text) > 25:
+            llm_input_text = self.ctx.transcription_text
+            self.ctx.transcription_text = ""
+            param = TitleSummaryInput(
+                input_text=llm_input_text,
+                transcribed_time=ctx.last_transcribed_time)
             llm_result = run_in_executor(get_title_and_summary,
+                                         ctx,
                                          param,
                                          executor=executor)
-            llm_result.add_done_callback(
-                    lambda f: channel_send_increment(data_channel,
-                                                     llm_result.result())
-                    if f.result()
-                    else None
-            )
+            llm_result.add_done_callback(lambda f: channel_send_increment(
+                data_channel, llm_result.result()) if f.result() else None)
         return frame
 
 
@@ -233,6 +244,7 @@ async def offer(request: requests.Request) -> web.Response:
     """
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+    ctx = TranscriptionContext()
 
     pc = RTCPeerConnection()
     pc_id = "PeerConnection(%s)" % uuid.uuid4()
@@ -245,8 +257,7 @@ async def offer(request: requests.Request) -> web.Response:
 
     @pc.on("datachannel")
     def on_datachannel(channel) -> NoReturn:
-        global data_channel
-        data_channel = channel
+        ctx.data_channel = channel
         channel_log(channel, "-", "created by remote party")
 
         @channel.on("message")
@@ -254,8 +265,8 @@ async def offer(request: requests.Request) -> web.Response:
             channel_log(channel, "<", message)
             if json.loads(message)["cmd"] == "STOP":
                 # Placeholder final summary
-                response = get_final_summary_response()
-                channel_send_increment(data_channel, response)
+                response = get_final_summary_response(ctx)
+                channel_send_increment(channel, response)
                 # To-do Add code to stop connection from server side here
                 # But have to handshake with client once
 
@@ -272,20 +283,18 @@ async def offer(request: requests.Request) -> web.Response:
     @pc.on("track")
     def on_track(track) -> NoReturn:
         log_info("Track " + track.kind + " received")
-        pc.addTrack(AudioStreamTrack(relay.subscribe(track)))
+        pc.addTrack(AudioStreamTrack(ctx, relay.subscribe(track)))
 
     await pc.setRemoteDescription(offer)
 
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return web.Response(
-            content_type="application/json",
-            text=json.dumps(
-                    {
-                            "sdp": pc.localDescription.sdp,
-                            "type": pc.localDescription.type
-                    }
-            ),
+        content_type="application/json",
+        text=json.dumps({
+            "sdp": pc.localDescription.sdp,
+            "type": pc.localDescription.type
+        }),
     )
 
 
@@ -297,25 +306,24 @@ async def on_shutdown(application: web.Application) -> NoReturn:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description="WebRTC based server for Reflector"
-    )
-    parser.add_argument(
-            "--host", default="0.0.0.0", help="Server host IP (def: 0.0.0.0)"
-    )
-    parser.add_argument(
-            "--port", type=int, default=1250, help="Server port (def: 1250)"
-    )
+        description="WebRTC based server for Reflector")
+    parser.add_argument("--host",
+                        default="0.0.0.0",
+                        help="Server host IP (def: 0.0.0.0)")
+    parser.add_argument("--port",
+                        type=int,
+                        default=1250,
+                        help="Server port (def: 1250)")
     args = parser.parse_args()
     app = web.Application()
     cors = aiohttp_cors.setup(
-            app,
-            defaults={
-                    "*": aiohttp_cors.ResourceOptions(
-                            allow_credentials=True,
-                            expose_headers="*",
-                            allow_headers="*"
-                    )
-            },
+        app,
+        defaults={
+            "*":
+            aiohttp_cors.ResourceOptions(allow_credentials=True,
+                                         expose_headers="*",
+                                         allow_headers="*")
+        },
     )
 
     offer_resource = cors.add(app.router.add_resource("/offer"))
