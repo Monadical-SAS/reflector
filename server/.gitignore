@@ -167,7 +167,7 @@ test_*.txt
 wordcloud*.png
 utils/secrets.ini
 test_samples/
-*.wav
+# *.wav
 *.mp3
 *.m4a
 .DS_Store/
