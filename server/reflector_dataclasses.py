@@ -6,6 +6,7 @@ the input and output parameters of functions
 import datetime
 from dataclasses import dataclass
 from typing import List
+from sortedcontainers import SortedDict
 
 import av
 
@@ -184,3 +185,19 @@ class BlackListedMessages:
     messages = [" Thank you.", " See you next time!",
                 " Thank you for watching!", " Bye!",
                 " And that's what I'm talking about."]
+
+
+@dataclass
+class TranscriptionContext:
+    transcription_text: str
+    last_transcribed_time: float
+    incremental_responses: List[IncrementalResult]
+    sorted_transcripts: dict
+    data_channel: None  # FIXME
+
+    def __init__(self):
+        self.transcription_text = ""
+        self.last_transcribed_time = 0.0
+        self.incremental_responses = []
+        self.data_channel = None
+        self.sorted_transcripts = SortedDict()
