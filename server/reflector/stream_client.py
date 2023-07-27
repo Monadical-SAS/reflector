@@ -4,7 +4,6 @@ import uuid
 
 import httpx
 import pyaudio
-import requests
 import stamina
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
@@ -15,7 +14,7 @@ from reflector.settings import settings
 
 class StreamClient:
     def __init__(
-        self, signaling, url="http://0.0.0.0:1250", play_from=None, ping_pong=False
+        self, signaling, url="http://0.0.0.0:1250/offer", play_from=None, ping_pong=False
     ):
         self.signaling = signaling
         self.server_url = url
@@ -25,21 +24,15 @@ class StreamClient:
 
         self.pc = RTCPeerConnection()
 
-        self.loop = asyncio.get_event_loop()
         self.relay = None
         self.pcs = set()
         self.time_start = None
         self.queue = asyncio.Queue()
-        self.player = MediaPlayer(
-            f":{settings.AUDIO_AV_FOUNDATION_DEVICE_ID}",
-            format="avfoundation",
-            options={"channels": "2"},
-        )
+        self.logger = logger.bind(stream_client=id(self))
 
-    def stop(self):
-        self.loop.run_until_complete(self.signaling.close())
-        self.loop.run_until_complete(self.pc.close())
-        # self.loop.close()
+    async def stop(self):
+        await self.signaling.close()
+        await self.pc.close()
 
     def create_local_tracks(self, play_from):
         if play_from:
@@ -48,10 +41,12 @@ class StreamClient:
         else:
             if self.relay is None:
                 self.relay = MediaRelay()
+            self.player = MediaPlayer(
+                f":{settings.AUDIO_AV_FOUNDATION_DEVICE_ID}",
+                format="avfoundation",
+                options={"channels": "2"},
+            )
             return self.relay.subscribe(self.player.audio), None
-
-    def channel_log(self, channel, t, message):
-        print("channel(%s) %s %s" % (channel.label, t, message))
 
     def channel_send(self, channel, message):
         # self.channel_log(channel, ">", message)
@@ -67,32 +62,31 @@ class StreamClient:
     async def run_offer(self, pc, signaling):
         # microphone
         audio, video = self.create_local_tracks(self.play_from)
-        pc_id = "PeerConnection(%s)" % uuid.uuid4()
+        pc_id = uuid.uuid4().hex
         self.pcs.add(pc)
-
-        def log_info(msg, *args):
-            logger.info(pc_id + " " + msg, *args)
+        self.logger = self.logger.bind(pc_id=pc_id)
 
         @pc.on("connectionstatechange")
         async def on_connectionstatechange():
-            print("Connection state is %s" % pc.connectionState)
+            self.logger.info(f"Connection state is {pc.connectionState}")
             if pc.connectionState == "failed":
                 await pc.close()
                 self.pcs.discard(pc)
 
         @pc.on("track")
         def on_track(track):
-            print("Sending %s" % track.kind)
+            self.logger.info(f"Sending {track.kind}")
             self.pc.addTrack(track)
 
             @track.on("ended")
             async def on_ended():
-                log_info("Track %s ended", track.kind)
+                self.logger.info(f"Track {track.kind} ended")
 
         self.pc.addTrack(audio)
 
         channel = pc.createDataChannel("data-channel")
-        self.channel_log(channel, "-", "created by local party")
+        self.logger = self.logger.bind(channel=channel.label)
+        self.logger.info("Created by local party")
 
         async def send_pings():
             while True:
@@ -108,23 +102,24 @@ class StreamClient:
         def on_message(message):
             self.queue.put_nowait(message)
             if self.ping_pong:
-                self.channel_log(channel, "<", message)
+                self.logger.info(f"Message: {message}")
 
                 if isinstance(message, str) and message.startswith("pong"):
                     elapsed_ms = (self.current_stamp() - int(message[5:])) / 1000
-                    print(" RTT %.2f ms" % elapsed_ms)
+                    self.logger.debug("RTT %.2f ms" % elapsed_ms)
 
         await pc.setLocalDescription(await pc.createOffer())
 
         sdp = {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
         @stamina.retry(on=httpx.HTTPError, attempts=5)
-        def connect_to_server():
-            response = requests.post(self.server_url, json=sdp, timeout=10)
-            response.raise_for_status()
-            return response
+        async def connect_to_server():
+            async with httpx.AsyncClient() as client:
+                response = await client.post(self.server_url, json=sdp, timeout=10)
+                response.raise_for_status()
+                return response.json()
 
-        params = connect_to_server().json()
+        params = await connect_to_server()
         answer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
         await pc.setRemoteDescription(answer)
 

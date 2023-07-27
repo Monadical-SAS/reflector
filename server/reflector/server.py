@@ -348,15 +348,10 @@ async def on_shutdown(application: web.Application) -> NoReturn:
     pcs.clear()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="WebRTC based server for Reflector")
-    parser.add_argument(
-        "--host", default="0.0.0.0", help="Server host IP (def: 0.0.0.0)"
-    )
-    parser.add_argument(
-        "--port", type=int, default=1250, help="Server port (def: 1250)"
-    )
-    args = parser.parse_args()
+def create_app() -> web.Application:
+    """
+    Create the web application
+    """
     app = web.Application()
     cors = aiohttp_cors.setup(
         app,
@@ -370,4 +365,17 @@ if __name__ == "__main__":
     offer_resource = cors.add(app.router.add_resource("/offer"))
     cors.add(offer_resource.add_route("POST", offer))
     app.on_shutdown.append(on_shutdown)
+    return app
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="WebRTC based server for Reflector")
+    parser.add_argument(
+        "--host", default="0.0.0.0", help="Server host IP (def: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=1250, help="Server port (def: 1250)"
+    )
+    args = parser.parse_args()
+    app = create_app()
     web.run_app(app, access_log=None, host=args.host, port=args.port)

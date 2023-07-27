@@ -29,6 +29,12 @@ httpx = "^0.24.1"
 pyaudio = "^0.2.13"
 stamina = "^23.1.0"
 
+
+[tool.poetry.group.tests.dependencies]
+pytest-aiohttp = "^1.0.4"
+pytest-asyncio = "^0.21.1"
+pytest = "^7.4.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
