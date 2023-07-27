@@ -10,6 +10,7 @@ class SingletonLogger:
     Use Singleton design pattern to create a logger object and share it
     across the entire project
     """
+
     __instance = None
 
     @staticmethod

@@ -14,9 +14,11 @@ from .run_utils import SECRETS
 
 BUCKET_NAME = SECRETS["AWS-S3"]["BUCKET_NAME"]
 
-s3 = boto3.client('s3',
-                  aws_access_key_id=SECRETS["AWS-S3"]["AWS_ACCESS_KEY"],
-                  aws_secret_access_key=SECRETS["AWS-S3"]["AWS_SECRET_KEY"])
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=SECRETS["AWS-S3"]["AWS_ACCESS_KEY"],
+    aws_secret_access_key=SECRETS["AWS-S3"]["AWS_SECRET_KEY"],
+)
 
 
 def upload_files(files_to_upload: List[str]) -> NoReturn:
@@ -44,7 +46,7 @@ def download_files(files_to_download: List[str]) -> NoReturn:
         try:
             s3.download_file(BUCKET_NAME, key, key)
         except botocore.exceptions.ClientError as exception:
-            if exception.response['Error']['Code'] == "404":
+            if exception.response["Error"]["Code"] == "404":
                 print("The object does not exist.")
             else:
                 raise
