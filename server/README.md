@@ -33,12 +33,12 @@ Then run the server:
 
 ```
 # With a config.ini
-$ poetry run python server.py
+$ poetry run python -m reflector.server
 
 
 # Within a poetry env
 $ poetry shell
-$ LLM_URL=http://.../api/v1/generate python server.py
+$ LLM_URL=http://.../api/v1/generate python -m reflector.server
 
 ```
 

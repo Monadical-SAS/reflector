@@ -3,8 +3,8 @@ import asyncio
 import datetime
 import json
 import os
-import uuid
 import wave
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import NoReturn, Union
 
@@ -16,7 +16,7 @@ from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from faster_whisper import WhisperModel
 
-from reflector_dataclasses import (
+from reflector.models import (
     BlackListedMessages,
     FinalSummaryResult,
     ParseLLMResult,
@@ -26,8 +26,9 @@ from reflector_dataclasses import (
     TranscriptionOutput,
     TranscriptionContext,
 )
-from utils.log_utils import LOGGER
-from utils.run_utils import CONFIG, run_in_executor, SECRETS
+from reflector.logger import logger
+from reflector.utils.run_utils import run_in_executor
+from reflector.settings import settings
 
 # WebRTC components
 pcs = set()
@@ -37,19 +38,12 @@ executor = ThreadPoolExecutor()
 # Transcription model
 model = WhisperModel("tiny", device="cpu", compute_type="float32", num_workers=12)
 
-# Audio configurations
-CHANNELS = int(CONFIG["AUDIO"]["CHANNELS"])
-RATE = int(CONFIG["AUDIO"]["SAMPLING_RATE"])
-AUDIO_BUFFER_SIZE = 256 * 960
-
 # LLM
-LLM_URL = os.environ.get("LLM_URL")
-if LLM_URL:
-    LOGGER.info(f"Using LLM from environment: {LLM_URL}")
-else:
-    LLM_MACHINE_IP = CONFIG["LLM"]["LLM_MACHINE_IP"]
-    LLM_MACHINE_PORT = CONFIG["LLM"]["LLM_MACHINE_PORT"]
-    LLM_URL = f"http://{LLM_MACHINE_IP}:{LLM_MACHINE_PORT}/api/v1/generate"
+LLM_URL = settings.LLM_URL
+if not LLM_URL:
+    assert settings.LLM_BACKEND == "oobagooda"
+    LLM_URL = f"http://{settings.LLM_HOST}:{settings.LLM_PORT}/api/v1/generate"
+logger.info(f"Using LLM [{settings.LLM_BACKEND}]: {LLM_URL}")
 
 
 def parse_llm_output(
@@ -64,8 +58,8 @@ def parse_llm_output(
     try:
         output = json.loads(response.json()["results"][0]["text"])
         return ParseLLMResult(param, output)
-    except Exception as e:
-        LOGGER.info("Exception" + str(e))
+    except Exception:
+        logger.exception("Exception while parsing LLM output")
         return None
 
 
@@ -78,7 +72,7 @@ def get_title_and_summary(
     :param param:
     :return:
     """
-    LOGGER.info("Generating title and summary")
+    logger.info("Generating title and summary")
 
     # TODO : Handle unexpected output formats from the model
     try:
@@ -89,19 +83,8 @@ def get_title_and_summary(
             ctx.incremental_responses.append(result)
             return TitleSummaryOutput(ctx.incremental_responses)
     except Exception:
-        LOGGER.exception("Exception while generating title and summary")
+        logger.exception("Exception while generating title and summary")
         return None
-
-
-def channel_log(channel, t: str, message: str) -> NoReturn:
-    """
-    Add logs
-    :param channel:
-    :param t:
-    :param message:
-    :return:
-    """
-    LOGGER.info("channel(%s) %s %s" % (channel.label, t, message))
 
 
 def channel_send(channel, message: str) -> NoReturn:
@@ -135,7 +118,6 @@ def channel_send_transcript(ctx: TranscriptionContext) -> NoReturn:
     :param channel:
     :return:
     """
-    # channel_log(channel, ">", message)
     if not ctx.data_channel:
         return
     try:
@@ -151,8 +133,8 @@ def channel_send_transcript(ctx: TranscriptionContext) -> NoReturn:
         else:
             if len(ctx.sorted_transcripts) >= 3:
                 del ctx.sorted_transcripts[least_time]
-    except Exception as exception:
-        LOGGER.info("Exception", str(exception))
+    except Exception:
+        logger.exception("Exception while sending transcript")
 
 
 def get_transcription(
@@ -164,7 +146,7 @@ def get_transcription(
     :param input_frames:
     :return:
     """
-    LOGGER.info("Transcribing..")
+    ctx.logger.info("Transcribing..")
     ctx.sorted_transcripts[input_frames.frames[0].time] = None
 
     # TODO: Find cleaner way, watch "no transcription" issue below
@@ -174,9 +156,9 @@ def get_transcription(
     # https://github.com/guillaumekln/faster-whisper/issues/369
     audio_file = "test" + str(datetime.datetime.now())
     wf = wave.open(audio_file, "wb")
-    wf.setnchannels(CHANNELS)
-    wf.setframerate(RATE)
-    wf.setsampwidth(2)
+    wf.setnchannels(settings.AUDIO_CHANNELS)
+    wf.setframerate(settings.AUDIO_SAMPLING_RATE)
+    wf.setsampwidth(settings.AUDIO_SAMPLING_WIDTH)
 
     for frame in input_frames.frames:
         wf.writeframes(b"".join(frame.to_ndarray()))
@@ -209,8 +191,8 @@ def get_transcription(
         ctx.last_transcribed_time += duration
         ctx.transcription_text += result_text
 
-    except Exception as exception:
-        LOGGER.info("Exception" + str(exception))
+    except Exception:
+        logger.exception("Exception while transcribing")
 
     result = TranscriptionOutput(result_text)
     ctx.sorted_transcripts[input_frames.frames[0].time] = result
@@ -258,7 +240,7 @@ class AudioStreamTrack(MediaStreamTrack):
         self.audio_buffer.write(frame)
 
         if local_frames := self.audio_buffer.read_many(
-            AUDIO_BUFFER_SIZE, partial=False
+            settings.AUDIO_BUFFER_SIZE, partial=False
         ):
             whisper_result = run_in_executor(
                 get_transcription,
@@ -296,24 +278,30 @@ async def offer(request: requests.Request) -> web.Response:
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    ctx = TranscriptionContext()
+    # client identification
+    peername = request.transport.get_extra_info("peername")
+    if peername is not None:
+        clientid = f"{peername[0]}:{peername[1]}"
+    else:
+        clientid = uuid.uuid4()
+
+    # create a context for the whole rtc transaction
+    # add a customised logger to the context
+    ctx = TranscriptionContext(logger=logger.bind(client=clientid))
+
+    # handle RTC peer connection
     pc = RTCPeerConnection()
-    pc_id = "PeerConnection(%s)" % uuid.uuid4()
     pcs.add(pc)
-
-    def log_info(msg, *args) -> NoReturn:
-        LOGGER.info(pc_id + " " + msg, *args)
-
-    log_info("Created for " + request.remote)
 
     @pc.on("datachannel")
     def on_datachannel(channel) -> NoReturn:
         ctx.data_channel = channel
-        channel_log(channel, "-", "created by remote party")
+        ctx.logger = ctx.logger.bind(channel=channel.label)
+        ctx.logger.info("Channel created by remote party")
 
         @channel.on("message")
         def on_message(message: str) -> NoReturn:
-            channel_log(channel, "<", message)
+            ctx.logger.info(f"Message: {message}")
             if json.loads(message)["cmd"] == "STOP":
                 # Placeholder final summary
                 response = get_final_summary_response()
@@ -326,14 +314,14 @@ async def offer(request: requests.Request) -> web.Response:
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange() -> NoReturn:
-        log_info("Connection state is " + pc.connectionState)
+        ctx.logger.info(f"Connection state changed: {pc.connectionState}")
         if pc.connectionState == "failed":
             await pc.close()
             pcs.discard(pc)
 
     @pc.on("track")
     def on_track(track) -> NoReturn:
-        log_info("Track " + track.kind + " received")
+        ctx.logger.info(f"Track {track.kind} received")
         pc.addTrack(AudioStreamTrack(ctx, relay.subscribe(track)))
 
     await pc.setRemoteDescription(offer)

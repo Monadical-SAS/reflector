@@ -24,7 +24,6 @@ RUN . /venv/bin/activate && poetry install --only main --no-root --no-interactio
 FROM base AS final
 COPY --from=builder /venv /venv
 RUN mkdir -p /app
-COPY server.py reflector_dataclasses.py /app/
-COPY utils /app/utils
+COPY reflector /app/reflector
 WORKDIR /app
-CMD ["/venv/bin/python", "server.py"]
+CMD ["/venv/bin/python", "-m", "reflector.server"]

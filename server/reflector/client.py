@@ -4,8 +4,8 @@ import signal
 
 from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
 
-from utils.log_utils import LOGGER
-from stream_client import StreamClient
+from reflector.logger import logger
+from reflector.stream_client import StreamClient
 from typing import NoReturn
 
 
@@ -42,16 +42,16 @@ async def main() -> NoReturn:
 
     async def shutdown(signal, loop):
         """Cleanup tasks tied to the service's shutdown."""
-        LOGGER.info(f"Received exit signal {signal.name}...")
-        LOGGER.info("Closing database connections")
-        LOGGER.info("Nacking outstanding messages")
+        logger.info(f"Received exit signal {signal.name}...")
+        logger.info("Closing database connections")
+        logger.info("Nacking outstanding messages")
         tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
         [task.cancel() for task in tasks]
 
-        LOGGER.info(f"Cancelling {len(tasks)} outstanding tasks")
+        logger.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
-        LOGGER.info(f'{"Flushing metrics"}')
+        logger.info(f'{"Flushing metrics"}')
         loop.stop()
 
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)

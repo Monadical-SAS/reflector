@@ -16,10 +16,18 @@ aiortc = "^1.5.0"
 faster-whisper = "^0.7.1"
 sortedcontainers = "^2.4.0"
 loguru = "^0.7.0"
+pydantic-settings = "^2.0.2"
+structlog = "^23.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
+
+
+[tool.poetry.group.client.dependencies]
+httpx = "^0.24.1"
+pyaudio = "^0.2.13"
+stamina = "^23.1.0"
 
 [build-system]
 requires = ["poetry-core"]

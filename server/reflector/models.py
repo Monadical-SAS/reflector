@@ -198,10 +198,12 @@ class TranscriptionContext:
     incremental_responses: List[IncrementalResult]
     sorted_transcripts: dict
     data_channel: None  # FIXME
+    logger: None
 
-    def __init__(self):
+    def __init__(self, logger):
         self.transcription_text = ""
         self.last_transcribed_time = 0.0
         self.incremental_responses = []
         self.data_channel = None
         self.sorted_transcripts = SortedDict()
+        self.logger = logger
