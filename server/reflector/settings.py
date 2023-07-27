@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # Whisper
     WHISPER_MODEL_SIZE: str = "tiny"
-    whisper_real_time_model_size: str = "tiny"
+    WHISPER_REAL_TIME_MODEL_SIZE: str = "tiny"
 
     # Summarizer
     SUMMARIZER_MODEL: str = "facebook/bart-large-cnn"
