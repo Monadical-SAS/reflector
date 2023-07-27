@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Monadical team <ops@monadical.com>"]
 readme = "README.md"
-packages = [{include = "reflector_server"}]
+packages = []
 
 [tool.poetry.dependencies]
 python = "^3.11"
