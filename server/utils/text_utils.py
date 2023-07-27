@@ -1,6 +1,8 @@
 """
 Utility file for all text processing related functionalities
 """
+import datetime
+from typing import List
 
 import nltk
 import torch
@@ -16,7 +18,12 @@ from run_utils import CONFIG
 nltk.download('punkt', quiet=True)
 
 
-def preprocess_sentence(sentence):
+def preprocess_sentence(sentence: str) -> str:
+    """
+    Filter out undesirable tokens from thr sentence
+    :param sentence:
+    :return:
+    """
     stop_words = set(stopwords.words('english'))
     tokens = word_tokenize(sentence.lower())
     tokens = [token for token in tokens
@@ -24,7 +31,7 @@ def preprocess_sentence(sentence):
     return ' '.join(tokens)
 
 
-def compute_similarity(sent1, sent2):
+def compute_similarity(sent1: str, sent2: str) -> float:
     """
     Compute the similarity
     """
@@ -35,7 +42,7 @@ def compute_similarity(sent1, sent2):
     return 0.0
 
 
-def remove_almost_alike_sentences(sentences, threshold=0.7):
+def remove_almost_alike_sentences(sentences: List[str], threshold=0.7) -> List[str]:
     """
     Filter sentences that are similar beyond a set threshold
     :param sentences:
@@ -71,7 +78,7 @@ def remove_almost_alike_sentences(sentences, threshold=0.7):
     return filtered_sentences
 
 
-def remove_outright_duplicate_sentences_from_chunk(chunk):
+def remove_outright_duplicate_sentences_from_chunk(chunk: str) -> List[str]:
     """
     Remove repetitive sentences
     :param chunk:
@@ -83,7 +90,7 @@ def remove_outright_duplicate_sentences_from_chunk(chunk):
     return nonduplicate_sentences
 
 
-def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
+def remove_whisper_repetitive_hallucination(nonduplicate_sentences: List[str]) -> List[str]:
     """
     Remove sentences that are repeated as a result of Whisper
     hallucinations
@@ -111,7 +118,7 @@ def remove_whisper_repetitive_hallucination(nonduplicate_sentences):
     return chunk_sentences
 
 
-def post_process_transcription(whisper_result):
+def post_process_transcription(whisper_result: dict) -> dict:
     """
     Parent function to perform post-processing on the transcription result
     :param whisper_result:
@@ -131,7 +138,7 @@ def post_process_transcription(whisper_result):
     return whisper_result
 
 
-def summarize_chunks(chunks, tokenizer, model):
+def summarize_chunks(chunks: List[str], tokenizer, model) -> List[str]:
     """
     Summarize each chunk using a summarizer model
     :param chunks:
@@ -157,8 +164,8 @@ def summarize_chunks(chunks, tokenizer, model):
     return summaries
 
 
-def chunk_text(text,
-               max_chunk_length=int(CONFIG["SUMMARIZER"]["MAX_CHUNK_LENGTH"])):
+def chunk_text(text: str,
+               max_chunk_length: int = int(CONFIG["SUMMARIZER"]["MAX_CHUNK_LENGTH"])) -> List[str]:
     """
     Split text into smaller chunks.
     :param text: Text to be chunked
@@ -178,9 +185,9 @@ def chunk_text(text,
     return chunks
 
 
-def summarize(transcript_text, timestamp,
-              real_time=False,
-              chunk_summarize=CONFIG["SUMMARIZER"]["SUMMARIZE_USING_CHUNKS"]):
+def summarize(transcript_text: str, timestamp: datetime.datetime.timestamp,
+              real_time: bool = False,
+              chunk_summarize: str = CONFIG["SUMMARIZER"]["SUMMARIZE_USING_CHUNKS"]):
     """
     Summarize the given text either as a whole or as chunks as needed
     :param transcript_text:
