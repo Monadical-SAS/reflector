@@ -89,7 +89,7 @@ export default function Recorder(props) {
   const handleRecClick = async () => {
     if (!record) return console.log("no record");
 
-    if (record?.isRecording()) {
+    if (record.isRecording()) {
       props.onStop();
       record.stopRecording();
       setIsRecording(false);

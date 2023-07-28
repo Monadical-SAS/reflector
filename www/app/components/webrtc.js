@@ -3,7 +3,7 @@ import Peer from "simple-peer";
 
 const WebRTC_SERVER_URL = "http://127.0.0.1:1250/offer";
 
-const useWebRTC = (stream, setIsRecording) => {
+const useWebRTC = (stream) => {
   const [data, setData] = useState({
     peer: null,
   });
@@ -66,7 +66,6 @@ const useWebRTC = (stream, setIsRecording) => {
             },
             text: ''
           }));
-          setIsRecording(false);
           break;
         default:
           console.error(`Unknown command ${serverData.cmd}`);
@@ -76,7 +75,7 @@ const useWebRTC = (stream, setIsRecording) => {
     return () => {
       peer.destroy();
     };
-  }, [stream, setIsRecording]);
+  }, [stream]);
 
   return data;
 };
