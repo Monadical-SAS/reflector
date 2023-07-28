@@ -10,7 +10,7 @@ const App = () => {
 
   // This is where you'd send the stream and receive the data from the server.
   // transcription, summary, etc
-  const serverData = useWebRTC(stream, () => { });
+  const serverData = useWebRTC(stream);
 
   const sendStopCmd = () => serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }))
 
