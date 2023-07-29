@@ -80,8 +80,7 @@ class Processor:
         if callback:
             self.on(callback)
         self.uid = uuid4().hex
-        self.logger = (custom_logger or logger).bind(
-            processor=self.__class__.__name__)
+        self.logger = (custom_logger or logger).bind(processor=self.__class__.__name__)
 
     def set_pipeline(self, pipeline: "Pipeline"):
         self.logger = self.logger.bind(pipeline=pipeline.uid)
@@ -107,6 +106,9 @@ class Processor:
         """
         Register a callback to be called when data is emitted
         """
+        # ensure callback is asynchronous
+        if not asyncio.iscoroutinefunction(callback):
+            raise ValueError("Callback must be a coroutine function")
         self._callbacks.append(callback)
 
     def off(self, callback):
@@ -127,7 +129,10 @@ class Processor:
         The function returns the output of type `OUTPUT_TYPE`
         """
         # logger.debug(f"{self.__class__.__name__} push")
-        return await self._push(data)
+        try:
+            return await self._push(data)
+        except Exception:
+            self.logger.exception("Error in push")
 
     async def flush(self):
         """
@@ -461,7 +466,6 @@ class Pipeline(Processor):
         for processor in self.processors:
             processor.describe(level + 1)
         logger.info("")
-
 
 
 class FinalSummaryProcessor(Processor):
