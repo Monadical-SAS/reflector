@@ -9,10 +9,9 @@ from reflector.processors import (
     Pipeline,
     AudioChunkerProcessor,
     AudioMergeProcessor,
-    AudioAutoTranscriptProcessor,
-    TranscriptLineProcessor,
-    TitleSummaryProcessor,
-    # FinalSummaryProcessor,
+    AudioTranscriptAutoProcessor,
+    TranscriptLinerProcessor,
+    TranscriptTopicDetectorProcessor,
     Transcript,
     TitleSummary,
 )
@@ -74,9 +73,9 @@ async def rtc_offer(params: RtcOffer, request: Request):
     ctx.pipeline = Pipeline(
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
-        AudioAutoTranscriptProcessor.as_threaded(),
-        TranscriptLineProcessor(callback=on_transcript),
-        TitleSummaryProcessor.as_threaded(callback=on_summary),
+        AudioTranscriptAutoProcessor.as_threaded(),
+        TranscriptLinerProcessor(callback=on_transcript),
+        TranscriptTopicDetectorProcessor.as_threaded(callback=on_summary),
         # FinalSummaryProcessor.as_threaded(
         #     filename=result_fn, callback=on_final_summary
         # ),
