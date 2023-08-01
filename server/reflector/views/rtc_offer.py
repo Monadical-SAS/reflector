@@ -2,10 +2,7 @@ import asyncio
 from fastapi import Request, APIRouter
 from reflector.events import subscribers_shutdown
 from pydantic import BaseModel
-from reflector.models import (
-    TranscriptionContext,
-    TranscriptionOutput,
-)
+from reflector.models import TranscriptionContext
 from reflector.logger import logger
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from json import loads, dumps
