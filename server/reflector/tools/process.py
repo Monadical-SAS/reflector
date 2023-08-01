@@ -7,7 +7,7 @@ from reflector.processors import (
     AudioTranscriptAutoProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    # TranscriptSummarizerProcessor,
+    TranscriptFinalSummaryProcessor,
 )
 import asyncio
 
@@ -29,9 +29,7 @@ async def process_audio_file(filename, event_callback):
         AudioTranscriptAutoProcessor.as_threaded(),
         TranscriptLinerProcessor(callback=on_transcript),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
-        # TranscriptSummarizerProcessor.as_threaded(
-        #     callback=on_summary
-        # ),
+        TranscriptFinalSummaryProcessor.as_threaded(callback=on_summary),
     )
     pipeline.describe()
 

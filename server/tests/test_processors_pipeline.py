@@ -26,7 +26,7 @@ async def test_basic_process(event_loop):
     marks = {
         "transcript": 0,
         "topic": 0,
-        # "summary": 0,
+        "summary": 0,
     }
 
     async def event_callback(event, data):
@@ -40,5 +40,5 @@ async def test_basic_process(event_loop):
 
     # validate the events
     assert marks["transcript"] == 5
-    assert marks["topic"] == 4
-    # assert marks["summary"] == 1
+    assert marks["topic"] == 2
+    assert marks["summary"] == 1

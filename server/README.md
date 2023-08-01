@@ -48,6 +48,13 @@ $ LLM_URL=http://.../api/v1/generate python -m reflector.app
 - Ensure the API server is activated in GPT4all
 - Run with: `LLM_BACKEND=openai LLM_URL=http://localhost:4891/v1/completions LLM_OPENAI_MODEL="GPT4All Falcon" python -m reflector.app`
 
+
+### Using local files
+
+```
+poetry run python -m reflector.tools.process path/to/audio.wav
+```
+
 # Old documentation
 
 This is the code base for the Reflector demo (formerly called agenda-talk-diff) for the leads : Troy Web Consulting
