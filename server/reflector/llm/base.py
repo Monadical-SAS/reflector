@@ -55,9 +55,13 @@ class LLM:
 
         regex = r"```(json|javascript|)?(.*)```"
         matches = re.findall(regex, result.strip(), re.MULTILINE | re.DOTALL)
-        if not matches:
-            return result
+        if matches:
+            result = matches[0][1]
 
-        # we have a match, try to parse it
-        result = matches[0][1]
+        else:
+            # maybe the prompt has been started with ```json
+            # so if text ends with ```, just remove it and use it as json
+            if result.endswith("```"):
+                result = result[:-3]
+
         return json.loads(result.strip())

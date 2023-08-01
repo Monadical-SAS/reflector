@@ -21,9 +21,10 @@ class TranscriptTopicDetectorProcessor(Processor):
         {input_text}
 
         ### Assistant:
+
     """
 
-    def __init__(self, min_transcript_length=25, **kwargs):
+    def __init__(self, min_transcript_length=100, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
@@ -43,6 +44,12 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         prompt = self.PROMPT.format(input_text=self.transcript.text)
         result = await self.llm.generate(prompt=prompt)
-        summary = TitleSummary(title=result["title"], summary=result["summary"])
+        summary = TitleSummary(
+            title=result["title"],
+            summary=result["summary"],
+            timestamp=self.transcript.timestamp,
+            duration=self.transcript.duration,
+            transcript=self.transcript,
+        )
         self.transcript = None
         await self.emit(summary)

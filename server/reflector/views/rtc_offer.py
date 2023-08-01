@@ -1,6 +1,11 @@
 from fastapi import Request, APIRouter
 from pydantic import BaseModel
-from reflector.models import TranscriptionContext, TranscriptionOutput
+from reflector.models import (
+    TranscriptionContext,
+    TranscriptionOutput,
+    TitleSummaryOutput,
+    IncrementalResult,
+)
 from reflector.logger import logger
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from json import loads, dumps
@@ -67,6 +72,31 @@ async def rtc_offer(params: RtcOffer, request: Request):
 
     async def on_summary(summary: TitleSummary):
         ctx.logger.info("Summary", summary=summary)
+        # XXX doesnt work as expected, IncrementalResult is not serializable
+        #     and previous implementation assume output of oobagooda
+        # result = TitleSummaryOutput(
+        #     [
+        #         IncrementalResult(
+        #             title=summary.title,
+        #             desc=summary.summary,
+        #             transcript=summary.transcript.text,
+        #             timestamp=summary.timestamp,
+        #         )
+        #     ]
+        # )
+        result = {
+            "cmd": "UPDATE_TOPICS",
+            "topics": [
+                {
+                    "title": summary.title,
+                    "timestamp": summary.timestamp,
+                    "transcript": summary.transcript.text,
+                    "desc": summary.summary,
+                }
+            ],
+        }
+
+        ctx.data_channel.send(dumps(result))
 
     # create a context for the whole rtc transaction
     # add a customised logger to the context
