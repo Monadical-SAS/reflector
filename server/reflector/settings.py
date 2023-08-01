@@ -31,15 +31,18 @@ class Settings(BaseSettings):
     LLM_URL: str | None = None
     LLM_HOST: str = "localhost"
     LLM_PORT: int = 7860
+    LLM_OPENAI_KEY: str | None = None
+    LLM_OPENAI_MODEL: str = "gpt-3.5-turbo"
+    LLM_OPENAI_TEMPERATURE: float = 0.7
+    LLM_TIMEOUT: int = 90
+    LLM_MAX_TOKENS: int = 1024
+    LLM_TEMPERATURE: float = 0.7
 
     # Storage
     STORAGE_BACKEND: str = "aws"
     STORAGE_AWS_ACCESS_KEY: str = ""
     STORAGE_AWS_SECRET_KEY: str = ""
     STORAGE_AWS_BUCKET: str = ""
-
-    # OpenAI
-    OPENAI_API_KEY: str = ""
 
 
 settings = Settings()
