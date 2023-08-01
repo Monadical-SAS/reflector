@@ -73,8 +73,8 @@ async def rtc_offer(params: RtcOffer, request: Request):
     ctx.pipeline = Pipeline(
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
-        AudioTranscriptAutoProcessor.as_threaded(),
-        TranscriptLinerProcessor(callback=on_transcript),
+        AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
+        TranscriptLinerProcessor(),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_summary),
         # FinalSummaryProcessor.as_threaded(
         #     filename=result_fn, callback=on_final_summary

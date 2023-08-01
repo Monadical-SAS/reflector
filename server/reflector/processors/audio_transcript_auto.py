@@ -13,8 +13,8 @@ class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
     BACKEND_DEFAULT = "whisper"
 
     def __init__(self, backend=None, **kwargs):
-        super().__init__(**kwargs)
         self.processor = self.BACKENDS[backend or self.BACKEND_DEFAULT]()
+        super().__init__(**kwargs)
 
     def connect(self, processor: Processor):
         self.processor.connect(processor)

@@ -28,4 +28,3 @@ class TranscriptSummarizerProcessor(Processor):
             return
         self.logger.info(f"Writing to {self.filename}")
         await self.emit(self.filename)
-

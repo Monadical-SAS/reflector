@@ -39,7 +39,7 @@ jobs:
         cd server
         poetry run python -m pytest -v tests
 
-  pep8:
+  formatting:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -52,6 +52,20 @@ jobs:
         pip install black
         cd server
         black --check reflector tests
+
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.x
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    - name: Validate formatting
+      run: |
+        pip install ruff
+        cd server
+        ruff reflector tests
 
   docker:
     runs-on: ubuntu-latest
