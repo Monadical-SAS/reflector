@@ -22,12 +22,6 @@ class Word:
 
 
 @dataclass
-class TitleSummary:
-    title: str
-    summary: str
-
-
-@dataclass
 class Transcript:
     text: str = ""
     words: list[Word] = None
@@ -63,3 +57,12 @@ class Transcript:
             Word(text=word.text, start=word.start, end=word.end) for word in self.words
         ]
         return Transcript(text=self.text, words=words)
+
+
+@dataclass
+class TitleSummary:
+    title: str
+    summary: str
+    timestamp: float
+    duration: float
+    transcript: Transcript
