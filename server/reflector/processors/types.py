@@ -66,3 +66,9 @@ class TitleSummary:
     timestamp: float
     duration: float
     transcript: Transcript
+
+
+@dataclass
+class FinalSummary:
+    summary: str
+    duration: float
