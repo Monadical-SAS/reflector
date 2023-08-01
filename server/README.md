@@ -33,14 +33,20 @@ Then run the server:
 
 ```
 # With a config.ini
-$ poetry run python -m reflector.server
+$ poetry run python -m reflector.app
 
 
 # Within a poetry env
 $ poetry shell
-$ LLM_URL=http://.../api/v1/generate python -m reflector.server
+$ LLM_URL=http://.../api/v1/generate python -m reflector.app
 
 ```
+
+### Using local GPT4All
+
+- Start GPT4All with any model you want
+- Ensure the API server is activated in GPT4all
+- Run with: `LLM_BACKEND=openai LLM_URL=http://localhost:4891/v1/completions LLM_OPENAI_MODEL="GPT4All Falcon" python -m reflector.app`
 
 # Old documentation
 
