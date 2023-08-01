@@ -26,3 +26,7 @@ app.add_middleware(
 
 # register views
 app.include_router(rtc_offer_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("reflector.app:app", host="0.0.0.0", port=1250, reload=True)
