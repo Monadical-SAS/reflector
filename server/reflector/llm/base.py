@@ -2,6 +2,7 @@ from reflector.logger import logger
 from reflector.settings import settings
 import asyncio
 import json
+import re
 
 
 class LLM:
@@ -48,11 +49,15 @@ class LLM:
     def _parse_json(self, result: str) -> dict:
         result = result.strip()
         # try detecting code block if exist
-        if result.startswith("```json\n") and result.endswith("```"):
-            result = result[8:-3]
-        elif result.startswith("```\n") and result.endswith("```"):
-            result = result[4:-3]
-        print(">>>", result)
+        # starts with ```json\n, ends with ```
+        # or starts with ```\n, ends with ```
+        # or starts with \n```javascript\n, ends with ```
+
+        regex = r"```(json|javascript|)?(.*)```"
+        matches = re.findall(regex, result.strip(), re.MULTILINE | re.DOTALL)
+        if not matches:
+            return result
+
+        # we have a match, try to parse it
+        result = matches[0][1]
         return json.loads(result.strip())
-
-

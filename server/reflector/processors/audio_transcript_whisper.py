@@ -32,7 +32,11 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
             transcript.text += segment.text
             for word in segment.words:
                 transcript.words.append(
-                    Word(text=word.word, start=ts + word.start, end=ts + word.end)
+                    Word(
+                        text=word.word,
+                        start=round(ts + word.start, 3),
+                        end=round(ts + word.end, 3),
+                    )
                 )
 
         return transcript
