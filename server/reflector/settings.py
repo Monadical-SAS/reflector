@@ -44,5 +44,8 @@ class Settings(BaseSettings):
     STORAGE_AWS_SECRET_KEY: str = ""
     STORAGE_AWS_BUCKET: str = ""
 
+    # Sentry
+    SENTRY_DSN: str | None = None
+
 
 settings = Settings()
