@@ -30,8 +30,8 @@
   },
   "main": "index.js",
   "repository": "https://github.com/Monadical-SAS/reflector-ui.git",
-  "author": "Koper <andreas@monadical.com>",
-  "license": "MIT",
+  "author": "Andreas <andreas@monadical.com>",
+  "license": "All Rights Reserved",
   "devDependencies": {
     "prettier": "^3.0.0"
   }
