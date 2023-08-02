@@ -70,7 +70,7 @@ export default function Home() {
 
         <p>
           Next, look for the error on the{" "}
-          <a href="https://monadical.sentry.io/issues/?project=4505634578563072">Issues Page</a>.
+          <a href="https://monadical.sentry.io/issues/?project=4505634666577920">Issues Page</a>.
         </p>
         <p style={{ marginTop: "24px" }}>
           For more information, see{" "}
