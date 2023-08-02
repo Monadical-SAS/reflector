@@ -174,3 +174,4 @@ test_samples/
 .DS_Store
 .vscode/
 artefacts/
+audio_*.wav
