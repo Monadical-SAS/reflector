@@ -10,3 +10,4 @@ Here's a structured timeline for our project completion:
 | Friday    | Big demo presentation                                  |
 
 Let's stay focused and get our tasks done on time for a successful demo on Friday. Let's have a successful week!
+
