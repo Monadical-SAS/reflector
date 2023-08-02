@@ -12,7 +12,8 @@ const App = () => {
   // transcription, summary, etc
   const serverData = useWebRTC(stream);
 
-  const sendStopCmd = () => serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }))
+  const sendStopCmd = () =>
+    serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }));
 
   return (
     <div className="flex flex-col items-center h-[100svh]">

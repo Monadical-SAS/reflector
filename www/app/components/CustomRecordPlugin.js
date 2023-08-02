@@ -18,81 +18,81 @@ class CustomRecordPlugin extends RecordPlugin {
     return new CustomRecordPlugin(options || {});
   }
   render(stream) {
-    if (!this.wavesurfer) return () => undefined
+    if (!this.wavesurfer) return () => undefined;
 
-    const container = this.wavesurfer.getWrapper()
-    const canvas = document.createElement('canvas')
-    canvas.width = container.clientWidth
-    canvas.height = container.clientHeight
-    canvas.style.zIndex = '10'
-    container.appendChild(canvas)
+    const container = this.wavesurfer.getWrapper();
+    const canvas = document.createElement("canvas");
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    canvas.style.zIndex = "10";
+    container.appendChild(canvas);
 
-    const canvasCtx = canvas.getContext('2d')
-    const audioContext = new AudioContext()
-    const source = audioContext.createMediaStreamSource(stream)
-    const analyser = audioContext.createAnalyser()
-    analyser.fftSize = 2 ** 5
-    source.connect(analyser)
-    const bufferLength = analyser.frequencyBinCount
-    const dataArray = new Uint8Array(bufferLength)
+    const canvasCtx = canvas.getContext("2d");
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2 ** 5;
+    source.connect(analyser);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
     let animationId, previousTimeStamp;
-    const BUFFER_SIZE = 2 ** 8
-    const dataBuffer = new Array(BUFFER_SIZE).fill(canvas.height)
+    const BUFFER_SIZE = 2 ** 8;
+    const dataBuffer = new Array(BUFFER_SIZE).fill(canvas.height);
 
     const drawWaveform = (timeStamp) => {
-      if (!canvasCtx) return
+      if (!canvasCtx) return;
 
-      analyser.getByteTimeDomainData(dataArray)
-      canvasCtx.clearRect(0, 0, canvas.width, canvas.height)
-      canvasCtx.fillStyle = '#cc3347'
+      analyser.getByteTimeDomainData(dataArray);
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+      canvasCtx.fillStyle = "#cc3347";
 
       if (previousTimeStamp === undefined) {
-        previousTimeStamp = timeStamp
-        dataBuffer.push(Math.min(...dataArray))
-        dataBuffer.splice(0, 1)
+        previousTimeStamp = timeStamp;
+        dataBuffer.push(Math.min(...dataArray));
+        dataBuffer.splice(0, 1);
       }
       const elapsed = timeStamp - previousTimeStamp;
       if (elapsed > 10) {
-        previousTimeStamp = timeStamp
-        dataBuffer.push(Math.min(...dataArray))
-        dataBuffer.splice(0, 1)
+        previousTimeStamp = timeStamp;
+        dataBuffer.push(Math.min(...dataArray));
+        dataBuffer.splice(0, 1);
       }
 
       // Drawing
-      const sliceWidth = canvas.width / dataBuffer.length
-      let x = 0
+      const sliceWidth = canvas.width / dataBuffer.length;
+      let x = 0;
 
       for (let i = 0; i < dataBuffer.length; i++) {
-        const valueNormalized = dataBuffer[i] / canvas.height
-        const y = valueNormalized * canvas.height / 2
-        const sliceHeight = canvas.height + 1 - y * 2
+        const valueNormalized = dataBuffer[i] / canvas.height;
+        const y = (valueNormalized * canvas.height) / 2;
+        const sliceHeight = canvas.height + 1 - y * 2;
 
-        canvasCtx.fillRect(x, y, sliceWidth * 2 / 3, sliceHeight)
-        x += sliceWidth
+        canvasCtx.fillRect(x, y, (sliceWidth * 2) / 3, sliceHeight);
+        x += sliceWidth;
       }
 
-      animationId = requestAnimationFrame(drawWaveform)
-    }
+      animationId = requestAnimationFrame(drawWaveform);
+    };
 
-    drawWaveform()
+    drawWaveform();
 
     return () => {
       if (animationId) {
-        cancelAnimationFrame(animationId)
+        cancelAnimationFrame(animationId);
       }
 
       if (source) {
-        source.disconnect()
-        source.mediaStream.getTracks().forEach((track) => track.stop())
+        source.disconnect();
+        source.mediaStream.getTracks().forEach((track) => track.stop());
       }
 
       if (audioContext) {
-        audioContext.close()
+        audioContext.close();
       }
 
-      canvas?.remove()
-    }
+      canvas?.remove();
+    };
   }
   startRecording(stream) {
     this.preventInteraction();
