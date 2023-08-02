@@ -15,7 +15,7 @@ export function Dashboard({
 
   return (
     <>
-      <div className="flex-grow w-3/4 py-4">
+      <div className="h-[60svh] w-3/4 flex flex-col">
         <div className="text-center py-6">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>
@@ -25,28 +25,32 @@ export function Dashboard({
           <div className="w-1/4"></div>
         </div>
 
-        {topics.map((item, index) => (
-          <div key={index} className="border-b-2 py-2">
-            <div
-              className="flex justify-between items-center cursor-pointer"
-              onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            >
-              <div className="w-1/4">{item.timestamp}</div>
-              <div className="w-1/4 flex justify-between items-center">
-                {item.title}
-                <FontAwesomeIcon
-                  className={`transform transition-transform duration-200`}
-                  icon={openIndex === index ? faChevronDown : faChevronRight}
-                />
+        <div className="py-2 overflow-y-auto">
+          {topics.map((item, index) => (
+            <div key={index} className="border-b-2 py-2">
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+              >
+                <div className="w-1/4">{item.timestamp}</div>
+                <div className="w-1/4 flex justify-between items-center">
+                  {item.title}
+                  <FontAwesomeIcon
+                    className={`transform transition-transform duration-200`}
+                    icon={openIndex === index ? faChevronDown : faChevronRight}
+                  />
+                </div>
+                <div className="w-1/4 flex flex-row space-x-0.5"></div>
               </div>
-              <div className="w-1/4 flex flex-row space-x-0.5"></div>
+              {openIndex === index && (
+                <div className="mt-2 p-2 bg-white rounded">{item.transcript}</div>
+              )}
             </div>
-            {openIndex === index && (
-              <div className="mt-2 p-2 bg-white rounded">{item.transcript}</div>
-            )}
-          </div>
-        ))}
-
+          ))}
+          {topics.length === 0 && (
+            <div className="text-center text-gray-500">No topics yet</div>
+          )}
+        </div>
 
         {finalSummary && (
           <div className="mt-2 p-2 bg-white temp-transcription rounded">
@@ -57,7 +61,7 @@ export function Dashboard({
         )}
       </div>
 
-      <footer className="w-full bg-gray-800 text-white text-center py-4 text-2xl mt-8 h-32">
+      <footer className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl mt-8 h-32">
         &nbsp;{transcriptionText}&nbsp;
       </footer>
     </>

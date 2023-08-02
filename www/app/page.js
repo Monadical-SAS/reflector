@@ -16,7 +16,7 @@ const App = () => {
 
   return (
     <div className="flex flex-col items-center h-[100svh]">
-      <div className="text-center py-6 mt-10">
+      <div className="h-[13svh] flex flex-col justify-center items-center">
         <h1 className="text-5xl font-bold text-blue-500">Reflector</h1>
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
