@@ -12,38 +12,59 @@ export function Dashboard({
   stream,
 }) {
   const [openIndex, setOpenIndex] = useState(null);
+  const [autoscrollEnabled, setAutoscrollEnabled] = useState(true);
+
+  useEffect(() => {
+    if (autoscrollEnabled) scrollToBottom();
+  }, [topics.length]);
+
+  const scrollToBottom = () => {
+    const topicsDiv = document.getElementById("topics-div");
+    topicsDiv.scrollTop = topicsDiv.scrollHeight;
+  };
+
+  const handleScroll = (e) => {
+    const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
+    if (!bottom && autoscrollEnabled) {
+      setAutoscrollEnabled(false);
+    } else if (bottom && !autoscrollEnabled) {
+      setAutoscrollEnabled(true);
+    }
+  };
 
   return (
     <>
-      <div className="h-[60svh] w-3/4 flex flex-col">
-        <div className="text-center py-6">
+      <div className="relative h-[60svh] w-3/4 flex flex-col">
+        <div className="text-center pb-1 pt-4">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>
         <div className="flex justify-between border-b-2">
-          <div className="w-1/4">Timestamp</div>
-          <div className="w-1/4">Topic</div>
-          <div className="w-1/4"></div>
+          <div className="w-1/4 font-bold">Timestamp</div>
+          <div className="w-3/4 font-bold">Topic</div>
         </div>
 
-        <div className="py-2 overflow-y-auto">
+        <div
+          className={`absolute top-7 right-5 w-10 h-10 ${autoscrollEnabled ? 'hidden' : 'flex'} justify-center items-center text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl border-slate-400 bg-[#3c82f638] text-[#3c82f6ed]`}
+          onClick={scrollToBottom}
+        >&#11015;</div>
+        <div id="topics-div" className="py-2 overflow-y-auto" onScroll={handleScroll}>
           {topics.map((item, index) => (
-            <div key={index} className="border-b-2 py-2">
+            <div key={index} className="border-b-2 py-2 hover:bg-[#8ec5fc30]">
               <div
-                className="flex justify-between items-center cursor-pointer"
+                className="flex justify-between items-center cursor-pointer px-4"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
                 <div className="w-1/4">{item.timestamp}</div>
-                <div className="w-1/4 flex justify-between items-center">
+                <div className="w-3/4 flex justify-between items-center">
                   {item.title}
                   <FontAwesomeIcon
                     className={`transform transition-transform duration-200`}
                     icon={openIndex === index ? faChevronDown : faChevronRight}
                   />
                 </div>
-                <div className="w-1/4 flex flex-row space-x-0.5"></div>
               </div>
               {openIndex === index && (
-                <div className="mt-2 p-2 bg-white rounded">{item.transcript}</div>
+                <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">{item.transcript}</div>
               )}
             </div>
           ))}
@@ -53,7 +74,7 @@ export function Dashboard({
         </div>
 
         {finalSummary && (
-          <div className="mt-2 p-2 bg-white temp-transcription rounded">
+          <div className="min-h-[200px] overflow-y-auto mt-2 p-2 bg-white temp-transcription rounded">
             <h2>Final Summary</h2>
             <p>Duration: {finalSummary.duration}</p>
             <p>{finalSummary.summary}</p>
@@ -61,7 +82,7 @@ export function Dashboard({
         )}
       </div>
 
-      <footer className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl mt-8 h-32">
+      <footer className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl">
         &nbsp;{transcriptionText}&nbsp;
       </footer>
     </>
