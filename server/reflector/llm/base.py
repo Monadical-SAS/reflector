@@ -1,6 +1,7 @@
 from reflector.logger import logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+import importlib
 import json
 import re
 
@@ -13,7 +14,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def instance(cls):
+    def get_instance(cls, name=None):
         """
         Return an instance depending on the settings.
         Settings used:
@@ -21,7 +22,12 @@ class LLM:
         - `LLM_BACKEND`: key of the backend, defaults to `oobagooda`
         - `LLM_URL`: url of the backend
         """
-        return cls._registry[settings.LLM_BACKEND]()
+        if name is None:
+            name = settings.LLM_BACKEND
+        if name not in cls._registry:
+            module_name = f"reflector.llm.llm_{name}"
+            importlib.import_module(module_name)
+        return cls._registry[name]()
 
     async def generate(self, prompt: str, **kwargs) -> dict:
         try:
