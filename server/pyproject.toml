@@ -38,6 +38,10 @@ pytest-aiohttp = "^1.0.4"
 pytest-asyncio = "^0.21.1"
 pytest = "^7.4.0"
 
+
+[tool.poetry.group.aws.dependencies]
+aioboto3 = "^11.2.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
