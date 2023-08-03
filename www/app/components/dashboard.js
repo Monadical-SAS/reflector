@@ -1,7 +1,10 @@
 import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronRight,
+  faChevronDown,
+} from "@fortawesome/free-solid-svg-icons";
 
 export function Dashboard({
   isRecording,
@@ -46,7 +49,6 @@ export function Dashboard({
             )}
           </div>
         ))}
-
 
         {finalSummary && (
           <div className="mt-2 p-2 bg-white temp-transcription rounded">
