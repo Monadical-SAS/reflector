@@ -7,27 +7,28 @@ import "react-dropdown/style.css";
 
 import CustomRecordPlugin from "./CustomRecordPlugin";
 
-
 const AudioInputsDropdown = (props) => {
   const [ddOptions, setDdOptions] = useState([]);
 
   useEffect(() => {
     const init = async () => {
       // Request permission to use audio inputs
-      await navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => stream.getTracks().forEach((t) => t.stop()))
+      await navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => stream.getTracks().forEach((t) => t.stop()));
 
-      const devices = await navigator.mediaDevices.enumerateDevices()
+      const devices = await navigator.mediaDevices.enumerateDevices();
       const audioDevices = devices
         .filter((d) => d.kind === "audioinput" && d.deviceId != "")
-        .map((d) => ({ value: d.deviceId, label: d.label }))
+        .map((d) => ({ value: d.deviceId, label: d.label }));
 
-      if (audioDevices.length < 1) return console.log("no audio input devices")
+      if (audioDevices.length < 1) return console.log("no audio input devices");
 
-      setDdOptions(audioDevices)
-      props.setDeviceId(audioDevices[0].value)
-    }
-    init()
-  }, [])
+      setDdOptions(audioDevices);
+      props.setDeviceId(audioDevices[0].value);
+    };
+    init();
+  }, []);
 
   const handleDropdownChange = (e) => {
     props.setDeviceId(e.value);
@@ -40,8 +41,8 @@ const AudioInputsDropdown = (props) => {
       value={ddOptions[0]}
       disabled={props.disabled}
     />
-  )
-}
+  );
+};
 
 export default function Recorder(props) {
   const waveformRef = useRef();

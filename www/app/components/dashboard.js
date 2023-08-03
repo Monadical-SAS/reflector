@@ -1,7 +1,10 @@
 import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronRight, faChevronDown } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChevronRight,
+  faChevronDown,
+} from "@fortawesome/free-solid-svg-icons";
 
 export function Dashboard({
   isRecording,
@@ -24,7 +27,8 @@ export function Dashboard({
   };
 
   const handleScroll = (e) => {
-    const bottom = e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
+    const bottom =
+      e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
     if (!bottom && autoscrollEnabled) {
       setAutoscrollEnabled(false);
     } else if (bottom && !autoscrollEnabled) {
@@ -44,10 +48,18 @@ export function Dashboard({
         </div>
 
         <div
-          className={`absolute top-7 right-5 w-10 h-10 ${autoscrollEnabled ? 'hidden' : 'flex'} justify-center items-center text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl border-slate-400 bg-[#3c82f638] text-[#3c82f6ed]`}
+          className={`absolute top-7 right-5 w-10 h-10 ${
+            autoscrollEnabled ? "hidden" : "flex"
+          } justify-center items-center text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl border-slate-400 bg-[#3c82f638] text-[#3c82f6ed]`}
           onClick={scrollToBottom}
-        >&#11015;</div>
-        <div id="topics-div" className="py-2 overflow-y-auto" onScroll={handleScroll}>
+        >
+          &#11015;
+        </div>
+        <div
+          id="topics-div"
+          className="py-2 overflow-y-auto"
+          onScroll={handleScroll}
+        >
           {topics.map((item, index) => (
             <div key={index} className="border-b-2 py-2 hover:bg-[#8ec5fc30]">
               <div
@@ -64,7 +76,9 @@ export function Dashboard({
                 </div>
               </div>
               {openIndex === index && (
-                <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">{item.transcript}</div>
+                <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">
+                  {item.transcript}
+                </div>
               )}
             </div>
           ))}
