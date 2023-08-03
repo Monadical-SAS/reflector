@@ -15,7 +15,6 @@ repos:
     hooks:
       - id: debug-statements
       - id: trailing-whitespace
-      - id: check-added-large-files
       - id: detect-private-key
 
   - repo: https://github.com/pycqa/isort
