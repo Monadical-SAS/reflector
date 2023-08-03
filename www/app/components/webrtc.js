@@ -64,7 +64,7 @@ const useWebRTC = (stream) => {
               duration: serverData.duration,
               summary: serverData.summary,
             },
-            text: ''
+            text: "",
           }));
           break;
         default:
