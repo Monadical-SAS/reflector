@@ -28,7 +28,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
-        self.llm = LLM.instance()
+        self.llm = LLM.get_instance()
 
     async def _push(self, data: Transcript):
         if self.transcript is None:
