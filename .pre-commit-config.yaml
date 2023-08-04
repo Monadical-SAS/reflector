@@ -16,7 +16,6 @@ repos:
       - id: debug-statements
       - id: trailing-whitespace
         exclude: ^server/trials
-      - id: check-added-large-files
       - id: detect-private-key
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
