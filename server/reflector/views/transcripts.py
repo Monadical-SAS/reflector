@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 from datetime import datetime
 from fastapi_pagination import Page, paginate
-from .rtc_offer import rtc_offer, RtcOffer, PipelineEvent
+from reflector.logger import logger
+from .rtc_offer import rtc_offer_base, RtcOffer, PipelineEvent
 import asyncio
 from typing import Optional
 
@@ -46,6 +47,7 @@ class Transcript(BaseModel):
 
     def add_event(self, event: str, data):
         self.events.append(TranscriptEvent(event=event, data=data))
+        return {"event": event, "data": data}
 
     def upsert_topic(self, topic: TranscriptTopic):
         existing_topic = next((t for t in self.topics if t.id == topic.id), None)
@@ -239,14 +241,37 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
     # OFC the current implementation is not good,
     # but it's just a POC before persistence. It won't query the
     # transcript from the database for each event.
-    print(f"Event: {event}", args, data)
+    # print(f"Event: {event}", args, data)
     transcript_id = args
     transcript = transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         return
-    transcript.add_event(event=event, data=data)
-    if event == PipelineEvent.TOPIC:
-        transcript.upsert_topic(TranscriptTopic(**data))
+
+    # event send to websocket clients may not be the same as the event
+    # received from the pipeline. For example, the pipeline will send
+    # a TRANSCRIPT event with all words, but this is not what we want
+    # to send to the websocket client.
+
+    # FIXME don't do copy
+    if event == PipelineEvent.TRANSCRIPT:
+        resp = transcript.add_event(event=event, data={
+            "text": data.text,
+        })
+    elif event == PipelineEvent.TOPIC:
+        topic = TranscriptTopic(
+            title=data.title,
+            summary=data.summary,
+            transcript=data.transcript,
+            timestamp=data.timestamp,
+        )
+        resp = transcript.add_event(event=event, data=topic.model_dump())
+        transcript.upsert_topic(topic)
+    else:
+        logger.warning(f"Unknown event: {event}")
+        return
+
+    # transmit to websocket clients
+    await ws_manager.send_json(transcript_id, resp)
 
 
 @router.post("/transcripts/{transcript_id}/record/webrtc")
@@ -261,9 +286,9 @@ async def transcript_record_webrtc(
         raise HTTPException(status_code=400, detail="Transcript is locked")
 
     # FIXME do not allow multiple recording at the same time
-    return await rtc_offer(
+    return await rtc_offer_base(
         params,
         request,
-        event_callback=transcript.handle_event,
+        event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
     )
