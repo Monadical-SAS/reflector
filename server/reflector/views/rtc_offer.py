@@ -6,6 +6,7 @@ from reflector.models import TranscriptionContext
 from reflector.logger import logger
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from json import loads, dumps
+from enum import StrEnum
 import av
 from reflector.processors import (
     Pipeline,
@@ -51,8 +52,15 @@ class RtcOffer(BaseModel):
     type: str
 
 
-@router.post("/offer")
-async def rtc_offer(params: RtcOffer, request: Request):
+class PipelineEvent(StrEnum):
+    TRANSCRIPT = "TRANSCRIPT"
+    TOPIC = "TOPIC"
+    FINAL_SUMMARY = "FINAL_SUMMARY"
+
+
+async def rtc_offer_base(
+    params: RtcOffer, request: Request, event_callback=None, event_callback_args=None
+):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)
 
@@ -71,7 +79,16 @@ async def rtc_offer(params: RtcOffer, request: Request):
         }
         ctx.data_channel.send(dumps(result))
 
-    async def on_topic(summary: TitleSummary):
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.TRANSCRIPT,
+                args=event_callback_args,
+                data=transcript,
+            )
+
+    async def on_topic(
+        summary: TitleSummary, event_callback=None, event_callback_args=None
+    ):
         # FIXME: make it incremental with the frontend, not send everything
         ctx.logger.info("Summary", summary=summary)
         ctx.topics.append(
@@ -85,7 +102,14 @@ async def rtc_offer(params: RtcOffer, request: Request):
         result = {"cmd": "UPDATE_TOPICS", "topics": ctx.topics}
         ctx.data_channel.send(dumps(result))
 
-    async def on_final_summary(summary: FinalSummary):
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
+            )
+
+    async def on_final_summary(
+        summary: FinalSummary, event_callback=None, event_callback_args=None
+    ):
         ctx.logger.info("FinalSummary", final_summary=summary)
         result = {
             "cmd": "DISPLAY_FINAL_SUMMARY",
@@ -93,6 +117,11 @@ async def rtc_offer(params: RtcOffer, request: Request):
             "duration": summary.duration,
         }
         ctx.data_channel.send(dumps(result))
+
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
+            )
 
     # create a context for the whole rtc transaction
     # add a customised logger to the context
@@ -157,3 +186,8 @@ async def rtc_clean_sessions():
         logger.debug(f"Closing session {pc}")
         await pc.close()
     sessions.clear()
+
+
+@router.post("/offer")
+async def rtc_offer(params: RtcOffer, request: Request):
+    return await rtc_offer_base(params, request)
