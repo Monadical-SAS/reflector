@@ -21,7 +21,6 @@ class OpenAILLM(LLM):
             "Authorization": f"Bearer {self.openai_key}",
         }
 
-        logger.debug(f"LLM openai prompt: {prompt}")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
@@ -36,7 +35,6 @@ class OpenAILLM(LLM):
             )
             response.raise_for_status()
             result = response.json()
-            logger.info(f"LLM openai result: {result}")
             return result["choices"][0]["text"]
 
 
