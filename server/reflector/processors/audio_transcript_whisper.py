@@ -1,4 +1,5 @@
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
+from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word
 from faster_whisper import WhisperModel
 
@@ -40,3 +41,6 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
                 )
 
         return transcript
+
+
+AudioTranscriptAutoProcessor.register("whisper", AudioTranscriptWhisperProcessor)

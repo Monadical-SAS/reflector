@@ -12,6 +12,7 @@ async def test_basic_process(event_loop):
 
     # use an LLM test backend
     settings.LLM_BACKEND = "test"
+    settings.TRANSCRIPT_BACKEND = "whisper"
 
     class LLMTest(LLM):
         async def _generate(self, prompt: str, **kwargs) -> str:

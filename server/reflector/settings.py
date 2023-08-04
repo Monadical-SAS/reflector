@@ -26,8 +26,29 @@ class Settings(BaseSettings):
     AUDIO_SAMPLING_WIDTH: int = 2
     AUDIO_BUFFER_SIZE: int = 256 * 960
 
+    # Audio Transcription
+    # backends: whisper, banana
+    TRANSCRIPT_BACKEND: str = "whisper"
+    TRANSCRIPT_URL: str | None = None
+    TRANSCRIPT_TIMEOUT: int = 90
+
+    # Audio transcription banana.dev configuration
+    TRANSCRIPT_BANANA_API_KEY: str | None = None
+    TRANSCRIPT_BANANA_MODEL_KEY: str | None = None
+
+    # Audio transcription storage
+    TRANSCRIPT_STORAGE_BACKEND: str = "aws"
+
+    # Storage configuration for AWS
+    TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket/chunks"
+    TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
+    TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
+    TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+
     # LLM
     LLM_BACKEND: str = "oobagooda"
+
+    # LLM common configuration
     LLM_URL: str | None = None
     LLM_HOST: str = "localhost"
     LLM_PORT: int = 7860
@@ -38,11 +59,9 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 1024
     LLM_TEMPERATURE: float = 0.7
 
-    # Storage
-    STORAGE_BACKEND: str = "aws"
-    STORAGE_AWS_ACCESS_KEY: str = ""
-    STORAGE_AWS_SECRET_KEY: str = ""
-    STORAGE_AWS_BUCKET: str = ""
+    # LLM Banana configuration
+    LLM_BANANA_API_KEY: str | None = None
+    LLM_BANANA_MODEL_KEY: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None
