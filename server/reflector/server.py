@@ -55,11 +55,34 @@ def parse_llm_output(
     :param response:
     :return:
     """
+    result = ""
     try:
-        output = json.loads(response.json()["results"][0]["text"])
+        result = response.json()["results"][0]["text"]
+        if "```json" in result:
+            _, result = result.split("```json")
+        if "```" in result:
+            result, _ = result.split("```")
+        if result.startswith("```json"):
+            result = result[len("```json") :]
+        if result.startswith("```"):
+            result = result[len("```") :]
+        if result.endswith("```"):
+            result = result[: -len("```")]
+        result = result.strip()
+        output = json.loads(result)
         return ParseLLMResult(param, output)
-    except Exception:
+    except Exception as e:
         logger.exception("Exception while parsing LLM output")
+        if "Expecting ',' delimiter" in str(e):
+            output = json.loads(result + "}")
+            print("Problem sorted !!")
+            return ParseLLMResult(param, output)
+        else:
+            print("######################")
+            print(response.json()["results"][0]["text"])
+            print("######################")
+            print(result)
+            print("######################")
         return None
 
 
@@ -252,7 +275,7 @@ class AudioStreamTrack(MediaStreamTrack):
                 lambda f: channel_send_transcript(ctx) if f.result() else None
             )
 
-        if len(ctx.transcription_text) > 25:
+        if len(ctx.transcription_text) > 100:
             llm_input_text = ctx.transcription_text
             ctx.transcription_text = ""
             param = TitleSummaryInput(
