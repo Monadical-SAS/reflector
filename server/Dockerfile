@@ -18,7 +18,7 @@ COPY pyproject.toml poetry.lock /tmp
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
 RUN . /venv/bin/activate && poetry config virtualenvs.create false
-RUN . /venv/bin/activate && poetry install --only main --no-root --no-interaction --no-ansi
+RUN . /venv/bin/activate && poetry install --only main,aws --no-root --no-interaction --no-ansi
 
 # bootstrap
 FROM base AS final
@@ -26,4 +26,4 @@ COPY --from=builder /venv /venv
 RUN mkdir -p /app
 COPY reflector /app/reflector
 WORKDIR /app
-CMD ["/venv/bin/python", "-m", "reflector.server"]
+CMD ["/venv/bin/python", "-m", "reflector.app"]
