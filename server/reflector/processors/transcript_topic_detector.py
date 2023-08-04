@@ -24,7 +24,7 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     """
 
-    def __init__(self, min_transcript_length=100, **kwargs):
+    def __init__(self, min_transcript_length=750, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
