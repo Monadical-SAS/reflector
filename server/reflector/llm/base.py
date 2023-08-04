@@ -1,6 +1,7 @@
 from reflector.logger import logger
 from reflector.settings import settings
-import asyncio
+from reflector.utils.retry import retry
+import importlib
 import json
 import re
 
@@ -13,7 +14,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def instance(cls):
+    def get_instance(cls, name=None):
         """
         Return an instance depending on the settings.
         Settings used:
@@ -21,22 +22,19 @@ class LLM:
         - `LLM_BACKEND`: key of the backend, defaults to `oobagooda`
         - `LLM_URL`: url of the backend
         """
-        return cls._registry[settings.LLM_BACKEND]()
+        if name is None:
+            name = settings.LLM_BACKEND
+        if name not in cls._registry:
+            module_name = f"reflector.llm.llm_{name}"
+            importlib.import_module(module_name)
+        return cls._registry[name]()
 
-    async def generate(
-        self, prompt: str, retry_count: int = 5, retry_interval: int = 1, **kwargs
-    ) -> dict:
-        while retry_count > 0:
-            try:
-                result = await self._generate(prompt=prompt, **kwargs)
-                break
-            except Exception:
-                logger.exception("Failed to call llm")
-                retry_count -= 1
-                await asyncio.sleep(retry_interval)
-
-        if retry_count == 0:
-            raise Exception("Failed to call llm after retrying")
+    async def generate(self, prompt: str, **kwargs) -> dict:
+        try:
+            result = await retry(self._generate)(prompt=prompt, **kwargs)
+        except Exception:
+            logger.exception("Failed to call llm after retrying")
+            raise
 
         if isinstance(result, str):
             result = self._parse_json(result)
