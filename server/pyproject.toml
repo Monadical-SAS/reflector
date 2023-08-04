@@ -22,6 +22,7 @@ uvicorn = {extras = ["standard"], version = "^0.23.1"}
 fastapi = "^0.100.1"
 sentry-sdk = {extras = ["fastapi"], version = "^1.29.2"}
 httpx = "^0.24.1"
+fastapi-pagination = "^0.12.6"
 
 
 [tool.poetry.group.dev.dependencies]
