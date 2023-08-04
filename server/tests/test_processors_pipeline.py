@@ -41,5 +41,5 @@ async def test_basic_process(event_loop):
 
     # validate the events
     assert marks["transcript"] == 5
-    assert marks["topic"] == 2
+    assert marks["topic"] == 1
     assert marks["summary"] == 1
