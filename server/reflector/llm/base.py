@@ -1,6 +1,6 @@
-from reflector.logger import logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from reflector.logger import logger as reflector_logger
 import importlib
 import json
 import re
@@ -29,15 +29,18 @@ class LLM:
             importlib.import_module(module_name)
         return cls._registry[name]()
 
-    async def generate(self, prompt: str, **kwargs) -> dict:
+    async def generate(self, prompt: str, logger: reflector_logger, **kwargs) -> dict:
+        logger.info("LLM generate", prompt=repr(prompt))
         try:
             result = await retry(self._generate)(prompt=prompt, **kwargs)
         except Exception:
             logger.exception("Failed to call llm after retrying")
             raise
 
+        logger.debug("LLM result [raw]", result=repr(result))
         if isinstance(result, str):
             result = self._parse_json(result)
+        logger.debug("LLM result [parsed]", result=repr(result))
 
         return result
 

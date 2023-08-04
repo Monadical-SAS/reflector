@@ -65,9 +65,11 @@ if __name__ == "__main__":
         if event == "transcript":
             print(f"Transcript[{data.human_timestamp}]: {data.text}")
         elif event == "topic":
-            print(f"Topic: {data}")
+            print(f"Topic[{data.human_timestamp}]: title={data.title}")
+            print(f"Topic[{data.human_timestamp}]: summary={data.summary}")
         elif event == "summary":
-            print(f"Summary: {data}")
+            print(f"Summary: duration={data.duration}")
+            print(f"Summary: summary={data.summary}")
 
     asyncio.run(
         process_audio_file(

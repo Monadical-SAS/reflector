@@ -1,5 +1,6 @@
 from reflector.processors.base import Processor
 from reflector.processors.types import Transcript, TitleSummary
+from reflector.utils.retry import retry
 from reflector.llm import LLM
 
 
@@ -42,8 +43,10 @@ class TranscriptTopicDetectorProcessor(Processor):
     async def _flush(self):
         if not self.transcript:
             return
-        prompt = self.PROMPT.format(input_text=self.transcript.text)
-        result = await self.llm.generate(prompt=prompt)
+        text = self.transcript.text
+        self.logger.info(f"Detect topic on {len(text)} length transcript")
+        prompt = self.PROMPT.format(input_text=text)
+        result = await retry(self.llm.generate)(prompt=prompt, logger=self.logger)
         summary = TitleSummary(
             title=result["title"],
             summary=result["summary"],
