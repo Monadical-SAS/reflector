@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 from pathlib import Path
 
 
-@dataclass
-class AudioFile:
+class AudioFile(BaseModel):
     path: Path
     sample_rate: int
     channels: int
@@ -14,15 +13,13 @@ class AudioFile:
         self.path.unlink()
 
 
-@dataclass
-class Word:
+class Word(BaseModel):
     text: str
     start: float
     end: float
 
 
-@dataclass
-class Transcript:
+class Transcript(BaseModel):
     text: str = ""
     words: list[Word] = None
 
@@ -59,8 +56,7 @@ class Transcript:
         return Transcript(text=self.text, words=words)
 
 
-@dataclass
-class TitleSummary:
+class TitleSummary(BaseModel):
     title: str
     summary: str
     timestamp: float
@@ -75,7 +71,6 @@ class TitleSummary:
         return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
-@dataclass
-class FinalSummary:
+class FinalSummary(BaseModel):
     summary: str
     duration: float
