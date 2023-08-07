@@ -55,34 +55,10 @@ def parse_llm_output(
     :param response:
     :return:
     """
-    result = ""
     try:
         result = response.json()["results"][0]["text"]
-        if "```json" in result:
-            _, result = result.split("```json")
-        if "```" in result:
-            result, _ = result.split("```")
-        if result.startswith("```json"):
-            result = result[len("```json") :]
-        if result.startswith("```"):
-            result = result[len("```") :]
-        if result.endswith("```"):
-            result = result[: -len("```")]
-        result = result.strip()
-        output = json.loads(result)
-        return ParseLLMResult(param, output)
-    except Exception as e:
-        logger.exception("Exception while parsing LLM output")
-        if "Expecting ',' delimiter" in str(e):
-            output = json.loads(result + "}")
-            print("Problem sorted !!")
-            return ParseLLMResult(param, output)
-        else:
-            print("######################")
-            print(response.json()["results"][0]["text"])
-            print("######################")
-            print(result)
-            print("######################")
+        return ParseLLMResult(param, result)
+    except Exception:
         return None
 
 

@@ -5,6 +5,11 @@ import importlib
 import json
 import re
 
+import spacy
+
+SPACY_MODEL = "en_core_web_md"
+nlp = spacy.load(SPACY_MODEL)
+
 
 class LLM:
     _registry = {}
@@ -65,4 +70,13 @@ class LLM:
             if result.endswith("```"):
                 result = result[:-3]
 
-        return json.loads(result.strip())
+        try:
+            result = result.strip()
+            result = json.loads(result)
+        except json.decoder.JSONDecodeError as exception:
+            if "Expecting ',' delimiter" in str(exception):
+                result = json.loads(result + "}")
+            elif "Unterminated string" in str(exception):
+                result = result[: list(nlp(result).sents)[-1].start_char]
+                result = json.loads(result + '" }')
+        return result

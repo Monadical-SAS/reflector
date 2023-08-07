@@ -4,11 +4,16 @@ the input and output parameters of functions
 """
 
 import datetime
+import json
 from dataclasses import dataclass
 from typing import List
-from sortedcontainers import SortedDict
 
 import av
+import spacy
+from sortedcontainers import SortedDict
+
+SPACY_MODEL = "en_core_web_md"
+nlp = spacy.load(SPACY_MODEL)
 
 
 @dataclass
@@ -95,10 +100,42 @@ class ParseLLMResult:
     timestamp = str
 
     def __init__(self, param: TitleSummaryInput, output: dict):
+        if isinstance(output, str):
+            output = self._parse_json(output.strip())
         self.title = output["title"]
         self.transcript = param.input_text
         self.description = output.pop("summary")
         self.timestamp = str(datetime.timedelta(seconds=round(param.transcribed_time)))
+
+    @staticmethod
+    def _parse_json(output: str) -> dict:
+        """
+        If the output is of type str, try to crop the right content
+        as parse it as JSON
+        :param output:
+        :return:
+        """
+        if "```json" in output:
+            _, output = output.split("```json")
+        if "```" in output:
+            output, _ = output.split("```")
+        if output.startswith("```json"):
+            output = output[len("```json") :]
+        if output.startswith("```"):
+            output = output[len("```") :]
+        if output.endswith("```"):
+            output = output[: -len("```")]
+        output = output.strip()
+
+        try:
+            output = json.loads(output)
+        except json.decoder.JSONDecodeError as exception:
+            if "Expecting ',' delimiter" in str(exception):
+                output = json.loads(output + "}")
+            elif "Unterminated string" in str(exception):
+                output = output[: list(nlp(output).sents)[-1].start_char]
+                output = json.loads(output + '" }')
+        return output
 
     def get_result(self) -> dict:
         """
