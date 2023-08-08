@@ -48,8 +48,10 @@ export function Dashboard({
         </div>
 
         <div
-          className={`absolute top-7 right-5 w-10 h-10 ${
+          className={`absolute right-5 w-10 h-10 ${
             autoscrollEnabled ? "hidden" : "flex"
+          } ${
+            finalSummary ? "top-[49%]" : "bottom-1"
           } justify-center items-center text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl border-slate-400 bg-[#3c82f638] text-[#3c82f6ed]`}
           onClick={scrollToBottom}
         >
