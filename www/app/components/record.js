@@ -67,7 +67,7 @@ export default function Recorder(props) {
       });
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
-      wsWrapper.style.backgroundColor = "lightgray";
+      wsWrapper.style.backgroundColor = "#e0c3fc42";
       wsWrapper.style.borderRadius = "15px";
 
       _wavesurfer.on("play", () => {
@@ -115,6 +115,7 @@ export default function Recorder(props) {
         <AudioInputsDropdown setDeviceId={setDeviceId} disabled={isRecording} />
         &nbsp;
         <button
+          className="w-20"
           onClick={handleRecClick}
           data-color={isRecording ? "red" : "blue"}
           disabled={!deviceId}
@@ -123,6 +124,7 @@ export default function Recorder(props) {
         </button>
         &nbsp;
         <button
+          className="w-20"
           id="play-btn"
           onClick={handlePlayClick}
           data-color={isPlaying ? "orange" : "green"}
@@ -130,8 +132,9 @@ export default function Recorder(props) {
           {isPlaying ? "Pause" : "Play"}
         </button>
       </div>
-      <div ref={waveformRef} className="w-full"></div>
+      <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
       {/* TODO: Download audio <a> tag */}
+      {/* TODO: current time / audio duration */}
     </div>
   );
 }
