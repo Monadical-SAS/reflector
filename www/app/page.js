@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Recorder from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
@@ -7,6 +7,17 @@ import "../public/button.css";
 
 const App = () => {
   const [stream, setStream] = useState(null);
+  const [disconnected, setDisconnected] = useState(false);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENV === "development") {
+      document.onkeyup = (e) => {
+        if (e.key === "d") {
+          setDisconnected((prev) => !prev);
+        }
+      };
+    }
+  }, []);
 
   // This is where you'd send the stream and receive the data from the server.
   // transcription, summary, etc
@@ -28,6 +39,7 @@ const App = () => {
         finalSummary={serverData.finalSummary}
         topics={serverData.topics ?? []}
         stream={stream}
+        disconnected={disconnected}
       />
     </div>
   );
