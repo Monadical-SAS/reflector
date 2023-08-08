@@ -20,6 +20,7 @@ class BananaLLM(LLM):
                 headers=self.headers,
                 json={"prompt": prompt},
                 timeout=self.timeout,
+                retry_timeout=300,  # as per their sdk
             )
             response.raise_for_status()
             text = response.json()["text"]
