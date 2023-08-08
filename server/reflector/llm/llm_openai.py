@@ -21,7 +21,6 @@ class OpenAILLM(LLM):
             "Authorization": f"Bearer {self.openai_key}",
         }
 
-
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 self.openai_url,

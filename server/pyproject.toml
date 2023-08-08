@@ -31,7 +31,6 @@ black = "^23.7.0"
 
 [tool.poetry.group.client.dependencies]
 pyaudio = "^0.2.13"
-stamina = "^23.1.0"
 
 
 [tool.poetry.group.tests.dependencies]
@@ -40,6 +39,7 @@ pytest-aiohttp = "^1.0.4"
 pytest-asyncio = "^0.21.1"
 pytest = "^7.4.0"
 httpx-ws = "^0.4.1"
+pytest-httpx = "^0.23.1"
 
 
 [tool.poetry.group.aws.dependencies]
