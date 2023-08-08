@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
 
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload } from "@fortawesome/free-solid-svg-icons";
+
 import Dropdown from "react-dropdown";
 import "react-dropdown/style.css";
 
@@ -87,6 +90,17 @@ export default function Recorder(props) {
     }
   }, []);
 
+  useEffect(() => {
+    if (record) {
+      return record.on("stopRecording", () => {
+        const link = document.getElementById("download-recording");
+        link.href = record.getRecordedUrl();
+        link.download = "reflector-recording.webm";
+        link.style.visibility = "visible";
+      });
+    }
+  }, [record]);
+
   const handleRecClick = async () => {
     if (!record) return console.log("no record");
 
@@ -135,9 +149,15 @@ export default function Recorder(props) {
         >
           {isPlaying ? "Pause" : "Play"}
         </button>
+        <a
+          id="download-recording"
+          title="Download recording"
+          className="invisible w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
+        >
+          <FontAwesomeIcon icon={faDownload} />
+        </a>
       </div>
       <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
-      {/* TODO: Download audio <a> tag */}
       {/* TODO: current time / audio duration */}
     </div>
   );
