@@ -3,14 +3,18 @@ import React, { useState } from "react";
 import Recorder from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
+import useCreateTranscript from "./components/transcript.js";
+import { useWebSockets } from "./components/websocket.js";
 import "../public/button.css";
 
 const App = () => {
   const [stream, setStream] = useState(null);
 
-  // This is where you'd send the stream and receive the data from the server.
-  // transcription, summary, etc
-  const serverData = useWebRTC(stream);
+  const transcript = useCreateTranscript();
+  const serverData = useWebRTC(stream, transcript.response);
+  const webSockets = useWebSockets(transcript.response?.id);
+
+  console.log("serverData", serverData);
 
   const sendStopCmd = () =>
     serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }));
