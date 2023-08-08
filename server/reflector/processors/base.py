@@ -17,7 +17,8 @@ class Processor:
         self.logger = (custom_logger or logger).bind(processor=self.__class__.__name__)
 
     def set_pipeline(self, pipeline: "Pipeline"):
-        self.logger = self.logger.bind(pipeline=pipeline.uid)
+        # if pipeline is used, pipeline logger will be used instead
+        self.logger = pipeline.logger.bind(processor=self.__class__.__name__)
 
     def connect(self, processor: "Processor"):
         """
@@ -111,6 +112,10 @@ class ThreadedProcessor(Processor):
         self.queue = asyncio.Queue()
         self.task = asyncio.get_running_loop().create_task(self.loop())
 
+    def set_pipeline(self, pipeline: "Pipeline"):
+        super().set_pipeline(pipeline)
+        self.processor.set_pipeline(pipeline)
+
     async def loop(self):
         while True:
             data = await self.queue.get()
@@ -153,6 +158,9 @@ class Pipeline(Processor):
 
     def __init__(self, *processors: Processor):
         super().__init__()
+        self.logger = logger.bind(pipeline=self.uid)
+        self.logger.info("Pipeline created")
+
         self.processors = processors
 
         for processor in processors:
@@ -168,8 +176,10 @@ class Pipeline(Processor):
         await self.processors[0].push(data)
 
     async def _flush(self):
+        self.logger.debug("Pipeline flushing")
         for processor in self.processors:
             await processor.flush()
+        self.logger.info("Pipeline flushed")
 
     def describe(self, level=0):
         logger.info("  " * level + "Pipeline:")

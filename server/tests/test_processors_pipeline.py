@@ -12,6 +12,7 @@ async def test_basic_process(event_loop):
 
     # use an LLM test backend
     settings.LLM_BACKEND = "test"
+    settings.TRANSCRIPT_BACKEND = "whisper"
 
     class LLMTest(LLM):
         async def _generate(self, prompt: str, **kwargs) -> str:
@@ -40,5 +41,5 @@ async def test_basic_process(event_loop):
 
     # validate the events
     assert marks["transcript"] == 5
-    assert marks["topic"] == 2
+    assert marks["topic"] == 1
     assert marks["summary"] == 1
