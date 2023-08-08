@@ -1,35 +1,41 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
+import axios from "axios";
 
-// allow customization of the WebRTC server URL from env
-const WEBRTC_SERVER_URL = process.env.NEXT_PUBLIC_WEBRTC_SERVER_URL || "http://127.0.0.1:1250/offer";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-const useWebRTC = (stream) => {
+const useWebRTC = (stream, transcript) => {
   const [data, setData] = useState({
     peer: null,
   });
 
   useEffect(() => {
-    if (!stream) {
+    if (!stream || !transcript) {
       return;
     }
+    const url = `${API_URL}/v1/transcripts/${transcript.id}/record/webrtc`;
+    console.log("Sending RTC Offer", url, transcript);
 
     let peer = new Peer({ initiator: true, stream: stream });
 
     peer.on("signal", (data) => {
       if ("sdp" in data) {
-        fetch(WEBRTC_SERVER_URL, {
-          body: JSON.stringify({
-            sdp: data.sdp,
-            type: data.type,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-        })
-          .then((response) => response.json())
-          .then((answer) => peer.signal(answer))
+        const rtcOffer = {
+          sdp: data.sdp,
+          type: data.type,
+        };
+
+        axios
+          .post(url, rtcOffer, {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+          .then((response) => {
+            const answer = response.data;
+            console.log("Answer:", answer);
+            peer.signal(answer);
+          })
           .catch((e) => {
             console.log("Error signaling:", e);
           });
@@ -76,7 +82,7 @@ const useWebRTC = (stream) => {
     return () => {
       peer.destroy();
     };
-  }, [stream]);
+  }, [stream, transcript]);
 
   return data;
 };
