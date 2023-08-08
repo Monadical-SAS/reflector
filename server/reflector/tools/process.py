@@ -12,7 +12,7 @@ from reflector.processors import (
 import asyncio
 
 
-async def process_audio_file(filename, event_callback):
+async def process_audio_file(filename, event_callback, only_transcript=False):
     async def on_transcript(data):
         await event_callback("transcript", data)
 
@@ -22,15 +22,21 @@ async def process_audio_file(filename, event_callback):
     async def on_summary(data):
         await event_callback("summary", data)
 
-    # transcription output
-    pipeline = Pipeline(
+    # build pipeline for audio processing
+    processors = [
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(),
         TranscriptLinerProcessor(callback=on_transcript),
-        TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
-        TranscriptFinalSummaryProcessor.as_threaded(callback=on_summary),
-    )
+    ]
+    if not only_transcript:
+        processors += [
+            TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
+            TranscriptFinalSummaryProcessor.as_threaded(callback=on_summary),
+        ]
+
+    # transcription output
+    pipeline = Pipeline(*processors)
     pipeline.describe()
 
     # start processing audio
@@ -52,14 +58,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
+    parser.add_argument("--only-transcript", "-t", action="store_true")
     args = parser.parse_args()
 
     async def event_callback(event, data):
         if event == "transcript":
             print(f"Transcript[{data.human_timestamp}]: {data.text}")
         elif event == "topic":
-            print(f"Topic: {data}")
+            print(f"Topic[{data.human_timestamp}]: title={data.title}")
+            print(f"Topic[{data.human_timestamp}]: summary={data.summary}")
         elif event == "summary":
-            print(f"Summary: {data}")
+            print(f"Summary: duration={data.duration}")
+            print(f"Summary: summary={data.summary}")
 
-    asyncio.run(process_audio_file(args.source, event_callback))
+    asyncio.run(
+        process_audio_file(
+            args.source, event_callback, only_transcript=args.only_transcript
+        )
+    )

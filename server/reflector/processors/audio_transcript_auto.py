@@ -1,19 +1,38 @@
 from reflector.processors.base import Processor
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
-from reflector.processors.audio_transcript_whisper import (
-    AudioTranscriptWhisperProcessor,
-)
 from reflector.processors.types import AudioFile
+from reflector.settings import settings
+import importlib
 
 
 class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
-    BACKENDS = {
-        "whisper": AudioTranscriptWhisperProcessor,
-    }
-    BACKEND_DEFAULT = "whisper"
+    _registry = {}
 
-    def __init__(self, backend=None, **kwargs):
-        self.processor = self.BACKENDS[backend or self.BACKEND_DEFAULT]()
+    @classmethod
+    def register(cls, name, kclass):
+        cls._registry[name] = kclass
+
+    @classmethod
+    def get_instance(cls, name):
+        if name not in cls._registry:
+            module_name = f"reflector.processors.audio_transcript_{name}"
+            importlib.import_module(module_name)
+
+        # gather specific configuration for the processor
+        # search `TRANSCRIPT_BACKEND_XXX_YYY`, push to constructor as `backend_xxx_yyy`
+        config = {}
+        name_upper = name.upper()
+        settings_prefix = "TRANSCRIPT_"
+        config_prefix = f"{settings_prefix}{name_upper}_"
+        for key, value in settings:
+            if key.startswith(config_prefix):
+                config_name = key[len(settings_prefix) :].lower()
+                config[config_name] = value
+
+        return cls._registry[name](**config)
+
+    def __init__(self, **kwargs):
+        self.processor = self.get_instance(settings.TRANSCRIPT_BACKEND)
         super().__init__(**kwargs)
 
     def connect(self, processor: Processor):

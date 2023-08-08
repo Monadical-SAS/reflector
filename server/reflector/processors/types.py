@@ -67,6 +67,13 @@ class TitleSummary:
     duration: float
     transcript: Transcript
 
+    @property
+    def human_timestamp(self):
+        minutes = int(self.timestamp / 60)
+        seconds = int(self.timestamp % 60)
+        milliseconds = int((self.timestamp % 1) * 1000)
+        return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+
 
 @dataclass
 class FinalSummary:
