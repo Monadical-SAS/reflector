@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import Peer from "simple-peer";
 
 // allow customization of the WebRTC server URL from env
-const WEBRTC_SERVER_URL = process.env.NEXT_PUBLIC_WEBRTC_SERVER_URL || "http://127.0.0.1:1250/offer";
+const WEBRTC_SERVER_URL =
+  process.env.NEXT_PUBLIC_WEBRTC_SERVER_URL || "http://127.0.0.1:1250/offer";
 
 const useWebRTC = (stream) => {
   const [data, setData] = useState({
