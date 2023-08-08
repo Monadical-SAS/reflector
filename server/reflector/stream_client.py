@@ -72,7 +72,7 @@ class StreamClient:
         async def on_connectionstatechange():
             self.logger.info(f"Connection state is {pc.connectionState}")
             if pc.connectionState == "failed":
-                await pc.close()
+                await self.stop()
                 self.pcs.discard(pc)
 
         @pc.on("track")
@@ -87,7 +87,7 @@ class StreamClient:
         self.pc.addTrack(audio)
         self.track_audio = audio
 
-        channel = pc.createDataChannel("data-channel")
+        self.channel = channel = pc.createDataChannel("data-channel")
         self.logger = self.logger.bind(channel=channel.label)
         self.logger.info("Created by local party")
 

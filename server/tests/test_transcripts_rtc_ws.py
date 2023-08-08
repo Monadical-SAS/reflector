@@ -4,6 +4,7 @@
 # FIXME try with locked session, RTC should not work
 
 import pytest
+import json
 from unittest.mock import patch
 from httpx import AsyncClient
 
@@ -61,7 +62,7 @@ async def dummy_llm():
 
     class TestLLM(LLM):
         async def _generate(self, prompt: str, **kwargs):
-            return {"text": "LLM RESULT"}
+            return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
         mock_llm.return_value = TestLLM()
@@ -132,6 +133,13 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
         if timeout < 0:
             raise TimeoutError("Timeout while waiting for RTC to end")
 
+    # XXX aiortc is long to close the connection
+    # instead of waiting a long time, we just send a STOP
+    client.channel.send(json.dumps({"cmd": "STOP"}))
+
+    # wait the processing to finish
+    await asyncio.sleep(2)
+
     await client.stop()
 
     # wait the processing to finish
@@ -141,10 +149,18 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
     websocket_task.cancel()
 
     # check events
-    print(events)
     assert len(events) > 0
     assert events[0]["event"] == "TRANSCRIPT"
     assert events[0]["data"]["text"] == "Hello world"
+
+    assert events[-2]["event"] == "TOPIC"
+    assert events[-2]["data"]["id"]
+    assert events[-2]["data"]["summary"] == "LLM SUMMARY"
+    assert events[-2]["data"]["transcript"].startswith("Hello world")
+    assert events[-2]["data"]["timestamp"] == 0.0
+
+    assert events[-1]["event"] == "FINAL_SUMMARY"
+    assert events[-1]["data"]["summary"] == "LLM SUMMARY"
 
     # stop server
     # server.stop()

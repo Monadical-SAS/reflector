@@ -21,12 +21,20 @@ def generate_transcript_name():
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
+class TranscriptText(BaseModel):
+    text: str
+
+
 class TranscriptTopic(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     title: str
     summary: str
     transcript: str
     timestamp: float
+
+
+class TranscriptFinalSummary(BaseModel):
+    summary: str
 
 
 class TranscriptEvent(BaseModel):
@@ -45,9 +53,10 @@ class Transcript(BaseModel):
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
 
-    def add_event(self, event: str, data):
-        self.events.append(TranscriptEvent(event=event, data=data))
-        return {"event": event, "data": data}
+    def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
+        ev = TranscriptEvent(event=event, data=data.model_dump())
+        self.events.append(ev)
+        return ev
 
     def upsert_topic(self, topic: TranscriptTopic):
         existing_topic = next((t for t in self.topics if t.id == topic.id), None)
@@ -219,7 +228,7 @@ async def transcript_events_websocket(transcript_id: UUID, websocket: WebSocket)
 
     # on first connection, send all events
     for event in transcript.events:
-        await websocket.send_json(event.model_dump())
+        await websocket.send_json(event.model_dump(mode="json"))
 
     # XXX if transcript is final (locked=True and status=ended)
     # XXX send a final event to the client and close the connection
@@ -254,24 +263,29 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
 
     # FIXME don't do copy
     if event == PipelineEvent.TRANSCRIPT:
-        resp = transcript.add_event(event=event, data={
-            "text": data.text,
-        })
+        resp = transcript.add_event(event=event, data=TranscriptText(text=data.text))
+
     elif event == PipelineEvent.TOPIC:
         topic = TranscriptTopic(
             title=data.title,
             summary=data.summary,
-            transcript=data.transcript,
+            transcript=data.transcript.text,
             timestamp=data.timestamp,
         )
-        resp = transcript.add_event(event=event, data=topic.model_dump())
+        resp = transcript.add_event(event=event, data=topic)
         transcript.upsert_topic(topic)
+
+    elif event == PipelineEvent.FINAL_SUMMARY:
+        final_summary = TranscriptFinalSummary(summary=data.summary)
+        resp = transcript.add_event(event=event, data=final_summary)
+        transcript.summary = final_summary
+
     else:
         logger.warning(f"Unknown event: {event}")
         return
 
     # transmit to websocket clients
-    await ws_manager.send_json(transcript_id, resp)
+    await ws_manager.send_json(transcript_id, resp.model_dump(mode="json"))
 
 
 @router.post("/transcripts/{transcript_id}/record/webrtc")
