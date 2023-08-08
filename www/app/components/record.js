@@ -97,7 +97,11 @@ export default function Recorder(props) {
       document.getElementById("play-btn").disabled = false;
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId },
+        audio: {
+          deviceId,
+          noiseSuppression: false,
+          echoCancellation: false,
+        },
       });
       await record.startRecording(stream);
       props.setStream(stream);
