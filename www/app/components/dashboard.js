@@ -104,8 +104,7 @@ export function Dashboard({
         {finalSummary && (
           <div className="min-h-[200px] overflow-y-auto mt-2 p-2 bg-white temp-transcription rounded">
             <h2>Final Summary</h2>
-            <p>Duration: {finalSummary.duration}</p>
-            <p>{finalSummary.summary}</p>
+            <p>{finalSummary}</p>
           </div>
         )}
       </div>
