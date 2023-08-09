@@ -29,7 +29,7 @@ const useTranscript = () => {
       })
       .catch((err) => {
         const errorString = err.response || err || "Unknown error";
-        setError(eerrorString);
+        setError(errorString);
         setLoading(false);
         console.error("Error creating transcript:", errorString);
       });
