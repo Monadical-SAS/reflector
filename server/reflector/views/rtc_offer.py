@@ -6,6 +6,7 @@ from reflector.models import TranscriptionContext
 from reflector.logger import logger
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from json import loads, dumps
+from enum import StrEnum
 import av
 from reflector.processors import (
     Pipeline,
@@ -51,8 +52,20 @@ class RtcOffer(BaseModel):
     type: str
 
 
-@router.post("/offer")
-async def rtc_offer(params: RtcOffer, request: Request):
+class StrValue(BaseModel):
+    value: str
+
+
+class PipelineEvent(StrEnum):
+    TRANSCRIPT = "TRANSCRIPT"
+    TOPIC = "TOPIC"
+    FINAL_SUMMARY = "FINAL_SUMMARY"
+    STATUS = "STATUS"
+
+
+async def rtc_offer_base(
+    params: RtcOffer, request: Request, event_callback=None, event_callback_args=None
+):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)
 
@@ -62,14 +75,36 @@ async def rtc_offer(params: RtcOffer, request: Request):
     ctx = TranscriptionContext(logger=logger.bind(client=clientid))
     ctx.topics = []
 
+    async def update_status(status: str):
+        changed = ctx.status != status
+        if changed:
+            ctx.status = status
+            if event_callback:
+                await event_callback(
+                    event=PipelineEvent.STATUS,
+                    args=event_callback_args,
+                    data=StrValue(value=status),
+                )
+
     # build pipeline callback
     async def on_transcript(transcript: Transcript):
         ctx.logger.info("Transcript", transcript=transcript)
-        result = {
-            "cmd": "SHOW_TRANSCRIPTION",
-            "text": transcript.text,
-        }
-        ctx.data_channel.send(dumps(result))
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {
+                "cmd": "SHOW_TRANSCRIPTION",
+                "text": transcript.text,
+            }
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.TRANSCRIPT,
+                args=event_callback_args,
+                data=transcript,
+            )
 
     async def on_topic(summary: TitleSummary):
         # FIXME: make it incremental with the frontend, not send everything
@@ -82,17 +117,37 @@ async def rtc_offer(params: RtcOffer, request: Request):
                 "desc": summary.summary,
             }
         )
-        result = {"cmd": "UPDATE_TOPICS", "topics": ctx.topics}
-        ctx.data_channel.send(dumps(result))
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {"cmd": "UPDATE_TOPICS", "topics": ctx.topics}
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
+            )
 
     async def on_final_summary(summary: FinalSummary):
         ctx.logger.info("FinalSummary", final_summary=summary)
-        result = {
-            "cmd": "DISPLAY_FINAL_SUMMARY",
-            "summary": summary.summary,
-            "duration": summary.duration,
-        }
-        ctx.data_channel.send(dumps(result))
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {
+                "cmd": "DISPLAY_FINAL_SUMMARY",
+                "summary": summary.summary,
+                "duration": summary.duration,
+            }
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.FINAL_SUMMARY,
+                args=event_callback_args,
+                data=summary,
+            )
 
     # create a context for the whole rtc transaction
     # add a customised logger to the context
@@ -108,11 +163,13 @@ async def rtc_offer(params: RtcOffer, request: Request):
     # handle RTC peer connection
     pc = RTCPeerConnection()
 
-    async def flush_pipeline_and_quit():
-        ctx.logger.info("Flushing pipeline")
+    async def flush_pipeline_and_quit(close=True):
+        await update_status("processing")
         await ctx.pipeline.flush()
-        ctx.logger.debug("Closing peer connection")
-        await pc.close()
+        if close:
+            ctx.logger.debug("Closing peer connection")
+            await pc.close()
+            await update_status("ended")
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -135,11 +192,14 @@ async def rtc_offer(params: RtcOffer, request: Request):
         ctx.logger.info(f"Connection state: {pc.connectionState}")
         if pc.connectionState == "failed":
             await pc.close()
+        elif pc.connectionState == "closed":
+            await flush_pipeline_and_quit(close=False)
 
     @pc.on("track")
     def on_track(track):
         ctx.logger.info(f"Track {track.kind} received")
         pc.addTrack(AudioStreamTrack(ctx, track))
+        asyncio.get_event_loop().create_task(update_status("recording"))
 
     await pc.setRemoteDescription(offer)
 
@@ -157,3 +217,8 @@ async def rtc_clean_sessions():
         logger.debug(f"Closing session {pc}")
         await pc.close()
     sessions.clear()
+
+
+@router.post("/offer")
+async def rtc_offer(params: RtcOffer, request: Request):
+    return await rtc_offer_base(params, request)

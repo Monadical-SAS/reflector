@@ -1,38 +1,41 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
+import axios from "axios";
 
-// allow customization of the WebRTC server URL from env
-const WEBRTC_SERVER_URL =
-  process.env.NEXT_PUBLIC_WEBRTC_SERVER_URL || "http://127.0.0.1:1250/offer";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-const useWebRTC = (stream) => {
+const useWebRTC = (stream, transcriptId) => {
   const [data, setData] = useState({
     peer: null,
   });
 
   useEffect(() => {
-    if (!stream) {
+    if (!stream || !transcriptId) {
       return;
     }
+    const url = `${API_URL}/v1/transcripts/${transcriptId}/record/webrtc`;
 
     let peer = new Peer({ initiator: true, stream: stream });
 
     peer.on("signal", (data) => {
       if ("sdp" in data) {
-        fetch(WEBRTC_SERVER_URL, {
-          body: JSON.stringify({
-            sdp: data.sdp,
-            type: data.type,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          method: "POST",
-        })
-          .then((response) => response.json())
-          .then((answer) => peer.signal(answer))
+        const rtcOffer = {
+          sdp: data.sdp,
+          type: data.type,
+        };
+
+        axios
+          .post(url, rtcOffer, {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+          .then((response) => {
+            const answer = response.data;
+            peer.signal(answer);
+          })
           .catch((e) => {
-            console.log("Error signaling:", e);
+            console.error("WebRTC signaling error:", e);
           });
       }
     });
@@ -42,42 +45,10 @@ const useWebRTC = (stream) => {
       setData((prevData) => ({ ...prevData, peer: peer }));
     });
 
-    peer.on("data", (data) => {
-      const serverData = JSON.parse(data.toString());
-      console.log(serverData);
-
-      switch (serverData.cmd) {
-        case "SHOW_TRANSCRIPTION":
-          setData((prevData) => ({
-            ...prevData,
-            text: serverData.text,
-          }));
-          break;
-        case "UPDATE_TOPICS":
-          setData((prevData) => ({
-            ...prevData,
-            topics: serverData.topics,
-          }));
-          break;
-        case "DISPLAY_FINAL_SUMMARY":
-          setData((prevData) => ({
-            ...prevData,
-            finalSummary: {
-              duration: serverData.duration,
-              summary: serverData.summary,
-            },
-            text: "",
-          }));
-          break;
-        default:
-          console.error(`Unknown command ${serverData.cmd}`);
-      }
-    });
-
     return () => {
       peer.destroy();
     };
-  }, [stream]);
+  }, [stream, transcriptId]);
 
   return data;
 };

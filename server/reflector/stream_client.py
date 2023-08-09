@@ -3,7 +3,6 @@ import time
 import uuid
 
 import httpx
-import pyaudio
 import stamina
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
@@ -24,7 +23,6 @@ class StreamClient:
         self.server_url = url
         self.play_from = play_from
         self.ping_pong = ping_pong
-        self.paudio = pyaudio.PyAudio()
 
         self.pc = RTCPeerConnection()
 
@@ -74,7 +72,7 @@ class StreamClient:
         async def on_connectionstatechange():
             self.logger.info(f"Connection state is {pc.connectionState}")
             if pc.connectionState == "failed":
-                await pc.close()
+                await self.stop()
                 self.pcs.discard(pc)
 
         @pc.on("track")
@@ -87,8 +85,9 @@ class StreamClient:
                 self.logger.info(f"Track {track.kind} ended")
 
         self.pc.addTrack(audio)
+        self.track_audio = audio
 
-        channel = pc.createDataChannel("data-channel")
+        self.channel = channel = pc.createDataChannel("data-channel")
         self.logger = self.logger.bind(channel=channel.label)
         self.logger.info("Created by local party")
 
@@ -142,3 +141,6 @@ class StreamClient:
         coro = self.run_offer(self.pc, self.signaling)
         task = asyncio.create_task(coro)
         await task
+
+    def is_ended(self):
+        return self.track_audio is None or self.track_audio.readyState == "ended"
