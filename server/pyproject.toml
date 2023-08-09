@@ -27,6 +27,7 @@ fastapi-pagination = "^0.12.6"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
+stamina = "^23.1.0"
 
 
 [tool.poetry.group.client.dependencies]

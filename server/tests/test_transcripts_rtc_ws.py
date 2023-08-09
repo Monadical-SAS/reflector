@@ -4,6 +4,7 @@
 # FIXME try with locked session, RTC should not work
 
 import pytest
+import json
 from unittest.mock import patch
 from httpx import AsyncClient
 
@@ -61,7 +62,7 @@ async def dummy_llm():
 
     class TestLLM(LLM):
         async def _generate(self, prompt: str, **kwargs):
-            return {"text": "LLM RESULT"}
+            return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
         mock_llm.return_value = TestLLM()
@@ -132,6 +133,13 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
         if timeout < 0:
             raise TimeoutError("Timeout while waiting for RTC to end")
 
+    # XXX aiortc is long to close the connection
+    # instead of waiting a long time, we just send a STOP
+    client.channel.send(json.dumps({"cmd": "STOP"}))
+
+    # wait the processing to finish
+    await asyncio.sleep(2)
+
     await client.stop()
 
     # wait the processing to finish
@@ -141,10 +149,42 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
     websocket_task.cancel()
 
     # check events
-    print(events)
     assert len(events) > 0
-    assert events[0]["event"] == "TRANSCRIPT"
-    assert events[0]["data"]["text"] == "Hello world"
+    from pprint import pprint
+
+    pprint(events)
+
+    # get events list
+    eventnames = [e["event"] for e in events]
+
+    # check events
+    assert "TRANSCRIPT" in eventnames
+    ev = events[eventnames.index("TRANSCRIPT")]
+    assert ev["data"]["text"] == "Hello world"
+
+    assert "TOPIC" in eventnames
+    ev = events[eventnames.index("TOPIC")]
+    assert ev["data"]["id"]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+    assert ev["data"]["transcript"].startswith("Hello world")
+    assert ev["data"]["timestamp"] == 0.0
+
+    assert "FINAL_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_SUMMARY")]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+
+    # check status order
+    statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
+    assert statuses == ["recording", "processing", "ended"]
+
+    # ensure the last event received is ended
+    assert events[-1]["event"] == "STATUS"
+    assert events[-1]["data"]["value"] == "ended"
 
     # stop server
     # server.stop()
+
+    # check that transcript status in model is updated
+    resp = await ac.get(f"/transcripts/{tid}")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ended"

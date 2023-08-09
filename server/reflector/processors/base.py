@@ -14,6 +14,7 @@ class Processor:
         if callback:
             self.on(callback)
         self.uid = uuid4().hex
+        self.flushed = False
         self.logger = (custom_logger or logger).bind(processor=self.__class__.__name__)
 
     def set_pipeline(self, pipeline: "Pipeline"):
@@ -65,6 +66,7 @@ class Processor:
         """
         # logger.debug(f"{self.__class__.__name__} push")
         try:
+            self.flushed = False
             return await self._push(data)
         except Exception:
             self.logger.exception("Error in push")
@@ -72,8 +74,12 @@ class Processor:
     async def flush(self):
         """
         Flush data to this processor
+        Works only one time, until another push is called
         """
+        if self.flushed:
+            return
         # logger.debug(f"{self.__class__.__name__} flush")
+        self.flushed = True
         return await self._flush()
 
     def describe(self, level=0):
