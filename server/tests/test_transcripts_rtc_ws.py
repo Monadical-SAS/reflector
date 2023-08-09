@@ -150,17 +150,36 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
 
     # check events
     assert len(events) > 0
-    assert events[0]["event"] == "TRANSCRIPT"
-    assert events[0]["data"]["text"] == "Hello world"
+    from pprint import pprint
 
-    assert events[-2]["event"] == "TOPIC"
-    assert events[-2]["data"]["id"]
-    assert events[-2]["data"]["summary"] == "LLM SUMMARY"
-    assert events[-2]["data"]["transcript"].startswith("Hello world")
-    assert events[-2]["data"]["timestamp"] == 0.0
+    pprint(events)
 
-    assert events[-1]["event"] == "FINAL_SUMMARY"
-    assert events[-1]["data"]["summary"] == "LLM SUMMARY"
+    # get events list
+    eventnames = [e["event"] for e in events]
+
+    # check events
+    assert "TRANSCRIPT" in eventnames
+    ev = events[eventnames.index("TRANSCRIPT")]
+    assert ev["data"]["text"] == "Hello world"
+
+    assert "TOPIC" in eventnames
+    ev = events[eventnames.index("TOPIC")]
+    assert ev["data"]["id"]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+    assert ev["data"]["transcript"].startswith("Hello world")
+    assert ev["data"]["timestamp"] == 0.0
+
+    assert "FINAL_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_SUMMARY")]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+
+    # check status order
+    statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
+    assert statuses == ["recording", "processing", "ended"]
+
+    # ensure the last event received is ended
+    assert events[-1]["event"] == "STATUS"
+    assert events[-1]["data"]["value"] == "ended"
 
     # stop server
     # server.stop()

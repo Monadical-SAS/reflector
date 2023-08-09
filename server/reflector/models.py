@@ -199,6 +199,7 @@ class TranscriptionContext:
     sorted_transcripts: dict
     data_channel: None  # FIXME
     logger: None
+    status: str
 
     def __init__(self, logger):
         self.transcription_text = ""
@@ -206,4 +207,5 @@ class TranscriptionContext:
         self.incremental_responses = []
         self.data_channel = None
         self.sorted_transcripts = SortedDict()
+        self.status = "idle"
         self.logger = logger
