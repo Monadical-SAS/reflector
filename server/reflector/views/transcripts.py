@@ -211,8 +211,11 @@ class WebsocketManager:
     async def send_json(self, transcript_id: UUID, message):
         if transcript_id not in self.active_connections:
             return
-        for connection in self.active_connections[transcript_id]:
-            await connection.send_json(message)
+        for connection in self.active_connections[transcript_id][:]:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                self.active_connections[transcript_id].remove(connection)
 
 
 ws_manager = WebsocketManager()
