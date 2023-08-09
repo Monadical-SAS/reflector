@@ -4,17 +4,16 @@ import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-const useWebRTC = (stream, transcript) => {
+const useWebRTC = (stream, transcriptId) => {
   const [data, setData] = useState({
     peer: null,
   });
 
   useEffect(() => {
-    if (!stream || !transcript) {
+    if (!stream || !transcriptId) {
       return;
     }
-    const url = `${API_URL}/v1/transcripts/${transcript.id}/record/webrtc`;
-    console.log("Sending RTC Offer", url, transcript);
+    const url = `${API_URL}/v1/transcripts/${transcriptId}/record/webrtc`;
 
     let peer = new Peer({ initiator: true, stream: stream });
 
@@ -33,11 +32,10 @@ const useWebRTC = (stream, transcript) => {
           })
           .then((response) => {
             const answer = response.data;
-            console.log("Answer:", answer);
             peer.signal(answer);
           })
           .catch((e) => {
-            console.log("Error signaling:", e);
+            console.error("WebRTC signaling error:", e);
           });
       }
     });
@@ -47,42 +45,10 @@ const useWebRTC = (stream, transcript) => {
       setData((prevData) => ({ ...prevData, peer: peer }));
     });
 
-    peer.on("data", (data) => {
-      const serverData = JSON.parse(data.toString());
-      console.log(serverData);
-
-      switch (serverData.cmd) {
-        case "SHOW_TRANSCRIPTION":
-          setData((prevData) => ({
-            ...prevData,
-            text: serverData.text,
-          }));
-          break;
-        case "UPDATE_TOPICS":
-          setData((prevData) => ({
-            ...prevData,
-            topics: serverData.topics,
-          }));
-          break;
-        case "DISPLAY_FINAL_SUMMARY":
-          setData((prevData) => ({
-            ...prevData,
-            finalSummary: {
-              duration: serverData.duration,
-              summary: serverData.summary,
-            },
-            text: "",
-          }));
-          break;
-        default:
-          console.error(`Unknown command ${serverData.cmd}`);
-      }
-    });
-
     return () => {
       peer.destroy();
     };
-  }, [stream, transcript]);
+  }, [stream, transcriptId]);
 
   return data;
 };
