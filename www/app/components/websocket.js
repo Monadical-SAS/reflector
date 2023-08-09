@@ -33,9 +33,9 @@ export const useWebSockets = (transcriptId) => {
           break;
 
         case "FINAL_SUMMARY":
-          if (message.data.summary) {
-            setFinalSummary(message.data.summary.trim());
-            console.debug("FINAL_SUMMARY event:", message.data.summary);
+          if (message.data) {
+            setFinalSummary(message.data);
+            console.debug("FINAL_SUMMARY event:", message.data);
           }
           break;
 
