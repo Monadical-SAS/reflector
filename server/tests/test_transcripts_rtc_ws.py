@@ -183,3 +183,8 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
 
     # stop server
     # server.stop()
+
+    # check that transcript status in model is updated
+    resp = await ac.get(f"/transcripts/{tid}")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ended"
