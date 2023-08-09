@@ -36,6 +36,18 @@ export function Dashboard({
     }
   };
 
+  const formatTime = (seconds) => {
+    let hours = Math.floor(seconds / 3600);
+    let minutes = Math.floor((seconds % 3600) / 60);
+    let secs = Math.floor(seconds % 60);
+
+    let timeString = `${hours > 0 ? hours + ":" : ""}${minutes
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+
+    return timeString;
+  };
+
   return (
     <>
       <div className="relative h-[60svh] w-3/4 flex flex-col">
@@ -68,7 +80,7 @@ export function Dashboard({
                 className="flex justify-between items-center cursor-pointer px-4"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
-                <div className="w-1/4">{item.timestamp}</div>
+                <div className="w-1/4">{formatTime(item.timestamp)}</div>
                 <div className="w-3/4 flex justify-between items-center">
                   {item.title}
                   <FontAwesomeIcon
@@ -92,7 +104,6 @@ export function Dashboard({
         {finalSummary && (
           <div className="min-h-[200px] overflow-y-auto mt-2 p-2 bg-white temp-transcription rounded">
             <h2>Final Summary</h2>
-            <p>Duration: {finalSummary.duration}</p>
             <p>{finalSummary.summary}</p>
           </div>
         )}

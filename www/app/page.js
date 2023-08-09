@@ -3,17 +3,16 @@ import React, { useState } from "react";
 import Recorder from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
+import useTranscript from "./components/transcript.js";
+import { useWebSockets } from "./components/websocket.js";
 import "../public/button.css";
 
 const App = () => {
   const [stream, setStream] = useState(null);
 
-  // This is where you'd send the stream and receive the data from the server.
-  // transcription, summary, etc
-  const serverData = useWebRTC(stream);
-
-  const sendStopCmd = () =>
-    serverData?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+  const transcript = useTranscript();
+  const webRTC = useWebRTC(stream, transcript.response?.id);
+  const webSockets = useWebSockets(transcript.response?.id);
 
   return (
     <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
@@ -22,11 +21,17 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder setStream={setStream} onStop={sendStopCmd} />
+      <Recorder
+        setStream={setStream}
+        onStop={() => {
+          webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+          setStream(null);
+        }}
+      />
       <Dashboard
-        transcriptionText={serverData.text ?? "(No transcription yet)"}
-        finalSummary={serverData.finalSummary}
-        topics={serverData.topics ?? []}
+        transcriptionText={webSockets.transcriptText}
+        finalSummary={webSockets.finalSummary}
+        topics={webSockets.topics}
         stream={stream}
       />
     </div>
