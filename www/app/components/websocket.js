@@ -1,15 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export const useWebSockets = (transcript_id) => {
+export const useWebSockets = (transcriptId) => {
+  const [transcriptText, setTranscriptText] = useState("");
+  const [topics, setTopics] = useState([]);
+  const [finalSummary, setFinalSummary] = useState("");
+  const [status, setStatus] = useState("disconnected");
+
   useEffect(() => {
-    if (!transcript_id) return;
+    if (!transcriptId) return;
 
-    const url = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL}/v1/transcripts/${transcript_id}/events`;
+    const url = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
     const ws = new WebSocket(url);
-    console.log("Opening websocket: ", url);
 
     ws.onopen = () => {
-      console.log("WebSocket connection opened");
+      console.debug("WebSocket connection opened");
     };
 
     ws.onmessage = (event) => {
@@ -17,15 +21,28 @@ export const useWebSockets = (transcript_id) => {
 
       switch (message.event) {
         case "TRANSCRIPT":
-          if (!message.data.text) break;
-          console.log("TRANSCRIPT event:", message.data.text);
+          if (message.data.text) {
+            setTranscriptText(message.data.text.trim());
+            console.debug("TRANSCRIPT event:", message.data);
+          }
           break;
+
         case "TOPIC":
-          console.log("TOPIC event:", message.data);
+          setTopics((prevTopics) => [...prevTopics, message.data]);
+          console.debug("TOPIC event:", message.data);
           break;
+
         case "FINAL_SUMMARY":
-          console.log("FINAL_SUMMARY event:", message.data.summary);
+          if (message.data.summary) {
+            setFinalSummary(message.data.summary.trim());
+            console.debug("FINAL_SUMMARY event:", message.data.summary);
+          }
           break;
+
+        case "STATUS":
+          setStatus(message.data.status);
+          break;
+
         default:
           console.error("Unknown event:", message.event);
       }
@@ -36,11 +53,13 @@ export const useWebSockets = (transcript_id) => {
     };
 
     ws.onclose = () => {
-      console.log("WebSocket connection closed");
+      console.debug("WebSocket connection closed");
     };
 
     return () => {
       ws.close();
     };
-  }, [transcript_id]);
+  }, [transcriptId]);
+
+  return { transcriptText, topics, finalSummary, status };
 };
