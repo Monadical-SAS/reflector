@@ -280,6 +280,9 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
         resp = transcript.add_event(event=event, data=final_summary)
         transcript.summary = final_summary
 
+    elif event == PipelineEvent.STATUS:
+        resp = transcript.add_event(event=event, data=data)
+
     else:
         logger.warning(f"Unknown event: {event}")
         return

@@ -52,10 +52,15 @@ class RtcOffer(BaseModel):
     type: str
 
 
+class StrValue(BaseModel):
+    value: str
+
+
 class PipelineEvent(StrEnum):
     TRANSCRIPT = "TRANSCRIPT"
     TOPIC = "TOPIC"
     FINAL_SUMMARY = "FINAL_SUMMARY"
+    STATUS = "STATUS"
 
 
 async def rtc_offer_base(
@@ -69,6 +74,17 @@ async def rtc_offer_base(
     clientid = f"{peername[0]}:{peername[1]}"
     ctx = TranscriptionContext(logger=logger.bind(client=clientid))
     ctx.topics = []
+
+    async def update_status(status: str):
+        changed = ctx.status != status
+        if changed:
+            ctx.status = status
+            if event_callback:
+                await event_callback(
+                    event=PipelineEvent.STATUS,
+                    args=event_callback_args,
+                    data=StrValue(value=status),
+                )
 
     # build pipeline callback
     async def on_transcript(transcript: Transcript):
@@ -148,10 +164,12 @@ async def rtc_offer_base(
     pc = RTCPeerConnection()
 
     async def flush_pipeline_and_quit(close=True):
+        await update_status("processing")
         await ctx.pipeline.flush()
         if close:
             ctx.logger.debug("Closing peer connection")
             await pc.close()
+            await update_status("ended")
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -181,6 +199,7 @@ async def rtc_offer_base(
     def on_track(track):
         ctx.logger.info(f"Track {track.kind} received")
         pc.addTrack(AudioStreamTrack(ctx, track))
+        asyncio.get_event_loop().create_task(update_status("recording"))
 
     await pc.setRemoteDescription(offer)
 
