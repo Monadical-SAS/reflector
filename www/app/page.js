@@ -24,6 +24,7 @@ const App = () => {
       <Recorder
         setStream={setStream}
         onStop={() => {
+          webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
           setStream(null);
         }}
       />
