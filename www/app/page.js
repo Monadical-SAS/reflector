@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Recorder from "./components/record.js";
 import { Dashboard } from "./components/dashboard.js";
 import useWebRTC from "./components/webrtc.js";
@@ -9,6 +9,17 @@ import "../public/button.css";
 
 const App = () => {
   const [stream, setStream] = useState(null);
+  const [disconnected, setDisconnected] = useState(false);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENV === "development") {
+      document.onkeyup = (e) => {
+        if (e.key === "d") {
+          setDisconnected((prev) => !prev);
+        }
+      };
+    }
+  }, []);
 
   const transcript = useTranscript();
   const webRTC = useWebRTC(stream, transcript.response?.id);
@@ -33,6 +44,7 @@ const App = () => {
         finalSummary={webSockets.finalSummary}
         topics={webSockets.topics}
         stream={stream}
+        disconnected={disconnected}
       />
     </div>
   );
