@@ -1,0 +1,15 @@
+.openapi-generator-ignore
+apis/DefaultApi.ts
+apis/index.ts
+index.ts
+models/CreateTranscript.ts
+models/DeletionStatus.ts
+models/GetTranscript.ts
+models/HTTPValidationError.ts
+models/PageGetTranscript.ts
+models/RtcOffer.ts
+models/TranscriptTopic.ts
+models/UpdateTranscript.ts
+models/ValidationError.ts
+models/index.ts
+runtime.ts
