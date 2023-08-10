@@ -41,13 +41,16 @@ pytest-asyncio = "^0.21.1"
 pytest = "^7.4.0"
 httpx-ws = "^0.4.1"
 pytest-httpx = "^0.23.1"
-jiwer = "^3.0.2"
-levenshtein = "^0.21.1"
-tqdm = "^4.66.0"
 
 
 [tool.poetry.group.aws.dependencies]
 aioboto3 = "^11.2.0"
+
+
+[tool.poetry.group.evaluation.dependencies]
+jiwer = "^3.0.2"
+levenshtein = "^0.21.1"
+tqdm = "^4.66.0"
 
 [build-system]
 requires = ["poetry-core"]
