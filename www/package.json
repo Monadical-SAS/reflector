@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "openapi": "openapi-generator-cli generate -i http://localhost:1250/openapi.json -g typescript-fetch -o app/api && yarn format"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
@@ -19,7 +20,6 @@
     "fontawesome": "^5.6.3",
     "jest-worker": "^29.6.2",
     "next": "^13.4.9",
-    "openapi-generator": "^0.1.39",
     "postcss": "8.4.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -37,6 +37,7 @@
   "author": "Andreas <andreas@monadical.com>",
   "license": "All Rights Reserved",
   "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.7.0",
     "@types/react": "18.2.20",
     "prettier": "^3.0.0"
   }

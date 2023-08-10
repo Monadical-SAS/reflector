@@ -26,7 +26,7 @@ const useTranscript = () => {
     );
 
     api
-      .transcriptsCreateV1TranscriptsPost(requestParameters)
+      .v1TranscriptsCreate(requestParameters)
       .then((result) => {
         setResponse(result);
         setLoading(false);
