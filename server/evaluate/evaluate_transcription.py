@@ -49,7 +49,7 @@ class TestDatasetLoader(BaseModel):
 
     def _load_test_data(self) -> tuple[Path, Path]:
         """
-        Loader function to validate inout files and generate samples
+        Loader function to validate input files and generate samples
         """
         PREDICTED_TEST_SAMPLES_DIR = self.test_dir / "predicted_texts"
         REFERENCE_TEST_SAMPLES_DIR = self.test_dir / "reference_texts"
@@ -116,6 +116,7 @@ class ModelEvaluator:
         Returns the parameters defining the evaluator
         """
         return self.evaluation_config.model_dump()
+
     def _normalize(self, sample: EvaluationTestSample) -> None:
         """
         Normalize both reference and predicted text
