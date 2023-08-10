@@ -39,45 +39,45 @@ import {
   UpdateTranscriptToJSON,
 } from "../models";
 
-export interface RtcOfferOfferPostRequest {
+export interface RtcOfferRequest {
   rtcOffer: RtcOffer;
 }
 
-export interface TranscriptDeleteV1TranscriptsTranscriptIdDeleteRequest {
+export interface V1TranscriptDeleteRequest {
   transcriptId: any;
 }
 
-export interface TranscriptGetAudioV1TranscriptsTranscriptIdAudioGetRequest {
+export interface V1TranscriptGetRequest {
   transcriptId: any;
 }
 
-export interface TranscriptGetTopicsV1TranscriptsTranscriptIdTopicsGetRequest {
+export interface V1TranscriptGetAudioRequest {
   transcriptId: any;
 }
 
-export interface TranscriptGetV1TranscriptsTranscriptIdGetRequest {
+export interface V1TranscriptGetTopicsRequest {
   transcriptId: any;
 }
 
-export interface TranscriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGetRequest {
+export interface V1TranscriptGetWebsocketEventsRequest {
   transcriptId: any;
 }
 
-export interface TranscriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPostRequest {
+export interface V1TranscriptRecordWebrtcRequest {
   transcriptId: any;
   rtcOffer: RtcOffer;
 }
 
-export interface TranscriptUpdateV1TranscriptsTranscriptIdPatchRequest {
+export interface V1TranscriptUpdateRequest {
   transcriptId: any;
   updateTranscript: UpdateTranscript;
 }
 
-export interface TranscriptsCreateV1TranscriptsPostRequest {
+export interface V1TranscriptsCreateRequest {
   createTranscript: CreateTranscript;
 }
 
-export interface TranscriptsListV1TranscriptsGetRequest {
+export interface V1TranscriptsListRequest {
   page?: any;
   size?: any;
 }
@@ -89,8 +89,8 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Rtc Offer
    */
-  async rtcOfferOfferPostRaw(
-    requestParameters: RtcOfferOfferPostRequest,
+  async rtcOfferRaw(
+    requestParameters: RtcOfferRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<any>> {
     if (
@@ -99,7 +99,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "rtcOffer",
-        "Required parameter requestParameters.rtcOffer was null or undefined when calling rtcOfferOfferPost.",
+        "Required parameter requestParameters.rtcOffer was null or undefined when calling rtcOffer.",
       );
     }
 
@@ -130,22 +130,19 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Rtc Offer
    */
-  async rtcOfferOfferPost(
-    requestParameters: RtcOfferOfferPostRequest,
+  async rtcOffer(
+    requestParameters: RtcOfferRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
-    const response = await this.rtcOfferOfferPostRaw(
-      requestParameters,
-      initOverrides,
-    );
+    const response = await this.rtcOfferRaw(requestParameters, initOverrides);
     return await response.value();
   }
 
   /**
    * Transcript Delete
    */
-  async transcriptDeleteV1TranscriptsTranscriptIdDeleteRaw(
-    requestParameters: TranscriptDeleteV1TranscriptsTranscriptIdDeleteRequest,
+  async v1TranscriptDeleteRaw(
+    requestParameters: V1TranscriptDeleteRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<DeletionStatus>> {
     if (
@@ -154,7 +151,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptDeleteV1TranscriptsTranscriptIdDelete.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptDelete.",
       );
     }
 
@@ -183,23 +180,75 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Delete
    */
-  async transcriptDeleteV1TranscriptsTranscriptIdDelete(
-    requestParameters: TranscriptDeleteV1TranscriptsTranscriptIdDeleteRequest,
+  async v1TranscriptDelete(
+    requestParameters: V1TranscriptDeleteRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<DeletionStatus> {
-    const response =
-      await this.transcriptDeleteV1TranscriptsTranscriptIdDeleteRaw(
-        requestParameters,
-        initOverrides,
+    const response = await this.v1TranscriptDeleteRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get
+   */
+  async v1TranscriptGetRaw(
+    requestParameters: V1TranscriptGetRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<GetTranscript>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGet.",
       );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      GetTranscriptFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Get
+   */
+  async v1TranscriptGet(
+    requestParameters: V1TranscriptGetRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<GetTranscript> {
+    const response = await this.v1TranscriptGetRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
   /**
    * Transcript Get Audio
    */
-  async transcriptGetAudioV1TranscriptsTranscriptIdAudioGetRaw(
-    requestParameters: TranscriptGetAudioV1TranscriptsTranscriptIdAudioGetRequest,
+  async v1TranscriptGetAudioRaw(
+    requestParameters: V1TranscriptGetAudioRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<any>> {
     if (
@@ -208,7 +257,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptGetAudioV1TranscriptsTranscriptIdAudioGet.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetAudio.",
       );
     }
 
@@ -239,23 +288,22 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Get Audio
    */
-  async transcriptGetAudioV1TranscriptsTranscriptIdAudioGet(
-    requestParameters: TranscriptGetAudioV1TranscriptsTranscriptIdAudioGetRequest,
+  async v1TranscriptGetAudio(
+    requestParameters: V1TranscriptGetAudioRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
-    const response =
-      await this.transcriptGetAudioV1TranscriptsTranscriptIdAudioGetRaw(
-        requestParameters,
-        initOverrides,
-      );
+    const response = await this.v1TranscriptGetAudioRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
   /**
    * Transcript Get Topics
    */
-  async transcriptGetTopicsV1TranscriptsTranscriptIdTopicsGetRaw(
-    requestParameters: TranscriptGetTopicsV1TranscriptsTranscriptIdTopicsGetRequest,
+  async v1TranscriptGetTopicsRaw(
+    requestParameters: V1TranscriptGetTopicsRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<any>> {
     if (
@@ -264,7 +312,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptGetTopicsV1TranscriptsTranscriptIdTopicsGet.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetTopics.",
       );
     }
 
@@ -295,65 +343,11 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Get Topics
    */
-  async transcriptGetTopicsV1TranscriptsTranscriptIdTopicsGet(
-    requestParameters: TranscriptGetTopicsV1TranscriptsTranscriptIdTopicsGetRequest,
+  async v1TranscriptGetTopics(
+    requestParameters: V1TranscriptGetTopicsRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
-    const response =
-      await this.transcriptGetTopicsV1TranscriptsTranscriptIdTopicsGetRaw(
-        requestParameters,
-        initOverrides,
-      );
-    return await response.value();
-  }
-
-  /**
-   * Transcript Get
-   */
-  async transcriptGetV1TranscriptsTranscriptIdGetRaw(
-    requestParameters: TranscriptGetV1TranscriptsTranscriptIdGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<GetTranscript>> {
-    if (
-      requestParameters.transcriptId === null ||
-      requestParameters.transcriptId === undefined
-    ) {
-      throw new runtime.RequiredError(
-        "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptGetV1TranscriptsTranscriptIdGet.",
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/v1/transcripts/{transcript_id}`.replace(
-          `{${"transcript_id"}}`,
-          encodeURIComponent(String(requestParameters.transcriptId)),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      GetTranscriptFromJSON(jsonValue),
-    );
-  }
-
-  /**
-   * Transcript Get
-   */
-  async transcriptGetV1TranscriptsTranscriptIdGet(
-    requestParameters: TranscriptGetV1TranscriptsTranscriptIdGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<GetTranscript> {
-    const response = await this.transcriptGetV1TranscriptsTranscriptIdGetRaw(
+    const response = await this.v1TranscriptGetTopicsRaw(
       requestParameters,
       initOverrides,
     );
@@ -363,8 +357,8 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Get Websocket Events
    */
-  async transcriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGetRaw(
-    requestParameters: TranscriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGetRequest,
+  async v1TranscriptGetWebsocketEventsRaw(
+    requestParameters: V1TranscriptGetWebsocketEventsRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<any>> {
     if (
@@ -373,7 +367,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGet.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetWebsocketEvents.",
       );
     }
 
@@ -404,23 +398,22 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Get Websocket Events
    */
-  async transcriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGet(
-    requestParameters: TranscriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGetRequest,
+  async v1TranscriptGetWebsocketEvents(
+    requestParameters: V1TranscriptGetWebsocketEventsRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
-    const response =
-      await this.transcriptGetWebsocketEventsV1TranscriptsTranscriptIdEventsGetRaw(
-        requestParameters,
-        initOverrides,
-      );
+    const response = await this.v1TranscriptGetWebsocketEventsRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
   /**
    * Transcript Record Webrtc
    */
-  async transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPostRaw(
-    requestParameters: TranscriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPostRequest,
+  async v1TranscriptRecordWebrtcRaw(
+    requestParameters: V1TranscriptRecordWebrtcRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<any>> {
     if (
@@ -429,7 +422,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPost.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptRecordWebrtc.",
       );
     }
 
@@ -439,7 +432,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "rtcOffer",
-        "Required parameter requestParameters.rtcOffer was null or undefined when calling transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPost.",
+        "Required parameter requestParameters.rtcOffer was null or undefined when calling v1TranscriptRecordWebrtc.",
       );
     }
 
@@ -473,23 +466,22 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Record Webrtc
    */
-  async transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPost(
-    requestParameters: TranscriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPostRequest,
+  async v1TranscriptRecordWebrtc(
+    requestParameters: V1TranscriptRecordWebrtcRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
-    const response =
-      await this.transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPostRaw(
-        requestParameters,
-        initOverrides,
-      );
+    const response = await this.v1TranscriptRecordWebrtcRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
   /**
    * Transcript Update
    */
-  async transcriptUpdateV1TranscriptsTranscriptIdPatchRaw(
-    requestParameters: TranscriptUpdateV1TranscriptsTranscriptIdPatchRequest,
+  async v1TranscriptUpdateRaw(
+    requestParameters: V1TranscriptUpdateRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<GetTranscript>> {
     if (
@@ -498,7 +490,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "transcriptId",
-        "Required parameter requestParameters.transcriptId was null or undefined when calling transcriptUpdateV1TranscriptsTranscriptIdPatch.",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptUpdate.",
       );
     }
 
@@ -508,7 +500,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "updateTranscript",
-        "Required parameter requestParameters.updateTranscript was null or undefined when calling transcriptUpdateV1TranscriptsTranscriptIdPatch.",
+        "Required parameter requestParameters.updateTranscript was null or undefined when calling v1TranscriptUpdate.",
       );
     }
 
@@ -540,23 +532,22 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcript Update
    */
-  async transcriptUpdateV1TranscriptsTranscriptIdPatch(
-    requestParameters: TranscriptUpdateV1TranscriptsTranscriptIdPatchRequest,
+  async v1TranscriptUpdate(
+    requestParameters: V1TranscriptUpdateRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<GetTranscript> {
-    const response =
-      await this.transcriptUpdateV1TranscriptsTranscriptIdPatchRaw(
-        requestParameters,
-        initOverrides,
-      );
+    const response = await this.v1TranscriptUpdateRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
   /**
    * Transcripts Create
    */
-  async transcriptsCreateV1TranscriptsPostRaw(
-    requestParameters: TranscriptsCreateV1TranscriptsPostRequest,
+  async v1TranscriptsCreateRaw(
+    requestParameters: V1TranscriptsCreateRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<GetTranscript>> {
     if (
@@ -565,7 +556,7 @@ export class DefaultApi extends runtime.BaseAPI {
     ) {
       throw new runtime.RequiredError(
         "createTranscript",
-        "Required parameter requestParameters.createTranscript was null or undefined when calling transcriptsCreateV1TranscriptsPost.",
+        "Required parameter requestParameters.createTranscript was null or undefined when calling v1TranscriptsCreate.",
       );
     }
 
@@ -594,11 +585,11 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcripts Create
    */
-  async transcriptsCreateV1TranscriptsPost(
-    requestParameters: TranscriptsCreateV1TranscriptsPostRequest,
+  async v1TranscriptsCreate(
+    requestParameters: V1TranscriptsCreateRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<GetTranscript> {
-    const response = await this.transcriptsCreateV1TranscriptsPostRaw(
+    const response = await this.v1TranscriptsCreateRaw(
       requestParameters,
       initOverrides,
     );
@@ -608,8 +599,8 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcripts List
    */
-  async transcriptsListV1TranscriptsGetRaw(
-    requestParameters: TranscriptsListV1TranscriptsGetRequest,
+  async v1TranscriptsListRaw(
+    requestParameters: V1TranscriptsListRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<PageGetTranscript>> {
     const queryParameters: any = {};
@@ -642,11 +633,11 @@ export class DefaultApi extends runtime.BaseAPI {
   /**
    * Transcripts List
    */
-  async transcriptsListV1TranscriptsGet(
-    requestParameters: TranscriptsListV1TranscriptsGetRequest = {},
+  async v1TranscriptsList(
+    requestParameters: V1TranscriptsListRequest = {},
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<PageGetTranscript> {
-    const response = await this.transcriptsListV1TranscriptsGetRaw(
+    const response = await this.v1TranscriptsListRaw(
       requestParameters,
       initOverrides,
     );

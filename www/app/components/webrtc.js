@@ -31,9 +31,7 @@ const useWebRTC = (stream, transcriptId) => {
         };
 
         api
-          .transcriptRecordWebrtcV1TranscriptsTranscriptIdRecordWebrtcPost(
-            requestParameters,
-          )
+          .v1TranscriptRecordWebrtc(requestParameters)
           .then((answer) => {
             peer.signal(answer);
           })
