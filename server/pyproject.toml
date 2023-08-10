@@ -51,6 +51,7 @@ aioboto3 = "^11.2.0"
 jiwer = "^3.0.2"
 levenshtein = "^0.21.1"
 tqdm = "^4.66.0"
+pydantic = "^2.1.1"
 
 [build-system]
 requires = ["poetry-core"]
