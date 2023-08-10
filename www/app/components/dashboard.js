@@ -1,18 +1,16 @@
-import { Mulberry32 } from "../utils.js";
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronRight,
   faChevronDown,
+  faLinkSlash,
 } from "@fortawesome/free-solid-svg-icons";
 
 export function Dashboard({
-  isRecording,
-  onRecord,
   transcriptionText,
   finalSummary,
   topics,
-  stream,
+  disconnected,
 }) {
   const [openIndex, setOpenIndex] = useState(null);
   const [autoscrollEnabled, setAutoscrollEnabled] = useState(true);
@@ -108,6 +106,15 @@ export function Dashboard({
           </div>
         )}
       </div>
+
+      {disconnected && (
+        <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 flex justify-center items-center">
+          <div className="text-white text-2xl">
+            <FontAwesomeIcon icon={faLinkSlash} className="mr-2" />
+            Disconnected
+          </div>
+        </div>
+      )}
 
       <footer className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl">
         &nbsp;{transcriptionText}&nbsp;
