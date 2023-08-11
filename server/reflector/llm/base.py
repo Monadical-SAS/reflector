@@ -35,7 +35,7 @@ class LLM:
         name = self.__class__.__name__
         logger.info(f"LLM[{name}] warming up...")
         try:
-            await retry(self._warmup)(logger=logger)
+            await self._warmup(logger=logger)
             duration = monotonic() - start
             logger.info(f"LLM[{name}] warmup took {duration:.2f} seconds")
         except Exception:
