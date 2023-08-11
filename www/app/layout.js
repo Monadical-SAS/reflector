@@ -11,7 +11,7 @@ export const metadata = {
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
   },
   description:
-    "Reflector is an AI-powered tool that transcribes your meetings with unparalleled accuracy, divides content by topics, and provides insightful summaries. Maximize your productivity with Reflector, brought to you by Monadical. Capture the signal, not the noise.",
+    "Reflector is an AI-powered tool that transcribes your meetings with unparalleled accuracy, divides content by topics, and provides insightful summaries. Maximize your productivity with Reflector, brought to you by Monadical. Capture the signal, not the noise",
   applicationName: "Reflector",
   referrer: "origin-when-cross-origin",
   keywords: ["Reflector", "Monadical", "AI", "Meetings", "Transcription"],
