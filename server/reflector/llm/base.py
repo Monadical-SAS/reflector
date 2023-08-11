@@ -39,8 +39,7 @@ class LLM:
             duration = monotonic() - start
             logger.info(f"LLM[{name}] warmup took {duration:.2f} seconds")
         except Exception:
-            logger.exception(f"LLM[{name}] warmup failed")
-            raise
+            logger.exception(f"LLM[{name}] warmup failed, ignoring")
 
     async def _warmup(self, logger: reflector_logger):
         pass
