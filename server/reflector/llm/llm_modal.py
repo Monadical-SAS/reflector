@@ -19,7 +19,7 @@ class ModalLLM(LLM):
             response = await client.post(
                 self.llm_warmup_url,
                 headers=self.headers,
-                timeout=self.timeout,
+                timeout=60**5,
             )
             response.raise_for_status()
 
