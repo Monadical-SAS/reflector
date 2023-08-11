@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     AUDIO_BUFFER_SIZE: int = 256 * 960
 
     # Audio Transcription
-    # backends: whisper, banana
+    # backends: whisper, banana, modal
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
+    # available backend: openai, banana, modal, oobagooda
     LLM_BACKEND: str = "oobagooda"
 
     # LLM common configuration
