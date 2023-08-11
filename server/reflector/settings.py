@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     TRANSCRIPT_BANANA_API_KEY: str | None = None
     TRANSCRIPT_BANANA_MODEL_KEY: str | None = None
 
+    # Audio transcription modal.com configuration
+    TRANSCRIPT_MODAL_API_KEY: str | None = None
+
     # Audio transcription storage
     TRANSCRIPT_STORAGE_BACKEND: str = "aws"
 
@@ -62,6 +65,9 @@ class Settings(BaseSettings):
     # LLM Banana configuration
     LLM_BANANA_API_KEY: str | None = None
     LLM_BANANA_MODEL_KEY: str | None = None
+
+    # LLM Modal configuration
+    LLM_MODAL_API_KEY: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None

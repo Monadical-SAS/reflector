@@ -31,6 +31,9 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.min_transcript_length = min_transcript_length
         self.llm = LLM.get_instance()
 
+    async def _warmup(self):
+        await self.llm.warmup(logger=self.logger)
+
     async def _push(self, data: Transcript):
         if self.transcript is None:
             self.transcript = data

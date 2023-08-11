@@ -58,12 +58,14 @@ def retry(fn):
                 if result:
                     return result
             except HTTPStatusError as e:
+                logger.exception(e)
                 status_code = e.response.status_code
                 logger.debug(f"HTTP status {status_code} - {e}")
                 if status_code in retry_httpx_status_stop:
                     message = f"HTTP status {status_code} is in retry_httpx_status_stop"
                     raise RetryHTTPException(message) from e
             except retry_ignore_exc_types as e:
+                logger.exception(e)
                 last_exception = e
 
             logger.debug(
