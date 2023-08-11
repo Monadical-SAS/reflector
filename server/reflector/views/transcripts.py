@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 from datetime import datetime
 from fastapi_pagination import Page, paginate
 from reflector.logger import logger
 from .rtc_offer import rtc_offer_base, RtcOffer, PipelineEvent
-import asyncio
 from typing import Optional
 
 
@@ -239,8 +244,8 @@ async def transcript_events_websocket(transcript_id: UUID, websocket: WebSocket)
     # endless loop to wait for new events
     try:
         while True:
-            await asyncio.sleep(42)
-    except WebSocketDisconnect:
+            await websocket.receive()
+    except (RuntimeError, WebSocketDisconnect):
         ws_manager.disconnect(transcript_id, websocket)
 
 

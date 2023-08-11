@@ -7,6 +7,7 @@ import asyncio
 class Processor:
     INPUT_TYPE: type = None
     OUTPUT_TYPE: type = None
+    WARMUP_EVENT: str = "WARMUP_EVENT"
 
     def __init__(self, callback=None, custom_logger=None):
         self._processors = []
@@ -85,10 +86,19 @@ class Processor:
     def describe(self, level=0):
         logger.info("  " * level + self.__class__.__name__)
 
+    async def warmup(self):
+        """
+        Warmup the processor
+        """
+        await self._warmup()
+
     async def _push(self, data):
         raise NotImplementedError
 
     async def _flush(self):
+        pass
+
+    async def _warmup(self):
         pass
 
     @classmethod
@@ -129,9 +139,16 @@ class ThreadedProcessor(Processor):
                 if data is None:
                     await self.processor.flush()
                     break
+                if data == self.WARMUP_EVENT:
+                    self.logger.debug(f"Warming up {self.processor.__class__.__name__}")
+                    await self.processor.warmup()
+                    continue
                 await self.processor.push(data)
             finally:
                 self.queue.task_done()
+
+    async def _warmup(self):
+        await self.queue.put(self.WARMUP_EVENT)
 
     async def _push(self, data):
         await self.queue.put(data)
@@ -163,6 +180,7 @@ class Pipeline(Processor):
     OUTPUT_TYPE = None
 
     def __init__(self, *processors: Processor):
+        self._warmed_up = False
         super().__init__()
         self.logger = logger.bind(pipeline=self.uid)
         self.logger.info("Pipeline created")
@@ -177,6 +195,11 @@ class Pipeline(Processor):
 
         self.INPUT_TYPE = processors[0].INPUT_TYPE
         self.OUTPUT_TYPE = processors[-1].OUTPUT_TYPE
+
+    async def _warmup(self):
+        for processor in self.processors:
+            self.logger.debug(f"Warming up {processor.__class__.__name__}")
+            await processor.warmup()
 
     async def _push(self, data):
         await self.processors[0].push(data)

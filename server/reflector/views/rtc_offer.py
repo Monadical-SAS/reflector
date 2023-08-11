@@ -159,6 +159,7 @@ async def rtc_offer_base(
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
     )
+    await ctx.pipeline.warmup()
 
     # handle RTC peer connection
     pc = RTCPeerConnection()
