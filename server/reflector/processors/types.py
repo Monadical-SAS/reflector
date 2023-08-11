@@ -49,6 +49,11 @@ class Transcript(BaseModel):
             self.words.extend(other.words)
         self.text += other.text
 
+    def add_offset(self, offset: float):
+        for word in self.words:
+            word.start += offset
+            word.end += offset
+
     def clone(self):
         words = [
             Word(text=word.text, start=word.start, end=word.end) for word in self.words

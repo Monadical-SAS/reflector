@@ -9,9 +9,19 @@ class ModalLLM(LLM):
         super().__init__()
         self.timeout = settings.LLM_TIMEOUT
         self.llm_url = settings.LLM_URL + "/llm"
+        self.llm_warmup_url = settings.LLM_URL + "/warmup"
         self.headers = {
             "Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}",
         }
+
+    async def _warmup(self, logger):
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.llm_warmup_url,
+                headers=self.headers,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
 
     async def _generate(self, prompt: str, **kwargs):
         async with httpx.AsyncClient() as client:

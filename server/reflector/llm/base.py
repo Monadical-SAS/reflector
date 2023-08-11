@@ -1,6 +1,7 @@
 from reflector.settings import settings
 from reflector.utils.retry import retry
 from reflector.logger import logger as reflector_logger
+from time import monotonic
 import importlib
 import json
 import re
@@ -28,6 +29,21 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         return cls._registry[name]()
+
+    async def warmup(self, logger: reflector_logger):
+        start = monotonic()
+        name = self.__class__.__name__
+        logger.info(f"LLM[{name}] warming up...")
+        try:
+            await retry(self._warmup)(logger=logger)
+            duration = monotonic() - start
+            logger.info(f"LLM[{name}] warmup took {duration:.2f} seconds")
+        except Exception:
+            logger.exception(f"LLM[{name}] warmup failed")
+            raise
+
+    async def _warmup(self, logger: reflector_logger):
+        pass
 
     async def generate(self, prompt: str, logger: reflector_logger, **kwargs) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
