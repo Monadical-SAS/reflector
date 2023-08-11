@@ -143,7 +143,12 @@ class ThreadedProcessor(Processor):
                     self.logger.debug(f"Warming up {self.processor.__class__.__name__}")
                     await self.processor.warmup()
                     continue
-                await self.processor.push(data)
+                try:
+                    await self.processor.push(data)
+                except Exception:
+                    self.logger.error(
+                        f"Error in push {self.processor.__class__.__name__}, continue"
+                    )
             finally:
                 self.queue.task_done()
 
