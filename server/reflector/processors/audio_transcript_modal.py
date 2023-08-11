@@ -48,7 +48,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
 
     async def _transcript(self, data: AudioFile):
         async with httpx.AsyncClient() as client:
-            print(f"Try to transcribe audio {data.path.name}")
+            self.logger.debug(f"Try to transcribe audio {data.path.name}")
             files = {
                 "file": (data.path.name, data.path.open("rb")),
             }
@@ -59,7 +59,9 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 headers=self.headers,
             )
 
-            print(f"Transcript response: {response.status_code} {response.content}")
+            self.logger.debug(
+                f"Transcript response: {response.status_code} {response.content}"
+            )
             response.raise_for_status()
             result = response.json()
             transcript = Transcript(
