@@ -39,7 +39,10 @@ class TranscriptTopicDetectorProcessor(Processor):
             self.transcript = data
         else:
             self.transcript.merge(data)
-        if len(self.transcript.text) < self.min_transcript_length:
+        text_length = len(self.transcript.text)
+        required_length = self.min_transcript_length
+        if text_length <= required_length:
+            self.logger.info(f"Topic detector {text_length}/{required_length}")
             return
         await self.flush()
 
@@ -47,7 +50,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         if not self.transcript:
             return
         text = self.transcript.text
-        self.logger.info(f"Detect topic on {len(text)} length transcript")
+        self.logger.info(f"Topic detector got {len(text)} length transcript")
         prompt = self.PROMPT.format(input_text=text)
         result = await retry(self.llm.generate)(prompt=prompt, logger=self.logger)
         summary = TitleSummary(

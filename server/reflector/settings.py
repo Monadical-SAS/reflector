@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     LLM_OPENAI_KEY: str | None = None
     LLM_OPENAI_MODEL: str = "gpt-3.5-turbo"
     LLM_OPENAI_TEMPERATURE: float = 0.7
-    LLM_TIMEOUT: int = 90
+    LLM_TIMEOUT: int = 60 * 5  # take cold start into account
     LLM_MAX_TOKENS: int = 1024
     LLM_TEMPERATURE: float = 0.7
 
