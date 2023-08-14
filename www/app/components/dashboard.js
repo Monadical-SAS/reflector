@@ -48,7 +48,7 @@ export function Dashboard({
 
   return (
     <>
-      <div className="relative h-[60svh] w-3/4 flex flex-col">
+      <div className="relative h-[64svh] w-3/4 flex flex-col">
         <div className="text-center pb-1 pt-4">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>

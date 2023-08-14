@@ -71,6 +71,7 @@ export default function Recorder(props) {
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
+        height: 90,
       });
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
