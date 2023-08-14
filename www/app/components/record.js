@@ -111,9 +111,28 @@ export default function Recorder(props) {
         link.style.visibility = "visible";
 
         for (let topic of props.topics) {
+          const content = document.createElement("div");
+          content.style = `
+            border-left: solid 1px orange;
+            padding: 0 2px;
+            font-size: 0.7rem;
+            max-width: 100px;
+            width: max-content;
+            cursor: pointer;
+            background-color: white;
+            border-radius: 0 3px 3px 0;
+          `;
+          content.onmouseover = () =>
+            (content.style.backgroundColor = "orange");
+          content.onmouseout = () => (content.style.backgroundColor = "white");
+          content.textContent =
+            topic.title.length >= 20
+              ? topic.title.slice(0, 17) + "..."
+              : topic.title;
+
           const region = waveRegions.addRegion({
             start: topic.timestamp,
-            content: topic.title.slice(0, 7) + "...",
+            content,
             color: "f00",
             drag: false,
           });
