@@ -37,8 +37,9 @@ class CustomRecordPlugin extends RecordPlugin {
     const dataArray = new Uint8Array(bufferLength);
 
     let animationId, previousTimeStamp;
+    const DATA_SIZE = 128.0;
     const BUFFER_SIZE = 2 ** 8;
-    const dataBuffer = new Array(BUFFER_SIZE).fill(canvas.height);
+    const dataBuffer = new Array(BUFFER_SIZE).fill(DATA_SIZE);
 
     const drawWaveform = (timeStamp) => {
       if (!canvasCtx) return;
@@ -64,9 +65,9 @@ class CustomRecordPlugin extends RecordPlugin {
       let x = 0;
 
       for (let i = 0; i < dataBuffer.length; i++) {
-        const valueNormalized = dataBuffer[i] / canvas.height;
-        const y = (valueNormalized * canvas.height) / 2;
-        const sliceHeight = canvas.height + 1 - y * 2;
+        const y = (canvas.height * dataBuffer[i]) / (2 * DATA_SIZE);
+        const sliceHeight =
+          ((1 - canvas.height) * dataBuffer[i]) / DATA_SIZE + canvas.height;
 
         canvasCtx.fillRect(x, y, (sliceWidth * 2) / 3, sliceHeight);
         x += sliceWidth;
