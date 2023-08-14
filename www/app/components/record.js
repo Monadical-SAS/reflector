@@ -63,6 +63,8 @@ export default function Recorder(props) {
 
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
 
+  const topicsRef = useRef(props.topics);
+
   useEffect(() => {
     document.getElementById("play-btn").disabled = true;
 
@@ -103,6 +105,10 @@ export default function Recorder(props) {
   }, []);
 
   useEffect(() => {
+    topicsRef.current = props.topics;
+  }, [props.topics]);
+
+  useEffect(() => {
     if (record) {
       return record.on("stopRecording", () => {
         const link = document.getElementById("download-recording");
@@ -110,7 +116,7 @@ export default function Recorder(props) {
         link.download = "reflector-recording.webm";
         link.style.visibility = "visible";
 
-        for (let topic of props.topics) {
+        for (let topic of topicsRef.current) {
           const content = document.createElement("div");
           content.style = `
             border-left: solid 1px orange;
