@@ -11,8 +11,9 @@ export function Dashboard({
   finalSummary,
   topics,
   disconnected,
+  useActiveTopic,
 }) {
-  const [openIndex, setOpenIndex] = useState(null);
+  const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState(true);
 
   useEffect(() => {
@@ -76,18 +77,26 @@ export function Dashboard({
             <div key={index} className="border-b-2 py-2 hover:bg-[#8ec5fc30]">
               <div
                 className="flex justify-between items-center cursor-pointer px-4"
-                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                onClick={() =>
+                  setActiveTopic(
+                    activeTopic == item.timestamp ? null : item.timestamp,
+                  )
+                }
               >
                 <div className="w-1/4">{formatTime(item.timestamp)}</div>
                 <div className="w-3/4 flex justify-between items-center">
                   {item.title}
                   <FontAwesomeIcon
                     className={`transform transition-transform duration-200`}
-                    icon={openIndex === index ? faChevronDown : faChevronRight}
+                    icon={
+                      activeTopic == item.timestamp
+                        ? faChevronDown
+                        : faChevronRight
+                    }
                   />
                 </div>
               </div>
-              {openIndex === index && (
+              {activeTopic == item.timestamp && (
                 <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">
                   {item.transcript}
                 </div>
