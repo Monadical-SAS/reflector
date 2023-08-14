@@ -1,11 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Recorder from "./components/record.js";
-import { Dashboard } from "./components/dashboard.js";
-import useWebRTC from "./components/webrtc.js";
-import useTranscript from "./components/transcript.js";
-import { useWebSockets } from "./components/websocket.js";
-import "../public/button.css";
+import Recorder from "../recorder";
+import { Dashboard } from "../dashboard";
+import useWebRTC from "../useWebRTC";
+import useTranscript from "../useTranscript";
+import { useWebSockets } from "../useWebSockets";
+import "../../styles/button.css";
 
 const App = () => {
   const [stream, setStream] = useState(null);
@@ -39,6 +39,9 @@ const App = () => {
           setStream(null);
         }}
       />
+
+      <hr />
+
       <Dashboard
         transcriptionText={webSockets.transcriptText}
         finalSummary={webSockets.finalSummary}
