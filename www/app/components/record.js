@@ -138,7 +138,7 @@ export default function Recorder(props) {
           });
           region.on("click", (e) => {
             e.stopPropagation();
-            setActiveTopic(region.start);
+            setActiveTopic(topic);
             wavesurfer.setTime(region.start);
           });
         }
@@ -164,7 +164,7 @@ export default function Recorder(props) {
 
   useEffect(() => {
     if (activeTopic) {
-      wavesurfer.setTime(activeTopic);
+      wavesurfer.setTime(activeTopic.timestamp);
     }
   }, [activeTopic]);
 

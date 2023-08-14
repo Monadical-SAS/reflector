@@ -78,9 +78,7 @@ export function Dashboard({
               <div
                 className="flex justify-between items-center cursor-pointer px-4"
                 onClick={() =>
-                  setActiveTopic(
-                    activeTopic == item.timestamp ? null : item.timestamp,
-                  )
+                  setActiveTopic(activeTopic?.id == item.id ? null : item)
                 }
               >
                 <div className="w-1/4">{formatTime(item.timestamp)}</div>
@@ -89,14 +87,14 @@ export function Dashboard({
                   <FontAwesomeIcon
                     className={`transform transition-transform duration-200`}
                     icon={
-                      activeTopic == item.timestamp
+                      activeTopic?.id == item.id
                         ? faChevronDown
                         : faChevronRight
                     }
                   />
                 </div>
               </div>
-              {activeTopic == item.timestamp && (
+              {activeTopic?.id == item.id && (
                 <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">
                   {item.transcript}
                 </div>
