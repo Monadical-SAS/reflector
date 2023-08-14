@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
+import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
@@ -58,6 +59,9 @@ export default function Recorder(props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [timeInterval, setTimeInterval] = useState(null);
   const [duration, setDuration] = useState(0);
+  const [waveRegions, setWaveRegions] = useState(null);
+
+  const [activeTopic, setActiveTopic] = props.useActiveTopic;
 
   useEffect(() => {
     document.getElementById("play-btn").disabled = true;
@@ -87,6 +91,8 @@ export default function Recorder(props) {
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setRecord(_wavesurfer.registerPlugin(CustomRecordPlugin.create()));
+      setWaveRegions(_wavesurfer.registerPlugin(RegionsPlugin.create()));
+
       setWavesurfer(_wavesurfer);
       return () => {
         _wavesurfer.destroy();
@@ -103,6 +109,20 @@ export default function Recorder(props) {
         link.href = record.getRecordedUrl();
         link.download = "reflector-recording.webm";
         link.style.visibility = "visible";
+
+        for (let topic of props.topics) {
+          const region = waveRegions.addRegion({
+            start: topic.timestamp,
+            content: topic.title.slice(0, 7) + "...",
+            color: "f00",
+            drag: false,
+          });
+          region.on("click", (e) => {
+            e.stopPropagation();
+            setActiveTopic(region.start);
+            wavesurfer.setTime(region.start);
+          });
+        }
       });
     }
   }, [record]);
@@ -122,6 +142,12 @@ export default function Recorder(props) {
       });
     }
   }, [isRecording]);
+
+  useEffect(() => {
+    if (activeTopic) {
+      wavesurfer.setTime(activeTopic);
+    }
+  }, [activeTopic]);
 
   const handleRecClick = async () => {
     if (!record) return console.log("no record");
