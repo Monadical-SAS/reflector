@@ -1,16 +1,41 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from pathlib import Path
+import tempfile
+import io
 
 
 class AudioFile(BaseModel):
-    path: Path
+    name: str
     sample_rate: int
     channels: int
     sample_width: int
     timestamp: float = 0.0
 
+    _fd: io.BytesIO = PrivateAttr(None)
+    _path: Path = PrivateAttr(None)
+
+    def __init__(self, fd, **kwargs):
+        super().__init__(**kwargs)
+        self._fd = fd
+
+    @property
+    def fd(self):
+        self._fd.seek(0)
+        return self._fd
+
+    @property
+    def path(self):
+        if self._path is None:
+            # write down to disk
+            filename = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+            self._path = Path(filename)
+            with self._path.open("wb") as f:
+                f.write(self._fd.getbuffer())
+        return self._path
+
     def release(self):
-        self.path.unlink()
+        if self._path:
+            self._path.unlink()
 
 
 class Word(BaseModel):
