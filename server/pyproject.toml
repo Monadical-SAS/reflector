@@ -23,6 +23,8 @@ fastapi = "^0.100.1"
 sentry-sdk = {extras = ["fastapi"], version = "^1.29.2"}
 httpx = "^0.24.1"
 fastapi-pagination = "^0.12.6"
+databases = {extras = ["aiosqlite", "asyncpg"], version = "^0.7.0"}
+sqlalchemy = "<1.5"
 
 
 [tool.poetry.group.dev.dependencies]

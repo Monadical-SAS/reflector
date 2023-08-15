@@ -175,3 +175,6 @@ test_samples/
 .vscode/
 artefacts/
 audio_*.wav
+
+# ignore local database
+reflector.sqlite3
