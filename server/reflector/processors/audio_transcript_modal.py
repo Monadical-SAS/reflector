@@ -48,9 +48,9 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
 
     async def _transcript(self, data: AudioFile):
         async with httpx.AsyncClient() as client:
-            self.logger.debug(f"Try to transcribe audio {data.path.name}")
+            self.logger.debug(f"Try to transcribe audio {data.name}")
             files = {
-                "file": (data.path.name, data.path.open("rb")),
+                "file": (data.name, data.fd),
             }
             response = await retry(client.post)(
                 self.transcript_url,
