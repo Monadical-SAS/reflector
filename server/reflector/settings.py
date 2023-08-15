@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
 
+    # local data directory (audio for no)
+    DATA_DIR: str = "./data"
+
     # Whisper
     WHISPER_MODEL_SIZE: str = "tiny"
     WHISPER_REAL_TIME_MODEL_SIZE: str = "tiny"

@@ -1,5 +1,6 @@
 from .base import Processor, ThreadedProcessor, Pipeline  # noqa: F401
 from .types import AudioFile, Transcript, Word, TitleSummary, FinalSummary  # noqa: F401
+from .audio_file_writer import AudioFileWriterProcessor  # noqa: F401
 from .audio_chunker import AudioChunkerProcessor  # noqa: F401
 from .audio_merge import AudioMergeProcessor  # noqa: F401
 from .audio_transcript import AudioTranscriptProcessor  # noqa: F401

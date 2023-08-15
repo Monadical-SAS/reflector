@@ -70,10 +70,14 @@ async def dummy_llm():
 
 
 @pytest.mark.asyncio
-async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
+async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
     # to be able to connect with aiortc
+
+    from reflector.settings import settings
+
+    settings.DATA_DIR = Path(tmpdir)
 
     # start server
     host = "127.0.0.1"
@@ -188,3 +192,13 @@ async def test_transcript_rtc_and_websocket(dummy_transcript, dummy_llm):
     resp = await ac.get(f"/transcripts/{tid}")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ended"
+
+    # check that audio is available
+    resp = await ac.get(f"/transcripts/{tid}/audio")
+    assert resp.status_code == 200
+    assert resp.headers["Content-Type"] == "audio/wav"
+
+    # check that audio/mp3 is available
+    resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
+    assert resp.status_code == 200
+    assert resp.headers["Content-Type"] == "audio/mp3"
