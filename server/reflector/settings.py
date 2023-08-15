@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
 
+    # Database
+    DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
+
     # Whisper
     WHISPER_MODEL_SIZE: str = "tiny"
     WHISPER_REAL_TIME_MODEL_SIZE: str = "tiny"
