@@ -1,4 +1,4 @@
-import "./globals.scss";
+import "./styles/globals.scss";
 import { Roboto } from "next/font/google";
 
 import Head from "next/head";
