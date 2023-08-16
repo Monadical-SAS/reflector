@@ -10,6 +10,7 @@ import "../../styles/button.css";
 const App = () => {
   const [stream, setStream] = useState(null);
   const [disconnected, setDisconnected] = useState(false);
+  const useActiveTopic = useState(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -38,6 +39,8 @@ const App = () => {
           webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
           setStream(null);
         }}
+        topics={webSockets.topics}
+        useActiveTopic={useActiveTopic}
       />
 
       <hr />
@@ -48,6 +51,7 @@ const App = () => {
         topics={webSockets.topics}
         stream={stream}
         disconnected={disconnected}
+        useActiveTopic={useActiveTopic}
       />
     </div>
   );
