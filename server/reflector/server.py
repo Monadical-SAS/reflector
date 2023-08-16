@@ -41,7 +41,7 @@ model = WhisperModel("tiny", device="cpu", compute_type="float32", num_workers=1
 # LLM
 LLM_URL = settings.LLM_URL
 if not LLM_URL:
-    assert settings.LLM_BACKEND == "oobagooda"
+    assert settings.LLM_BACKEND == "oobabooga"
     LLM_URL = f"http://{settings.LLM_HOST}:{settings.LLM_PORT}/api/v1/generate"
 logger.info(f"Using LLM [{settings.LLM_BACKEND}]: {LLM_URL}")
 
