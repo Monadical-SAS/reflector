@@ -5,8 +5,9 @@ Reflector GPU backend - LLM
 """
 
 import os
-from modal import Image, method, Stub, asgi_app, Secret
 
+from modal import asgi_app, Image, method, Secret, Stub
+from pydantic.typing import Optional
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
@@ -100,13 +101,6 @@ class LLM:
         self.model = model
         self.tokenizer = tokenizer
         self.gen_cfg = gen_cfg
-        self.json_schema = {
-                "type": "object",
-                "properties": {
-                        "title": {"type": "string"},
-                        "summary": {"type": "string"},
-                },
-        }
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -117,19 +111,30 @@ class LLM:
         return {"status": "ok"}
 
     @method()
-    def generate(self, prompt: str):
+    def generate(self, prompt: str, schema: str = None):
         print(f"Generate {prompt=}")
-        import jsonformer
-        import json
+        if schema:
+            import ast
+            import jsonformer
 
-        jsonformer_llm = jsonformer.Jsonformer(model=self.model,
-                                               tokenizer=self.tokenizer,
-                                               json_schema=self.json_schema,
-                                               prompt=prompt,
-                                               max_string_token_length=self.gen_cfg.max_new_tokens)
-        response = jsonformer_llm()
+            jsonformer_llm = jsonformer.Jsonformer(model=self.model,
+                                                   tokenizer=self.tokenizer,
+                                                   json_schema=ast.literal_eval(schema),
+                                                   prompt=prompt,
+                                                   max_string_token_length=self.gen_cfg.max_new_tokens)
+            response = jsonformer_llm()
+            print(f"Generated {response=}")
+            return {"text": response}
+
+        input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
+                self.model.device
+        )
+        output = self.model.generate(input_ids, generation_config=self.gen_cfg)
+
+        # decode output
+        response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
         print(f"Generated {response=}")
-        return {"text": json.dumps(response)}
+        return {"text": response}
 
 
 # -------------------------------------------------------------------
@@ -165,12 +170,13 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
+        schema: Optional[str] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        func = llmstub.generate.spawn(prompt=req.prompt)
+        func = llmstub.generate.spawn(prompt=req.prompt, schema=req.schema)
         result = func.get()
         return result
 
