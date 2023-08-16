@@ -1,10 +1,22 @@
 import { useEffect, useState } from "react";
+import { TopicType, FinalSummaryType, StatusType } from "./webSocketTypes";
 
-export const useWebSockets = (transcriptId) => {
-  const [transcriptText, setTranscriptText] = useState("");
-  const [topics, setTopics] = useState([]);
-  const [finalSummary, setFinalSummary] = useState("");
-  const [status, setStatus] = useState("disconnected");
+type UseWebSocketsReturnType = {
+  transcriptText: string;
+  topics: TopicType[];
+  finalSummary: FinalSummaryType;
+  status: StatusType;
+};
+
+export const useWebSockets = (
+  transcriptId: string | null,
+): UseWebSocketsReturnType => {
+  const [transcriptText, setTranscriptText] = useState<string>("");
+  const [topics, setTopics] = useState<TopicType[]>([]);
+  const [finalSummary, setFinalSummary] = useState<FinalSummaryType>({
+    summary: "",
+  });
+  const [status, setStatus] = useState<StatusType>({ value: "disconnected" });
 
   useEffect(() => {
     if (!transcriptId) return;
@@ -40,7 +52,7 @@ export const useWebSockets = (transcriptId) => {
           break;
 
         case "STATUS":
-          setStatus(message.data.status);
+          setStatus(message.data);
           break;
 
         default:
