@@ -14,10 +14,11 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     PROMPT = """
         ### Human:
-        Create a JSON object as response.The JSON object must have 2 fields:
-        i) title and ii) summary.For the title field,generate a short title
-        for the given text. For the summary field, summarize the given text
-        in three sentences.
+        Generate information based on the given schema:
+
+        For the title field, generate a short title for the given text.
+        For the summary field, summarize the given text in a maximum of
+        three sentences.
 
         {input_text}
 
