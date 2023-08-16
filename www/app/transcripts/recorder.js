@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
-import RegionsPlugin from "wavesurfer.js/dist/plugins/regions";
+import CustomRecordPlugin from "./custom-plugins/record";
+import CustomRegionsPlugin from "./custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
@@ -9,7 +10,6 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import Dropdown from "react-dropdown";
 import "react-dropdown/style.css";
 
-import CustomRecordPlugin from "./CustomRecordPlugin";
 import { formatTime } from "../lib/time";
 
 const AudioInputsDropdown = (props) => {
@@ -93,7 +93,7 @@ export default function Recorder(props) {
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setRecord(_wavesurfer.registerPlugin(CustomRecordPlugin.create()));
-      setWaveRegions(_wavesurfer.registerPlugin(RegionsPlugin.create()));
+      setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
 
       setWavesurfer(_wavesurfer);
       return () => {
@@ -116,21 +116,29 @@ export default function Recorder(props) {
     for (let topic of topicsRef.current) {
       const content = document.createElement("div");
       content.style = `
+        position: absolute;
         border-left: solid 1px orange;
-        padding: 0 2px;
+        padding: 0 2px 0 5px;
         font-size: 0.7rem;
-        max-width: 100px;
-        width: max-content;
+        width: 100px;
         cursor: pointer;
         background-color: white;
         border-radius: 0 3px 3px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       `;
-      content.onmouseover = () => (content.style.backgroundColor = "orange");
-      content.onmouseout = () => (content.style.backgroundColor = "white");
-      content.textContent =
-        topic.title.length >= 20
-          ? topic.title.slice(0, 17) + "..."
-          : topic.title;
+      content.onmouseover = () => {
+        content.style.backgroundColor = "orange";
+        content.style.zIndex = 999;
+        content.style.width = "auto";
+      };
+      content.onmouseout = () => {
+        content.style.backgroundColor = "white";
+        content.style.zIndex = 0;
+        content.style.width = "100px";
+      };
+      content.textContent = topic.title;
 
       const region = waveRegions.addRegion({
         start: topic.timestamp,
@@ -199,6 +207,7 @@ export default function Recorder(props) {
       await record.startRecording(stream);
       props.setStream(stream);
       setIsRecording(true);
+      waveRegions?.clearRegions();
     }
   };
 
