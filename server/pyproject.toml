@@ -25,6 +25,7 @@ httpx = "^0.24.1"
 fastapi-pagination = "^0.12.6"
 databases = {extras = ["aiosqlite", "asyncpg"], version = "^0.7.0"}
 sqlalchemy = "<1.5"
+fief-client = {extras = ["fastapi"], version = "^0.17.0"}
 
 
 [tool.poetry.group.dev.dependencies]
