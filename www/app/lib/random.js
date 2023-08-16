@@ -17,15 +17,3 @@ export function Mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-export const formatTime = (seconds) => {
-  let hours = Math.floor(seconds / 3600);
-  let minutes = Math.floor((seconds % 3600) / 60);
-  let secs = Math.floor(seconds % 60);
-
-  let timeString = `${hours > 0 ? hours + ":" : ""}${minutes
-    .toString()
-    .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-
-  return timeString;
-};

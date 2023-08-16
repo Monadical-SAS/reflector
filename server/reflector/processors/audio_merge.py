@@ -1,7 +1,8 @@
 from reflector.processors.base import Processor
 from reflector.processors.types import AudioFile
-from pathlib import Path
-import wave
+from time import monotonic_ns
+from uuid import uuid4
+import io
 import av
 
 
@@ -24,24 +25,27 @@ class AudioMergeProcessor(Processor):
         sample_width = frame.format.bytes
 
         # create audio file
-        from time import monotonic_ns
-        from uuid import uuid4
-
         uu = uuid4().hex
-        path = Path(f"audio_{monotonic_ns()}_{uu}.wav")
-        with wave.open(path.as_posix(), "wb") as wf:
-            wf.setnchannels(channels)
-            wf.setsampwidth(sample_width)
-            wf.setframerate(sample_rate)
-            for frame in data:
-                wf.writeframes(frame.to_ndarray().tobytes())
+        fd = io.BytesIO()
+
+        out_container = av.open(fd, "w", format="wav")
+        out_stream = out_container.add_stream("pcm_s16le", rate=sample_rate)
+        for frame in data:
+            for packet in out_stream.encode(frame):
+                out_container.mux(packet)
+        for packet in out_stream.encode(None):
+            out_container.mux(packet)
+        out_container.close()
+        fd.seek(0)
 
         # emit audio file
         audiofile = AudioFile(
-            path=path,
+            name=f"{monotonic_ns()}-{uu}.wav",
+            fd=fd,
             sample_rate=sample_rate,
             channels=channels,
             sample_width=sample_width,
             timestamp=data[0].pts * data[0].time_base,
         )
+
         await self.emit(audiofile)
