@@ -8,7 +8,6 @@ import json
 from unittest.mock import patch
 from httpx import AsyncClient
 
-from reflector.app import app
 from uvicorn import Config, Server
 import threading
 import asyncio
@@ -76,6 +75,7 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
     # to be able to connect with aiortc
 
     from reflector.settings import settings
+    from reflector.app import app
 
     settings.DATA_DIR = Path(tmpdir)
 

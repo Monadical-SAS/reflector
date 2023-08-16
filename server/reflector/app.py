@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 from fastapi.routing import APIRoute
 import reflector.db  # noqa
+import reflector.auth  # noqa
 from reflector.views.rtc_offer import router as rtc_offer_router
 from reflector.views.transcripts import router as transcripts_router
 from reflector.events import subscribers_startup, subscribers_shutdown
