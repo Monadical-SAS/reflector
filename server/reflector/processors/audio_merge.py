@@ -3,7 +3,6 @@ from reflector.processors.types import AudioFile
 from time import monotonic_ns
 from uuid import uuid4
 import io
-import wave
 import av
 
 
@@ -28,12 +27,16 @@ class AudioMergeProcessor(Processor):
         # create audio file
         uu = uuid4().hex
         fd = io.BytesIO()
-        with wave.open(fd, "wb") as wf:
-            wf.setnchannels(channels)
-            wf.setsampwidth(sample_width)
-            wf.setframerate(sample_rate)
-            for frame in data:
-                wf.writeframes(frame.to_ndarray().tobytes())
+
+        out_container = av.open(fd, "w", format="wav")
+        out_stream = out_container.add_stream("pcm_s16le", rate=sample_rate)
+        for frame in data:
+            for packet in out_stream.encode(frame):
+                out_container.mux(packet)
+        for packet in out_stream.encode(None):
+            out_container.mux(packet)
+        out_container.close()
+        fd.seek(0)
 
         # emit audio file
         audiofile = AudioFile(
@@ -44,4 +47,5 @@ class AudioMergeProcessor(Processor):
             sample_width=sample_width,
             timestamp=data[0].pts * data[0].time_base,
         )
+
         await self.emit(audiofile)
