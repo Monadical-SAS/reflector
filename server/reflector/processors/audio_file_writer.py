@@ -1,6 +1,5 @@
 from reflector.processors.base import Processor
 import av
-import wave
 from pathlib import Path
 
 
@@ -17,19 +16,24 @@ class AudioFileWriterProcessor(Processor):
         if isinstance(path, str):
             path = Path(path)
         self.path = path
-        self.fd = None
+        self.out_container = None
+        self.out_stream = None
 
     async def _push(self, data: av.AudioFrame):
-        if not self.fd:
+        if not self.out_container:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.fd = wave.open(self.path.as_posix(), "wb")
-            self.fd.setnchannels(len(data.layout.channels))
-            self.fd.setsampwidth(data.format.bytes)
-            self.fd.setframerate(data.sample_rate)
-        self.fd.writeframes(data.to_ndarray().tobytes())
+            self.out_container = av.open(self.path.as_posix(), "w", format="wav")
+            self.out_stream = self.out_container.add_stream(
+                "pcm_s16le", rate=data.sample_rate
+            )
+            for packet in self.out_stream.encode(data):
+                self.out_container.mux(packet)
         await self.emit(data)
 
     async def _flush(self):
-        if self.fd:
-            self.fd.close()
-            self.fd = None
+        if self.out_container:
+            for packet in self.out_stream.encode(None):
+                self.out_container.mux(packet)
+            self.out_container.close()
+            self.out_container = None
+            self.out_stream = None
