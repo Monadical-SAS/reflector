@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
-import { DefaultApi } from "../api/apis/DefaultApi";
+import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
+import { GetTranscript } from "../api";
 
-const useTranscript = () => {
-  const [response, setResponse] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+type UseTranscriptReturnType = {
+  response: GetTranscript | null;
+  loading: boolean;
+  error: string | null;
+  createTranscript: () => void;
+};
+
+const useTranscript = (): UseTranscriptReturnType => {
+  const [response, setResponse] = useState<GetTranscript | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const apiConfiguration = new Configuration({
     basePath: process.env.NEXT_PUBLIC_API_URL,
@@ -14,7 +22,7 @@ const useTranscript = () => {
 
   const createTranscript = () => {
     setLoading(true);
-    const requestParameters = {
+    const requestParameters: V1TranscriptsCreateRequest = {
       createTranscript: {
         name: "Weekly All-Hands", // Hardcoded for now
       },
