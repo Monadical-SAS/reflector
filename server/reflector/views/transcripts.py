@@ -5,13 +5,20 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
-from uuid import UUID, uuid4
+from uuid import uuid4
 from datetime import datetime
 from fastapi_pagination import Page, paginate
 from reflector.logger import logger
+from reflector.db import database, transcripts
+from reflector.settings import settings
 from .rtc_offer import rtc_offer_base, RtcOffer, PipelineEvent
 from typing import Optional
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+import av
 
 
 router = APIRouter()
@@ -19,6 +26,10 @@ router = APIRouter()
 # ==============================================================
 # Models to move to a database, but required for the API to work
 # ==============================================================
+
+
+def generate_uuid4():
+    return str(uuid4())
 
 
 def generate_transcript_name():
@@ -31,7 +42,7 @@ class TranscriptText(BaseModel):
 
 
 class TranscriptTopic(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: str = Field(default_factory=generate_uuid4)
     title: str
     summary: str
     transcript: str
@@ -48,7 +59,7 @@ class TranscriptEvent(BaseModel):
 
 
 class Transcript(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: str = Field(default_factory=generate_uuid4)
     name: str = Field(default_factory=generate_transcript_name)
     status: str = "idle"
     locked: bool = False
@@ -70,21 +81,87 @@ class Transcript(BaseModel):
         else:
             self.topics.append(topic)
 
+    def events_dump(self, mode="json"):
+        return [event.model_dump(mode=mode) for event in self.events]
+
+    def topics_dump(self, mode="json"):
+        return [topic.model_dump(mode=mode) for topic in self.topics]
+
+    def convert_audio_to_mp3(self):
+        fn = self.audio_mp3_filename
+        if fn.exists():
+            return
+
+        logger.info(f"Converting audio to mp3: {self.audio_filename}")
+        inp = av.open(self.audio_filename.as_posix(), "r")
+
+        # create temporary file for mp3
+        with NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            out = av.open(tmp.name, "w")
+            stream = out.add_stream("mp3")
+            for frame in inp.decode(audio=0):
+                frame.pts = None
+                for packet in stream.encode(frame):
+                    out.mux(packet)
+            for packet in stream.encode(None):
+                out.mux(packet)
+            out.close()
+
+            # move temporary file to final location
+            Path(tmp.name).rename(fn)
+
+    def unlink(self):
+        self.data_path.unlink(missing_ok=True)
+
+    @property
+    def data_path(self):
+        return Path(settings.DATA_DIR) / self.id
+
+    @property
+    def audio_filename(self):
+        return self.data_path / "audio.wav"
+
+    @property
+    def audio_mp3_filename(self):
+        return self.data_path / "audio.mp3"
+
 
 class TranscriptController:
-    transcripts: list[Transcript] = []
+    async def get_all(self) -> list[Transcript]:
+        query = transcripts.select()
+        results = await database.fetch_all(query)
+        return results
 
-    def get_all(self) -> list[Transcript]:
-        return self.transcripts
+    async def get_by_id(self, transcript_id: str) -> Transcript | None:
+        query = transcripts.select().where(transcripts.c.id == transcript_id)
+        result = await database.fetch_one(query)
+        if not result:
+            return None
+        return Transcript(**result)
 
-    def get_by_id(self, transcript_id: UUID) -> Transcript | None:
-        return next((t for t in self.transcripts if t.id == transcript_id), None)
+    async def add(self, name: str):
+        transcript = Transcript(name=name)
+        query = transcripts.insert().values(**transcript.model_dump())
+        await database.execute(query)
+        return transcript
 
-    def add(self, transcript: Transcript):
-        self.transcripts.append(transcript)
+    async def update(self, transcript: Transcript, values: dict):
+        query = (
+            transcripts.update()
+            .where(transcripts.c.id == transcript.id)
+            .values(**values)
+        )
+        await database.execute(query)
+        for key, value in values.items():
+            setattr(transcript, key, value)
 
-    def remove(self, transcript: Transcript):
-        self.transcripts.remove(transcript)
+    async def remove_by_id(self, transcript_id: str) -> None:
+        transcript = await self.get_by_id(transcript_id)
+        if not transcript:
+            return
+        transcript.unlink()
+        query = transcripts.delete().where(transcripts.c.id == transcript_id)
+        await database.execute(query)
 
 
 transcripts_controller = TranscriptController()
@@ -96,7 +173,7 @@ transcripts_controller = TranscriptController()
 
 
 class GetTranscript(BaseModel):
-    id: UUID
+    id: str
     name: str
     status: str
     locked: bool
@@ -123,15 +200,12 @@ class DeletionStatus(BaseModel):
 
 @router.get("/transcripts", response_model=Page[GetTranscript])
 async def transcripts_list():
-    return paginate(transcripts_controller.get_all())
+    return paginate(await transcripts_controller.get_all())
 
 
 @router.post("/transcripts", response_model=GetTranscript)
 async def transcripts_create(info: CreateTranscript):
-    transcript = Transcript()
-    transcript.name = info.name
-    transcripts_controller.add(transcript)
-    return transcript
+    return await transcripts_controller.add(info.name)
 
 
 # ==============================================================
@@ -140,54 +214,72 @@ async def transcripts_create(info: CreateTranscript):
 
 
 @router.get("/transcripts/{transcript_id}", response_model=GetTranscript)
-async def transcript_get(transcript_id: UUID):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_get(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     return transcript
 
 
 @router.patch("/transcripts/{transcript_id}", response_model=GetTranscript)
-async def transcript_update(transcript_id: UUID, info: UpdateTranscript):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_update(transcript_id: str, info: UpdateTranscript):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
+    values = {}
     if info.name is not None:
-        transcript.name = info.name
+        values["name"] = info.name
     if info.locked is not None:
-        transcript.locked = info.locked
+        values["locked"] = info.locked
+    await transcripts_controller.update(transcript, values)
     return transcript
 
 
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)
-async def transcript_delete(transcript_id: UUID):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_delete(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    transcripts_controller.remove(transcript)
+    await transcripts_controller.remove_by_id(transcript.id)
     return DeletionStatus(status="ok")
 
 
 @router.get("/transcripts/{transcript_id}/audio")
-async def transcript_get_audio(transcript_id: UUID):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_get_audio(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    # TODO: Implement audio generation
-    return HTTPException(status_code=500, detail="Not implemented")
+    if not transcript.audio_filename.exists():
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    return FileResponse(transcript.audio_filename, media_type="audio/wav")
+
+
+@router.get("/transcripts/{transcript_id}/audio/mp3")
+async def transcript_get_audio_mp3(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    if not transcript.audio_filename.exists():
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    await run_in_threadpool(transcript.convert_audio_to_mp3)
+
+    return FileResponse(transcript.audio_mp3_filename, media_type="audio/mp3")
 
 
 @router.get("/transcripts/{transcript_id}/topics", response_model=list[TranscriptTopic])
-async def transcript_get_topics(transcript_id: UUID):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_get_topics(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     return transcript.topics
 
 
 @router.get("/transcripts/{transcript_id}/events")
-async def transcript_get_websocket_events(transcript_id: UUID):
+async def transcript_get_websocket_events(transcript_id: str):
     pass
 
 
@@ -200,20 +292,20 @@ class WebsocketManager:
     def __init__(self):
         self.active_connections = {}
 
-    async def connect(self, transcript_id: UUID, websocket: WebSocket):
+    async def connect(self, transcript_id: str, websocket: WebSocket):
         await websocket.accept()
         if transcript_id not in self.active_connections:
             self.active_connections[transcript_id] = []
         self.active_connections[transcript_id].append(websocket)
 
-    def disconnect(self, transcript_id: UUID, websocket: WebSocket):
+    def disconnect(self, transcript_id: str, websocket: WebSocket):
         if transcript_id not in self.active_connections:
             return
         self.active_connections[transcript_id].remove(websocket)
         if not self.active_connections[transcript_id]:
             del self.active_connections[transcript_id]
 
-    async def send_json(self, transcript_id: UUID, message):
+    async def send_json(self, transcript_id: str, message):
         if transcript_id not in self.active_connections:
             return
         for connection in self.active_connections[transcript_id][:]:
@@ -227,8 +319,8 @@ ws_manager = WebsocketManager()
 
 
 @router.websocket("/transcripts/{transcript_id}/events")
-async def transcript_events_websocket(transcript_id: UUID, websocket: WebSocket):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+async def transcript_events_websocket(transcript_id: str, websocket: WebSocket):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -260,7 +352,7 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
     # transcript from the database for each event.
     # print(f"Event: {event}", args, data)
     transcript_id = args
-    transcript = transcripts_controller.get_by_id(transcript_id)
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         return
 
@@ -272,6 +364,12 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
     # FIXME don't do copy
     if event == PipelineEvent.TRANSCRIPT:
         resp = transcript.add_event(event=event, data=TranscriptText(text=data.text))
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+            },
+        )
 
     elif event == PipelineEvent.TOPIC:
         topic = TranscriptTopic(
@@ -283,14 +381,34 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
         resp = transcript.add_event(event=event, data=topic)
         transcript.upsert_topic(topic)
 
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "topics": transcript.topics_dump(),
+            },
+        )
+
     elif event == PipelineEvent.FINAL_SUMMARY:
         final_summary = TranscriptFinalSummary(summary=data.summary)
         resp = transcript.add_event(event=event, data=final_summary)
-        transcript.summary = final_summary
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "summary": final_summary.summary,
+            },
+        )
 
     elif event == PipelineEvent.STATUS:
         resp = transcript.add_event(event=event, data=data)
-        transcript.status = data.value
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "status": data.value,
+            },
+        )
 
     else:
         logger.warning(f"Unknown event: {event}")
@@ -302,9 +420,9 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
 
 @router.post("/transcripts/{transcript_id}/record/webrtc")
 async def transcript_record_webrtc(
-    transcript_id: UUID, params: RtcOffer, request: Request
+    transcript_id: str, params: RtcOffer, request: Request
 ):
-    transcript = transcripts_controller.get_by_id(transcript_id)
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -317,4 +435,5 @@ async def transcript_record_webrtc(
         request,
         event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
+        audio_filename=transcript.audio_filename,
     )

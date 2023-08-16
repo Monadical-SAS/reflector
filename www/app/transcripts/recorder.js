@@ -10,7 +10,7 @@ import Dropdown from "react-dropdown";
 import "react-dropdown/style.css";
 
 import CustomRecordPlugin from "./CustomRecordPlugin";
-import { formatTime } from "../utils";
+import { formatTime } from "../lib/time";
 
 const AudioInputsDropdown = (props) => {
   const [ddOptions, setDdOptions] = useState([]);
