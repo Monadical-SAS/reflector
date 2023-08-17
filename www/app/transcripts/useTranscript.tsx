@@ -17,6 +17,7 @@ const useTranscript = (): UseTranscript => {
 
   const apiConfiguration = new Configuration({
     basePath: process.env.NEXT_PUBLIC_API_URL,
+    //    accessToken:
   });
   const api = new DefaultApi(apiConfiguration);
 

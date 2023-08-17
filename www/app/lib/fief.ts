@@ -1,3 +1,4 @@
+"use client";
 import { Fief, FiefUserInfo } from "@fief/fief";
 import { FiefAuth, IUserInfoCache } from "@fief/fief/nextjs";
 
