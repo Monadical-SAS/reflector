@@ -121,17 +121,19 @@ export default function Recorder(props) {
         padding: 0 2px 0 5px;
         font-size: 0.7rem;
         width: 100px;
+        max-width: fit-content;
         cursor: pointer;
         background-color: white;
         border-radius: 0 3px 3px 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        transition: width 100ms linear;
       `;
       content.onmouseover = () => {
         content.style.backgroundColor = "orange";
         content.style.zIndex = 999;
-        content.style.width = "auto";
+        content.style.width = "300px";
       };
       content.onmouseout = () => {
         content.style.backgroundColor = "white";
