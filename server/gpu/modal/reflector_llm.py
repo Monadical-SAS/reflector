@@ -172,13 +172,16 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
-        schema: Optional[str] = None
+        schema: Optional[dict] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        func = llmstub.generate.spawn(prompt=req.prompt, schema=req.schema)
+        if req.schema:
+            func = llmstub.generate.spawn(prompt=req.prompt, schema=json.dumps(req.schema))
+        else:
+            func = llmstub.generate.spawn(prompt=req.prompt)
         result = func.get()
         return result
 

@@ -1,5 +1,3 @@
-import json
-
 import httpx
 from reflector.llm.base import LLM
 from reflector.settings import settings
@@ -28,7 +26,7 @@ class ModalLLM(LLM):
     async def _generate(self, prompt: str, schema: dict | None, **kwargs):
         json_payload = {"prompt": prompt}
         if schema:
-            json_payload["schema"] = json.dumps(schema)
+            json_payload["schema"] = schema
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 self.llm_url,
