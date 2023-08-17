@@ -1,4 +1,4 @@
-export type TopicType = {
+export type Topic = {
   timestamp: number;
   title: string;
   transcript: string;
@@ -6,14 +6,14 @@ export type TopicType = {
   id: string;
 };
 
-export type TranscriptType = {
+export type Transcript = {
   text: string;
 };
 
-export type FinalSummaryType = {
+export type FinalSummary = {
   summary: string;
 };
 
-export type StatusType = {
+export type Status = {
   value: string;
 };

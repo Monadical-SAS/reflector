@@ -6,15 +6,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { formatTime } from "../lib/time";
 import ScrollToBottom from "./scrollToBottom";
-import FinalSummary from "./finalSummary";
 import DisconnectedIndicator from "./disconnectedIndicator";
 import LiveTrancription from "./liveTranscription";
-import { TopicType, FinalSummaryType } from "./webSocketTypes";
+import FinalSummary from "./finalSummary";
+import { Topic, FinalSummary as FinalSummaryType } from "./webSocketTypes";
 
 type DashboardProps = {
   transcriptionText: string;
   finalSummary: FinalSummaryType;
-  topics: TopicType[];
+  topics: Topic[];
   disconnected: boolean;
 };
 
