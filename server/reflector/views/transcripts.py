@@ -111,7 +111,9 @@ class Transcript(BaseModel):
             out.close()
 
             # move temporary file to final location
-            Path(tmp.name).rename(fn)
+            import shutil
+
+            shutil.move(tmp.name, fn.as_posix())
 
     def unlink(self):
         self.data_path.unlink(missing_ok=True)

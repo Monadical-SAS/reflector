@@ -1,11 +1,10 @@
 import "./styles/globals.scss";
 import { Roboto } from "next/font/google";
-
-import Head from "next/head";
+import { Metadata } from "next";
 
 const roboto = Roboto({ subsets: ["latin"], weight: "400" });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
@@ -52,9 +51,6 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <Head>
-        <title>Test</title>
-      </Head>
       <body className={roboto.className + " flex flex-col min-h-screen"}>
         {children}
       </body>
