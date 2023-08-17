@@ -5,9 +5,9 @@ Reflector GPU backend - LLM
 """
 
 import os
+from typing import Optional
 
 from modal import asgi_app, Image, method, Secret, Stub
-from pydantic.typing import Optional
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"

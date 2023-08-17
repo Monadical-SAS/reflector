@@ -14,7 +14,6 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     PROMPT = """
         ### Human:
-        Generate information based on the given schema:
 
         For the title field, generate a short title for the given text.
         For the summary field, summarize the given text in a maximum of
@@ -62,7 +61,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.logger.info(f"Topic detector got {len(text)} length transcript")
         prompt = self.PROMPT.format(input_text=text)
         result = await retry(self.llm.generate)(
-            prompt=prompt, kwargs=self.kwargs, logger=self.logger
+            prompt=prompt, schema=self.topic_detector_schema, logger=self.logger
         )
         summary = TitleSummary(
             title=result["title"],

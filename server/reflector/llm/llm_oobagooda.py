@@ -1,4 +1,5 @@
 import json
+from typing import Union
 
 import httpx
 from reflector.llm.base import LLM
@@ -6,10 +7,10 @@ from reflector.settings import settings
 
 
 class OobaboogaLLM(LLM):
-    async def _generate(self, prompt: str, **kwargs):
+    async def _generate(self, prompt: str, schema: Union[str | None], **kwargs):
         json_payload = {"prompt": prompt}
-        if "schema" in kwargs:
-            json_payload["schema"] = json.dumps(kwargs["schema"])
+        if schema:
+            json_payload["schema"] = json.dumps(schema)
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 settings.LLM_URL,
