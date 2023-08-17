@@ -3,14 +3,14 @@ import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
 import { GetTranscript } from "../api";
 
-type UseTranscriptReturnType = {
+type UseTranscript = {
   response: GetTranscript | null;
   loading: boolean;
   error: string | null;
   createTranscript: () => void;
 };
 
-const useTranscript = (): UseTranscriptReturnType => {
+const useTranscript = (): UseTranscript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
