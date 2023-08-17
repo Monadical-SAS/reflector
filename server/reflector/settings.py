@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, banana, modal, oobagooda
-    LLM_BACKEND: str = "oobagooda"
+    # available backend: openai, banana, modal, oobabooga
+    LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
     LLM_URL: str | None = None
