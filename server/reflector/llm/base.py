@@ -1,10 +1,12 @@
-from reflector.settings import settings
-from reflector.utils.retry import retry
-from reflector.logger import logger as reflector_logger
-from time import monotonic
 import importlib
 import json
 import re
+from time import monotonic
+from typing import Union
+
+from reflector.logger import logger as reflector_logger
+from reflector.settings import settings
+from reflector.utils.retry import retry
 
 
 class LLM:
@@ -44,10 +46,12 @@ class LLM:
     async def _warmup(self, logger: reflector_logger):
         pass
 
-    async def generate(self, prompt: str, logger: reflector_logger, **kwargs) -> dict:
+    async def generate(
+        self, prompt: str, logger: reflector_logger, schema: str = None, **kwargs
+    ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
         try:
-            result = await retry(self._generate)(prompt=prompt, **kwargs)
+            result = await retry(self._generate)(prompt=prompt, schema=schema, **kwargs)
         except Exception:
             logger.exception("Failed to call llm after retrying")
             raise
@@ -59,7 +63,7 @@ class LLM:
 
         return result
 
-    async def _generate(self, prompt: str, **kwargs) -> str:
+    async def _generate(self, prompt: str, schema: Union[str | None], **kwargs) -> str:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:

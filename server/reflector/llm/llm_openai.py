@@ -1,7 +1,9 @@
+from typing import Union
+
+import httpx
 from reflector.llm.base import LLM
 from reflector.logger import logger
 from reflector.settings import settings
-import httpx
 
 
 class OpenAILLM(LLM):
@@ -15,7 +17,7 @@ class OpenAILLM(LLM):
         self.max_tokens = settings.LLM_MAX_TOKENS
         logger.info(f"LLM use openai backend at {self.openai_url}")
 
-    async def _generate(self, prompt: str, **kwargs) -> str:
+    async def _generate(self, prompt: str, schema: Union[str | None], **kwargs) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.openai_key}",

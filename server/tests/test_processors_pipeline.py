@@ -9,13 +9,16 @@ async def test_basic_process(event_loop):
     from reflector.settings import settings
     from reflector.llm.base import LLM
     from pathlib import Path
+    from typing import Union
 
     # use an LLM test backend
     settings.LLM_BACKEND = "test"
     settings.TRANSCRIPT_BACKEND = "whisper"
 
     class LLMTest(LLM):
-        async def _generate(self, prompt: str, **kwargs) -> str:
+        async def _generate(
+            self, prompt: str, schema: Union[str | None], **kwargs
+        ) -> str:
             return {
                 "title": "TITLE",
                 "summary": "SUMMARY",
