@@ -217,6 +217,9 @@ class DeletionStatus(BaseModel):
 async def transcripts_list(
     user: auth.UserInfo = Depends(auth.current_user),
 ):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     return paginate(await transcripts_controller.get_all(user_id=user["sub"]))
 
 
