@@ -1,15 +1,15 @@
-export function getRandomNumber(min, max) {
+export function getRandomNumber(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function SeededRand(seed) {
+export function SeededRand(seed: number): number {
   seed ^= seed << 13;
   seed ^= seed >> 17;
   seed ^= seed << 5;
   return seed / 2 ** 32;
 }
 
-export function Mulberry32(seed) {
+export function Mulberry32(seed: number) {
   return function () {
     var t = (seed += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);

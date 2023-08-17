@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
-import { DefaultApi } from "../api/apis/DefaultApi";
+import {
+  DefaultApi,
+  V1TranscriptRecordWebrtcRequest,
+} from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
 
-const useWebRTC = (stream, transcriptId) => {
-  const [data, setData] = useState({
-    peer: null,
-  });
+const useWebRTC = (
+  stream: MediaStream | null,
+  transcriptId: string | null,
+): Peer => {
+  const [peer, setPeer] = useState<Peer | null>(null);
 
   useEffect(() => {
     if (!stream || !transcriptId) {
@@ -18,11 +22,11 @@ const useWebRTC = (stream, transcriptId) => {
     });
     const api = new DefaultApi(apiConfiguration);
 
-    let peer = new Peer({ initiator: true, stream: stream });
+    let p: Peer = new Peer({ initiator: true, stream: stream });
 
-    peer.on("signal", (data) => {
+    p.on("signal", (data: any) => {
       if ("sdp" in data) {
-        const requestParameters = {
+        const requestParameters: V1TranscriptRecordWebrtcRequest = {
           transcriptId: transcriptId,
           rtcOffer: {
             sdp: data.sdp,
@@ -33,7 +37,7 @@ const useWebRTC = (stream, transcriptId) => {
         api
           .v1TranscriptRecordWebrtc(requestParameters)
           .then((answer) => {
-            peer.signal(answer);
+            p.signal(answer);
           })
           .catch((err) => {
             console.error("WebRTC signaling error:", err);
@@ -41,17 +45,17 @@ const useWebRTC = (stream, transcriptId) => {
       }
     });
 
-    peer.on("connect", () => {
+    p.on("connect", () => {
       console.log("WebRTC connected");
-      setData((prevData) => ({ ...prevData, peer: peer }));
+      setPeer(p);
     });
 
     return () => {
-      peer.destroy();
+      p.destroy();
     };
   }, [stream, transcriptId]);
 
-  return data;
+  return peer;
 };
 
 export default useWebRTC;
