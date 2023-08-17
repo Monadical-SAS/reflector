@@ -98,7 +98,7 @@ export function Dashboard({
           )}
         </div>
 
-        {finalSummary && <FinalSummary text={finalSummary.summary} />}
+        {finalSummary.summary && <FinalSummary text={finalSummary.summary} />}
       </div>
 
       {disconnected && <DisconnectedIndicator />}
