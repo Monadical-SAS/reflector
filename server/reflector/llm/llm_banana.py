@@ -15,7 +15,7 @@ class BananaLLM(LLM):
             "X-Banana-Model-Key": settings.LLM_BANANA_MODEL_KEY,
         }
 
-    async def _generate(self, prompt: str, schema: str | None, **kwargs):
+    async def _generate(self, prompt: str, schema: dict | None, **kwargs):
         json_payload = {"prompt": prompt}
         if schema:
             json_payload["schema"] = json.dumps(schema)

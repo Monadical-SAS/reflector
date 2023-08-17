@@ -6,7 +6,7 @@ from reflector.settings import settings
 
 
 class OobaboogaLLM(LLM):
-    async def _generate(self, prompt: str, schema: str | None, **kwargs):
+    async def _generate(self, prompt: str, schema: dict | None, **kwargs):
         json_payload = {"prompt": prompt}
         if schema:
             json_payload["schema"] = json.dumps(schema)

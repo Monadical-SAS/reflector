@@ -46,7 +46,11 @@ class LLM:
         pass
 
     async def generate(
-        self, prompt: str, logger: reflector_logger, schema: str | None = None, **kwargs
+        self,
+        prompt: str,
+        logger: reflector_logger,
+        schema: dict | None = None,
+        **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
         try:
@@ -62,7 +66,7 @@ class LLM:
 
         return result
 
-    async def _generate(self, prompt: str, schema: str | None, **kwargs) -> str:
+    async def _generate(self, prompt: str, schema: dict | None, **kwargs) -> str:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:
