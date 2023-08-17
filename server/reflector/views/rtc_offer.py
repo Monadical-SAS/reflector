@@ -2,17 +2,18 @@ import asyncio
 from fastapi import Request, APIRouter
 from reflector.events import subscribers_shutdown
 from pydantic import BaseModel
-from reflector.models import TranscriptionContext
 from reflector.logger import logger
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from json import loads, dumps
 from enum import StrEnum
+from pathlib import Path
 import av
 from reflector.processors import (
     Pipeline,
     AudioChunkerProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
+    AudioFileWriterProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
     TranscriptFinalSummaryProcessor,
@@ -23,6 +24,15 @@ from reflector.processors import (
 
 sessions = []
 router = APIRouter()
+
+
+class TranscriptionContext(object):
+    def __init__(self, logger):
+        self.logger = logger
+        self.pipeline = None
+        self.data_channel = None
+        self.status = "idle"
+        self.topics = []
 
 
 class AudioStreamTrack(MediaStreamTrack):
@@ -64,7 +74,11 @@ class PipelineEvent(StrEnum):
 
 
 async def rtc_offer_base(
-    params: RtcOffer, request: Request, event_callback=None, event_callback_args=None
+    params: RtcOffer,
+    request: Request,
+    event_callback=None,
+    event_callback_args=None,
+    audio_filename: Path | None = None,
 ):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)
@@ -73,7 +87,6 @@ async def rtc_offer_base(
     peername = request.client
     clientid = f"{peername[0]}:{peername[1]}"
     ctx = TranscriptionContext(logger=logger.bind(client=clientid))
-    ctx.topics = []
 
     async def update_status(status: str):
         changed = ctx.status != status
@@ -151,14 +164,18 @@ async def rtc_offer_base(
 
     # create a context for the whole rtc transaction
     # add a customised logger to the context
-    ctx.pipeline = Pipeline(
+    processors = []
+    if audio_filename is not None:
+        processors += [AudioFileWriterProcessor(path=audio_filename)]
+    processors += [
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
         TranscriptLinerProcessor(),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
-    )
+    ]
+    ctx.pipeline = Pipeline(*processors)
     # FIXME: warmup is not working well yet
     # await ctx.pipeline.warmup()
 

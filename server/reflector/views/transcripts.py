@@ -5,14 +5,20 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from uuid import uuid4
 from datetime import datetime
 from fastapi_pagination import Page, paginate
 from reflector.logger import logger
 from reflector.db import database, transcripts
+from reflector.settings import settings
 from .rtc_offer import rtc_offer_base, RtcOffer, PipelineEvent
 from typing import Optional
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+import av
 
 
 router = APIRouter()
@@ -81,6 +87,44 @@ class Transcript(BaseModel):
     def topics_dump(self, mode="json"):
         return [topic.model_dump(mode=mode) for topic in self.topics]
 
+    def convert_audio_to_mp3(self):
+        fn = self.audio_mp3_filename
+        if fn.exists():
+            return
+
+        logger.info(f"Converting audio to mp3: {self.audio_filename}")
+        inp = av.open(self.audio_filename.as_posix(), "r")
+
+        # create temporary file for mp3
+        with NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            out = av.open(tmp.name, "w")
+            stream = out.add_stream("mp3")
+            for frame in inp.decode(audio=0):
+                frame.pts = None
+                for packet in stream.encode(frame):
+                    out.mux(packet)
+            for packet in stream.encode(None):
+                out.mux(packet)
+            out.close()
+
+            # move temporary file to final location
+            Path(tmp.name).rename(fn)
+
+    def unlink(self):
+        self.data_path.unlink(missing_ok=True)
+
+    @property
+    def data_path(self):
+        return Path(settings.DATA_DIR) / self.id
+
+    @property
+    def audio_filename(self):
+        return self.data_path / "audio.wav"
+
+    @property
+    def audio_mp3_filename(self):
+        return self.data_path / "audio.mp3"
+
 
 class TranscriptController:
     async def get_all(self) -> list[Transcript]:
@@ -112,6 +156,10 @@ class TranscriptController:
             setattr(transcript, key, value)
 
     async def remove_by_id(self, transcript_id: str) -> None:
+        transcript = await self.get_by_id(transcript_id)
+        if not transcript:
+            return
+        transcript.unlink()
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
         await database.execute(query)
 
@@ -202,8 +250,24 @@ async def transcript_get_audio(transcript_id: str):
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    # TODO: Implement audio generation
-    return HTTPException(status_code=500, detail="Not implemented")
+    if not transcript.audio_filename.exists():
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    return FileResponse(transcript.audio_filename, media_type="audio/wav")
+
+
+@router.get("/transcripts/{transcript_id}/audio/mp3")
+async def transcript_get_audio_mp3(transcript_id: str):
+    transcript = await transcripts_controller.get_by_id(transcript_id)
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    if not transcript.audio_filename.exists():
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    await run_in_threadpool(transcript.convert_audio_to_mp3)
+
+    return FileResponse(transcript.audio_mp3_filename, media_type="audio/mp3")
 
 
 @router.get("/transcripts/{transcript_id}/topics", response_model=list[TranscriptTopic])
@@ -371,4 +435,5 @@ async def transcript_record_webrtc(
         request,
         event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
+        audio_filename=transcript.audio_filename,
     )
