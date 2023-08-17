@@ -15,7 +15,7 @@ class OpenAILLM(LLM):
         self.max_tokens = settings.LLM_MAX_TOKENS
         logger.info(f"LLM use openai backend at {self.openai_url}")
 
-    async def _generate(self, prompt: str, schema: str | None, **kwargs) -> str:
+    async def _generate(self, prompt: str, schema: dict | None, **kwargs) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.openai_key}",
