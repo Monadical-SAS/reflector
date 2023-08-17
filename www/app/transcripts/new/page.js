@@ -5,6 +5,7 @@ import { Dashboard } from "../dashboard";
 import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
+import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 
 const App = () => {
@@ -24,6 +25,13 @@ const App = () => {
   const transcript = useTranscript();
   const webRTC = useWebRTC(stream, transcript.response?.id);
   const webSockets = useWebSockets(transcript.response?.id);
+  const {
+    loading,
+    permissionOk,
+    audioDevices,
+    requestPermission,
+    getAudioStream,
+  } = useAudioDevice();
 
   return (
     <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
@@ -32,23 +40,54 @@ const App = () => {
         <p className="text-gray-500">Capture The Signal, Not The Noise</p>
       </div>
 
-      <Recorder
-        setStream={setStream}
-        onStop={() => {
-          webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
-          setStream(null);
-        }}
-      />
+      {permissionOk ? (
+        <>
+          <Recorder
+            setStream={setStream}
+            onStop={() => {
+              webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+              setStream(null);
+            }}
+            getAudioStream={getAudioStream}
+            audioDevices={audioDevices}
+          />
 
-      <hr />
-
-      <Dashboard
-        transcriptionText={webSockets.transcriptText}
-        finalSummary={webSockets.finalSummary}
-        topics={webSockets.topics}
-        stream={stream}
-        disconnected={disconnected}
-      />
+          <Dashboard
+            transcriptionText={webSockets.transcriptText}
+            finalSummary={webSockets.finalSummary}
+            topics={webSockets.topics}
+            stream={stream}
+            disconnected={disconnected}
+          />
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col items-center justify-center w-fit bg-white px-6 py-8 mt-8 rounded-xl">
+            <h1 className="text-2xl font-bold text-blue-500">
+              Audio Permissions
+            </h1>
+            {loading ? (
+              <p className="text-gray-500 text-center mt-5">
+                Checking permission...
+              </p>
+            ) : (
+              <>
+                <p className="text-gray-500 text-center mt-5">
+                  Reflector needs access to your microphone to work.
+                  <br />
+                  Please grant permission to continue.
+                </p>
+                <button
+                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-auto"
+                  onClick={requestPermission}
+                >
+                  Grant Permission
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
