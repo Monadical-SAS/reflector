@@ -3,17 +3,29 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faChevronRight,
   faChevronDown,
-  faLinkSlash,
 } from "@fortawesome/free-solid-svg-icons";
+import { formatTime } from "../lib/time";
+import ScrollToBottom from "./scrollToBottom";
+import DisconnectedIndicator from "./disconnectedIndicator";
+import LiveTrancription from "./liveTranscription";
+import FinalSummary from "./finalSummary";
+import { Topic, FinalSummary as FinalSummaryType } from "./webSocketTypes";
+
+type DashboardProps = {
+  transcriptionText: string;
+  finalSummary: FinalSummaryType;
+  topics: Topic[];
+  disconnected: boolean;
+};
 
 export function Dashboard({
   transcriptionText,
   finalSummary,
   topics,
   disconnected,
-}) {
-  const [openIndex, setOpenIndex] = useState(null);
-  const [autoscrollEnabled, setAutoscrollEnabled] = useState(true);
+}: DashboardProps) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     if (autoscrollEnabled) scrollToBottom();
@@ -21,7 +33,10 @@ export function Dashboard({
 
   const scrollToBottom = () => {
     const topicsDiv = document.getElementById("topics-div");
-    topicsDiv.scrollTop = topicsDiv.scrollHeight;
+
+    if (!topicsDiv)
+      console.error("Could not find topics div to scroll to bottom");
+    else topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
   const handleScroll = (e) => {
@@ -32,18 +47,6 @@ export function Dashboard({
     } else if (bottom && !autoscrollEnabled) {
       setAutoscrollEnabled(true);
     }
-  };
-
-  const formatTime = (seconds) => {
-    let hours = Math.floor(seconds / 3600);
-    let minutes = Math.floor((seconds % 3600) / 60);
-    let secs = Math.floor(seconds % 60);
-
-    let timeString = `${hours > 0 ? hours + ":" : ""}${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-
-    return timeString;
   };
 
   return (
@@ -57,16 +60,12 @@ export function Dashboard({
           <div className="w-3/4 font-bold">Topic</div>
         </div>
 
-        <div
-          className={`absolute right-5 w-10 h-10 ${
-            autoscrollEnabled ? "hidden" : "flex"
-          } ${
-            finalSummary ? "top-[49%]" : "bottom-1"
-          } justify-center items-center text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl border-slate-400 bg-[#3c82f638] text-[#3c82f6ed]`}
-          onClick={scrollToBottom}
-        >
-          &#11015;
-        </div>
+        <ScrollToBottom
+          visible={!autoscrollEnabled}
+          hasFinalSummary={finalSummary ? true : false}
+          handleScrollBottom={scrollToBottom}
+        />
+
         <div
           id="topics-div"
           className="py-2 overflow-y-auto"
@@ -99,26 +98,12 @@ export function Dashboard({
           )}
         </div>
 
-        {finalSummary && (
-          <div className="min-h-[200px] overflow-y-auto mt-2 p-2 bg-white temp-transcription rounded">
-            <h2>Final Summary</h2>
-            <p>{finalSummary.summary}</p>
-          </div>
-        )}
+        {finalSummary.summary && <FinalSummary text={finalSummary.summary} />}
       </div>
 
-      {disconnected && (
-        <div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 flex justify-center items-center">
-          <div className="text-white text-2xl">
-            <FontAwesomeIcon icon={faLinkSlash} className="mr-2" />
-            Disconnected
-          </div>
-        </div>
-      )}
+      {disconnected && <DisconnectedIndicator />}
 
-      <footer className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl">
-        &nbsp;{transcriptionText}&nbsp;
-      </footer>
+      <LiveTrancription text={transcriptionText} />
     </>
   );
 }

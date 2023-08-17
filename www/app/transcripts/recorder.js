@@ -8,7 +8,7 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import Dropdown from "react-dropdown";
 import "react-dropdown/style.css";
 
-import CustomRecordPlugin from "./CustomRecordPlugin";
+import CustomRecordPlugin from "../lib/CustomRecordPlugin";
 import { formatTime } from "../lib/time";
 
 const AudioInputsDropdown = (props) => {

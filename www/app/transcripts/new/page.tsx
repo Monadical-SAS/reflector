@@ -8,8 +8,8 @@ import { useWebSockets } from "../useWebSockets";
 import "../../styles/button.css";
 
 const App = () => {
-  const [stream, setStream] = useState(null);
-  const [disconnected, setDisconnected] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [disconnected, setDisconnected] = useState<boolean>(false);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -46,7 +46,6 @@ const App = () => {
         transcriptionText={webSockets.transcriptText}
         finalSummary={webSockets.finalSummary}
         topics={webSockets.topics}
-        stream={stream}
         disconnected={disconnected}
       />
     </div>
