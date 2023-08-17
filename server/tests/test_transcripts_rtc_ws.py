@@ -7,7 +7,6 @@ import asyncio
 import json
 import threading
 from pathlib import Path
-from typing import Union
 from unittest.mock import patch
 
 import pytest
@@ -62,7 +61,7 @@ async def dummy_llm():
     from reflector.llm.base import LLM
 
     class TestLLM(LLM):
-        async def _generate(self, prompt: str, schema: Union[str | None], **kwargs):
+        async def _generate(self, prompt: str, schema: str | None, **kwargs):
             return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:

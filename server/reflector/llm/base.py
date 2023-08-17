@@ -2,7 +2,6 @@ import importlib
 import json
 import re
 from time import monotonic
-from typing import Union
 
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
@@ -47,7 +46,7 @@ class LLM:
         pass
 
     async def generate(
-        self, prompt: str, logger: reflector_logger, schema: str = None, **kwargs
+        self, prompt: str, logger: reflector_logger, schema: str | None = None, **kwargs
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
         try:
@@ -63,7 +62,7 @@ class LLM:
 
         return result
 
-    async def _generate(self, prompt: str, schema: Union[str | None], **kwargs) -> str:
+    async def _generate(self, prompt: str, schema: str | None, **kwargs) -> str:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:
