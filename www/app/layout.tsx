@@ -1,6 +1,7 @@
 import "./styles/globals.scss";
 import { Roboto } from "next/font/google";
 import { Metadata } from "next";
+import { FiefAuthProvider } from "@fief/fief/nextjs/react";
 
 const roboto = Roboto({ subsets: ["latin"], weight: "400" });
 
@@ -50,10 +51,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={roboto.className + " flex flex-col min-h-screen"}>
-        {children}
-      </body>
-    </html>
+    <FiefAuthProvider currentUserPath="/api/current-user">
+      {" "}
+      {}
+      <html lang="en">
+        <body className={roboto.className + " flex flex-col min-h-screen"}>
+          {children}
+        </body>
+      </html>
+    </FiefAuthProvider>
   );
 }
