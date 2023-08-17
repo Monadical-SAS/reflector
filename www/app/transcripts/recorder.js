@@ -15,24 +15,11 @@ const AudioInputsDropdown = (props) => {
   const [ddOptions, setDdOptions] = useState([]);
 
   useEffect(() => {
-    const init = async () => {
-      // Request permission to use audio inputs
-      await navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((stream) => stream.getTracks().forEach((t) => t.stop()));
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioDevices = devices
-        .filter((d) => d.kind === "audioinput" && d.deviceId != "")
-        .map((d) => ({ value: d.deviceId, label: d.label }));
-
-      if (audioDevices.length < 1) return console.log("no audio input devices");
-
-      setDdOptions(audioDevices);
-      props.setDeviceId(audioDevices[0].value);
-    };
-    init();
-  }, []);
+    setDdOptions(props.audioDevices);
+    props.setDeviceId(
+      props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
+    );
+  }, [props.audioDevices]);
 
   const handleDropdownChange = (e) => {
     props.setDeviceId(e.value);
@@ -131,16 +118,12 @@ export default function Recorder(props) {
       setIsRecording(false);
       document.getElementById("play-btn").disabled = false;
     } else {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId,
-          noiseSuppression: false,
-          echoCancellation: false,
-        },
-      });
-      await record.startRecording(stream);
+      const stream = await props.getAudioStream(deviceId);
       props.setStream(stream);
-      setIsRecording(true);
+      if (stream) {
+        await record.startRecording(stream);
+        setIsRecording(true);
+      }
     }
   };
 
@@ -158,7 +141,11 @@ export default function Recorder(props) {
   return (
     <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
       <div className="flex my-2 mx-auto">
-        <AudioInputsDropdown setDeviceId={setDeviceId} disabled={isRecording} />
+        <AudioInputsDropdown
+          audioDevices={props.audioDevices}
+          setDeviceId={setDeviceId}
+          disabled={isRecording}
+        />
         &nbsp;
         <button
           className="w-20"
