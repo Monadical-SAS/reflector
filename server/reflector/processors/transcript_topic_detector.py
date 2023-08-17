@@ -37,7 +37,6 @@ class TranscriptTopicDetectorProcessor(Processor):
                 "summary": {"type": "string"},
             },
         }
-        self.kwargs = {"schema": self.topic_detector_schema}
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
