@@ -3,11 +3,11 @@ Reflector GPU backend - LLM
 ===========================
 
 """
-
+import json
 import os
 from typing import Optional
 
-from modal import asgi_app, Image, method, Secret, Stub
+from modal import Image, Secret, Stub, asgi_app, method
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
@@ -116,12 +116,11 @@ class LLM:
         # If a schema is given, conform to schema
         if schema:
             print(f"Schema {schema=}")
-            import ast
             import jsonformer
 
             jsonformer_llm = jsonformer.Jsonformer(model=self.model,
                                                    tokenizer=self.tokenizer,
-                                                   json_schema=ast.literal_eval(schema),
+                                                   json_schema=json.loads(schema),
                                                    prompt=prompt,
                                                    max_string_token_length=self.gen_cfg.max_new_tokens)
             response = jsonformer_llm()
@@ -154,7 +153,7 @@ class LLM:
 )
 @asgi_app()
 def web():
-    from fastapi import FastAPI, HTTPException, status, Depends
+    from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
     from pydantic import BaseModel
 
