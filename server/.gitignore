@@ -178,3 +178,4 @@ audio_*.wav
 
 # ignore local database
 reflector.sqlite3
+data/
