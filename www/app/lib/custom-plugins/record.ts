@@ -1,5 +1,4 @@
-// Override the startRecording method so we can pass the desired stream
-// Checkout: https://github.com/katspaugh/wavesurfer.js/blob/fa2bcfe/src/plugins/record.ts
+// Source code: https://github.com/katspaugh/wavesurfer.js/blob/fa2bcfe/src/plugins/record.ts
 
 import RecordPlugin from "wavesurfer.js/dist/plugins/record";
 
