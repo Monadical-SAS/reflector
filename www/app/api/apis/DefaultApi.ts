@@ -55,6 +55,10 @@ export interface V1TranscriptGetAudioRequest {
   transcriptId: any;
 }
 
+export interface V1TranscriptGetAudioMp3Request {
+  transcriptId: any;
+}
+
 export interface V1TranscriptGetTopicsRequest {
   transcriptId: any;
 }
@@ -159,6 +163,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     const headerParameters: runtime.HTTPHeaders = {};
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts/{transcript_id}`.replace(
@@ -211,6 +223,14 @@ export class DefaultApi extends runtime.BaseAPI {
     const queryParameters: any = {};
 
     const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
 
     const response = await this.request(
       {
@@ -293,6 +313,61 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.v1TranscriptGetAudioRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get Audio Mp3
+   */
+  async v1TranscriptGetAudioMp3Raw(
+    requestParameters: V1TranscriptGetAudioMp3Request,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetAudioMp3.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/audio/mp3`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Transcript Get Audio Mp3
+   */
+  async v1TranscriptGetAudioMp3(
+    requestParameters: V1TranscriptGetAudioMp3Request,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1TranscriptGetAudioMp3Raw(
       requestParameters,
       initOverrides,
     );
@@ -510,6 +585,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     headerParameters["Content-Type"] = "application/json";
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts/{transcript_id}`.replace(
@@ -566,6 +649,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     headerParameters["Content-Type"] = "application/json";
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts`,
@@ -615,6 +706,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     const headerParameters: runtime.HTTPHeaders = {};
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts`,
@@ -641,6 +740,51 @@ export class DefaultApi extends runtime.BaseAPI {
       requestParameters,
       initOverrides,
     );
+    return await response.value();
+  }
+
+  /**
+   * User Me
+   */
+  async v1UserMeRaw(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/me`,
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * User Me
+   */
+  async v1UserMe(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1UserMeRaw(initOverrides);
     return await response.value();
   }
 }
