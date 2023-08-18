@@ -3,14 +3,15 @@ Reflector GPU backend - LLM
 ===========================
 
 """
-
+import json
 import os
-from modal import Image, method, Stub, asgi_app, Secret
+from typing import Optional
 
+from modal import Image, Secret, Stub, asgi_app, method
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
-LLM_LOW_CPU_MEM_USAGE: bool = False
+LLM_LOW_CPU_MEM_USAGE: bool = True
 LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
 
@@ -49,6 +50,8 @@ llm_image = (
         "torch",
         "sentencepiece",
         "protobuf",
+        "jsonformer==0.12.0",
+        "accelerate==0.21.0",
         "einops==0.6.1",
         "hf-transfer~=0.1",
         "huggingface_hub==0.16.4",
@@ -81,6 +84,7 @@ class LLM:
 
         # generation configuration
         print("Instance llm generation config")
+        # JSONFormer doesn't yet support generation configs, but keeping for future usage
         model.config.max_new_tokens = LLM_MAX_NEW_TOKENS
         gen_cfg = GenerationConfig.from_model_config(model.config)
         gen_cfg.max_new_tokens = LLM_MAX_NEW_TOKENS
@@ -107,16 +111,30 @@ class LLM:
         return {"status": "ok"}
 
     @method()
-    def generate(self, prompt: str):
+    def generate(self, prompt: str, schema: str = None):
         print(f"Generate {prompt=}")
-        # tokenize prompt
-        input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
-            self.model.device
-        )
-        output = self.model.generate(input_ids, generation_config=self.gen_cfg)
+        # If a schema is given, conform to schema
+        if schema:
+            print(f"Schema {schema=}")
+            import jsonformer
 
-        # decode output
-        response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
+            jsonformer_llm = jsonformer.Jsonformer(model=self.model,
+                                                   tokenizer=self.tokenizer,
+                                                   json_schema=json.loads(schema),
+                                                   prompt=prompt,
+                                                   max_string_token_length=self.gen_cfg.max_new_tokens)
+            response = jsonformer_llm()
+        else:
+            # If no schema, perform prompt only generation
+
+            # tokenize prompt
+            input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
+                self.model.device
+            )
+            output = self.model.generate(input_ids, generation_config=self.gen_cfg)
+
+            # decode output
+            response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
         print(f"Generated {response=}")
         return {"text": response}
 
@@ -135,7 +153,7 @@ class LLM:
 )
 @asgi_app()
 def web():
-    from fastapi import FastAPI, HTTPException, status, Depends
+    from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
     from pydantic import BaseModel
 
@@ -154,12 +172,16 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
+        schema: Optional[dict] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        func = llmstub.generate.spawn(prompt=req.prompt)
+        if req.schema:
+            func = llmstub.generate.spawn(prompt=req.prompt, schema=json.dumps(req.schema))
+        else:
+            func = llmstub.generate.spawn(prompt=req.prompt)
         result = func.get()
         return result
 

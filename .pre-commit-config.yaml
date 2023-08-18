@@ -29,3 +29,10 @@ repos:
     hooks:
       - id: black
         files: ^server/(reflector|tests)/
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort (python)
+        files: ^server/(gpu|evaluate|reflector)/
