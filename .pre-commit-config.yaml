@@ -36,3 +36,4 @@ repos:
       - id: isort
         name: isort (python)
         files: ^server/(gpu|evaluate|reflector)/
+        args: ["--profile", "black", "--filter-files"]
