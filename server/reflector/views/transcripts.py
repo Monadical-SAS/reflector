@@ -371,10 +371,10 @@ ws_manager = WebsocketManager()
 async def transcript_events_websocket(
     transcript_id: str,
     websocket: WebSocket,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    # user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    user_id = user["sub"] if user else None
-    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
+    # user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
