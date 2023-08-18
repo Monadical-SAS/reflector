@@ -106,6 +106,7 @@ export default function Recorder(props: any) {
         _wavesurfer.destroy();
         setIsRecording(false);
         setIsPlaying(false);
+        setCurrentTime(0);
       };
     }
   }, []);
