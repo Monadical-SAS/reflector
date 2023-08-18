@@ -1,7 +1,7 @@
-from reflector.processors.base import Processor
-from reflector.processors.types import Transcript, TitleSummary
-from reflector.utils.retry import retry
 from reflector.llm import LLM
+from reflector.processors.base import Processor
+from reflector.processors.types import TitleSummary, Transcript
+from reflector.utils.retry import retry
 
 
 class TranscriptTopicDetectorProcessor(Processor):
@@ -15,9 +15,11 @@ class TranscriptTopicDetectorProcessor(Processor):
     PROMPT = """
         ### Human:
         Create a JSON object as response.The JSON object must have 2 fields:
-        i) title and ii) summary.For the title field,generate a short title
-        for the given text. For the summary field, summarize the given text
-        in three sentences.
+        i) title and ii) summary.
+
+        For the title field, generate a short title for the given text.
+        For the summary field, summarize the given text in a maximum of
+        three sentences.
 
         {input_text}
 
@@ -30,6 +32,13 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.transcript = None
         self.min_transcript_length = min_transcript_length
         self.llm = LLM.get_instance()
+        self.topic_detector_schema = {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "summary": {"type": "string"},
+            },
+        }
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
@@ -52,7 +61,9 @@ class TranscriptTopicDetectorProcessor(Processor):
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
         prompt = self.PROMPT.format(input_text=text)
-        result = await retry(self.llm.generate)(prompt=prompt, logger=self.logger)
+        result = await retry(self.llm.generate)(
+            prompt=prompt, schema=self.topic_detector_schema, logger=self.logger
+        )
         summary = TitleSummary(
             title=result["title"],
             summary=result["summary"],
