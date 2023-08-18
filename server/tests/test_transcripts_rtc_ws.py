@@ -12,7 +12,6 @@ from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
 from httpx_ws import aconnect_ws
-from reflector.app import app
 from uvicorn import Config, Server
 
 
