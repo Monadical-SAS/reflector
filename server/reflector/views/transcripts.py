@@ -134,9 +134,7 @@ class Transcript(BaseModel):
 
 class TranscriptController:
     async def get_all(self, user_id: str | None = None) -> list[Transcript]:
-        query = transcripts.select()
-        if user_id is not None:
-            query = query.where(transcripts.c.user_id == user_id)
+        query = transcripts.select().where(transcripts.c.user_id == user_id)
         results = await database.fetch_all(query)
         return results
 
