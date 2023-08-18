@@ -1,6 +1,21 @@
 // Source code: https://github.com/katspaugh/wavesurfer.js/blob/fa2bcfe/src/plugins/record.ts
+/**
+ * Record audio from the microphone, render a waveform and download the audio.
+ */
 
-import RecordPlugin from "wavesurfer.js/dist/plugins/record";
+import BasePlugin, {
+  type BasePluginEvents,
+} from "wavesurfer.js/dist/base-plugin";
+
+export type RecordPluginOptions = {
+  mimeType?: MediaRecorderOptions["mimeType"];
+  audioBitsPerSecond?: MediaRecorderOptions["audioBitsPerSecond"];
+};
+
+export type RecordPluginEvents = BasePluginEvents & {
+  startRecording: [];
+  stopRecording: [];
+};
 
 const MIME_TYPES = [
   "audio/webm",
@@ -12,11 +27,44 @@ const MIME_TYPES = [
 const findSupportedMimeType = () =>
   MIME_TYPES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
 
-class CustomRecordPlugin extends RecordPlugin {
-  static create(options) {
-    return new CustomRecordPlugin(options || {});
+class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordedUrl = "";
+  private savedCursorWidth = 1;
+  private savedInteractive = true;
+
+  public static create(options?: RecordPluginOptions) {
+    return new RecordPlugin(options || {});
   }
-  render(stream) {
+
+  private preventInteraction() {
+    if (this.wavesurfer) {
+      this.savedCursorWidth = this.wavesurfer.options.cursorWidth || 1;
+      this.savedInteractive = this.wavesurfer.options.interact || true;
+      this.wavesurfer.options.cursorWidth = 0;
+      this.wavesurfer.options.interact = false;
+    }
+  }
+
+  private restoreInteraction() {
+    if (this.wavesurfer) {
+      this.wavesurfer.options.cursorWidth = this.savedCursorWidth;
+      this.wavesurfer.options.interact = this.savedInteractive;
+    }
+  }
+
+  onInit() {
+    this.preventInteraction();
+  }
+
+  private loadBlob(data: Blob[], type: string) {
+    const blob = new Blob(data, { type });
+    this.recordedUrl = URL.createObjectURL(blob);
+    this.restoreInteraction();
+    this.wavesurfer?.load(this.recordedUrl);
+  }
+
+  render(stream: MediaStream): () => void {
     if (!this.wavesurfer) return () => undefined;
 
     const container = this.wavesurfer.getWrapper();
@@ -35,12 +83,12 @@ class CustomRecordPlugin extends RecordPlugin {
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    let animationId, previousTimeStamp;
+    let animationId: number, previousTimeStamp: number;
     const DATA_SIZE = 128.0;
     const BUFFER_SIZE = 2 ** 8;
     const dataBuffer = new Array(BUFFER_SIZE).fill(DATA_SIZE);
 
-    const drawWaveform = (timeStamp) => {
+    const drawWaveform = (timeStamp: number) => {
       if (!canvasCtx) return;
 
       analyser.getByteTimeDomainData(dataArray);
@@ -75,7 +123,7 @@ class CustomRecordPlugin extends RecordPlugin {
       animationId = requestAnimationFrame(drawWaveform);
     };
 
-    drawWaveform();
+    drawWaveform(0);
 
     return () => {
       if (animationId) {
@@ -94,7 +142,17 @@ class CustomRecordPlugin extends RecordPlugin {
       canvas?.remove();
     };
   }
-  startRecording(stream) {
+
+  private cleanUp() {
+    this.stopRecording();
+    this.wavesurfer?.empty();
+    if (this.recordedUrl) {
+      URL.revokeObjectURL(this.recordedUrl);
+      this.recordedUrl = "";
+    }
+  }
+
+  public async startRecording(stream: MediaStream) {
     this.preventInteraction();
     this.cleanUp();
 
@@ -103,7 +161,7 @@ class CustomRecordPlugin extends RecordPlugin {
       mimeType: this.options.mimeType || findSupportedMimeType(),
       audioBitsPerSecond: this.options.audioBitsPerSecond,
     });
-    const recordedChunks = [];
+    const recordedChunks: Blob[] = [];
 
     mediaRecorder.addEventListener("dataavailable", (event) => {
       if (event.data.size > 0) {
@@ -123,6 +181,25 @@ class CustomRecordPlugin extends RecordPlugin {
 
     this.mediaRecorder = mediaRecorder;
   }
+
+  public isRecording(): boolean {
+    return this.mediaRecorder?.state === "recording";
+  }
+
+  public stopRecording() {
+    if (this.isRecording()) {
+      this.mediaRecorder?.stop();
+    }
+  }
+
+  public getRecordedUrl(): string {
+    return this.recordedUrl;
+  }
+
+  public destroy() {
+    super.destroy();
+    this.cleanUp();
+  }
 }
 
-export default CustomRecordPlugin;
+export default RecordPlugin;
