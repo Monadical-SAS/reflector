@@ -136,9 +136,7 @@ class TranscriptController:
         query = transcripts.select()
         if user_id is not None:
             query = query.where(transcripts.c.user_id == user_id)
-        print(query)
         results = await database.fetch_all(query)
-        print(results)
         return results
 
     async def get_by_id(

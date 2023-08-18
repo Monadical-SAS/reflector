@@ -1,7 +1,7 @@
+import httpx
 from reflector.llm.base import LLM
 from reflector.settings import settings
 from reflector.utils.retry import retry
-import httpx
 
 
 class BananaLLM(LLM):
@@ -13,18 +13,22 @@ class BananaLLM(LLM):
             "X-Banana-Model-Key": settings.LLM_BANANA_MODEL_KEY,
         }
 
-    async def _generate(self, prompt: str, **kwargs):
+    async def _generate(self, prompt: str, schema: dict | None, **kwargs):
+        json_payload = {"prompt": prompt}
+        if schema:
+            json_payload["schema"] = schema
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 settings.LLM_URL,
                 headers=self.headers,
-                json={"prompt": prompt},
+                json=json_payload,
                 timeout=self.timeout,
                 retry_timeout=300,  # as per their sdk
             )
             response.raise_for_status()
             text = response.json()["text"]
-            text = text[len(prompt) :]  # remove prompt
+            if not schema:
+                text = text[len(prompt) :]
             return text
 
 

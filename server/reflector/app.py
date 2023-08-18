@@ -1,15 +1,17 @@
+from contextlib import asynccontextmanager
+
+import reflector.auth  # noqa
+import reflector.db  # noqa
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_pagination import add_pagination
 from fastapi.routing import APIRoute
-import reflector.db  # noqa
-import reflector.auth  # noqa
-from reflector.views.rtc_offer import router as rtc_offer_router
-from reflector.views.transcripts import router as transcripts_router
-from reflector.events import subscribers_startup, subscribers_shutdown
+from fastapi_pagination import add_pagination
+from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.settings import settings
-from contextlib import asynccontextmanager
+from reflector.views.rtc_offer import router as rtc_offer_router
+from reflector.views.transcripts import router as transcripts_router
+from reflector.views.user import router as user_router
 
 try:
     import sentry_sdk
@@ -50,6 +52,7 @@ app.add_middleware(
 # register views
 app.include_router(rtc_offer_router)
 app.include_router(transcripts_router, prefix="/v1")
+app.include_router(user_router, prefix="/v1")
 add_pagination(app)
 
 
