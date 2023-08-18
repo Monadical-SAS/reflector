@@ -3,16 +3,17 @@
 # FIXME test websocket connection after RTC is finished still send the full events
 # FIXME try with locked session, RTC should not work
 
-import pytest
-import json
-from unittest.mock import patch
-from httpx import AsyncClient
-
-from uvicorn import Config, Server
-import threading
 import asyncio
+import json
+import threading
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+from httpx import AsyncClient
 from httpx_ws import aconnect_ws
+from reflector.app import app
+from uvicorn import Config, Server
 
 
 class ThreadedUvicorn:
@@ -60,7 +61,7 @@ async def dummy_llm():
     from reflector.llm.base import LLM
 
     class TestLLM(LLM):
-        async def _generate(self, prompt: str, **kwargs):
+        async def _generate(self, prompt: str, schema: dict | None, **kwargs):
             return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
