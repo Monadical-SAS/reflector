@@ -1,25 +1,28 @@
+from datetime import datetime
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import Annotated, Optional
+from uuid import uuid4
+
+import av
+import reflector.auth as auth
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     Request,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
-from starlette.concurrency import run_in_threadpool
-from pydantic import BaseModel, Field
-from uuid import uuid4
-from datetime import datetime
 from fastapi_pagination import Page, paginate
-from reflector.logger import logger
+from pydantic import BaseModel, Field
 from reflector.db import database, transcripts
+from reflector.logger import logger
 from reflector.settings import settings
-from .rtc_offer import rtc_offer_base, RtcOffer, PipelineEvent
-from typing import Optional
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-import av
+from starlette.concurrency import run_in_threadpool
 
+from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
 
 router = APIRouter()
 
@@ -60,6 +63,7 @@ class TranscriptEvent(BaseModel):
 
 class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
+    user_id: str | None = None
     name: str = Field(default_factory=generate_transcript_name)
     status: str = "idle"
     locked: bool = False
@@ -108,7 +112,9 @@ class Transcript(BaseModel):
             out.close()
 
             # move temporary file to final location
-            Path(tmp.name).rename(fn)
+            import shutil
+
+            shutil.move(tmp.name, fn.as_posix())
 
     def unlink(self):
         self.data_path.unlink(missing_ok=True)
@@ -127,20 +133,22 @@ class Transcript(BaseModel):
 
 
 class TranscriptController:
-    async def get_all(self) -> list[Transcript]:
-        query = transcripts.select()
+    async def get_all(self, user_id: str | None = None) -> list[Transcript]:
+        query = transcripts.select().where(transcripts.c.user_id == user_id)
         results = await database.fetch_all(query)
         return results
 
-    async def get_by_id(self, transcript_id: str) -> Transcript | None:
+    async def get_by_id(self, transcript_id: str, **kwargs) -> Transcript | None:
         query = transcripts.select().where(transcripts.c.id == transcript_id)
+        if "user_id" in kwargs:
+            query = query.where(transcripts.c.user_id == kwargs["user_id"])
         result = await database.fetch_one(query)
         if not result:
             return None
         return Transcript(**result)
 
-    async def add(self, name: str):
-        transcript = Transcript(name=name)
+    async def add(self, name: str, user_id: str | None = None):
+        transcript = Transcript(name=name, user_id=user_id)
         query = transcripts.insert().values(**transcript.model_dump())
         await database.execute(query)
         return transcript
@@ -155,9 +163,13 @@ class TranscriptController:
         for key, value in values.items():
             setattr(transcript, key, value)
 
-    async def remove_by_id(self, transcript_id: str) -> None:
-        transcript = await self.get_by_id(transcript_id)
+    async def remove_by_id(
+        self, transcript_id: str, user_id: str | None = None
+    ) -> None:
+        transcript = await self.get_by_id(transcript_id, user_id=user_id)
         if not transcript:
+            return
+        if user_id is not None and transcript.user_id != user_id:
             return
         transcript.unlink()
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
@@ -199,13 +211,23 @@ class DeletionStatus(BaseModel):
 
 
 @router.get("/transcripts", response_model=Page[GetTranscript])
-async def transcripts_list():
-    return paginate(await transcripts_controller.get_all())
+async def transcripts_list(
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    if not user and not settings.PUBLIC_MODE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user_id = user["sub"] if user else None
+    return paginate(await transcripts_controller.get_all(user_id=user_id))
 
 
 @router.post("/transcripts", response_model=GetTranscript)
-async def transcripts_create(info: CreateTranscript):
-    return await transcripts_controller.add(info.name)
+async def transcripts_create(
+    info: CreateTranscript,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    return await transcripts_controller.add(info.name, user_id=user_id)
 
 
 # ==============================================================
@@ -214,16 +236,25 @@ async def transcripts_create(info: CreateTranscript):
 
 
 @router.get("/transcripts/{transcript_id}", response_model=GetTranscript)
-async def transcript_get(transcript_id: str):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_get(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     return transcript
 
 
 @router.patch("/transcripts/{transcript_id}", response_model=GetTranscript)
-async def transcript_update(transcript_id: str, info: UpdateTranscript):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_update(
+    transcript_id: str,
+    info: UpdateTranscript,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     values = {}
@@ -236,17 +267,25 @@ async def transcript_update(transcript_id: str, info: UpdateTranscript):
 
 
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)
-async def transcript_delete(transcript_id: str):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_delete(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    await transcripts_controller.remove_by_id(transcript.id)
+    await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
     return DeletionStatus(status="ok")
 
 
 @router.get("/transcripts/{transcript_id}/audio")
-async def transcript_get_audio(transcript_id: str):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_get_audio(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -257,8 +296,12 @@ async def transcript_get_audio(transcript_id: str):
 
 
 @router.get("/transcripts/{transcript_id}/audio/mp3")
-async def transcript_get_audio_mp3(transcript_id: str):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_get_audio_mp3(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -271,8 +314,12 @@ async def transcript_get_audio_mp3(transcript_id: str):
 
 
 @router.get("/transcripts/{transcript_id}/topics", response_model=list[TranscriptTopic])
-async def transcript_get_topics(transcript_id: str):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_get_topics(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     return transcript.topics
@@ -319,7 +366,12 @@ ws_manager = WebsocketManager()
 
 
 @router.websocket("/transcripts/{transcript_id}/events")
-async def transcript_events_websocket(transcript_id: str, websocket: WebSocket):
+async def transcript_events_websocket(
+    transcript_id: str,
+    websocket: WebSocket,
+    # user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    # user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
@@ -420,9 +472,13 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
 
 @router.post("/transcripts/{transcript_id}/record/webrtc")
 async def transcript_record_webrtc(
-    transcript_id: str, params: RtcOffer, request: Request
+    transcript_id: str,
+    params: RtcOffer,
+    request: Request,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 

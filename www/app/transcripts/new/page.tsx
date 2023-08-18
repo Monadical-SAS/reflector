@@ -6,11 +6,12 @@ import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
 import "../../styles/button.css";
+import { Topic } from "../webSocketTypes";
 
 const App = () => {
-  const [stream, setStream] = useState(null);
-  const [disconnected, setDisconnected] = useState(false);
-  const useActiveTopic = useState(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [disconnected, setDisconnected] = useState<boolean>(false);
+  const useActiveTopic = useState<Topic | null>(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -27,12 +28,7 @@ const App = () => {
   const webSockets = useWebSockets(transcript.response?.id);
 
   return (
-    <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
-      <div className="h-[13svh] flex flex-col justify-center items-center">
-        <h1 className="text-5xl font-bold text-blue-500">Reflector</h1>
-        <p className="text-gray-500">Capture The Signal, Not The Noise</p>
-      </div>
-
+    <>
       <Recorder
         setStream={setStream}
         onStop={() => {
@@ -49,11 +45,10 @@ const App = () => {
         transcriptionText={webSockets.transcriptText}
         finalSummary={webSockets.finalSummary}
         topics={webSockets.topics}
-        stream={stream}
         disconnected={disconnected}
         useActiveTopic={useActiveTopic}
       />
-    </div>
+    </>
   );
 };
 

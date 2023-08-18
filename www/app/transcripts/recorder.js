@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
-import CustomRecordPlugin from "./custom-plugins/record";
-import CustomRegionsPlugin from "./custom-plugins/regions";
+import CustomRecordPlugin from "../lib/custom-plugins/record";
+import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";

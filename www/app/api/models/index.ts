@@ -8,4 +8,5 @@ export * from "./PageGetTranscript";
 export * from "./RtcOffer";
 export * from "./TranscriptTopic";
 export * from "./UpdateTranscript";
+export * from "./UserInfo";
 export * from "./ValidationError";
