@@ -1,19 +1,22 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
-import CustomRecordPlugin from "../lib/custom-plugins/record";
+import RecordPlugin from "../lib/custom-plugins/record";
 import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
-import Dropdown from "react-dropdown";
+import Dropdown, { Option } from "react-dropdown";
 import "react-dropdown/style.css";
 
 import { formatTime } from "../lib/time";
 
-const AudioInputsDropdown = (props) => {
-  const [ddOptions, setDdOptions] = useState([]);
+const AudioInputsDropdown: React.FC<{
+  setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
+  disabled: boolean;
+}> = (props) => {
+  const [ddOptions, setDdOptions] = useState<Array<Option>>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -35,8 +38,8 @@ const AudioInputsDropdown = (props) => {
     init();
   }, []);
 
-  const handleDropdownChange = (e) => {
-    props.setDeviceId(e.value);
+  const handleDropdownChange = (option: Option) => {
+    props.setDeviceId(option.value);
   };
 
   return (
@@ -49,24 +52,27 @@ const AudioInputsDropdown = (props) => {
   );
 };
 
-export default function Recorder(props) {
+export default function Recorder(props: any) {
   const waveformRef = useRef();
-  const [wavesurfer, setWavesurfer] = useState(null);
-  const [record, setRecord] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [deviceId, setDeviceId] = useState(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [timeInterval, setTimeInterval] = useState(null);
-  const [duration, setDuration] = useState(0);
-  const [waveRegions, setWaveRegions] = useState(null);
+  const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
+  const [record, setRecord] = useState<RecordPlugin | null>(null);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [timeInterval, setTimeInterval] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number>(0);
+  const [waveRegions, setWaveRegions] = useState<CustomRegionsPlugin | null>(
+    null,
+  );
 
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
 
   const topicsRef = useRef(props.topics);
 
   useEffect(() => {
-    document.getElementById("play-btn").disabled = true;
+    const playBtn = document.getElementById("play-btn");
+    if (playBtn) playBtn.setAttribute("disabled", "true");
 
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
@@ -92,7 +98,7 @@ export default function Recorder(props) {
       });
       _wavesurfer.on("timeupdate", setCurrentTime);
 
-      setRecord(_wavesurfer.registerPlugin(CustomRecordPlugin.create()));
+      setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
       setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
 
       setWavesurfer(_wavesurfer);
@@ -115,7 +121,9 @@ export default function Recorder(props) {
     waveRegions.clearRegions();
     for (let topic of topicsRef.current) {
       const content = document.createElement("div");
-      content.style = `
+      content.setAttribute(
+        "style",
+        `
         position: absolute;
         border-left: solid 1px orange;
         padding: 0 2px 0 5px;
@@ -129,15 +137,16 @@ export default function Recorder(props) {
         overflow: hidden;
         text-overflow: ellipsis;
         transition: width 100ms linear;
-      `;
+      `,
+      );
       content.onmouseover = () => {
         content.style.backgroundColor = "orange";
-        content.style.zIndex = 999;
+        content.style.zIndex = "999";
         content.style.width = "300px";
       };
       content.onmouseout = () => {
         content.style.backgroundColor = "white";
-        content.style.zIndex = 0;
+        content.style.zIndex = "0";
         content.style.width = "100px";
       };
       content.textContent = topic.title;
@@ -151,7 +160,7 @@ export default function Recorder(props) {
       region.on("click", (e) => {
         e.stopPropagation();
         setActiveTopic(topic);
-        wavesurfer.setTime(region.start);
+        wavesurfer?.setTime(region.start);
       });
     }
   };
@@ -160,8 +169,10 @@ export default function Recorder(props) {
     if (record) {
       return record.on("stopRecording", () => {
         const link = document.getElementById("download-recording");
-        link.href = record.getRecordedUrl();
-        link.download = "reflector-recording.webm";
+        if (!link) return;
+
+        link.setAttribute("href", record.getRecordedUrl());
+        link.setAttribute("download", "reflector-recording.webm");
         link.style.visibility = "visible";
         renderMarkers();
       });
@@ -170,13 +181,13 @@ export default function Recorder(props) {
 
   useEffect(() => {
     if (isRecording) {
-      const interval = setInterval(() => {
+      const interval = window.setInterval(() => {
         setCurrentTime((prev) => prev + 1);
       }, 1000);
       setTimeInterval(interval);
       return () => clearInterval(interval);
     } else {
-      clearInterval(timeInterval);
+      clearInterval(timeInterval as number);
       setCurrentTime((prev) => {
         setDuration(prev);
         return 0;
@@ -186,7 +197,7 @@ export default function Recorder(props) {
 
   useEffect(() => {
     if (activeTopic) {
-      wavesurfer.setTime(activeTopic.timestamp);
+      wavesurfer?.setTime(activeTopic.timestamp);
     }
   }, [activeTopic]);
 
@@ -197,11 +208,12 @@ export default function Recorder(props) {
       props.onStop();
       record.stopRecording();
       setIsRecording(false);
-      document.getElementById("play-btn").disabled = false;
+      const playBtn = document.getElementById("play-btn");
+      if (playBtn) playBtn.removeAttribute("disabled");
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          deviceId,
+          deviceId: deviceId as string,
           noiseSuppression: false,
           echoCancellation: false,
         },
