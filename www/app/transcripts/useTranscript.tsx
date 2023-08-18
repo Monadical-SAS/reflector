@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
 import { GetTranscript } from "../api";
+import getApi from "../lib/getApi";
 
 type UseTranscript = {
   response: GetTranscript | null;
@@ -15,10 +16,7 @@ const useTranscript = (): UseTranscript => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const apiConfiguration = new Configuration({
-    basePath: process.env.NEXT_PUBLIC_API_URL,
-  });
-  const api = new DefaultApi(apiConfiguration);
+  const api = getApi();
 
   const createTranscript = () => {
     setLoading(true);

@@ -5,6 +5,7 @@ import {
   V1TranscriptRecordWebrtcRequest,
 } from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
+import getApi from "../lib/getApi";
 
 const useWebRTC = (
   stream: MediaStream | null,
@@ -17,10 +18,7 @@ const useWebRTC = (
       return;
     }
 
-    const apiConfiguration = new Configuration({
-      basePath: process.env.NEXT_PUBLIC_API_URL,
-    });
-    const api = new DefaultApi(apiConfiguration);
+    const api = getApi();
 
     let p: Peer = new Peer({ initiator: true, stream: stream });
 

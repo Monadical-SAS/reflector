@@ -26,12 +26,7 @@ const App = () => {
   const webSockets = useWebSockets(transcript.response?.id);
 
   return (
-    <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
-      <div className="h-[13svh] flex flex-col justify-center items-center">
-        <h1 className="text-5xl font-bold text-blue-500">Reflector</h1>
-        <p className="text-gray-500">Capture The Signal, Not The Noise</p>
-      </div>
-
+    <>
       <Recorder
         setStream={setStream}
         onStop={() => {
@@ -48,7 +43,7 @@ const App = () => {
         topics={webSockets.topics}
         disconnected={disconnected}
       />
-    </div>
+    </>
   );
 };
 

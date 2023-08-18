@@ -9,6 +9,7 @@ models/PageGetTranscript.ts
 models/RtcOffer.ts
 models/TranscriptTopic.ts
 models/UpdateTranscript.ts
+models/UserInfo.ts
 models/ValidationError.ts
 models/index.ts
 runtime.ts
