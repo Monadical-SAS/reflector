@@ -87,5 +87,9 @@ class Settings(BaseSettings):
     AUTH_FIEF_CLIENT_ID: str | None = None
     AUTH_FIEF_CLIENT_SECRET: str | None = None
 
+    # API public mode
+    # if set, all anonymous record will be public
+    PUBLIC_MODE: bool = False
+
 
 settings = Settings()

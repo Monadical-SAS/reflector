@@ -214,12 +214,13 @@ class DeletionStatus(BaseModel):
 
 @router.get("/transcripts", response_model=Page[GetTranscript])
 async def transcripts_list(
-    user: auth.UserInfo = Depends(auth.current_user),
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    if not user:
+    if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    return paginate(await transcripts_controller.get_all(user_id=user["sub"]))
+    user_id = user["sub"] if user else None
+    return paginate(await transcripts_controller.get_all(user_id=user_id))
 
 
 @router.post("/transcripts", response_model=GetTranscript)
@@ -367,8 +368,13 @@ ws_manager = WebsocketManager()
 
 
 @router.websocket("/transcripts/{transcript_id}/events")
-async def transcript_events_websocket(transcript_id: str, websocket: WebSocket):
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+async def transcript_events_websocket(
+    transcript_id: str,
+    websocket: WebSocket,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 

@@ -49,10 +49,20 @@ async def test_transcripts_list_anonymous():
     # XXX this test is a bit fragile, as it depends on the storage which
     #     is shared between tests
     from reflector.app import app
+    from reflector.settings import settings
 
     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
         response = await ac.get("/transcripts")
         assert response.status_code == 401
+
+    # if public mode, it should be allowed
+    try:
+        settings.PUBLIC_MODE = True
+        async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+            response = await ac.get("/transcripts")
+            assert response.status_code == 200
+    finally:
+        settings.PUBLIC_MODE = False
 
 
 @pytest.fixture
