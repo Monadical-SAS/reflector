@@ -1,7 +1,8 @@
-from pydantic import BaseModel, PrivateAttr
-from pathlib import Path
-import tempfile
 import io
+import tempfile
+from pathlib import Path
+
+from pydantic import BaseModel, PrivateAttr
 
 
 class AudioFile(BaseModel):
@@ -104,3 +105,117 @@ class TitleSummary(BaseModel):
 class FinalSummary(BaseModel):
     summary: str
     duration: float
+
+
+class TranslationLanguages(BaseModel):
+    language_to_id_mapping: dict = {
+        "Afrikaans": "af",
+        "Albanian": "sq",
+        "Amharic": "am",
+        "Arabic": "ar",
+        "Armenian": "hy",
+        "Asturian": "ast",
+        "Azerbaijani": "az",
+        "Bashkir": "ba",
+        "Belarusian": "be",
+        "Bengali": "bn",
+        "Bosnian": "bs",
+        "Breton": "br",
+        "Bulgarian": "bg",
+        "Burmese": "my",
+        "Catalan; Valencian": "ca",
+        "Cebuano": "ceb",
+        "Central Khmer": "km",
+        "Chinese": "zh",
+        "Croatian": "hr",
+        "Czech": "cs",
+        "Danish": "da",
+        "Dutch; Flemish": "nl",
+        "English": "en",
+        "Estonian": "et",
+        "Finnish": "fi",
+        "French": "fr",
+        "Fulah": "ff",
+        "Gaelic; Scottish Gaelic": "gd",
+        "Galician": "gl",
+        "Ganda": "lg",
+        "Georgian": "ka",
+        "German": "de",
+        "Greeek": "el",
+        "Gujarati": "gu",
+        "Haitian; Haitian Creole": "ht",
+        "Hausa": "ha",
+        "Hebrew": "he",
+        "Hindi": "hi",
+        "Hungarian": "hu",
+        "Icelandic": "is",
+        "Igbo": "ig",
+        "Iloko": "ilo",
+        "Indonesian": "id",
+        "Irish": "ga",
+        "Italian": "it",
+        "Japanese": "ja",
+        "Javanese": "jv",
+        "Kannada": "kn",
+        "Kazakh": "kk",
+        "Korean": "ko",
+        "Lao": "lo",
+        "Latvian": "lv",
+        "Lingala": "ln",
+        "Lithuanian": "lt",
+        "Luxembourgish; Letzeburgesch": "lb",
+        "Macedonian": "mk",
+        "Malagasy": "mg",
+        "Malay": "ms",
+        "Malayalam": "ml",
+        "Marathi": "mr",
+        "Mongolian": "mn",
+        "Nepali": "ne",
+        "Northern Sotho": "ns",
+        "Norwegian": "no",
+        "Occitan": "oc",
+        "Oriya": "or",
+        "Panjabi; Punjabi": "pa",
+        "Persian": "fa",
+        "Polish": "pl",
+        "Portuguese": "pt",
+        "Pushto; Pashto": "ps",
+        "Romanian; Moldavian; Moldovan": "ro",
+        "Russian": "ru",
+        "Serbian": "sr",
+        "Sindhi": "sd",
+        "Sinhala; Sinhalese": "si",
+        "Slovak": "sk",
+        "Slovenian": "sl",
+        "Somali": "so",
+        "Spanish": "es",
+        "Sundanese": "su",
+        "Swahili": "sw",
+        "Swati": "ss",
+        "Swedish": "sv",
+        "Tagalog": "tl",
+        "Tamil": "ta",
+        "Thai": "th",
+        "Tswana": "tn",
+        "Turkish": "tr",
+        "Ukrainian": "uk",
+        "Urdu": "ur",
+        "Uzbek": "uz",
+        "Vietnamese": "vi",
+        "Welsh": "cy",
+        "Western Frisian": "fy",
+        "Wolof": "wo",
+        "Xhosa": "xh",
+        "Yiddish": "yi",
+        "Yoruba": "yo",
+        "Zulu": "zu",
+    }
+
+    @property
+    def supported_languages(self):
+        return self.language_to_id_mapping.values()
+
+    def is_supported(self, lang_id: str) -> bool:
+        if lang_id in self.supported_languages:
+            return True
+        return False
