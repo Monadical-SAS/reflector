@@ -11,13 +11,15 @@ API will be a POST request to TRANSCRIPT_URL:
 
 """
 
+from time import monotonic
+
+import httpx
+
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
-from reflector.processors.types import AudioFile, Transcript, Word
+from reflector.processors.types import AudioFile, Transcript, TranslationLanguages, Word
 from reflector.settings import settings
 from reflector.utils.retry import retry
-from time import monotonic
-import httpx
 
 
 class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
@@ -28,6 +30,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.timeout = settings.TRANSCRIPT_TIMEOUT
         self.headers = {
             "Authorization": f"Bearer {modal_api_key}",
+            # "Content-Type": "multipart/form-data"
         }
 
     async def _warmup(self):
@@ -52,11 +55,28 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             files = {
                 "file": (data.name, data.fd),
             }
+            # TODO: Get the source / target language from the UI preferences dynamically
+            # like context, session objects
+            source_language = "en"
+            target_language = "fr"
+            languages = TranslationLanguages()
+
+            # Only way to set the target should be the UI element like dropdown.
+            # Hence, this assert should never fail.
+            assert languages.is_supported(target_language)
+            data = {
+                "source_language": source_language,
+                "target_language": target_language,
+            }
+
+            print("TRYING TO TRANSCRIBE")
+
             response = await retry(client.post)(
                 self.transcript_url,
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
+                # data=data
             )
 
             self.logger.debug(
@@ -64,8 +84,14 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             )
             response.raise_for_status()
             result = response.json()
+
+            # Sanity check for translation status in result
+            if "target_language" in result["text"]:
+                text = result["text"]["target_language"]
+            else:
+                text = result["text"]["en"]
             transcript = Transcript(
-                text=result["text"],
+                text=text,
                 words=[
                     Word(
                         text=word["text"],
