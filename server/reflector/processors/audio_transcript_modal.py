@@ -29,10 +29,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.transcript_url = settings.TRANSCRIPT_URL + "/transcribe"
         self.warmup_url = settings.TRANSCRIPT_URL + "/warmup"
         self.timeout = settings.TRANSCRIPT_TIMEOUT
-        self.headers = {
-            "Authorization": f"Bearer {modal_api_key}",
-            # "Content-Type": "multipart/form-data"
-        }
+        self.headers = {"Authorization": f"Bearer {modal_api_key}"}
 
     async def _warmup(self):
         try:
@@ -90,7 +87,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             if target_language in result["text"]:
                 text = result["text"][target_language]
             else:
-                text = result["text"]["en"]
+                text = result["text"][source_language]
             transcript = Transcript(
                 text=text,
                 words=[
