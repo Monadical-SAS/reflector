@@ -99,13 +99,13 @@ class Whisper:
             )
 
             multilingual_transcript = {}
-            transcript_en = ""
+            transcript_source_lang = ""
             words = []
             if segments:
                 segments = list(segments)
 
                 for segment in segments:
-                    transcript_en += segment.text
+                    transcript_source_lang += segment.text
                     for word in segment.words:
                         words.append(
                             {
@@ -115,12 +115,12 @@ class Whisper:
                             }
                         )
 
-            multilingual_transcript["en"] = transcript_en
+            multilingual_transcript[source_language] = transcript_source_lang
 
-            if target_language != "en":
+            if target_language != source_language:
                 self.translation_tokenizer.src_lang = source_language
                 forced_bos_token_id = self.translation_tokenizer.get_lang_id(target_language)
-                encoded_transcript = self.translation_tokenizer(transcript_en, return_tensors="pt").to(self.device)
+                encoded_transcript = self.translation_tokenizer(transcript_source_lang, return_tensors="pt").to(self.device)
                 generated_tokens = self.translation_model.generate(
                         **encoded_transcript,
                         forced_bos_token_id=forced_bos_token_id
