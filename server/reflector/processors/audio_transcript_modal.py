@@ -5,19 +5,22 @@ API will be a POST request to TRANSCRIPT_URL:
 
 ```form
 "timestamp": 123.456
-"language": "en"
+"source_language": "en"
+"target_language": "en"
 "file": <audio file>
 ```
 
 """
 
+from time import monotonic
+
+import httpx
+
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
-from reflector.processors.types import AudioFile, Transcript, Word
+from reflector.processors.types import AudioFile, Transcript, TranslationLanguages, Word
 from reflector.settings import settings
 from reflector.utils.retry import retry
-from time import monotonic
-import httpx
 
 
 class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
@@ -26,9 +29,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.transcript_url = settings.TRANSCRIPT_URL + "/transcribe"
         self.warmup_url = settings.TRANSCRIPT_URL + "/warmup"
         self.timeout = settings.TRANSCRIPT_TIMEOUT
-        self.headers = {
-            "Authorization": f"Bearer {modal_api_key}",
-        }
+        self.headers = {"Authorization": f"Bearer {modal_api_key}"}
 
     async def _warmup(self):
         try:
@@ -52,11 +53,28 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             files = {
                 "file": (data.name, data.fd),
             }
+
+            # TODO: Get the source / target language from the UI preferences dynamically
+            # Update code here once this is possible.
+            # i.e) extract from context/session objects
+            source_language = "en"
+            target_language = "en"
+            languages = TranslationLanguages()
+
+            # Only way to set the target should be the UI element like dropdown.
+            # Hence, this assert should never fail.
+            assert languages.is_supported(target_language)
+            json_payload = {
+                "source_language": source_language,
+                "target_language": target_language,
+            }
+
             response = await retry(client.post)(
                 self.transcript_url,
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
+                json=json_payload,
             )
 
             self.logger.debug(
@@ -64,8 +82,14 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             )
             response.raise_for_status()
             result = response.json()
+
+            # Sanity check for translation status in the result
+            if target_language in result["text"]:
+                text = result["text"][target_language]
+            else:
+                text = result["text"][source_language]
             transcript = Transcript(
-                text=result["text"],
+                text=text,
                 words=[
                     Word(
                         text=word["text"],
