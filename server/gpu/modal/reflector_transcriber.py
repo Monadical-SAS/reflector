@@ -10,7 +10,7 @@ from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
 
 # Whisper
-WHISPER_MODEL: str = "tiny"
+WHISPER_MODEL: str = "large-v2"
 WHISPER_COMPUTE_TYPE: str = "float16"
 WHISPER_NUM_WORKERS: int = 1
 WHISPER_CACHE_DIR: str = "/cache/whisper"
@@ -18,7 +18,7 @@ WHISPER_CACHE_DIR: str = "/cache/whisper"
 # Translation Model
 TRANSLATION_MODEL = "facebook/m2m100_418M"
 
-stub = Stub(name="reflector-translator")
+stub = Stub(name="reflector-transcriber")
 
 
 def download_whisper():
@@ -82,9 +82,9 @@ class Whisper:
         self,
         audio_data: str,
         audio_suffix: str,
-        timestamp: float = 0,
-        source_language: str = "en",
-        target_language: str = "fr"
+        source_language: str,
+        target_language: str,
+        timestamp: float = 0
     ):
         with tempfile.NamedTemporaryFile("wb+", suffix=f".{audio_suffix}") as fp:
             fp.write(audio_data)
@@ -126,7 +126,8 @@ class Whisper:
                         forced_bos_token_id=forced_bos_token_id
                 )
                 result = self.translation_tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-                multilingual_transcript[target_language] = result[0].strip()
+                translation = result[0].strip()
+                multilingual_transcript[target_language] = translation
 
             return {
                 "text": multilingual_transcript,
@@ -167,29 +168,26 @@ def web():
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    class TranscriptionRequest(BaseModel):
-        file: UploadFile
-        timestamp: Annotated[float, Form()] = 0
-        source_language: Annotated[str, Form()] = "en"
-        target_language: Annotated[str, Form()] = "en"
-
     class TranscriptResponse(BaseModel):
         result: dict
 
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     async def transcribe(
-            req
-    ):
-        print(req)
-        audio_data = await req.file.read()
-        audio_suffix = req.file.filename.split(".")[-1]
+        file: UploadFile,
+        timestamp: Annotated[float, Form()] = 0,
+        source_language: Annotated[str, Form()] = "en",
+        target_language: Annotated[str, Form()] = "en"
+    ) -> TranscriptResponse:
+        audio_data = await file.read()
+        audio_suffix = file.filename.split(".")[-1]
         assert audio_suffix in supported_audio_file_types
 
         func = transcriberstub.transcribe_segment.spawn(
             audio_data=audio_data,
             audio_suffix=audio_suffix,
-            source_language="en",
-            timestamp=req.timestamp
+            source_language=source_language,
+            target_language=target_language,
+            timestamp=timestamp
         )
         result = func.get()
         return result
