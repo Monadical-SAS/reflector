@@ -185,6 +185,44 @@ def web():
         result = func.get()
         return result
 
+    class LLMTitleRequest(BaseModel):
+        prompt: str
+        text: str
+        schema: Optional[dict] = None
+
+    @app.post("/title", dependencies=[Depends(apikey_auth)])
+    async def llm(
+            req: LLMTitleRequest,
+    ):
+        if req.schema:
+            func = llmstub.generate.spawn(prompt=req.prompt,
+                                          text=req.text,
+                                          schema=json.dumps(req.schema))
+        else:
+            func = llmstub.generate.spawn(prompt=req.prompt,
+                                          text=req.text)
+        result = func.get()
+        return result
+
+    class LLMSummaryRequest(BaseModel):
+        prompt: str
+        text: str
+        schema: Optional[dict] = None
+
+    @app.post("/summary", dependencies=[Depends(apikey_auth)])
+    async def llm(
+            req: LLMSummaryRequest,
+    ):
+        if req.schema:
+            func = llmstub.generate.spawn(prompt=req.prompt,
+                                          text=req.text,
+                                          schema=json.dumps(req.schema))
+        else:
+            func = llmstub.generate.spawn(prompt=req.prompt,
+                                          text=req.text)
+        result = func.get()
+        return result
+
     @app.post("/warmup", dependencies=[Depends(apikey_auth)])
     async def warmup():
         return llmstub.warmup.spawn().get()
