@@ -5,7 +5,8 @@ API will be a POST request to TRANSCRIPT_URL:
 
 ```form
 "timestamp": 123.456
-"language": "en"
+"source_language": "en"
+"target_language": "en"
 "file": <audio file>
 ```
 
@@ -76,7 +77,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
-                json=json_payload.values(),
+                json=json_payload,
             )
 
             self.logger.debug(
