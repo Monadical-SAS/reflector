@@ -55,28 +55,28 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             files = {
                 "file": (data.name, data.fd),
             }
+
             # TODO: Get the source / target language from the UI preferences dynamically
-            # like context, session objects
+            # Update code here once this is possible.
+            # i.e) extract from context/session objects
             source_language = "en"
-            target_language = "fr"
+            target_language = "en"
             languages = TranslationLanguages()
 
             # Only way to set the target should be the UI element like dropdown.
             # Hence, this assert should never fail.
             assert languages.is_supported(target_language)
-            data = {
+            json_payload = {
                 "source_language": source_language,
                 "target_language": target_language,
             }
-
-            print("TRYING TO TRANSCRIBE")
 
             response = await retry(client.post)(
                 self.transcript_url,
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
-                # data=data
+                json=json_payload.values(),
             )
 
             self.logger.debug(
@@ -85,9 +85,9 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             response.raise_for_status()
             result = response.json()
 
-            # Sanity check for translation status in result
-            if "target_language" in result["text"]:
-                text = result["text"]["target_language"]
+            # Sanity check for translation status in the result
+            if target_language in result["text"]:
+                text = result["text"][target_language]
             else:
                 text = result["text"]["en"]
             transcript = Transcript(
