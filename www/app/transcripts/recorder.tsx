@@ -1,18 +1,22 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
+import RecordPlugin from "../lib/custom-plugins/record";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
-import Dropdown from "react-dropdown";
+import Dropdown, { Option } from "react-dropdown";
 import "react-dropdown/style.css";
 
-import CustomRecordPlugin from "../lib/CustomRecordPlugin";
 import { formatTime } from "../lib/time";
 
-const AudioInputsDropdown = (props) => {
-  const [ddOptions, setDdOptions] = useState([]);
+const AudioInputsDropdown = (props: {
+  audioDevices: Option[];
+  setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
+  disabled: boolean;
+}) => {
+  const [ddOptions, setDdOptions] = useState<Option[]>([]);
 
   useEffect(() => {
     setDdOptions(props.audioDevices);
@@ -21,8 +25,8 @@ const AudioInputsDropdown = (props) => {
     );
   }, [props.audioDevices]);
 
-  const handleDropdownChange = (e) => {
-    props.setDeviceId(e.value);
+  const handleDropdownChange = (option: Option) => {
+    props.setDeviceId(option.value);
   };
 
   return (
@@ -36,18 +40,19 @@ const AudioInputsDropdown = (props) => {
 };
 
 export default function Recorder(props) {
-  const waveformRef = useRef();
-  const [wavesurfer, setWavesurfer] = useState(null);
-  const [record, setRecord] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [deviceId, setDeviceId] = useState(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [timeInterval, setTimeInterval] = useState(null);
-  const [duration, setDuration] = useState(0);
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
+  const [record, setRecord] = useState<RecordPlugin | null>(null);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [timeInterval, setTimeInterval] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number>(0);
 
   useEffect(() => {
-    document.getElementById("play-btn").disabled = true;
+    const playBtn = document.getElementById("play-btn");
+    if (playBtn) playBtn.setAttribute("disabled", "true");
 
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
@@ -72,7 +77,7 @@ export default function Recorder(props) {
       });
       _wavesurfer.on("timeupdate", setCurrentTime);
 
-      setRecord(_wavesurfer.registerPlugin(CustomRecordPlugin.create()));
+      setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
       setWavesurfer(_wavesurfer);
       return () => {
         _wavesurfer.destroy();
@@ -86,8 +91,10 @@ export default function Recorder(props) {
     if (record) {
       return record.on("stopRecording", () => {
         const link = document.getElementById("download-recording");
-        link.href = record.getRecordedUrl();
-        link.download = "reflector-recording.webm";
+        if (!link) return;
+
+        link.setAttribute("href", record.getRecordedUrl());
+        link.setAttribute("download", "reflector-recording.webm");
         link.style.visibility = "visible";
       });
     }
@@ -95,13 +102,13 @@ export default function Recorder(props) {
 
   useEffect(() => {
     if (isRecording) {
-      const interval = setInterval(() => {
+      const interval = window.setInterval(() => {
         setCurrentTime((prev) => prev + 1);
       }, 1000);
       setTimeInterval(interval);
       return () => clearInterval(interval);
     } else {
-      clearInterval(timeInterval);
+      clearInterval(timeInterval as number);
       setCurrentTime((prev) => {
         setDuration(prev);
         return 0;
@@ -116,7 +123,8 @@ export default function Recorder(props) {
       props.onStop();
       record.stopRecording();
       setIsRecording(false);
-      document.getElementById("play-btn").disabled = false;
+      const playBtn = document.getElementById("play-btn");
+      if (playBtn) playBtn.removeAttribute("disabled");
     } else {
       const stream = await props.getAudioStream(deviceId);
       props.setStream(stream);
@@ -133,9 +141,8 @@ export default function Recorder(props) {
 
   const timeLabel = () => {
     if (isRecording) return formatTime(currentTime);
-    else if (duration)
-      return `${formatTime(currentTime)}/${formatTime(duration)}`;
-    else "";
+    if (duration) return `${formatTime(currentTime)}/${formatTime(duration)}`;
+    return "";
   };
 
   return (
