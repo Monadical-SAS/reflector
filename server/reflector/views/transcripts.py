@@ -190,6 +190,7 @@ class GetTranscript(BaseModel):
     status: str
     locked: bool
     duration: int
+    summary: str | None
     created_at: datetime
 
 
@@ -200,6 +201,7 @@ class CreateTranscript(BaseModel):
 class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
+    summary: Optional[str] = Field(None)
 
 
 class TranscriptEntryCreate(BaseModel):
@@ -262,6 +264,15 @@ async def transcript_update(
         values["name"] = info.name
     if info.locked is not None:
         values["locked"] = info.locked
+    if info.summary is not None:
+        values["summary"] = info.summary
+        # also find FINAL_SUMMARY event and patch it
+        for te in transcript.events:
+            if te["event"] == PipelineEvent.FINAL_SUMMARY:
+                te["summary"] = info.summary
+                break
+        values["events"] = transcript.events
+
     await transcripts_controller.update(transcript, values)
     return transcript
 
