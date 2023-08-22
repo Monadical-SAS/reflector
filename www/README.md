@@ -79,7 +79,7 @@ This data is then returned from the `useWebRTC` hook and can be used in your com
 To generate the TypeScript files from the openapi.json file, make sure the python server is running, then run:
 
 ```
-openapi-generator-cli generate -i http://localhost:1250/openapi.json -g typescript-fetch -o app/api
+yarn openapi
 ```
 
 You may need to run `yarn global add @openapitools/openapi-generator-cli` first. You also need a Java runtime installed on your machine.

@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, banana, modal, oobagooda
-    LLM_BACKEND: str = "oobagooda"
+    # available backend: openai, banana, modal, oobabooga
+    LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
     LLM_URL: str | None = None
@@ -78,6 +78,18 @@ class Settings(BaseSettings):
 
     # Sentry
     SENTRY_DSN: str | None = None
+
+    # User authentication (none, fief)
+    AUTH_BACKEND: str = "none"
+
+    # User authentication using fief
+    AUTH_FIEF_URL: str | None = None
+    AUTH_FIEF_CLIENT_ID: str | None = None
+    AUTH_FIEF_CLIENT_SECRET: str | None = None
+
+    # API public mode
+    # if set, all anonymous record will be public
+    PUBLIC_MODE: bool = False
 
 
 settings = Settings()

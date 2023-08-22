@@ -7,10 +7,11 @@ import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
 import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
+import getApi from "../../lib/getApi";
 
 const App = () => {
-  const [stream, setStream] = useState(null);
-  const [disconnected, setDisconnected] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [disconnected, setDisconnected] = useState<boolean>(false);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -22,8 +23,9 @@ const App = () => {
     }
   }, []);
 
+  const api = getApi();
   const transcript = useTranscript();
-  const webRTC = useWebRTC(stream, transcript.response?.id);
+  const webRTC = useWebRTC(stream, transcript.response?.id, api);
   const webSockets = useWebSockets(transcript.response?.id);
   const {
     loading,
@@ -56,7 +58,6 @@ const App = () => {
             transcriptionText={webSockets.transcriptText}
             finalSummary={webSockets.finalSummary}
             topics={webSockets.topics}
-            stream={stream}
             disconnected={disconnected}
           />
         </>
