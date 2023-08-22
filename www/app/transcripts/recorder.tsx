@@ -53,7 +53,7 @@ const AudioInputsDropdown: React.FC<{
 };
 
 export default function Recorder(props: any) {
-  const waveformRef = useRef();
+  const waveformRef = useRef<HTMLDivElement>(null);
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
