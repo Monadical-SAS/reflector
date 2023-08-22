@@ -17,12 +17,11 @@ LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/model"
 
-stub = Stub(name="reflector-llm")
+stub = Stub(name="reflector-test")
 
 
 def download_llm():
     from huggingface_hub import snapshot_download
-
     print("Downloading LLM model")
     snapshot_download(LLM_MODEL, local_dir=IMAGE_MODEL_DIR)
     print("LLM model downloaded")
@@ -36,7 +35,6 @@ def migrate_cache_llm():
     `transformers.utils.move_cache()`.
     """
     from transformers.utils.hub import move_cache
-
     print("Moving LLM cache")
     move_cache()
     print("LLM cache moved")
@@ -96,6 +94,9 @@ class LLM:
         print("Instance llm tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL)
 
+        print("Downloading NLTK model")
+        nltk.download('punkt')
+
         # move model to gpu
         print("Move llm model to GPU")
         model = model.cuda()
@@ -103,9 +104,20 @@ class LLM:
         print("Warmup llm done")
         self.model = model
         self.tokenizer = tokenizer
-        self.base_gen_cfg = GenerationConfig()
         self.sentence_tokenizer = nltk.sent_tokenize
-        self.json_former = jsonformer.Jsonformer()
+        self.json_former = jsonformer.Jsonformer
+        self.summary_gen_cfg = GenerationConfig(
+                max_new_tokens=1500,
+                num_beams=3,
+                use_cache=True,
+                temperature=0.3
+        )
+        self.title_gen_cfg = GenerationConfig(
+                max_new_tokens=200,
+                num_beams=5,
+                use_cache=True,
+                temperature=0.5
+        )
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -138,42 +150,60 @@ class LLM:
             raise NotImplementedError(f"Task: '{task}' is not supported.")
         return self.generate_registry[task]
 
-    def split_corpus(self, corpus: str, token_threshold: int = 500) -> List[str]:
-        total_tokens = 0
+    def split_corpus(self, corpus: str, token_threshold: int = 1000) -> List[str]:
+        accumulated_tokens = []
+        accumulated_sentences = []
+        accumulated_token_count = 0
         corpus_sentences = self.sentence_tokenizer(corpus)
 
         for sentence in corpus_sentences:
             tokens = self.tokenizer.tokenize(sentence)
-            if total_tokens + len(tokens) <= token_threshold:
-                total_tokens += len(tokens)
-                tokenized_corpus = " ".join(tokens)
-                yield tokenized_corpus
+            if accumulated_token_count + len(tokens) <= token_threshold:
+                accumulated_token_count += len(tokens)
+                accumulated_tokens.extend(tokens)
+                accumulated_sentences.append(sentence)
+            else:
+                yield "".join(accumulated_sentences)
+                accumulated_token_count = len(tokens)
+                accumulated_tokens = tokens
+                accumulated_sentences = [sentence]
 
+        if accumulated_tokens:
+            yield " ".join(accumulated_sentences)
+
+    @method()
     def _generate_title(self, prompt: str, text: str, schema: str = None) -> str | dict:
         chunk_titles = []
-        for chunk in self.split_corpus(text):
+        for chunk in self.split_corpus(text, token_threshold=1000):
             title = self._generate(prompt=prompt, text=chunk, schema=schema, gen_cfg=self.title_gen_cfg)
-            title = title["title"] if schema else title["result"]
+            title = title["result"]["title"] if schema else title["result"]
+            if not title.endswith("."):
+                title += "."
             chunk_titles.append(title)
 
         collected_titles = " ".join(chunk_titles)
         return self._generate(prompt=prompt, text=collected_titles, schema=schema, gen_cfg=self.title_gen_cfg)
 
+    @method()
     def _generate_topic(self, prompt: str, text: str, schema: str = None) -> str | dict:
         return self._generate(prompt=prompt, text=text, schema=schema, gen_cfg=self.topic_gen_cfg)
 
+    @method()
     def _generate_summary(self, prompt: str, text: str, schema: str = None) -> str | dict:
         chunk_summary = []
         for chunk in self.split_corpus(text):
-            title = self._generate(prompt=prompt, text=chunk, schema=schema, gen_cfg=self.summary_gen_cfg)
-            title = title["summary"] if schema else title["result"]
-            chunk_summary.append(title)
+            summary = self._generate(prompt=prompt, text=chunk, schema=schema, gen_cfg=self.summary_gen_cfg)
+            summary = summary["result"]["summary"] if schema else summary["result"]
+            chunk_summary.append(summary)
 
         collected_summaries = " ".join(chunk_summary)
+        print("*****************************************")
+        print(collected_summaries)
+        print("*****************************************")
         return collected_summaries
 
     def _generate(self, prompt: str, text: str, gen_cfg, schema: str = None) -> str | dict:
-        prompt = prompt.format(text)
+        prompt = prompt.format(text=text)
         print(f"Generate {prompt=}")
         # If a schema is given, conform to schema
         if schema:

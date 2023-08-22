@@ -35,7 +35,6 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.topic_detector_schema = {
             "type": "object",
             "properties": {
-                "title": {"type": "string"},
                 "summary": {"type": "string"},
             },
         }
