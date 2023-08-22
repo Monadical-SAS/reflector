@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+import { Option } from "react-dropdown";
 
 const useAudioDevice = () => {
   const [permissionOk, setPermissionOk] = useState(false);
-  const [audioDevices, setAudioDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
 
   const requestPermission = () => {
@@ -22,7 +24,9 @@ const useAudioDevice = () => {
       });
   };
 
-  const getAudioStream = async (deviceId) => {
+  const getAudioStream = async (
+    deviceId: string,
+  ): Promise<MediaStream | null> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -39,7 +43,7 @@ const useAudioDevice = () => {
     }
   };
 
-  const updateDevices = async () => {
+  const updateDevices = async (): Promise<void> => {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const _audioDevices = devices
       .filter(
@@ -50,10 +54,6 @@ const useAudioDevice = () => {
     setPermissionOk(_audioDevices.length > 0);
     setAudioDevices(_audioDevices);
   };
-
-  useEffect(() => {
-    requestPermission();
-  }, []);
 
   return {
     permissionOk,
