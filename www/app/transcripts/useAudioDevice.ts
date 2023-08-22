@@ -1,22 +1,57 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Option } from "react-dropdown";
 
+const MIC_QUERY = { name: "microphone" as PermissionName };
+
 const useAudioDevice = () => {
-  const [permissionOk, setPermissionOk] = useState(false);
+  const [permissionOk, setPermissionOk] = useState<boolean>(false);
+  const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
   const [audioDevices, setAudioDevices] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkPermission();
+  }, []);
+
+  useEffect(() => {
+    if (permissionOk) {
+      updateDevices();
+    }
+  }, [permissionOk]);
+
+  const checkPermission = (): void => {
+    navigator.permissions
+      .query(MIC_QUERY)
+      .then((permissionStatus) => {
+        setPermissionOk(permissionStatus.state === "granted");
+        setPermissionDenied(permissionStatus.state === "denied");
+        permissionStatus.onchange = () => {
+          setPermissionOk(permissionStatus.state === "granted");
+          setPermissionDenied(permissionStatus.state === "denied");
+        };
+      })
+      .catch(() => {
+        setPermissionOk(false);
+        setPermissionDenied(false);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   const requestPermission = () => {
     navigator.mediaDevices
       .getUserMedia({
         audio: true,
       })
-      .then(() => {
+      .then((stream) => {
+        if (!navigator.userAgent.includes("Firefox"))
+          stream.getTracks().forEach((track) => track.stop());
         setPermissionOk(true);
-        updateDevices();
       })
       .catch(() => {
+        setPermissionDenied(true);
         setPermissionOk(false);
       })
       .finally(() => {
@@ -56,11 +91,12 @@ const useAudioDevice = () => {
   };
 
   return {
+    loading,
     permissionOk,
+    permissionDenied,
     audioDevices,
     getAudioStream,
     requestPermission,
-    loading,
   };
 };
 

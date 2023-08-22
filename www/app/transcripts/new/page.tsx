@@ -30,6 +30,7 @@ const App = () => {
   const {
     loading,
     permissionOk,
+    permissionDenied,
     audioDevices,
     requestPermission,
     getAudioStream,
@@ -71,13 +72,16 @@ const App = () => {
                 <p className="text-gray-500 text-center mt-5">
                   Reflector needs access to your microphone to work.
                   <br />
-                  Please grant permission to continue.
+                  {permissionDenied
+                    ? "Please reset microphone permissions to continue."
+                    : "Please grant permission to continue."}
                 </p>
                 <button
                   className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-auto"
                   onClick={requestPermission}
+                  disabled={permissionDenied}
                 >
-                  Grant Permission
+                  {permissionDenied ? "Access denied" : "Grant Permission"}
                 </button>
               </>
             )}
