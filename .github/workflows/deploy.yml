@@ -1,6 +1,6 @@
 name: Deploy to Amazon ECS
 
-on: [deployment, workflow_dispatch]
+on: [workflow_dispatch]
 
 env:
   # 384658522150.dkr.ecr.us-east-1.amazonaws.com/reflector
