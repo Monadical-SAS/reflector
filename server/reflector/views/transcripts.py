@@ -14,7 +14,6 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from fastapi.responses import FileResponse
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
 from reflector.db import database, transcripts
@@ -22,6 +21,7 @@ from reflector.logger import logger
 from reflector.settings import settings
 from starlette.concurrency import run_in_threadpool
 
+from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
 
 router = APIRouter()
@@ -190,6 +190,7 @@ class GetTranscript(BaseModel):
     status: str
     locked: bool
     duration: int
+    summary: str | None
     created_at: datetime
 
 
@@ -200,6 +201,7 @@ class CreateTranscript(BaseModel):
 class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
+    summary: Optional[str] = Field(None)
 
 
 class TranscriptEntryCreate(BaseModel):
@@ -262,6 +264,15 @@ async def transcript_update(
         values["name"] = info.name
     if info.locked is not None:
         values["locked"] = info.locked
+    if info.summary is not None:
+        values["summary"] = info.summary
+        # also find FINAL_SUMMARY event and patch it
+        for te in transcript.events:
+            if te["event"] == PipelineEvent.FINAL_SUMMARY:
+                te["summary"] = info.summary
+                break
+        values["events"] = transcript.events
+
     await transcripts_controller.update(transcript, values)
     return transcript
 
@@ -281,6 +292,7 @@ async def transcript_delete(
 
 @router.get("/transcripts/{transcript_id}/audio")
 async def transcript_get_audio(
+    request: Request,
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
@@ -292,11 +304,16 @@ async def transcript_get_audio(
     if not transcript.audio_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
-    return FileResponse(transcript.audio_filename, media_type="audio/wav")
+    return range_requests_response(
+        request,
+        transcript.audio_filename,
+        content_type="audio/wav",
+    )
 
 
 @router.get("/transcripts/{transcript_id}/audio/mp3")
 async def transcript_get_audio_mp3(
+    request: Request,
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
@@ -310,7 +327,11 @@ async def transcript_get_audio_mp3(
 
     await run_in_threadpool(transcript.convert_audio_to_mp3)
 
-    return FileResponse(transcript.audio_mp3_filename, media_type="audio/mp3")
+    return range_requests_response(
+        request,
+        transcript.audio_mp3_filename,
+        content_type="audio/mp3",
+    )
 
 
 @router.get("/transcripts/{transcript_id}/topics", response_model=list[TranscriptTopic])

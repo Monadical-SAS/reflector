@@ -7,6 +7,7 @@ import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
+import getApi from "../../lib/getApi";
 
 const App = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -23,8 +24,9 @@ const App = () => {
     }
   }, []);
 
+  const api = getApi();
   const transcript = useTranscript();
-  const webRTC = useWebRTC(stream, transcript.response?.id);
+  const webRTC = useWebRTC(stream, transcript.response?.id, api);
   const webSockets = useWebSockets(transcript.response?.id);
 
   return (

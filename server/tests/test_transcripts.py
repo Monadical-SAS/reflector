@@ -45,6 +45,54 @@ async def test_transcript_get_update_name():
 
 
 @pytest.mark.asyncio
+async def test_transcript_get_update_locked():
+    from reflector.app import app
+
+    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+        response = await ac.post("/transcripts", json={"name": "test"})
+        assert response.status_code == 200
+        assert response.json()["locked"] is False
+
+        tid = response.json()["id"]
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["locked"] is False
+
+        response = await ac.patch(f"/transcripts/{tid}", json={"locked": True})
+        assert response.status_code == 200
+        assert response.json()["locked"] is True
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["locked"] is True
+
+
+@pytest.mark.asyncio
+async def test_transcript_get_update_summary():
+    from reflector.app import app
+
+    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+        response = await ac.post("/transcripts", json={"name": "test"})
+        assert response.status_code == 200
+        assert response.json()["summary"] is None
+
+        tid = response.json()["id"]
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["summary"] is None
+
+        response = await ac.patch(f"/transcripts/{tid}", json={"summary": "test"})
+        assert response.status_code == 200
+        assert response.json()["summary"] == "test"
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["summary"] == "test"
+
+
+@pytest.mark.asyncio
 async def test_transcripts_list_anonymous():
     # XXX this test is a bit fragile, as it depends on the storage which
     #     is shared between tests

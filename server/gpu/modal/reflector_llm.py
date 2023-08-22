@@ -155,7 +155,7 @@ class LLM:
 def web():
     from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
-    from pydantic import BaseModel
+    from pydantic import BaseModel, Field
 
     llmstub = LLM()
 
@@ -172,14 +172,14 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
-        schema: Optional[dict] = None
+        schema_: Optional[dict] = Field(None, alias="schema")
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        if req.schema:
-            func = llmstub.generate.spawn(prompt=req.prompt, schema=json.dumps(req.schema))
+        if req.schema_:
+            func = llmstub.generate.spawn(prompt=req.prompt, schema=json.dumps(req.schema_))
         else:
             func = llmstub.generate.spawn(prompt=req.prompt)
         result = func.get()
