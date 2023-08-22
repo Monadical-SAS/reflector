@@ -6,7 +6,7 @@ import RegionsPlugin, {
 
 class CustomRegionsPlugin extends RegionsPlugin {
   public static create(options?: RegionsPluginOptions) {
-    return new RegionsPlugin(options);
+    return new CustomRegionsPlugin(options);
   }
 
   constructor(options?: RegionsPluginOptions) {
