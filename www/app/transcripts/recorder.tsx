@@ -11,6 +11,7 @@ import Dropdown, { Option } from "react-dropdown";
 import "react-dropdown/style.css";
 
 import { formatTime } from "../lib/time";
+import { Topic } from "./webSocketTypes";
 
 const AudioInputsDropdown: React.FC<{
   audioDevices: Option[];
@@ -40,7 +41,19 @@ const AudioInputsDropdown: React.FC<{
   );
 };
 
-export default function Recorder(props: any) {
+type RecorderProps = {
+  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
+  onStop: () => void;
+  topics: Topic[];
+  getAudioStream: (deviceId: string | null) => Promise<MediaStream | null>;
+  audioDevices: Option[];
+  useActiveTopic: [
+    Topic | null,
+    React.Dispatch<React.SetStateAction<Topic | null>>,
+  ];
+};
+
+export default function Recorder(props: RecorderProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
