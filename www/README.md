@@ -78,7 +78,7 @@ This data is then returned from the `useWebRTC` hook and can be used in your com
 
 To generate the TypeScript files from the openapi.json file, make sure the python server is running, then run:
 
-```
+```bash
 yarn openapi
 ```
 
