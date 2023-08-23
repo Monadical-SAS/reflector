@@ -6,11 +6,13 @@ import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
 import "../../styles/button.css";
+import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
 
 const App = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [disconnected, setDisconnected] = useState<boolean>(false);
+  const useActiveTopic = useState<Topic | null>(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -35,6 +37,8 @@ const App = () => {
           webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
           setStream(null);
         }}
+        topics={webSockets.topics}
+        useActiveTopic={useActiveTopic}
       />
 
       <hr />
@@ -44,6 +48,7 @@ const App = () => {
         finalSummary={webSockets.finalSummary}
         topics={webSockets.topics}
         disconnected={disconnected}
+        useActiveTopic={useActiveTopic}
       />
     </>
   );
