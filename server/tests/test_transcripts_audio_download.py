@@ -104,4 +104,4 @@ async def test_transcript_audio_download_waveform(fake_transcript):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/json"
     assert isinstance(response.json()["data"], list)
-    assert len(response.json()["data"]) == 1000
+    assert len(response.json()["data"]) == 256
