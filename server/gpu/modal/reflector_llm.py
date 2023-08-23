@@ -107,7 +107,7 @@ class LLM:
         self.sentence_tokenizer = nltk.sent_tokenize
         self.json_former = jsonformer.Jsonformer
         self.summary_gen_cfg = GenerationConfig(
-                max_new_tokens=1500,
+                max_new_tokens=1300,
                 num_beams=3,
                 use_cache=True,
                 temperature=0.3
@@ -118,6 +118,24 @@ class LLM:
                 use_cache=True,
                 temperature=0.5
         )
+        self.topic_gen_cfg = GenerationConfig(
+                max_new_tokens=200,
+                num_beams=3,
+                use_cache=True,
+                temperature=0.9
+        )
+
+        self.PROMPT_TEMPLATE = """
+            ### Human:
+            {user_prompt}
+
+            {text}
+
+            ### Assistant:
+            """
+
+        self.final_title_prompt = "Combine the following individual titles into one single " \
+                                  "title that condenses the essence of all titles."
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -134,20 +152,22 @@ class LLM:
     @property
     def generate_registry(self) -> None:
         if not self._generate_registry:
-            self._initialize_generate_registry()
+            self._init_generate_registry()
         return self._generate_registry
 
-    def _initialize_generate_registry(self) -> None:
+    def _init_generate_registry(self) -> None:
         for task in self.supported_tasks:
             func_name = "_generate_" + task
             func = getattr(self, func_name, None)
             if not func:
-                raise NotImplementedError(f"Generation function for '{task}' is not implemented.")
+                raise NotImplementedError(f"Generation function for '{task}' is not implemented, but the task is "
+                                          f"marked as supported. Either remove task from the supported tasks list or"
+                                          f"add support by implementing its generation function i.e {func_name}")
             self._generate_registry[task] = func
 
     def _generation_swivel(self, task: str) -> Callable:
         if task not in self.supported_tasks:
-            raise NotImplementedError(f"Task: '{task}' is not supported.")
+            raise NotImplementedError(f"Task: '{task}' is not supported, but requested by client.")
         return self.generate_registry[task]
 
     def split_corpus(self, corpus: str, token_threshold: int = 1000) -> List[str]:
@@ -171,39 +191,40 @@ class LLM:
         if accumulated_tokens:
             yield " ".join(accumulated_sentences)
 
+    def create_prompt(self, user_prompt: str, text: str) -> str:
+        return self.PROMPT_TEMPLATE.format(user_prompt=user_prompt, text=text)
+
     @method()
-    def _generate_title(self, prompt: str, text: str, schema: str = None) -> str | dict:
+    def _generate_title(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
         chunk_titles = []
         for chunk in self.split_corpus(text, token_threshold=1000):
-            title = self._generate(prompt=prompt, text=chunk, schema=schema, gen_cfg=self.title_gen_cfg)
+            prompt = self.create_prompt(user_prompt=user_prompt, text=chunk)
+            title = self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
             title = title["result"]["title"] if schema else title["result"]
-            if not title.endswith("."):
-                title += "."
             chunk_titles.append(title)
 
-        collected_titles = " ".join(chunk_titles)
-        return self._generate(prompt=prompt, text=collected_titles, schema=schema, gen_cfg=self.title_gen_cfg)
+        collected_titles = ". ".join(chunk_titles)
+        prompt = self.create_prompt(user_prompt=self.final_title_prompt, text=collected_titles)
+        return self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
 
     @method()
-    def _generate_topic(self, prompt: str, text: str, schema: str = None) -> str | dict:
-        return self._generate(prompt=prompt, text=text, schema=schema, gen_cfg=self.topic_gen_cfg)
+    def _generate_topic(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
+        prompt = self.create_prompt(user_prompt=user_prompt, text=text)
+        return self._generate(prompt=prompt, schema=schema, gen_cfg=self.topic_gen_cfg)
 
     @method()
-    def _generate_summary(self, prompt: str, text: str, schema: str = None) -> str | dict:
+    def _generate_summary(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
         chunk_summary = []
         for chunk in self.split_corpus(text):
-            summary = self._generate(prompt=prompt, text=chunk, schema=schema, gen_cfg=self.summary_gen_cfg)
+            prompt = self.create_prompt(user_prompt=user_prompt, text=chunk)
+            summary = self._generate(prompt=prompt, schema=schema, gen_cfg=self.summary_gen_cfg)
             summary = summary["result"]["summary"] if schema else summary["result"]
             chunk_summary.append(summary)
 
         collected_summaries = " ".join(chunk_summary)
-        print("*****************************************")
-        print(collected_summaries)
-        print("*****************************************")
         return collected_summaries
 
-    def _generate(self, prompt: str, text: str, gen_cfg, schema: str = None) -> str | dict:
-        prompt = prompt.format(text=text)
+    def _generate(self, prompt: str, gen_cfg, schema: str = None) -> str | dict:
         print(f"Generate {prompt=}")
         # If a schema is given, conform to schema
         if schema:
@@ -230,8 +251,11 @@ class LLM:
         return {"result": response}
 
     @method()
-    def generate(self, req) -> str | dict:
-        return self._generation_swivel(req.task)(req)
+    def generate(self, user_prompt: str, task: str, text: str, schema: dict | None) -> str | dict:
+        try:
+            return self._generation_swivel(task)(user_prompt=user_prompt, text=text, schema=schema)
+        except NotImplementedError as e:
+            return f"Unsupported LLM task requested: {str(e)}"
 
 # -------------------------------------------------------------------
 # Web API
@@ -249,7 +273,7 @@ class LLM:
 def web():
     from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
-    from pydantic import BaseModel
+    from pydantic import BaseModel, Field
 
     llmstub = LLM()
 
@@ -268,13 +292,13 @@ def web():
         prompt: str
         text: str
         task: str
-        schema: Optional[dict] = None
+        schema_: Optional[dict] = Field(None, alias="schema")
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
             req: LLMRequest,
     ):
-        return llmstub.generate(req)
+        return llmstub.generate(user_prompt=req.prompt, text=req.text, task=req.task, schema=req.schema_)
 
     @app.post("/warmup", dependencies=[Depends(apikey_auth)])
     async def warmup():
