@@ -119,7 +119,7 @@ class LLM:
                 temperature=0.5
         )
         self.topic_gen_cfg = GenerationConfig(
-                max_new_tokens=200,
+                max_new_tokens=300,
                 num_beams=3,
                 use_cache=True,
                 temperature=0.9
@@ -233,7 +233,7 @@ class LLM:
                                               tokenizer=self.tokenizer,
                                               json_schema=json.loads(schema),
                                               prompt=prompt,
-                                              max_string_token_length=gen_cfg.max_new_tokens)
+                                              max_string_token_length=self.topic_gen_cfg.max_new_tokens)
             response = jsonformer_llm()
         else:
             # If no schema, perform prompt only generation
