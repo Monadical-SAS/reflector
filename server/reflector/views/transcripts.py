@@ -121,7 +121,7 @@ class Transcript(BaseModel):
             # move temporary file to final location
             shutil.move(tmp.name, fn.as_posix())
 
-    def convert_audio_to_waveform(self, segments_count=1000):
+    def convert_audio_to_waveform(self, segments_count=256):
         fn = self.audio_waveform_filename
         if fn.exists():
             return
