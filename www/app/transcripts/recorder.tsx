@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../lib/custom-plugins/record";
+import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
@@ -11,11 +12,11 @@ import "react-dropdown/style.css";
 
 import { formatTime } from "../lib/time";
 
-const AudioInputsDropdown = (props: {
+const AudioInputsDropdown: React.FC<{
   audioDevices: Option[];
   setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
   disabled: boolean;
-}) => {
+}> = (props) => {
   const [ddOptions, setDdOptions] = useState<Option[]>([]);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ const AudioInputsDropdown = (props: {
   );
 };
 
-export default function Recorder(props) {
+export default function Recorder(props: any) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
@@ -49,6 +50,13 @@ export default function Recorder(props) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [timeInterval, setTimeInterval] = useState<number | null>(null);
   const [duration, setDuration] = useState<number>(0);
+  const [waveRegions, setWaveRegions] = useState<CustomRegionsPlugin | null>(
+    null,
+  );
+
+  const [activeTopic, setActiveTopic] = props.useActiveTopic;
+
+  const topicsRef = useRef(props.topics);
 
   useEffect(() => {
     const playBtn = document.getElementById("play-btn");
@@ -63,6 +71,7 @@ export default function Recorder(props) {
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
+        height: 90,
       });
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
@@ -78,14 +87,72 @@ export default function Recorder(props) {
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
+      setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
+
       setWavesurfer(_wavesurfer);
       return () => {
         _wavesurfer.destroy();
         setIsRecording(false);
         setIsPlaying(false);
+        setCurrentTime(0);
       };
     }
   }, []);
+
+  useEffect(() => {
+    topicsRef.current = props.topics;
+    if (!isRecording) renderMarkers();
+  }, [props.topics]);
+
+  const renderMarkers = () => {
+    if (!waveRegions) return;
+
+    waveRegions.clearRegions();
+    for (let topic of topicsRef.current) {
+      const content = document.createElement("div");
+      content.setAttribute(
+        "style",
+        `
+        position: absolute;
+        border-left: solid 1px orange;
+        padding: 0 2px 0 5px;
+        font-size: 0.7rem;
+        width: 100px;
+        max-width: fit-content;
+        cursor: pointer;
+        background-color: white;
+        border-radius: 0 3px 3px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: width 100ms linear;
+      `,
+      );
+      content.onmouseover = () => {
+        content.style.backgroundColor = "orange";
+        content.style.zIndex = "999";
+        content.style.width = "300px";
+      };
+      content.onmouseout = () => {
+        content.style.backgroundColor = "white";
+        content.style.zIndex = "0";
+        content.style.width = "100px";
+      };
+      content.textContent = topic.title;
+
+      const region = waveRegions.addRegion({
+        start: topic.timestamp,
+        content,
+        color: "f00",
+        drag: false,
+      });
+      region.on("click", (e) => {
+        e.stopPropagation();
+        setActiveTopic(topic);
+        wavesurfer?.setTime(region.start);
+      });
+    }
+  };
 
   useEffect(() => {
     if (record) {
@@ -96,6 +163,7 @@ export default function Recorder(props) {
         link.setAttribute("href", record.getRecordedUrl());
         link.setAttribute("download", "reflector-recording.webm");
         link.style.visibility = "visible";
+        renderMarkers();
       });
     }
   }, [record]);
@@ -116,6 +184,12 @@ export default function Recorder(props) {
     }
   }, [isRecording]);
 
+  useEffect(() => {
+    if (activeTopic) {
+      wavesurfer?.setTime(activeTopic.timestamp);
+    }
+  }, [activeTopic]);
+
   const handleRecClick = async () => {
     if (!record) return console.log("no record");
 
@@ -128,6 +202,7 @@ export default function Recorder(props) {
     } else {
       const stream = await props.getAudioStream(deviceId);
       props.setStream(stream);
+      waveRegions?.clearRegions();
       if (stream) {
         await record.startRecording(stream);
         setIsRecording(true);
