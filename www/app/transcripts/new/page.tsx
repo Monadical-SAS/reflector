@@ -48,9 +48,10 @@ const App = () => {
               webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
               setStream(null);
             }}
+            topics={webSockets.topics}
             getAudioStream={getAudioStream}
             audioDevices={audioDevices}
-            topics={webSockets.topics}
+            useActiveTopic={useActiveTopic}
           />
 
           <Dashboard
