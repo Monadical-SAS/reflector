@@ -16,12 +16,10 @@ from reflector.processors import (
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
     FinalSummary,
-    FinalTitle,
     Pipeline,
     TitleSummary,
     Transcript,
     TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
@@ -167,22 +165,6 @@ async def rtc_offer_base(
                 data=summary,
             )
 
-    async def on_final_title(title: FinalTitle):
-        ctx.logger.info("FinalTitle", final_title=title)
-
-        # send to RTC
-        if ctx.data_channel.readyState == "open":
-            result = {"cmd": "DISPLAY_FINAL_TITLE", "title": title.title}
-            ctx.data_channel.send(dumps(result))
-
-        # send to callback (eg. websocket)
-        if event_callback:
-            await event_callback(
-                event=PipelineEvent.FINAL_TITLE,
-                args=event_callback_args,
-                data=title,
-            )
-
     # create a context for the whole rtc transaction
     # add a customised logger to the context
     processors = []
@@ -194,7 +176,6 @@ async def rtc_offer_base(
         AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
         TranscriptLinerProcessor(),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
-        TranscriptFinalTitleProcessor.as_threaded(callback=on_final_title),
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
     ]
     ctx.pipeline = Pipeline(*processors)

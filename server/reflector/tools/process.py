@@ -9,7 +9,6 @@ from reflector.processors import (
     AudioTranscriptAutoProcessor,
     Pipeline,
     TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
@@ -38,7 +37,6 @@ async def process_audio_file(filename, event_callback, only_transcript=False):
     if not only_transcript:
         processors += [
             TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
-            TranscriptFinalTitleProcessor.as_threaded(callback=on_title),
             TranscriptFinalSummaryProcessor.as_threaded(callback=on_summary),
         ]
 
