@@ -8,8 +8,6 @@ The project architecture consists of three primary components:
 * **Back-End**: Python server that offers an API and data persistence, found in `server/`.
 * **AI Models**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
 
-![Project Architecture](ProjectArchitecture.jpg)
-
 ## Table of Contents
 
 - [Reflector](#reflector)
