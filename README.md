@@ -51,6 +51,8 @@ You may have to add permission for browser's microphone access to record audio i
 
 ## Front-End
 
+Start with `cd www`.
+
 ### Installation
 
 To install the application, run:
@@ -80,6 +82,8 @@ yarn openapi
 You may need to run `yarn global add @openapitools/openapi-generator-cli` first. You also need a Java runtime installed on your machine.
 
 ## Back-End
+
+Start with `cd server`.
 
 ### Installation
 
