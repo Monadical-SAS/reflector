@@ -225,7 +225,7 @@ From the reflector root folder,
 
 run `python3 whisjax_realtime.py`
 
-The transcription text should be written to `real_time_transcription_<timestamp>.txt`.
+The transcription text should be written to `real_time_transcription_<timestamp>.txt`
 
 NEXT STEPS:
 

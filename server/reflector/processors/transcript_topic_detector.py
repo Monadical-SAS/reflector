@@ -11,20 +11,15 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = TitleSummary
+    TASK = "topic"
 
     PROMPT = """
-        ### Human:
         Create a JSON object as response.The JSON object must have 2 fields:
         i) title and ii) summary.
 
         For the title field, generate a short title for the given text.
         For the summary field, summarize the given text in a maximum of
         three sentences.
-
-        {input_text}
-
-        ### Assistant:
-
     """
 
     def __init__(self, min_transcript_length=750, **kwargs):
@@ -59,9 +54,12 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
-        prompt = self.PROMPT.format(input_text=text)
         result = await retry(self.llm.generate)(
-            prompt=prompt, schema=self.topic_detector_schema, logger=self.logger
+            prompt=self.PROMPT,
+            text=text,
+            task=self.TASK,
+            schema=self.topic_detector_schema,
+            logger=self.logger,
         )
         summary = TitleSummary(
             title=result["title"],

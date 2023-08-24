@@ -1,4 +1,5 @@
 import httpx
+
 from reflector.llm.base import LLM
 from reflector.settings import settings
 from reflector.utils.retry import retry
@@ -23,8 +24,8 @@ class ModalLLM(LLM):
             )
             response.raise_for_status()
 
-    async def _generate(self, prompt: str, schema: dict | None, **kwargs):
-        json_payload = {"prompt": prompt}
+    async def _generate(self, prompt: str, text: str, schema: dict | None, **kwargs):
+        json_payload = {"prompt": prompt, "text": text}
         if schema:
             json_payload["schema"] = schema
         async with httpx.AsyncClient() as client:
@@ -49,7 +50,10 @@ if __name__ == "__main__":
 
     async def main():
         llm = ModalLLM()
-        result = await llm.generate("Hello, my name is", logger=logger)
+        prompt = "Complete the following sentence."
+        result = await llm.generate(
+            prompt=prompt, text="Hello, my name is", logger=logger
+        )
         print(result)
 
         schema = {
@@ -57,7 +61,9 @@ if __name__ == "__main__":
             "properties": {"name": {"type": "string"}},
         }
 
-        result = await llm.generate("Hello, my name is", schema=schema, logger=logger)
+        result = await llm.generate(
+            prompt=prompt, text="Hello, my name is", schema=schema, logger=logger
+        )
         print(result)
 
     import asyncio

@@ -5,11 +5,11 @@ import {
   V1TranscriptRecordWebrtcRequest,
 } from "../api/apis/DefaultApi";
 import { Configuration } from "../api/runtime";
-import getApi from "../lib/getApi";
 
 const useWebRTC = (
   stream: MediaStream | null,
   transcriptId: string | null,
+  api: DefaultApi,
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
 
@@ -17,8 +17,6 @@ const useWebRTC = (
     if (!stream || !transcriptId) {
       return;
     }
-
-    const api = getApi();
 
     let p: Peer = new Peer({ initiator: true, stream: stream });
 

@@ -60,7 +60,9 @@ async def dummy_llm():
     from reflector.llm.base import LLM
 
     class TestLLM(LLM):
-        async def _generate(self, prompt: str, schema: dict | None, **kwargs):
+        async def _generate(
+            self, prompt: str, text: str, schema: dict | None, **kwargs
+        ):
             return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:

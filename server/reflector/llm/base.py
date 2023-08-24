@@ -48,13 +48,16 @@ class LLM:
     async def generate(
         self,
         prompt: str,
+        text: str,
         logger: reflector_logger,
         schema: dict | None = None,
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
         try:
-            result = await retry(self._generate)(prompt=prompt, schema=schema, **kwargs)
+            result = await retry(self._generate)(
+                prompt=prompt, text=text, schema=schema, **kwargs
+            )
         except Exception:
             logger.exception("Failed to call llm after retrying")
             raise
@@ -66,7 +69,9 @@ class LLM:
 
         return result
 
-    async def _generate(self, prompt: str, schema: dict | None, **kwargs) -> str:
+    async def _generate(
+        self, prompt: str, text: str, schema: dict | None, **kwargs
+    ) -> str:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:

@@ -16,6 +16,10 @@ type DashboardProps = {
   finalSummary: FinalSummaryType;
   topics: Topic[];
   disconnected: boolean;
+  useActiveTopic: [
+    Topic | null,
+    React.Dispatch<React.SetStateAction<Topic | null>>,
+  ];
 };
 
 export function Dashboard({
@@ -23,8 +27,9 @@ export function Dashboard({
   finalSummary,
   topics,
   disconnected,
+  useActiveTopic,
 }: DashboardProps) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
 
   useEffect(() => {
@@ -51,7 +56,7 @@ export function Dashboard({
 
   return (
     <>
-      <div className="relative h-[60svh] w-3/4 flex flex-col">
+      <div className="relative h-[64svh] w-3/4 flex flex-col">
         <div className="text-center pb-1 pt-4">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
         </div>
@@ -75,18 +80,24 @@ export function Dashboard({
             <div key={index} className="border-b-2 py-2 hover:bg-[#8ec5fc30]">
               <div
                 className="flex justify-between items-center cursor-pointer px-4"
-                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                onClick={() =>
+                  setActiveTopic(activeTopic?.id == item.id ? null : item)
+                }
               >
                 <div className="w-1/4">{formatTime(item.timestamp)}</div>
                 <div className="w-3/4 flex justify-between items-center">
                   {item.title}
                   <FontAwesomeIcon
                     className={`transform transition-transform duration-200`}
-                    icon={openIndex === index ? faChevronDown : faChevronRight}
+                    icon={
+                      activeTopic?.id == item.id
+                        ? faChevronDown
+                        : faChevronRight
+                    }
                   />
                 </div>
               </div>
-              {openIndex === index && (
+              {activeTopic?.id == item.id && (
                 <div className="p-2 mt-2 -mb-2 bg-slate-50 rounded">
                   {item.transcript}
                 </div>
