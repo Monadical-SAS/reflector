@@ -234,7 +234,7 @@ class LLM:
 
     def _generate_topic(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
         """
-        Generate short topic and
+        Generate short topic and short summary
         """
         prompt = self._create_prompt(user_prompt=user_prompt, text=text)
         return self._generate(prompt=prompt, schema=schema, gen_cfg=self.topic_gen_cfg)
