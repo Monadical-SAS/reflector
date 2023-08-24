@@ -22,6 +22,7 @@ stub = Stub(name="reflector-test")
 
 def download_llm():
     from huggingface_hub import snapshot_download
+
     print("Downloading LLM model")
     snapshot_download(LLM_MODEL, local_dir=IMAGE_MODEL_DIR)
     print("LLM model downloaded")
@@ -35,6 +36,7 @@ def migrate_cache_llm():
     `transformers.utils.move_cache()`.
     """
     from transformers.utils.hub import move_cache
+
     print("Moving LLM cache")
     move_cache()
     print("LLM cache moved")
@@ -157,8 +159,7 @@ class LLM:
 
     def _registered_generator(self, task: str) -> Callable:
         """
-        Populate a registry for generation tasks in the format:
-        task -> generation function.
+        Populate a registry for generation tasks in the format: task -> generation function.
         Return the generation function for a given task
         """
         # If already registered
@@ -227,7 +228,7 @@ class LLM:
         for chunk in self._split_corpus(text, token_threshold=1000):
             prompt = self._create_prompt(user_prompt=user_prompt, text=chunk)
             title = self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
-            title = title["result"]["title"] if schema else title["result"]
+            title = title["text"]["title"] if schema else title["text"]
             chunk_titles.append(title)
 
         collected_titles = ". ".join(chunk_titles)
@@ -249,11 +250,11 @@ class LLM:
         for chunk in self._split_corpus(text):
             prompt = self._create_prompt(user_prompt=user_prompt, text=chunk)
             summary = self._generate(prompt=prompt, schema=schema, gen_cfg=self.summary_gen_cfg)
-            summary = summary["result"]["summary"] if schema else summary["result"]
+            summary = summary["text"]["summary"] if schema else summary["text"]
             chunk_summary.append(summary)
 
         collected_summaries = " ".join(chunk_summary)
-        return collected_summaries
+        return {"text": collected_summaries}
 
     def _generate(self, prompt: str, gen_cfg, schema: str = None) -> str | dict:
         """
@@ -274,7 +275,7 @@ class LLM:
 
             # tokenize prompt
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
-                    self.model.device
+                self.model.device
             )
             output = self.model.generate(input_ids, generation_config=gen_cfg)
 
@@ -282,7 +283,7 @@ class LLM:
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
             response = response[len(prompt):]
         print(f"Generated {response=}")
-        return {"result": response}
+        return {"text": response}
 
     @method()
     def generate(self, user_prompt: str, task: str, text: str, schema: dict | None) -> str | dict:
@@ -330,9 +331,9 @@ def web():
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
-            req: LLMRequest,
+        req: LLMRequest,
     ):
-        return llmstub.generate(user_prompt=req.prompt, text=req.text, task=req.task, schema=req.schema_)
+        return llmstub.generate.spawn(user_prompt=req.prompt, text=req.text, task=req.task, schema=req.schema_)
 
     @app.post("/warmup", dependencies=[Depends(apikey_auth)])
     async def warmup():
