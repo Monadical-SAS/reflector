@@ -104,8 +104,6 @@ AUTH_BACKEND=fief
 AUTH_FIEF_URL=https://auth.reflector.media/reflector-local
 AUTH_FIEF_CLIENT_ID=KQzRsNgoY<omitted>
 AUTH_FIEF_CLIENT_SECRET=<omitted>
-
-LLM_URL=http://IP:HOST/api/v1/generate
 ```
 
 ### Start the project
