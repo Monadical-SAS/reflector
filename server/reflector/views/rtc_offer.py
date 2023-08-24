@@ -1,25 +1,29 @@
 import asyncio
-from fastapi import Request, APIRouter
-from reflector.events import subscribers_shutdown
-from pydantic import BaseModel
-from reflector.logger import logger
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from json import loads, dumps
 from enum import StrEnum
+from json import dumps, loads
 from pathlib import Path
+
 import av
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+
+from reflector.events import subscribers_shutdown
+from reflector.logger import logger
 from reflector.processors import (
-    Pipeline,
     AudioChunkerProcessor,
+    AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    AudioFileWriterProcessor,
+    FinalSummary,
+    FinalTitle,
+    Pipeline,
+    TitleSummary,
+    Transcript,
+    TranscriptFinalSummaryProcessor,
+    TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptFinalSummaryProcessor,
-    Transcript,
-    TitleSummary,
-    FinalSummary,
 )
 
 sessions = []
@@ -69,6 +73,7 @@ class StrValue(BaseModel):
 class PipelineEvent(StrEnum):
     TRANSCRIPT = "TRANSCRIPT"
     TOPIC = "TOPIC"
+    FINAL_TITLE = "FINAL_TITLE"
     FINAL_SUMMARY = "FINAL_SUMMARY"
     STATUS = "STATUS"
 
@@ -162,6 +167,22 @@ async def rtc_offer_base(
                 data=summary,
             )
 
+    async def on_final_title(title: FinalTitle):
+        ctx.logger.info("FinalSummary", final_title=title)
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {"cmd": "DISPLAY_FINAL_TITLE", "title": title.title}
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.FINAL_TITLE,
+                args=event_callback_args,
+                data=title,
+            )
+
     # create a context for the whole rtc transaction
     # add a customised logger to the context
     processors = []
@@ -173,6 +194,7 @@ async def rtc_offer_base(
         AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
         TranscriptLinerProcessor(),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
+        TranscriptFinalTitleProcessor.as_threaded(callback=on_final_title),
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
     ]
     ctx.pipeline = Pipeline(*processors)

@@ -140,9 +140,6 @@ class LLM:
             ### Assistant:
             """
 
-        self.final_title_prompt = "Combine the following individual titles into one single " \
-                                  "title that condenses the essence of all titles."
-
         # Currently supported LLM generation operations. To add new task, add it to list
         # and create a new generation function i.e) _generate_<task> and the registry will
         # automatically pick this up.
@@ -232,7 +229,7 @@ class LLM:
             chunk_titles.append(title)
 
         collected_titles = ". ".join(chunk_titles)
-        prompt = self._create_prompt(user_prompt=self.final_title_prompt, text=collected_titles)
+        prompt = self._create_prompt(user_prompt=user_prompt, text=collected_titles)
         return self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
 
     def _generate_topic(self, user_prompt: str, text: str, schema: str = None) -> str | dict:

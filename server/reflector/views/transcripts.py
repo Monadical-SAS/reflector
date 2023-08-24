@@ -5,7 +5,6 @@ from typing import Annotated, Optional
 from uuid import uuid4
 
 import av
-import reflector.auth as auth
 from fastapi import (
     APIRouter,
     Depends,
@@ -16,10 +15,12 @@ from fastapi import (
 )
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
+
+import reflector.auth as auth
 from reflector.db import database, transcripts
 from reflector.logger import logger
 from reflector.settings import settings
-from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
@@ -54,6 +55,10 @@ class TranscriptTopic(BaseModel):
 
 class TranscriptFinalSummary(BaseModel):
     summary: str
+
+
+class TranscriptFinalTitle(BaseModel):
+    title: str
 
 
 class TranscriptEvent(BaseModel):
@@ -266,10 +271,13 @@ async def transcript_update(
         values["locked"] = info.locked
     if info.summary is not None:
         values["summary"] = info.summary
-        # also find FINAL_SUMMARY event and patch it
+        # also find FINAL_TITLE, FINAL_SUMMARY event and patch it
         for te in transcript.events:
             if te["event"] == PipelineEvent.FINAL_SUMMARY:
                 te["summary"] = info.summary
+                break
+            elif te["event"] == PipelineEvent.FINAL_TITLE:
+                te["title"] = info.title
                 break
         values["events"] = transcript.events
 
@@ -459,6 +467,17 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
             {
                 "events": transcript.events_dump(),
                 "topics": transcript.topics_dump(),
+            },
+        )
+
+    elif event == PipelineEvent.FINAL_TITLE:
+        final_title = TranscriptFinalTitle(title=data.title)
+        resp = transcript.add_event(event=event, data=final_title)
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "title": final_title.title,
             },
         )
 

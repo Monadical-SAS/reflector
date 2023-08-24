@@ -107,6 +107,10 @@ class FinalSummary(BaseModel):
     duration: float
 
 
+class FinalTitle(BaseModel):
+    title: str
+
+
 class TranslationLanguages(BaseModel):
     language_to_id_mapping: dict = {
         "Afrikaans": "af",
