@@ -56,8 +56,8 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
 
     volumes = volumes[:current_chunk_idx]
 
-    # normalize the volumes 0-2**8
-    volumes = volumes * (2**8 - 1) / volumes.max()
+    # normalize the volumes 0-128
+    volumes = volumes * 128 / volumes.max()
 
     return volumes.astype("uint8").tolist()
 
