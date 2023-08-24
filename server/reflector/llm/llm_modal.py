@@ -24,8 +24,10 @@ class ModalLLM(LLM):
             )
             response.raise_for_status()
 
-    async def _generate(self, prompt: str, text: str, schema: dict | None, **kwargs):
-        json_payload = {"prompt": prompt, "text": text}
+    async def _generate(
+        self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
+    ):
+        json_payload = {"prompt": prompt, "text": text, "task": task}
         if schema:
             json_payload["schema"] = schema
         async with httpx.AsyncClient() as client:

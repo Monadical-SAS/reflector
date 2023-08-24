@@ -14,8 +14,10 @@ class BananaLLM(LLM):
             "X-Banana-Model-Key": settings.LLM_BANANA_MODEL_KEY,
         }
 
-    async def _generate(self, prompt: str, text: str, schema: dict | None, **kwargs):
-        json_payload = {"prompt": prompt, "text": text}
+    async def _generate(
+        self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
+    ):
+        json_payload = {"prompt": prompt, "text": text, "task": task}
         if schema:
             json_payload["schema"] = schema
         async with httpx.AsyncClient() as client:

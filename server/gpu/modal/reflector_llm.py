@@ -160,8 +160,8 @@ class LLM:
         Return the generation function for a given task
         """
         # If already registered
-        if task in self._generation_registry:
-            return self._generation_registry[task]
+        if task in self.task_registry:
+            return self.task_registry[task]
 
         # If not, try to register
         func_name = "_generate_" + str(task)
@@ -172,8 +172,8 @@ class LLM:
                                       f"add support by implementing its generation function i.e {func_name}")
 
         # Update registry
-        self._generation_registry[task] = func
-        return self._generation_registry[task]
+        self.task_registry[task] = func
+        return self.task_registry[task]
 
     def _generation_swivel(self, user_prompt: str, text: str, task: str, schema: str = None) -> Callable:
         """
