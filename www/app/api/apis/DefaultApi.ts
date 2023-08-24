@@ -285,6 +285,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     const headerParameters: runtime.HTTPHeaders = {};
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts/{transcript_id}/audio`.replace(
@@ -340,6 +348,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     const headerParameters: runtime.HTTPHeaders = {};
 
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
     const response = await this.request(
       {
         path: `/v1/transcripts/{transcript_id}/audio/mp3`.replace(
@@ -394,6 +410,14 @@ export class DefaultApi extends runtime.BaseAPI {
     const queryParameters: any = {};
 
     const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
 
     const response = await this.request(
       {
@@ -516,6 +540,14 @@ export class DefaultApi extends runtime.BaseAPI {
     const headerParameters: runtime.HTTPHeaders = {};
 
     headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
 
     const response = await this.request(
       {

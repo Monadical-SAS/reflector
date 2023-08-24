@@ -31,6 +31,12 @@ export interface UpdateTranscript {
    * @memberof UpdateTranscript
    */
   locked?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof UpdateTranscript
+   */
+  summary?: any | null;
 }
 
 /**
@@ -56,6 +62,7 @@ export function UpdateTranscriptFromJSONTyped(
   return {
     name: !exists(json, "name") ? undefined : json["name"],
     locked: !exists(json, "locked") ? undefined : json["locked"],
+    summary: !exists(json, "summary") ? undefined : json["summary"],
   };
 }
 
@@ -69,5 +76,6 @@ export function UpdateTranscriptToJSON(value?: UpdateTranscript | null): any {
   return {
     name: value.name,
     locked: value.locked,
+    summary: value.summary,
   };
 }

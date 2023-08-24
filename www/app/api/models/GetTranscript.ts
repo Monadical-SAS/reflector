@@ -54,6 +54,12 @@ export interface GetTranscript {
    * @type {any}
    * @memberof GetTranscript
    */
+  summary: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
   createdAt: any | null;
 }
 
@@ -67,6 +73,7 @@ export function instanceOfGetTranscript(value: object): boolean {
   isInstance = isInstance && "status" in value;
   isInstance = isInstance && "locked" in value;
   isInstance = isInstance && "duration" in value;
+  isInstance = isInstance && "summary" in value;
   isInstance = isInstance && "createdAt" in value;
 
   return isInstance;
@@ -89,6 +96,7 @@ export function GetTranscriptFromJSONTyped(
     status: json["status"],
     locked: json["locked"],
     duration: json["duration"],
+    summary: json["summary"],
     createdAt: json["created_at"],
   };
 }
@@ -106,6 +114,7 @@ export function GetTranscriptToJSON(value?: GetTranscript | null): any {
     status: value.status,
     locked: value.locked,
     duration: value.duration,
+    summary: value.summary,
     created_at: value.createdAt,
   };
 }
