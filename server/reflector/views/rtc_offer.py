@@ -168,7 +168,7 @@ async def rtc_offer_base(
             )
 
     async def on_final_title(title: FinalTitle):
-        ctx.logger.info("FinalSummary", final_title=title)
+        ctx.logger.info("FinalTitle", final_title=title)
 
         # send to RTC
         if ctx.data_channel.readyState == "open":
