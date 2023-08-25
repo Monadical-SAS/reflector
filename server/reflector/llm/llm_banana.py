@@ -30,8 +30,6 @@ class BananaLLM(LLM):
             )
             response.raise_for_status()
             text = response.json()["text"]
-            if not schema:
-                text = text[len(prompt) :]
             return text
 
 

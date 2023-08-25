@@ -63,6 +63,7 @@ class TranscriptFinalSummaryProcessor(Processor):
             prompt=self.SUMMARY_PROMPT,
             text=accumulated_summary,
             task=self.SUMMARY_TASK,
+            schema=self.final_summary_schema,
             logger=self.logger,
         )
         return summary_result

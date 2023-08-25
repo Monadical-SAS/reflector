@@ -152,6 +152,7 @@ async def rtc_offer_base(
         if ctx.data_channel.readyState == "open":
             result = {
                 "cmd": "DISPLAY_FINAL_SUMMARY",
+                "title": summary.title,
                 "summary": summary.summary,
                 "duration": summary.duration,
             }
