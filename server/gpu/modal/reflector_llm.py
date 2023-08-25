@@ -175,7 +175,7 @@ class LLM:
         self.task_registry[task] = func
         return self.task_registry[task]
 
-    def _generation_swivel(self, user_prompt: str, text: str, task: str, schema: str = None) -> Callable:
+    def _generation_swivel(self, user_prompt: str, text: str, task: str, schema: str | None) -> Callable:
         """
         Based on the requested task, call the corresponding generation function.
         """
@@ -183,7 +183,7 @@ class LLM:
             raise NotImplementedError(f"The requested task: {task} is not supported.")
         return (self._registered_generator(task))(user_prompt=user_prompt, text=text, schema=schema)
 
-    def _split_corpus(self, corpus: str, token_threshold: int = 1000) -> List[str]:
+    def _split_corpus(self, corpus: str, token_threshold: int = 800) -> List[str]:
         """
         Split the input to the LLM due to CUDA memory limitations and LLM context window
         restrictions.
@@ -217,29 +217,37 @@ class LLM:
         """
         return self.PROMPT_TEMPLATE.format(user_prompt=user_prompt, text=text)
 
-    def _generate_title(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
+    def _generate_title(self, user_prompt: str, text: str, schema: str | None) -> str | dict:
         """
         Generate final title
         """
-        chunk_titles = []
-        for chunk in self._split_corpus(text, token_threshold=1000):
+        titles = []
+        for chunk in self._split_corpus(text):
             prompt = self._create_prompt(user_prompt=user_prompt, text=chunk)
             title = self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
-            title = title["text"]["title"] if schema else title["text"]
-            chunk_titles.append(title)
+            titles.append(title)
 
-        collected_titles = ". ".join(chunk_titles)
-        prompt = self._create_prompt(user_prompt=user_prompt, text=collected_titles)
-        return self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
+        if len(titles) > 1:
+            if schema:
+                collected_titles = ".".join([title["title"] for title in titles])
+            else:
+                collected_titles = ".".join(titles)
+            prompt = self._create_prompt(user_prompt=user_prompt, text=collected_titles)
+            result = self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
+        else:
+            result = titles[0]
+        print(f"result {result=}")
+        return {"text": result}
 
-    def _generate_topic(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
+    def _generate_topic(self, user_prompt: str, text: str, schema: str | None) -> str | dict:
         """
         Generate short topic and short summary
         """
         prompt = self._create_prompt(user_prompt=user_prompt, text=text)
-        return self._generate(prompt=prompt, schema=schema, gen_cfg=self.topic_gen_cfg)
+        result = self._generate(prompt=prompt, schema=schema, gen_cfg=self.topic_gen_cfg)
+        return {"text": result}
 
-    def _generate_summary(self, user_prompt: str, text: str, schema: str = None) -> str | dict:
+    def _generate_summary(self, user_prompt: str, text: str, schema: str | None) -> str | dict:
         """
         Generate final summary
         """
@@ -247,13 +255,14 @@ class LLM:
         for chunk in self._split_corpus(text):
             prompt = self._create_prompt(user_prompt=user_prompt, text=chunk)
             summary = self._generate(prompt=prompt, schema=schema, gen_cfg=self.summary_gen_cfg)
-            summary = summary["text"]["summary"] if schema else summary["text"]
+            summary = summary["summary"] if schema else summary
             chunk_summary.append(summary)
 
-        collected_summaries = " ".join(chunk_summary)
-        return {"text": collected_summaries}
+        final_summary = {"summary": "".join(chunk_summary)}
+        print(f"Generated {final_summary=}")
+        return {"text": final_summary}
 
-    def _generate(self, prompt: str, gen_cfg, schema: str = None) -> str | dict:
+    def _generate(self, prompt: str, gen_cfg, schema: str | None) -> str | dict:
         """
         Perform a generation action using the LLM
         """
@@ -280,10 +289,10 @@ class LLM:
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
             response = response[len(prompt):]
         print(f"Generated {response=}")
-        return {"text": response}
+        return response
 
     @method()
-    def generate(self, user_prompt: str, task: str, text: str, schema: dict | None) -> str | dict:
+    def generate(self, user_prompt: str, task: str, text: str, schema: str = None) -> str | dict:
         """
         Entry point to the LLM. Delegate generation, based on the type of generation task requested
         """
@@ -330,7 +339,15 @@ def web():
     async def llm(
         req: LLMRequest,
     ):
-        return llmstub.generate.spawn(user_prompt=req.prompt, text=req.text, task=req.task, schema=req.schema_)
+        if req.schema_:
+            func = llmstub.generate.spawn(user_prompt=req.prompt,
+                                          text=req.text,
+                                          task=req.task,
+                                          schema=json.dumps(req.schema_))
+        else:
+            func = llmstub.generate.spawn(user_prompt=req.prompt, text=req.text, task=req.task)
+        result = func.get()
+        return result
 
     @app.post("/warmup", dependencies=[Depends(apikey_auth)])
     async def warmup():

@@ -53,7 +53,7 @@ class LLM:
         schema: dict | None = None,
         **kwargs,
     ) -> dict:
-        logger.info("LLM generate", prompt=repr(prompt))
+        logger.info("LLM generate", prompt=repr(prompt), text=text)
         try:
             result = await retry(self._generate)(
                 prompt=prompt, text=text, schema=schema, **kwargs
