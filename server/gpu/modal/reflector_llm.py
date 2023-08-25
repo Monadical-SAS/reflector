@@ -236,7 +236,7 @@ class LLM:
             result = self._generate(prompt=prompt, schema=schema, gen_cfg=self.title_gen_cfg)
         else:
             result = titles[0]
-        print(f"result {result=}")
+        print(f"Generated title {result=}")
         return {"text": result}
 
     def _generate_topic(self, user_prompt: str, text: str, schema: str | None) -> str | dict:
@@ -259,7 +259,7 @@ class LLM:
             chunk_summary.append(summary)
 
         final_summary = {"summary": "".join(chunk_summary)}
-        print(f"Generated {final_summary=}")
+        print(f"Generated final summary {final_summary=}")
         return {"text": final_summary}
 
     def _generate(self, prompt: str, gen_cfg, schema: str | None) -> str | dict:

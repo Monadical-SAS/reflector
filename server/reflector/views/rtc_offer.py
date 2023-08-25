@@ -71,7 +71,6 @@ class StrValue(BaseModel):
 class PipelineEvent(StrEnum):
     TRANSCRIPT = "TRANSCRIPT"
     TOPIC = "TOPIC"
-    FINAL_TITLE = "FINAL_TITLE"
     FINAL_SUMMARY = "FINAL_SUMMARY"
     STATUS = "STATUS"
 

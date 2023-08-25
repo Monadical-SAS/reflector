@@ -14,13 +14,13 @@ class TranscriptFinalSummaryProcessor(Processor):
     TITLE_TASK = "title"
     SUMMARY_TASK = "summary"
 
-    SUMMARY_PROMPT = """
+    FINAL_SUMMARY_PROMPT = """
         Take the key ideas and takeaways from the text and create a short summary.
          Be sure to keep the length of the response to a minimum. Do not include
          trivial information in the summary.
     """
 
-    TITLE_PROMPT = """
+    FINAL_TITLE_PROMPT = """
         Combine the following individual titles into one single short title that
         condenses the essence of all titles.
     """
@@ -46,7 +46,7 @@ class TranscriptFinalSummaryProcessor(Processor):
 
         self.logger.info(f"Smoothing out title of length {len(accumulated_titles)}")
         title_result = await retry(self.llm.generate)(
-            prompt=self.TITLE_PROMPT,
+            prompt=self.FINAL_TITLE_PROMPT,
             text=accumulated_titles,
             task=self.TITLE_TASK,
             schema=self.final_title_schema,
@@ -58,9 +58,8 @@ class TranscriptFinalSummaryProcessor(Processor):
         accumulated_summary = " ".join([chunk.summary for chunk in self.chunks])
 
         self.logger.info(f"Smoothing out {len(accumulated_summary)} length summary")
-        # Skipping sending schema as we are asking for a bulleted list
         summary_result = await retry(self.llm.generate)(
-            prompt=self.SUMMARY_PROMPT,
+            prompt=self.FINAL_SUMMARY_PROMPT,
             text=accumulated_summary,
             task=self.SUMMARY_TASK,
             schema=self.final_summary_schema,

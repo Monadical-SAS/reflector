@@ -21,9 +21,6 @@ async def process_audio_file(filename, event_callback, only_transcript=False):
     async def on_topic(data):
         await event_callback("topic", data)
 
-    async def on_title(data):
-        await event_callback("title", data)
-
     async def on_summary(data):
         await event_callback("summary", data)
 
@@ -72,8 +69,6 @@ if __name__ == "__main__":
         elif event == "topic":
             print(f"Topic[{data.human_timestamp}]: title={data.title}")
             print(f"Topic[{data.human_timestamp}]: summary={data.summary}")
-        elif event == "title":
-            print(f"Title: title={data.title}")
         elif event == "summary":
             print(f"Summary: duration={data.duration}")
             print(f"Summary: summary={data.summary}")

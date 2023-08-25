@@ -16,7 +16,7 @@ async def test_basic_process(event_loop):
 
     class LLMTest(LLM):
         async def _generate(
-            self, prompt: str, text: str, schema: dict | None, **kwargs
+            self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
         ) -> str:
             return {
                 "title": "TITLE",

@@ -49,6 +49,7 @@ class LLM:
         self,
         prompt: str,
         text: str,
+        task: str,
         logger: reflector_logger,
         schema: dict | None = None,
         **kwargs,
@@ -56,7 +57,7 @@ class LLM:
         logger.info("LLM generate", prompt=repr(prompt), text=text)
         try:
             result = await retry(self._generate)(
-                prompt=prompt, text=text, schema=schema, **kwargs
+                prompt=prompt, text=text, task=task, schema=schema, **kwargs
             )
         except Exception:
             logger.exception("Failed to call llm after retrying")
@@ -70,7 +71,7 @@ class LLM:
         return result
 
     async def _generate(
-        self, prompt: str, text: str, schema: dict | None, **kwargs
+        self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
     ) -> str:
         raise NotImplementedError
 

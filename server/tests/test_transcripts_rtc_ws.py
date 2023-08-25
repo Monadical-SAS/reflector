@@ -61,7 +61,7 @@ async def dummy_llm():
 
     class TestLLM(LLM):
         async def _generate(
-            self, prompt: str, text: str, schema: dict | None, **kwargs
+            self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
         ):
             return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
