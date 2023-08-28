@@ -27,19 +27,19 @@ class TranscriptLinerProcessor(Processor):
                 return
 
         # cut to the next .
-        partial = Transcript(words=[])
+        partial = Transcript(translation=self.transcript.translation, words=[])
         for word in self.transcript.words[:]:
             partial.text += word.text
             partial.words.append(word)
             if "." not in word.text:
                 continue
 
-            partial.translation = self.transcript.translation
             # emit line
             await self.emit(partial)
 
             # create new transcript
-            partial = Transcript(words=[])
+            partial = Transcript(translation=self.transcript.translation, words=[])
+
         self.transcript = partial
 
     async def _flush(self):
