@@ -77,7 +77,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
-                data=json_payload,
+                params=json_payload,
             )
 
             self.logger.debug(

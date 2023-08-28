@@ -151,7 +151,7 @@ class Whisper:
 )
 @asgi_app()
 def web():
-    from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, status
+    from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile, status
     from fastapi.security import OAuth2PasswordBearer
     from typing_extensions import Annotated
 
@@ -173,26 +173,23 @@ def web():
     class TranscriptResponse(BaseModel):
         result: dict
 
-    class TranscriptRequest(BaseModel):
-        file: UploadFile
-        timestamp: Annotated[float, Form()] = 0
-        source_language: Annotated[str, Form()] = "en"
-        target_language: Annotated[str, Form()] = "en"
-
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     async def transcribe(
-        req: TranscriptRequest
+        file: UploadFile,
+        source_language: Annotated[str, Body(...)] = "en",
+        target_language: Annotated[str, Body(...)] = "en",
+        timestamp: Annotated[float, Body()] = 0.0
     ) -> TranscriptResponse:
-        audio_data = await req.file.read()
-        audio_suffix = req.file.filename.split(".")[-1]
+        audio_data = await file.read()
+        audio_suffix = file.filename.split(".")[-1]
         assert audio_suffix in supported_audio_file_types
 
         func = transcriberstub.transcribe_segment.spawn(
             audio_data=audio_data,
             audio_suffix=audio_suffix,
-            source_language=req.source_language,
-            target_language=req.target_language,
-            timestamp=req.timestamp
+            source_language=source_language,
+            target_language=target_language,
+            timestamp=timestamp
         )
         result = func.get()
         return result
