@@ -39,7 +39,7 @@ class TranscriptFinalSummaryProcessor(Processor):
         self.llm = LLM.get_instance()
         # TODO: Once we have the option to pass LLM as constructor param,
         # choose the corresponding prompt template
-        self.prompt_template = LLMPromptTemplate.template
+        self.prompt_template = LLMPromptTemplate().template
         self.tokenizer = AutoTokenizer.from_pretrained("lmsys/vicuna-13b-v1.5")
 
     async def _push(self, data: TitleSummary):
