@@ -1,3 +1,5 @@
+from transformers.generation import GenerationConfig
+
 from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
@@ -12,6 +14,9 @@ class TranscriptTopicDetectorProcessor(Processor):
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = TitleSummary
     TASK = "topic"
+    topic_gen_cfg = GenerationConfig(
+        max_new_tokens=300, num_beams=3, use_cache=True, temperature=0.9
+    )
 
     PROMPT = """
         Create a JSON object as response.The JSON object must have 2 fields:
@@ -22,7 +27,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         three sentences.
     """
 
-    def __init__(self, min_transcript_length=100, **kwargs):
+    def __init__(self, min_transcript_length=750, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length

@@ -9,6 +9,7 @@ class ModalLLM(LLM):
     def __init__(self):
         super().__init__()
         self.timeout = settings.LLM_TIMEOUT
+        self.llm_name = "lmsys/vicuna-13b-v1.5"
         self.llm_url = settings.LLM_URL + "/llm"
         self.llm_warmup_url = settings.LLM_URL + "/warmup"
         self.headers = {
@@ -50,19 +51,27 @@ if __name__ == "__main__":
 
     async def main():
         llm = ModalLLM()
-        prompt = "Complete the following sentence."
+        prompt = "Complete the following task."
+        task = "chat"
         result = await llm.generate(
-            prompt=prompt, text="Hello, my name is", logger=logger
+            prompt=prompt,
+            task=task,
+            text="Tell me a joke about programming",
+            logger=logger,
         )
         print(result)
 
         schema = {
             "type": "object",
-            "properties": {"name": {"type": "string"}},
+            "properties": {"response": {"type": "string"}},
         }
 
         result = await llm.generate(
-            prompt=prompt, text="Hello, my name is", schema=schema, logger=logger
+            prompt=prompt,
+            task=task,
+            text="Tell me a joke about programming",
+            schema=schema,
+            logger=logger,
         )
         print(result)
 

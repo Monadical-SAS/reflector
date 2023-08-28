@@ -220,3 +220,14 @@ class TranslationLanguages(BaseModel):
         if lang_id in self.supported_languages:
             return True
         return False
+
+
+class LLMPromptTemplate(BaseModel):
+    template: str = """
+    ### Human:
+    {user_prompt}
+
+    {text}
+
+    ### Assistant:
+    """

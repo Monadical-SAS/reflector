@@ -39,8 +39,11 @@ if __name__ == "__main__":
 
     async def main():
         llm = BananaLLM()
-        prompt = "Complete the following sentence."
-        result = await llm.generate(prompt=prompt, text="Hello, my name is")
+        prompt = "Complete the following task."
+        task = "chat"
+        result = await llm.generate(
+            prompt=prompt, task=task, text="Tell me a joke about programming"
+        )
         print(result)
 
     import asyncio
