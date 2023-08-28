@@ -129,7 +129,6 @@ class Whisper:
                 translation = result[0].strip()
                 multilingual_transcript[target_language] = translation
 
-            print(multilingual_transcript)
 
             return {
                 "text": multilingual_transcript,
