@@ -25,10 +25,14 @@ class ModalLLM(LLM):
             )
             response.raise_for_status()
 
-    async def _generate(self, prompt: str, text: str, schema: dict | None, **kwargs):
-        json_payload = {"prompt": prompt, "text": text}
+    async def _generate(
+        self, prompt: str, schema: dict | None, gen_cfg: dict | None, **kwargs
+    ):
+        json_payload = {"prompt": prompt}
         if schema:
             json_payload["schema"] = schema
+        if gen_cfg:
+            json_payload["gen_cfg"] = gen_cfg
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 self.llm_url,

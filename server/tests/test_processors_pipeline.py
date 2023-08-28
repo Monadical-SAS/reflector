@@ -15,9 +15,7 @@ async def test_basic_process(event_loop):
     settings.TRANSCRIPT_BACKEND = "whisper"
 
     class LLMTest(LLM):
-        async def _generate(
-            self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
-        ) -> str:
+        async def _generate(self, prompt: str, schema: dict | None, **kwargs) -> str:
             return {
                 "title": "TITLE",
                 "summary": "SUMMARY",

@@ -13,12 +13,11 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = TitleSummary
-    TASK = "topic"
     topic_gen_cfg = GenerationConfig(
         max_new_tokens=300, num_beams=3, use_cache=True, temperature=0.9
     )
 
-    PROMPT = """
+    TOPIC_SUMMARY_PROMPT = """
         Create a JSON object as response.The JSON object must have 2 fields:
         i) title and ii) summary.
 
@@ -27,18 +26,19 @@ class TranscriptTopicDetectorProcessor(Processor):
         three sentences.
     """
 
-    def __init__(self, min_transcript_length=750, **kwargs):
+    topic_detector_schema = {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "summary": {"type": "string"},
+        },
+    }
+
+    def __init__(self, min_transcript_length=150, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
         self.llm = LLM.get_instance()
-        self.topic_detector_schema = {
-            "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "summary": {"type": "string"},
-            },
-        }
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
@@ -60,11 +60,13 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
+        prompt = self.llm.create_prompt(
+            user_prompt=self.TOPIC_SUMMARY_PROMPT, text=text
+        )
         result = await retry(self.llm.generate)(
-            prompt=self.PROMPT,
-            text=text,
-            task=self.TASK,
+            prompt=prompt,
             schema=self.topic_detector_schema,
+            gen_cfg=self.topic_gen_cfg,
             logger=self.logger,
         )
         summary = TitleSummary(

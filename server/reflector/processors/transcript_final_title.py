@@ -3,7 +3,7 @@ from transformers.generation import GenerationConfig
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
-from reflector.processors.types import FinalTitle, LLMPromptTemplate, TitleSummary
+from reflector.processors.types import FinalTitle, TitleSummary
 from reflector.utils.retry import retry
 
 
@@ -36,9 +36,6 @@ class TranscriptFinalTitleProcessor(Processor):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance()
-        # TODO: Once we have the option to pass LLM as constructor param,
-        # choose the corresponding prompt template
-        self.prompt_template = LLMPromptTemplate().template
         self.tokenizer = AutoTokenizer.from_pretrained("lmsys/vicuna-13b-v1.5")
 
     async def _push(self, data: TitleSummary):
@@ -63,7 +60,10 @@ class TranscriptFinalTitleProcessor(Processor):
                     user_prompt=self.FINAL_TITLE_PROMPT, text=chunk
                 )
                 title_result = await retry(self.llm.generate)(
-                    prompt=prompt, schema=self.final_title_schema, logger=self.logger
+                    prompt=prompt,
+                    gen_cfg=self.title_gen_cfg,
+                    schema=self.final_title_schema,
+                    logger=self.logger,
                 )
                 accumulated_titles.append(title_result)
             titles = ".".join([chunk.title for chunk in self.chunks])

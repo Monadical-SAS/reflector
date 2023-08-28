@@ -118,7 +118,8 @@ class LLM:
         Perform a generation action using the LLM
         """
         print(f"Generate {prompt=}")
-        self.gen_cfg.update(json.loads(gen_cfg))
+        self.gen_cfg.update(**json.loads(gen_cfg))
+        print(f"Generation config {gen_cfg=}")
 
         # If a schema is given, conform to schema
         if schema:
@@ -180,18 +181,15 @@ def web():
         text: str
         task: str
         schema_: Optional[dict] = Field(None, alias="schema")
-        generation_config: Optional[dict] = None
+        gen_cfg: Optional[dict] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        if req.schema_:
-            func = llmstub.generate.spawn(prompt=req.prompt,
-                                          schema=json.dumps(req.schema_),
-                                          generation_config=req.generation_config)
-        else:
-            func = llmstub.generate.spawn(user_prompt=req.prompt, text=req.text, task=req.task)
+        schema = json.dumps(req.schema_) if req.schema_ else None
+        gen_cfg = json.dumps(req.gen_cfg) if req.gen_cfg else None
+        func = llmstub.generate.spawn(prompt=req.prompt, schema=schema, gen_cfg=gen_cfg)
         result = func.get()
         return result
 

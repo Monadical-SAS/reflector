@@ -3,6 +3,8 @@ import json
 import re
 from time import monotonic
 
+from transformers import GenerationConfig
+
 from reflector.logger import logger as reflector_logger
 from reflector.processors.types import LLMPromptTemplate
 from reflector.settings import settings
@@ -49,14 +51,16 @@ class LLM:
     async def generate(
         self,
         prompt: str,
-        text: str,
         logger: reflector_logger,
         schema: dict | None = None,
+        gen_cfg: GenerationConfig | None = None,
         **kwargs,
     ) -> dict:
-        logger.info("LLM generate", prompt=repr(prompt), text=text)
+        logger.info("LLM generate", prompt=repr(prompt))
         try:
-            result = await retry(self._generate)(prompt=prompt, schema=schema, **kwargs)
+            result = await retry(self._generate)(
+                prompt=prompt, schema=schema, gen_cfg=gen_cfg.to_dict(), **kwargs
+            )
         except Exception:
             logger.exception("Failed to call llm after retrying")
             raise
@@ -69,7 +73,7 @@ class LLM:
         return result
 
     async def _generate(
-        self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
+        self, prompt: str, schema: dict | None, gen_cfg: dict | None, **kwargs
     ) -> str:
         raise NotImplementedError
 
@@ -97,4 +101,4 @@ class LLM:
         """
         Create a consumable prompt based on the prompt template
         """
-        return LLMPromptTemplate.template.format(user_prompt=user_prompt, text=text)
+        return LLMPromptTemplate().template.format(user_prompt=user_prompt, text=text)

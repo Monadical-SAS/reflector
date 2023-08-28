@@ -106,7 +106,7 @@ class Processor:
         pass
 
     def split_corpus(
-        self, tokenizer: Callable, corpus: str, token_threshold: int = 800
+        self, tokenizer: Callable, corpus: str, token_threshold: int = 10
     ) -> List[str]:
         """
         Split the input to the LLM due to CUDA memory limitations and LLM context window

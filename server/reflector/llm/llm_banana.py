@@ -15,11 +15,13 @@ class BananaLLM(LLM):
         }
 
     async def _generate(
-        self, prompt: str, text: str, task: str, schema: dict | None, **kwargs
+        self, prompt: str, schema: dict | None, gen_cfg: dict | None, **kwargs
     ):
-        json_payload = {"prompt": prompt, "text": text, "task": task}
+        json_payload = {"prompt": prompt}
         if schema:
             json_payload["schema"] = schema
+        if gen_cfg:
+            json_payload["gen_cfg"] = gen_cfg
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 settings.LLM_URL,
