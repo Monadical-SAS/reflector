@@ -58,7 +58,10 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             # Update code here once this is possible.
             # i.e) extract from context/session objects
             source_language = "en"
-            target_language = "en"
+
+            # TODO: target lang is set to "fr" for demo purposes
+            # Revert back once language selection is implemented
+            target_language = "fr"
             languages = TranslationLanguages()
 
             # Only way to set the target should be the UI element like dropdown.
@@ -74,7 +77,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 files=files,
                 timeout=self.timeout,
                 headers=self.headers,
-                json=json_payload,
+                data=json_payload,
             )
 
             self.logger.debug(
@@ -84,12 +87,14 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             result = response.json()
 
             # Sanity check for translation status in the result
+            translation = ""
             if target_language in result["text"]:
-                text = result["text"][target_language]
-            else:
-                text = result["text"][source_language]
+                translation = result["text"][target_language]
+            text = result["text"][source_language]
+
             transcript = Transcript(
                 text=text,
+                translation=translation,
                 words=[
                     Word(
                         text=word["text"],

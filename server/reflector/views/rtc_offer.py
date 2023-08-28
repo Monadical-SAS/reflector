@@ -1,25 +1,27 @@
 import asyncio
-from fastapi import Request, APIRouter
-from reflector.events import subscribers_shutdown
-from pydantic import BaseModel
-from reflector.logger import logger
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from json import loads, dumps
 from enum import StrEnum
+from json import dumps, loads
 from pathlib import Path
+
 import av
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+
+from reflector.events import subscribers_shutdown
+from reflector.logger import logger
 from reflector.processors import (
-    Pipeline,
     AudioChunkerProcessor,
+    AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    AudioFileWriterProcessor,
+    FinalSummary,
+    Pipeline,
+    TitleSummary,
+    Transcript,
+    TranscriptFinalSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptFinalSummaryProcessor,
-    Transcript,
-    TitleSummary,
-    FinalSummary,
 )
 
 sessions = []
@@ -108,6 +110,7 @@ async def rtc_offer_base(
             result = {
                 "cmd": "SHOW_TRANSCRIPTION",
                 "text": transcript.text,
+                "translation": transcript.translation,
             }
             ctx.data_channel.send(dumps(result))
 

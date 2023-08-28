@@ -6,6 +6,7 @@ Reflector GPU backend - transcriber
 import os
 import tempfile
 
+from fastapi import File
 from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
 
@@ -18,7 +19,7 @@ WHISPER_CACHE_DIR: str = "/cache/whisper"
 # Translation Model
 TRANSLATION_MODEL = "facebook/m2m100_418M"
 
-stub = Stub(name="reflector-transcriber")
+stub = Stub(name="reflector-lang")
 
 
 def download_whisper():
@@ -129,6 +130,8 @@ class Whisper:
                 translation = result[0].strip()
                 multilingual_transcript[target_language] = translation
 
+            print(multilingual_transcript)
+
             return {
                 "text": multilingual_transcript,
                 "words": words
@@ -149,7 +152,9 @@ class Whisper:
 )
 @asgi_app()
 def web():
-    from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, status
+    from typing import List
+
+    from fastapi import Body, Depends, FastAPI, Form, HTTPException, UploadFile, status
     from fastapi.security import OAuth2PasswordBearer
     from typing_extensions import Annotated
 
@@ -174,9 +179,9 @@ def web():
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     async def transcribe(
         file: UploadFile,
-        timestamp: Annotated[float, Form()] = 0,
         source_language: Annotated[str, Form()] = "en",
-        target_language: Annotated[str, Form()] = "en"
+        target_language: Annotated[str, Form()] = "fr",
+        timestamp: Annotated[float, Form()] = 0.0
     ) -> TranscriptResponse:
         audio_data = await file.read()
         audio_suffix = file.filename.split(".")[-1]
