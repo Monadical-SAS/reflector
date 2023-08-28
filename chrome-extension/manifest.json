@@ -1,0 +1,24 @@
+{
+    "name": "Reflector",
+    "version": "1.0",
+    "manifest_version": 3,
+    "description": "Capture the audio from a video call to use with Reflector services",
+    "permissions": ["storage", "tabs", "scripting"],
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "host_permissions": ["*://*/"],
+    "options_page": "options.html",
+    "content_scripts": [
+        {
+            "js": ["content-script.js"],
+            "matches": [
+                "*://*.whereby.com/*",
+                "*://*.zoom.us/*",
+                "*://*.meet.google.com/*",
+                "*://*.teams.microsoft.com/*",
+                "*://*.jitsi.org/*"
+            ]
+        }
+    ]
+}
