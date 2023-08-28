@@ -18,7 +18,7 @@ WHISPER_CACHE_DIR: str = "/cache/whisper"
 # Translation Model
 TRANSLATION_MODEL = "facebook/m2m100_418M"
 
-stub = Stub(name="reflector-lang")
+stub = Stub(name="reflector-transcriber")
 
 
 def download_whisper():
