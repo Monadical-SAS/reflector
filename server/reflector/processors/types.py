@@ -103,9 +103,12 @@ class TitleSummary(BaseModel):
 
 
 class FinalSummary(BaseModel):
-    title: str
     summary: str
     duration: float
+
+
+class FinalTitle(BaseModel):
+    title: str
 
 
 class TranslationLanguages(BaseModel):

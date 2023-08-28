@@ -1,7 +1,11 @@
-from reflector.logger import logger
-from uuid import uuid4
-from concurrent.futures import ThreadPoolExecutor
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from typing import Callable, List
+from uuid import uuid4
+
+import nltk
+
+from reflector.logger import logger
 
 
 class Processor:
@@ -100,6 +104,37 @@ class Processor:
 
     async def _warmup(self):
         pass
+
+    def split_corpus(
+        self, tokenizer: Callable, corpus: str, token_threshold: int = 800
+    ) -> List[str]:
+        """
+        Split the input to the LLM due to CUDA memory limitations and LLM context window
+        restrictions.
+
+        Accumulate tokens from full sentences till threshold and yield accumulated
+        tokens. Reset accumulation and repeat process.
+        """
+        nltk.download("punkt", quiet=True)
+        accumulated_tokens = []
+        accumulated_sentences = []
+        accumulated_token_count = 0
+        corpus_sentences = nltk.sent_tokenize(corpus)
+
+        for sentence in corpus_sentences:
+            tokens = tokenizer.tokenize(sentence)
+            if accumulated_token_count + len(tokens) <= token_threshold:
+                accumulated_token_count += len(tokens)
+                accumulated_tokens.extend(tokens)
+                accumulated_sentences.append(sentence)
+            else:
+                yield "".join(accumulated_sentences)
+                accumulated_token_count = len(tokens)
+                accumulated_tokens = tokens
+                accumulated_sentences = [sentence]
+
+        if accumulated_tokens:
+            yield " ".join(accumulated_sentences)
 
     @classmethod
     def as_threaded(cls, *args, **kwargs):

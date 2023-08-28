@@ -4,6 +4,7 @@ import re
 from time import monotonic
 
 from reflector.logger import logger as reflector_logger
+from reflector.processors.types import LLMPromptTemplate
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
@@ -49,16 +50,13 @@ class LLM:
         self,
         prompt: str,
         text: str,
-        task: str,
         logger: reflector_logger,
         schema: dict | None = None,
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt), text=text)
         try:
-            result = await retry(self._generate)(
-                prompt=prompt, text=text, task=task, schema=schema, **kwargs
-            )
+            result = await retry(self._generate)(prompt=prompt, schema=schema, **kwargs)
         except Exception:
             logger.exception("Failed to call llm after retrying")
             raise
@@ -94,3 +92,9 @@ class LLM:
                 result = result[:-3]
 
         return json.loads(result.strip())
+
+    def create_prompt(self, user_prompt: str, text: str) -> str:
+        """
+        Create a consumable prompt based on the prompt template
+        """
+        return LLMPromptTemplate.template.format(user_prompt=user_prompt, text=text)
