@@ -56,13 +56,9 @@ export function Dashboard({
 
   return (
     <>
-      <div className="relative h-[64svh] w-3/4 flex flex-col">
+      <div className="relative h-[60svh] w-3/4 flex flex-col">
         <div className="text-center pb-1 pt-4">
           <h1 className="text-2xl font-bold text-blue-500">Meeting Notes</h1>
-        </div>
-        <div className="flex justify-between border-b-2">
-          <div className="w-1/4 font-bold">Timestamp</div>
-          <div className="w-3/4 font-bold">Topic</div>
         </div>
 
         <ScrollToBottom
@@ -84,9 +80,11 @@ export function Dashboard({
                   setActiveTopic(activeTopic?.id == item.id ? null : item)
                 }
               >
-                <div className="w-1/4">{formatTime(item.timestamp)}</div>
-                <div className="w-3/4 flex justify-between items-center">
-                  {item.title}
+                <div className="flex justify-between items-center">
+                  <span className="font-light text-slate-500 pr-1">
+                    [{formatTime(item.timestamp)}]
+                  </span>{" "}
+                  <span className="pr-1">{item.title}</span>
                   <FontAwesomeIcon
                     className={`transform transition-transform duration-200`}
                     icon={

@@ -235,7 +235,7 @@ export default function Recorder(props: RecorderProps) {
 
   return (
     <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
-      <div className="flex my-2 mx-auto">
+      <div className="flex my-2 mx-auto audio-source-dropdown">
         <AudioInputsDropdown
           audioDevices={props.audioDevices}
           setDeviceId={setDeviceId}
