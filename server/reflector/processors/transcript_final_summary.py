@@ -17,7 +17,7 @@ class TranscriptFinalSummaryProcessor(Processor):
 
     # Generation configuration
     summary_gen_cfg = GenerationConfig(
-        max_new_tokens=1000, num_beams=3, use_cache=True, temperature=0.3
+        max_new_tokens=1300, num_beams=3, use_cache=True, temperature=0.3
     )
 
     # Prompt instructions
