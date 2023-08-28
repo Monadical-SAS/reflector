@@ -7,7 +7,6 @@ from typing import Annotated, Optional
 from uuid import uuid4
 
 import av
-import reflector.auth as auth
 from fastapi import (
     APIRouter,
     Depends,
@@ -18,11 +17,13 @@ from fastapi import (
 )
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
+
+import reflector.auth as auth
 from reflector.db import database, transcripts
 from reflector.logger import logger
 from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
-from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
@@ -49,6 +50,7 @@ class AudioWaveform(BaseModel):
 
 class TranscriptText(BaseModel):
     text: str
+    translation: str
 
 
 class TranscriptTopic(BaseModel):
@@ -491,7 +493,10 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
 
     # FIXME don't do copy
     if event == PipelineEvent.TRANSCRIPT:
-        resp = transcript.add_event(event=event, data=TranscriptText(text=data.text))
+        resp = transcript.add_event(
+            event=event,
+            data=TranscriptText(text=data.text, translation=data.translation),
+        )
         await transcripts_controller.update(
             transcript,
             {

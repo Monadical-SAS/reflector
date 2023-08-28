@@ -34,12 +34,12 @@ class TranscriptLinerProcessor(Processor):
             if "." not in word.text:
                 continue
 
+            partial.translation = self.transcript.translation
             # emit line
             await self.emit(partial)
 
             # create new transcript
             partial = Transcript(words=[])
-
         self.transcript = partial
 
     async def _flush(self):
