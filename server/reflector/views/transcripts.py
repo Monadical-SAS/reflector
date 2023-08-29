@@ -7,6 +7,7 @@ from typing import Annotated, Optional
 from uuid import uuid4
 
 import av
+import reflector.auth as auth
 from fastapi import (
     APIRouter,
     Depends,
@@ -17,13 +18,11 @@ from fastapi import (
 )
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
-from starlette.concurrency import run_in_threadpool
-
-import reflector.auth as auth
 from reflector.db import database, transcripts
 from reflector.logger import logger
 from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
+from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
@@ -50,7 +49,7 @@ class AudioWaveform(BaseModel):
 
 class TranscriptText(BaseModel):
     text: str
-    translation: str
+    translation: str | None
 
 
 class TranscriptTopic(BaseModel):
@@ -81,6 +80,8 @@ class Transcript(BaseModel):
     summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
+    source_language: str = "en"
+    target_language: str = "en"
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -186,8 +187,19 @@ class TranscriptController:
             return None
         return Transcript(**result)
 
-    async def add(self, name: str, user_id: str | None = None):
-        transcript = Transcript(name=name, user_id=user_id)
+    async def add(
+        self,
+        name: str,
+        source_language: str = "en",
+        target_language: str = "en",
+        user_id: str | None = None,
+    ):
+        transcript = Transcript(
+            name=name,
+            source_language=source_language,
+            target_language=target_language,
+            user_id=user_id,
+        )
         query = transcripts.insert().values(**transcript.model_dump())
         await database.execute(query)
         return transcript
@@ -231,20 +243,20 @@ class GetTranscript(BaseModel):
     duration: int
     summary: str | None
     created_at: datetime
+    source_language: str
+    target_language: str
 
 
 class CreateTranscript(BaseModel):
     name: str
+    source_language: str = Field("en")
+    target_language: str = Field("en")
 
 
 class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
     summary: Optional[str] = Field(None)
-
-
-class TranscriptEntryCreate(BaseModel):
-    name: str
 
 
 class DeletionStatus(BaseModel):
@@ -268,7 +280,12 @@ async def transcripts_create(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     user_id = user["sub"] if user else None
-    return await transcripts_controller.add(info.name, user_id=user_id)
+    return await transcripts_controller.add(
+        info.name,
+        source_language=info.source_language,
+        target_language=info.target_language,
+        user_id=user_id,
+    )
 
 
 # ==============================================================
@@ -573,4 +590,6 @@ async def transcript_record_webrtc(
         event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
         audio_filename=transcript.audio_filename,
+        source_language=transcript.source_language,
+        target_language=transcript.target_language,
     )

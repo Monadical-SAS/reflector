@@ -15,7 +15,6 @@ API will be a POST request to TRANSCRIPT_URL:
 from time import monotonic
 
 import httpx
-
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, TranslationLanguages, Word
@@ -54,14 +53,10 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 "file": (data.name, data.fd),
             }
 
-            # TODO: Get the source / target language from the UI preferences dynamically
-            # Update code here once this is possible.
-            # i.e) extract from context/session objects
-            source_language = "en"
-
-            # TODO: target lang is set to "fr" for demo purposes
-            # Revert back once language selection is implemented
-            target_language = "fr"
+            # FIXME this should be a processor after, as each user may want
+            # different languages
+            source_language = self.get_pref("audio:source_language", "en")
+            target_language = self.get_pref("audio:target_language", "en")
             languages = TranslationLanguages()
 
             # Only way to set the target should be the UI element like dropdown.
@@ -87,8 +82,8 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             result = response.json()
 
             # Sanity check for translation status in the result
-            translation = ""
-            if target_language in result["text"]:
+            translation = None
+            if source_language != target_language and target_language in result["text"]:
                 translation = result["text"][target_language]
             text = result["text"][source_language]
 
