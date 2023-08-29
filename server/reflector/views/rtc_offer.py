@@ -1,25 +1,26 @@
 import asyncio
-from fastapi import Request, APIRouter
-from reflector.events import subscribers_shutdown
-from pydantic import BaseModel
-from reflector.logger import logger
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
-from json import loads, dumps
 from enum import StrEnum
+from json import dumps, loads
 from pathlib import Path
+
 import av
+from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+from reflector.events import subscribers_shutdown
+from reflector.logger import logger
 from reflector.processors import (
-    Pipeline,
     AudioChunkerProcessor,
+    AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    AudioFileWriterProcessor,
+    FinalSummary,
+    Pipeline,
+    TitleSummary,
+    Transcript,
+    TranscriptFinalSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptFinalSummaryProcessor,
-    Transcript,
-    TitleSummary,
-    FinalSummary,
 )
 
 sessions = []
@@ -79,6 +80,8 @@ async def rtc_offer_base(
     event_callback=None,
     event_callback_args=None,
     audio_filename: Path | None = None,
+    source_language: str = "en",
+    target_language: str = "en",
 ):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)
@@ -176,6 +179,8 @@ async def rtc_offer_base(
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
     ]
     ctx.pipeline = Pipeline(*processors)
+    ctx.pipeline.set_pref("audio:source_language", source_language)
+    ctx.pipeline.set_pref("audio:target_language", target_language)
     # FIXME: warmup is not working well yet
     # await ctx.pipeline.warmup()
 

@@ -14,6 +14,7 @@
 
 import * as runtime from "../runtime";
 import type {
+  AudioWaveform,
   CreateTranscript,
   DeletionStatus,
   GetTranscript,
@@ -23,6 +24,8 @@ import type {
   UpdateTranscript,
 } from "../models";
 import {
+  AudioWaveformFromJSON,
+  AudioWaveformToJSON,
   CreateTranscriptFromJSON,
   CreateTranscriptToJSON,
   DeletionStatusFromJSON,
@@ -56,6 +59,10 @@ export interface V1TranscriptGetAudioRequest {
 }
 
 export interface V1TranscriptGetAudioMp3Request {
+  transcriptId: any;
+}
+
+export interface V1TranscriptGetAudioWaveformRequest {
   transcriptId: any;
 }
 
@@ -384,6 +391,67 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.v1TranscriptGetAudioMp3Raw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get Audio Waveform
+   */
+  async v1TranscriptGetAudioWaveformRaw(
+    requestParameters: V1TranscriptGetAudioWaveformRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<AudioWaveform>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetAudioWaveform.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/audio/waveform`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      AudioWaveformFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Get Audio Waveform
+   */
+  async v1TranscriptGetAudioWaveform(
+    requestParameters: V1TranscriptGetAudioWaveformRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<AudioWaveform> {
+    const response = await this.v1TranscriptGetAudioWaveformRaw(
       requestParameters,
       initOverrides,
     );

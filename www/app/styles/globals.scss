@@ -15,8 +15,15 @@ body {
 }
 
 .temp-transcription {
-  background: beige;
+  background: rgb(151 190 255);
   border-radius: 5px;
+  border: solid 1px #808080;
+  margin: 1em 0;
+}
+
+.temp-transcription h2 {
+  font-weight: bold;
+  font-size: 130%;
 }
 
 .Dropdown-placeholder {
@@ -24,4 +31,10 @@ body {
 }
 .Dropdown-arrow {
   top: 47% !important;
+}
+
+@media (max-width: 768px) {
+  .audio-source-dropdown .Dropdown-control {
+    max-width: 90px;
+  }
 }

@@ -1,8 +1,9 @@
-from reflector.processors.base import Processor
+import importlib
+
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
+from reflector.processors.base import Pipeline, Processor
 from reflector.processors.types import AudioFile
 from reflector.settings import settings
-import importlib
 
 
 class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
@@ -34,6 +35,10 @@ class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
     def __init__(self, **kwargs):
         self.processor = self.get_instance(settings.TRANSCRIPT_BACKEND)
         super().__init__(**kwargs)
+
+    def set_pipeline(self, pipeline: Pipeline):
+        super().set_pipeline(pipeline)
+        self.processor.set_pipeline(pipeline)
 
     def connect(self, processor: Processor):
         self.processor.connect(processor)
