@@ -2,7 +2,9 @@ import importlib
 import json
 import re
 from time import monotonic
+from typing import Callable, List
 
+import nltk
 from transformers import GenerationConfig
 
 from reflector.logger import logger as reflector_logger
@@ -96,6 +98,67 @@ class LLM:
                 result = result[:-3]
 
         return json.loads(result.strip())
+
+    def text_token_threshold(
+        self, prompt: str, tokenizer: Callable, gen_cfg: GenerationConfig | None
+    ) -> int:
+        """
+        Choose the token size to set as the threshold to pack the LLM calls
+        """
+        buffer_token_size = 25
+        default_output_tokens = 1000
+        context_window = tokenizer.model_max_length
+        tokens = tokenizer.tokenize(
+            LLMPromptTemplate().template.format(user_prompt=prompt)
+        )
+        threshold = context_window - len(tokens) - buffer_token_size
+        if gen_cfg:
+            threshold -= gen_cfg.max_new_tokens
+        else:
+            threshold -= default_output_tokens
+        return threshold
+
+    def split_corpus(
+        self,
+        tokenizer: Callable,
+        corpus: str,
+        prompt: str,
+        token_threshold: int | None,
+        gen_cfg: GenerationConfig | None,
+    ) -> List[str]:
+        """
+        Split the input to the LLM due to CUDA memory limitations and LLM context window
+        restrictions.
+
+        Accumulate tokens from full sentences till threshold and yield accumulated
+        tokens. Reset accumulation and repeat process.
+        """
+        nltk.download("punkt", quiet=True)
+
+        if not token_threshold:
+            token_threshold = self.text_token_threshold(
+                prompt=prompt, tokenizer=tokenizer, gen_cfg=gen_cfg
+            )
+
+        accumulated_tokens = []
+        accumulated_sentences = []
+        accumulated_token_count = 0
+        corpus_sentences = nltk.sent_tokenize(corpus)
+
+        for sentence in corpus_sentences:
+            tokens = tokenizer.tokenize(sentence)
+            if accumulated_token_count + len(tokens) <= token_threshold:
+                accumulated_token_count += len(tokens)
+                accumulated_tokens.extend(tokens)
+                accumulated_sentences.append(sentence)
+            else:
+                yield "".join(accumulated_sentences)
+                accumulated_token_count = len(tokens)
+                accumulated_tokens = tokens
+                accumulated_sentences = [sentence]
+
+        if accumulated_tokens:
+            yield " ".join(accumulated_sentences)
 
     def create_prompt(self, user_prompt: str, text: str) -> str:
         """

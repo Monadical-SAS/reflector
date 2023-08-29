@@ -42,7 +42,14 @@ class TranscriptFinalTitleProcessor(Processor):
         self.chunks.append(data)
 
     async def get_title(self, text: str) -> dict:
-        chunks = list(self.split_corpus(self.tokenizer, text))
+        chunks = list(
+            self.llm.split_corpus(
+                tokenizer=self.tokenizer,
+                corpus=text,
+                prompt=self.FINAL_TITLE_PROMPT,
+                gen_cfg=self.title_gen_cfg,
+            )
+        )
 
         if len(chunks) == 1:
             self.logger.info(f"Smoothing out {len(text)} titles")

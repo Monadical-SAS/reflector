@@ -43,7 +43,14 @@ class TranscriptFinalSummaryProcessor(Processor):
         self.chunks.append(data)
 
     async def get_long_summary(self, text: str) -> str:
-        chunks = list(self.split_corpus(self.tokenizer, text))
+        chunks = list(
+            self.llm.split_corpus(
+                tokenizer=self.tokenizer,
+                corpus=text,
+                prompt=self.FINAL_SUMMARY_PROMPT,
+                gen_cfg=self.summary_gen_cfg,
+            )
+        )
 
         accumulated_summaries = ""
         for chunk in chunks:
@@ -61,7 +68,14 @@ class TranscriptFinalSummaryProcessor(Processor):
         return accumulated_summaries
 
     async def tree_summarizer(self, text: str) -> dict:
-        chunks = list(self.split_corpus(self.tokenizer, text))
+        chunks = list(
+            self.llm.split_corpus(
+                tokenizer=self.tokenizer,
+                corpus=text,
+                prompt=self.FINAL_SUMMARY_PROMPT,
+                gen_cfg=self.summary_gen_cfg,
+            )
+        )
 
         if len(chunks) == 1:
             self.logger.info(f"Smoothing out {len(text)} length summary")
