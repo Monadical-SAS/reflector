@@ -26,7 +26,7 @@ const App = () => {
   }, []);
 
   const api = getApi();
-  const transcript = useTranscript();
+  const transcript = useTranscript(api);
   const webRTC = useWebRTC(stream, transcript.response?.id, api);
   const webSockets = useWebSockets(transcript.response?.id);
   const {
