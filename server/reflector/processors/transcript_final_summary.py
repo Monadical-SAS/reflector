@@ -37,6 +37,8 @@ class TranscriptFinalSummaryProcessor(Processor):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance()
+        # TODO : Get tokenizer given model name (when passing model name in
+        # getting instance is implemented)
         self.tokenizer = AutoTokenizer.from_pretrained("lmsys/vicuna-13b-v1.5")
 
     async def _push(self, data: TitleSummary):
@@ -83,7 +85,10 @@ class TranscriptFinalSummaryProcessor(Processor):
                 user_prompt=self.FINAL_SUMMARY_PROMPT, text=chunks[0]
             )
             summary_result = await retry(self.llm.generate)(
-                prompt=prompt, schema=self.final_summary_schema, logger=self.logger
+                prompt=prompt,
+                gen_cfg=self.summary_gen_cfg,
+                schema=self.final_summary_schema,
+                logger=self.logger,
             )
             return summary_result
         else:
@@ -93,7 +98,10 @@ class TranscriptFinalSummaryProcessor(Processor):
                     user_prompt=self.FINAL_SUMMARY_PROMPT, text=chunk
                 )
                 summary_result = await retry(self.llm.generate)(
-                    prompt=prompt, schema=self.final_summary_schema, logger=self.logger
+                    prompt=prompt,
+                    gen_cfg=self.summary_gen_cfg,
+                    schema=self.final_summary_schema,
+                    logger=self.logger,
                 )
                 accumulated_summaries += summary_result["summary"]
 

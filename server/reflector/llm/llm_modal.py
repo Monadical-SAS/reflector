@@ -33,6 +33,7 @@ class ModalLLM(LLM):
             json_payload["schema"] = schema
         if gen_cfg:
             json_payload["gen_cfg"] = gen_cfg
+        print(json_payload)
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 self.llm_url,

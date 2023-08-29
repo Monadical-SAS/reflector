@@ -113,13 +113,18 @@ class LLM:
         return {"status": "ok"}
 
     @method()
-    def generate(self, prompt: str, schema: str | None, gen_cfg=str | None) -> str | dict:
+    def generate(self, prompt: str, schema: str | None, gen_cfg: str | None) -> dict:
         """
         Perform a generation action using the LLM
         """
         print(f"Generate {prompt=}")
-        self.gen_cfg.update(**json.loads(gen_cfg))
-        print(f"Generation config {gen_cfg=}")
+        if not gen_cfg:
+            gen_cfg = self.gen_cfg.to_dict()
+        else:
+            gen_cfg = json.loads(gen_cfg)
+
+        # Update the base gen cfg with the supplied gen cfg
+        # self.gen_cfg.update(**json.loads(gen_cfg))
 
         # If a schema is given, conform to schema
         if schema:
@@ -128,7 +133,7 @@ class LLM:
                                               tokenizer=self.tokenizer,
                                               json_schema=json.loads(schema),
                                               prompt=prompt,
-                                              max_string_token_length=self.gen_cfg.max_new_tokens)
+                                              max_string_token_length=gen_cfg["max_new_tokens"])
             response = jsonformer_llm()
         else:
             # If no schema, perform prompt only generation
@@ -137,13 +142,13 @@ class LLM:
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
                 self.model.device
             )
-            output = self.model.generate(input_ids, generation_config=self.gen_cfg)
+            output = self.model.generate(input_ids, generation_config=gen_cfg)
 
             # decode output
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
             response = response[len(prompt):]
         print(f"Generated {response=}")
-        return response
+        return {"text": response}
 
 # -------------------------------------------------------------------
 # Web API
@@ -178,8 +183,6 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
-        text: str
-        task: str
         schema_: Optional[dict] = Field(None, alias="schema")
         gen_cfg: Optional[dict] = None
 

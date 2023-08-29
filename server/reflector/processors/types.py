@@ -234,3 +234,6 @@ class LLMPromptTemplate(BaseModel):
 
     ### Assistant:
     """
+
+    def get_template(self):
+        return self.template

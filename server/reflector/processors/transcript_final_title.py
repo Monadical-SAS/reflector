@@ -57,7 +57,10 @@ class TranscriptFinalTitleProcessor(Processor):
                 user_prompt=self.FINAL_TITLE_PROMPT, text=chunks[0]
             )
             title_result = await retry(self.llm.generate)(
-                prompt=prompt, schema=self.final_title_schema, logger=self.logger
+                prompt=prompt,
+                gen_cfg=self.title_gen_cfg,
+                schema=self.final_title_schema,
+                logger=self.logger,
             )
             return title_result
         else:

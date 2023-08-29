@@ -109,7 +109,7 @@ class LLM:
         default_output_tokens = 1000
         context_window = tokenizer.model_max_length
         tokens = tokenizer.tokenize(
-            LLMPromptTemplate().template.format(user_prompt=prompt)
+            LLMPromptTemplate().get_template().format(user_prompt=prompt, text="")
         )
         threshold = context_window - len(tokens) - buffer_token_size
         if gen_cfg:
@@ -123,8 +123,8 @@ class LLM:
         tokenizer: Callable,
         corpus: str,
         prompt: str,
-        token_threshold: int | None,
         gen_cfg: GenerationConfig | None,
+        token_threshold: int | None = None,
     ) -> List[str]:
         """
         Split the input to the LLM due to CUDA memory limitations and LLM context window
