@@ -61,6 +61,18 @@ export interface GetTranscript {
    * @memberof GetTranscript
    */
   createdAt: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
+  sourceLanguage: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
+  targetLanguage: any | null;
 }
 
 /**
@@ -75,6 +87,8 @@ export function instanceOfGetTranscript(value: object): boolean {
   isInstance = isInstance && "duration" in value;
   isInstance = isInstance && "summary" in value;
   isInstance = isInstance && "createdAt" in value;
+  isInstance = isInstance && "sourceLanguage" in value;
+  isInstance = isInstance && "targetLanguage" in value;
 
   return isInstance;
 }
@@ -98,6 +112,8 @@ export function GetTranscriptFromJSONTyped(
     duration: json["duration"],
     summary: json["summary"],
     createdAt: json["created_at"],
+    sourceLanguage: json["source_language"],
+    targetLanguage: json["target_language"],
   };
 }
 
@@ -116,5 +132,7 @@ export function GetTranscriptToJSON(value?: GetTranscript | null): any {
     duration: value.duration,
     summary: value.summary,
     created_at: value.createdAt,
+    source_language: value.sourceLanguage,
+    target_language: value.targetLanguage,
   };
 }

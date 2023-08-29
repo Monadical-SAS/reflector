@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from "./AudioWaveform";
 export * from "./CreateTranscript";
 export * from "./DeletionStatus";
 export * from "./GetTranscript";
