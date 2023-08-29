@@ -47,7 +47,7 @@ class Word(BaseModel):
 
 class Transcript(BaseModel):
     text: str = ""
-    translation: str = ""
+    translation: str | None = None
     words: list[Word] = None
 
     @property
