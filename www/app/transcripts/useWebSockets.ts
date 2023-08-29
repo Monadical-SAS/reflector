@@ -80,9 +80,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       switch (message.event) {
         case "TRANSCRIPT":
           if (message.data.text) {
-            setTranscriptText(
-              (message.data.translation ?? message.data.text ?? "").trim(),
-            );
+            setTranscriptText((message.data.text ?? "").trim());
             console.debug("TRANSCRIPT event:", message.data);
           }
           break;
