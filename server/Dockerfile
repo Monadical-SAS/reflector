@@ -25,5 +25,6 @@ FROM base AS final
 COPY --from=builder /venv /venv
 RUN mkdir -p /app
 COPY reflector /app/reflector
+COPY runserver.sh /app/runserver.sh
 WORKDIR /app
-CMD ["/venv/bin/python", "-m", "reflector.app"]
+CMD ["./runserver.sh"]
