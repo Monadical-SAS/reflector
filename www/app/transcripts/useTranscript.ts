@@ -23,6 +23,7 @@ const useTranscript = (): UseTranscript => {
     const requestParameters: V1TranscriptsCreateRequest = {
       createTranscript: {
         name: "Weekly All-Hands", // Hardcoded for now
+        targetLanguage: "fr", // Hardcoded for now
       },
     };
 
