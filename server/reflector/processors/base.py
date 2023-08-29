@@ -1,7 +1,9 @@
-from reflector.logger import logger
-from uuid import uuid4
-from concurrent.futures import ThreadPoolExecutor
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+from uuid import uuid4
+
+from reflector.logger import logger
 
 
 class Processor:
@@ -17,9 +19,11 @@ class Processor:
         self.uid = uuid4().hex
         self.flushed = False
         self.logger = (custom_logger or logger).bind(processor=self.__class__.__name__)
+        self.pipeline = None
 
     def set_pipeline(self, pipeline: "Pipeline"):
         # if pipeline is used, pipeline logger will be used instead
+        self.pipeline = pipeline
         self.logger = pipeline.logger.bind(processor=self.__class__.__name__)
 
     def connect(self, processor: "Processor"):
@@ -53,6 +57,14 @@ class Processor:
         Unregister a callback to be called when data is emitted
         """
         self._callbacks.remove(callback)
+
+    def get_pref(self, key: str, default: Any = None):
+        """
+        Get a preference from the pipeline prefs
+        """
+        if self.pipeline:
+            return self.pipeline.get_pref(key, default)
+        return default
 
     async def emit(self, data):
         for callback in self._callbacks:
@@ -191,6 +203,7 @@ class Pipeline(Processor):
         self.logger.info("Pipeline created")
 
         self.processors = processors
+        self.prefs = {}
 
         for processor in processors:
             processor.set_pipeline(self)
@@ -220,3 +233,17 @@ class Pipeline(Processor):
         for processor in self.processors:
             processor.describe(level + 1)
         logger.info("")
+
+    def set_pref(self, key: str, value: Any):
+        """
+        Set a preference for this pipeline
+        """
+        self.prefs[key] = value
+
+    def get_pref(self, key: str, default=None):
+        """
+        Get a preference for this pipeline
+        """
+        if key not in self.prefs:
+            self.logger.warning(f"Pref {key} not found, using default")
+        return self.prefs.get(key, default)
