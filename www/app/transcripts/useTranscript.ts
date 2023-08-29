@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
-import { Configuration } from "../api/runtime";
 import { GetTranscript } from "../api";
 import getApi from "../lib/getApi";
 
@@ -11,12 +10,10 @@ type UseTranscript = {
   createTranscript: () => void;
 };
 
-const useTranscript = (): UseTranscript => {
+const useTranscript = (api: DefaultApi): UseTranscript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  const api = getApi();
 
   const createTranscript = () => {
     setLoading(true);

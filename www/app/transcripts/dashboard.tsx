@@ -103,7 +103,11 @@ export function Dashboard({
             </div>
           ))}
           {topics.length === 0 && (
-            <div className="text-center text-gray-500">No topics yet</div>
+            <div className="text-center text-gray-500">
+              Discussion topics will appear here after you start recording. It
+              may take up to 5 minutes of conversation for the first topic to
+              appear.
+            </div>
           )}
         </div>
 

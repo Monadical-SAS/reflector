@@ -58,6 +58,7 @@ export default function Recorder(props: RecorderProps) {
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [hasRecorded, setHasRecorded] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -210,8 +211,7 @@ export default function Recorder(props: RecorderProps) {
       props.onStop();
       record.stopRecording();
       setIsRecording(false);
-      const playBtn = document.getElementById("play-btn");
-      if (playBtn) playBtn.removeAttribute("disabled");
+      setHasRecorded(true);
     } else {
       const stream = await props.getAudioStream(deviceId);
       props.setStream(stream);
@@ -236,36 +236,45 @@ export default function Recorder(props: RecorderProps) {
   return (
     <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
       <div className="flex my-2 mx-auto audio-source-dropdown">
-        <AudioInputsDropdown
-          audioDevices={props.audioDevices}
-          setDeviceId={setDeviceId}
-          disabled={isRecording}
-        />
-        &nbsp;
-        <button
-          className="w-20"
-          onClick={handleRecClick}
-          data-color={isRecording ? "red" : "blue"}
-          disabled={!deviceId}
-        >
-          {isRecording ? "Stop" : "Record"}
-        </button>
-        &nbsp;
-        <button
-          className="w-20"
-          id="play-btn"
-          onClick={handlePlayClick}
-          data-color={isPlaying ? "orange" : "green"}
-        >
-          {isPlaying ? "Pause" : "Play"}
-        </button>
-        <a
-          id="download-recording"
-          title="Download recording"
-          className="invisible w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
-        >
-          <FontAwesomeIcon icon={faDownload} />
-        </a>
+        {!hasRecorded && (
+          <>
+            <AudioInputsDropdown
+              audioDevices={props.audioDevices}
+              setDeviceId={setDeviceId}
+              disabled={isRecording}
+            />
+            &nbsp;
+            <button
+              className="w-20"
+              onClick={handleRecClick}
+              data-color={isRecording ? "red" : "blue"}
+              disabled={!deviceId}
+            >
+              {isRecording ? "Stop" : "Record"}
+            </button>
+            &nbsp;
+          </>
+        )}
+
+        {hasRecorded && (
+          <>
+            <button
+              className="w-20"
+              id="play-btn"
+              onClick={handlePlayClick}
+              data-color={isPlaying ? "orange" : "green"}
+            >
+              {isPlaying ? "Pause" : "Play"}
+            </button>
+            <a
+              id="download-recording"
+              title="Download recording"
+              className="invisible w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+            </a>
+          </>
+        )}
       </div>
       <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
       <div className="absolute bottom-0 right-2 text-xs text-black">
