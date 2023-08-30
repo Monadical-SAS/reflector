@@ -38,7 +38,7 @@ def migrate_cache_llm():
     from transformers.utils.hub import move_cache
 
     print("Moving LLM cache")
-    move_cache()
+    move_cache(cache_dir=IMAGE_MODEL_DIR)
     print("LLM cache moved")
 
 
