@@ -3,7 +3,14 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from uuid import uuid4
 
+from pydantic import BaseModel
 from reflector.logger import logger
+
+
+class PipelineEvent(BaseModel):
+    processor: str
+    uid: str
+    data: Any
 
 
 class Processor:
@@ -12,6 +19,7 @@ class Processor:
     WARMUP_EVENT: str = "WARMUP_EVENT"
 
     def __init__(self, callback=None, custom_logger=None):
+        self.name = self.__class__.__name__
         self._processors = []
         self._callbacks = []
         if callback:
@@ -67,6 +75,10 @@ class Processor:
         return default
 
     async def emit(self, data):
+        if self.pipeline:
+            await self.pipeline.emit(
+                PipelineEvent(processor=self.name, uid=self.uid, data=data)
+            )
         for callback in self._callbacks:
             await callback(data)
         for processor in self._processors:
