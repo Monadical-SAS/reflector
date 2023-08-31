@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
+import { useError } from "../(errors)/errorContext";
 
 type UseWebSockets = {
   transcriptText: string;
@@ -15,6 +16,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     summary: "",
   });
   const [status, setStatus] = useState<Status>({ value: "disconnected" });
+  const { setError } = useError();
 
   useEffect(() => {
     document.onkeyup = (e) => {
@@ -77,41 +79,50 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
 
-      switch (message.event) {
-        case "TRANSCRIPT":
-          if (message.data.text) {
-            setTranscriptText((message.data.text ?? "").trim());
-            console.debug("TRANSCRIPT event:", message.data);
-          }
-          break;
+      try {
+        switch (message.event) {
+          case "TRANSCRIPT":
+            if (message.data.text) {
+              setTranscriptText((message.data.text ?? "").trim());
+              console.debug("TRANSCRIPT event:", message.data);
+            }
+            break;
 
-        case "TOPIC":
-          setTopics((prevTopics) => [...prevTopics, message.data]);
-          console.debug("TOPIC event:", message.data);
-          break;
+          case "TOPIC":
+            setTopics((prevTopics) => [...prevTopics, message.data]);
+            console.debug("TOPIC event:", message.data);
+            break;
 
-        case "FINAL_SUMMARY":
-          if (message.data) {
-            setFinalSummary(message.data);
-            console.debug("FINAL_SUMMARY event:", message.data);
-          }
-          break;
+          case "FINAL_SUMMARY":
+            if (message.data) {
+              setFinalSummary(message.data);
+              console.debug("FINAL_SUMMARY event:", message.data);
+            }
+            break;
 
-        case "STATUS":
-          setStatus(message.data);
-          break;
+          case "STATUS":
+            setStatus(message.data);
+            break;
 
-        default:
-          console.error("Unknown event:", message.event);
+          default:
+            console.error("Unknown event:", message.event);
+            setError(`Received unknown WebSocket event: ${message.event}`);
+        }
+      } catch (error) {
+        setError(`Failed to process WebSocket message: ${error.message}`);
       }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      setError("A WebSocket error occurred.");
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       console.debug("WebSocket connection closed");
+      if (event.code !== 1000) {
+        setError(`WebSocket closed unexpectedly with code: ${event.code}`);
+      }
     };
 
     return () => {
