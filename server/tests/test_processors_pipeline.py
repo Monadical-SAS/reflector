@@ -24,15 +24,12 @@ async def test_basic_process(event_loop):
     LLM.register("test", LLMTest)
 
     # event callback
-    marks = {
-        "transcript": 0,
-        "topic": 0,
-        "summary": 0,
-    }
+    marks = {}
 
-    async def event_callback(event, data):
-        print(f"{event}: {data}")
-        marks[event] += 1
+    async def event_callback(event):
+        if event.processor not in marks:
+            marks[event.processor] = 0
+        marks[event.processor] += 1
 
     # invoke the process and capture events
     path = Path(__file__).parent / "records" / "test_mathieu_hello.wav"
@@ -40,6 +37,6 @@ async def test_basic_process(event_loop):
     print(marks)
 
     # validate the events
-    assert marks["transcript"] == 5
-    assert marks["topic"] == 1
-    assert marks["summary"] == 1
+    assert marks["TranscriptLinerProcessor"] == 5
+    assert marks["TranscriptTopicDetectorProcessor"] == 1
+    assert marks["TranscriptFinalSummaryProcessor"] == 1
