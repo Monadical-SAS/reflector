@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import { GetTranscript } from "../api";
 import { useError } from "../(errors)/errorContext";
+import handleError from "../(errors)/handleError";
 
 type UseTranscript = {
   response: GetTranscript | null;
@@ -37,7 +38,7 @@ const useTranscript = (api: DefaultApi): UseTranscript => {
       })
       .catch((err) => {
         const errorString = err.response || err.message || "Unknown error";
-        setError(errorString);
+        handleError(setError, errorString, err);
         setLoading(false);
         console.error("Error creating transcript:", errorString);
       });
