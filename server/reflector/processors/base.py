@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Union
+from typing import Any, List, Union
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -216,7 +216,7 @@ class BroadcastProcessor(Processor):
     types of input.
     """
 
-    def __init__(self, processors: Processor):
+    def __init__(self, processors: List[Processor]):
         super().__init__()
         self.processors = processors
         self.INPUT_TYPE = processors[0].INPUT_TYPE

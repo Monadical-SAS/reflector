@@ -1,6 +1,7 @@
 import asyncio
 
 import av
+from processors.base import BroadcastProcessor
 
 from reflector.logger import logger
 from reflector.processors import (
@@ -9,7 +10,9 @@ from reflector.processors import (
     AudioTranscriptAutoProcessor,
     Pipeline,
     PipelineEvent,
-    TranscriptFinalSummaryProcessor,
+    TranscriptFinalLongSummaryProcessor,
+    TranscriptFinalTitleProcessor,
+    TranscriptFinalTreeSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
@@ -32,7 +35,13 @@ async def process_audio_file(
     if not only_transcript:
         processors += [
             TranscriptTopicDetectorProcessor.as_threaded(),
-            TranscriptFinalSummaryProcessor.as_threaded(),
+            BroadcastProcessor(
+                processors=[
+                    TranscriptFinalTitleProcessor.as_threaded(),
+                    TranscriptFinalLongSummaryProcessor.as_threaded(),
+                    TranscriptFinalTreeSummaryProcessor.as_threaded(),
+                ],
+            ),
         ]
 
     # transcription output
