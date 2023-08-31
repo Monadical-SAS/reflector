@@ -47,6 +47,7 @@ class Word(BaseModel):
 
 class Transcript(BaseModel):
     text: str = ""
+    translation: str | None = None
     words: list[Word] = None
 
     @property
@@ -84,7 +85,7 @@ class Transcript(BaseModel):
         words = [
             Word(text=word.text, start=word.start, end=word.end) for word in self.words
         ]
-        return Transcript(text=self.text, words=words)
+        return Transcript(text=self.text, translation=self.translation, words=words)
 
 
 class TitleSummary(BaseModel):

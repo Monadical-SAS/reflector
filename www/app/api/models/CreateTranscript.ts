@@ -25,6 +25,18 @@ export interface CreateTranscript {
    * @memberof CreateTranscript
    */
   name: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof CreateTranscript
+   */
+  sourceLanguage?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof CreateTranscript
+   */
+  targetLanguage?: any | null;
 }
 
 /**
@@ -50,6 +62,12 @@ export function CreateTranscriptFromJSONTyped(
   }
   return {
     name: json["name"],
+    sourceLanguage: !exists(json, "source_language")
+      ? undefined
+      : json["source_language"],
+    targetLanguage: !exists(json, "target_language")
+      ? undefined
+      : json["target_language"],
   };
 }
 
@@ -62,5 +80,7 @@ export function CreateTranscriptToJSON(value?: CreateTranscript | null): any {
   }
   return {
     name: value.name,
+    source_language: value.sourceLanguage,
+    target_language: value.targetLanguage,
   };
 }

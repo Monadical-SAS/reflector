@@ -81,6 +81,8 @@ async def rtc_offer_base(
     event_callback=None,
     event_callback_args=None,
     audio_filename: Path | None = None,
+    source_language: str = "en",
+    target_language: str = "en",
 ):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)
@@ -179,6 +181,8 @@ async def rtc_offer_base(
         TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
     ]
     ctx.pipeline = Pipeline(*processors)
+    ctx.pipeline.set_pref("audio:source_language", source_language)
+    ctx.pipeline.set_pref("audio:target_language", target_language)
     # FIXME: warmup is not working well yet
     # await ctx.pipeline.warmup()
 

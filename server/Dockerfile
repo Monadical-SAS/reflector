@@ -25,5 +25,7 @@ FROM base AS final
 COPY --from=builder /venv /venv
 RUN mkdir -p /app
 COPY reflector /app/reflector
+COPY migrations /app/migrations
+COPY alembic.ini runserver.sh /app/
 WORKDIR /app
-CMD ["/venv/bin/python", "-m", "reflector.app"]
+CMD ["./runserver.sh"]
