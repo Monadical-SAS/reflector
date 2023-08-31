@@ -2,13 +2,13 @@ import importlib
 import json
 import re
 from time import monotonic
-from typing import Callable, List
+from typing import List
 
 import nltk
-from transformers import GenerationConfig
+from llm import LLMParams
+from transformers import AutoTokenizer, GenerationConfig
 
 from reflector.logger import logger as reflector_logger
-from reflector.processors.types import LLMPromptTemplate
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
@@ -21,7 +21,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(cls, name=None):
+    def get_instance(cls, model_name, task, name=None):
         """
         Return an instance depending on the settings.
         Settings used:
@@ -34,7 +34,21 @@ class LLM:
         if name not in cls._registry:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
+        cls.model_name = model_name
+        cls.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        cls.params = LLMParams(task)
         return cls._registry[name]()
+
+    @property
+    def template(self):
+        return """
+        ### Human:
+        {user_prompt}
+
+        {text}
+
+        ### Assistant:
+        """
 
     async def warmup(self, logger: reflector_logger):
         start = monotonic()
@@ -49,6 +63,10 @@ class LLM:
 
     async def _warmup(self, logger: reflector_logger):
         pass
+
+    @property
+    def tokenizer(self):
+        return self.tokenizer
 
     async def generate(
         self,
@@ -100,16 +118,16 @@ class LLM:
         return json.loads(result.strip())
 
     def text_token_threshold(
-        self, prompt: str, tokenizer: Callable, gen_cfg: GenerationConfig | None
+        self, prompt: str, gen_cfg: GenerationConfig | None
     ) -> int:
         """
         Choose the token size to set as the threshold to pack the LLM calls
         """
         buffer_token_size = 25
         default_output_tokens = 1000
-        context_window = tokenizer.model_max_length
-        tokens = tokenizer.tokenize(
-            LLMPromptTemplate().get_template().format(user_prompt=prompt, text="")
+        context_window = self.tokenizer.model_max_length
+        tokens = self.tokenizer.tokenize(
+            self.template.format(user_prompt=prompt, text="")
         )
         threshold = context_window - len(tokens) - buffer_token_size
         if gen_cfg:
@@ -120,10 +138,8 @@ class LLM:
 
     def split_corpus(
         self,
-        tokenizer: Callable,
         corpus: str,
-        prompt: str,
-        gen_cfg: GenerationConfig | None,
+        params: LLMParams,
         token_threshold: int | None = None,
     ) -> List[str]:
         """
@@ -137,7 +153,7 @@ class LLM:
 
         if not token_threshold:
             token_threshold = self.text_token_threshold(
-                prompt=prompt, tokenizer=tokenizer, gen_cfg=gen_cfg
+                prompt=self.template, tokenizer=self.tokenizer, gen_cfg=params.gen_cfg
             )
 
         accumulated_tokens = []
@@ -146,7 +162,7 @@ class LLM:
         corpus_sentences = nltk.sent_tokenize(corpus)
 
         for sentence in corpus_sentences:
-            tokens = tokenizer.tokenize(sentence)
+            tokens = self.tokenizer.tokenize(sentence)
             if accumulated_token_count + len(tokens) <= token_threshold:
                 accumulated_token_count += len(tokens)
                 accumulated_tokens.extend(tokens)
@@ -164,4 +180,14 @@ class LLM:
         """
         Create a consumable prompt based on the prompt template
         """
-        return LLMPromptTemplate().template.format(user_prompt=user_prompt, text=text)
+        return self.template.format(user_prompt=user_prompt, text=text)
+
+    async def get_response(self, text, params, logger):
+        prompt = self.create_prompt(user_prompt=params.instruct, text=text)
+        response = await retry(self.generate)(
+            prompt=prompt,
+            gen_cfg=params.gen_cfg,
+            schema=params.schema,
+            logger=logger,
+        )
+        return response

@@ -1,10 +1,8 @@
-from transformers import AutoTokenizer
-from transformers.generation import GenerationConfig
+from llm import LLMParams
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalTitle, TitleSummary
-from reflector.utils.retry import retry
 
 
 class TranscriptFinalTitleProcessor(Processor):
@@ -14,71 +12,38 @@ class TranscriptFinalTitleProcessor(Processor):
 
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = FinalTitle
-
-    # Generation configurations
-    title_gen_cfg = GenerationConfig(
-        max_new_tokens=200, num_beams=5, use_cache=True, temperature=0.5
-    )
-
-    # Prompt instructions
-    FINAL_TITLE_PROMPT = """
-        Combine the following individual titles into one single short title that
-        condenses the essence of all titles.
-    """
-
-    # Generation schema
-    final_title_schema = {
-        "type": "object",
-        "properties": {"title": {"type": "string"}},
-    }
+    TASK = "title"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
-        self.llm = LLM.get_instance()
-        self.tokenizer = AutoTokenizer.from_pretrained("lmsys/vicuna-13b-v1.5")
+        self.llm = LLM.get_instance("lmsys/vicuna-13b-v1.5")
+        self.params = LLMParams(self.TASK)
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def get_title(self, text: str) -> dict:
-        chunks = list(
-            self.llm.split_corpus(
-                tokenizer=self.tokenizer,
-                corpus=text,
-                prompt=self.FINAL_TITLE_PROMPT,
-                gen_cfg=self.title_gen_cfg,
-            )
-        )
+        chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
 
         if len(chunks) == 1:
-            self.logger.info(f"Smoothing out {len(text)} titles")
-            prompt = self.llm.create_prompt(
-                user_prompt=self.FINAL_TITLE_PROMPT, text=chunks[0]
-            )
-            title_result = await retry(self.llm.generate)(
-                prompt=prompt,
-                gen_cfg=self.title_gen_cfg,
-                schema=self.final_title_schema,
-                logger=self.logger,
+            self.logger.info(f"Smoothing out {len(text)} length summary")
+            chunk = chunks[0]
+            title_result = await self.llm.get_response(
+                text=chunk,
+                params=self.params,
             )
             return title_result
         else:
-            accumulated_titles = []
+            accumulated_titles = ""
             for chunk in chunks:
-                prompt = self.llm.create_prompt(
-                    user_prompt=self.FINAL_TITLE_PROMPT, text=chunk
+                title_result = await self.llm.get_response(
+                    text=chunk,
+                    params=self.params,
                 )
-                title_result = await retry(self.llm.generate)(
-                    prompt=prompt,
-                    gen_cfg=self.title_gen_cfg,
-                    schema=self.final_title_schema,
-                    logger=self.logger,
-                )
-                accumulated_titles.append(title_result)
-            titles = ".".join([chunk.title for chunk in self.chunks])
+                accumulated_titles += title_result["summary"]
 
-            return await self.get_title(titles)
+            return await self.get_title(accumulated_titles)
 
     async def _flush(self):
         if not self.chunks:

@@ -1,9 +1,8 @@
-from transformers.generation import GenerationConfig
+from llm import LLMParams
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
-from reflector.utils.retry import retry
 
 
 class TranscriptTopicDetectorProcessor(Processor):
@@ -13,32 +12,14 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = TitleSummary
-    topic_gen_cfg = GenerationConfig(
-        max_new_tokens=300, num_beams=3, use_cache=True, temperature=0.9
-    )
-
-    TOPIC_SUMMARY_PROMPT = """
-        Create a JSON object as response.The JSON object must have 2 fields:
-        i) title and ii) summary.
-
-        For the title field, generate a short title for the given text.
-        For the summary field, summarize the given text in a maximum of
-        three sentences.
-    """
-
-    topic_detector_schema = {
-        "type": "object",
-        "properties": {
-            "title": {"type": "string"},
-            "summary": {"type": "string"},
-        },
-    }
+    TASK = "topic"
 
     def __init__(self, min_transcript_length=500, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
-        self.llm = LLM.get_instance()
+        self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
+        self.params = LLMParams(self.TASK)
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
@@ -55,23 +36,24 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         await self.flush()
 
+    async def get_topic(self, text):
+        topic_result = await self.llm.get_response(
+            text=text,
+            params=self.params,
+        )
+        return topic_result
+
     async def _flush(self):
         if not self.transcript:
             return
+
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
-        prompt = self.llm.create_prompt(
-            user_prompt=self.TOPIC_SUMMARY_PROMPT, text=text
-        )
-        result = await retry(self.llm.generate)(
-            prompt=prompt,
-            schema=self.topic_detector_schema,
-            gen_cfg=self.topic_gen_cfg,
-            logger=self.logger,
-        )
+        topic_result = await self.get_topic(text=text)
+
         summary = TitleSummary(
-            title=result["title"],
-            summary=result["summary"],
+            title=topic_result["title"],
+            summary=topic_result["summary"],
             timestamp=self.transcript.timestamp,
             duration=self.transcript.duration,
             transcript=self.transcript,
