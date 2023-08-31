@@ -108,13 +108,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           default:
             console.error("Unknown event:", message.event);
             handleError(
-              useError,
+              setError,
               `Received unknown WebSocket event: ${message.event}`,
             );
         }
       } catch (error) {
         handleError(
-          useError,
+          setError,
           `Failed to process WebSocket message: ${error.message}`,
           error,
         );
@@ -123,14 +123,14 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      handleError(useError, "A WebSocket error occurred.", error);
+      handleError(setError, "A WebSocket error occurred.", error);
     };
 
     ws.onclose = (event) => {
       console.debug("WebSocket connection closed");
       if (event.code !== 1000) {
         handleError(
-          useError,
+          setError,
           `WebSocket closed unexpectedly with code: ${event.code}`,
         );
       }

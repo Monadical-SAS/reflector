@@ -9,7 +9,6 @@ import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
-import { useError } from "../../(errors)/errorContext";
 
 const App = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
