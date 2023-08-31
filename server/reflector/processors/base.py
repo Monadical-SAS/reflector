@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from typing import Any, Union
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -211,12 +211,16 @@ class BroadcastProcessor(Processor):
     This processor does not guarantee that the output is in order.
 
     This processor connect all the output of the processors to the input of
-    the next processor.
+    the next processor; so the next processor must be able to accept different
+    types of input.
     """
 
     def __init__(self, processors: Processor):
         super().__init__()
         self.processors = processors
+        self.INPUT_TYPE = processors[0].INPUT_TYPE
+        output_types = set([processor.OUTPUT_TYPE for processor in processors])
+        self.OUTPUT_TYPE = Union[tuple(output_types)]
 
     def set_pipeline(self, pipeline: "Pipeline"):
         super().set_pipeline(pipeline)
