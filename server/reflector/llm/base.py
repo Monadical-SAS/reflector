@@ -5,12 +5,13 @@ from time import monotonic
 from typing import List
 
 import nltk
-from llm import LLMParams
 from transformers import AutoTokenizer, GenerationConfig
 
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+
+from .llm_params import LLMParams
 
 
 class LLM:
@@ -21,7 +22,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(cls, model_name, task, name=None):
+    def get_instance(cls, model_name, name=None):
         """
         Return an instance depending on the settings.
         Settings used:
@@ -36,7 +37,6 @@ class LLM:
             importlib.import_module(module_name)
         cls.model_name = model_name
         cls.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        cls.params = LLMParams(task)
         return cls._registry[name]()
 
     @property
@@ -153,7 +153,7 @@ class LLM:
 
         if not token_threshold:
             token_threshold = self.text_token_threshold(
-                prompt=self.template, tokenizer=self.tokenizer, gen_cfg=params.gen_cfg
+                prompt=self.template, gen_cfg=params.gen_cfg
             )
 
         accumulated_tokens = []

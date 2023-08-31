@@ -5,13 +5,13 @@ class LLMParams:
     task = ""
     generation_configs = {
         "topic": GenerationConfig(
-            max_new_tokens=300, num_beams=3, use_cache=True, temperature=0.9
+            max_new_tokens=300, num_beams=3, do_sample=True, temperature=0.9
         ),
         "title": GenerationConfig(
-            max_new_tokens=200, num_beams=5, use_cache=True, temperature=0.5
+            max_new_tokens=200, num_beams=5, do_sample=True, temperature=0.5
         ),
         "summary": GenerationConfig(
-            max_new_tokens=1300, num_beams=3, use_cache=True, temperature=0.3
+            max_new_tokens=1300, num_beams=3, do_sample=True, temperature=0.3
         ),
     }
     schemas = {
@@ -48,7 +48,7 @@ class LLMParams:
     }
 
     def __init__(self, task):
-        assert self.task in self.instructs
+        assert task in self.instructs
         self.task = task
 
     @property

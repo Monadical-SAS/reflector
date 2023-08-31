@@ -19,10 +19,14 @@ from reflector.processors import (
     Pipeline,
     TitleSummary,
     Transcript,
-    TranscriptFinalSummaryProcessor,
+    TranscriptFinalLongSummaryProcessor,
+    TranscriptFinalTitleProcessor,
+    TranscriptFinalTreeSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
+from reflector.processors.base import BroadcastProcessor
+from reflector.processors.types import FinalTitle
 
 sessions = []
 router = APIRouter()
@@ -73,6 +77,8 @@ class PipelineEvent(StrEnum):
     TOPIC = "TOPIC"
     FINAL_SUMMARY = "FINAL_SUMMARY"
     STATUS = "STATUS"
+    FINAL_TREE_SUMMARY = "FINAL_TREE_SUMMARY"
+    FINAL_TITLE = "FINAL_TITLE"
 
 
 async def rtc_offer_base(
@@ -146,14 +152,33 @@ async def rtc_offer_base(
                 event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
             )
 
-    async def on_final_summary(summary: FinalSummary):
-        ctx.logger.info("FinalSummary", final_summary=summary)
+    async def on_final_tree_summary(summary: FinalSummary):
+        ctx.logger.info("FinalTreeSummary", final_tree_summary=summary)
 
         # send to RTC
         if ctx.data_channel.readyState == "open":
             result = {
-                "cmd": "DISPLAY_FINAL_SUMMARY",
-                "title": summary.title,
+                "cmd": "DISPLAY_FINAL_TREE_SUMMARY",
+                "summary": summary.summary,
+                "duration": summary.duration,
+            }
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.FINAL_TREE_SUMMARY,
+                args=event_callback_args,
+                data=summary,
+            )
+
+    async def on_final_long_summary(summary: FinalSummary):
+        ctx.logger.info("FinalLongSummary", final_summary=summary)
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {
+                "cmd": "DISPLAY_FINAL_LONG_SUMMARY",
                 "summary": summary.summary,
                 "duration": summary.duration,
             }
@@ -167,6 +192,22 @@ async def rtc_offer_base(
                 data=summary,
             )
 
+    async def on_final_title(title: FinalTitle):
+        ctx.logger.info("FinalLongSummary", final_title=title)
+
+        # send to RTC
+        if ctx.data_channel.readyState == "open":
+            result = {"cmd": "DISPLAY_FINAL_TITLE", "summary": title.title}
+            ctx.data_channel.send(dumps(result))
+
+        # send to callback (eg. websocket)
+        if event_callback:
+            await event_callback(
+                event=PipelineEvent.FINAL_TITLE,
+                args=event_callback_args,
+                data=title,
+            )
+
     # create a context for the whole rtc transaction
     # add a customised logger to the context
     processors = []
@@ -178,7 +219,17 @@ async def rtc_offer_base(
         AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
         TranscriptLinerProcessor(),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
-        TranscriptFinalSummaryProcessor.as_threaded(callback=on_final_summary),
+        BroadcastProcessor(
+            processors=[
+                TranscriptFinalTitleProcessor.as_threaded(callback=on_final_title),
+                TranscriptFinalLongSummaryProcessor.as_threaded(
+                    callback=on_final_long_summary
+                ),
+                TranscriptFinalTreeSummaryProcessor.as_threaded(
+                    callback=on_final_tree_summary
+                ),
+            ]
+        ),
     ]
     ctx.pipeline = Pipeline(*processors)
     ctx.pipeline.set_pref("audio:source_language", source_language)

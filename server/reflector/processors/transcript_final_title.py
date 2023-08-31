@@ -1,6 +1,4 @@
-from llm import LLMParams
-
-from reflector.llm import LLM
+from reflector.llm import LLM, LLMParams
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalTitle, TitleSummary
 
@@ -30,16 +28,14 @@ class TranscriptFinalTitleProcessor(Processor):
             self.logger.info(f"Smoothing out {len(text)} length summary")
             chunk = chunks[0]
             title_result = await self.llm.get_response(
-                text=chunk,
-                params=self.params,
+                text=chunk, params=self.params, logger=self.logger
             )
             return title_result
         else:
             accumulated_titles = ""
             for chunk in chunks:
                 title_result = await self.llm.get_response(
-                    text=chunk,
-                    params=self.params,
+                    text=chunk, params=self.params, logger=self.logger
                 )
                 accumulated_titles += title_result["summary"]
 
@@ -54,4 +50,7 @@ class TranscriptFinalTitleProcessor(Processor):
         title_result = await self.get_title(accumulated_titles)
 
         final_title = FinalTitle(title=title_result["title"])
+        print("****************")
+        print("FINAL TITLE", final_title.title)
+        print("****************")
         await self.emit(final_title)

@@ -28,16 +28,14 @@ class TranscriptFinalTreeSummaryProcessor(Processor):
             self.logger.info(f"Smoothing out {len(text)} length summary")
             chunk = chunks[0]
             summary_result = await self.llm.get_response(
-                text=chunk,
-                params=self.params,
+                text=chunk, params=self.params, logger=self.logger
             )
             return summary_result
         else:
             accumulated_summaries = ""
             for chunk in chunks:
                 summary_result = await self.llm.get_response(
-                    text=chunk,
-                    params=self.params,
+                    text=chunk, params=self.params, logger=self.logger
                 )
                 accumulated_summaries += summary_result["summary"]
 
@@ -58,4 +56,7 @@ class TranscriptFinalTreeSummaryProcessor(Processor):
             summary=summary_result["summary"],
             duration=duration,
         )
+        print("****************")
+        print("FINAL TREE SUMMARY", final_summary.summary)
+        print("****************")
         await self.emit(final_summary)

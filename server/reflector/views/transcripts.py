@@ -65,6 +65,10 @@ class TranscriptFinalSummary(BaseModel):
     summary: str
 
 
+class TranscriptFinalTitle(BaseModel):
+    title: str
+
+
 class TranscriptEvent(BaseModel):
     event: str
     data: dict
@@ -540,7 +544,21 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
             },
         )
 
-    elif event == PipelineEvent.FINAL_SUMMARY:
+    elif event == PipelineEvent.FINAL_TITLE:
+        final_title = TranscriptFinalTitle(title=data.title)
+        resp = transcript.add_event(event=event, data=final_title)
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "title": final_title.title,
+            },
+        )
+
+    elif (
+        event == PipelineEvent.FINAL_SUMMARY
+        or event == PipelineEvent.FINAL_TREE_SUMMARY
+    ):
         final_summary = TranscriptFinalSummary(summary=data.summary)
         resp = transcript.add_event(event=event, data=final_summary)
         await transcripts_controller.update(

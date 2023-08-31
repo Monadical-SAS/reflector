@@ -1,6 +1,4 @@
-from llm import LLMParams
-
-from reflector.llm import LLM
+from reflector.llm import LLM, LLMParams
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
 
@@ -14,7 +12,7 @@ class TranscriptTopicDetectorProcessor(Processor):
     OUTPUT_TYPE = TitleSummary
     TASK = "topic"
 
-    def __init__(self, min_transcript_length=500, **kwargs):
+    def __init__(self, min_transcript_length=100, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
@@ -38,8 +36,7 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     async def get_topic(self, text):
         topic_result = await self.llm.get_response(
-            text=text,
-            params=self.params,
+            text=text, params=self.params, logger=self.logger
         )
         return topic_result
 

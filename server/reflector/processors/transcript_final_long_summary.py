@@ -22,13 +22,12 @@ class TranscriptFinalLongSummaryProcessor(Processor):
         self.chunks.append(data)
 
     async def get_long_summary(self, text: str) -> str:
-        chunks = list(self.llm.split_corpus(corpus=text))
+        chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
 
         accumulated_summaries = ""
         for chunk in chunks:
             summary_result = await self.llm.get_response(
-                text=chunk,
-                params=self.params,
+                text=chunk, params=self.params, logger=self.logger
             )
             accumulated_summaries += summary_result["summary"]
 
@@ -40,13 +39,16 @@ class TranscriptFinalLongSummaryProcessor(Processor):
             return
 
         accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
-        summary_result = await self.get_long_summary(accumulated_summaries)
+        long_summary = await self.get_long_summary(accumulated_summaries)
 
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
 
         final_summary = FinalSummary(
-            summary=summary_result["summary"],
+            summary=long_summary,
             duration=duration,
         )
+        print("****************")
+        print("FINAL SUMMARY", final_summary.summary)
+        print("****************")
         await self.emit(final_summary)
