@@ -48,6 +48,7 @@ class LLMParams:
     }
 
     def __init__(self, task):
+        assert self.task in self.instructs
         self.task = task
 
     @property
