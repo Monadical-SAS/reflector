@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/react";
+import { Dispatch, SetStateAction } from "react";
 
 const handleError = (
-  setError: Function,
+  setError: Dispatch<SetStateAction<String>>,
   errorString: string,
   errorObj?: any,
 ) => {
