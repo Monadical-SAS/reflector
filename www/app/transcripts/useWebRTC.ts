@@ -5,7 +5,6 @@ import {
   V1TranscriptRecordWebrtcRequest,
 } from "../api/apis/DefaultApi";
 import { useError } from "../(errors)/errorContext";
-import handleError from "../(errors)/handleError";
 
 const useWebRTC = (
   stream: MediaStream | null,
@@ -25,16 +24,12 @@ const useWebRTC = (
     try {
       p = new Peer({ initiator: true, stream: stream });
     } catch (error) {
-      handleError(
-        setError,
-        `Failed to create WebRTC Peer: ${error.message}`,
-        error,
-      );
+      setError(error);
       return;
     }
 
     p.on("error", (err) => {
-      handleError(setError, `WebRTC error: ${err.message}`, err);
+      setError(new Error(`WebRTC error: ${err}`));
     });
 
     p.on("signal", (data: any) => {
@@ -53,19 +48,11 @@ const useWebRTC = (
             try {
               p.signal(answer);
             } catch (error) {
-              handleError(
-                setError,
-                `Failed to signal answer: ${error.message}`,
-                error,
-              );
+              setError(error);
             }
           })
-          .catch((err) => {
-            const errorString =
-              "WebRTC signaling error: " +
-              (err.response || err.message || "Unknown error");
-            handleError(setError, errorString, err);
-            console.error(errorString);
+          .catch((error) => {
+            setError(error);
           });
       }
     });

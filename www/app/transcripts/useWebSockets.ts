@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
-import handleError from "../(errors)/handleError";
 
 type UseWebSockets = {
   transcriptText: string;
@@ -106,32 +105,25 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             break;
 
           default:
-            console.error("Unknown event:", message.event);
-            handleError(
-              setError,
-              `Received unknown WebSocket event: ${message.event}`,
+            setError(
+              new Error(`Received unknown WebSocket event: ${message.event}`),
             );
         }
       } catch (error) {
-        handleError(
-          setError,
-          `Failed to process WebSocket message: ${error.message}`,
-          error,
-        );
+        setError(error);
       }
     };
 
     ws.onerror = (error) => {
       console.error("WebSocket error:", error);
-      handleError(setError, "A WebSocket error occurred.", error);
+      setError(new Error("A WebSocket error occurred."));
     };
 
     ws.onclose = (event) => {
       console.debug("WebSocket connection closed");
       if (event.code !== 1000) {
-        handleError(
-          setError,
-          `WebSocket closed unexpectedly with code: ${event.code}`,
+        setError(
+          new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
         );
       }
     };
