@@ -25,7 +25,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
         """
         Generate a long version of the final summary
         """
-        chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
+        chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
 
         accumulated_summaries = ""
         for chunk in chunks:

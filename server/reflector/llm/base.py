@@ -156,7 +156,7 @@ class LLM:
         task_params = llm_params.task_params
         if not token_threshold:
             token_threshold = self.text_token_threshold(
-                rompt=self.template, gen_cfg=task_params.gen_cfg
+                prompt=self.template, gen_cfg=task_params.gen_cfg
             )
 
         accumulated_tokens = []

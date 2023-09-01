@@ -25,7 +25,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
         """
         Generata a short summary using tree summarizer
         """
-        chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
+        chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
 
         if len(chunks) == 1:
             self.logger.info(f"Smoothing out {len(text)} length summary")
