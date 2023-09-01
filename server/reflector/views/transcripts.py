@@ -246,7 +246,9 @@ class GetTranscript(BaseModel):
     status: str
     locked: bool
     duration: int
-    summary: str | None
+    title: str
+    short_summary: str | None
+    long_summary: str | None
     created_at: datetime
     source_language: str
     target_language: str
@@ -262,7 +264,8 @@ class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
     title: Optional[str] = Field(None)
-    summary: Optional[str] = Field(None)
+    short_summary: Optional[str] = Field(None)
+    long_summary: Optional[str] = Field(None)
 
 
 class DeletionStatus(BaseModel):
@@ -326,26 +329,28 @@ async def transcript_update(
         values["name"] = info.name
     if info.locked is not None:
         values["locked"] = info.locked
-    if info.summary is not None:
-        values["summary"] = info.summary
-        # also find SUMMARY events and patch it
-        for te in transcript.events:
-            if (
-                te["event"] == PipelineEvent.FINAL_LONG_SUMMARY
-                or te["event"] == PipelineEvent.FINAL_SHORT_SUMMARY
-            ):
-                te["summary"] = info.summary
+    if info.long_summary is not None:
+        values["long_summary"] = info.long_summary
+        for trancript_event in transcript.events:
+            if trancript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
+                trancript_event["long_summary"] = info.long_summary
+                break
+        values["events"].extend(transcript.events)
+    if info.short_summary is not None:
+        values["short_summary"] = info.short_summary
+        for trancript_event in transcript.events:
+            if trancript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
+                trancript_event["short_summary"] = info.short_summary
+                break
         values["events"].extend(transcript.events)
     if info.title is not None:
         values["title"] = info.title
-        # also find TITLE event and patch it
-        for te in transcript.events:
-            if te["event"] == PipelineEvent.FINAL_TITLE:
-                te["title"] = info.title
+        for trancript_event in transcript.events:
+            if trancript_event["event"] == PipelineEvent.FINAL_TITLE:
+                trancript_event["title"] = info.title
                 break
         values["events"].extend(transcript.events)
     await transcripts_controller.update(transcript, values)
-    print("&&&&&&&&&&&&&&&&&&&&&&", values)
     return transcript
 
 
