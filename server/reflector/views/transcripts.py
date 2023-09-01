@@ -82,7 +82,9 @@ class Transcript(BaseModel):
     locked: bool = False
     duration: float = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    summary: str | None = None
+    title: str | None = None
+    short_summary: str | None = None
+    long_summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
     source_language: str = "en"
@@ -246,7 +248,7 @@ class GetTranscript(BaseModel):
     status: str
     locked: bool
     duration: int
-    title: str
+    title: str | None
     short_summary: str | None
     long_summary: str | None
     created_at: datetime
