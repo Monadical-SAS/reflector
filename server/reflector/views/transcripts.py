@@ -327,9 +327,12 @@ async def transcript_update(
         values["locked"] = info.locked
     if info.summary is not None:
         values["summary"] = info.summary
-        # also find FINAL_SUMMARY event and patch it
+        # also find SUMMARY events and patch it
         for te in transcript.events:
-            if te["event"] == PipelineEvent.FINAL_SUMMARY:
+            if (
+                te["event"] == PipelineEvent.FINAL_LONG_SUMMARY
+                or PipelineEvent.FINAL_SHORT_SUMMARY
+            ):
                 te["summary"] = info.summary
                 break
         values["events"] = transcript.events
@@ -556,8 +559,8 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
         )
 
     elif (
-        event == PipelineEvent.FINAL_SUMMARY
-        or event == PipelineEvent.FINAL_TREE_SUMMARY
+        event == PipelineEvent.FINAL_LONG_SUMMARY
+        or event == PipelineEvent.FINAL_SHORT_SUMMARY
     ):
         final_summary = TranscriptFinalSummary(summary=data.summary)
         resp = transcript.add_event(event=event, data=final_summary)

@@ -26,11 +26,11 @@ class ModalLLM(LLM):
             response.raise_for_status()
 
     async def _generate(
-        self, prompt: str, schema: dict | None, gen_cfg: dict | None, **kwargs
+        self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ):
         json_payload = {"prompt": prompt}
-        if schema:
-            json_payload["schema"] = schema
+        if gen_schema:
+            json_payload["gen_schema"] = gen_schema
         if gen_cfg:
             json_payload["gen_cfg"] = gen_cfg
         print(json_payload)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         )
         print(result)
 
-        schema = {
+        gen_schema = {
             "type": "object",
             "properties": {"response": {"type": "string"}},
         }
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             prompt=prompt,
             task=task,
             text="Tell me a joke about programming",
-            schema=schema,
+            gen_schema=gen_schema,
             logger=logger,
         )
         print(result)

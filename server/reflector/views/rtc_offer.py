@@ -20,8 +20,8 @@ from reflector.processors import (
     TitleSummary,
     Transcript,
     TranscriptFinalLongSummaryProcessor,
+    TranscriptFinalShortSummaryProcessor,
     TranscriptFinalTitleProcessor,
-    TranscriptFinalTreeSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
@@ -75,9 +75,9 @@ class StrValue(BaseModel):
 class PipelineEvent(StrEnum):
     TRANSCRIPT = "TRANSCRIPT"
     TOPIC = "TOPIC"
-    FINAL_SUMMARY = "FINAL_SUMMARY"
+    FINAL_LONG_SUMMARY = "FINAL_LONG_SUMMARY"
     STATUS = "STATUS"
-    FINAL_TREE_SUMMARY = "FINAL_TREE_SUMMARY"
+    FINAL_SHORT_SUMMARY = "FINAL_SHORT_SUMMARY"
     FINAL_TITLE = "FINAL_TITLE"
 
 
@@ -152,13 +152,13 @@ async def rtc_offer_base(
                 event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
             )
 
-    async def on_final_tree_summary(summary: FinalSummary):
-        ctx.logger.info("FinalTreeSummary", final_tree_summary=summary)
+    async def on_final_short_summary(summary: FinalSummary):
+        ctx.logger.info("FinalShortSummary", final_short_summary=summary)
 
         # send to RTC
         if ctx.data_channel.readyState == "open":
             result = {
-                "cmd": "DISPLAY_FINAL_TREE_SUMMARY",
+                "cmd": "DISPLAY_FINAL_SHORT_SUMMARY",
                 "summary": summary.summary,
                 "duration": summary.duration,
             }
@@ -167,7 +167,7 @@ async def rtc_offer_base(
         # send to callback (eg. websocket)
         if event_callback:
             await event_callback(
-                event=PipelineEvent.FINAL_TREE_SUMMARY,
+                event=PipelineEvent.FINAL_SHORT_SUMMARY,
                 args=event_callback_args,
                 data=summary,
             )
@@ -187,7 +187,7 @@ async def rtc_offer_base(
         # send to callback (eg. websocket)
         if event_callback:
             await event_callback(
-                event=PipelineEvent.FINAL_SUMMARY,
+                event=PipelineEvent.FINAL_LONG_SUMMARY,
                 args=event_callback_args,
                 data=summary,
             )
@@ -225,8 +225,8 @@ async def rtc_offer_base(
                 TranscriptFinalLongSummaryProcessor.as_threaded(
                     callback=on_final_long_summary
                 ),
-                TranscriptFinalTreeSummaryProcessor.as_threaded(
-                    callback=on_final_tree_summary
+                TranscriptFinalShortSummaryProcessor.as_threaded(
+                    callback=on_final_short_summary
                 ),
             ]
         ),

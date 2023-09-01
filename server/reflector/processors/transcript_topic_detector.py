@@ -1,4 +1,4 @@
-from reflector.llm import LLM, LLMParams
+from reflector.llm import LLM, LLMTaskParams
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
 
@@ -12,12 +12,12 @@ class TranscriptTopicDetectorProcessor(Processor):
     OUTPUT_TYPE = TitleSummary
     TASK = "topic"
 
-    def __init__(self, min_transcript_length=100, **kwargs):
+    def __init__(self, min_transcript_length: int = 100, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
         self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
-        self.params = LLMParams(self.TASK)
+        self.params = LLMTaskParams.get_instance(self.TASK)
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
@@ -34,9 +34,12 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         await self.flush()
 
-    async def get_topic(self, text):
+    async def get_topic(self, text: str) -> dict:
+        """
+        Generate a topic and description for a transcription excerpt
+        """
         topic_result = await self.llm.get_response(
-            text=text, params=self.params, logger=self.logger
+            text=text, llm_params=self.params, logger=self.logger
         )
         return topic_result
 

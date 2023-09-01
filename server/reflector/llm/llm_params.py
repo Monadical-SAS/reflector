@@ -1,66 +1,140 @@
+from typing import Optional
+
+from pydantic import BaseModel
 from transformers import GenerationConfig
 
 
-class LLMParams:
-    task = ""
-    generation_configs = {
-        "topic": GenerationConfig(
-            max_new_tokens=300, num_beams=3, do_sample=True, temperature=0.9
-        ),
-        "title": GenerationConfig(
-            max_new_tokens=200, num_beams=5, do_sample=True, temperature=0.5
-        ),
-        "summary": GenerationConfig(
+class TaskParams(BaseModel, arbitrary_types_allowed=True):
+    instruct: str
+    gen_cfg: Optional[GenerationConfig] = None
+    gen_schema: Optional[dict] = None
+
+
+class LLMTaskParams:
+    _registry = {}
+
+    @classmethod
+    def register(cls, task, klass):
+        cls._registry[task] = klass
+
+    @classmethod
+    def get_instance(cls, task):
+        return cls._registry[task]()
+
+    @property
+    def task_params(self):
+        """
+        Fetch the task related parameters
+        """
+        return self._get_task_params()
+
+    def _get_task_params(self):
+        pass
+
+
+class FinalLongSummaryParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
             max_new_tokens=1300, num_beams=3, do_sample=True, temperature=0.3
-        ),
-    }
-    schemas = {
-        "topic": {
-            "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "summary": {"type": "string"},
-            },
-        },
-        "title": {
+        )
+        self._instruct = """
+        Take the key ideas and takeaways from the text and create a short
+         summary. Be sure to keep the length of the response to a minimum.
+         Do not include trivial information in the summary.
+          """
+        self._schema = {"type": "object", "properties": {"summary": {"type": "string"}}}
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
+        )
+
+    def _get_task_params(self) -> TaskParams:
+        """gen_schema
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
+
+
+class FinalShortSummaryParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
+            max_new_tokens=1300, num_beams=3, do_sample=True, temperature=0.3
+        )
+        self._instruct = """
+        Take the key ideas and takeaways from the text and create a short
+         summary. Be sure to keep the length of the response to a minimum.
+         Do not include trivial information in the summary.
+          """
+        self._schema = {"type": "object", "properties": {"summary": {"type": "string"}}}
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
+        )
+
+    def _get_task_params(self) -> TaskParams:
+        """
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
+
+
+class FinalTitleParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
+            max_new_tokens=200, num_beams=5, do_sample=True, temperature=0.5
+        )
+        self._instruct = """
+            Combine the following individual titles into one single short title that
+            condenses the essence of all titles.
+        """
+        self._schema = {
             "type": "object",
             "properties": {"title": {"type": "string"}},
-        },
-        "summary": {"type": "object", "properties": {"summary": {"type": "string"}}},
-    }
-    instructs = {
-        "topic": """
+        }
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
+        )
+
+    def _get_task_params(self) -> TaskParams:
+        """
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
+
+
+class TopicParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
+            max_new_tokens=300, num_beams=5, do_sample=True, temperature=0.9
+        )
+        self._instruct = """
                 Create a JSON object as response.The JSON object must have 2 fields:
                 i) title and ii) summary.
                 For the title field, generate a short title for the given text.
                 For the summary field, summarize the given text in a maximum of
                 three sentences.
-            """,
-        "title": """
-                Combine the following individual titles into one single short title that
-                condenses the essence of all titles.
-            """,
-        "summary": """
-                Take the key ideas and takeaways from the text and create a short
-                 summary. Be sure to keep the length of the response to a minimum.
-                Do not include trivial information in the summary.
-            """,
-    }
+            """
+        self._schema = {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "summary": {"type": "string"},
+            },
+        }
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
+        )
 
-    def __init__(self, task):
-        assert task in self.instructs
-        self.task = task
+    def _get_task_params(self) -> TaskParams:
+        """
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
 
-    @property
-    def gen_cfg(self):
-        if self.task in self.generation_configs:
-            return self.generation_configs[self.task]
 
-    @property
-    def schema(self):
-        if self.task in self.schemas:
-            return self.schemas[self.task]
-
-    @property
-    def instruct(self):
-        return self.instructs[self.task]
+LLMTaskParams.register("topic", TopicParams)
+LLMTaskParams.register("final_title", FinalTitleParams)
+LLMTaskParams.register("final_short_summary", FinalShortSummaryParams)
+LLMTaskParams.register("final_long_summary", FinalLongSummaryParams)

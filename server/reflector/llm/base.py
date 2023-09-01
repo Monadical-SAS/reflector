@@ -7,11 +7,12 @@ from typing import List
 import nltk
 from transformers import AutoTokenizer, GenerationConfig
 
+from reflector.llm.llm_params import LLMTaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
-from .llm_params import LLMParams
+nltk.download("punkt", quiet=True)
 
 
 class LLM:
@@ -36,7 +37,7 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         cls.model_name = model_name
-        cls.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        cls.llm_tokenizer = AutoTokenizer.from_pretrained(model_name)
         return cls._registry[name]()
 
     @property
@@ -66,20 +67,23 @@ class LLM:
 
     @property
     def tokenizer(self):
-        return self.tokenizer
+        return self.llm_tokenizer
 
     async def generate(
         self,
         prompt: str,
         logger: reflector_logger,
-        schema: dict | None = None,
+        gen_schema: dict | None = None,
         gen_cfg: GenerationConfig | None = None,
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
         try:
             result = await retry(self._generate)(
-                prompt=prompt, schema=schema, gen_cfg=gen_cfg.to_dict(), **kwargs
+                prompt=prompt,
+                gen_schema=gen_schema,
+                gen_cfg=gen_cfg.to_dict(),
+                **kwargs,
             )
         except Exception:
             logger.exception("Failed to call llm after retrying")
@@ -93,7 +97,7 @@ class LLM:
         return result
 
     async def _generate(
-        self, prompt: str, schema: dict | None, gen_cfg: dict | None, **kwargs
+        self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ) -> str:
         raise NotImplementedError
 
@@ -139,7 +143,7 @@ class LLM:
     def split_corpus(
         self,
         corpus: str,
-        params: LLMParams,
+        llm_params: LLMTaskParams,
         token_threshold: int | None = None,
     ) -> List[str]:
         """
@@ -149,11 +153,10 @@ class LLM:
         Accumulate tokens from full sentences till threshold and yield accumulated
         tokens. Reset accumulation and repeat process.
         """
-        nltk.download("punkt", quiet=True)
-
+        task_params = llm_params.task_params
         if not token_threshold:
             token_threshold = self.text_token_threshold(
-                prompt=self.template, gen_cfg=params.gen_cfg
+                rompt=self.template, gen_cfg=task_params.gen_cfg
             )
 
         accumulated_tokens = []
@@ -182,12 +185,16 @@ class LLM:
         """
         return self.template.format(user_prompt=user_prompt, text=text)
 
-    async def get_response(self, text, params, logger):
-        prompt = self.create_prompt(user_prompt=params.instruct, text=text)
+    async def get_response(self, text: str, llm_params: LLMTaskParams, logger):
+        """
+        Perform one atomic query to the LLM and return its response
+        """
+        task_params = llm_params.task_params
+        prompt = self.create_prompt(user_prompt=task_params.instruct, text=text)
         response = await retry(self.generate)(
             prompt=prompt,
-            gen_cfg=params.gen_cfg,
-            schema=params.schema,
+            gen_cfg=task_params.gen_cfg,
+            gen_schema=task_params.gen_schema,
             logger=logger,
         )
         return response

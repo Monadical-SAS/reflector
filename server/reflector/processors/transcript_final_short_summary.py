@@ -1,41 +1,44 @@
-from reflector.llm import LLM, LLMParams
+from reflector.llm import LLM, LLMTaskParams
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalSummary, TitleSummary
 
 
-class TranscriptFinalTreeSummaryProcessor(Processor):
+class TranscriptFinalShortSummaryProcessor(Processor):
     """
     Get the final summary using a tree summarizer
     """
 
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = FinalSummary
-    TASK = "summary"
+    TASK = "final_short_summary"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
-        self.params = LLMParams(self.TASK)
+        self.params = LLMTaskParams.get_instance(self.TASK)
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def tree_summarizer(self, text: str) -> dict:
+        """
+        Generata a short summary using tree summarizer
+        """
         chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
 
         if len(chunks) == 1:
             self.logger.info(f"Smoothing out {len(text)} length summary")
             chunk = chunks[0]
             summary_result = await self.llm.get_response(
-                text=chunk, params=self.params, logger=self.logger
+                text=chunk, llm_params=self.params, logger=self.logger
             )
             return summary_result
         else:
             accumulated_summaries = ""
             for chunk in chunks:
                 summary_result = await self.llm.get_response(
-                    text=chunk, params=self.params, logger=self.logger
+                    text=chunk, llm_params=self.params, logger=self.logger
                 )
                 accumulated_summaries += summary_result["summary"]
 
@@ -57,6 +60,6 @@ class TranscriptFinalTreeSummaryProcessor(Processor):
             duration=duration,
         )
         print("****************")
-        print("FINAL TREE SUMMARY", final_summary.summary)
+        print("FINAL SHORT SUMMARY", final_summary.summary)
         print("****************")
         await self.emit(final_summary)

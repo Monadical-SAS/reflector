@@ -72,7 +72,7 @@ async def dummy_llm():
     from reflector.llm.base import LLM
 
     class TestLLM(LLM):
-        async def _generate(self, prompt: str, schema: dict | None, **kwargs):
+        async def _generate(self, prompt: str, gen_schema: dict | None, **kwargs):
             return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
@@ -186,8 +186,16 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
     assert ev["data"]["transcript"].startswith("Hello world")
     assert ev["data"]["timestamp"] == 0.0
 
-    assert "FINAL_SUMMARY" in eventnames
-    ev = events[eventnames.index("FINAL_SUMMARY")]
+    assert "FINAL_LONG_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+
+    assert "FINAL_SHORT_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
+    assert ev["data"]["summary"] == "LLM SUMMARY"
+
+    assert "FINAL_TITLE" in eventnames
+    ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
     assert ev["data"]["summary"] == "LLM SUMMARY"
 
     # check status order

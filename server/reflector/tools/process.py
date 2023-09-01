@@ -11,8 +11,8 @@ from reflector.processors import (
     Pipeline,
     PipelineEvent,
     TranscriptFinalLongSummaryProcessor,
+    TranscriptFinalShortSummaryProcessor,
     TranscriptFinalTitleProcessor,
-    TranscriptFinalTreeSummaryProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
@@ -39,7 +39,7 @@ async def process_audio_file(
                 processors=[
                     TranscriptFinalTitleProcessor.as_threaded(),
                     TranscriptFinalLongSummaryProcessor.as_threaded(),
-                    TranscriptFinalTreeSummaryProcessor.as_threaded(),
+                    TranscriptFinalShortSummaryProcessor.as_threaded(),
                 ],
             ),
         ]

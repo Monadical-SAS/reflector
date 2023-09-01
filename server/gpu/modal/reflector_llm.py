@@ -5,7 +5,7 @@ Reflector GPU backend - LLM
 """
 import json
 import os
-from typing import Callable, List, Optional
+from typing import Optional
 
 from modal import Image, Secret, Stub, asgi_app, method
 
@@ -113,36 +113,32 @@ class LLM:
         return {"status": "ok"}
 
     @method()
-    def generate(self, prompt: str, schema: str | None, gen_cfg: str | None) -> dict:
+    def generate(self, prompt: str, gen_schema: str | None, gen_cfg: str | None) -> dict:
         """
         Perform a generation action using the LLM
         """
         print(f"Generate {prompt=}")
-        if not gen_cfg:
-            gen_cfg = self.gen_cfg.to_dict()
-        else:
-            gen_cfg = json.loads(gen_cfg)
+        if gen_cfg:
+            # Update the base gen cfg with the supplied gen cfg
+            self.gen_cfg.update(**json.loads(gen_cfg))
 
-        # Update the base gen cfg with the supplied gen cfg
-        # self.gen_cfg.update(**json.loads(gen_cfg))
-
-        # If a schema is given, conform to schema
-        if schema:
-            print(f"Schema {schema=}")
+        # If a gen_schema is given, conform to gen_schema
+        if gen_schema:
+            print(f"Schema {gen_schema=}")
             jsonformer_llm = self.json_former(model=self.model,
                                               tokenizer=self.tokenizer,
-                                              json_schema=json.loads(schema),
+                                              json_schema=json.loads(gen_schema),
                                               prompt=prompt,
-                                              max_string_token_length=gen_cfg["max_new_tokens"])
+                                              max_string_token_length=self.gen_cfg.max_new_tokens)
             response = jsonformer_llm()
         else:
-            # If no schema, perform prompt only generation
+            # If no gen_schema, perform prompt only generation
 
             # tokenize prompt
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
                 self.model.device
             )
-            output = self.model.generate(input_ids, generation_config=gen_cfg)
+            output = self.model.generate(input_ids, generation_config=self.gen_cfg)
 
             # decode output
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
@@ -166,7 +162,7 @@ class LLM:
 def web():
     from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel
 
     llmstub = LLM()
 
@@ -183,16 +179,16 @@ def web():
 
     class LLMRequest(BaseModel):
         prompt: str
-        schema_: Optional[dict] = Field(None, alias="schema")
+        gen_schema: Optional[dict] = None
         gen_cfg: Optional[dict] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     async def llm(
         req: LLMRequest,
     ):
-        schema = json.dumps(req.schema_) if req.schema_ else None
+        gen_schema = json.dumps(req.gen_schema) if req.gen_schema else None
         gen_cfg = json.dumps(req.gen_cfg) if req.gen_cfg else None
-        func = llmstub.generate.spawn(prompt=req.prompt, schema=schema, gen_cfg=gen_cfg)
+        func = llmstub.generate.spawn(prompt=req.prompt, gen_schema=gen_schema, gen_cfg=gen_cfg)
         result = func.get()
         return result
 

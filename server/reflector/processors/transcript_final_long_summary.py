@@ -1,4 +1,4 @@
-from reflector.llm import LLM, LLMParams
+from reflector.llm import LLM, LLMTaskParams
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalSummary, TitleSummary
 
@@ -10,24 +10,27 @@ class TranscriptFinalLongSummaryProcessor(Processor):
 
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = FinalSummary
-    TASK = "summary"
+    TASK = "final_long_summary"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
-        self.params = LLMParams(self.TASK)
+        self.params = LLMTaskParams.get_instance(self.TASK)
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def get_long_summary(self, text: str) -> str:
+        """
+        Generate a long version of the final summary
+        """
         chunks = list(self.llm.split_corpus(corpus=text, params=self.params))
 
         accumulated_summaries = ""
         for chunk in chunks:
             summary_result = await self.llm.get_response(
-                text=chunk, params=self.params, logger=self.logger
+                text=chunk, llm_params=self.params, logger=self.logger
             )
             accumulated_summaries += summary_result["summary"]
 
