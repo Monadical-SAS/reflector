@@ -52,6 +52,6 @@ class TranscriptFinalLongSummaryProcessor(Processor):
             duration=duration,
         )
         print("****************")
-        print("FINAL SUMMARY", final_summary.summary)
+        print("FINAL LONG SUMMARY", final_summary.summary)
         print("****************")
         await self.emit(final_summary)

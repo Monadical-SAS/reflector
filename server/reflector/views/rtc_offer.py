@@ -193,11 +193,11 @@ async def rtc_offer_base(
             )
 
     async def on_final_title(title: FinalTitle):
-        ctx.logger.info("FinalLongSummary", final_title=title)
+        ctx.logger.info("FinalTitle", final_title=title)
 
         # send to RTC
         if ctx.data_channel.readyState == "open":
-            result = {"cmd": "DISPLAY_FINAL_TITLE", "summary": title.title}
+            result = {"cmd": "DISPLAY_FINAL_TITLE", "title": title.title}
             ctx.data_channel.send(dumps(result))
 
         # send to callback (eg. websocket)

@@ -33,7 +33,6 @@ class ModalLLM(LLM):
             json_payload["gen_schema"] = gen_schema
         if gen_cfg:
             json_payload["gen_cfg"] = gen_cfg
-        print(json_payload)
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 self.llm_url,
@@ -54,14 +53,8 @@ if __name__ == "__main__":
 
     async def main():
         llm = ModalLLM()
-        prompt = "Complete the following task."
-        task = "chat"
-        result = await llm.generate(
-            prompt=prompt,
-            task=task,
-            text="Tell me a joke about programming",
-            logger=logger,
-        )
+        prompt = "Tell me a joke about programming"
+        result = await llm.generate(prompt=prompt, logger=logger)
         print(result)
 
         gen_schema = {
@@ -71,8 +64,6 @@ if __name__ == "__main__":
 
         result = await llm.generate(
             prompt=prompt,
-            task=task,
-            text="Tell me a joke about programming",
             gen_schema=gen_schema,
             logger=logger,
         )

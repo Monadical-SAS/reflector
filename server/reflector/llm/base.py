@@ -162,9 +162,8 @@ class LLM:
         Accumulate tokens from full sentences till threshold and yield accumulated
         tokens. Reset accumulation when threshold is reached and repeat process.
         """
-        task_params = llm_params.task_params
         if not token_threshold:
-            token_threshold = self.text_token_threshold(llm_params=task_params)
+            token_threshold = self.text_token_threshold(llm_params=llm_params)
 
         accumulated_tokens = []
         accumulated_sentences = []
@@ -192,7 +191,7 @@ class LLM:
         """
         return self.template.format(instruct=instruct, text=text)
 
-    async def get_response(self, text: str, llm_params: LLMTaskParams, logger):
+    async def get_response(self, text: str, llm_params: LLMTaskParams, logger) -> dict:
         """
         Perform one atomic query to the LLM and return its response
         """

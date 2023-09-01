@@ -261,6 +261,7 @@ class CreateTranscript(BaseModel):
 class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
+    title: Optional[str] = Field(None)
     summary: Optional[str] = Field(None)
 
 
@@ -320,7 +321,7 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    values = {}
+    values = {"events": []}
     if info.name is not None:
         values["name"] = info.name
     if info.locked is not None:
@@ -331,13 +332,20 @@ async def transcript_update(
         for te in transcript.events:
             if (
                 te["event"] == PipelineEvent.FINAL_LONG_SUMMARY
-                or PipelineEvent.FINAL_SHORT_SUMMARY
+                or te["event"] == PipelineEvent.FINAL_SHORT_SUMMARY
             ):
                 te["summary"] = info.summary
+        values["events"].extend(transcript.events)
+    if info.title is not None:
+        values["title"] = info.title
+        # also find TITLE event and patch it
+        for te in transcript.events:
+            if te["event"] == PipelineEvent.FINAL_TITLE:
+                te["title"] = info.title
                 break
-        values["events"] = transcript.events
-
+        values["events"].extend(transcript.events)
     await transcripts_controller.update(transcript, values)
+    print("&&&&&&&&&&&&&&&&&&&&&&", values)
     return transcript
 
 

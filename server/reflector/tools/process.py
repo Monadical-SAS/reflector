@@ -1,7 +1,6 @@
 import asyncio
 
 import av
-from processors.base import BroadcastProcessor
 
 from reflector.logger import logger
 from reflector.processors import (
@@ -16,6 +15,7 @@ from reflector.processors import (
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
 )
+from reflector.processors.base import BroadcastProcessor
 
 
 async def process_audio_file(
