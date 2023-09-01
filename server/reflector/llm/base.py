@@ -49,7 +49,7 @@ class LLM:
         """
         return """
         ### Human:
-        {user_prompt}
+        {instruct}
 
         {text}
 
@@ -131,21 +131,20 @@ class LLM:
 
         return json.loads(result.strip())
 
-    def text_token_threshold(
-        self, prompt: str, gen_cfg: GenerationConfig | None
-    ) -> int:
+    def text_token_threshold(self, llm_params: LLMTaskParams | None) -> int:
         """
         Choose the token size to set as the threshold to pack the LLM calls
         """
+        task_params = llm_params.task_params
         buffer_token_size = 25
         default_output_tokens = 1000
         context_window = self.tokenizer.model_max_length
         tokens = self.tokenizer.tokenize(
-            self.template.format(user_prompt=prompt, text="")
+            self.template.format(instruct=task_params.instruct, text="")
         )
         threshold = context_window - len(tokens) - buffer_token_size
-        if gen_cfg:
-            threshold -= gen_cfg.max_new_tokens
+        if task_params.gen_cfg:
+            threshold -= task_params.gen_cfg.max_new_tokens
         else:
             threshold -= default_output_tokens
         return threshold
@@ -161,13 +160,11 @@ class LLM:
         restrictions.
 
         Accumulate tokens from full sentences till threshold and yield accumulated
-        tokens. Reset accumulation and repeat process.
+        tokens. Reset accumulation when threshold is reached and repeat process.
         """
         task_params = llm_params.task_params
         if not token_threshold:
-            token_threshold = self.text_token_threshold(
-                prompt=self.template, gen_cfg=task_params.gen_cfg
-            )
+            token_threshold = self.text_token_threshold(llm_params=task_params)
 
         accumulated_tokens = []
         accumulated_sentences = []
@@ -189,18 +186,18 @@ class LLM:
         if accumulated_tokens:
             yield " ".join(accumulated_sentences)
 
-    def create_prompt(self, user_prompt: str, text: str) -> str:
+    def create_prompt(self, instruct: str, text: str) -> str:
         """
         Create a consumable prompt based on the prompt template
         """
-        return self.template.format(user_prompt=user_prompt, text=text)
+        return self.template.format(instruct=instruct, text=text)
 
     async def get_response(self, text: str, llm_params: LLMTaskParams, logger):
         """
         Perform one atomic query to the LLM and return its response
         """
         task_params = llm_params.task_params
-        prompt = self.create_prompt(user_prompt=task_params.instruct, text=text)
+        prompt = self.create_prompt(instruct=task_params.instruct, text=text)
         response = await retry(self.generate)(
             prompt=prompt,
             gen_cfg=task_params.gen_cfg,
