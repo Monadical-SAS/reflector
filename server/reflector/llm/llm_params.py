@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, TypeVar
 
 from pydantic import BaseModel
 from transformers import GenerationConfig
@@ -10,25 +10,28 @@ class TaskParams(BaseModel, arbitrary_types_allowed=True):
     gen_schema: Optional[dict] = None
 
 
+T = TypeVar("T", bound="LLMTaskParams")
+
+
 class LLMTaskParams:
     _registry = {}
 
     @classmethod
-    def register(cls, task, klass):
+    def register(cls, task, klass) -> None:
         cls._registry[task] = klass
 
     @classmethod
-    def get_instance(cls, task):
+    def get_instance(cls, task: str) -> T:
         return cls._registry[task]()
 
     @property
-    def task_params(self):
+    def task_params(self) -> TaskParams | None:
         """
         Fetch the task related parameters
         """
         return self._get_task_params()
 
-    def _get_task_params(self):
+    def _get_task_params(self) -> None:
         pass
 
 

@@ -2,7 +2,7 @@ import importlib
 import json
 import re
 from time import monotonic
-from typing import List
+from typing import List, TypeVar
 
 import nltk
 from transformers import AutoTokenizer, GenerationConfig
@@ -14,6 +14,8 @@ from reflector.utils.retry import retry
 
 nltk.download("punkt", quiet=True)
 
+T = TypeVar("T", bound="LLM")
+
 
 class LLM:
     _registry = {}
@@ -23,7 +25,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(cls, model_name, name=None):
+    def get_instance(cls, model_name: str, name: str = None) -> T:
         """
         Return an instance depending on the settings.
         Settings used:
@@ -41,7 +43,10 @@ class LLM:
         return cls._registry[name]()
 
     @property
-    def template(self):
+    def template(self) -> str:
+        """
+        Return the LLM Prompt template
+        """
         return """
         ### Human:
         {user_prompt}
@@ -67,6 +72,9 @@ class LLM:
 
     @property
     def tokenizer(self):
+        """
+        Return the tokenizer instance used by LLM
+        """
         return self.llm_tokenizer
 
     async def generate(
@@ -78,11 +86,13 @@ class LLM:
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
+        if gen_cfg:
+            gen_cfg = gen_cfg.to_dict()
         try:
             result = await retry(self._generate)(
                 prompt=prompt,
                 gen_schema=gen_schema,
-                gen_cfg=gen_cfg.to_dict(),
+                gen_cfg=gen_cfg,
                 **kwargs,
             )
         except Exception:
