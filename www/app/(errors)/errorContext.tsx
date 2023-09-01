@@ -2,8 +2,8 @@
 import React, { createContext, useContext, useState } from "react";
 
 interface ErrorContextProps {
-  error: string;
-  setError: React.Dispatch<React.SetStateAction<string>>;
+  error: Error | null;
+  setError: React.Dispatch<React.SetStateAction<Error | null>>;
 }
 
 const ErrorContext = createContext<ErrorContextProps | undefined>(undefined);
@@ -21,7 +21,7 @@ interface ErrorProviderProps {
 }
 
 export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<Error | null>(null);
 
   return (
     <ErrorContext.Provider value={{ error, setError }}>
