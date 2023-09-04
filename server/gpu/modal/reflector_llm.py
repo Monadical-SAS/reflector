@@ -8,6 +8,7 @@ import os
 from typing import Optional
 
 from modal import Image, Secret, Stub, asgi_app, method
+from transformers import GenerationConfig
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
@@ -119,8 +120,9 @@ class LLM:
         """
         print(f"Generate {prompt=}")
         if gen_cfg:
-            # Update the base gen cfg with the supplied gen cfg
-            self.gen_cfg.update(**json.loads(gen_cfg))
+            gen_cfg = GenerationConfig.from_dict(json.loads(gen_cfg))
+        else:
+            gen_cfg = self.gen_cfg
 
         # If a gen_schema is given, conform to gen_schema
         if gen_schema:
@@ -129,7 +131,7 @@ class LLM:
                                               tokenizer=self.tokenizer,
                                               json_schema=json.loads(gen_schema),
                                               prompt=prompt,
-                                              max_string_token_length=self.gen_cfg.max_new_tokens)
+                                              max_string_token_length=gen_cfg.max_new_tokens)
             response = jsonformer_llm()
         else:
             # If no gen_schema, perform prompt only generation
@@ -138,7 +140,7 @@ class LLM:
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
                 self.model.device
             )
-            output = self.model.generate(input_ids, generation_config=self.gen_cfg)
+            output = self.model.generate(input_ids, generation_config=gen_cfg)
 
             # decode output
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)

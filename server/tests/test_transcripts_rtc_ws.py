@@ -101,7 +101,7 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
     # start server
     host = "127.0.0.1"
     port = 1255
-    base_url = f"http://{host}:{port}/v1"
+    base_url = f"http://{host}:{port}/v1.0"
     config = Config(app=app, host=host, port=port)
     server = ThreadedUvicorn(config)
     await server.start()
@@ -247,7 +247,7 @@ async def test_transcript_rtc_and_websocket_and_fr(tmpdir, dummy_transcript, dum
     # start server
     host = "127.0.0.1"
     port = 1255
-    base_url = f"http://{host}:{port}/v1"
+    base_url = f"http://{host}:{port}/v1.0"
     config = Config(app=app, host=host, port=port)
     server = ThreadedUvicorn(config)
     await server.start()

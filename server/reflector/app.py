@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 
-import reflector.auth  # noqa
-import reflector.db  # noqa
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi_pagination import add_pagination
+
+import reflector.auth  # noqa
+import reflector.db  # noqa
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.settings import settings
@@ -51,8 +52,8 @@ app.add_middleware(
 
 # register views
 app.include_router(rtc_offer_router)
-app.include_router(transcripts_router, prefix="/v1")
-app.include_router(user_router, prefix="/v1")
+app.include_router(transcripts_router, prefix="/v1.0")
+app.include_router(user_router, prefix="/v1.0")
 add_pagination(app)
 
 
@@ -70,7 +71,7 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
             # opid
 
             # extract version out of path if exists
-            # /v1/transcripts -> v1
+            # /v1.0/transcripts -> v1.0
             # /transcripts -> None
             version = None
             if route.path.startswith("/v"):

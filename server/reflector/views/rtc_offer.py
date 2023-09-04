@@ -129,15 +129,15 @@ async def rtc_offer_base(
                 data=transcript,
             )
 
-    async def on_topic(summary: TitleSummary):
+    async def on_topic(topic: TitleSummary):
         # FIXME: make it incremental with the frontend, not send everything
-        ctx.logger.info("Summary", summary=summary)
+        ctx.logger.info("Topic", topic=topic)
         ctx.topics.append(
             {
-                "title": summary.title,
-                "timestamp": summary.timestamp,
-                "transcript": summary.transcript.text,
-                "desc": summary.summary,
+                "title": topic.title,
+                "timestamp": topic.timestamp,
+                "transcript": topic.transcript.text,
+                "desc": topic.summary,
             }
         )
 
@@ -149,7 +149,7 @@ async def rtc_offer_base(
         # send to callback (eg. websocket)
         if event_callback:
             await event_callback(
-                event=PipelineEvent.TOPIC, args=event_callback_args, data=summary
+                event=PipelineEvent.TOPIC, args=event_callback_args, data=topic
             )
 
     async def on_final_short_summary(summary: FinalSummary):
