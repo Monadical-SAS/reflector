@@ -193,14 +193,14 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
     # assert "FINAL_LONG_SUMMARY" in eventnames
     # ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
     # assert ev["data"]["summary"] == "LLM SUMMARY"
-
+    #
     # assert "FINAL_SHORT_SUMMARY" in eventnames
     # ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
     # assert ev["data"]["summary"] == "LLM SUMMARY"
-    #
-    # assert "FINAL_TITLE" in eventnames
-    # ev = events[eventnames.index("FINAL_TITLE")]
-    # assert ev["data"]["title"] == "LLM TITLE"
+
+    assert "FINAL_TITLE" in eventnames
+    ev = events[eventnames.index("FINAL_TITLE")]
+    assert ev["data"]["title"] == "LLM TITLE"
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
@@ -341,14 +341,14 @@ async def test_transcript_rtc_and_websocket_and_fr(tmpdir, dummy_transcript, dum
     # assert "FINAL_LONG_SUMMARY" in eventnames
     # ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
     # assert ev["data"]["summary"] == "LLM SUMMARY"
-
+    #
     # assert "FINAL_SHORT_SUMMARY" in eventnames
     # ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
     # assert ev["data"]["summary"] == "LLM SUMMARY"
-    #
-    # assert "FINAL_TITLE" in eventnames
-    # ev = events[eventnames.index("FINAL_TITLE")]
-    # assert ev["data"]["title"] == "LLM TITLE"
+
+    assert "FINAL_TITLE" in eventnames
+    ev = events[eventnames.index("FINAL_TITLE")]
+    assert ev["data"]["title"] == "LLM TITLE"
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
