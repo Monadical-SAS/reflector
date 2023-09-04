@@ -13,4 +13,11 @@ from .transcript_final_short_summary import (  # noqa: F401
 from .transcript_final_title import TranscriptFinalTitleProcessor  # noqa: F401
 from .transcript_liner import TranscriptLinerProcessor  # noqa: F401
 from .transcript_topic_detector import TranscriptTopicDetectorProcessor  # noqa: F401
-from .types import AudioFile, FinalSummary, TitleSummary, Transcript, Word  # noqa: F401
+from .types import (  # noqa: F401
+    AudioFile,
+    FinalLongSummary,
+    FinalShortSummary,
+    TitleSummary,
+    Transcript,
+    Word,
+)

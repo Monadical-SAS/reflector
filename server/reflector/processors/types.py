@@ -103,7 +103,12 @@ class TitleSummary(BaseModel):
         return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
-class FinalSummary(BaseModel):
+class FinalLongSummary(BaseModel):
+    summary: str
+    duration: float
+
+
+class FinalShortSummary(BaseModel):
     summary: str
     duration: float
 

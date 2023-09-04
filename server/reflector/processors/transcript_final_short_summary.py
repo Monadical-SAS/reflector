@@ -1,6 +1,6 @@
 from reflector.llm import LLM, LLMTaskParams
 from reflector.processors.base import Processor
-from reflector.processors.types import FinalSummary, TitleSummary
+from reflector.processors.types import FinalShortSummary, TitleSummary
 
 
 class TranscriptFinalShortSummaryProcessor(Processor):
@@ -9,7 +9,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
     """
 
     INPUT_TYPE = TitleSummary
-    OUTPUT_TYPE = FinalSummary
+    OUTPUT_TYPE = FinalShortSummary
     TASK = "final_short_summary"
 
     def __init__(self, **kwargs):
@@ -55,7 +55,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
 
-        final_summary = FinalSummary(
+        final_summary = FinalShortSummary(
             summary=summary_result["summary"],
             duration=duration,
         )

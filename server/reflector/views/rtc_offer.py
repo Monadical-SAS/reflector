@@ -15,7 +15,8 @@ from reflector.processors import (
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    FinalSummary,
+    FinalLongSummary,
+    FinalShortSummary,
     Pipeline,
     TitleSummary,
     Transcript,
@@ -152,7 +153,7 @@ async def rtc_offer_base(
                 event=PipelineEvent.TOPIC, args=event_callback_args, data=topic
             )
 
-    async def on_final_short_summary(summary: FinalSummary):
+    async def on_final_short_summary(summary: FinalShortSummary):
         ctx.logger.info("FinalShortSummary", final_short_summary=summary)
 
         # send to RTC
@@ -172,7 +173,7 @@ async def rtc_offer_base(
                 data=summary,
             )
 
-    async def on_final_long_summary(summary: FinalSummary):
+    async def on_final_long_summary(summary: FinalLongSummary):
         ctx.logger.info("FinalLongSummary", final_summary=summary)
 
         # send to RTC
