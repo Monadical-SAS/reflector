@@ -25,7 +25,9 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(cls, model_name: str, name: str = None) -> T:
+    def get_instance(
+        cls, model_name: str = settings.DEFAULT_LLM_NAME, name: str = None
+    ) -> T:
         """
         Return an instance depending on the settings.
         Settings used:

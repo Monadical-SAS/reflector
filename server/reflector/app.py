@@ -52,8 +52,8 @@ app.add_middleware(
 
 # register views
 app.include_router(rtc_offer_router)
-app.include_router(transcripts_router, prefix="/v1.0")
-app.include_router(user_router, prefix="/v1.0")
+app.include_router(transcripts_router, prefix="/v1")
+app.include_router(user_router, prefix="/v1")
 add_pagination(app)
 
 
@@ -71,7 +71,7 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
             # opid
 
             # extract version out of path if exists
-            # /v1.0/transcripts -> v1.0
+            # /v1/transcripts -> v1
             # /transcripts -> None
             version = None
             if route.path.startswith("/v"):
