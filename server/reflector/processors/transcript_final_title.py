@@ -28,7 +28,6 @@ class TranscriptFinalTitleProcessor(Processor):
         chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
 
         if len(chunks) == 1:
-            self.logger.info(f"Smoothing out {len(text)} length summary")
             chunk = chunks[0]
             title_result = await self.llm.get_response(
                 text=chunk, llm_params=self.params, logger=self.logger

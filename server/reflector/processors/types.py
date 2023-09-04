@@ -104,12 +104,12 @@ class TitleSummary(BaseModel):
 
 
 class FinalLongSummary(BaseModel):
-    summary: str
+    long_summary: str
     duration: float
 
 
 class FinalShortSummary(BaseModel):
-    summary: str
+    short_summary: str
     duration: float
 
 

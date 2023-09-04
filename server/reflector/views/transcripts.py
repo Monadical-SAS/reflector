@@ -62,11 +62,11 @@ class TranscriptTopic(BaseModel):
 
 
 class TranscriptFinalShortSummary(BaseModel):
-    summary: str
+    short_summary: str
 
 
 class TranscriptFinalLongSummary(BaseModel):
-    summary: str
+    long_summary: str
 
 
 class TranscriptFinalTitle(BaseModel):
@@ -578,24 +578,26 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
         )
 
     elif event == PipelineEvent.FINAL_LONG_SUMMARY:
-        final_long_summary = TranscriptFinalLongSummary(summary=data.summary)
+        final_long_summary = TranscriptFinalLongSummary(long_summary=data.long_summary)
         resp = transcript.add_event(event=event, data=final_long_summary)
         await transcripts_controller.update(
             transcript,
             {
                 "events": transcript.events_dump(),
-                "long_summary": final_long_summary.summary,
+                "long_summary": final_long_summary.long_summary,
             },
         )
 
     elif event == PipelineEvent.FINAL_SHORT_SUMMARY:
-        final_short_summary = TranscriptFinalShortSummary(summary=data.summary)
+        final_short_summary = TranscriptFinalShortSummary(
+            short_summary=data.short_summary
+        )
         resp = transcript.add_event(event=event, data=final_short_summary)
         await transcripts_controller.update(
             transcript,
             {
                 "events": transcript.events_dump(),
-                "short_summary": final_short_summary.summary,
+                "short_summary": final_short_summary.short_summary,
             },
         )
 

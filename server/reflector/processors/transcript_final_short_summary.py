@@ -21,14 +21,14 @@ class TranscriptFinalShortSummaryProcessor(Processor):
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
-    async def tree_summarizer(self, text: str) -> dict:
+    async def get_short_summary(self, text: str) -> dict:
         """
         Generata a short summary using tree summarizer
         """
+        self.logger.info(f"Smoothing out {len(text)} length summary to a short summary")
         chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
 
         if len(chunks) == 1:
-            self.logger.info(f"Smoothing out {len(text)} length summary")
             chunk = chunks[0]
             summary_result = await self.llm.get_response(
                 text=chunk, llm_params=self.params, logger=self.logger
@@ -40,9 +40,9 @@ class TranscriptFinalShortSummaryProcessor(Processor):
                 summary_result = await self.llm.get_response(
                     text=chunk, llm_params=self.params, logger=self.logger
                 )
-                accumulated_summaries += summary_result["summary"]
+                accumulated_summaries += summary_result["short_summary"]
 
-            return await self.tree_summarizer(accumulated_summaries)
+            return await self.get_short_summary(accumulated_summaries)
 
     async def _flush(self):
         if not self.chunks:
@@ -50,16 +50,16 @@ class TranscriptFinalShortSummaryProcessor(Processor):
             return
 
         accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
-        summary_result = await self.tree_summarizer(accumulated_summaries)
+        short_summary_result = await self.get_short_summary(accumulated_summaries)
 
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
 
         final_summary = FinalShortSummary(
-            summary=summary_result["summary"],
+            short_summary=short_summary_result["short_summary"],
             duration=duration,
         )
         print("****************")
-        print("FINAL SHORT SUMMARY", final_summary.summary)
+        print("FINAL SHORT SUMMARY", final_summary.short_summary)
         print("****************")
         await self.emit(final_summary)

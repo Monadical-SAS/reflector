@@ -46,7 +46,10 @@ class FinalLongSummaryParams(LLMTaskParams):
          summary. Be sure to keep the length of the response to a minimum.
          Do not include trivial information in the summary.
           """
-        self._schema = {"type": "object", "properties": {"summary": {"type": "string"}}}
+        self._schema = {
+            "type": "object",
+            "properties": {"long_summary": {"type": "string"}},
+        }
         self._task_params = TaskParams(
             instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
         )
@@ -69,7 +72,10 @@ class FinalShortSummaryParams(LLMTaskParams):
          summary. Be sure to keep the length of the response to a minimum.
          Do not include trivial information in the summary.
           """
-        self._schema = {"type": "object", "properties": {"summary": {"type": "string"}}}
+        self._schema = {
+            "type": "object",
+            "properties": {"short_summary": {"type": "string"}},
+        }
         self._task_params = TaskParams(
             instruct=self._instruct, gen_schema=self._schema, gen_cfg=self._gen_cfg
         )

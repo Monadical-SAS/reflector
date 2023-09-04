@@ -160,7 +160,7 @@ async def rtc_offer_base(
         if ctx.data_channel.readyState == "open":
             result = {
                 "cmd": "DISPLAY_FINAL_SHORT_SUMMARY",
-                "summary": summary.summary,
+                "summary": summary.short_summary,
                 "duration": summary.duration,
             }
             ctx.data_channel.send(dumps(result))
@@ -180,7 +180,7 @@ async def rtc_offer_base(
         if ctx.data_channel.readyState == "open":
             result = {
                 "cmd": "DISPLAY_FINAL_LONG_SUMMARY",
-                "summary": summary.summary,
+                "summary": summary.long_summary,
                 "duration": summary.duration,
             }
             ctx.data_channel.send(dumps(result))
