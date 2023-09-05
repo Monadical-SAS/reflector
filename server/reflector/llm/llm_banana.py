@@ -38,13 +38,15 @@ class BananaLLM(LLM):
 LLM.register("banana", BananaLLM)
 
 if __name__ == "__main__":
+    from reflector.logger import logger
 
     async def main():
         llm = BananaLLM()
-        prompt = "Complete the following task."
-        result = await llm.generate(
-            prompt=prompt, text="Tell me a joke about programming"
+        prompt = llm.create_prompt(
+            instruct="Complete the following task",
+            text="Tell me a joke about programming.",
         )
+        result = await llm.generate(prompt=prompt, logger=logger)
         print(result)
 
     import asyncio

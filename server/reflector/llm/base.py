@@ -85,7 +85,7 @@ class LLM:
     async def generate(
         self,
         prompt: str,
-        logger: reflector_logger,
+        logger: reflector_logger | None,
         gen_schema: dict | None = None,
         gen_cfg: GenerationConfig | None = None,
         **kwargs,

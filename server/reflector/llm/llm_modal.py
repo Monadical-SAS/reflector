@@ -1,4 +1,5 @@
 import httpx
+from transformers import GenerationConfig
 
 from reflector.llm.base import LLM
 from reflector.settings import settings
@@ -53,7 +54,10 @@ if __name__ == "__main__":
 
     async def main():
         llm = ModalLLM()
-        prompt = "Tell me a joke about programming"
+        prompt = llm.create_prompt(
+            instruct="Complete the following task",
+            text="Tell me a joke about programming.",
+        )
         result = await llm.generate(prompt=prompt, logger=logger)
         print(result)
 
@@ -62,10 +66,12 @@ if __name__ == "__main__":
             "properties": {"response": {"type": "string"}},
         }
 
+        result = await llm.generate(prompt=prompt, gen_schema=gen_schema, logger=logger)
+        print(result)
+
+        gen_cfg = GenerationConfig(max_new_tokens=150)
         result = await llm.generate(
-            prompt=prompt,
-            gen_schema=gen_schema,
-            logger=logger,
+            prompt=prompt, gen_cfg=gen_cfg, gen_schema=gen_schema, logger=logger
         )
         print(result)
 
