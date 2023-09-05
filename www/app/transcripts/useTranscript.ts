@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import { GetTranscript } from "../api";
-import getApi from "../lib/getApi";
+import { useError } from "../(errors)/errorContext";
 
 type UseTranscript = {
   response: GetTranscript | null;
   loading: boolean;
-  error: string | null;
   createTranscript: () => void;
 };
 
 const useTranscript = (api: DefaultApi): UseTranscript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const { setError } = useError();
 
   const createTranscript = () => {
     setLoading(true);
@@ -37,10 +36,7 @@ const useTranscript = (api: DefaultApi): UseTranscript => {
         console.debug("New transcript created:", result);
       })
       .catch((err) => {
-        const errorString = err.response || err.message || "Unknown error";
-        setError(errorString);
-        setLoading(false);
-        console.error("Error creating transcript:", errorString);
+        setError(err);
       });
   };
 
@@ -48,7 +44,7 @@ const useTranscript = (api: DefaultApi): UseTranscript => {
     createTranscript();
   }, []);
 
-  return { response, loading, error, createTranscript };
+  return { response, loading, createTranscript };
 };
 
 export default useTranscript;
