@@ -4,7 +4,7 @@ import {
   DefaultApi,
   V1TranscriptRecordWebrtcRequest,
 } from "../api/apis/DefaultApi";
-import { Configuration } from "../api/runtime";
+import { useError } from "../(errors)/errorContext";
 
 const useWebRTC = (
   stream: MediaStream | null,
@@ -12,13 +12,25 @@ const useWebRTC = (
   api: DefaultApi,
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
+  const { setError } = useError();
 
   useEffect(() => {
     if (!stream || !transcriptId) {
       return;
     }
 
-    let p: Peer = new Peer({ initiator: true, stream: stream });
+    let p: Peer;
+
+    try {
+      p = new Peer({ initiator: true, stream: stream });
+    } catch (error) {
+      setError(error);
+      return;
+    }
+
+    p.on("error", (err) => {
+      setError(new Error(`WebRTC error: ${err}`));
+    });
 
     p.on("signal", (data: any) => {
       if ("sdp" in data) {
@@ -33,10 +45,14 @@ const useWebRTC = (
         api
           .v1TranscriptRecordWebrtc(requestParameters)
           .then((answer) => {
-            p.signal(answer);
+            try {
+              p.signal(answer);
+            } catch (error) {
+              setError(error);
+            }
           })
-          .catch((err) => {
-            console.error("WebRTC signaling error:", err);
+          .catch((error) => {
+            setError(error);
           });
       }
     });

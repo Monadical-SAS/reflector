@@ -1,9 +1,16 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
+from typing import Any, Union
 from uuid import uuid4
 
+from pydantic import BaseModel
 from reflector.logger import logger
+
+
+class PipelineEvent(BaseModel):
+    processor: str
+    uid: str
+    data: Any
 
 
 class Processor:
@@ -12,6 +19,7 @@ class Processor:
     WARMUP_EVENT: str = "WARMUP_EVENT"
 
     def __init__(self, callback=None, custom_logger=None):
+        self.name = self.__class__.__name__
         self._processors = []
         self._callbacks = []
         if callback:
@@ -67,6 +75,10 @@ class Processor:
         return default
 
     async def emit(self, data):
+        if self.pipeline:
+            await self.pipeline.emit(
+                PipelineEvent(processor=self.name, uid=self.uid, data=data)
+            )
         for callback in self._callbacks:
             await callback(data)
         for processor in self._processors:
@@ -183,9 +195,70 @@ class ThreadedProcessor(Processor):
     def on(self, callback):
         self.processor.on(callback)
 
+    def off(self, callback):
+        self.processor.off(callback)
+
     def describe(self, level=0):
         super().describe(level)
         self.processor.describe(level + 1)
+
+
+class BroadcastProcessor(Processor):
+    """
+    A processor that broadcasts data to multiple processors, in the order
+    they were passed to the constructor
+
+    This processor does not guarantee that the output is in order.
+
+    This processor connect all the output of the processors to the input of
+    the next processor; so the next processor must be able to accept different
+    types of input.
+    """
+
+    def __init__(self, processors: Processor):
+        super().__init__()
+        self.processors = processors
+        self.INPUT_TYPE = processors[0].INPUT_TYPE
+        output_types = set([processor.OUTPUT_TYPE for processor in processors])
+        self.OUTPUT_TYPE = Union[tuple(output_types)]
+
+    def set_pipeline(self, pipeline: "Pipeline"):
+        super().set_pipeline(pipeline)
+        for processor in self.processors:
+            processor.set_pipeline(pipeline)
+
+    async def _warmup(self):
+        for processor in self.processors:
+            await processor.warmup()
+
+    async def _push(self, data):
+        for processor in self.processors:
+            await processor.push(data)
+
+    async def _flush(self):
+        for processor in self.processors:
+            await processor.flush()
+
+    def connect(self, processor: Processor):
+        for processor in self.processors:
+            processor.connect(processor)
+
+    def disconnect(self, processor: Processor):
+        for processor in self.processors:
+            processor.disconnect(processor)
+
+    def on(self, callback):
+        for processor in self.processors:
+            processor.on(callback)
+
+    def off(self, callback):
+        for processor in self.processors:
+            processor.off(callback)
+
+    def describe(self, level=0):
+        super().describe(level)
+        for processor in self.processors:
+            processor.describe(level + 1)
 
 
 class Pipeline(Processor):
