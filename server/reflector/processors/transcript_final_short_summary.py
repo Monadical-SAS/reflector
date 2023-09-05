@@ -16,7 +16,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
-        self.params = LLMTaskParams.get_instance(self.TASK)
+        self.params = LLMTaskParams.get_instance(self.TASK).task_params
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
@@ -30,15 +30,25 @@ class TranscriptFinalShortSummaryProcessor(Processor):
 
         if len(chunks) == 1:
             chunk = chunks[0]
-            summary_result = await self.llm.get_response(
-                text=chunk, llm_params=self.params, logger=self.logger
+            prompt = self.llm.create_prompt(instruct=self.params.instruct, text=chunk)
+            summary_result = await self.llm.generate(
+                prompt=prompt,
+                gen_schema=self.params.gen_schema,
+                gen_cfg=self.params.gen_cfg,
+                logger=self.logger,
             )
             return summary_result
         else:
             accumulated_summaries = ""
             for chunk in chunks:
-                summary_result = await self.llm.get_response(
-                    text=chunk, llm_params=self.params, logger=self.logger
+                prompt = self.llm.create_prompt(
+                    instruct=self.params.instruct, text=chunk
+                )
+                summary_result = await self.llm.generate(
+                    prompt=prompt,
+                    gen_schema=self.params.gen_schema,
+                    gen_cfg=self.params.gen_cfg,
+                    logger=self.logger,
                 )
                 accumulated_summaries += summary_result["short_summary"]
 

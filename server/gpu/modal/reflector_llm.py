@@ -72,7 +72,6 @@ llm_image = (
 )
 class LLM:
     def __enter__(self):
-        import jsonformer
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         from transformers.generation import GenerationConfig
@@ -103,7 +102,6 @@ class LLM:
         self.model = model
         self.tokenizer = tokenizer
         self.gen_cfg = gen_cfg
-        self.json_former = jsonformer.Jsonformer
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -126,12 +124,16 @@ class LLM:
 
         # If a gen_schema is given, conform to gen_schema
         if gen_schema:
+            import jsonformer
+
             print(f"Schema {gen_schema=}")
-            jsonformer_llm = self.json_former(model=self.model,
-                                              tokenizer=self.tokenizer,
-                                              json_schema=json.loads(gen_schema),
-                                              prompt=prompt,
-                                              max_string_token_length=gen_cfg.max_new_tokens)
+            jsonformer_llm = jsonformer.Jsonformer(
+                model=self.model,
+                tokenizer=self.tokenizer,
+                json_schema=json.loads(gen_schema),
+                prompt=prompt,
+                max_string_token_length=gen_cfg.max_new_tokens
+            )
             response = jsonformer_llm()
         else:
             # If no gen_schema, perform prompt only generation

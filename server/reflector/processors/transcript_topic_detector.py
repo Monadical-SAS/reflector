@@ -17,7 +17,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.transcript = None
         self.min_transcript_length = min_transcript_length
         self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
-        self.params = LLMTaskParams.get_instance(self.TASK)
+        self.params = LLMTaskParams.get_instance(self.TASK).task_params
 
     async def _warmup(self):
         await self.llm.warmup(logger=self.logger)
@@ -38,8 +38,12 @@ class TranscriptTopicDetectorProcessor(Processor):
         """
         Generate a topic and description for a transcription excerpt
         """
-        topic_result = await self.llm.get_response(
-            text=text, llm_params=self.params, logger=self.logger
+        prompt = self.llm.create_prompt(instruct=self.params.instruct, text=text)
+        topic_result = await self.llm.generate(
+            prompt=prompt,
+            gen_schema=self.params.gen_schema,
+            gen_cfg=self.params.gen_cfg,
+            logger=self.logger,
         )
         return topic_result
 

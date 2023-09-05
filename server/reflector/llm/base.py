@@ -12,13 +12,15 @@ from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
-nltk.download("punkt", quiet=True)
-
 T = TypeVar("T", bound="LLM")
 
 
 class LLM:
     _registry = {}
+
+    @classmethod
+    def setup_nltk(cls):
+        nltk.download("punkt", quiet=True)
 
     @classmethod
     def register(cls, name, klass):
@@ -62,6 +64,7 @@ class LLM:
         start = monotonic()
         name = self.__class__.__name__
         logger.info(f"LLM[{name}] warming up...")
+        self.setup_nltk()
         try:
             await self._warmup(logger=logger)
             duration = monotonic() - start
@@ -192,17 +195,3 @@ class LLM:
         Create a consumable prompt based on the prompt template
         """
         return self.template.format(instruct=instruct, text=text)
-
-    async def get_response(self, text: str, llm_params: LLMTaskParams, logger) -> dict:
-        """
-        Perform one atomic query to the LLM and return its response
-        """
-        task_params = llm_params.task_params
-        prompt = self.create_prompt(instruct=task_params.instruct, text=text)
-        response = await retry(self.generate)(
-            prompt=prompt,
-            gen_cfg=task_params.gen_cfg,
-            gen_schema=task_params.gen_schema,
-            logger=logger,
-        )
-        return response
