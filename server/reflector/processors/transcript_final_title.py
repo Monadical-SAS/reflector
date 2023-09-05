@@ -25,7 +25,7 @@ class TranscriptFinalTitleProcessor(Processor):
         """
         Generate a title for the whole recording
         """
-        chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
+        chunks = list(self.llm.split_corpus(corpus=text, task_params=self.params))
 
         if len(chunks) == 1:
             chunk = chunks[0]
@@ -62,7 +62,4 @@ class TranscriptFinalTitleProcessor(Processor):
         title_result = await self.get_title(accumulated_titles)
 
         final_title = FinalTitle(title=title_result["title"])
-        print("****************")
-        print("FINAL TITLE", final_title.title)
-        print("****************")
         await self.emit(final_title)

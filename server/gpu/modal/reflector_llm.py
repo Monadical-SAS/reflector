@@ -8,7 +8,6 @@ import os
 from typing import Optional
 
 from modal import Image, Secret, Stub, asgi_app, method
-from transformers import GenerationConfig
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
@@ -18,7 +17,7 @@ LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/model"
 
-stub = Stub(name="reflector-test")
+stub = Stub(name="reflector-llm")
 
 
 def download_llm():
@@ -73,8 +72,7 @@ llm_image = (
 class LLM:
     def __enter__(self):
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        from transformers.generation import GenerationConfig
+        from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
         print("Instance llm model")
         model = AutoModelForCausalLM.from_pretrained(
@@ -83,10 +81,11 @@ class LLM:
             low_cpu_mem_usage=LLM_LOW_CPU_MEM_USAGE,
         )
 
-        # generation configuration
+        # JSONFormer doesn't yet support generation configs
         print("Instance llm generation config")
-        # JSONFormer doesn't yet support generation configs, but keeping for future usage
         model.config.max_new_tokens = LLM_MAX_NEW_TOKENS
+
+        # generation configuration
         gen_cfg = GenerationConfig.from_model_config(model.config)
         gen_cfg.max_new_tokens = LLM_MAX_NEW_TOKENS
 
@@ -102,6 +101,7 @@ class LLM:
         self.model = model
         self.tokenizer = tokenizer
         self.gen_cfg = gen_cfg
+        self.GenerationConfig = GenerationConfig
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -118,7 +118,7 @@ class LLM:
         """
         print(f"Generate {prompt=}")
         if gen_cfg:
-            gen_cfg = GenerationConfig.from_dict(json.loads(gen_cfg))
+            gen_cfg = self.GenerationConfig.from_dict(json.loads(gen_cfg))
         else:
             gen_cfg = self.gen_cfg
 

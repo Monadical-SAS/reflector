@@ -7,7 +7,7 @@ from typing import List, TypeVar
 import nltk
 from transformers import AutoTokenizer, GenerationConfig
 
-from reflector.llm.llm_params import LLMTaskParams
+from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
@@ -136,11 +136,10 @@ class LLM:
 
         return json.loads(result.strip())
 
-    def text_token_threshold(self, llm_params: LLMTaskParams | None) -> int:
+    def text_token_threshold(self, task_params: TaskParams | None) -> int:
         """
         Choose the token size to set as the threshold to pack the LLM calls
         """
-        task_params = llm_params.task_params
         buffer_token_size = 25
         default_output_tokens = 1000
         context_window = self.tokenizer.model_max_length
@@ -157,7 +156,7 @@ class LLM:
     def split_corpus(
         self,
         corpus: str,
-        llm_params: LLMTaskParams,
+        task_params: TaskParams,
         token_threshold: int | None = None,
     ) -> List[str]:
         """
@@ -168,7 +167,7 @@ class LLM:
         tokens. Reset accumulation when threshold is reached and repeat process.
         """
         if not token_threshold:
-            token_threshold = self.text_token_threshold(llm_params=llm_params)
+            token_threshold = self.text_token_threshold(task_params=task_params)
 
         accumulated_tokens = []
         accumulated_sentences = []

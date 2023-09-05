@@ -12,7 +12,7 @@ class TranscriptTopicDetectorProcessor(Processor):
     OUTPUT_TYPE = TitleSummary
     TASK = "topic"
 
-    def __init__(self, min_transcript_length: int = 1000, **kwargs):
+    def __init__(self, min_transcript_length: int = 500, **kwargs):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length

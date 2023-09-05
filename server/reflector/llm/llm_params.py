@@ -39,7 +39,7 @@ class FinalLongSummaryParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=1300, num_beams=3, do_sample=True, temperature=0.3
+            max_new_tokens=800, num_beams=3, do_sample=True, temperature=0.3
         )
         self._instruct = """
         Take the key ideas and takeaways from the text and create a short

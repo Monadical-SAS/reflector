@@ -26,7 +26,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
         Generata a short summary using tree summarizer
         """
         self.logger.info(f"Smoothing out {len(text)} length summary to a short summary")
-        chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
+        chunks = list(self.llm.split_corpus(corpus=text, task_params=self.params))
 
         if len(chunks) == 1:
             chunk = chunks[0]
@@ -69,7 +69,4 @@ class TranscriptFinalShortSummaryProcessor(Processor):
             short_summary=short_summary_result["short_summary"],
             duration=duration,
         )
-        print("****************")
-        print("FINAL SHORT SUMMARY", final_summary.short_summary)
-        print("****************")
         await self.emit(final_summary)

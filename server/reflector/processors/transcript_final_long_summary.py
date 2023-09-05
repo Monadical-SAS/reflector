@@ -26,7 +26,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
         Generate a long version of the final summary
         """
         self.logger.info(f"Smoothing out {len(text)} length summary to a long summary")
-        chunks = list(self.llm.split_corpus(corpus=text, llm_params=self.params))
+        chunks = list(self.llm.split_corpus(corpus=text, task_params=self.params))
 
         accumulated_summaries = ""
         for chunk in chunks:
@@ -52,11 +52,8 @@ class TranscriptFinalLongSummaryProcessor(Processor):
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
 
-        final_summary = FinalLongSummary(
+        final_long_summary = FinalLongSummary(
             long_summary=long_summary,
             duration=duration,
         )
-        print("****************")
-        print("FINAL LONG SUMMARY", final_summary.long_summary)
-        print("****************")
-        await self.emit(final_summary)
+        await self.emit(final_long_summary)
