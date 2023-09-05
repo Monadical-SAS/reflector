@@ -1,5 +1,5 @@
 import httpx
-from transformers import GenerationConfig
+from transformers import AutoTokenizer, GenerationConfig
 
 from reflector.llm.base import LLM
 from reflector.settings import settings
@@ -10,7 +10,7 @@ class ModalLLM(LLM):
     def __init__(self):
         super().__init__()
         self.timeout = settings.LLM_TIMEOUT
-        self.llm_name = "lmsys/vicuna-13b-v1.5"
+        self.supported_models = ["lmsys/vicuna-13b-v1.5"]
         self.llm_url = settings.LLM_URL + "/llm"
         self.llm_warmup_url = settings.LLM_URL + "/warmup"
         self.headers = {
@@ -45,6 +45,22 @@ class ModalLLM(LLM):
             response.raise_for_status()
             text = response.json()["text"]
             return text
+
+    def _set_model(self, model_name: str) -> bool:
+        if model_name in self.supported_models:
+            self.model_name = model_name
+            self.llm_tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name, cache_dir=settings.CACHE_DIR
+            )
+            return True
+        logger.info(
+            f"Attempted to change {model_name=}, but is not supported."
+            f"Setting model and tokenizer failed !"
+        )
+        return False
+
+    def _get_tokenizer(self):
+        return self.llm_tokenizer
 
 
 LLM.register("modal", ModalLLM)

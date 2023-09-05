@@ -16,7 +16,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
-        self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
+        self.llm = LLM.get_instance()
         self.params = LLMTaskParams.get_instance(self.TASK).task_params
 
     async def _warmup(self):

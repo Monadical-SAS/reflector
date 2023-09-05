@@ -15,7 +15,7 @@ class TranscriptFinalShortSummaryProcessor(Processor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
-        self.llm = LLM.get_instance(model_name="lmsys/vicuna-13b-v1.5")
+        self.llm = LLM.get_instance()
         self.params = LLMTaskParams.get_instance(self.TASK).task_params
 
     async def _push(self, data: TitleSummary):

@@ -18,18 +18,19 @@ T = TypeVar("T", bound="LLM")
 class LLM:
     _registry = {}
 
+    def __enter__(self):
+        self.ensure_nltk()
+
     @classmethod
-    def setup_nltk(cls):
-        nltk.download("punkt", quiet=True)
+    def ensure_nltk(cls):
+        nltk.download("punkt", download_dir=settings.CACHE_DIR)
 
     @classmethod
     def register(cls, name, klass):
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(
-        cls, model_name: str = settings.DEFAULT_LLM_NAME, name: str = None
-    ) -> T:
+    def get_instance(cls, name: str = None) -> T:
         """
         Return an instance depending on the settings.
         Settings used:
@@ -42,9 +43,18 @@ class LLM:
         if name not in cls._registry:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
-        cls.model_name = model_name
-        cls.llm_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        return cls._registry[name]()
+        instance = cls._registry[name]()
+        instance.model_name = settings.DEFAULT_LLM
+        instance.llm_tokenizer = AutoTokenizer.from_pretrained(
+            instance.model_name, cache_dir=settings.CACHE_DIR
+        )
+        return instance
+
+    def set_model(self, model_name: str) -> bool:
+        return self._set_model(model_name)
+
+    def _set_model(self, model_name: str) -> bool:
+        raise NotImplementedError
 
     @property
     def template(self) -> str:
@@ -64,7 +74,6 @@ class LLM:
         start = monotonic()
         name = self.__class__.__name__
         logger.info(f"LLM[{name}] warming up...")
-        self.setup_nltk()
         try:
             await self._warmup(logger=logger)
             duration = monotonic() - start
@@ -80,7 +89,10 @@ class LLM:
         """
         Return the tokenizer instance used by LLM
         """
-        return self.llm_tokenizer
+        return self._get_tokenizer()
+
+    def _get_tokenizer(self):
+        pass
 
     async def generate(
         self,
@@ -142,9 +154,9 @@ class LLM:
         """
         buffer_token_size = 25
         default_output_tokens = 1000
-        context_window = self.tokenizer.model_max_length
+        context_window = self.tokenizer.max_new_tokens
         tokens = self.tokenizer.tokenize(
-            self.template.format(instruct=task_params.instruct, text="")
+            self.create_prompt(instruct=task_params.instruct, text="")
         )
         threshold = context_window - len(tokens) - buffer_token_size
         if task_params.gen_cfg:
