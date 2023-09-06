@@ -337,23 +337,23 @@ async def transcript_update(
         values["locked"] = info.locked
     if info.long_summary is not None:
         values["long_summary"] = info.long_summary
-        for trancript_event in transcript.events:
-            if trancript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
-                trancript_event["long_summary"] = info.long_summary
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
+                transcript_event["long_summary"] = info.long_summary
                 break
         values["events"].extend(transcript.events)
     if info.short_summary is not None:
         values["short_summary"] = info.short_summary
-        for trancript_event in transcript.events:
-            if trancript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
-                trancript_event["short_summary"] = info.short_summary
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
+                transcript_event["short_summary"] = info.short_summary
                 break
         values["events"].extend(transcript.events)
     if info.title is not None:
         values["title"] = info.title
-        for trancript_event in transcript.events:
-            if trancript_event["event"] == PipelineEvent.FINAL_TITLE:
-                trancript_event["title"] = info.title
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_TITLE:
+                transcript_event["title"] = info.title
                 break
         values["events"].extend(transcript.events)
     await transcripts_controller.update(transcript, values)

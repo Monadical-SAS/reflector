@@ -154,7 +154,7 @@ class LLM:
         """
         buffer_token_size = 25
         default_output_tokens = 1000
-        context_window = self.tokenizer.max_new_tokens
+        context_window = self.tokenizer.model_max_length
         tokens = self.tokenizer.tokenize(
             self.create_prompt(instruct=task_params.instruct, text="")
         )

@@ -17,7 +17,7 @@ LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/model"
 
-stub = Stub(name="reflector-llm")
+stub = Stub(name="reflector-llmtest")
 
 
 def download_llm():
