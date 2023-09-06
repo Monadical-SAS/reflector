@@ -79,9 +79,7 @@ const App = () => {
       <section className="bg-red-200 p-4">
         {displayTopics.map((topic, index) => (
           <div key={topic?.id || index} className="bg-red-400 p-2 my-1 text-xl">
-            {topic
-              ? `[${formatTime(topic.timestamp)}] ${topic.title}`
-              : "\u00A0"}
+            {topic ? `${topic.title}` : "\u00A0"}
           </div>
         ))}
       </section>
