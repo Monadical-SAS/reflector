@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
+import { isDevelopment } from "../lib/utils";
 
 type UseWebSockets = {
   transcriptText: string;
@@ -18,7 +19,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [status, setStatus] = useState<Status>({ value: "disconnected" });
   const { setError } = useError();
 
-  useEffect(() => {
+  const setupDebugKeys = () => {
     document.onkeyup = (e) => {
       if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
         setTranscriptText("Lorem Ipsum");
@@ -66,6 +67,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         setFinalSummary({ summary: "This is the final summary" });
       }
     };
+  };
+
+  useEffect(() => {
+    if (isDevelopment()) setupDebugKeys();
 
     if (!transcriptId) return;
 
@@ -83,7 +88,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         switch (message.event) {
           case "TRANSCRIPT":
             if (message.data.text) {
-              setTranscriptText((message.data.text ?? "").trim());
+              setTranscriptText((message.data.translation ?? "").trim());
               console.debug("TRANSCRIPT event:", message.data);
             }
             break;

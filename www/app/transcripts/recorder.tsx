@@ -13,6 +13,8 @@ import "react-dropdown/style.css";
 import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
 
+import { isProjector } from "../lib/utils";
+
 const AudioInputsDropdown: React.FC<{
   audioDevices: Option[];
   setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -72,6 +74,42 @@ export default function Recorder(props: RecorderProps) {
 
   const topicsRef = useRef(props.topics);
 
+  // Function used to setup keyboard shortcuts for the streamdeck when running in projector mode
+  const setupProjectorKeys = (): (() => void) => {
+    if (!record) return () => {};
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case "~":
+          location.reload();
+          break;
+        case "!":
+          if (record.isRecording()) return;
+          handleRecClick();
+          break;
+        case "@":
+          if (!record.isRecording()) return;
+          handleRecClick();
+          break;
+        case "(":
+          location.href = "/login";
+          break;
+        case ")":
+          location.href = "/logout";
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+
+    // Return the cleanup function
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  };
+
   useEffect(() => {
     const playBtn = document.getElementById("play-btn");
     if (playBtn) playBtn.setAttribute("disabled", "true");
@@ -85,7 +123,7 @@ export default function Recorder(props: RecorderProps) {
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
-        height: 90,
+        height: 60,
       });
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
@@ -169,8 +207,16 @@ export default function Recorder(props: RecorderProps) {
   };
 
   useEffect(() => {
-    if (record) {
-      return record.on("stopRecording", () => {
+    if (!record) return;
+
+    let cleanup: (() => void) | undefined;
+
+    if (isProjector()) {
+      cleanup = setupProjectorKeys();
+    }
+
+    return () => {
+      record.on("stopRecording", () => {
         const link = document.getElementById("download-recording");
         if (!link) return;
 
@@ -179,7 +225,9 @@ export default function Recorder(props: RecorderProps) {
         link.style.visibility = "visible";
         renderMarkers();
       });
-    }
+
+      if (cleanup) cleanup();
+    };
   }, [record]);
 
   useEffect(() => {
@@ -235,47 +283,6 @@ export default function Recorder(props: RecorderProps) {
 
   return (
     <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
-      <div className="flex my-2 mx-auto audio-source-dropdown">
-        {!hasRecorded && (
-          <>
-            <AudioInputsDropdown
-              audioDevices={props.audioDevices}
-              setDeviceId={setDeviceId}
-              disabled={isRecording}
-            />
-            &nbsp;
-            <button
-              className="w-20"
-              onClick={handleRecClick}
-              data-color={isRecording ? "red" : "blue"}
-              disabled={!deviceId}
-            >
-              {isRecording ? "Stop" : "Record"}
-            </button>
-            &nbsp;
-          </>
-        )}
-
-        {hasRecorded && (
-          <>
-            <button
-              className="w-20"
-              id="play-btn"
-              onClick={handlePlayClick}
-              data-color={isPlaying ? "orange" : "green"}
-            >
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-            <a
-              id="download-recording"
-              title="Download recording"
-              className="invisible w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
-            >
-              <FontAwesomeIcon icon={faDownload} />
-            </a>
-          </>
-        )}
-      </div>
       <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
       <div className="absolute bottom-0 right-2 text-xs text-black">
         {isRecording && (

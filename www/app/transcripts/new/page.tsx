@@ -9,6 +9,9 @@ import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
+import { isDevelopment } from "../../lib/utils";
+import Image from "next/image";
+import { formatTime } from "../../lib/time";
 
 const App = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -16,13 +19,11 @@ const App = () => {
   const useActiveTopic = useState<Topic | null>(null);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_ENV === "development") {
-      document.onkeyup = (e) => {
-        if (e.key === "d") {
-          setDisconnected((prev) => !prev);
-        }
-      };
-    }
+    document.onkeyup = (e) => {
+      if (isDevelopment() && e.key === "d") {
+        setDisconnected((prev) => !prev);
+      }
+    };
   }, []);
 
   const api = getApi();
@@ -37,7 +38,64 @@ const App = () => {
     requestPermission,
     getAudioStream,
   } = useAudioDevice();
+  const topicsToDisplay = 5;
+  const realTopics = webSockets.topics.slice(-topicsToDisplay);
+  const displayTopics = [
+    ...realTopics,
+    ...Array(topicsToDisplay - realTopics.length).fill(null),
+  ];
 
+  return (
+    <>
+      <header className="flex justify-between items-center py-4 bg-transparent">
+        <div className="flex items-center">
+          <Image
+            src="/reach.png"
+            width={16}
+            height={16}
+            className="h-6 w-auto ml-2"
+            alt="Reflector"
+          />
+
+          <h1 className="text-lg">Reflector</h1>
+        </div>
+
+        <Recorder
+          setStream={setStream}
+          onStop={() => {
+            webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+            setStream(null);
+          }}
+          topics={webSockets.topics}
+          getAudioStream={getAudioStream}
+          audioDevices={audioDevices}
+          useActiveTopic={useActiveTopic}
+        />
+
+        <span className="p-2 rounded-full">&nbsp;</span>
+      </header>
+
+      {/* Topic Section */}
+      <section className="bg-red-200 p-4">
+        {displayTopics.map((topic, index) => (
+          <div key={topic?.id || index} className="bg-red-400 p-2 my-1 text-xl">
+            {topic
+              ? `[${formatTime(topic.timestamp)}] ${topic.title}`
+              : "\u00A0"}
+          </div>
+        ))}
+      </section>
+
+      {/* Translation Section */}
+      <section className="bg-light-blue p-4 h-1/2 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-4xl font-bold">{webSockets.transcriptText}</p>
+        </div>
+      </section>
+    </>
+  );
+
+  /*
   return (
     <div className="w-full flex flex-col items-center h-[100svh]">
       {permissionOk ? (
@@ -94,7 +152,7 @@ const App = () => {
         </>
       )}
     </div>
-  );
+  ); */
 };
 
 export default App;

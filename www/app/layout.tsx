@@ -5,6 +5,7 @@ import FiefWrapper from "./(auth)/fiefWrapper";
 import UserInfo from "./(auth)/userInfo";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
+import Image from "next/image";
 
 const roboto = Roboto({ subsets: ["latin"], weight: "400" });
 
@@ -55,24 +56,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={roboto.className + " flex flex-col min-h-screen"}>
+      <body className={roboto.className}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
             <div id="container">
-              <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
-                <UserInfo />
-
-                <div className="h-[13svh] flex flex-col justify-center items-center">
-                  <h1 className="text-5xl font-bold text-blue-500">
-                    Reflector
-                  </h1>
-                  <p className="text-gray-500">
-                    Capture The Signal, Not The Noise
-                  </p>
-                </div>
-                {children}
-              </div>
+              <div className="bg-dark-blue text-white h-screen">{children}</div>
             </div>
           </ErrorProvider>
         </FiefWrapper>
