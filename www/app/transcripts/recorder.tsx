@@ -12,6 +12,7 @@ import "react-dropdown/style.css";
 
 import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
+import { useError } from "../(errors)/errorContext";
 
 import { isProjector } from "../lib/utils";
 
@@ -73,6 +74,7 @@ export default function Recorder(props: RecorderProps) {
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
 
   const topicsRef = useRef(props.topics);
+  const { setError } = useError();
 
   // Function used to setup keyboard shortcuts for the streamdeck when running in projector mode
   const setupProjectorKeys = (): (() => void) => {
@@ -91,6 +93,11 @@ export default function Recorder(props: RecorderProps) {
           if (!record.isRecording()) return;
           handleRecClick();
           break;
+        case "%":
+          setError(new Error("Test Error"));
+          break;
+        case "^":
+          throw new Error("Unhandled Exception (Test Error)");
         case "(":
           location.href = "/login";
           break;
