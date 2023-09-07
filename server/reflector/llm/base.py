@@ -2,7 +2,7 @@ import importlib
 import json
 import re
 from time import monotonic
-from typing import List, TypeVar
+from typing import TypeVar
 
 import nltk
 from transformers import GenerationConfig
@@ -181,7 +181,7 @@ class LLM:
         corpus: str,
         task_params: TaskParams,
         token_threshold: int | None = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Split the input to the LLM due to CUDA memory limitations and LLM context window
         restrictions.
