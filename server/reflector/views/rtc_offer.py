@@ -164,7 +164,6 @@ async def rtc_offer_base(
                 "duration": summary.duration,
             }
             ctx.data_channel.send(dumps(result))
-            print("DISPLAY_FINAL_SHORT_SUMMARY", dumps(result))
 
         # send to callback (eg. websocket)
         if event_callback:
@@ -185,7 +184,7 @@ async def rtc_offer_base(
                 "duration": summary.duration,
             }
             ctx.data_channel.send(dumps(result))
-            print("DISPLAY_FINAL_LONG_SUMMARY", dumps(result))
+
         # send to callback (eg. websocket)
         if event_callback:
             await event_callback(
@@ -201,7 +200,7 @@ async def rtc_offer_base(
         if ctx.data_channel.readyState == "open":
             result = {"cmd": "DISPLAY_FINAL_TITLE", "title": title.title}
             ctx.data_channel.send(dumps(result))
-            print("DISPLAY_FINAL_TITLE", dumps(result))
+
         # send to callback (eg. websocket)
         if event_callback:
             await event_callback(
