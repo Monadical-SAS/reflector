@@ -94,10 +94,10 @@ export default function Recorder(props: RecorderProps) {
           handleRecClick();
           break;
         case "%":
-          setError(new Error("Test Error"));
+          setError(new Error("Error triggered by '%' shortcut"));
           break;
         case "^":
-          throw new Error("Unhandled Exception (Test Error)");
+          throw new Error("Unhandled Exception thrown by '^' shortcut");
         case "(":
           location.href = "/login";
           break;

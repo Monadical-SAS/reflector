@@ -10,8 +10,9 @@ const ErrorMessage: React.FC = () => {
   useEffect(() => {
     if (error) {
       setIsVisible(true);
+      console.log("Sentry capture exception", error, typeof error);
       Sentry.captureException(error);
-      console.error("Error", error.message, error);
+      console.error(error);
     }
   }, [error]);
 
