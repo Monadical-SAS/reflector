@@ -53,6 +53,6 @@ async def dummy_llm():
 
 @pytest.fixture
 def nltk():
-    with patch("reflector.llm.base.LLM.setup_nltk") as mock_nltk:
+    with patch("reflector.llm.base.LLM.ensure_nltk") as mock_nltk:
         mock_nltk.return_value = "NLTK PACKAGE"
         yield

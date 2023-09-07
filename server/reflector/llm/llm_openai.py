@@ -7,7 +7,7 @@ from reflector.settings import settings
 
 
 class OpenAILLM(LLM):
-    def __init__(self, **kwargs):
+    def __init__(self, model_name: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.openai_key = settings.LLM_OPENAI_KEY
         self.openai_url = settings.LLM_URL

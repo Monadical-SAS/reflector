@@ -5,7 +5,7 @@ from time import monotonic
 from typing import List, TypeVar
 
 import nltk
-from transformers import AutoTokenizer, GenerationConfig
+from transformers import GenerationConfig
 
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
@@ -23,6 +23,10 @@ class LLM:
 
     @classmethod
     def ensure_nltk(cls):
+        """
+        Make sure NLTK package is installed. Searches in the cache and
+        downloads only if needed.
+        """
         nltk.download("punkt", download_dir=settings.CACHE_DIR)
 
     @classmethod
@@ -30,7 +34,7 @@ class LLM:
         cls._registry[name] = klass
 
     @classmethod
-    def get_instance(cls, name: str = None) -> T:
+    def get_instance(cls, model_name: str | None = None, name: str = None) -> T:
         """
         Return an instance depending on the settings.
         Settings used:
@@ -43,17 +47,24 @@ class LLM:
         if name not in cls._registry:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
-        instance = cls._registry[name]()
-        instance.model_name = settings.DEFAULT_LLM
-        instance.llm_tokenizer = AutoTokenizer.from_pretrained(
-            instance.model_name, cache_dir=settings.CACHE_DIR
-        )
-        return instance
+        return cls._registry[name](model_name)
 
-    def set_model(self, model_name: str) -> bool:
-        return self._set_model(model_name)
+    def get_model_name(self) -> str:
+        """
+        Get the currently set model name
+        """
+        return self._get_model_name()
 
-    def _set_model(self, model_name: str) -> bool:
+    def _get_model_name(self) -> str:
+        pass
+
+    def set_model_name(self, model_name: str) -> bool:
+        """
+        Update the model name with the provided model name
+        """
+        return self._set_model_name(model_name)
+
+    def _set_model_name(self, model_name: str) -> bool:
         raise NotImplementedError
 
     @property

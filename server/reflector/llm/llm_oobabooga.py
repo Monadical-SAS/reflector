@@ -5,6 +5,9 @@ from reflector.settings import settings
 
 
 class OobaboogaLLM(LLM):
+    def __init__(self, model_name: str | None = None):
+        super().__init__()
+
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ):

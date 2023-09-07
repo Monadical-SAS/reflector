@@ -7,15 +7,24 @@ from reflector.utils.retry import retry
 
 
 class ModalLLM(LLM):
-    def __init__(self):
+    def __init__(self, model_name: str | None = None):
         super().__init__()
         self.timeout = settings.LLM_TIMEOUT
-        self.supported_models = ["lmsys/vicuna-13b-v1.5"]
         self.llm_url = settings.LLM_URL + "/llm"
         self.llm_warmup_url = settings.LLM_URL + "/warmup"
         self.headers = {
             "Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}",
         }
+        self._set_model_name(model_name if model_name else settings.DEFAULT_LLM)
+
+    @property
+    def supported_models(self):
+        """
+        List of currently supported models on this GPU platform
+        """
+        # TODO: Query the specific GPU platform
+        # Replace this with a HTTP call
+        return ["lmsys/vicuna-13b-v1.5"]
 
     async def _warmup(self, logger):
         async with httpx.AsyncClient() as client:
@@ -46,21 +55,40 @@ class ModalLLM(LLM):
             text = response.json()["text"]
             return text
 
-    def _set_model(self, model_name: str) -> bool:
-        if model_name in self.supported_models:
-            self.model_name = model_name
-            self.llm_tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name, cache_dir=settings.CACHE_DIR
+    def _set_model_name(self, model_name: str) -> bool:
+        """
+        Set the model name
+        """
+        # Abort, if the model is not supported
+        if model_name not in self.supported_models:
+            logger.error(
+                f"Attempted to change {model_name=}, but is not supported."
+                f"Setting model and tokenizer failed !"
             )
-            return True
-        logger.info(
-            f"Attempted to change {model_name=}, but is not supported."
-            f"Setting model and tokenizer failed !"
+            return False
+        # Abort, if the model is already set
+        elif hasattr(self, "model_name") and model_name == self._get_model_name():
+            logger.warning("No change in model. Setting model skipped.")
+            return False
+        # Update model name and tokenizer
+        self.model_name = model_name
+        self.llm_tokenizer = AutoTokenizer.from_pretrained(
+            self.model_name, cache_dir=settings.CACHE_DIR
         )
-        return False
+        logger.info(f"Model set to {model_name=}. Tokenizer updated.")
+        return True
 
-    def _get_tokenizer(self):
+    def _get_tokenizer(self) -> AutoTokenizer:
+        """
+        Return the currently used LLM tokenizer
+        """
         return self.llm_tokenizer
+
+    def _get_model_name(self) -> str:
+        """
+        Return the current model name from the instance details
+        """
+        return self.model_name
 
 
 LLM.register("modal", ModalLLM)
