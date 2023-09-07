@@ -15,7 +15,7 @@ class OobaboogaLLM(LLM):
         if gen_schema:
             json_payload["gen_schema"] = gen_schema
         if gen_cfg:
-            json_payload["gen_cfg"] = gen_cfg
+            json_payload.update(gen_cfg)
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 settings.LLM_URL,
