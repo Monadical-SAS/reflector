@@ -17,9 +17,8 @@ LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/root/llm_models"
-volume = modal.NetworkFileSystem.persisted("reflector-llm-models")
 
-stub = Stub(name="reflector-llmtest1")
+stub = Stub(name="reflector-llm")
 
 
 def download_llm():
@@ -40,7 +39,7 @@ def migrate_cache_llm():
     from transformers.utils.hub import move_cache
 
     print("Moving LLM cache")
-    move_cache()
+    move_cache(cache_dir=IMAGE_MODEL_DIR, new_cache_dir=IMAGE_MODEL_DIR)
     print("LLM cache moved")
 
 
@@ -60,6 +59,7 @@ llm_image = (
     )
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
     .run_function(download_llm)
+    .run_function(migrate_cache_llm)
 )
 
 
@@ -69,7 +69,6 @@ llm_image = (
     container_idle_timeout=60 * 5,
     concurrency_limit=2,
     image=llm_image,
-    network_file_systems={IMAGE_MODEL_DIR: volume},
 )
 class LLM:
     def __enter__(self):

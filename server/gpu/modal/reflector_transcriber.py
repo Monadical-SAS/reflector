@@ -19,9 +19,8 @@ WHISPER_NUM_WORKERS: int = 1
 TRANSLATION_MODEL = "facebook/m2m100_418M"
 
 IMAGE_MODEL_DIR = "/root/transcription_models"
-volume = modal.NetworkFileSystem.persisted("reflector-transcribe-models")
 
-stub = Stub(name="reflector-transtest1")
+stub = Stub(name="reflector-transcriber")
 
 
 def download_whisper(cache_dir: str | None = None):
@@ -52,6 +51,20 @@ def download_models():
     print(f"Model downloads complete.")
 
 
+def migrate_cache_llm():
+    """
+    XXX The cache for model files in Transformers v4.22.0 has been updated.
+    Migrating your old cache. This is a one-time only operation. You can
+    interrupt this and resume the migration later on by calling
+    `transformers.utils.move_cache()`.
+    """
+    from transformers.utils.hub import move_cache
+
+    print("Moving LLM cache")
+    move_cache(cache_dir=IMAGE_MODEL_DIR, new_cache_dir=IMAGE_MODEL_DIR)
+    print("LLM cache moved")
+
+
 whisper_image = (
     Image.debian_slim(python_version="3.10.8")
     .apt_install("git")
@@ -65,6 +78,7 @@ whisper_image = (
         "huggingface_hub==0.16.4",
     )
     .run_function(download_models)
+    .run_function(migrate_cache_llm)
     .env(
         {
             "LD_LIBRARY_PATH": (
@@ -80,7 +94,6 @@ whisper_image = (
     gpu="A10G",
     container_idle_timeout=60,
     image=whisper_image,
-    network_file_systems={IMAGE_MODEL_DIR: volume},
 )
 class Whisper:
     def __enter__(self):
