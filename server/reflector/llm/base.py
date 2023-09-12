@@ -5,6 +5,7 @@ from time import monotonic
 from typing import TypeVar
 
 import nltk
+from prometheus_client import Counter, Histogram
 from transformers import GenerationConfig
 
 from reflector.llm.llm_params import TaskParams
@@ -17,6 +18,26 @@ T = TypeVar("T", bound="LLM")
 
 class LLM:
     _registry = {}
+    m_generate = Histogram(
+        "llm_generate",
+        "Time spent in LLM.generate",
+        ["backend"],
+    )
+    m_generate_call = Counter(
+        "llm_generate_call",
+        "Number of calls to LLM.generate",
+        ["backend"],
+    )
+    m_generate_success = Counter(
+        "llm_generate_success",
+        "Number of successful calls to LLM.generate",
+        ["backend"],
+    )
+    m_generate_failure = Counter(
+        "llm_generate_failure",
+        "Number of failed calls to LLM.generate",
+        ["backend"],
+    )
 
     def __enter__(self):
         self.ensure_nltk()
@@ -83,6 +104,13 @@ class LLM:
         ### Assistant:
         """
 
+    def __init__(self):
+        name = self.__class__.__name__
+        self.m_generate = self.m_generate.labels(name)
+        self.m_generate_call = self.m_generate_call.labels(name)
+        self.m_generate_success = self.m_generate_success.labels(name)
+        self.m_generate_failure = self.m_generate_failure.labels(name)
+
     async def warmup(self, logger: reflector_logger):
         start = monotonic()
         name = self.__class__.__name__
@@ -116,17 +144,23 @@ class LLM:
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
+
         if gen_cfg:
             gen_cfg = gen_cfg.to_dict()
+        self.m_generate_call.inc()
         try:
-            result = await retry(self._generate)(
-                prompt=prompt,
-                gen_schema=gen_schema,
-                gen_cfg=gen_cfg,
-                **kwargs,
-            )
+            with self.m_generate.time():
+                result = await retry(self._generate)(
+                    prompt=prompt,
+                    gen_schema=gen_schema,
+                    gen_cfg=gen_cfg,
+                    **kwargs,
+                )
+            self.m_generate_success.inc()
+
         except Exception:
             logger.exception("Failed to call llm after retrying")
+            self.m_generate_failure.inc()
             raise
 
         logger.debug("LLM result [raw]", result=repr(result))

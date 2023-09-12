@@ -6,6 +6,7 @@ from pathlib import Path
 import av
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from fastapi import APIRouter, Request
+from prometheus_client import Gauge
 from pydantic import BaseModel
 
 from reflector.events import subscribers_shutdown
@@ -31,6 +32,7 @@ from reflector.processors.types import FinalTitle
 
 sessions = []
 router = APIRouter()
+m_rtc_sessions = Gauge("rtc_sessions", "Number of active RTC sessions")
 
 
 class TranscriptionContext(object):
@@ -242,12 +244,21 @@ async def rtc_offer_base(
     pc = RTCPeerConnection()
 
     async def flush_pipeline_and_quit(close=True):
+        # may be called twice
+        # 1. either the client ask to sotp the meeting
+        #    - we flush and close
+        #    - when we receive the close event, we do nothing.
+        # 2. or the client close the connection
+        #    and there is nothing to do because it is already closed
         await update_status("processing")
         await ctx.pipeline.flush()
         if close:
             ctx.logger.debug("Closing peer connection")
             await pc.close()
             await update_status("ended")
+            if pc in sessions:
+                sessions.remove(pc)
+                m_rtc_sessions.dec()
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -289,7 +300,7 @@ async def rtc_offer_base(
 
 
 @subscribers_shutdown.append
-async def rtc_clean_sessions():
+async def rtc_clean_sessions(_):
     logger.info("Closing all RTC sessions")
     for pc in sessions:
         logger.debug(f"Closing session {pc}")

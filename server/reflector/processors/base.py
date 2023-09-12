@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Union
 from uuid import uuid4
 
+from prometheus_client import Counter, Gauge, Histogram
 from pydantic import BaseModel
 
 from reflector.logger import logger
@@ -19,8 +20,57 @@ class Processor:
     OUTPUT_TYPE: type = None
     WARMUP_EVENT: str = "WARMUP_EVENT"
 
+    m_processor = Histogram(
+        "processor",
+        "Time spent in Processor.process",
+        ["processor"],
+    )
+    m_processor_call = Counter(
+        "processor_call",
+        "Number of calls to Processor.process",
+        ["processor"],
+    )
+    m_processor_success = Counter(
+        "processor_success",
+        "Number of successful calls to Processor.process",
+        ["processor"],
+    )
+    m_processor_failure = Counter(
+        "processor_failure",
+        "Number of failed calls to Processor.process",
+        ["processor"],
+    )
+    m_processor_flush = Histogram(
+        "processor_flush",
+        "Time spent in Processor.flush",
+        ["processor"],
+    )
+    m_processor_flush_call = Counter(
+        "processor_flush_call",
+        "Number of calls to Processor.flush",
+        ["processor"],
+    )
+    m_processor_flush_success = Counter(
+        "processor_flush_success",
+        "Number of successful calls to Processor.flush",
+        ["processor"],
+    )
+    m_processor_flush_failure = Counter(
+        "processor_flush_failure",
+        "Number of failed calls to Processor.flush",
+        ["processor"],
+    )
+
     def __init__(self, callback=None, custom_logger=None):
-        self.name = self.__class__.__name__
+        self.name = name = self.__class__.__name__
+        self.m_processor = self.m_processor.labels(name)
+        self.m_processor_call = self.m_processor_call.labels(name)
+        self.m_processor_success = self.m_processor_success.labels(name)
+        self.m_processor_failure = self.m_processor_failure.labels(name)
+        self.m_processor_flush = self.m_processor_flush.labels(name)
+        self.m_processor_flush_call = self.m_processor_flush_call.labels(name)
+        self.m_processor_flush_success = self.m_processor_flush_success.labels(name)
+        self.m_processor_flush_failure = self.m_processor_flush_failure.labels(name)
         self._processors = []
         self._callbacks = []
         if callback:
@@ -90,11 +140,15 @@ class Processor:
         Push data to this processor. `data` must be of type `INPUT_TYPE`
         The function returns the output of type `OUTPUT_TYPE`
         """
-        # logger.debug(f"{self.__class__.__name__} push")
+        self.m_processor_call.inc()
         try:
             self.flushed = False
-            return await self._push(data)
+            with self.m_processor.time():
+                ret = await self._push(data)
+                self.m_processor_success.inc()
+                return ret
         except Exception:
+            self.m_processor_failure.inc()
             self.logger.exception("Error in push")
 
     async def flush(self):
@@ -104,9 +158,16 @@ class Processor:
         """
         if self.flushed:
             return
-        # logger.debug(f"{self.__class__.__name__} flush")
+        self.m_processor_flush_call.inc()
         self.flushed = True
-        return await self._flush()
+        try:
+            with self.m_processor_flush.time():
+                ret = await self._flush()
+                self.m_processor_flush_success.inc()
+                return ret
+        except Exception:
+            self.m_processor_flush_failure.inc()
+            raise
 
     def describe(self, level=0):
         logger.info("  " * level + self.__class__.__name__)
@@ -140,12 +201,27 @@ class ThreadedProcessor(Processor):
     A processor that runs in a separate thread
     """
 
+    m_processor_queue = Gauge(
+        "processor_queue",
+        "Number of items in the processor queue",
+        ["processor", "processor_uid"],
+    )
+    m_processor_queue_in_progress = Gauge(
+        "processor_queue_in_progress",
+        "Number of items in the processor queue in progress (global)",
+        ["processor"],
+    )
+
     def __init__(self, processor: Processor, max_workers=1):
         super().__init__()
         # FIXME: This is a hack to make sure that the processor is single threaded
         # but if it is more than 1, then we need to make sure that the processor
         # is emiting data in order
         assert max_workers == 1
+        self.m_processor_queue = self.m_processor_queue.labels(processor.name, self.uid)
+        self.m_processor_queue_in_progress = self.m_processor_queue_in_progress.labels(
+            processor.name
+        )
         self.processor = processor
         self.INPUT_TYPE = processor.INPUT_TYPE
         self.OUTPUT_TYPE = processor.OUTPUT_TYPE
@@ -160,22 +236,27 @@ class ThreadedProcessor(Processor):
     async def loop(self):
         while True:
             data = await self.queue.get()
-            try:
-                if data is None:
-                    await self.processor.flush()
-                    break
-                if data == self.WARMUP_EVENT:
-                    self.logger.debug(f"Warming up {self.processor.__class__.__name__}")
-                    await self.processor.warmup()
-                    continue
+            self.m_processor_queue.set(self.queue.qsize())
+            with self.m_processor_queue_in_progress.track_inprogress():
                 try:
-                    await self.processor.push(data)
-                except Exception:
-                    self.logger.error(
-                        f"Error in push {self.processor.__class__.__name__}, continue"
-                    )
-            finally:
-                self.queue.task_done()
+                    if data is None:
+                        await self.processor.flush()
+                        break
+                    if data == self.WARMUP_EVENT:
+                        self.logger.debug(
+                            f"Warming up {self.processor.__class__.__name__}"
+                        )
+                        await self.processor.warmup()
+                        continue
+                    try:
+                        await self.processor.push(data)
+                    except Exception:
+                        self.logger.error(
+                            f"Error in push {self.processor.__class__.__name__}"
+                            ", continue"
+                        )
+                finally:
+                    self.queue.task_done()
 
     async def _warmup(self):
         await self.queue.put(self.WARMUP_EVENT)
