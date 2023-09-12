@@ -98,11 +98,20 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             console.debug("TOPIC event:", message.data);
             break;
 
+          case "FINAL_LONG_SUMMARY":
           case "FINAL_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
               console.debug("FINAL_SUMMARY event:", message.data);
             }
+            break;
+
+          case "FINAL_SHORT_SUMMARY":
+            console.debug("FINAL_SHORT_SUMMARY event:", message.data);
+            break;
+
+          case "FINAL_TITLE":
+            console.debug("FINAL_TITLE event:", message.data);
             break;
 
           case "STATUS":
