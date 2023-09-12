@@ -116,12 +116,13 @@ class TopicParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=300, num_beams=5, do_sample=True, temperature=0.9
+            max_new_tokens=550, num_beams=6, do_sample=True, temperature=0.9
         )
         self._instruct = """
                 Create a JSON object as response.The JSON object must have 2 fields:
                 i) title and ii) summary.
-                For the title field, generate a short title for the given text.
+                For the title field, generate a very detailed and self-explanatory
+                 title for the given text. Let the title be as descriptive as possible.
                 For the summary field, summarize the given text in a maximum of
                 three sentences.
             """

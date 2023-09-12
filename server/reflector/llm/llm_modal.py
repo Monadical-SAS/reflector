@@ -2,6 +2,7 @@ import httpx
 from transformers import AutoTokenizer, GenerationConfig
 
 from reflector.llm.base import LLM
+from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
@@ -61,21 +62,21 @@ class ModalLLM(LLM):
         """
         # Abort, if the model is not supported
         if model_name not in self.supported_models:
-            logger.error(
+            reflector_logger.info(
                 f"Attempted to change {model_name=}, but is not supported."
                 f"Setting model and tokenizer failed !"
             )
             return False
         # Abort, if the model is already set
         elif hasattr(self, "model_name") and model_name == self._get_model_name():
-            logger.warning("No change in model. Setting model skipped.")
+            reflector_logger.info("No change in model. Setting model skipped.")
             return False
         # Update model name and tokenizer
         self.model_name = model_name
         self.llm_tokenizer = AutoTokenizer.from_pretrained(
             self.model_name, cache_dir=settings.CACHE_DIR
         )
-        logger.info(f"Model set to {model_name=}. Tokenizer updated.")
+        reflector_logger.info(f"Model set to {model_name=}. Tokenizer updated.")
         return True
 
     def _get_tokenizer(self) -> AutoTokenizer:
