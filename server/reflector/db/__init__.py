@@ -31,13 +31,11 @@ engine = sqlalchemy.create_engine(
 metadata.create_all(engine)
 
 
-async def database_connect():
+@subscribers_startup.append
+async def database_connect(_):
     await database.connect()
 
 
-async def database_disconnect():
+@subscribers_shutdown.append
+async def database_disconnect(_):
     await database.disconnect()
-
-
-subscribers_startup.append(database_connect)
-subscribers_shutdown.append(database_disconnect)
