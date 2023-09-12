@@ -242,6 +242,9 @@ async def rtc_offer_base(
     await pc.setLocalDescription(answer)
     sessions.append(pc)
 
+    # update metrics
+    m_rtc_sessions.inc()
+
     return RtcOffer(sdp=pc.localDescription.sdp, type=pc.localDescription.type)
 
 
