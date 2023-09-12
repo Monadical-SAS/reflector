@@ -170,6 +170,57 @@ class LLM:
 
         return result
 
+    def ensure_casing(self, title: str) -> str:
+        """
+        LLM takes care of word casing, but in rare cases this
+        can falter. This is a fallback to ensure the casing of
+        topics is in a proper format.
+
+        We select nouns, verbs and adjectives and check if camel
+         casing is present and fix it, if not. Will not perform
+         any other changes.
+        """
+        tokens = nltk.word_tokenize(title)
+        pos_tags = nltk.pos_tag(tokens)
+        camel_cased = []
+
+        whitelisted_pos_tags = [
+            "NN",
+            "NNS",
+            "NNP",
+            "NNPS",  # Noun POS
+            "VB",
+            "VBD",
+            "VBG",
+            "VBN",
+            "VBP",
+            "VBZ",  # Verb POS
+            "JJ",
+            "JJR",
+            "JJS",  # Adjective POS
+        ]
+
+        # If at all there is an exception, do not block other reflector
+        # processes. Return the LLM generated title, at the least.
+        try:
+            for word, pos in pos_tags:
+                if pos in whitelisted_pos_tags and word[0].islower():
+                    camel_cased.append(word[0].upper() + word[1:])
+                else:
+                    camel_cased.append(word)
+            modified_title = " ".join(camel_cased)
+
+            # The result can have words in braces with additional space.
+            # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
+            pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
+            title = re.sub(pattern, "", modified_title)
+        except Exception as e:
+            reflector_logger.info(
+                f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
+            )
+
+        return title
+
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ) -> str:
