@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     DEFAULT_LLM: str = "lmsys/vicuna-13b-v1.5"
 
     # Cache directory for all model storage
-    CACHE_DIR: str = "data"
+    CACHE_DIR: str = "./data"
 
 
 settings = Settings()
