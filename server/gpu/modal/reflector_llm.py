@@ -7,6 +7,7 @@ import json
 import os
 from typing import Optional
 
+import modal
 from modal import Image, Secret, Stub, asgi_app, method
 
 # LLM
@@ -15,7 +16,7 @@ LLM_LOW_CPU_MEM_USAGE: bool = True
 LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
 
-IMAGE_MODEL_DIR = "/model"
+IMAGE_MODEL_DIR = "/root/llm_models"
 
 stub = Stub(name="reflector-llm")
 
@@ -24,7 +25,7 @@ def download_llm():
     from huggingface_hub import snapshot_download
 
     print("Downloading LLM model")
-    snapshot_download(LLM_MODEL, local_dir=IMAGE_MODEL_DIR)
+    snapshot_download(LLM_MODEL, cache_dir=IMAGE_MODEL_DIR)
     print("LLM model downloaded")
 
 
@@ -38,7 +39,7 @@ def migrate_cache_llm():
     from transformers.utils.hub import move_cache
 
     print("Moving LLM cache")
-    move_cache()
+    move_cache(cache_dir=IMAGE_MODEL_DIR, new_cache_dir=IMAGE_MODEL_DIR)
     print("LLM cache moved")
 
 
@@ -76,9 +77,10 @@ class LLM:
 
         print("Instance llm model")
         model = AutoModelForCausalLM.from_pretrained(
-            IMAGE_MODEL_DIR,
+            LLM_MODEL,
             torch_dtype=getattr(torch, LLM_TORCH_DTYPE),
             low_cpu_mem_usage=LLM_LOW_CPU_MEM_USAGE,
+            cache_dir=IMAGE_MODEL_DIR
         )
 
         # JSONFormer doesn't yet support generation configs
@@ -91,7 +93,10 @@ class LLM:
 
         # load tokenizer
         print("Instance llm tokenizer")
-        tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL)
+        tokenizer = AutoTokenizer.from_pretrained(
+            LLM_MODEL,
+            cache_dir=IMAGE_MODEL_DIR
+        )
 
         # move model to gpu
         print("Move llm model to GPU")
