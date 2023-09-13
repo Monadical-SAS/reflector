@@ -2,7 +2,9 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_basic_process(event_loop, nltk, dummy_llm, dummy_processors):
+async def test_basic_process(
+    event_loop, nltk, dummy_llm, dummy_processors, ensure_casing
+):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
     from reflector.tools.process import process_audio_file
