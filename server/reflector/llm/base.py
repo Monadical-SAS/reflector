@@ -51,6 +51,7 @@ class LLM:
         nltk.download("punkt", download_dir=settings.CACHE_DIR)
         # For POS tagging
         nltk.download("averaged_perceptron_tagger", download_dir=settings.CACHE_DIR)
+        nltk.data.path.append(settings.CACHE_DIR)
 
     @classmethod
     def register(cls, name, klass):
