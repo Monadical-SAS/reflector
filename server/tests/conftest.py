@@ -56,3 +56,10 @@ def nltk():
     with patch("reflector.llm.base.LLM.ensure_nltk") as mock_nltk:
         mock_nltk.return_value = "NLTK PACKAGE"
         yield
+
+
+@pytest.fixture
+def ensure_casing():
+    with patch("reflector.llm.base.LLM.ensure_casing") as mock_casing:
+        mock_casing.return_value = "LLM TITLE"
+        yield
