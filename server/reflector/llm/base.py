@@ -3,6 +3,7 @@ import json
 import re
 from time import monotonic
 
+from prometheus_client import Counter, Histogram
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
@@ -10,6 +11,26 @@ from reflector.utils.retry import retry
 
 class LLM:
     _registry = {}
+    m_generate = Histogram(
+        "llm_generate",
+        "Time spent in LLM.generate",
+        ["backend"],
+    )
+    m_generate_call = Counter(
+        "llm_generate_call",
+        "Number of calls to LLM.generate",
+        ["backend"],
+    )
+    m_generate_success = Counter(
+        "llm_generate_success",
+        "Number of successful calls to LLM.generate",
+        ["backend"],
+    )
+    m_generate_failure = Counter(
+        "llm_generate_failure",
+        "Number of failed calls to LLM.generate",
+        ["backend"],
+    )
 
     @classmethod
     def register(cls, name, klass):
@@ -30,6 +51,13 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         return cls._registry[name]()
+
+    def __init__(self):
+        name = self.__class__.__name__
+        self.m_generate = self.m_generate.labels(name)
+        self.m_generate_call = self.m_generate_call.labels(name)
+        self.m_generate_success = self.m_generate_success.labels(name)
+        self.m_generate_failure = self.m_generate_failure.labels(name)
 
     async def warmup(self, logger: reflector_logger):
         start = monotonic()
@@ -53,10 +81,16 @@ class LLM:
         **kwargs,
     ) -> dict:
         logger.info("LLM generate", prompt=repr(prompt))
+        self.m_generate_call.inc()
         try:
-            result = await retry(self._generate)(prompt=prompt, schema=schema, **kwargs)
+            with self.m_generate.time():
+                result = await retry(self._generate)(
+                    prompt=prompt, schema=schema, **kwargs
+                )
+            self.m_generate_success.inc()
         except Exception:
             logger.exception("Failed to call llm after retrying")
+            self.m_generate_failure.inc()
             raise
 
         logger.debug("LLM result [raw]", result=repr(result))
