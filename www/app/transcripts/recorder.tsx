@@ -124,17 +124,16 @@ export default function Recorder(props: RecorderProps) {
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        waveColor: "#777",
-        progressColor: "#222",
-        cursorColor: "OrangeRed",
+        waveColor: "white",
+        progressColor: "white",
+        cursorColor: "transparent",
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
         height: 60,
       });
       const wsWrapper = _wavesurfer.getWrapper();
-      wsWrapper.style.cursor = "pointer";
-      wsWrapper.style.backgroundColor = "#e0c3fc42";
+      // wsWrapper.style.cursor = "pointer";
       wsWrapper.style.borderRadius = "15px";
 
       _wavesurfer.on("play", () => {
@@ -179,7 +178,6 @@ export default function Recorder(props: RecorderProps) {
         width: 100px;
         max-width: fit-content;
         cursor: pointer;
-        background-color: white;
         border-radius: 0 3px 3px 0;
         white-space: nowrap;
         overflow: hidden;
@@ -188,21 +186,22 @@ export default function Recorder(props: RecorderProps) {
       `,
       );
       content.onmouseover = () => {
-        content.style.backgroundColor = "orange";
+        content.style.backgroundColor = "#feb082";
         content.style.zIndex = "999";
         content.style.width = "300px";
       };
       content.onmouseout = () => {
-        content.style.backgroundColor = "white";
+        content.style.backgroundColor = "#4551e5";
         content.style.zIndex = "0";
         content.style.width = "100px";
       };
       content.textContent = topic.title;
+      content.style.backgroundColor = "#feb082";
 
       const region = waveRegions.addRegion({
         start: topic.timestamp,
         content,
-        color: "f00",
+        color: "white",
         drag: false,
       });
       region.on("click", (e) => {
@@ -289,11 +288,14 @@ export default function Recorder(props: RecorderProps) {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
-      <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
+    <div className="relative w-full">
+      <div
+        ref={waveformRef}
+        className="w-full shadow-xl rounded-2xl bg-white/10"
+      ></div>
       <div className="absolute bottom-0 right-2 text-xs text-black">
         {isRecording && (
-          <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
+          <div className="inline-block bg-white rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
         )}
         {timeLabel()}
       </div>

@@ -17,6 +17,8 @@ module.exports = {
         "light-blue": "#0044aa",
         "red-200": "#cc7777",
         "red-400": "#aa5555",
+        "allin-orange": "#feb082",
+        "allin-blue": "#4551e5",
       },
     },
   },

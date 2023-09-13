@@ -1,13 +1,12 @@
 import "./styles/globals.scss";
-import { Roboto } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { Metadata } from "next";
+import Image from "next/image";
 import FiefWrapper from "./(auth)/fiefWrapper";
-import UserInfo from "./(auth)/userInfo";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
-import Image from "next/image";
 
-const roboto = Roboto({ subsets: ["latin"], weight: "400" });
+const roboto = Poppins({ subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
   title: {
@@ -60,8 +59,8 @@ export default function RootLayout({ children }) {
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
-            <div id="container">
-              <div className="bg-dark-blue text-white h-screen">{children}</div>
+            <div id="container" className="h-screen">
+              {children}
             </div>
           </ErrorProvider>
         </FiefWrapper>
