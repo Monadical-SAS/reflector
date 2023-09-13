@@ -48,10 +48,9 @@ class LLM:
         Make sure NLTK package is installed. Searches in the cache and
         downloads only if needed.
         """
-        nltk.download("punkt", download_dir=settings.CACHE_DIR)
+        nltk.download("punkt")
         # For POS tagging
-        nltk.download("averaged_perceptron_tagger", download_dir=settings.CACHE_DIR)
-        nltk.data.path.append(settings.CACHE_DIR)
+        nltk.download("averaged_perceptron_tagger")
 
     @classmethod
     def register(cls, name, klass):
