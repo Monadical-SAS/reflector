@@ -75,21 +75,52 @@ async def test_transcript_get_update_summary():
     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
         response = await ac.post("/transcripts", json={"name": "test"})
         assert response.status_code == 200
-        assert response.json()["summary"] is None
+        assert response.json()["long_summary"] is None
+        assert response.json()["short_summary"] is None
 
         tid = response.json()["id"]
 
         response = await ac.get(f"/transcripts/{tid}")
         assert response.status_code == 200
-        assert response.json()["summary"] is None
+        assert response.json()["long_summary"] is None
+        assert response.json()["short_summary"] is None
 
-        response = await ac.patch(f"/transcripts/{tid}", json={"summary": "test"})
+        response = await ac.patch(
+            f"/transcripts/{tid}",
+            json={"long_summary": "test_long", "short_summary": "test_short"},
+        )
         assert response.status_code == 200
-        assert response.json()["summary"] == "test"
+        assert response.json()["long_summary"] == "test_long"
+        assert response.json()["short_summary"] == "test_short"
 
         response = await ac.get(f"/transcripts/{tid}")
         assert response.status_code == 200
-        assert response.json()["summary"] == "test"
+        assert response.json()["long_summary"] == "test_long"
+        assert response.json()["short_summary"] == "test_short"
+
+
+@pytest.mark.asyncio
+async def test_transcript_get_update_title():
+    from reflector.app import app
+
+    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+        response = await ac.post("/transcripts", json={"name": "test"})
+        assert response.status_code == 200
+        assert response.json()["title"] is None
+
+        tid = response.json()["id"]
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["title"] is None
+
+        response = await ac.patch(f"/transcripts/{tid}", json={"title": "test_title"})
+        assert response.status_code == 200
+        assert response.json()["title"] == "test_title"
+
+        response = await ac.get(f"/transcripts/{tid}")
+        assert response.status_code == 200
+        assert response.json()["title"] == "test_title"
 
 
 @pytest.mark.asyncio

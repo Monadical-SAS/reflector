@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from prometheus_client import Counter, Gauge, Histogram
 from pydantic import BaseModel
+
 from reflector.logger import logger
 
 
@@ -296,7 +297,7 @@ class BroadcastProcessor(Processor):
     types of input.
     """
 
-    def __init__(self, processors: Processor):
+    def __init__(self, processors: list[Processor]):
         super().__init__()
         self.processors = processors
         self.INPUT_TYPE = processors[0].INPUT_TYPE

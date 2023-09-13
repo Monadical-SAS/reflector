@@ -18,12 +18,6 @@ repos:
         exclude: ^server/trials
       - id: detect-private-key
 
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.282
-    hooks:
-      - id: ruff
-        files: ^server/(reflector|tests)/
-
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
@@ -36,4 +30,10 @@ repos:
       - id: isort
         name: isort (python)
         files: ^server/(gpu|evaluate|reflector)/
-        args: ["--profile", "black", "--filter-files"]
+        args: [ "--profile", "black", "--filter-files" ]
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.282
+    hooks:
+      - id: ruff
+        files: ^server/(reflector|tests)/

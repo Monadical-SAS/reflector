@@ -67,21 +67,10 @@ async def dummy_transcript():
         yield
 
 
-@pytest.fixture
-async def dummy_llm():
-    from reflector.llm.base import LLM
-
-    class TestLLM(LLM):
-        async def _generate(self, prompt: str, schema: dict | None, **kwargs):
-            return json.dumps({"title": "LLM TITLE", "summary": "LLM SUMMARY"})
-
-    with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
-        mock_llm.return_value = TestLLM()
-        yield
-
-
 @pytest.mark.asyncio
-async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm):
+async def test_transcript_rtc_and_websocket(
+    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
     # to be able to connect with aiortc
@@ -186,9 +175,17 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
     assert ev["data"]["transcript"].startswith("Hello world")
     assert ev["data"]["timestamp"] == 0.0
 
-    assert "FINAL_SUMMARY" in eventnames
-    ev = events[eventnames.index("FINAL_SUMMARY")]
-    assert ev["data"]["summary"] == "LLM SUMMARY"
+    assert "FINAL_LONG_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
+    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+
+    assert "FINAL_SHORT_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
+    assert ev["data"]["short_summary"] == "LLM SHORT SUMMARY"
+
+    assert "FINAL_TITLE" in eventnames
+    ev = events[eventnames.index("FINAL_TITLE")]
+    assert ev["data"]["title"] == "LLM FINAL TITLE"
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
@@ -218,7 +215,9 @@ async def test_transcript_rtc_and_websocket(tmpdir, dummy_transcript, dummy_llm)
 
 
 @pytest.mark.asyncio
-async def test_transcript_rtc_and_websocket_and_fr(tmpdir, dummy_transcript, dummy_llm):
+async def test_transcript_rtc_and_websocket_and_fr(
+    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
     # to be able to connect with aiortc
@@ -326,9 +325,17 @@ async def test_transcript_rtc_and_websocket_and_fr(tmpdir, dummy_transcript, dum
     assert ev["data"]["transcript"].startswith("Hello world")
     assert ev["data"]["timestamp"] == 0.0
 
-    assert "FINAL_SUMMARY" in eventnames
-    ev = events[eventnames.index("FINAL_SUMMARY")]
-    assert ev["data"]["summary"] == "LLM SUMMARY"
+    assert "FINAL_LONG_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
+    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+
+    assert "FINAL_SHORT_SUMMARY" in eventnames
+    ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
+    assert ev["data"]["short_summary"] == "LLM SHORT SUMMARY"
+
+    assert "FINAL_TITLE" in eventnames
+    ev = events[eventnames.index("FINAL_TITLE")]
+    assert ev["data"]["title"] == "LLM FINAL TITLE"
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]

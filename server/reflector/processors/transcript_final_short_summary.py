@@ -1,0 +1,72 @@
+from reflector.llm import LLM, LLMTaskParams
+from reflector.processors.base import Processor
+from reflector.processors.types import FinalShortSummary, TitleSummary
+
+
+class TranscriptFinalShortSummaryProcessor(Processor):
+    """
+    Get the final summary using a tree summarizer
+    """
+
+    INPUT_TYPE = TitleSummary
+    OUTPUT_TYPE = FinalShortSummary
+    TASK = "final_short_summary"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.chunks: list[TitleSummary] = []
+        self.llm = LLM.get_instance()
+        self.params = LLMTaskParams.get_instance(self.TASK).task_params
+
+    async def _push(self, data: TitleSummary):
+        self.chunks.append(data)
+
+    async def get_short_summary(self, text: str) -> dict:
+        """
+        Generata a short summary using tree summarizer
+        """
+        self.logger.info(f"Smoothing out {len(text)} length summary to a short summary")
+        chunks = list(self.llm.split_corpus(corpus=text, task_params=self.params))
+
+        if len(chunks) == 1:
+            chunk = chunks[0]
+            prompt = self.llm.create_prompt(instruct=self.params.instruct, text=chunk)
+            summary_result = await self.llm.generate(
+                prompt=prompt,
+                gen_schema=self.params.gen_schema,
+                gen_cfg=self.params.gen_cfg,
+                logger=self.logger,
+            )
+            return summary_result
+        else:
+            accumulated_summaries = ""
+            for chunk in chunks:
+                prompt = self.llm.create_prompt(
+                    instruct=self.params.instruct, text=chunk
+                )
+                summary_result = await self.llm.generate(
+                    prompt=prompt,
+                    gen_schema=self.params.gen_schema,
+                    gen_cfg=self.params.gen_cfg,
+                    logger=self.logger,
+                )
+                accumulated_summaries += summary_result["short_summary"]
+
+            return await self.get_short_summary(accumulated_summaries)
+
+    async def _flush(self):
+        if not self.chunks:
+            self.logger.warning("No summary to output")
+            return
+
+        accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
+        short_summary_result = await self.get_short_summary(accumulated_summaries)
+
+        last_chunk = self.chunks[-1]
+        duration = last_chunk.timestamp + last_chunk.duration
+
+        final_summary = FinalShortSummary(
+            short_summary=short_summary_result["short_summary"],
+            duration=duration,
+        )
+        await self.emit(final_summary)
