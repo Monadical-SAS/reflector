@@ -1,12 +1,10 @@
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Annotated, Optional
 from uuid import uuid4
 
-import av
+import reflector.auth as auth
 from fastapi import (
     APIRouter,
     Depends,
@@ -17,13 +15,11 @@ from fastapi import (
 )
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
-from starlette.concurrency import run_in_threadpool
-
-import reflector.auth as auth
 from reflector.db import database, transcripts
 from reflector.logger import logger
 from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
+from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
@@ -112,35 +108,12 @@ class Transcript(BaseModel):
     def topics_dump(self, mode="json"):
         return [topic.model_dump(mode=mode) for topic in self.topics]
 
-    def convert_audio_to_mp3(self):
-        fn = self.audio_mp3_filename
-        if fn.exists():
-            return
-
-        logger.info(f"Converting audio to mp3: {self.audio_filename}")
-        inp = av.open(self.audio_filename.as_posix(), "r")
-
-        # create temporary file for mp3
-        with NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-            out = av.open(tmp.name, "w")
-            stream = out.add_stream("mp3")
-            for frame in inp.decode(audio=0):
-                frame.pts = None
-                for packet in stream.encode(frame):
-                    out.mux(packet)
-            for packet in stream.encode(None):
-                out.mux(packet)
-            out.close()
-
-            # move temporary file to final location
-            shutil.move(tmp.name, fn.as_posix())
-
     def convert_audio_to_waveform(self, segments_count=256):
         fn = self.audio_waveform_filename
         if fn.exists():
             return
         waveform = get_audio_waveform(
-            path=self.audio_filename, segments_count=segments_count
+            path=self.audio_mp3_filename, segments_count=segments_count
         )
         try:
             with open(fn, "w") as fd:
@@ -157,10 +130,6 @@ class Transcript(BaseModel):
     @property
     def data_path(self):
         return Path(settings.DATA_DIR) / self.id
-
-    @property
-    def audio_filename(self):
-        return self.data_path / "audio.wav"
 
     @property
     def audio_mp3_filename(self):
@@ -373,27 +342,6 @@ async def transcript_delete(
     return DeletionStatus(status="ok")
 
 
-@router.get("/transcripts/{transcript_id}/audio")
-async def transcript_get_audio(
-    request: Request,
-    transcript_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-):
-    user_id = user["sub"] if user else None
-    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
-    if not transcript:
-        raise HTTPException(status_code=404, detail="Transcript not found")
-
-    if not transcript.audio_filename.exists():
-        raise HTTPException(status_code=404, detail="Audio not found")
-
-    return range_requests_response(
-        request,
-        transcript.audio_filename,
-        content_type="audio/wav",
-    )
-
-
 @router.get("/transcripts/{transcript_id}/audio/mp3")
 async def transcript_get_audio_mp3(
     request: Request,
@@ -405,10 +353,8 @@ async def transcript_get_audio_mp3(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    if not transcript.audio_filename.exists():
+    if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
-
-    await run_in_threadpool(transcript.convert_audio_to_mp3)
 
     return range_requests_response(
         request,
@@ -427,7 +373,7 @@ async def transcript_get_audio_waveform(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    if not transcript.audio_filename.exists():
+    if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
     await run_in_threadpool(transcript.convert_audio_to_waveform)
@@ -640,7 +586,7 @@ async def transcript_record_webrtc(
         request,
         event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
-        audio_filename=transcript.audio_filename,
+        audio_filename=transcript.audio_mp3_filename,
         source_language=transcript.source_language,
         target_language=transcript.target_language,
     )
