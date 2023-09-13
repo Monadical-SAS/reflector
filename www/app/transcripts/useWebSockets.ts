@@ -94,6 +94,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             break;
 
           case "FINAL_LONG_SUMMARY":
+            if (message.data) {
+              message.data = { summary: message.data.long_summary };
+              setFinalSummary(message.data);
+              console.debug("FINAL_LONG_SUMMARY event:", message.data);
+            }
+            break;
+
           case "FINAL_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);

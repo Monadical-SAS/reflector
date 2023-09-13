@@ -103,9 +103,18 @@ class TitleSummary(BaseModel):
         return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
-class FinalSummary(BaseModel):
-    summary: str
+class FinalLongSummary(BaseModel):
+    long_summary: str
     duration: float
+
+
+class FinalShortSummary(BaseModel):
+    short_summary: str
+    duration: float
+
+
+class FinalTitle(BaseModel):
+    title: str
 
 
 class TranslationLanguages(BaseModel):

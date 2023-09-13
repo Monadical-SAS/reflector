@@ -91,5 +91,11 @@ class Settings(BaseSettings):
     # if set, all anonymous record will be public
     PUBLIC_MODE: bool = False
 
+    # Default LLM model name
+    DEFAULT_LLM: str = "lmsys/vicuna-13b-v1.5"
+
+    # Cache directory for all model storage
+    CACHE_DIR: str = "data"
+
 
 settings = Settings()
