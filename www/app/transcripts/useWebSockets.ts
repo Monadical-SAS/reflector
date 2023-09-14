@@ -95,17 +95,17 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             console.debug("TOPIC event:", message.data);
             break;
 
-          case "FINAL_LONG_SUMMARY":
-            console.debug("FINAL_LONG_SUMMARY event:", message.data);
+          case "FINAL_SHORT_SUMMARY":
+            console.debug("FINAL_SHORT_SUMMARY event:", message.data);
             break;
 
-          case "FINAL_SHORT_SUMMARY":
+          case "FINAL_LONG_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
               console.debug(
-                "FINAL_SUMMARY event:",
+                "FINAL_LONG_SUMMARY event:",
                 message.data,
                 "newUrl",
                 newUrl,
