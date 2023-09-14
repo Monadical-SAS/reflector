@@ -54,7 +54,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
             <Dashboard
               transcriptionText={""}
-              finalSummary={{ summary: transcript?.response?.shortSummary }}
+              finalSummary={{ summary: transcript?.response?.longSummary }}
               topics={topics?.topics || []}
               disconnected={false}
               useActiveTopic={useActiveTopic}
