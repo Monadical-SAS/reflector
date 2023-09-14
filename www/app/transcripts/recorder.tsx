@@ -144,7 +144,9 @@ export default function Recorder(props: RecorderProps) {
       });
       _wavesurfer.on("timeupdate", setCurrentTime);
 
-      setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
+      setRecord(
+        _wavesurfer.registerPlugin(RecordPlugin.create({ waveColor: "white" })),
+      );
       setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
 
       setWavesurfer(_wavesurfer);
