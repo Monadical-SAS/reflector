@@ -54,7 +54,19 @@ export interface GetTranscript {
    * @type {any}
    * @memberof GetTranscript
    */
-  summary: any | null;
+  title: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
+  shortSummary: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
+  longSummary: any | null;
   /**
    *
    * @type {any}
@@ -85,7 +97,9 @@ export function instanceOfGetTranscript(value: object): boolean {
   isInstance = isInstance && "status" in value;
   isInstance = isInstance && "locked" in value;
   isInstance = isInstance && "duration" in value;
-  isInstance = isInstance && "summary" in value;
+  isInstance = isInstance && "title" in value;
+  isInstance = isInstance && "shortSummary" in value;
+  isInstance = isInstance && "longSummary" in value;
   isInstance = isInstance && "createdAt" in value;
   isInstance = isInstance && "sourceLanguage" in value;
   isInstance = isInstance && "targetLanguage" in value;
@@ -110,7 +124,9 @@ export function GetTranscriptFromJSONTyped(
     status: json["status"],
     locked: json["locked"],
     duration: json["duration"],
-    summary: json["summary"],
+    title: json["title"],
+    shortSummary: json["short_summary"],
+    longSummary: json["long_summary"],
     createdAt: json["created_at"],
     sourceLanguage: json["source_language"],
     targetLanguage: json["target_language"],
@@ -130,7 +146,9 @@ export function GetTranscriptToJSON(value?: GetTranscript | null): any {
     status: value.status,
     locked: value.locked,
     duration: value.duration,
-    summary: value.summary,
+    title: value.title,
+    short_summary: value.shortSummary,
+    long_summary: value.longSummary,
     created_at: value.createdAt,
     source_language: value.sourceLanguage,
     target_language: value.targetLanguage,
