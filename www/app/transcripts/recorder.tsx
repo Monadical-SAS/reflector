@@ -291,10 +291,7 @@ export default function Recorder(props: RecorderProps) {
 
   return (
     <div className="relative w-full">
-      <div
-        ref={waveformRef}
-        className="w-full shadow-xl rounded-2xl bg-white/10"
-      ></div>
+      <div ref={waveformRef} className="w-full rounded-2xl bg-white/10"></div>
       <div className="absolute bottom-0 right-2 text-xs text-black">
         {isRecording && (
           <div className="inline-block bg-white rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
