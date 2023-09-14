@@ -46,51 +46,80 @@ const App = () => {
   ];
 
   return (
-    <>
-      <header className="flex justify-between items-center py-4 bg-transparent">
-        <div className="flex items-center">
+    <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-4 flex flex-col">
+      <header className="flex items-center">
+        <div className="flex items-center mr-2 mb-2">
           <Image
             src="/reach.png"
-            width={16}
-            height={16}
-            className="h-6 w-auto ml-2"
-            alt="Reflector"
+            width={40}
+            height={40}
+            className="h-12 w-auto"
+            alt="Reflector Logo"
           />
 
-          <h1 className="text-lg">Reflector</h1>
+          <h1 className="text-3xl p-2 font-bold">Reflector</h1>
         </div>
 
-        <Recorder
-          setStream={setStream}
-          onStop={() => {
-            webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
-            setStream(null);
-          }}
-          topics={webSockets.topics}
-          getAudioStream={getAudioStream}
-          audioDevices={audioDevices}
-          useActiveTopic={useActiveTopic}
-        />
-
-        <span className="p-2 rounded-full">&nbsp;</span>
+        <div className="flex-grow">
+          <Recorder
+            setStream={setStream}
+            onStop={() => {
+              webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+              setStream(null);
+            }}
+            topics={webSockets.topics}
+            getAudioStream={getAudioStream}
+            audioDevices={audioDevices}
+            useActiveTopic={useActiveTopic}
+          />
+        </div>
       </header>
 
-      {/* Topic Section */}
-      <section className="bg-red-200 p-4">
-        {displayTopics.map((topic, index) => (
-          <div key={topic?.id || index} className="bg-red-400 p-2 my-1 text-xl">
-            {topic ? `${topic.title}` : "\u00A0"}
+      <div className="py-4 flex-grow flex flex-wrap justify-between">
+        {/* Topic Section */}
+        <section className="w-full lg:max-w-[45vw] min-w-[45vw] flex items-center lg:mr-2">
+          <div className="bg-blue-100/10 rounded-lg md:rounded-xl w-full p-2 md:p-4 self-start lg:self-center">
+            <p className="text-right text-l font-light">Last 5 topics</p>
+            {displayTopics.map((topic, index) => (
+              <div
+                key={topic?.id || index}
+                className={`rounded-lg md:rounded-xl px-2 md:px-4 py-2 my-2 last:mb-0 text-l md:text-xl font-bold ${
+                  topic ? "odd:bg-white/20" : ""
+                }`}
+              >
+                {topic ? `${topic.title}` : "\u00A0"}
+              </div>
+            ))}
           </div>
-        ))}
-      </section>
+        </section>
 
-      {/* Translation Section */}
-      <section className="bg-light-blue p-4 h-1/2 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-4xl font-bold">{webSockets.transcriptText}</p>
-        </div>
-      </section>
-    </>
+        {/* Translation Section */}
+        <section className="flex-grow flex items-center justify-center lg:max-w-[49vw]">
+          <div className="text-center p-4">
+            <p className="text-2xl md:text-4xl font-bold">
+              {webSockets.transcriptText}
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <footer className="flex justify-between items-center pt-4 border-t ">
+        <Image
+          src="/monadical-black-white 1.svg"
+          width={40}
+          height={40}
+          className="h-12 w-auto"
+          alt="Monadical Logo"
+        />
+        <Image
+          src="/All-In_Logotype_Blanc_2L.png"
+          width={40}
+          height={40}
+          className="h-12 w-auto"
+          alt="All In Logo"
+        />
+      </footer>
+    </div>
   );
 
   /*

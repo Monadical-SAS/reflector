@@ -10,6 +10,7 @@ import BasePlugin, {
 export type RecordPluginOptions = {
   mimeType?: MediaRecorderOptions["mimeType"];
   audioBitsPerSecond?: MediaRecorderOptions["audioBitsPerSecond"];
+  waveColor?: string;
 };
 
 export type RecordPluginEvents = BasePluginEvents & {
@@ -93,7 +94,7 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
 
       analyser.getByteTimeDomainData(dataArray);
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-      canvasCtx.fillStyle = "#cc3347";
+      canvasCtx.fillStyle = this.options.waveColor || "#cc3347";
 
       if (previousTimeStamp === undefined) {
         previousTimeStamp = timeStamp;
