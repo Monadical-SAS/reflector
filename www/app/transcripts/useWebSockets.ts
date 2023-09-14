@@ -113,10 +113,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             }
             break;
 
-          case "FINAL_SUMMARY":
-            console.debug("FINAL_SUMMARY event:", message.data);
-            break;
-
           case "FINAL_TITLE":
             console.debug("FINAL_TITLE event:", message.data);
             break;
