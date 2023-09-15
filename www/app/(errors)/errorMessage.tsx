@@ -9,7 +9,8 @@ const ErrorMessage: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      setIsVisible(true);
+      // Never set the error to visible in Scale AI branch
+      //      setIsVisible(true);
       console.log("Sentry capture exception", error, typeof error);
       Sentry.captureException(error);
       console.error(error);
