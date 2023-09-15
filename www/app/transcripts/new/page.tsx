@@ -71,6 +71,7 @@ const TranscriptCreate = () => {
             getAudioStream={getAudioStream}
             audioDevices={audioDevices}
             useActiveTopic={useActiveTopic}
+            isPastMeeting={false}
           />
         </div>
       </header>
