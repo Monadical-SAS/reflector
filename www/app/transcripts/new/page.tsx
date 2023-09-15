@@ -65,10 +65,8 @@ const TranscriptCreate = () => {
         </>
       ) : (
         <>
-          <div className="flex flex-col items-center justify-center w-fit bg-white px-6 py-8 mt-8 rounded-xl">
-            <h1 className="text-2xl font-bold text-blue-500">
-              Audio Permissions
-            </h1>
+          <div className="flex flex-col items-center justify-center w-fit px-6 py-8 mt-8 rounded-xl">
+            <h1 className="text-2xl font-bold">Audio Permissions</h1>
             {loading ? (
               <p className="text-gray-500 text-center mt-5">
                 Checking permission...
@@ -83,7 +81,7 @@ const TranscriptCreate = () => {
                     : "Please grant permission to continue."}
                 </p>
                 <button
-                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-auto"
+                  className="mt-4 bg-black/40 hover:bg-black/60 text-white font-bold py-2 px-4 rounded m-auto"
                   onClick={requestPermission}
                   disabled={permissionDenied}
                 >
