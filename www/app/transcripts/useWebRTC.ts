@@ -19,6 +19,8 @@ const useWebRTC = (
       return;
     }
 
+    console.debug("Using WebRTC", stream, transcriptId);
+
     let p: Peer;
 
     try {

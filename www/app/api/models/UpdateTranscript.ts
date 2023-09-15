@@ -36,7 +36,19 @@ export interface UpdateTranscript {
    * @type {any}
    * @memberof UpdateTranscript
    */
-  summary?: any | null;
+  title?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof UpdateTranscript
+   */
+  shortSummary?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof UpdateTranscript
+   */
+  longSummary?: any | null;
 }
 
 /**
@@ -62,7 +74,13 @@ export function UpdateTranscriptFromJSONTyped(
   return {
     name: !exists(json, "name") ? undefined : json["name"],
     locked: !exists(json, "locked") ? undefined : json["locked"],
-    summary: !exists(json, "summary") ? undefined : json["summary"],
+    title: !exists(json, "title") ? undefined : json["title"],
+    shortSummary: !exists(json, "short_summary")
+      ? undefined
+      : json["short_summary"],
+    longSummary: !exists(json, "long_summary")
+      ? undefined
+      : json["long_summary"],
   };
 }
 
@@ -76,6 +94,8 @@ export function UpdateTranscriptToJSON(value?: UpdateTranscript | null): any {
   return {
     name: value.name,
     locked: value.locked,
-    summary: value.summary,
+    title: value.title,
+    short_summary: value.shortSummary,
+    long_summary: value.longSummary,
   };
 }
