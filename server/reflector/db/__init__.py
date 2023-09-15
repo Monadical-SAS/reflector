@@ -1,5 +1,6 @@
 import databases
 import sqlalchemy
+
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.settings import settings
 
@@ -16,7 +17,9 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
     sqlalchemy.Column("duration", sqlalchemy.Integer),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime),
-    sqlalchemy.Column("summary", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("title", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("short_summary", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("long_summary", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),

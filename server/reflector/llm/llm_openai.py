@@ -1,11 +1,13 @@
 import httpx
+from transformers import GenerationConfig
+
 from reflector.llm.base import LLM
 from reflector.logger import logger
 from reflector.settings import settings
 
 
 class OpenAILLM(LLM):
-    def __init__(self, **kwargs):
+    def __init__(self, model_name: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.openai_key = settings.LLM_OPENAI_KEY
         self.openai_url = settings.LLM_URL
@@ -15,7 +17,13 @@ class OpenAILLM(LLM):
         self.max_tokens = settings.LLM_MAX_TOKENS
         logger.info(f"LLM use openai backend at {self.openai_url}")
 
-    async def _generate(self, prompt: str, schema: dict | None, **kwargs) -> str:
+    async def _generate(
+        self,
+        prompt: str,
+        gen_schema: dict | None,
+        gen_cfg: GenerationConfig | None,
+        **kwargs,
+    ) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.openai_key}",

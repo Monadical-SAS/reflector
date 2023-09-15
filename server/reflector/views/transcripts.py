@@ -1,12 +1,9 @@
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Annotated, Optional
 from uuid import uuid4
 
-import av
 import reflector.auth as auth
 from fastapi import (
     APIRouter,
@@ -60,8 +57,16 @@ class TranscriptTopic(BaseModel):
     timestamp: float
 
 
-class TranscriptFinalSummary(BaseModel):
-    summary: str
+class TranscriptFinalShortSummary(BaseModel):
+    short_summary: str
+
+
+class TranscriptFinalLongSummary(BaseModel):
+    long_summary: str
+
+
+class TranscriptFinalTitle(BaseModel):
+    title: str
 
 
 class TranscriptEvent(BaseModel):
@@ -77,7 +82,9 @@ class Transcript(BaseModel):
     locked: bool = False
     duration: float = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    summary: str | None = None
+    title: str | None = None
+    short_summary: str | None = None
+    long_summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
     source_language: str = "en"
@@ -101,35 +108,12 @@ class Transcript(BaseModel):
     def topics_dump(self, mode="json"):
         return [topic.model_dump(mode=mode) for topic in self.topics]
 
-    def convert_audio_to_mp3(self):
-        fn = self.audio_mp3_filename
-        if fn.exists():
-            return
-
-        logger.info(f"Converting audio to mp3: {self.audio_filename}")
-        inp = av.open(self.audio_filename.as_posix(), "r")
-
-        # create temporary file for mp3
-        with NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-            out = av.open(tmp.name, "w")
-            stream = out.add_stream("mp3")
-            for frame in inp.decode(audio=0):
-                frame.pts = None
-                for packet in stream.encode(frame):
-                    out.mux(packet)
-            for packet in stream.encode(None):
-                out.mux(packet)
-            out.close()
-
-            # move temporary file to final location
-            shutil.move(tmp.name, fn.as_posix())
-
     def convert_audio_to_waveform(self, segments_count=256):
         fn = self.audio_waveform_filename
         if fn.exists():
             return
         waveform = get_audio_waveform(
-            path=self.audio_filename, segments_count=segments_count
+            path=self.audio_mp3_filename, segments_count=segments_count
         )
         try:
             with open(fn, "w") as fd:
@@ -146,10 +130,6 @@ class Transcript(BaseModel):
     @property
     def data_path(self):
         return Path(settings.DATA_DIR) / self.id
-
-    @property
-    def audio_filename(self):
-        return self.data_path / "audio.wav"
 
     @property
     def audio_mp3_filename(self):
@@ -241,7 +221,9 @@ class GetTranscript(BaseModel):
     status: str
     locked: bool
     duration: int
-    summary: str | None
+    title: str | None
+    short_summary: str | None
+    long_summary: str | None
     created_at: datetime
     source_language: str
     target_language: str
@@ -256,7 +238,9 @@ class CreateTranscript(BaseModel):
 class UpdateTranscript(BaseModel):
     name: Optional[str] = Field(None)
     locked: Optional[bool] = Field(None)
-    summary: Optional[str] = Field(None)
+    title: Optional[str] = Field(None)
+    short_summary: Optional[str] = Field(None)
+    long_summary: Optional[str] = Field(None)
 
 
 class DeletionStatus(BaseModel):
@@ -315,20 +299,32 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    values = {}
+    values = {"events": []}
     if info.name is not None:
         values["name"] = info.name
     if info.locked is not None:
         values["locked"] = info.locked
-    if info.summary is not None:
-        values["summary"] = info.summary
-        # also find FINAL_SUMMARY event and patch it
-        for te in transcript.events:
-            if te["event"] == PipelineEvent.FINAL_SUMMARY:
-                te["summary"] = info.summary
+    if info.long_summary is not None:
+        values["long_summary"] = info.long_summary
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
+                transcript_event["long_summary"] = info.long_summary
                 break
-        values["events"] = transcript.events
-
+        values["events"].extend(transcript.events)
+    if info.short_summary is not None:
+        values["short_summary"] = info.short_summary
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
+                transcript_event["short_summary"] = info.short_summary
+                break
+        values["events"].extend(transcript.events)
+    if info.title is not None:
+        values["title"] = info.title
+        for transcript_event in transcript.events:
+            if transcript_event["event"] == PipelineEvent.FINAL_TITLE:
+                transcript_event["title"] = info.title
+                break
+        values["events"].extend(transcript.events)
     await transcripts_controller.update(transcript, values)
     return transcript
 
@@ -346,27 +342,6 @@ async def transcript_delete(
     return DeletionStatus(status="ok")
 
 
-@router.get("/transcripts/{transcript_id}/audio")
-async def transcript_get_audio(
-    request: Request,
-    transcript_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-):
-    user_id = user["sub"] if user else None
-    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
-    if not transcript:
-        raise HTTPException(status_code=404, detail="Transcript not found")
-
-    if not transcript.audio_filename.exists():
-        raise HTTPException(status_code=404, detail="Audio not found")
-
-    return range_requests_response(
-        request,
-        transcript.audio_filename,
-        content_type="audio/wav",
-    )
-
-
 @router.get("/transcripts/{transcript_id}/audio/mp3")
 async def transcript_get_audio_mp3(
     request: Request,
@@ -378,10 +353,8 @@ async def transcript_get_audio_mp3(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    if not transcript.audio_filename.exists():
+    if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
-
-    await run_in_threadpool(transcript.convert_audio_to_mp3)
 
     return range_requests_response(
         request,
@@ -400,7 +373,7 @@ async def transcript_get_audio_waveform(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    if not transcript.audio_filename.exists():
+    if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
     await run_in_threadpool(transcript.convert_audio_to_waveform)
@@ -539,14 +512,38 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
             },
         )
 
-    elif event == PipelineEvent.FINAL_SUMMARY:
-        final_summary = TranscriptFinalSummary(summary=data.summary)
-        resp = transcript.add_event(event=event, data=final_summary)
+    elif event == PipelineEvent.FINAL_TITLE:
+        final_title = TranscriptFinalTitle(title=data.title)
+        resp = transcript.add_event(event=event, data=final_title)
         await transcripts_controller.update(
             transcript,
             {
                 "events": transcript.events_dump(),
-                "summary": final_summary.summary,
+                "title": final_title.title,
+            },
+        )
+
+    elif event == PipelineEvent.FINAL_LONG_SUMMARY:
+        final_long_summary = TranscriptFinalLongSummary(long_summary=data.long_summary)
+        resp = transcript.add_event(event=event, data=final_long_summary)
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "long_summary": final_long_summary.long_summary,
+            },
+        )
+
+    elif event == PipelineEvent.FINAL_SHORT_SUMMARY:
+        final_short_summary = TranscriptFinalShortSummary(
+            short_summary=data.short_summary
+        )
+        resp = transcript.add_event(event=event, data=final_short_summary)
+        await transcripts_controller.update(
+            transcript,
+            {
+                "events": transcript.events_dump(),
+                "short_summary": final_short_summary.short_summary,
             },
         )
 
@@ -589,7 +586,7 @@ async def transcript_record_webrtc(
         request,
         event_callback=handle_rtc_event,
         event_callback_args=transcript_id,
-        audio_filename=transcript.audio_filename,
+        audio_filename=transcript.audio_mp3_filename,
         source_language=transcript.source_language,
         target_language=transcript.target_language,
     )

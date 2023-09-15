@@ -27,7 +27,11 @@ databases = {extras = ["aiosqlite", "asyncpg"], version = "^0.7.0"}
 sqlalchemy = "<1.5"
 fief-client = {extras = ["fastapi"], version = "^0.17.0"}
 alembic = "^1.11.3"
+nltk = "^3.8.1"
+transformers = "^4.32.1"
 prometheus-fastapi-instrumentator = "^6.1.0"
+sentencepiece = "^0.1.99"
+protobuf = "^4.24.3"
 
 
 [tool.poetry.group.dev.dependencies]

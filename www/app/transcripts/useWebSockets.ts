@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
 import { isDevelopment } from "../lib/utils";
+import { useRouter } from "next/navigation";
 
 type UseWebSockets = {
   transcriptText: string;
@@ -18,6 +19,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   });
   const [status, setStatus] = useState<Status>({ value: "disconnected" });
   const { setError } = useError();
+  const router = useRouter();
 
   const setupDebugKeys = () => {
     document.onkeyup = (e) => {
@@ -99,10 +101,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             break;
 
           case "FINAL_LONG_SUMMARY":
-          case "FINAL_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
-              console.debug("FINAL_SUMMARY event:", message.data);
+              const newUrl = "/transcripts/" + transcriptId;
+              router.push(newUrl);
+              console.debug(
+                "FINAL_LONG_SUMMARY event:",
+                message.data,
+                "newUrl",
+                newUrl,
+              );
             }
             break;
 
@@ -135,10 +143,15 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     ws.onclose = (event) => {
       console.debug("WebSocket connection closed");
-      if (event.code !== 1000) {
-        setError(
-          new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
-        );
+      switch (event.code) {
+        case 1000: // Normal Closure:
+        case 1001: // Going Away:
+        case 1005:
+          break;
+        default:
+          setError(
+            new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
+          );
       }
     };
 

@@ -15,19 +15,22 @@ import { Topic } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
 
 import { isProjector } from "../lib/utils";
+import { AudioWaveform } from "../api";
 
 const AudioInputsDropdown: React.FC<{
-  audioDevices: Option[];
+  audioDevices?: Option[];
   setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
   disabled: boolean;
 }> = (props) => {
   const [ddOptions, setDdOptions] = useState<Option[]>([]);
 
   useEffect(() => {
-    setDdOptions(props.audioDevices);
-    props.setDeviceId(
-      props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
-    );
+    if (props.audioDevices) {
+      setDdOptions(props.audioDevices);
+      props.setDeviceId(
+        props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
+      );
+    }
   }, [props.audioDevices]);
 
   const handleDropdownChange = (option: Option) => {
@@ -45,15 +48,18 @@ const AudioInputsDropdown: React.FC<{
 };
 
 type RecorderProps = {
-  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
-  onStop: () => void;
+  setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
+  onStop?: () => void;
   topics: Topic[];
-  getAudioStream: (deviceId: string | null) => Promise<MediaStream | null>;
-  audioDevices: Option[];
+  getAudioStream?: (deviceId: string | null) => Promise<MediaStream | null>;
+  audioDevices?: Option[];
   useActiveTopic: [
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
+  waveform?: AudioWaveform | null;
+  isPastMeeting: boolean;
+  transcriptId?: string | null;
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -61,7 +67,7 @@ export default function Recorder(props: RecorderProps) {
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [hasRecorded, setHasRecorded] = useState<boolean>(false);
+  const [hasRecorded, setHasRecorded] = useState<boolean>(props.isPastMeeting);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -118,9 +124,6 @@ export default function Recorder(props: RecorderProps) {
   };
 
   useEffect(() => {
-    const playBtn = document.getElementById("play-btn");
-    if (playBtn) playBtn.setAttribute("disabled", "true");
-
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
@@ -131,7 +134,11 @@ export default function Recorder(props: RecorderProps) {
         autoCenter: true,
         barWidth: 2,
         height: 60,
+        url: props.transcriptId
+          ? `${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`
+          : undefined,
       });
+
       const wsWrapper = _wavesurfer.getWrapper();
       // wsWrapper.style.cursor = "pointer";
       wsWrapper.style.borderRadius = "15px";
@@ -148,6 +155,8 @@ export default function Recorder(props: RecorderProps) {
         _wavesurfer.registerPlugin(RecordPlugin.create({ waveColor: "white" })),
       );
       setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
+
+      if (props.transcriptId) _wavesurfer.toggleInteraction(true);
 
       setWavesurfer(_wavesurfer);
       return () => {
@@ -264,18 +273,21 @@ export default function Recorder(props: RecorderProps) {
     if (!record) return console.log("no record");
 
     if (record.isRecording()) {
-      props.onStop();
+      if (props.onStop) props.onStop();
       record.stopRecording();
       setIsRecording(false);
       setHasRecorded(true);
-    } else {
+    } else if (props.getAudioStream) {
       const stream = await props.getAudioStream(deviceId);
-      props.setStream(stream);
+
+      if (props.setStream) props.setStream(stream);
       waveRegions?.clearRegions();
       if (stream) {
         await record.startRecording(stream);
         setIsRecording(true);
       }
+    } else {
+      throw new Error("No getAudioStream function provided");
     }
   };
 

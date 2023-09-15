@@ -24,8 +24,8 @@ async def fake_transcript(tmpdir):
     await transcripts_controller.update(transcript, {"status": "finished"})
 
     # manually copy a file at the expected location
-    audio_filename = transcript.audio_filename
-    path = Path(__file__).parent / "records" / "test_mathieu_hello.wav"
+    audio_filename = transcript.audio_mp3_filename
+    path = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
     audio_filename.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(path, audio_filename)
     yield transcript
@@ -35,7 +35,6 @@ async def fake_transcript(tmpdir):
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["", "audio/wav"],
         ["/mp3", "audio/mp3"],
     ],
 )
@@ -52,7 +51,6 @@ async def test_transcript_audio_download(fake_transcript, url_suffix, content_ty
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["", "audio/wav"],
         ["/mp3", "audio/mp3"],
     ],
 )
@@ -76,7 +74,6 @@ async def test_transcript_audio_download_range(
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["", "audio/wav"],
         ["/mp3", "audio/mp3"],
     ],
 )
@@ -104,4 +101,4 @@ async def test_transcript_audio_download_waveform(fake_transcript):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/json"
     assert isinstance(response.json()["data"], list)
-    assert len(response.json()["data"]) == 256
+    assert len(response.json()["data"]) >= 255

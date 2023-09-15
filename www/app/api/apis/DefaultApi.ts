@@ -98,6 +98,45 @@ export interface V1TranscriptsListRequest {
  */
 export class DefaultApi extends runtime.BaseAPI {
   /**
+   * Endpoint that serves Prometheus metrics.
+   * Metrics
+   */
+  async metricsRaw(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    const response = await this.request(
+      {
+        path: `/metrics`,
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Endpoint that serves Prometheus metrics.
+   * Metrics
+   */
+  async metrics(
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.metricsRaw(initOverrides);
+    return await response.value();
+  }
+
+  /**
    * Rtc Offer
    */
   async rtcOfferRaw(

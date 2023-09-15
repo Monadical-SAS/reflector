@@ -13,7 +13,7 @@ import { isDevelopment } from "../../lib/utils";
 import Image from "next/image";
 import { formatTime } from "../../lib/time";
 
-const App = () => {
+const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [disconnected, setDisconnected] = useState<boolean>(false);
   const useActiveTopic = useState<Topic | null>(null);
@@ -27,9 +27,9 @@ const App = () => {
   }, []);
 
   const api = getApi();
-  const transcript = useTranscript(api);
-  const webRTC = useWebRTC(stream, transcript.response?.id, api);
-  const webSockets = useWebSockets(transcript.response?.id);
+  const transcript = useTranscript(stream, api);
+  const webRTC = useWebRTC(stream, transcript?.response?.id, api);
+  const webSockets = useWebSockets(transcript?.response?.id);
   const {
     loading,
     permissionOk,
@@ -137,6 +137,7 @@ const App = () => {
             getAudioStream={getAudioStream}
             audioDevices={audioDevices}
             useActiveTopic={useActiveTopic}
+            isPastMeeting={false}
           />
 
           <Dashboard
@@ -182,4 +183,4 @@ const App = () => {
   ); */
 };
 
-export default App;
+export default TranscriptCreate;

@@ -1,13 +1,21 @@
 import httpx
+
 from reflector.llm.base import LLM
 from reflector.settings import settings
 
 
 class OobaboogaLLM(LLM):
-    async def _generate(self, prompt: str, schema: dict | None, **kwargs):
+    def __init__(self, model_name: str | None = None):
+        super().__init__()
+
+    async def _generate(
+        self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
+    ):
         json_payload = {"prompt": prompt}
-        if schema:
-            json_payload["schema"] = schema
+        if gen_schema:
+            json_payload["gen_schema"] = gen_schema
+        if gen_cfg:
+            json_payload.update(gen_cfg)
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 settings.LLM_URL,
