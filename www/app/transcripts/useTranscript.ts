@@ -1,18 +1,55 @@
 import { useEffect, useState } from "react";
-import { DefaultApi, V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
+import {
+  DefaultApi,
+  V1TranscriptGetRequest,
+  V1TranscriptsCreateRequest,
+} from "../api/apis/DefaultApi";
 import { GetTranscript } from "../api";
 import { useError } from "../(errors)/errorContext";
 
-type UseTranscript = {
+type Transcript = {
   response: GetTranscript | null;
   loading: boolean;
-  createTranscript: () => void;
+  error: Error | null;
 };
 
-const useTranscript = (api: DefaultApi): UseTranscript => {
+const useTranscript = (
+  stream: MediaStream | null,
+  api: DefaultApi,
+  id: string | null = null,
+): Transcript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
+
+  const getOrCreateTranscript = (id: string | null) => {
+    if (id) {
+      getTranscript(id);
+    } else if (stream) {
+      createTranscript();
+    }
+  };
+
+  const getTranscript = (id: string | null) => {
+    if (!id) throw new Error("Transcript ID is required to get transcript");
+
+    setLoading(true);
+    const requestParameters: V1TranscriptGetRequest = {
+      transcriptId: id,
+    };
+    api
+      .v1TranscriptGet(requestParameters)
+      .then((result) => {
+        setResponse(result);
+        setLoading(false);
+        console.debug("New transcript created:", result);
+      })
+      .catch((err) => {
+        setError(err);
+        setErrorState(err);
+      });
+  };
 
   const createTranscript = () => {
     setLoading(true);
@@ -37,14 +74,15 @@ const useTranscript = (api: DefaultApi): UseTranscript => {
       })
       .catch((err) => {
         setError(err);
+        setErrorState(err);
       });
   };
 
   useEffect(() => {
-    createTranscript();
-  }, []);
+    getOrCreateTranscript(id);
+  }, [id, stream]);
 
-  return { response, loading, createTranscript };
+  return { response, loading, error };
 };
 
 export default useTranscript;
