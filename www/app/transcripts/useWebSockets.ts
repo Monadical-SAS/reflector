@@ -104,7 +104,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             if (message.data) {
               setFinalSummary(message.data);
               const newUrl = "/transcripts/" + transcriptId;
-              router.push(newUrl);
+              //              router.push(newUrl);
               console.debug(
                 "FINAL_LONG_SUMMARY event:",
                 message.data,
