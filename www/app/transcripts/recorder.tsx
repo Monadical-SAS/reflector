@@ -7,49 +7,15 @@ import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
-import Dropdown, { Option } from "react-dropdown";
-import "react-dropdown/style.css";
-
 import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../api";
-
-const AudioInputsDropdown: React.FC<{
-  audioDevices?: Option[];
-  setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
-  disabled: boolean;
-}> = (props) => {
-  const [ddOptions, setDdOptions] = useState<Option[]>([]);
-
-  useEffect(() => {
-    if (props.audioDevices) {
-      setDdOptions(props.audioDevices);
-      props.setDeviceId(
-        props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
-      );
-    }
-  }, [props.audioDevices]);
-
-  const handleDropdownChange = (option: Option) => {
-    props.setDeviceId(option.value);
-  };
-
-  return (
-    <Dropdown
-      options={ddOptions}
-      onChange={handleDropdownChange}
-      value={ddOptions[0]}
-      disabled={props.disabled}
-    />
-  );
-};
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
   onStop?: () => void;
   topics: Topic[];
-  getAudioStream?: (deviceId: string | null) => Promise<MediaStream | null>;
-  audioDevices?: Option[];
+  getAudioStream?: () => Promise<MediaStream | null>;
   useActiveTopic: [
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
@@ -66,7 +32,6 @@ export default function Recorder(props: RecorderProps) {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [hasRecorded, setHasRecorded] = useState<boolean>(props.isPastMeeting);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [timeInterval, setTimeInterval] = useState<number | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -88,7 +53,7 @@ export default function Recorder(props: RecorderProps) {
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
-        height: 90,
+        height: "auto",
         url: props.transcriptId
           ? `${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`
           : undefined,
@@ -222,7 +187,7 @@ export default function Recorder(props: RecorderProps) {
       setIsRecording(false);
       setHasRecorded(true);
     } else if (props.getAudioStream) {
-      const stream = await props.getAudioStream(deviceId);
+      const stream = await props.getAudioStream();
 
       if (props.setStream) props.setStream(stream);
       waveRegions?.clearRegions();
@@ -246,68 +211,65 @@ export default function Recorder(props: RecorderProps) {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center max-w-[75vw] w-full">
-      <div className="flex my-2 mx-auto audio-source-dropdown">
-        {!hasRecorded && (
-          <>
-            <AudioInputsDropdown
-              audioDevices={props.audioDevices}
-              setDeviceId={setDeviceId}
-              disabled={isRecording}
-            />
-            &nbsp;
-            <button
-              className="w-20"
-              onClick={handleRecClick}
-              data-color={isRecording ? "red" : "blue"}
-              disabled={!deviceId}
-            >
-              {isRecording ? "Stop" : "Record"}
-            </button>
-            &nbsp;
-          </>
-        )}
-
-        {hasRecorded && (
-          <>
-            <button
-              className="w-20"
-              id="play-btn"
-              onClick={handlePlayClick}
-              data-color={isPlaying ? "orange" : "green"}
-            >
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-
-            {props.transcriptId && (
-              <a
-                title="Download recording"
-                className="w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
-                href={`${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`}
-              >
-                <FontAwesomeIcon icon={faDownload} />
-              </a>
-            )}
-
-            {!props.transcriptId && (
-              <a
-                id="download-recording"
-                title="Download recording"
-                className="invisible w-9 m-auto text-center cursor-pointer text-blue-300 hover:text-blue-700"
-              >
-                <FontAwesomeIcon icon={faDownload} />
-              </a>
-            )}
-          </>
-        )}
+    <div className="flex items-center w-full">
+      <div className="flex-grow items-end relative">
+        <div
+          ref={waveformRef}
+          className="flex-grow shadow-lg md:shadow-xl rounded-2xl h-20"
+        ></div>
+        <div className="absolute right-2 bottom-0">
+          {isRecording && (
+            <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
+          )}
+          {timeLabel()}
+        </div>
       </div>
-      <div ref={waveformRef} className="w-full shadow-xl rounded-2xl"></div>
-      <div className="absolute bottom-0 right-2 text-xs text-black">
-        {isRecording && (
-          <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
-        )}
-        {timeLabel()}
-      </div>
+
+      {hasRecorded && (
+        <>
+          <button
+            className={`${
+              isPlaying ? "bg-orange-400" : "bg-green-400"
+            } ml-2 md:ml:4 text-white`}
+            id="play-btn"
+            onClick={handlePlayClick}
+            disabled={isRecording}
+          >
+            {isPlaying ? "Pause" : "Play"}
+          </button>
+
+          {props.transcriptId && (
+            <a
+              title="Download recording"
+              className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+              href={`${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`}
+            >
+              <FontAwesomeIcon icon={faDownload} />
+            </a>
+          )}
+
+          {!props.transcriptId && (
+            <a
+              id="download-recording"
+              title="Download recording"
+              className="invisible text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+            >
+              <FontAwesomeIcon icon={faDownload} />
+            </a>
+          )}
+        </>
+      )}
+      {!hasRecorded && (
+        <button
+          className={`${
+            isRecording ? "bg-red-400" : "bg-blue-400"
+          } text-white ml-2 md:ml:4`}
+          onClick={handleRecClick}
+          disabled={isPlaying}
+        >
+          {isRecording ? "Stop" : "Record"}
+        </button>
+      )}
     </div>
   );
 }

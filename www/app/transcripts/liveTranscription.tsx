@@ -4,8 +4,11 @@ type LiveTranscriptionProps = {
 
 export default function LiveTrancription(props: LiveTranscriptionProps) {
   return (
-    <div className="h-[7svh] w-full bg-gray-800 text-white text-center py-4 text-2xl">
-      &nbsp;{props.text}&nbsp;
+    <div className="text-center p-4">
+      <p className="text-lg md:text-xl font-bold">
+        {/* Nous allons prendre quelques appels téléphoniques et répondre à quelques questions */}
+        {props.text}
+      </p>
     </div>
   );
 }
