@@ -8,12 +8,12 @@ button {
   padding: 0;
   cursor: pointer;
   /* Visual */
-  background-color: #3e68ff;
-  color: #fff;
+  /* background-color: #3e68ff; */
+  /* color: #fff; */
   border-radius: 8px;
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18);
+  /* box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18); */
   /* Size */
-  padding: 0.25em 0.75em;
+  padding: 0.4em 1em;
   min-width: 10ch;
   min-height: 44px;
   /* Text */
@@ -23,11 +23,18 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: start;
+  /* align-self: start; */
   /* Optional - see "Gotchas" */
   /* Animation */
   transition: 220ms all ease-in-out;
-  display: block;
+}
+
+@media (max-width: 768px) {
+  input[type="button"],
+  button {
+    padding: 0.25em 0.75em;
+    min-height: 30px;
+  }
 }
 
 /* Button modifiers */
@@ -53,13 +60,6 @@ input[type="button"][disabled]:hover,
 button[disabled]:hover {
   background: #b8b8b8 !important;
   cursor: not-allowed !important;
-}
-
-/* Custom button properties */
-input[type="button"],
-button {
-  width: 243px;
-  border: solid 1px #dadada;
 }
 
 /* Red button states */

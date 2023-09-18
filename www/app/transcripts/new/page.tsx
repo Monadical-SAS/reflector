@@ -9,6 +9,7 @@ import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
+import AudioInputsDropdown from "../audioInputsDropdown";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -38,8 +39,14 @@ const TranscriptCreate = () => {
     getAudioStream,
   } = useAudioDevice();
 
+  const getCurrentStream = async () => {
+    return audioDevices.length
+      ? await getAudioStream(audioDevices[0].value)
+      : null;
+  };
+
   return (
-    <div className="w-full flex flex-col items-center h-[100svh]">
+    <div className="w-full">
       {permissionOk ? (
         <>
           <Recorder
@@ -49,8 +56,7 @@ const TranscriptCreate = () => {
               setStream(null);
             }}
             topics={webSockets.topics}
-            getAudioStream={getAudioStream}
-            audioDevices={audioDevices}
+            getAudioStream={getCurrentStream}
             useActiveTopic={useActiveTopic}
             isPastMeeting={false}
           />
@@ -65,7 +71,7 @@ const TranscriptCreate = () => {
         </>
       ) : (
         <>
-          <div className="flex flex-col items-center justify-center w-fit px-6 py-8 mt-8 rounded-xl">
+          <div className="flex flex-col w-full items-center justify-center px-6 py-8 mt-8 rounded-xl">
             <h1 className="text-2xl font-bold">Audio Permissions</h1>
             {loading ? (
               <p className="text-gray-500 text-center mt-5">

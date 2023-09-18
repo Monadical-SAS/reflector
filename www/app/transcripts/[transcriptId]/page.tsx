@@ -34,7 +34,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      <div className="w-full flex flex-col items-center h-[100svh]">
+      <div className="w-full flex flex-col items-center">
         {transcript?.loading === true ||
         waveform?.loading == true ||
         topics?.loading == true ? (
