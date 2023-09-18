@@ -55,22 +55,11 @@ export function Dashboard({
     }
   };
 
-  const faketopic = {
-    id: "641fbc68-dc2e-4c9d-aafd-89bdbf8cfc26",
-    summary:
-      "Explore the history of hypnotica music, a genre that has been deeply influential on modern music. From its origins in the 60s to its current status, this music has a unique and hypnotic quality that can be felt in the gut. Dive into the canon of modern hypnotica and discover its impact on music today.",
-    timestamp: 0,
-    title: "The Origins and Influence of Hypnotica Music",
-    transcript:
-      " vertically oriented music ultimately hypnotic So, that's what we're talking about. Uh, when does it start? I mean, technically, I think... It's always been here but Hypnotica, much like Exotica, which is also sort of a fraught genre. a sort of a western interpretive genre, a fetishizing genre. I would say, uh, it starts in the 60s when all these wh- weird things started, you know, and I started fucking around and... You can go into Woodstock or whatever, that's usually when these things start. Anything that ends with a at the end of a word usually started in By some dirty hippie. Yeah. By some dirty hippie. Yeah. It was like, uh. Okay. So. That's hypnotica, I don't care to explain it to be honest I think everyone can feel it in their gut. We're mostly gonna ex- Explore this kind of the canon of the modern canon of what what I might call hypnotic It's been deeply influential on me and, uh...",
-  };
-  const faketopics = new Array(10).fill(faketopic);
-
   return (
     <div className="py-4 grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-4 grid-rows-2 lg:grid-rows-1 h-outer-dashboard md:h-outer-dashboard-md lg:h-outer-dashboard-lg">
       {/* Topic Section */}
       <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
-        {faketopics.length > 0 ? (
+        {topics.length > 0 ? (
           <>
             <ScrollToBottom
               visible={!autoscrollEnabled}
@@ -83,7 +72,7 @@ export function Dashboard({
               className="overflow-y-auto h-auto max-h-full"
               onScroll={handleScroll}
             >
-              {faketopics.map((item, index) => (
+              {topics.map((item, index) => (
                 <div
                   key={index}
                   className="border-b-2 last:border-none px-2 md:px-4 py-2 hover:bg-blue-400/20"
