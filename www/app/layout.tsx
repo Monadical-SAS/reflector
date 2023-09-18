@@ -56,16 +56,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={poppins.className + " flex flex-col min-h-screen"}>
+      <body className={poppins.className + " h-screen"}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
             {/*TODO lvh or svh ? */}
             <div
               id="container"
-              className="flex flex-col items-center min-h-[100svh]"
+              className="flex flex-col items-center min-h-[100svh] p-2 md:p-4"
             >
-              <header className="flex justify-between items-center p-2 md:p-4 w-full">
+              <header className="flex justify-between items-center w-full mb-4 md:mb-4">
                 {/* Logo on the left */}
                 <div className="flex">
                   <Image

@@ -4,8 +4,8 @@ type FinalSummaryProps = {
 
 export default function FinalSummary(props: FinalSummaryProps) {
   return (
-    <div className="mt-2 p-2 bg-white temp-transcription rounded">
-      <h2>Final Summary</h2>
+    <div className="overflow-y-auto h-auto max-h-full">
+      <h2 className="text-lg">Final Summary</h2>
       <p>{props.text}</p>
     </div>
   );
