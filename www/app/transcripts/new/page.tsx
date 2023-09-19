@@ -48,16 +48,18 @@ const TranscriptCreate = () => {
   return (
     <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-4 flex flex-col">
       <header className="flex items-center">
-        <div className="flex items-center mr-2 mb-2">
+        <div className="flex items-start mr-2 mb-2">
           <Image
             src="/reach.png"
             width={40}
             height={40}
-            className="h-12 w-auto"
+            className="h-12 w-auto mt-2"
             alt="Reflector Logo"
           />
-
-          <h1 className="text-3xl p-2 font-bold">Reflector</h1>
+          <div className="p-2">
+            <h1 className="text-3xl font-bold">Reflector</h1>
+            <p className="text-xl font-light">reflector.media</p>
+          </div>
         </div>
 
         <div className="flex-grow">
@@ -104,20 +106,20 @@ const TranscriptCreate = () => {
         </section>
       </div>
 
-      <footer className="flex justify-between items-center pt-4 border-t ">
-        <Image
-          src="/monadical-black-white 1.svg"
-          width={40}
-          height={40}
-          className="h-12 w-auto"
-          alt="Monadical Logo"
-        />
+      <footer className="flex justify-between items-center pt-2 border-t ">
         <Image
           src="/All-In_Logotype_Blanc_2L.png"
           width={40}
           height={40}
-          className="h-12 w-auto"
+          className="h-14 ml-[-3px] w-auto"
           alt="All In Logo"
+        />
+        <Image
+          src="/Monadical-BW-with-name.svg"
+          width={40}
+          height={40}
+          className="h-16 mr-[-4px] w-auto"
+          alt="Monadical Logo"
         />
       </footer>
     </div>

@@ -6,7 +6,7 @@ import FiefWrapper from "./(auth)/fiefWrapper";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 
-const roboto = Poppins({ subsets: ["latin"], weight: "400" });
+const roboto = Poppins({ subsets: ["latin"], weight: ["400", "600", "200"] });
 
 export const metadata: Metadata = {
   title: {
