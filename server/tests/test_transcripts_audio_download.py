@@ -102,3 +102,31 @@ async def test_transcript_audio_download_waveform(fake_transcript):
     assert response.headers["content-type"] == "application/json"
     assert isinstance(response.json()["data"], list)
     assert len(response.json()["data"]) >= 255
+
+
+@pytest.mark.asyncio
+async def test_transcript_audio_download_via_url(fake_transcript):
+    from reflector.app import app
+
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.get(f"/transcripts/{fake_transcript.id}/audio/mp3/url")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert "url" in response.json()
+
+    url = response.json()["url"]
+    response = await ac.get(url)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/mp3"
+
+
+@pytest.mark.asyncio
+async def test_transcript_audio_download_via_url_invalid(fake_transcript):
+    from reflector.app import app
+
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.get(
+        f"/transcripts/{fake_transcript.id}/audio/mp3?token=invalid"
+    )
+    assert response.status_code == 401
+    assert response.headers["content-type"] == "application/json"

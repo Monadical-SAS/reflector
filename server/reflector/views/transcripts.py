@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Optional
 from uuid import uuid4
@@ -12,8 +12,10 @@ from fastapi import (
     Request,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
 from fastapi_pagination import Page, paginate
+from jose import jwt
 from pydantic import BaseModel, Field
 from reflector.db import database, transcripts
 from reflector.logger import logger
@@ -30,6 +32,9 @@ router = APIRouter()
 # Models to move to a database, but required for the API to work
 # ==============================================================
 
+ALGORITHM = "HS256"
+DOWNLOAD_EXPIRE_MINUTES = 60
+
 
 def generate_uuid4():
     return str(uuid4())
@@ -40,8 +45,20 @@ def generate_transcript_name():
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
+def create_access_token(data: dict, expires_delta: timedelta):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
 class AudioWaveform(BaseModel):
     data: list[int]
+
+
+class DownloadUrl(BaseModel):
+    url: str
 
 
 class TranscriptText(BaseModel):
@@ -347,8 +364,22 @@ async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    token: str | None = None,
 ):
     user_id = user["sub"] if user else None
+
+    if not user_id and token:
+        unauthorized_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+            user_id: str = payload.get("sub")
+        except jwt.JWTError:
+            raise unauthorized_exception
+
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
@@ -363,12 +394,36 @@ async def transcript_get_audio_mp3(
     )
 
 
+@router.get("/transcripts/{transcript_id}/audio/mp3/url")
+async def transcript_get_audio_mp3_url(
+    request: Request,
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+) -> DownloadUrl:
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    if not transcript.audio_mp3_filename.exists():
+        raise HTTPException(status_code=404, detail="Audio not found")
+
+    token = create_access_token(
+        {"user_id": user_id},
+        expires_delta=timedelta(minutes=DOWNLOAD_EXPIRE_MINUTES),
+    )
+    return DownloadUrl(
+        url=router.url_path_for("transcript_get_audio_mp3", transcript_id=transcript_id)
+        + f"?token={token}"
+    )
+
+
 @router.get("/transcripts/{transcript_id}/audio/waveform")
 async def transcript_get_audio_waveform(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ) -> AudioWaveform:
-    user_id = user["sub"] if user else None
+    user_id = user["user_id"] if user else None
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")

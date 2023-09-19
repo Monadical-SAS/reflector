@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
 
+    # General
+    SECRET_KEY: str = "change-with-a-random-secret-key"
+
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
 
