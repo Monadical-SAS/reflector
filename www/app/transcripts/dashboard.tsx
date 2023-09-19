@@ -7,7 +7,6 @@ import {
 import { formatTime } from "../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import DisconnectedIndicator from "./disconnectedIndicator";
-import LiveTrancription from "./liveTranscription";
 import FinalSummary from "./finalSummary";
 import { Topic, FinalSummary as FinalSummaryType } from "./webSocketTypes";
 
@@ -115,8 +114,6 @@ export function Dashboard({
       </div>
 
       {disconnected && <DisconnectedIndicator />}
-
-      <LiveTrancription text={transcriptionText} />
     </>
   );
 }

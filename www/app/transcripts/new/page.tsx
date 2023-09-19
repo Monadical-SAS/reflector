@@ -45,6 +45,42 @@ const TranscriptCreate = () => {
     ...Array(topicsToDisplay - realTopics.length).fill(null),
   ];
 
+  const [showEnglishText, setShowEnglishText] = useState<boolean>(true);
+  const [showTranslatedText, setShowTranslatedText] = useState<boolean>(true);
+  
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === "#") {
+  
+        if (showEnglishText && showTranslatedText) {
+          setShowEnglishText(false);
+          setShowTranslatedText(true);
+          return;
+        }
+  
+        if (!showEnglishText && showTranslatedText) {
+          setShowEnglishText(true);
+          setShowTranslatedText(false);
+          return;
+        }
+  
+        if (showEnglishText && !showTranslatedText) {
+          setShowEnglishText(true);
+          setShowTranslatedText(true);
+          return;
+        }
+      }
+    };
+  
+    document.addEventListener("keydown", handleKeyPress);
+  
+    // Cleanup function to remove the event listener
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [showEnglishText, showTranslatedText]);
+
+  
   return (
     <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-4 flex flex-col">
       <header className="flex items-center">
@@ -99,9 +135,12 @@ const TranscriptCreate = () => {
         {/* Translation Section */}
         <section className="flex-grow flex items-center justify-center lg:max-w-[49vw]">
           <div className="text-center p-4">
-            <p className="text-2xl md:text-4xl font-bold">
+            {showEnglishText && <p className={"text-2xl md:text-4xl font-bold " + (showTranslatedText ? "pb-5" : "")}>
               {webSockets.transcriptText}
-            </p>
+            </p>}
+            {showTranslatedText && <p className={showEnglishText ? "text-2xl md:text-2xl" : "text-2xl md:text-4xl font-bold"}>
+              {webSockets.translationText}
+            </p>}
           </div>
         </section>
       </div>
@@ -124,66 +163,6 @@ const TranscriptCreate = () => {
       </footer>
     </div>
   );
-
-  /*
-  return (
-    <div className="w-full flex flex-col items-center h-[100svh]">
-      {permissionOk ? (
-        <>
-          <Recorder
-            setStream={setStream}
-            onStop={() => {
-              webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
-              setStream(null);
-            }}
-            topics={webSockets.topics}
-            getAudioStream={getAudioStream}
-            audioDevices={audioDevices}
-            useActiveTopic={useActiveTopic}
-            isPastMeeting={false}
-          />
-
-          <Dashboard
-            transcriptionText={webSockets.transcriptText}
-            finalSummary={webSockets.finalSummary}
-            topics={webSockets.topics}
-            disconnected={disconnected}
-            useActiveTopic={useActiveTopic}
-          />
-        </>
-      ) : (
-        <>
-          <div className="flex flex-col items-center justify-center w-fit bg-white px-6 py-8 mt-8 rounded-xl">
-            <h1 className="text-2xl font-bold text-blue-500">
-              Audio Permissions
-            </h1>
-            {loading ? (
-              <p className="text-gray-500 text-center mt-5">
-                Checking permission...
-              </p>
-            ) : (
-              <>
-                <p className="text-gray-500 text-center mt-5">
-                  Reflector needs access to your microphone to work.
-                  <br />
-                  {permissionDenied
-                    ? "Please reset microphone permissions to continue."
-                    : "Please grant permission to continue."}
-                </p>
-                <button
-                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-auto"
-                  onClick={requestPermission}
-                  disabled={permissionDenied}
-                >
-                  {permissionDenied ? "Access denied" : "Grant Permission"}
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  ); */
 };
 
 export default TranscriptCreate;
