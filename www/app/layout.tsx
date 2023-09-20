@@ -61,7 +61,6 @@ export default function RootLayout({ children }) {
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
-            {/*TODO lvh or svh ? */}
             <div
               id="container"
               className="items-center h-[100svh] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
