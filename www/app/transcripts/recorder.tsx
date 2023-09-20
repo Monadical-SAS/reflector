@@ -213,10 +213,7 @@ export default function Recorder(props: RecorderProps) {
   return (
     <div className="flex items-center w-full">
       <div className="flex-grow items-end relative">
-        <div
-          ref={waveformRef}
-          className="flex-grow shadow-lg md:shadow-xl rounded-2xl h-20"
-        ></div>
+        <div ref={waveformRef} className="flex-grow rounded-2xl h-20"></div>
         <div className="absolute right-2 bottom-0">
           {isRecording && (
             <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
@@ -229,8 +226,10 @@ export default function Recorder(props: RecorderProps) {
         <>
           <button
             className={`${
-              isPlaying ? "bg-orange-400" : "bg-green-400"
-            } ml-2 md:ml:4 text-white`}
+              isPlaying
+                ? "bg-orange-400 hover:bg-orange-500"
+                : "bg-green-400 hover:bg-green-500"
+            } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
             id="play-btn"
             onClick={handlePlayClick}
             disabled={isRecording}
@@ -244,7 +243,7 @@ export default function Recorder(props: RecorderProps) {
               className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
               href={`${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`}
             >
-              <FontAwesomeIcon icon={faDownload} />
+              <FontAwesomeIcon icon={faDownload} className="h-5 w-auto" />
             </a>
           )}
 
@@ -254,7 +253,7 @@ export default function Recorder(props: RecorderProps) {
               title="Download recording"
               className="invisible text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
             >
-              <FontAwesomeIcon icon={faDownload} />
+              <FontAwesomeIcon icon={faDownload} className="h-5 w-auto" />
             </a>
           )}
         </>
@@ -262,8 +261,10 @@ export default function Recorder(props: RecorderProps) {
       {!hasRecorded && (
         <button
           className={`${
-            isRecording ? "bg-red-400" : "bg-blue-400"
-          } text-white ml-2 md:ml:4`}
+            isRecording
+              ? "bg-red-400 hover:bg-red-500"
+              : "bg-blue-400 hover:bg-blue-500"
+          } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
           onClick={handleRecClick}
           disabled={isPlaying}
         >

@@ -6,6 +6,7 @@ import UserInfo from "./(auth)/userInfo";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import Image from "next/image";
+import Link from "next/link";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -63,11 +64,11 @@ export default function RootLayout({ children }) {
             {/*TODO lvh or svh ? */}
             <div
               id="container"
-              className="flex flex-col items-center min-h-[100svh] p-2 md:p-4"
+              className="items-center h-[100svh] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
             >
-              <header className="flex justify-between items-center w-full mb-4 md:mb-4">
+              <header className="flex justify-between items-center w-full">
                 {/* Logo on the left */}
-                <div className="flex">
+                <Link href="/" className="flex">
                   <Image
                     src="/reach.png"
                     width={16}
@@ -81,7 +82,7 @@ export default function RootLayout({ children }) {
                       Capture The Signal, Not The Noise
                     </p>
                   </div>
-                </div>
+                </Link>
                 {/* Text link on the right */}
                 <UserInfo />
               </header>
