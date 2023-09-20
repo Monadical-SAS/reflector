@@ -90,7 +90,7 @@ const TranscriptCreate = () => {
         {/* Topic Section */}
         <section className="w-full lg:max-w-[45vw] min-w-[45vw] flex items-center lg:mr-2">
           <div className="bg-blue-100/10 rounded-lg md:rounded-xl w-full p-2 md:p-4 self-start lg:self-center">
-            <p className="text-right text-lg font-light">Last 5 topics</p>
+            <p className="text-right text-lg font-light">Latest topics</p>
             {displayTopics.map((topic, index) => (
               <div
                 key={topic?.id || index}
