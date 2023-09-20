@@ -6,7 +6,6 @@ Reflector GPU backend - transcriber
 import os
 import tempfile
 
-import modal
 from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
 
@@ -16,7 +15,7 @@ WHISPER_COMPUTE_TYPE: str = "float16"
 WHISPER_NUM_WORKERS: int = 1
 
 # Translation Model
-TRANSLATION_MODEL = "facebook/m2m100_418M"
+TRANSLATION_MODEL = "facebook/m2m100_1.2B"
 
 IMAGE_MODEL_DIR = "/root/transcription_models"
 
