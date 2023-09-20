@@ -4,20 +4,19 @@ import {
   useFiefUserinfo,
 } from "@fief/fief/nextjs/react";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function UserInfo() {
   const isAuthenticated = useFiefIsAuthenticated();
   const userinfo = useFiefUserinfo();
 
   return !isAuthenticated ? (
-    <span className="hover:underline font-thin px-2">
+    <span className="hover:underline underline-offset-2 decoration-[.5px] font-light px-2">
       <Link href="/login">Log in or create account</Link>
     </span>
   ) : (
-    <span className="font-thin px-2">
+    <span className="font-light px-2">
       {userinfo?.email} (
-      <span className="hover:underline">
+      <span className="hover:underline underline-offset-2 decoration-[.5px]">
         <Link href="/logout">Log out</Link>
       </span>
       )

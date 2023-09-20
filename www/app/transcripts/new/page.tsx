@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Recorder from "../recorder";
-import { Dashboard } from "../dashboard";
+import { TopicList } from "../topicList";
 import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
@@ -10,11 +10,15 @@ import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
 import AudioInputsDropdown from "../audioInputsDropdown";
+import LiveTrancription from "../liveTranscription";
+import DisconnectedIndicator from "../disconnectedIndicator";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [disconnected, setDisconnected] = useState<boolean>(false);
   const useActiveTopic = useState<Topic | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [recordStarted, setRecordStarted] = useState(false);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENV === "development") {
@@ -40,13 +44,18 @@ const TranscriptCreate = () => {
   } = useAudioDevice();
 
   const getCurrentStream = async () => {
-    return audioDevices.length
-      ? await getAudioStream(audioDevices[0].value)
-      : null;
+    setRecordStarted(true);
+    return deviceId ? await getAudioStream(deviceId) : null;
   };
 
+  useEffect(() => {
+    if (audioDevices.length > 0) {
+      setDeviceId[audioDevices[0].value];
+    }
+  }, [audioDevices]);
+
   return (
-    <div className="w-full">
+    <>
       {permissionOk ? (
         <>
           <Recorder
@@ -60,14 +69,28 @@ const TranscriptCreate = () => {
             useActiveTopic={useActiveTopic}
             isPastMeeting={false}
           />
+          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+            <TopicList
+              topics={webSockets.topics}
+              useActiveTopic={useActiveTopic}
+            />
+            <div className="h-full flex flex-col">
+              <section className="mb-2">
+                <AudioInputsDropdown
+                  setDeviceId={setDeviceId}
+                  audioDevices={audioDevices}
+                  disabled={recordStarted}
+                />
+              </section>
+              <section className="w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
+                <div className="py-2 h-auto">
+                  <LiveTrancription text={webSockets.transcriptText} />
+                </div>
+              </section>
+            </div>
 
-          <Dashboard
-            transcriptionText={webSockets.transcriptText}
-            finalSummary={webSockets.finalSummary}
-            topics={webSockets.topics}
-            disconnected={disconnected}
-            useActiveTopic={useActiveTopic}
-          />
+            {disconnected && <DisconnectedIndicator />}
+          </div>
         </>
       ) : (
         <>
@@ -87,7 +110,7 @@ const TranscriptCreate = () => {
                     : "Please grant permission to continue."}
                 </p>
                 <button
-                  className="mt-4 bg-black/40 hover:bg-black/60 text-white font-bold py-2 px-4 rounded m-auto"
+                  className="mt-4 bg-blue-400 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
                   onClick={requestPermission}
                   disabled={permissionDenied}
                 >
@@ -98,7 +121,7 @@ const TranscriptCreate = () => {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 };
 

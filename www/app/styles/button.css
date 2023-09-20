@@ -8,13 +8,9 @@ button {
   padding: 0;
   cursor: pointer;
   /* Visual */
-  /* background-color: #3e68ff; */
-  /* color: #fff; */
   border-radius: 8px;
-  /* box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18); */
   /* Size */
   padding: 0.4em 1em;
-  min-width: 10ch;
   min-height: 44px;
   /* Text */
   text-align: center;
