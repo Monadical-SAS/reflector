@@ -5,17 +5,21 @@ import RecordPlugin from "../lib/custom-plugins/record";
 import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
 import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../api";
+import AudioInputsDropdown from "./audioInputsDropdown";
+import { Option } from "react-dropdown";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
   onStop?: () => void;
   topics: Topic[];
-  getAudioStream?: () => Promise<MediaStream | null>;
+  getAudioStream?: (deviceId) => Promise<MediaStream | null>;
+  audioDevices?: Option[];
   useActiveTopic: [
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
@@ -38,10 +42,11 @@ export default function Recorder(props: RecorderProps) {
   const [waveRegions, setWaveRegions] = useState<CustomRegionsPlugin | null>(
     null,
   );
-
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [recordStarted, setRecordStarted] = useState(false);
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
-
   const topicsRef = useRef(props.topics);
+  const [showDevices, setShowDevices] = useState(false);
 
   useEffect(() => {
     if (waveformRef.current) {
@@ -186,8 +191,8 @@ export default function Recorder(props: RecorderProps) {
       record.stopRecording();
       setIsRecording(false);
       setHasRecorded(true);
-    } else if (props.getAudioStream) {
-      const stream = await props.getAudioStream();
+    } else {
+      const stream = await getCurrentStream();
 
       if (props.setStream) props.setStream(stream);
       waveRegions?.clearRegions();
@@ -195,8 +200,6 @@ export default function Recorder(props: RecorderProps) {
         await record.startRecording(stream);
         setIsRecording(true);
       }
-    } else {
-      throw new Error("No getAudioStream function provided");
     }
   };
 
@@ -210,8 +213,21 @@ export default function Recorder(props: RecorderProps) {
     return "";
   };
 
+  const getCurrentStream = async () => {
+    setRecordStarted(true);
+    return deviceId && props.getAudioStream
+      ? await props.getAudioStream(deviceId)
+      : null;
+  };
+
+  useEffect(() => {
+    if (props.audioDevices && props.audioDevices.length > 0) {
+      setDeviceId[props.audioDevices[0].value];
+    }
+  }, [props.audioDevices]);
+
   return (
-    <div className="flex items-center w-full">
+    <div className="flex items-center w-full relative">
       <div className="flex-grow items-end relative">
         <div ref={waveformRef} className="flex-grow rounded-2xl h-20"></div>
         <div className="absolute right-2 bottom-0">
@@ -259,17 +275,41 @@ export default function Recorder(props: RecorderProps) {
         </>
       )}
       {!hasRecorded && (
-        <button
-          className={`${
-            isRecording
-              ? "bg-red-400 hover:bg-red-500"
-              : "bg-blue-400 hover:bg-blue-500"
-          } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
-          onClick={handleRecClick}
-          disabled={isPlaying}
-        >
-          {isRecording ? "Stop" : "Record"}
-        </button>
+        <>
+          <button
+            className={`${
+              isRecording
+                ? "bg-red-400 hover:bg-red-500"
+                : "bg-blue-400 hover:bg-blue-500"
+            } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
+            onClick={handleRecClick}
+            disabled={isPlaying}
+          >
+            {isRecording ? "Stop" : "Record"}
+          </button>
+          {props.audioDevices && props.audioDevices?.length > 0 && (
+            <>
+              <button
+                className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+                onClick={() => setShowDevices((prev) => !prev)}
+              >
+                <FontAwesomeIcon icon={faMicrophone} className="h-5 w-auto" />
+              </button>
+              <div
+                className={`absolute z-20 bottom-[-1rem] right-0 bg-white rounded ${
+                  showDevices ? "visible" : "invisible"
+                }`}
+              >
+                <AudioInputsDropdown
+                  setDeviceId={setDeviceId}
+                  audioDevices={props.audioDevices}
+                  disabled={recordStarted}
+                  hide={() => setShowDevices(false)}
+                />
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );
