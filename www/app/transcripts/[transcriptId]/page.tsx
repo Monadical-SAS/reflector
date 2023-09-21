@@ -38,10 +38,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       {transcript?.loading === true ||
       waveform?.loading == true ||
       topics?.loading == true ? (
-        <Modal
-          title="Loading"
-          text={"Loading transcript..." + transcript.loading}
-        />
+        <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
           <Recorder
@@ -57,7 +54,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               useActiveTopic={useActiveTopic}
             />
             <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
-              <div className="py-2 h-auto">
+              <div className="py-2 h-full">
                 {transcript?.response?.longSummary && (
                   <FinalSummary text={transcript?.response?.longSummary} />
                 )}

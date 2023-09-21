@@ -67,15 +67,18 @@ export default function RootLayout({ children }) {
             >
               <header className="flex justify-between items-center w-full">
                 {/* Logo on the left */}
-                <Link href="/" className="flex">
+                <Link
+                  href="/"
+                  className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
+                >
                   <Image
                     src="/reach.png"
                     width={16}
                     height={16}
-                    className="h-10 w-auto mr-2"
+                    className="h-10 w-auto"
                     alt="Reflector"
                   />
-                  <div className="hidden flex-col md:flex">
+                  <div className="hidden flex-col ml-2 md:block">
                     <h1 className="text-4xl font-bold">Reflector</h1>
                     <p className="text-gray-500">
                       Capture The Signal, Not The Noise

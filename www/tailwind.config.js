@@ -10,6 +10,7 @@ module.exports = {
     extend: {
       gridTemplateRows: {
         layout: "auto auto minmax(0, 1fr)",
+        "mobile-inner": "minmax(0, 2fr) minmax(0, 1fr)",
       },
     },
   },

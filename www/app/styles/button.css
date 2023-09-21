@@ -6,7 +6,6 @@ button {
   background-color: transparent;
   font-family: inherit;
   padding: 0;
-  cursor: pointer;
   /* Visual */
   border-radius: 8px;
   /* Size */
@@ -21,6 +20,10 @@ button {
   justify-content: center;
   /* Animation */
   transition: 220ms all ease-in-out;
+}
+
+button:focus-visible {
+  outline-style: none;
 }
 
 @media (max-width: 768px) {
