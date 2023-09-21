@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 type UseWebSockets = {
   transcriptText: string;
+  translationText: string;
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
@@ -13,6 +14,7 @@ type UseWebSockets = {
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
+  const [translationText, setTranslationText] = useState<string>("");
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
@@ -24,7 +26,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const setupDebugKeys = () => {
     document.onkeyup = (e) => {
       if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
-        setTranscriptText("Lorem Ipsum");
+        setTranscriptText("This text is in English ");
+        setTranslationText("Ce texte est en français")
         setTopics([
           {
             id: "1",
@@ -90,7 +93,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         switch (message.event) {
           case "TRANSCRIPT":
             if (message.data.text) {
-              setTranscriptText((message.data.translation ?? "").trim());
+              setTranscriptText((message.data.text ?? "").trim());
+              setTranslationText((message.data.translation ?? "").trim());
               console.debug("TRANSCRIPT event:", message.data);
             }
             break;
@@ -160,5 +164,5 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
   }, [transcriptId]);
 
-  return { transcriptText, topics, finalSummary, status };
+  return { transcriptText, translationText, topics, finalSummary, status };
 };
