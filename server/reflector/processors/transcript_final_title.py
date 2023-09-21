@@ -60,6 +60,8 @@ class TranscriptFinalTitleProcessor(Processor):
 
         accumulated_titles = ".".join([chunk.title for chunk in self.chunks])
         title_result = await self.get_title(accumulated_titles)
+        final_title = self.llm.ensure_casing(title_result["title"])
+        final_title = self.llm.trim_title(final_title)
 
-        final_title = FinalTitle(title=title_result["title"])
+        final_title = FinalTitle(title=final_title)
         await self.emit(final_title)
