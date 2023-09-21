@@ -60,6 +60,8 @@ type RecorderProps = {
   waveform?: AudioWaveform | null;
   isPastMeeting: boolean;
   transcriptId?: string | null;
+  recordingTime?: number;
+  setRecordingTime?: React.Dispatch<React.SetStateAction<number>>;
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -149,7 +151,10 @@ export default function Recorder(props: RecorderProps) {
       _wavesurfer.on("pause", () => {
         setIsPlaying(false);
       });
-      _wavesurfer.on("timeupdate", setCurrentTime);
+      _wavesurfer.on("timeupdate", (time) => {
+        props.setRecordingTime && props.setRecordingTime(time);
+        setCurrentTime(time);
+      });
 
       setRecord(
         _wavesurfer.registerPlugin(RecordPlugin.create({ waveColor: "white" })),
@@ -164,6 +169,7 @@ export default function Recorder(props: RecorderProps) {
         setIsRecording(false);
         setIsPlaying(false);
         setCurrentTime(0);
+        props.setRecordingTime && props.setRecordingTime(0);
       };
     }
   }, []);
@@ -250,7 +256,7 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     if (isRecording) {
       const interval = window.setInterval(() => {
-        setCurrentTime((prev) => prev + 1);
+        props.setRecordingTime && props.setRecordingTime((prev) => prev + 1);
       }, 1000);
       setTimeInterval(interval);
       return () => clearInterval(interval);
@@ -296,19 +302,21 @@ export default function Recorder(props: RecorderProps) {
   };
 
   const timeLabel = () => {
-    if (isRecording) return formatTime(currentTime);
+    if (isRecording && props.recordingTime)
+      return formatTime(props.recordingTime);
     if (duration) return `${formatTime(currentTime)}/${formatTime(duration)}`;
     return "";
   };
+  console.log(timeLabel);
 
   return (
     <div className="relative w-full">
       <div ref={waveformRef} className="w-full rounded-2xl bg-white/10"></div>
-      <div className="absolute bottom-0 right-2 text-xs text-black">
+      <div className="absolute bottom-0 right-2 text-xs text-black z-10">
         {isRecording && (
           <div className="inline-block bg-white rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
         )}
-        {timeLabel()}
+        <span className="font-mono">{timeLabel()}</span>
       </div>
     </div>
   );

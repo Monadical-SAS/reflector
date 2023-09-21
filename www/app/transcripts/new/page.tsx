@@ -11,12 +11,13 @@ import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
 import { isDevelopment } from "../../lib/utils";
 import Image from "next/image";
-import { formatTime } from "../../lib/time";
+import { formatTime, formatTimeDifference } from "../../lib/time";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [disconnected, setDisconnected] = useState<boolean>(false);
   const useActiveTopic = useState<Topic | null>(null);
+  const [recordingTime, setRecordingTime] = useState<number>(0);
 
   useEffect(() => {
     document.onkeyup = (e) => {
@@ -40,10 +41,17 @@ const TranscriptCreate = () => {
   } = useAudioDevice();
   const topicsToDisplay = 5;
   const realTopics = webSockets.topics.slice(-topicsToDisplay);
+
   const displayTopics = [
     ...realTopics,
-    ...Array(topicsToDisplay - realTopics.length).fill(null),
-  ];
+    ...Array(topicsToDisplay - realTopics.length + 1).fill(null),
+  ] as (Topic | null)[];
+
+  const timeLabel = (timestamp: number) => {
+    return recordingTime
+      ? formatTimeDifference(recordingTime - timestamp)
+      : formatTime(timestamp);
+  };
 
   return (
     <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-4 flex flex-col">
@@ -74,6 +82,8 @@ const TranscriptCreate = () => {
             audioDevices={audioDevices}
             useActiveTopic={useActiveTopic}
             isPastMeeting={false}
+            recordingTime={recordingTime}
+            setRecordingTime={setRecordingTime}
           />
         </div>
       </header>
@@ -82,15 +92,24 @@ const TranscriptCreate = () => {
         {/* Topic Section */}
         <section className="w-full lg:max-w-[45vw] min-w-[45vw] flex items-center lg:mr-2">
           <div className="bg-blue-100/10 rounded-lg md:rounded-xl w-full p-2 md:p-4 self-start lg:self-center">
-            <p className="text-right text-l font-light">Last 5 topics</p>
+            <p className="text-right text-lg font-light">Latest topics</p>
             {displayTopics.map((topic, index) => (
               <div
                 key={topic?.id || index}
-                className={`rounded-lg md:rounded-xl px-2 md:px-4 py-2 my-2 last:mb-0 text-l md:text-xl font-bold ${
+                className={`rounded-lg md:rounded-xl px-2 md:px-4 py-2 my-2 last:mb-0 text-lg md:text-xl leading-normal font-bold ${
                   topic ? "odd:bg-white/20" : ""
                 }`}
               >
-                {topic ? `${topic.title}` : "\u00A0"}
+                {topic ? (
+                  <>
+                    <span className="font-light text-base md:text-lg inline-block align-middle font-mono">
+                      {timeLabel(topic.timestamp)}:&nbsp;
+                    </span>
+                    {topic.title}
+                  </>
+                ) : (
+                  "\u00A0"
+                )}
               </div>
             ))}
           </div>
