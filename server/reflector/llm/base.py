@@ -6,11 +6,12 @@ from typing import TypeVar
 
 import nltk
 from prometheus_client import Counter, Histogram
+from transformers import GenerationConfig
+
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
-from transformers import GenerationConfig
 
 T = TypeVar("T", bound="LLM")
 
@@ -219,6 +220,30 @@ class LLM:
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
             )
 
+        return title
+
+    def trim_title(self, title: str) -> str:
+        """
+        List of manual trimming to the title.
+
+        Longer titles currently run into
+        "Discussion on", "Discussion about", etc. that don't really
+        add any descriptive information and in some cases, this behaviour
+        can be repeated for several consecutive topics. We want to handle
+        these cases.
+        """
+        phrases_to_remove = ["Discussion on", "Discussion about"]
+        try:
+            pattern = (
+                r"\b(?:"
+                + "|".join(re.escape(phrase) for phrase in phrases_to_remove)
+                + r")\b"
+            )
+            title = re.sub(pattern, "", title, flags=re.IGNORECASE)
+        except Exception as e:
+            reflector_logger.info(
+                f"Failed to trim {title=} " f"with exception : {str(e)}"
+            )
         return title
 
     async def _generate(

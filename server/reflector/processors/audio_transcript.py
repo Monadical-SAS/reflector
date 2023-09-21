@@ -1,4 +1,6 @@
+from profanityfilter import ProfanityFilter
 from prometheus_client import Counter, Histogram
+
 from reflector.processors.base import Processor
 from reflector.processors.types import AudioFile, Transcript
 
@@ -38,6 +40,8 @@ class AudioTranscriptProcessor(Processor):
         self.m_transcript_call = self.m_transcript_call.labels(name)
         self.m_transcript_success = self.m_transcript_success.labels(name)
         self.m_transcript_failure = self.m_transcript_failure.labels(name)
+        self.profanity_filter = ProfanityFilter()
+        self.profanity_filter.set_censor("|*|")
         super().__init__(*args, **kwargs)
 
     async def _push(self, data: AudioFile):
@@ -56,3 +60,11 @@ class AudioTranscriptProcessor(Processor):
 
     async def _transcript(self, data: AudioFile):
         raise NotImplementedError
+
+    def filter_profanity(self, text: str) -> str:
+        """
+        Remove censored words from the transcript
+        """
+        text = self.profanity_filter.censor(text)
+        text = text.replace("|*|", "")
+        return text
