@@ -243,8 +243,8 @@ export default function Recorder(props: RecorderProps) {
           <button
             className={`${
               isPlaying
-                ? "bg-orange-400 hover:bg-orange-500"
-                : "bg-green-400 hover:bg-green-500"
+                ? "bg-orange-400 hover:bg-orange-500 focus-visible:bg-orange-500"
+                : "bg-green-400 hover:bg-green-500 focus-visible:bg-green-500"
             } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
             id="play-btn"
             onClick={handlePlayClick}
@@ -256,7 +256,7 @@ export default function Recorder(props: RecorderProps) {
           {props.transcriptId && (
             <a
               title="Download recording"
-              className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+              className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg outline-blue-400"
               href={`${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`}
             >
               <FontAwesomeIcon icon={faDownload} className="h-5 w-auto" />
@@ -267,7 +267,7 @@ export default function Recorder(props: RecorderProps) {
             <a
               id="download-recording"
               title="Download recording"
-              className="invisible text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+              className="invisible text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg outline-blue-400"
             >
               <FontAwesomeIcon icon={faDownload} className="h-5 w-auto" />
             </a>
@@ -279,8 +279,8 @@ export default function Recorder(props: RecorderProps) {
           <button
             className={`${
               isRecording
-                ? "bg-red-400 hover:bg-red-500"
-                : "bg-blue-400 hover:bg-blue-500"
+                ? "bg-red-400 hover:bg-red-500 focus-visible:bg-red-500"
+                : "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500"
             } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
             onClick={handleRecClick}
             disabled={isPlaying}
@@ -290,7 +290,7 @@ export default function Recorder(props: RecorderProps) {
           {props.audioDevices && props.audioDevices?.length > 0 && (
             <>
               <button
-                className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2"
+                className="text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg focus-visible:outline outline-blue-400"
                 onClick={() => setShowDevices((prev) => !prev)}
               >
                 <FontAwesomeIcon icon={faMicrophone} className="h-5 w-auto" />

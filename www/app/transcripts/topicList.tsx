@@ -57,36 +57,34 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
             className="overflow-y-auto py-2 h-full"
             onScroll={handleScroll}
           >
-            {topics.map((item, index) => (
-              <div
+            {topics.map((topic, index) => (
+              <button
                 key={index}
-                className="border-b border-blue-300 last:border-none p-2 hover:bg-blue-400/20"
-                role="button"
+                className="rounded-none border-solid border-0 border-b-blue-300 border-b last:border-none p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
                 onClick={() =>
-                  setActiveTopic(activeTopic?.id == item.id ? null : item)
+                  setActiveTopic(activeTopic?.id == topic.id ? null : topic)
                 }
               >
-                <div className="flex justify-between items-center rounded-lg md:rounded-xl text-lg md:text-xl font-bold">
+                <div className="w-full flex justify-between items-center rounded-lg md:rounded-xl text-lg md:text-xl font-bold leading-tight">
                   <p>
-                    <span className="font-light font-mono text-slate-500 pr-1 text-base md:text-lg">
-                      [{formatTime(item.timestamp)}]
+                    <span className="font-light font-mono text-slate-500 text-base md:text-lg">
+                      [{formatTime(topic.timestamp)}]&nbsp;
                     </span>
-                    &nbsp;
-                    <span className="pr-1">{item.title}</span>
+                    <span>{topic.title}</span>
                   </p>
                   <FontAwesomeIcon
                     className="transform transition-transform duration-200 ml-2"
                     icon={
-                      activeTopic?.id == item.id
+                      activeTopic?.id == topic.id
                         ? faChevronDown
                         : faChevronRight
                     }
                   />
                 </div>
-                {activeTopic?.id == item.id && (
-                  <div className="px-2">{item.transcript}</div>
+                {activeTopic?.id == topic.id && (
+                  <div className="p-2">{topic.transcript}</div>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </>

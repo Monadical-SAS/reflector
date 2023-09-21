@@ -58,7 +58,7 @@ const TranscriptCreate = () => {
             audioDevices={audioDevices}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-mobile-inner lg:grid-rows-1 gap-2 lg:gap-4 h-full">
             <TopicList
               topics={webSockets.topics}
               useActiveTopic={useActiveTopic}
@@ -109,7 +109,7 @@ const TranscriptCreate = () => {
                         : "Please grant permission to continue."}
                     </p>
                     <button
-                      className="mt-4 bg-blue-400 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
+                      className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
                       onClick={requestPermission}
                       disabled={permissionDenied}
                     >
