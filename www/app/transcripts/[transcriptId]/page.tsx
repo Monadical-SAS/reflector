@@ -4,11 +4,12 @@ import getApi from "../../lib/getApi";
 import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
-import { Dashboard } from "../dashboard";
+import { TopicList } from "../topicList";
 import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
 import "../../styles/button.css";
+import FinalSummary from "../finalSummary";
 
 type TranscriptDetails = {
   params: {
@@ -34,34 +35,34 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      <div className="w-full flex flex-col items-center h-[100svh]">
-        {transcript?.loading === true ||
-        waveform?.loading == true ||
-        topics?.loading == true ? (
-          <Modal
-            title="Loading"
-            text={"Loading transcript..." + transcript.loading}
+      {transcript?.loading === true ||
+      waveform?.loading == true ||
+      topics?.loading == true ? (
+        <Modal title="Loading" text={"Loading transcript..."} />
+      ) : (
+        <>
+          <Recorder
+            topics={topics?.topics || []}
+            useActiveTopic={useActiveTopic}
+            waveform={waveform?.waveform}
+            isPastMeeting={true}
+            transcriptId={transcript?.response?.id}
           />
-        ) : (
-          <>
-            <Recorder
+          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+            <TopicList
               topics={topics?.topics || []}
               useActiveTopic={useActiveTopic}
-              waveform={waveform?.waveform}
-              isPastMeeting={true}
-              transcriptId={transcript?.response?.id}
             />
-
-            <Dashboard
-              transcriptionText={""}
-              finalSummary={{ summary: transcript?.response?.longSummary }}
-              topics={topics?.topics || []}
-              disconnected={false}
-              useActiveTopic={useActiveTopic}
-            />
-          </>
-        )}
-      </div>
+            <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
+              <div className="py-2 h-full">
+                {transcript?.response?.longSummary && (
+                  <FinalSummary text={transcript?.response?.longSummary} />
+                )}
+              </div>
+            </section>
+          </div>
+        </>
+      )}
     </>
   );
 }

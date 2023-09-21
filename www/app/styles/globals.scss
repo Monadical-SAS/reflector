@@ -10,20 +10,8 @@
 
 body {
   background: white;
-
-  font-family: "Roboto", sans-serif;
-}
-
-.temp-transcription {
-  background: rgb(151 190 255);
-  border-radius: 5px;
-  border: solid 1px #808080;
-  margin: 1em 0;
-}
-
-.temp-transcription h2 {
-  font-weight: bold;
-  font-size: 130%;
+  scrollbar-color: rgb(96 165 250) transparent;
+  scrollbar-width: thin;
 }
 
 .Dropdown-placeholder {
@@ -33,8 +21,17 @@ body {
   top: 47% !important;
 }
 
-@media (max-width: 768px) {
-  .audio-source-dropdown .Dropdown-control {
-    max-width: 200px;
-  }
+.Dropdown-control.Dropdown-disabled {
+  background-color: lightgray;
+}
+
+::-webkit-scrollbar {
+  visibility: visible;
+  width: 5px;
+  opacity: 0.7;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background-color: rgb(96 165 250);
 }

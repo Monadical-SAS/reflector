@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Recorder from "../recorder";
-import { Dashboard } from "../dashboard";
+import { TopicList } from "../topicList";
 import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
@@ -9,6 +9,9 @@ import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
+import AudioInputsDropdown from "../audioInputsDropdown";
+import LiveTrancription from "../liveTranscription";
+import DisconnectedIndicator from "../disconnectedIndicator";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -39,7 +42,7 @@ const TranscriptCreate = () => {
   } = useAudioDevice();
 
   return (
-    <div className="w-full flex flex-col items-center h-[100svh]">
+    <>
       {permissionOk ? (
         <>
           <Recorder
@@ -50,51 +53,76 @@ const TranscriptCreate = () => {
             }}
             topics={webSockets.topics}
             getAudioStream={getAudioStream}
-            audioDevices={audioDevices}
             useActiveTopic={useActiveTopic}
             isPastMeeting={false}
+            audioDevices={audioDevices}
           />
 
-          <Dashboard
-            transcriptionText={webSockets.transcriptText}
-            finalSummary={webSockets.finalSummary}
-            topics={webSockets.topics}
-            disconnected={disconnected}
-            useActiveTopic={useActiveTopic}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-mobile-inner lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+            <TopicList
+              topics={webSockets.topics}
+              useActiveTopic={useActiveTopic}
+            />
+            <section className="w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
+              <div className="py-2 h-auto">
+                <LiveTrancription text={webSockets.transcriptText} />
+              </div>
+            </section>
+          </div>
+
+          {disconnected && <DisconnectedIndicator />}
         </>
       ) : (
         <>
-          <div className="flex flex-col items-center justify-center w-fit bg-white px-6 py-8 mt-8 rounded-xl">
-            <h1 className="text-2xl font-bold text-blue-500">
-              Audio Permissions
-            </h1>
-            {loading ? (
-              <p className="text-gray-500 text-center mt-5">
-                Checking permission...
+          <div></div>
+          <section className="flex flex-col w-full h-full items-center justify-evenly p-4 md:px-6 md:py-8">
+            <div className="flex flex-col max-w-2xl items-center justify-center">
+              <h1 className="text-2xl font-bold mb-2">Reflector</h1>
+              <p className="self-start">
+                Meet Monadical's own Reflector, your audio ally for hassle-free
+                insights.
               </p>
-            ) : (
-              <>
-                <p className="text-gray-500 text-center mt-5">
-                  Reflector needs access to your microphone to work.
-                  <br />
-                  {permissionDenied
-                    ? "Please reset microphone permissions to continue."
-                    : "Please grant permission to continue."}
-                </p>
-                <button
-                  className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-auto"
-                  onClick={requestPermission}
-                  disabled={permissionDenied}
-                >
-                  {permissionDenied ? "Access denied" : "Grant Permission"}
-                </button>
-              </>
-            )}
-          </div>
+              <p className="mb-4 md:text-justify">
+                With real-time transcriptions, translations, and summaries,
+                Reflector captures and categorizes the details of your meetings
+                and events, all while keeping your data locked down tight on
+                your own infrastructure. Forget the scribbled notes, endless
+                recordings, or third-party apps. Discover Reflector, a powerful
+                new way to elevate knowledge management and accessibility for
+                all.
+              </p>
+            </div>
+            <div>
+              <div className="flex flex-col max-w-2xl items-center justify-center">
+                <h2 className="text-2xl font-bold  mb-2">Audio Permissions</h2>
+                {loading ? (
+                  <p className="text-gray-500 text-center">
+                    Checking permission...
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-gray-500 text-center">
+                      Reflector needs access to your microphone to work.
+                      <br />
+                      {permissionDenied
+                        ? "Please reset microphone permissions to continue."
+                        : "Please grant permission to continue."}
+                    </p>
+                    <button
+                      className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
+                      onClick={requestPermission}
+                      disabled={permissionDenied}
+                    >
+                      {permissionDenied ? "Access denied" : "Grant Permission"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
         </>
       )}
-    </div>
+    </>
   );
 };
 
