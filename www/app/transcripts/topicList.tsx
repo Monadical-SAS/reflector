@@ -14,43 +14,62 @@ type TopicListProps = {
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
+  autoscroll: boolean;
 };
 
-export function TopicList({ topics, useActiveTopic }: TopicListProps) {
+export function TopicList({
+  topics,
+  useActiveTopic,
+  autoscroll,
+}: TopicListProps) {
   const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
 
   useEffect(() => {
-    if (autoscrollEnabled) scrollToBottom();
-    console.log(topics);
+    if (autoscroll && autoscrollEnabled) scrollToBottom();
   }, [topics.length]);
 
   const scrollToBottom = () => {
     const topicsDiv = document.getElementById("topics-div");
 
-    if (!topicsDiv)
-      console.error("Could not find topics div to scroll to bottom");
-    else topicsDiv.scrollTop = topicsDiv.scrollHeight;
+    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
-  const handleScroll = (e) => {
+  // scroll top is not rounded, heights are, so exact match won't work.
+  // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
+  const toggleScroll = (element) => {
     const bottom =
-      e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
+      Math.abs(
+        element.scrollHeight - element.clientHeight - element.scrollTop,
+      ) < 2 || element.scrollHeight == element.clientHeight;
     if (!bottom && autoscrollEnabled) {
       setAutoscrollEnabled(false);
     } else if (bottom && !autoscrollEnabled) {
       setAutoscrollEnabled(true);
     }
   };
+  const handleScroll = (e) => {
+    toggleScroll(e.target);
+  };
+
+  useEffect(() => {
+    if (autoscroll) {
+      const topicsDiv = document.getElementById("topics-div");
+
+      topicsDiv && toggleScroll(topicsDiv);
+    }
+  }, [activeTopic, autoscroll]);
 
   return (
     <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
       {topics.length > 0 ? (
         <>
-          <ScrollToBottom
-            visible={!autoscrollEnabled}
-            handleScrollBottom={scrollToBottom}
-          />
+          {autoscroll && (
+            <ScrollToBottom
+              visible={!autoscrollEnabled}
+              handleScrollBottom={scrollToBottom}
+            />
+          )}
 
           <div
             id="topics-div"
@@ -60,7 +79,7 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
             {topics.map((topic, index) => (
               <button
                 key={index}
-                className="rounded-none border-solid border-0 border-b-blue-300 border-b last:border-none p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
+                className="rounded-none border-solid border-0 border-b-blue-300 border-b last:border-none last:rounded-b-lg p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
                 onClick={() =>
                   setActiveTopic(activeTopic?.id == topic.id ? null : topic)
                 }

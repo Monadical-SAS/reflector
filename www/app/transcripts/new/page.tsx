@@ -65,6 +65,7 @@ const TranscriptCreate = () => {
             <TopicList
               topics={webSockets.topics}
               useActiveTopic={useActiveTopic}
+              autoscroll={true}
             />
             <section className="w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
               {!hasRecorded ? (

@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     maximumScale: 1,
   },
 
-  robots: { index: false, follow: false, noarchive: true, noimageindex: true }
+  robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
 export default function RootLayout({ children }) {
