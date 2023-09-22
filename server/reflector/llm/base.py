@@ -215,6 +215,9 @@ class LLM:
             # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
             pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
             title = re.sub(pattern, "", modified_title)
+            # Irrespective of casing changes, the starting letter
+            # of title is always upper-cased
+            title = title[0].upper() + title[1:]
         except Exception as e:
             reflector_logger.info(
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
@@ -226,13 +229,12 @@ class LLM:
         """
         List of manual trimming to the title.
 
-        Longer titles currently run into
-        "Discussion on", "Discussion about", etc. that don't really
+        Longer titles currently run into prefix of phrases that don't really
         add any descriptive information and in some cases, this behaviour
         can be repeated for several consecutive topics. We want to handle
         these cases.
         """
-        phrases_to_remove = ["Discussion on", "Discussion about"]
+        phrases_to_remove = ["Discussing", "Discussion on", "Discussion about"]
         try:
             pattern = (
                 r"\b(?:"
