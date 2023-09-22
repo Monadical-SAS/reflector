@@ -67,6 +67,58 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
         setFinalSummary({ summary: "This is the final summary" });
       }
+      if (e.key === "z" && process.env.NEXT_PUBLIC_ENV === "development") {
+        setTranscriptText(
+          "This text is in English, and it is a pretty long sentence to test the limits",
+        );
+        setTopics([
+          {
+            id: "1",
+            timestamp: 10,
+            summary: "This is test topic 1",
+            title:
+              "Topic 1: Introduction to Quantum Mechanics, a brief overview of quantum mechanics and its principles.",
+            transcript:
+              "A brief overview of quantum mechanics and its principles.",
+          },
+          {
+            id: "2",
+            timestamp: 20,
+            summary: "This is test topic 2",
+            title:
+              "Topic 2: Machine Learning Algorithms, understanding the different types of machine learning algorithms.",
+            transcript:
+              "Understanding the different types of machine learning algorithms.",
+          },
+          {
+            id: "3",
+            timestamp: 30,
+            summary: "This is test topic 3",
+            title:
+              "Topic 3: Mental Health Awareness, ways to improve mental health and reduce stigma.",
+            transcript: "Ways to improve mental health and reduce stigma.",
+          },
+          {
+            id: "4",
+            timestamp: 40,
+            summary: "This is test topic 4",
+            title:
+              "Topic 4: Basics of Productivity, tips and tricks to increase daily productivity.",
+            transcript: "Tips and tricks to increase daily productivity.",
+          },
+          {
+            id: "5",
+            timestamp: 50,
+            summary: "This is test topic 5",
+            title:
+              "Topic 5: Future of Aviation, exploring the advancements and possibilities in aviation.",
+            transcript:
+              "Exploring the advancements and possibilities in aviation.",
+          },
+        ]);
+
+        setFinalSummary({ summary: "This is the final summary" });
+      }
     };
 
     if (!transcriptId) return;
