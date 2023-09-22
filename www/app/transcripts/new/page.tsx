@@ -9,9 +9,10 @@ import useAudioDevice from "../useAudioDevice";
 import "../../styles/button.css";
 import { Topic } from "../webSocketTypes";
 import getApi from "../../lib/getApi";
-import AudioInputsDropdown from "../audioInputsDropdown";
 import LiveTrancription from "../liveTranscription";
 import DisconnectedIndicator from "../disconnectedIndicator";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear } from "@fortawesome/free-solid-svg-icons";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -40,6 +41,7 @@ const TranscriptCreate = () => {
     requestPermission,
     getAudioStream,
   } = useAudioDevice();
+  const [hasRecorded, setHasRecorded] = useState(false);
 
   return (
     <>
@@ -50,6 +52,7 @@ const TranscriptCreate = () => {
             onStop={() => {
               webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
               setStream(null);
+              setHasRecorded(true);
             }}
             topics={webSockets.topics}
             getAudioStream={getAudioStream}
@@ -64,9 +67,21 @@ const TranscriptCreate = () => {
               useActiveTopic={useActiveTopic}
             />
             <section className="w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
-              <div className="py-2 h-auto">
-                <LiveTrancription text={webSockets.transcriptText} />
-              </div>
+              {!hasRecorded ? (
+                <div className="py-2 h-auto">
+                  <LiveTrancription text={webSockets.transcriptText} />
+                </div>
+              ) : (
+                <div className="flex flex-col justify-center align center text-center">
+                  <div className="p-4">
+                    <FontAwesomeIcon
+                      icon={faGear}
+                      className="animate-spin-slow h-20 w-20"
+                    />
+                  </div>
+                  <p>Your final summary is being processed.</p>
+                </div>
+              )}
             </section>
           </div>
 

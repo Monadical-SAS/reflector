@@ -12,6 +12,9 @@ module.exports = {
         layout: "auto auto minmax(0, 1fr)",
         "mobile-inner": "minmax(0, 2fr) minmax(0, 1fr)",
       },
+      animation: {
+        "spin-slow": "spin 3s linear infinite",
+      },
     },
   },
   plugins: [],
