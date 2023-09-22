@@ -14,22 +14,25 @@ type TopicListProps = {
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
+  autoscroll: boolean;
 };
 
-export function TopicList({ topics, useActiveTopic }: TopicListProps) {
+export function TopicList({
+  topics,
+  useActiveTopic,
+  autoscroll,
+}: TopicListProps) {
   const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
 
   useEffect(() => {
-    if (autoscrollEnabled) scrollToBottom();
-  }, [topics]);
+    if (autoscroll && autoscrollEnabled) scrollToBottom();
+  }, [topics.length]);
 
   const scrollToBottom = () => {
     const topicsDiv = document.getElementById("topics-div");
 
-    if (!topicsDiv)
-      console.error("Could not find topics div to scroll to bottom");
-    else topicsDiv.scrollTop = topicsDiv.scrollHeight;
+    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
   // scroll top is not rounded, heights are, so exact match won't work.
@@ -50,19 +53,23 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
   };
 
   useEffect(() => {
-    const topicsDiv = document.getElementById("topics-div");
+    if (autoscroll) {
+      const topicsDiv = document.getElementById("topics-div");
 
-    topicsDiv && toggleScroll(topicsDiv);
-  }, [activeTopic]);
+      topicsDiv && toggleScroll(topicsDiv);
+    }
+  }, [activeTopic, autoscroll]);
 
   return (
     <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
       {topics.length > 0 ? (
         <>
-          <ScrollToBottom
-            visible={!autoscrollEnabled}
-            handleScrollBottom={scrollToBottom}
-          />
+          {autoscroll && (
+            <ScrollToBottom
+              visible={!autoscrollEnabled}
+              handleScrollBottom={scrollToBottom}
+            />
+          )}
 
           <div
             id="topics-div"

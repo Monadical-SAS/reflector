@@ -9,7 +9,7 @@ type ScrollToBottomProps = {
 export default function ScrollToBottom(props: ScrollToBottomProps) {
   return (
     <div
-      className={`absolute bottom-0 right-0 ${
+      className={`absolute bottom-0 right-[0.15rem] md:right-[0.65rem] ${
         props.visible ? "flex" : "hidden"
       }  text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 text-blue-400`}
       onClick={() => {
