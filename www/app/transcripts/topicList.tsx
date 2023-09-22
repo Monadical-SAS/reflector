@@ -22,8 +22,7 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
 
   useEffect(() => {
     if (autoscrollEnabled) scrollToBottom();
-    console.log(topics);
-  }, [topics.length]);
+  }, [topics]);
 
   const scrollToBottom = () => {
     const topicsDiv = document.getElementById("topics-div");
@@ -33,15 +32,28 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
     else topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
-  const handleScroll = (e) => {
+  // scroll top is not rounded, heights are, so exact match won't work.
+  // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
+  const toggleScroll = (element) => {
     const bottom =
-      e.target.scrollHeight - e.target.scrollTop === e.target.clientHeight;
+      Math.abs(
+        element.scrollHeight - element.clientHeight - element.scrollTop,
+      ) < 2 || element.scrollHeight == element.clientHeight;
     if (!bottom && autoscrollEnabled) {
       setAutoscrollEnabled(false);
     } else if (bottom && !autoscrollEnabled) {
       setAutoscrollEnabled(true);
     }
   };
+  const handleScroll = (e) => {
+    toggleScroll(e.target);
+  };
+
+  useEffect(() => {
+    const topicsDiv = document.getElementById("topics-div");
+
+    topicsDiv && toggleScroll(topicsDiv);
+  }, [activeTopic]);
 
   return (
     <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
@@ -60,7 +72,7 @@ export function TopicList({ topics, useActiveTopic }: TopicListProps) {
             {topics.map((topic, index) => (
               <button
                 key={index}
-                className="rounded-none border-solid border-0 border-b-blue-300 border-b last:border-none p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
+                className="rounded-none border-solid border-0 border-b-blue-300 border-b last:border-none last:rounded-b-lg p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
                 onClick={() =>
                   setActiveTopic(activeTopic?.id == topic.id ? null : topic)
                 }
