@@ -44,7 +44,7 @@ const TranscriptCreate = () => {
 
   const displayTopics = [
     ...realTopics,
-    ...Array(topicsToDisplay - realTopics.length + 1).fill(null),
+    ...Array(topicsToDisplay - realTopics.length).fill(null),
   ] as (Topic | null)[];
 
   const timeLabel = (timestamp: number) => {
@@ -55,23 +55,22 @@ const TranscriptCreate = () => {
 
   const [showEnglishText, setShowEnglishText] = useState<boolean>(true);
   const [showTranslatedText, setShowTranslatedText] = useState<boolean>(true);
-  
+
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === "#") {
-  
         if (showEnglishText && showTranslatedText) {
           setShowEnglishText(false);
           setShowTranslatedText(true);
           return;
         }
-  
+
         if (!showEnglishText && showTranslatedText) {
           setShowEnglishText(true);
           setShowTranslatedText(false);
           return;
         }
-  
+
         if (showEnglishText && !showTranslatedText) {
           setShowEnglishText(true);
           setShowTranslatedText(true);
@@ -79,24 +78,23 @@ const TranscriptCreate = () => {
         }
       }
     };
-  
+
     document.addEventListener("keydown", handleKeyPress);
-  
+
     // Cleanup function to remove the event listener
     return () => {
       document.removeEventListener("keydown", handleKeyPress);
     };
   }, [showEnglishText, showTranslatedText]);
 
-  
   return (
-    <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-4 flex flex-col">
+    <div className="bg-gradient-to-br from-blue-900 via-allin-blue via-50% to-allin-orange text-white min-h-screen p-2 md:p-3 lg:p-4 flex flex-col">
       <header className="flex items-center">
-        <div className="flex items-start mr-2 mb-2">
+        <div className="flex items-start mr-2">
           <Image
-            src="/reach.png"
-            width={40}
-            height={40}
+            src="/Reflector_Logo.svg"
+            width={80}
+            height={80}
             className="h-12 w-auto mt-2"
             alt="Reflector Logo"
           />
@@ -124,7 +122,7 @@ const TranscriptCreate = () => {
         </div>
       </header>
 
-      <div className="py-4 flex-grow flex flex-wrap justify-between">
+      <div className="py-2 md:py-3 lg:py-4 flex-grow flex flex-wrap justify-between">
         {/* Topic Section */}
         <section className="w-full lg:max-w-[45vw] min-w-[45vw] flex items-center lg:mr-2">
           <div className="bg-blue-100/10 rounded-lg md:rounded-xl w-full p-2 md:p-4 self-start lg:self-center">
@@ -132,17 +130,17 @@ const TranscriptCreate = () => {
             {displayTopics.map((topic, index) => (
               <div
                 key={topic?.id || index}
-                className={`rounded-lg md:rounded-xl px-2 md:px-4 py-2 my-2 last:mb-0 text-lg md:text-xl leading-normal font-bold ${
+                className={`rounded-lg md:rounded-xl px-2 md:px-4 py-2 my-2 last:mb-0 text-lg md:text-xl leading-tight font-bold ${
                   topic ? "odd:bg-white/20" : ""
                 }`}
               >
                 {topic ? (
-                  <>
+                  <p className=" line-clamp-2 md:line-clamp-2 lg:line-clamp-3">
                     <span className="font-light text-base md:text-lg inline-block align-middle font-mono">
                       {timeLabel(topic.timestamp)}:&nbsp;
                     </span>
                     {topic.title}
-                  </>
+                  </p>
                 ) : (
                   "\u00A0"
                 )}
@@ -154,12 +152,29 @@ const TranscriptCreate = () => {
         {/* Translation Section */}
         <section className="flex-grow flex items-center justify-center lg:max-w-[49vw]">
           <div className="text-center p-4">
-            {showEnglishText && <p className={"text-2xl md:text-4xl font-bold " + (showTranslatedText ? "pb-5" : "")}>
-              {webSockets.transcriptText}
-            </p>}
-            {showTranslatedText && <p className={showEnglishText ? "text-2xl md:text-2xl" : "text-2xl md:text-4xl font-bold"}>
-              {webSockets.translationText}
-            </p>}
+            {showEnglishText && (
+              <p
+                className={
+                  "text-xl md:text-2xl lg:text-4xl line-clamp-2 md:line-clamp-3 lg:line-clamp-4 font-bold " +
+                  (showTranslatedText
+                    ? "line-clamp-1 md:line-clamp-1 mb-2 md:mb-3 lg:mb-5"
+                    : "")
+                }
+              >
+                {webSockets.transcriptText}
+              </p>
+            )}
+            {showTranslatedText && (
+              <p
+                className={
+                  showEnglishText
+                    ? "text-lg md:text-xl lg:text-2xl line-clamp-1 lg:line-clamp-4"
+                    : "line-clamp-2 md:line-clamp-3 lg:line-clamp-4 text-xl md:text-2xl lg:text-4xl font-bold"
+                }
+              >
+                {webSockets.translationText}
+              </p>
+            )}
           </div>
         </section>
       </div>
@@ -169,14 +184,14 @@ const TranscriptCreate = () => {
           src="/All-In_Logotype_Blanc_2L.png"
           width={40}
           height={40}
-          className="h-14 ml-[-3px] w-auto"
+          className="h-12 lg:h-16 ml-[-3px] w-auto"
           alt="All In Logo"
         />
         <Image
           src="/Monadical-BW-with-name.svg"
           width={40}
           height={40}
-          className="h-16 mr-[-4px] w-auto"
+          className="h-12 lg:h-16 mr-[-4px] w-auto"
           alt="Monadical Logo"
         />
       </footer>

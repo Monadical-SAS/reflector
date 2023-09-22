@@ -65,10 +65,15 @@ const useAudioDevice = () => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
 
-      const noiseSuppression = urlParams.get('noiseSuppression') === 'true';
-      const echoCancellation = urlParams.get('echoCancellation') === 'true';
+      const noiseSuppression = urlParams.get("noiseSuppression") === "true";
+      const echoCancellation = urlParams.get("echoCancellation") === "true";
 
-      console.debug("noiseSuppression", noiseSuppression, "echoCancellation", echoCancellation);
+      console.debug(
+        "noiseSuppression",
+        noiseSuppression,
+        "echoCancellation",
+        echoCancellation,
+      );
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
