@@ -66,5 +66,4 @@ class AudioTranscriptProcessor(Processor):
         Remove censored words from the transcript
         """
         text = self.profanity_filter.censor(text)
-        text = text.replace("|*|", "")
-        return text
+        return text.replace("|*|", "")
