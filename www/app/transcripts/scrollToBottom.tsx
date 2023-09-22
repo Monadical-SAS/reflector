@@ -9,15 +9,15 @@ type ScrollToBottomProps = {
 export default function ScrollToBottom(props: ScrollToBottomProps) {
   return (
     <div
-      className={`absolute left-0 w-10 h-10 ${
+      className={`absolute bottom-0 right-[0.15rem] md:right-[0.65rem] ${
         props.visible ? "flex" : "hidden"
-      } top-[49%] text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 animate-bounce rounded-xl text-blue-400`}
+      }  text-2xl cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-200 text-blue-400`}
       onClick={() => {
         props.handleScrollBottom();
         return false;
       }}
     >
-      <FontAwesomeIcon icon={faArrowDown} />
+      <FontAwesomeIcon icon={faArrowDown} className="animate-bounce" />
     </div>
   );
 }

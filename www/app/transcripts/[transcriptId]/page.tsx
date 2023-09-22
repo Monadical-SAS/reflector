@@ -52,6 +52,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <TopicList
               topics={topics?.topics || []}
               useActiveTopic={useActiveTopic}
+              autoscroll={false}
             />
             <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
               <div className="py-2 h-full">
