@@ -73,13 +73,17 @@ const TranscriptCreate = () => {
                 </div>
               ) : (
                 <div className="flex flex-col justify-center align center text-center">
-                  <div className="p-4">
+                  <div className="p-2 md:p-4">
                     <FontAwesomeIcon
                       icon={faGear}
-                      className="animate-spin-slow h-20 w-20"
+                      className="animate-spin-slow h-14 w-14 md:h-20 md:w-20"
                     />
                   </div>
-                  <p>Your final summary is being processed.</p>
+                  <p>
+                    We are generating the final summary for you. This may take a
+                    couple of minutes. Please do not navigate away from the page
+                    during this time.
+                  </p>
                 </div>
               )}
             </section>
