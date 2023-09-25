@@ -30,7 +30,7 @@ def dummy_processors():
         "reflector.processors.transcript_final_short_summary.TranscriptFinalShortSummaryProcessor.get_short_summary"
     ) as mock_short_summary:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
-        mock_title.return_value = {"title": "LLM FINAL TITLE"}
+        mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
 

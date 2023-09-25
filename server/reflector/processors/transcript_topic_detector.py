@@ -54,9 +54,11 @@ class TranscriptTopicDetectorProcessor(Processor):
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
         topic_result = await self.get_topic(text=text)
+        title = self.llm.trim_title(topic_result["title"])
+        title = self.llm.ensure_casing(title)
 
         summary = TitleSummary(
-            title=self.llm.ensure_casing(topic_result["title"]),
+            title=title,
             summary=topic_result["summary"],
             timestamp=self.transcript.timestamp,
             duration=self.transcript.duration,
