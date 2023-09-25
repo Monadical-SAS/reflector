@@ -15,6 +15,7 @@ API will be a POST request to TRANSCRIPT_URL:
 from time import monotonic
 
 import httpx
+
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, TranslationLanguages, Word
@@ -86,7 +87,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             if source_language != target_language and target_language in result["text"]:
                 translation = result["text"][target_language]
             text = result["text"][source_language]
-
+            text = self.filter_profanity(text)
             transcript = Transcript(
                 text=text,
                 translation=translation,

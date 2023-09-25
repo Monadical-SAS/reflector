@@ -17,7 +17,7 @@ WHISPER_NUM_WORKERS: int = 1
 # Translation Model
 TRANSLATION_MODEL = "facebook/m2m100_1.2B"
 
-IMAGE_MODEL_DIR = "/root/transcription_models"
+IMAGE_MODEL_DIR = f"/root/transcription_models/{TRANSLATION_MODEL}"
 
 stub = Stub(name="reflector-transcriber")
 
