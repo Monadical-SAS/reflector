@@ -13,8 +13,8 @@ import LiveTrancription from "../liveTranscription";
 import DisconnectedIndicator from "../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
-import About from "../../about";
-import Privacy from "../../privacy";
+import About from "../../(aboutAndPrivacy)/about";
+import Privacy from "../../(aboutAndPrivacy)/privacy";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);

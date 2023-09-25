@@ -1,13 +1,13 @@
 "use client";
 import React, { useState } from "react";
-import FullscreenModal from "./transcripts/fullsreenModal";
-import AboutContent from "./aboutContent";
+import FullscreenModal from "../transcripts/fullsreenModal";
+import PrivacyContent from "./privacyContent";
 
-type AboutProps = {
+type PrivacyProps = {
   buttonText: string;
 };
 
-export default function About({ buttonText }: AboutProps) {
+export default function Privacy({ buttonText }: PrivacyProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -20,7 +20,7 @@ export default function About({ buttonText }: AboutProps) {
       </button>
       {modalOpen && (
         <FullscreenModal close={() => setModalOpen(false)}>
-          <AboutContent />
+          <PrivacyContent />
         </FullscreenModal>
       )}
     </>

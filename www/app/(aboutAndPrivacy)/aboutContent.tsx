@@ -1,4 +1,4 @@
-import { Paragraph, Subtitle, Title } from "./lib/textComponents";
+import { Paragraph, Subtitle, Title } from "../lib/textComponents";
 
 export default () => (
   <div className="max-w-xl">
