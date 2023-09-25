@@ -7,6 +7,8 @@ import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import Image from "next/image";
 import Link from "next/link";
+import About from "./about";
+import Privacy from "./privacy";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -59,7 +61,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={poppins.className + " h-screen"}>
+      <body className={poppins.className + " h-screen relative"}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
@@ -87,8 +89,12 @@ export default function RootLayout({ children }) {
                     </p>
                   </div>
                 </Link>
-                {/* Text link on the right */}
-                <UserInfo />
+                <div>
+                  {/* Text link on the right */}
+                  <About buttonText="About" />
+                  &nbsp;·&nbsp;
+                  <Privacy buttonText="Privacy" />
+                </div>
               </header>
 
               {children}
