@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+
 module.exports = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -7,10 +8,12 @@ module.exports = {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+      gridTemplateRows: {
+        layout: "auto auto minmax(0, 1fr)",
+        "mobile-inner": "minmax(0, 2fr) minmax(0, 1fr)",
+      },
+      animation: {
+        "spin-slow": "spin 3s linear infinite",
       },
     },
   },

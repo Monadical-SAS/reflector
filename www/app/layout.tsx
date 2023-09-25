@@ -1,12 +1,14 @@
 import "./styles/globals.scss";
-import { Roboto } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { Metadata } from "next";
 import FiefWrapper from "./(auth)/fiefWrapper";
 import UserInfo from "./(auth)/userInfo";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
+import Image from "next/image";
+import Link from "next/link";
 
-const roboto = Roboto({ subsets: ["latin"], weight: "400" });
+const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
 export const metadata: Metadata = {
   title: {
@@ -50,29 +52,46 @@ export const metadata: Metadata = {
     initialScale: 1,
     maximumScale: 1,
   },
+
+  robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={roboto.className + " flex flex-col min-h-screen"}>
+      <body className={poppins.className + " h-screen"}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
-            <div id="container">
-              <div className="flex flex-col items-center h-[100svh] bg-gradient-to-r from-[#8ec5fc30] to-[#e0c3fc42]">
+            <div
+              id="container"
+              className="items-center h-[100svh] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
+            >
+              <header className="flex justify-between items-center w-full">
+                {/* Logo on the left */}
+                <Link
+                  href="/"
+                  className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
+                >
+                  <Image
+                    src="/reach.png"
+                    width={16}
+                    height={16}
+                    className="h-10 w-auto"
+                    alt="Reflector"
+                  />
+                  <div className="hidden flex-col ml-2 md:block">
+                    <h1 className="text-4xl font-bold">Reflector</h1>
+                    <p className="text-gray-500">
+                      Capture The Signal, Not The Noise
+                    </p>
+                  </div>
+                </Link>
+                {/* Text link on the right */}
                 <UserInfo />
+              </header>
 
-                <div className="h-[13svh] flex flex-col justify-center items-center">
-                  <h1 className="text-5xl font-bold text-blue-500">
-                    Reflector
-                  </h1>
-                  <p className="text-gray-500">
-                    Capture The Signal, Not The Noise
-                  </p>
-                </div>
-                {children}
-              </div>
+              {children}
             </div>
           </ErrorProvider>
         </FiefWrapper>
