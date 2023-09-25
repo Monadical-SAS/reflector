@@ -7,8 +7,8 @@ import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import Image from "next/image";
 import Link from "next/link";
-import About from "./about";
-import Privacy from "./privacy";
+import About from "./(aboutAndPrivacy)/about";
+import Privacy from "./(aboutAndPrivacy)/privacy";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
