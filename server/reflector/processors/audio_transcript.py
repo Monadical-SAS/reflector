@@ -41,7 +41,7 @@ class AudioTranscriptProcessor(Processor):
         self.m_transcript_success = self.m_transcript_success.labels(name)
         self.m_transcript_failure = self.m_transcript_failure.labels(name)
         self.profanity_filter = ProfanityFilter()
-        self.profanity_filter.set_censor("|*|")
+        self.profanity_filter.set_censor("*")
         super().__init__(*args, **kwargs)
 
     async def _push(self, data: AudioFile):
@@ -65,5 +65,4 @@ class AudioTranscriptProcessor(Processor):
         """
         Remove censored words from the transcript
         """
-        text = self.profanity_filter.censor(text)
-        return text.replace("|*|", "")
+        return self.profanity_filter.censor(text)
