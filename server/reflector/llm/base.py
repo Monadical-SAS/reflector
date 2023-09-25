@@ -229,10 +229,10 @@ class LLM:
         """
         List of manual trimming to the title.
 
-        Longer titles currently run into prefix of phrases that don't really
-        add any descriptive information and in some cases, this behaviour
-        can be repeated for several consecutive topics. We want to handle
-        these cases.
+        Longer titles are prone to run into A prefix of phrases that don't
+        really add any descriptive information and in some cases, this
+        behaviour can be repeated for several consecutive topics. Trim the
+        titles to maintain quality of titles.
         """
         phrases_to_remove = ["Discussing", "Discussion on", "Discussion about"]
         try:
