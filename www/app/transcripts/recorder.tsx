@@ -13,6 +13,7 @@ import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
+import { useError } from "../(errors)/errorContext";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -47,6 +48,48 @@ export default function Recorder(props: RecorderProps) {
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
   const [showDevices, setShowDevices] = useState(false);
+  const { setError } = useError();
+
+  // Function used to setup keyboard shortcuts for the streamdeck
+  const setupProjectorKeys = (): (() => void) => {
+    if (!record) return () => {};
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      switch (event.key) {
+        case "~":
+          location.reload();
+          break;
+        case "!":
+          if (record.isRecording()) return;
+          handleRecClick();
+          break;
+        case "@":
+          if (!record.isRecording()) return;
+          handleRecClick();
+          break;
+        case "%":
+          setError(new Error("Error triggered by '%' shortcut"));
+          break;
+        case "^":
+          throw new Error("Unhandled Exception thrown by '^' shortcut");
+        case "(":
+          location.href = "/login";
+          break;
+        case ")":
+          location.href = "/logout";
+          break;
+        default:
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyPress);
+
+    // Return the cleanup function
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  };
 
   useEffect(() => {
     if (waveformRef.current) {
@@ -148,17 +191,23 @@ export default function Recorder(props: RecorderProps) {
   };
 
   useEffect(() => {
-    if (record) {
-      return record.on("stopRecording", () => {
-        const link = document.getElementById("download-recording");
-        if (!link) return;
+    if (!record) return;
 
-        link.setAttribute("href", record.getRecordedUrl());
-        link.setAttribute("download", "reflector-recording.webm");
-        link.style.visibility = "visible";
-        renderMarkers();
-      });
-    }
+    return setupProjectorKeys();
+  }, [record, deviceId]);
+
+  useEffect(() => {
+    if (!record) return;
+
+    return record.on("stopRecording", () => {
+      const link = document.getElementById("download-recording");
+      if (!link) return;
+
+      link.setAttribute("href", record.getRecordedUrl());
+      link.setAttribute("download", "reflector-recording.webm");
+      link.style.visibility = "visible";
+      renderMarkers();
+    });
   }, [record]);
 
   useEffect(() => {
