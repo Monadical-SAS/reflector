@@ -34,6 +34,7 @@ const ShareLink = () => {
           value={currentURL}
           ref={inputRef}
           className="border rounded p-2 flex-grow mr-2 text-sm bg-slate-100 outline-slate-400"
+          style={{ minHeight: "38px" }}
         />
         <button
           onClick={handleCopyClick}
