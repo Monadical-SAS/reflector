@@ -278,7 +278,10 @@ export default function Recorder(props: RecorderProps) {
   return (
     <div className="flex items-center w-full relative">
       <div className="flex-grow items-end relative">
-        <div ref={waveformRef} className="flex-grow rounded-2xl h-20"></div>
+        <div
+          ref={waveformRef}
+          className="flex-grow rounded-lg md:rounded-xl h-20"
+        ></div>
         <div className="absolute right-2 bottom-0">
           {isRecording && (
             <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
