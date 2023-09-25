@@ -109,7 +109,7 @@ export default function Recorder(props: RecorderProps) {
 
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
-      wsWrapper.style.backgroundColor = "#e0c3fc42";
+      wsWrapper.style.backgroundColor = "RGB(240 240 240)";
       wsWrapper.style.borderRadius = "15px";
 
       _wavesurfer.on("play", () => {
