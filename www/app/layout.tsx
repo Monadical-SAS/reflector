@@ -81,9 +81,11 @@ export default function RootLayout({ children }) {
                     alt="Reflector"
                   />
                   <div className="hidden flex-col ml-2 md:block">
-                    <h1 className="text-4xl font-bold">Reflector</h1>
-                    <p className="text-gray-500">
-                      Capture The Signal, Not The Noise
+                    <h1 className="text-4xl font-bold tracking-wide">
+                      Reflector
+                    </h1>
+                    <p className="text-gray-500 text-xs tracking-tighter">
+                      Capture the signal, not the noise
                     </p>
                   </div>
                 </Link>
