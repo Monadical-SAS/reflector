@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import FullscreenModal from "../transcripts/fullsreenModal";
+import FullscreenModal from "./fullsreenModal";
 import PrivacyContent from "./privacyContent";
 
 type PrivacyProps = {
