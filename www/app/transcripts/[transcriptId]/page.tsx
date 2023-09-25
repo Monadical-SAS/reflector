@@ -10,6 +10,7 @@ import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
 import "../../styles/button.css";
 import FinalSummary from "../finalSummary";
+import ShareLink from "../shareLink";
 
 type TranscriptDetails = {
   params: {
@@ -55,6 +56,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               autoscroll={false}
             />
             <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
+              <ShareLink />
+
               <div className="py-2 h-full">
                 {transcript?.response?.longSummary && (
                   <FinalSummary text={transcript?.response?.longSummary} />
