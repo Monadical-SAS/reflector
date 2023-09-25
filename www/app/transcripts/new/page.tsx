@@ -146,7 +146,6 @@ const TranscriptCreate = () => {
                 </div>
               </div>
             </section>
-            <section className="flex justify-center"></section>
           </div>
         </>
       )}
