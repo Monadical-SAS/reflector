@@ -13,6 +13,8 @@ import LiveTrancription from "../liveTranscription";
 import DisconnectedIndicator from "../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
+import About from "../../(aboutAndPrivacy)/about";
+import Privacy from "../../(aboutAndPrivacy)/privacy";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -95,51 +97,56 @@ const TranscriptCreate = () => {
       ) : (
         <>
           <div></div>
-          <section className="flex flex-col w-full h-full items-center justify-evenly p-4 md:px-6 md:py-8">
-            <div className="flex flex-col max-w-2xl items-center justify-center">
-              <h1 className="text-2xl font-bold mb-2">Reflector</h1>
-              <p className="self-start">
-                Meet Monadical's own Reflector, your audio ally for hassle-free
-                insights.
-              </p>
-              <p className="mb-4 md:text-justify">
-                With real-time transcriptions, translations, and summaries,
-                Reflector captures and categorizes the details of your meetings
-                and events, all while keeping your data locked down tight on
-                your own infrastructure. Forget the scribbled notes, endless
-                recordings, or third-party apps. Discover Reflector, a powerful
-                new way to elevate knowledge management and accessibility for
-                all.
-              </p>
-            </div>
-            <div>
-              <div className="flex flex-col max-w-2xl items-center justify-center">
-                <h2 className="text-2xl font-bold  mb-2">Audio Permissions</h2>
-                {loading ? (
-                  <p className="text-gray-500 text-center">
-                    Checking permission...
+          <div className="max-h-full overflow-auto">
+            <section className="flex flex-col w-full h-full items-center justify-evenly p-4 md:px-6 md:py-8">
+              <div>
+                <div className="flex flex-col max-w-xl items-center justify-center">
+                  <h1 className="text-2xl font-bold mb-2">
+                    Welcome to reflector.media
+                  </h1>
+                  <p>
+                    Reflector is a transcription and summarization pipeline that
+                    transforms audio into knowledge. The output is meeting
+                    minutes and topic summaries enabling topic-specific analyses
+                    stored in your systems of record. This is accomplished on
+                    your infrastructure - without 3rd parties - keeping your
+                    data private, secure, and organized.
                   </p>
-                ) : (
-                  <>
+                  <About buttonText="Learn more" />
+                  <h2 className="text-2xl font-bold mt-4 mb-2">
+                    Audio Permissions
+                  </h2>
+                  {loading ? (
                     <p className="text-gray-500 text-center">
-                      Reflector needs access to your microphone to work.
-                      <br />
-                      {permissionDenied
-                        ? "Please reset microphone permissions to continue."
-                        : "Please grant permission to continue."}
+                      Checking permission...
                     </p>
-                    <button
-                      className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
-                      onClick={requestPermission}
-                      disabled={permissionDenied}
-                    >
-                      {permissionDenied ? "Access denied" : "Grant Permission"}
-                    </button>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <p className="text-gray-500 text-center">
+                        To enable Reflector, we kindly request permission to
+                        access your microphone during meetings and events.
+                        <br />
+                        <Privacy buttonText="Privacy policy" />
+                        <br />
+                        {permissionDenied
+                          ? "Permission to use your microphone was denied, please change the permission setting in your browser and refresh this page."
+                          : "Please grant permission to continue."}
+                      </p>
+                      <button
+                        className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded m-auto"
+                        onClick={requestPermission}
+                        disabled={permissionDenied}
+                      >
+                        {permissionDenied
+                          ? "Access denied"
+                          : "Grant Permission"}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </>
       )}
     </>
