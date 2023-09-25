@@ -14,7 +14,6 @@ import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
 
-import { isProjector } from "../lib/utils";
 import { AudioWaveform } from "../api";
 
 const AudioInputsDropdown: React.FC<{
@@ -232,11 +231,7 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     if (!record) return;
 
-    let cleanup: (() => void) | undefined;
-
-    if (isProjector()) {
-      cleanup = setupProjectorKeys();
-    }
+    const cleanup = setupProjectorKeys();
 
     return () => {
       record.on("stopRecording", () => {
@@ -307,7 +302,6 @@ export default function Recorder(props: RecorderProps) {
     if (duration) return `${formatTime(currentTime)}/${formatTime(duration)}`;
     return "";
   };
-  console.log(timeLabel);
 
   return (
     <div className="relative w-full">
