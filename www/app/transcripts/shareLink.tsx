@@ -24,7 +24,7 @@ const ShareLink = () => {
     >
       <p className="text-sm mb-2">
         You can share this link with others. Anyone with the link will have
-        access to the page, including the full audio recording, for the next 10
+        access to the page, including the full audio recording, for the next 7
         days.
       </p>
       <div className="flex items-center">
