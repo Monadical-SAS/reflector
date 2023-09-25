@@ -84,6 +84,7 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
     const dataArray = new Uint8Array(bufferLength);
 
     let animationId: number, previousTimeStamp: number;
+    const MULTIPLIER = 1.2;
     const DATA_SIZE = 128.0;
     const BUFFER_SIZE = 2 ** 8;
     const dataBuffer = new Array(BUFFER_SIZE).fill(DATA_SIZE);
@@ -109,15 +110,19 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
 
       // Drawing
       const sliceWidth = canvas.width / dataBuffer.length;
-      let x = 0;
+      let xPos = 0;
 
       for (let i = 0; i < dataBuffer.length; i++) {
-        const y = (canvas.height * dataBuffer[i]) / (2 * DATA_SIZE);
+        const y =
+          dataBuffer[i] + 2 > DATA_SIZE
+            ? dataBuffer[i]
+            : dataBuffer[i] / MULTIPLIER;
+        const yPos = (canvas.height * y) / (2 * DATA_SIZE);
         const sliceHeight =
-          ((1 - canvas.height) * dataBuffer[i]) / DATA_SIZE + canvas.height;
+          ((1 - canvas.height) * y) / DATA_SIZE + canvas.height;
 
-        canvasCtx.fillRect(x, y, (sliceWidth * 2) / 3, sliceHeight);
-        x += sliceWidth;
+        canvasCtx.fillRect(xPos, yPos, (sliceWidth * 2) / 3, sliceHeight);
+        xPos += sliceWidth;
       }
 
       animationId = requestAnimationFrame(drawWaveform);
