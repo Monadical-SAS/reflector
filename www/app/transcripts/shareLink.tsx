@@ -19,7 +19,7 @@ const ShareLink = () => {
 
   return (
     <div
-      className="p-4 mt-4 rounded"
+      className="p-2 md:p-4 mt-8 md:mt-4 rounded"
       style={{ background: "rgba(96, 165, 250, 0.2)" }}
     >
       <p className="text-sm mb-2">
