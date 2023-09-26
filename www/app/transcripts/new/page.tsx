@@ -88,8 +88,9 @@ const TranscriptCreate = () => {
                     <div className="py-2 h-auto">
                       {!transcriptStarted ? (
                         <div className="text-center text-gray-500">
-                          The conversation transcript will appear here after you
-                          start recording.
+                          The conversation transcript will appear here shortly
+                          after you start recording.
+                          <br />
                         </div>
                       ) : (
                         <LiveTrancription text={webSockets.transcriptText} />
