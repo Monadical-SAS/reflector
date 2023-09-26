@@ -45,6 +45,12 @@ const TranscriptCreate = () => {
     getAudioStream,
   } = useAudioDevice();
   const [hasRecorded, setHasRecorded] = useState(false);
+  const [transcriptStarted, setTranscriptStarted] = useState(false);
+
+  useEffect(() => {
+    if (!transcriptStarted && webSockets.transcriptText.length !== 0)
+      setTranscriptStarted(true);
+  }, [webSockets.transcriptText]);
 
   useEffect(() => {
     lockWakeState();
@@ -77,13 +83,30 @@ const TranscriptCreate = () => {
               useActiveTopic={useActiveTopic}
               autoscroll={true}
             />
-            <section className="w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
+
+            <section
+              className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4`}
+            >
               {!hasRecorded ? (
-                <div className="py-2 h-auto">
-                  <LiveTrancription text={webSockets.transcriptText} />
-                </div>
+                <>
+                  {transcriptStarted && (
+                    <h2 className="md:text-lg font-bold">Transcription</h2>
+                  )}
+                  <div className="flex flex-col justify-center align center text-center h-full">
+                    <div className="py-2 h-auto">
+                      {!transcriptStarted ? (
+                        <div className="text-center text-gray-500">
+                          The conversation transcript will appear here shortly
+                          after you start recording.
+                        </div>
+                      ) : (
+                        <LiveTrancription text={webSockets.transcriptText} />
+                      )}
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="flex flex-col justify-center align center text-center">
+                <div className="flex flex-col justify-center align center text-center h-full text-gray-500">
                   <div className="p-2 md:p-4">
                     <FontAwesomeIcon
                       icon={faGear}
@@ -117,7 +140,7 @@ const TranscriptCreate = () => {
                     transforms audio into knowledge. The output is meeting
                     minutes and topic summaries enabling topic-specific analyses
                     stored in your systems of record. This is accomplished on
-                    your infrastructure - without 3rd parties - keeping your
+                    your infrastructure – without 3rd parties – keeping your
                     data private, secure, and organized.
                   </p>
                   <About buttonText="Learn more" />
@@ -125,14 +148,12 @@ const TranscriptCreate = () => {
                     Audio Permissions
                   </h2>
                   {loading ? (
-                    <p className="text-gray-500 text-center">
-                      Checking permission...
-                    </p>
+                    <p className="text-center">Checking permission...</p>
                   ) : (
                     <>
-                      <p className="text-gray-500 text-center">
-                        To enable Reflector, we kindly request permission to
-                        access your microphone during meetings and events.
+                      <p className="text-center">
+                        In order to use Reflector, we kindly request permission
+                        to access your microphone during meetings and events.
                         <br />
                         <Privacy buttonText="Privacy policy" />
                         <br />
