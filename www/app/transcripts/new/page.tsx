@@ -140,14 +140,12 @@ const TranscriptCreate = () => {
                     Audio Permissions
                   </h2>
                   {loading ? (
-                    <p className="text-gray-500 text-center">
-                      Checking permission...
-                    </p>
+                    <p className="text-center">Checking permission...</p>
                   ) : (
                     <>
-                      <p className="text-gray-500 text-center">
-                        To enable Reflector, we kindly request permission to
-                        access your microphone during meetings and events.
+                      <p className="text-center">
+                        In order to use Reflector, we kindly request permission
+                        to access your microphone during meetings and events.
                         <br />
                         <Privacy buttonText="Privacy policy" />
                         <br />
