@@ -35,9 +35,15 @@ async def test_basic_process(
     print(marks)
 
     # validate the events
+    print(1, marks["TranscriptLinerProcessor"])
     assert marks["TranscriptLinerProcessor"] == 4
+    print(2, marks["TranscriptTranslatorProcessor"])
     assert marks["TranscriptTranslatorProcessor"] == 4
+    print(3, marks["TranscriptTopicDetectorProcessor"])
     assert marks["TranscriptTopicDetectorProcessor"] == 1
+    print(4, marks["TranscriptFinalLongSummaryProcessor"])
     assert marks["TranscriptFinalLongSummaryProcessor"] == 1
+    print(5, marks["TranscriptFinalShortSummaryProcessor"])
     assert marks["TranscriptFinalShortSummaryProcessor"] == 1
+    print(6, marks["TranscriptFinalTitleProcessor"])
     assert marks["TranscriptFinalTitleProcessor"] == 1
