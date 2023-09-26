@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, use } from "react";
 const ShareLink = () => {
   const [isCopied, setIsCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [currentUrl, setCurrentUrl] = useState<string>();
+  const [currentUrl, setCurrentUrl] = useState<string>("");
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
@@ -36,6 +36,7 @@ const ShareLink = () => {
           readOnly
           value={currentUrl}
           ref={inputRef}
+          onChange={() => {}}
           className="border rounded-lg md:rounded-xl p-2 flex-grow mr-2 text-sm bg-slate-100 outline-slate-400"
         />
         <button
