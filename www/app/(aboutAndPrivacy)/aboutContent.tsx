@@ -23,7 +23,7 @@ export default () => (
       Monadical prioritizes safeguarding your data. Reflector operates
       exclusively on your infrastructure, ensuring guaranteed security.
     </Paragraph>
-    <Subtitle>3. Any industry-specific use cases?</Subtitle>
+    <Subtitle>3. Are there any industry-specific use cases?</Subtitle>
     <p>Absolutely! We have two custom deployments pre-built:</p>
     <ul className="mb-2 md:mb-4">
       <li>
