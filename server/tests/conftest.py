@@ -40,6 +40,34 @@ def dummy_processors():
 
 
 @pytest.fixture
+async def dummy_transcript():
+    from reflector.processors.audio_transcript import AudioTranscriptProcessor
+    from reflector.processors.types import AudioFile, Transcript, Word
+
+    class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
+        async def _transcript(self, data: AudioFile):
+            source_language = self.get_pref("audio:source_language", "en")
+            print("transcripting", source_language)
+            print("pipeline", self.pipeline)
+            print("prefs", self.pipeline.prefs)
+
+            return Transcript(
+                text="Hello world.",
+                words=[
+                    Word(start=0.0, end=1.0, text="Hello"),
+                    Word(start=1.0, end=2.0, text=" world."),
+                ],
+            )
+
+    with patch(
+        "reflector.processors.audio_transcript_auto"
+        ".AudioTranscriptAutoProcessor.get_instance"
+    ) as mock_audio:
+        mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
 async def dummy_llm():
     from reflector.llm.base import LLM
 
