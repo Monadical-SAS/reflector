@@ -1552,6 +1552,17 @@ files = [
 ]
 
 [[package]]
+name = "inflection"
+version = "0.5.1"
+description = "A port of Ruby on Rails inflector to Python"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
+    {file = "inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417"},
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
@@ -2096,6 +2107,20 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
+
+[[package]]
+name = "profanityfilter"
+version = "2.0.6"
+description = "A universal Python library for detecting and/or filtering profane words."
+optional = false
+python-versions = "*"
+files = [
+    {file = "profanityfilter-2.0.6-py2.py3-none-any.whl", hash = "sha256:1706c080c2364f5bfe217b2330dc35d90e02e4afa0a00ed52d5673c410b45b64"},
+    {file = "profanityfilter-2.0.6.tar.gz", hash = "sha256:ca701e22799526696963415fc36d5e943c168f1917e3c83881ffda6bf5240a30"},
+]
+
+[package.dependencies]
+inflection = "*"
 
 [[package]]
 name = "prometheus-client"
@@ -3744,4 +3769,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "b67b094055950a6b39da80dc7ca26b2a0e1c778f174016a00185d7219a3348b5"
+content-hash = "a85cb09a0e4b68b29c4272d550e618d2e24ace5f16b707f29e8ac4ce915c1fae"

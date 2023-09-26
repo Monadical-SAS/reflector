@@ -6,11 +6,12 @@ from typing import TypeVar
 
 import nltk
 from prometheus_client import Counter, Histogram
+from transformers import GenerationConfig
+
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
-from transformers import GenerationConfig
 
 T = TypeVar("T", bound="LLM")
 
@@ -214,11 +215,37 @@ class LLM:
             # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
             pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
             title = re.sub(pattern, "", modified_title)
+            # Irrespective of casing changes, the starting letter
+            # of title is always upper-cased
+            title = title[0].upper() + title[1:]
         except Exception as e:
             reflector_logger.info(
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
             )
 
+        return title
+
+    def trim_title(self, title: str) -> str:
+        """
+        List of manual trimming to the title.
+
+        Longer titles are prone to run into A prefix of phrases that don't
+        really add any descriptive information and in some cases, this
+        behaviour can be repeated for several consecutive topics. Trim the
+        titles to maintain quality of titles.
+        """
+        phrases_to_remove = ["Discussing", "Discussion on", "Discussion about"]
+        try:
+            pattern = (
+                r"\b(?:"
+                + "|".join(re.escape(phrase) for phrase in phrases_to_remove)
+                + r")\b"
+            )
+            title = re.sub(pattern, "", title, flags=re.IGNORECASE)
+        except Exception as e:
+            reflector_logger.info(
+                f"Failed to trim {title=} " f"with exception : {str(e)}"
+            )
         return title
 
     async def _generate(

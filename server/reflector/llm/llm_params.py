@@ -39,7 +39,7 @@ class FinalLongSummaryParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=800, num_beams=3, do_sample=True, temperature=0.3
+            max_new_tokens=1000, num_beams=3, do_sample=True, temperature=0.3
         )
         self._instruct = """
         Take the key ideas and takeaways from the text and create a short
@@ -65,7 +65,7 @@ class FinalShortSummaryParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=1300, num_beams=3, do_sample=True, temperature=0.3
+            max_new_tokens=800, num_beams=3, do_sample=True, temperature=0.3
         )
         self._instruct = """
         Take the key ideas and takeaways from the text and create a short
@@ -116,7 +116,7 @@ class TopicParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=550, num_beams=6, do_sample=True, temperature=0.9
+            max_new_tokens=500, num_beams=6, do_sample=True, temperature=0.9
         )
         self._instruct = """
                 Create a JSON object as response.The JSON object must have 2 fields:
@@ -124,7 +124,7 @@ class TopicParams(LLMTaskParams):
                 For the title field, generate a very detailed and self-explanatory
                  title for the given text. Let the title be as descriptive as possible.
                 For the summary field, summarize the given text in a maximum of
-                three sentences.
+                two sentences.
             """
         self._schema = {
             "type": "object",

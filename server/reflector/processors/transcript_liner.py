@@ -16,18 +16,25 @@ class TranscriptLinerProcessor(Processor):
         self.transcript = Transcript(words=[])
         self.max_text = max_text
 
+    def is_sentence_terminated(self, sentence) -> bool:
+        sentence_terminators = [".", "?", "!"]
+        for terminator in sentence_terminators:
+            if terminator in sentence:
+                return True
+        return False
+
     async def _push(self, data: Transcript):
         # merge both transcript
         self.transcript.merge(data)
 
         # check if a line is complete
-        if "." not in self.transcript.text:
+        if not self.is_sentence_terminated(self.transcript.text):
             # if the transcription text is still not too long, wait for more
             if len(self.transcript.text) < self.max_text:
                 return
 
         # cut to the next .
-        partial = Transcript(translation=self.transcript.translation, words=[])
+        partial = Transcript(words=[])
         for word in self.transcript.words[:]:
             partial.text += word.text
             partial.words.append(word)
@@ -38,7 +45,7 @@ class TranscriptLinerProcessor(Processor):
             await self.emit(partial)
 
             # create new transcript
-            partial = Transcript(translation=self.transcript.translation, words=[])
+            partial = Transcript(words=[])
 
         self.transcript = partial
 
