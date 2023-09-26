@@ -18,7 +18,7 @@ import httpx
 
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
-from reflector.processors.types import AudioFile, Transcript, TranslationLanguages, Word
+from reflector.processors.types import AudioFile, Transcript, Word
 from reflector.settings import settings
 from reflector.utils.retry import retry
 
@@ -53,21 +53,8 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             files = {
                 "file": (data.name, data.fd),
             }
-
-            # FIXME this should be a processor after, as each user may want
-            # different languages
             source_language = self.get_pref("audio:source_language", "en")
-            target_language = self.get_pref("audio:target_language", "en")
-            languages = TranslationLanguages()
-
-            # Only way to set the target should be the UI element like dropdown.
-            # Hence, this assert should never fail.
-            assert languages.is_supported(target_language)
-            json_payload = {
-                "source_language": source_language,
-                "target_language": target_language,
-            }
-
+            json_payload = {"source_language": source_language}
             response = await retry(client.post)(
                 self.transcript_url,
                 files=files,
@@ -81,16 +68,10 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             )
             response.raise_for_status()
             result = response.json()
-
-            # Sanity check for translation status in the result
-            translation = None
-            if source_language != target_language and target_language in result["text"]:
-                translation = result["text"][target_language]
             text = result["text"][source_language]
             text = self.filter_profanity(text)
             transcript = Transcript(
                 text=text,
-                translation=translation,
                 words=[
                     Word(
                         text=word["text"],
