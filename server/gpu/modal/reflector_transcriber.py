@@ -27,7 +27,7 @@ SEAMLESS_MODEL_DIR: str = "m4t"
 
 WHISPER_MODEL_DIR = "/root/transcription_models"
 
-stub = Stub(name="reflector-transcriber")
+stub = Stub(name="reflector-translation")
 
 
 def install_seamless_communication():
@@ -260,8 +260,6 @@ class Transcriber:
             tgt_lang=self.get_seamless_lang_code(target_language),
             ngram_filtering=True
         )
-        print(source_language, target_language)
-        print(self.get_seamless_lang_code(source_language), self.get_seamless_lang_code(target_language))
         return {
             "text": {
                 source_language: text,
