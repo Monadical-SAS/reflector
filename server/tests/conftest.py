@@ -79,7 +79,6 @@ async def dummy_translator():
     ):
         # ignore the created object
         TestTranscriptTranslatorProcessor()
-        yield
 
 
 @pytest.fixture
