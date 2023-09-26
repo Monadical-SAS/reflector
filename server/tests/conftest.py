@@ -71,14 +71,17 @@ async def dummy_translator():
     class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
+            self.transcript_url = "url"
+            self.warmup_url = "warmup_url"
+            self.timeout = 0.0
+            self.headers = {"Authorization": "Bearer API_KEY"}
 
     with patch(
         "reflector.processors.transcript_translator"
         ".TranscriptTranslatorProcessor.__init__",
         MagicMock(),
-    ):
-        # ignore the created object
-        TestTranscriptTranslatorProcessor()
+    ) as mock_init:
+        mock_init.return_value = None
 
 
 @pytest.fixture
