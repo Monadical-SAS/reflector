@@ -12,6 +12,8 @@ type UseWebSockets = {
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
+  const [textQueue, setTextQueue] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
@@ -19,6 +21,22 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [status, setStatus] = useState<Status>({ value: "disconnected" });
   const { setError } = useError();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isProcessing || textQueue.length === 0) {
+      return;
+    }
+
+    setIsProcessing(true);
+    const text = textQueue[0];
+    setTranscriptText(text);
+
+    const delay = text.length * 100;
+    setTimeout(() => {
+      setIsProcessing(false);
+      setTextQueue((prevQueue) => prevQueue.slice(1));
+    }, delay);
+  }, [textQueue, isProcessing]);
 
   useEffect(() => {
     document.onkeyup = (e) => {
@@ -136,10 +154,12 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       try {
         switch (message.event) {
           case "TRANSCRIPT":
-            if (message.data.text) {
-              setTranscriptText((message.data.text ?? "").trim());
-              console.debug("TRANSCRIPT event:", message.data);
-            }
+            const newText = (message.data.text ?? "").trim();
+
+            if (!newText) break;
+
+            console.debug("TRANSCRIPT event:", newText);
+            setTextQueue((prevQueue) => [...prevQueue, newText]);
             break;
 
           case "TOPIC":
