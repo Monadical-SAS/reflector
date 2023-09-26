@@ -38,7 +38,7 @@ class TranscriptLinerProcessor(Processor):
         for word in self.transcript.words[:]:
             partial.text += word.text
             partial.words.append(word)
-            if "." not in word.text:
+            if not self.is_sentence_terminated(word.text):
                 continue
 
             # emit line
