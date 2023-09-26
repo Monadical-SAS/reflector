@@ -339,7 +339,7 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
-          {props.audioDevices && props.audioDevices?.length > 0 && (
+          {props.audioDevices && props.audioDevices?.length > 1 && (
             <>
               <button
                 className="text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg focus-visible:outline outline-blue-400"
