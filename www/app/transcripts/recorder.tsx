@@ -109,7 +109,7 @@ export default function Recorder(props: RecorderProps) {
 
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
-      wsWrapper.style.backgroundColor = "#e0c3fc42";
+      wsWrapper.style.backgroundColor = "RGB(240 240 240)";
       wsWrapper.style.borderRadius = "15px";
 
       _wavesurfer.on("play", () => {
@@ -278,7 +278,10 @@ export default function Recorder(props: RecorderProps) {
   return (
     <div className="flex items-center w-full relative">
       <div className="flex-grow items-end relative">
-        <div ref={waveformRef} className="flex-grow rounded-2xl h-20"></div>
+        <div
+          ref={waveformRef}
+          className="flex-grow rounded-lg md:rounded-xl h-20"
+        ></div>
         <div className="absolute right-2 bottom-0">
           {isRecording && (
             <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
@@ -336,7 +339,7 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
-          {props.audioDevices && props.audioDevices?.length > 0 && (
+          {props.audioDevices && props.audioDevices?.length > 1 && (
             <>
               <button
                 className="text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg focus-visible:outline outline-blue-400"
