@@ -28,13 +28,43 @@ def dummy_processors():
         "reflector.processors.transcript_final_long_summary.TranscriptFinalLongSummaryProcessor.get_long_summary"
     ) as mock_long_summary, patch(
         "reflector.processors.transcript_final_short_summary.TranscriptFinalShortSummaryProcessor.get_short_summary"
-    ) as mock_short_summary:
+    ) as mock_short_summary, patch(
+        "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
+    ) as mock_translate:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
         mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
+        mock_translate.return_value = "Bonjour le monde"
+        yield mock_translate, mock_topic, mock_title, mock_long_summary, mock_short_summary  # noqa
 
-        yield mock_topic, mock_title, mock_long_summary, mock_short_summary
+
+@pytest.fixture
+async def dummy_transcript():
+    from reflector.processors.audio_transcript import AudioTranscriptProcessor
+    from reflector.processors.types import AudioFile, Transcript, Word
+
+    class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
+        async def _transcript(self, data: AudioFile):
+            source_language = self.get_pref("audio:source_language", "en")
+            print("transcripting", source_language)
+            print("pipeline", self.pipeline)
+            print("prefs", self.pipeline.prefs)
+
+            return Transcript(
+                text="Hello world.",
+                words=[
+                    Word(start=0.0, end=1.0, text="Hello"),
+                    Word(start=1.0, end=2.0, text=" world."),
+                ],
+            )
+
+    with patch(
+        "reflector.processors.audio_transcript_auto"
+        ".AudioTranscriptAutoProcessor.get_instance"
+    ) as mock_audio:
+        mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
 
 
 @pytest.fixture

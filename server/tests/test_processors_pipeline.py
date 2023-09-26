@@ -3,7 +3,12 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_basic_process(
-    event_loop, nltk, dummy_llm, dummy_processors, ensure_casing
+    event_loop,
+    nltk,
+    dummy_transcript,
+    dummy_llm,
+    dummy_processors,
+    ensure_casing,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
@@ -29,7 +34,8 @@ async def test_basic_process(
     print(marks)
 
     # validate the events
-    assert marks["TranscriptLinerProcessor"] == 5
+    assert marks["TranscriptLinerProcessor"] == 4
+    assert marks["TranscriptTranslatorProcessor"] == 4
     assert marks["TranscriptTopicDetectorProcessor"] == 1
     assert marks["TranscriptFinalLongSummaryProcessor"] == 1
     assert marks["TranscriptFinalShortSummaryProcessor"] == 1
