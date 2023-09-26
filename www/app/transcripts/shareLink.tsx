@@ -1,10 +1,13 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, use } from "react";
 
 const ShareLink = () => {
   const [isCopied, setIsCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [currentUrl, setCurrentUrl] = useState<string>();
 
-  const currentURL = window.location.href;
+  useEffect(() => {
+    setCurrentUrl(window.location.href);
+  }, []);
 
   const handleCopyClick = () => {
     if (inputRef.current) {
@@ -31,7 +34,7 @@ const ShareLink = () => {
         <input
           type="text"
           readOnly
-          value={currentURL}
+          value={currentUrl}
           ref={inputRef}
           className="border rounded-lg md:rounded-xl p-2 flex-grow mr-2 text-sm bg-slate-100 outline-slate-400"
         />
