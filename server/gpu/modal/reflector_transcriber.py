@@ -27,7 +27,7 @@ SEAMLESS_MODEL_DIR: str = "m4t"
 
 WHISPER_MODEL_DIR = "/root/transcription_models"
 
-stub = Stub(name="reflector-translation")
+stub = Stub(name="reflector-transcriber")
 
 
 def install_seamless_communication():
