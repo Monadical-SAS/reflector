@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -62,26 +62,6 @@ async def dummy_transcript():
     ) as mock_audio:
         mock_audio.return_value = TestAudioTranscriptProcessor()
         yield
-
-
-@pytest.fixture
-async def dummy_translator():
-    from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
-
-    class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            self.transcript_url = "url"
-            self.warmup_url = "warmup_url"
-            self.timeout = 0.0
-            self.headers = {"Authorization": "Bearer API_KEY"}
-
-    with patch(
-        "reflector.processors.transcript_translator"
-        ".TranscriptTranslatorProcessor.__init__",
-        MagicMock(),
-    ) as mock_init:
-        mock_init.return_value = None
 
 
 @pytest.fixture

@@ -19,8 +19,7 @@ class TranscriptTranslatorProcessor(Processor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.transcript_url = settings.TRANSCRIPT_URL + "/translate"
-        self.warmup_url = settings.TRANSCRIPT_URL + "/warmup"
+        self.transcript_url = settings.TRANSCRIPT_URL
         self.timeout = settings.TRANSCRIPT_TIMEOUT
         self.headers = {"Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}"}
 
@@ -30,7 +29,7 @@ class TranscriptTranslatorProcessor(Processor):
                 start = monotonic()
                 self.logger.debug("Translate modal: warming up...")
                 response = await client.post(
-                    self.warmup_url,
+                    settings.TRANSCRIPT_URL + "/warmup",
                     headers=self.headers,
                     timeout=self.timeout,
                 )
@@ -67,7 +66,7 @@ class TranscriptTranslatorProcessor(Processor):
         translation = None
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
-                self.transcript_url,
+                settings.TRANSCRIPT_URL + "/translate",
                 headers=self.headers,
                 params=json_payload,
                 timeout=self.timeout,
