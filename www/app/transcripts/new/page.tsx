@@ -16,6 +16,8 @@ import { faGear } from "@fortawesome/free-solid-svg-icons";
 import About from "../../(aboutAndPrivacy)/about";
 import Privacy from "../../(aboutAndPrivacy)/privacy";
 import { lockWakeState, releaseWakeState } from "../../lib/wakeLock";
+import { useError } from "../../(errors)/errorContext";
+import Link from "next/link";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -58,6 +60,15 @@ const TranscriptCreate = () => {
       releaseWakeState();
     };
   }, []);
+  const { error } = useError();
+  console.log(error);
+  const [hasErrored, setHasErrored] = useState(false);
+
+  useEffect(() => {
+    if (!hasErrored && error) {
+      setHasErrored(true);
+    }
+  }, [hasErrored, error]);
 
   return (
     <>
@@ -87,7 +98,22 @@ const TranscriptCreate = () => {
             <section
               className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4`}
             >
-              {!hasRecorded ? (
+              {hasErrored ? (
+                <div className="flex flex-col justify-center align-center text-center h-full">
+                  <div>
+                    <p className="text-center text-gray-500 mb-3">
+                      An unfortunate error has occured and the transcription can
+                      not resume.
+                    </p>
+                    <Link
+                      className="bg-red-400 hover:bg-red-500 focus-visible:bg-red-500 text-white rounded p-2"
+                      href="/"
+                    >
+                      Try Again
+                    </Link>
+                  </div>
+                </div>
+              ) : !hasRecorded ? (
                 <>
                   {transcriptStarted && (
                     <h2 className="md:text-lg font-bold">Transcription</h2>
