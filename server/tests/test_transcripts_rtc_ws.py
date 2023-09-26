@@ -48,7 +48,7 @@ async def dummy_transcript():
                 text="Hello world.",
                 words=[
                     Word(start=0.0, end=1.0, text="Hello"),
-                    Word(start=1.0, end=2.0, text="world."),
+                    Word(start=1.0, end=2.0, text=" world."),
                 ],
             )
 

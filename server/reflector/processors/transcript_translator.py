@@ -74,7 +74,7 @@ class TranscriptTranslatorProcessor(Processor):
             )
             response.raise_for_status()
             result = response.json()["text"]
-            print(result, source_language, target_language)
+
             # Sanity check for translation status in the result
             if source_language != target_language and target_language in result:
                 translation = result[target_language]

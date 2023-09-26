@@ -37,14 +37,12 @@ class TranscriptLinerProcessor(Processor):
         partial = Transcript(words=[])
         for word in self.transcript.words[:]:
             partial.text += word.text
-            partial.text += " "
             partial.words.append(word)
             if not self.is_sentence_terminated(word.text):
                 continue
 
             # emit line
             await self.emit(partial)
-
             # create new transcript
             partial = Transcript(words=[])
 
