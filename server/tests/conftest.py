@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -65,32 +65,30 @@ async def dummy_transcript():
 
 
 @pytest.fixture
-async def dummy_translate():
+async def dummy_translator():
     from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
-    from reflector.processors.types import Transcript, Word
 
     class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
-        async def translate(self, data: Transcript):
-            source_language = self.get_pref("audio:source_language", "en")
-            target_language = self.get_pref("audio:target_language", "en")
-            print("translating", source_language, "to", target_language)
-            print("pipeline", self.pipeline)
-            print("prefs", self.pipeline.prefs)
-
-            return Transcript(
-                text="Hello world.",
-                translation="Bonjour le monde",
-                words=[
-                    Word(start=0.0, end=1.0, text="Hello"),
-                    Word(start=1.0, end=2.0, text=" world."),
-                ],
-            )
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
 
     with patch(
         "reflector.processors.transcript_translator"
-        ".TranscriptTranslatorProcessor.__init__"
+        ".TranscriptTranslatorProcessor.__init__",
+        MagicMock(),
+    ):
+        # ignore the created object
+        TestTranscriptTranslatorProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_translate():
+    with patch(
+        "reflector.processors.transcript_translator"
+        ".TranscriptTranslatorProcessor.get_translation"
     ) as mock_translate:
-        mock_translate.return_value = TestTranscriptTranslatorProcessor()
+        mock_translate.return_value = "Bonjour le monde"
         yield
 
 
