@@ -90,7 +90,6 @@ const TranscriptCreate = () => {
                         <div className="text-center text-gray-500">
                           The conversation transcript will appear here shortly
                           after you start recording.
-                          <br />
                         </div>
                       ) : (
                         <LiveTrancription text={webSockets.transcriptText} />
