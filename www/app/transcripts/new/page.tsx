@@ -70,9 +70,7 @@ const TranscriptCreate = () => {
               autoscroll={true}
             />
             <section
-              className={`w-full h-full ${
-                hasRecorded ? "bg-blue-400/20" : ""
-              } rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center`}
+              className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center`}
             >
               {!hasRecorded ? (
                 <div className="py-2 h-auto">
