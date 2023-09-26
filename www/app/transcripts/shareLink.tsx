@@ -11,12 +11,14 @@ const ShareLink = () => {
 
   const handleCopyClick = () => {
     if (inputRef.current) {
-      inputRef.current.select();
-      document.execCommand("copy");
-      setIsCopied(true);
+      let text_to_copy = inputRef.current.value;
 
-      // Reset the copied state after 2 seconds
-      setTimeout(() => setIsCopied(false), 2000);
+      text_to_copy &&
+        navigator.clipboard.writeText(text_to_copy).then(() => {
+          setIsCopied(true);
+          // Reset the copied state after 2 seconds
+          setTimeout(() => setIsCopied(false), 2000);
+        });
     }
   };
 
