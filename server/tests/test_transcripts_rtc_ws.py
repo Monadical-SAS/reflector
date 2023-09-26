@@ -45,10 +45,10 @@ async def dummy_transcript():
             print("prefs", self.pipeline.prefs)
 
             return Transcript(
-                text="Hello world",
+                text="Hello world.",
                 words=[
                     Word(start=0.0, end=1.0, text="Hello"),
-                    Word(start=1.0, end=2.0, text="world"),
+                    Word(start=1.0, end=2.0, text="world."),
                 ],
             )
 
@@ -158,14 +158,14 @@ async def test_transcript_rtc_and_websocket(
     # check events
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
-    assert ev["data"]["text"].startswith("Hello world")
+    assert ev["data"]["text"].startswith("Hello world.")
     assert ev["data"]["translation"] == "Bonjour le monde"
 
     assert "TOPIC" in eventnames
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["transcript"].startswith("Hello world")
+    assert ev["data"]["transcript"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames
@@ -303,14 +303,14 @@ async def test_transcript_rtc_and_websocket_and_fr(
     # check events
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
-    assert ev["data"]["text"].startswith("Hello world")
+    assert ev["data"]["text"].startswith("Hello world.")
     assert ev["data"]["translation"] == "Bonjour le monde"
 
     assert "TOPIC" in eventnames
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["transcript"].startswith("Hello world")
+    assert ev["data"]["transcript"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames
