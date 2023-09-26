@@ -1,0 +1,25 @@
+                                                         Apps
+┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ App ID                  ┃ Name                     ┃ State    ┃ Creation time           ┃ Stop time                ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ ap-phKxARUTF2fVUvVrpZi… │ reflector-translator     │ deployed │ 2023-09-22              │                          │
+│                         │                          │          │ 19:28:45+05:30          │                          │
+│ ap-WMcM4gjz1kfHtYYY1R9… │ reflector-transcriber-s… │ deployed │ 2023-09-13              │                          │
+│                         │                          │          │ 20:53:39+05:30          │                          │
+│ ap-i1jqOdoF1PTN9S4od8i… │ reflector-llm-scaleai    │ deployed │ 2023-09-13              │                          │
+│                         │                          │          │ 20:53:11+05:30          │                          │
+│ ap-R4IKUHBI74NzE2MCa3A… │ reflector-llm            │ deployed │ 2023-08-11              │                          │
+│                         │                          │          │ 22:19:55+05:30          │                          │
+│ ap-afFQfPV288aWoprhfSf… │ reflector-transcriber    │ deployed │ 2023-08-11              │                          │
+│                         │                          │          │ 14:42:25+05:30          │                          │
+│ ap-ZhP8mIYvU5YwN0lz2Ix… │ reflector-translator     │ stopped  │ 2023-09-22              │ 2023-09-22               │
+│                         │                          │          │ 19:24:18+05:30          │ 19:28:26+05:30           │
+│ ap-tAqkl8WAuHfiebHYJHN… │ reflector-translator     │ stopped  │ 2023-09-22              │ 2023-09-22               │
+│                         │                          │          │ 19:27:11+05:30          │ 19:28:22+05:30           │
+│ ap-DdmHxjCsEbgu1cMAxe6… │ reflector-translator     │ stopped  │ 2023-09-22              │ 2023-09-22               │
+│                         │                          │          │ 19:22:34+05:30          │ 19:24:04+05:30           │
+│ ap-bIP8D4Ki0ohw5l0ui5J… │ reflector-translator     │ stopped  │ 2023-09-22              │ 2023-09-22               │
+│                         │                          │          │ 19:19:21+05:30          │ 19:24:01+05:30           │
+│ ap-vSB2kb9K4WSX1twpUNW… │ reflector-transcriber-l… │ stopped  │ 2023-09-19              │ 2023-09-22               │
+│                         │                          │          │ 12:52:43+05:30          │ 19:23:50+05:30           │
+└─────────────────────────┴──────────────────────────┴──────────┴─────────────────────────┴──────────────────────────┘

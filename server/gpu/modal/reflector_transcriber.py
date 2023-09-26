@@ -234,6 +234,18 @@ class Transcriber:
                 "words": words
             }
 
+    def get_seamless_lang_code(self, lang_code: str):
+        """
+        The codes for SeamlessM4T is different from regular standards.
+        For ex, French is "fra" and not "fr".
+        """
+        # TODO: Enhance with complete list of lang codes
+        seamless_lang_code = {
+            "en": "eng",
+            "fr": "fra"
+        }
+        return seamless_lang_code.get(lang_code, "eng")
+
     @method()
     def translate_text(
             self,
@@ -244,10 +256,12 @@ class Transcriber:
         translated_text, _, _ = self.translator.predict(
             text,
             "t2tt",
-            src_lang=source_language,
-            tgt_lang=target_language,
+            src_lang=self.get_seamless_lang_code(source_language),
+            tgt_lang=self.get_seamless_lang_code(target_language),
             ngram_filtering=True
         )
+        print(source_language, target_language)
+        print(self.get_seamless_lang_code(source_language), self.get_seamless_lang_code(target_language))
         return {
             "text": {
                 source_language: text,
@@ -290,18 +304,6 @@ def web():
     class TranscriptResponse(BaseModel):
         result: dict
 
-    def get_seamless_lang_code(lang_code: str):
-        """
-        The codes for SeamlessM4T is different from regular standards.
-        For ex, French is "fra" and not "fr".
-        """
-        # TODO: Enhance with complete list of lang codes
-        seamless_lang_code = {
-            "en": "eng",
-            "fr": "fra"
-        }
-        return seamless_lang_code.get(lang_code, "eng")
-
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     async def transcribe(
         file: UploadFile,
@@ -324,13 +326,13 @@ def web():
     @app.post("/translate", dependencies=[Depends(apikey_auth)])
     async def translate(
             text: str,
-            source_language: Annotated[str, Body(...)] = "eng",
-            target_language: Annotated[str, Body(...)] = "fra",
+            source_language: Annotated[str, Body(...)] = "en",
+            target_language: Annotated[str, Body(...)] = "fr",
     ) -> TranscriptResponse:
         func = transcriberstub.translate_text.spawn(
             text=text,
-            source_language=get_seamless_lang_code(source_language),
-            target_language=get_seamless_lang_code(target_language),
+            source_language=source_language,
+            target_language=target_language,
         )
         result = func.get()
         return result
