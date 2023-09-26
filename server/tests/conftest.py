@@ -28,15 +28,12 @@ def dummy_processors():
         "reflector.processors.transcript_final_long_summary.TranscriptFinalLongSummaryProcessor.get_long_summary"
     ) as mock_long_summary, patch(
         "reflector.processors.transcript_final_short_summary.TranscriptFinalShortSummaryProcessor.get_short_summary"
-    ) as mock_short_summary, patch(
-        "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
-    ) as mock_translate:
+    ) as mock_short_summary:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
         mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
-        mock_translate.return_value = "Bonjour le monde"
-        yield mock_translate, mock_topic, mock_title, mock_long_summary, mock_short_summary  # noqa
+        yield mock_topic, mock_title, mock_long_summary, mock_short_summary
 
 
 @pytest.fixture
@@ -64,6 +61,36 @@ async def dummy_transcript():
         ".AudioTranscriptAutoProcessor.get_instance"
     ) as mock_audio:
         mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_translate():
+    from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
+    from reflector.processors.types import Transcript, Word
+
+    class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
+        async def translate(self, data: Transcript):
+            source_language = self.get_pref("audio:source_language", "en")
+            target_language = self.get_pref("audio:target_language", "en")
+            print("translating", source_language, "to", target_language)
+            print("pipeline", self.pipeline)
+            print("prefs", self.pipeline.prefs)
+
+            return Transcript(
+                text="Hello world.",
+                translation="Bonjour le monde",
+                words=[
+                    Word(start=0.0, end=1.0, text="Hello"),
+                    Word(start=1.0, end=2.0, text=" world."),
+                ],
+            )
+
+    with patch(
+        "reflector.processors.transcript_translator"
+        ".TranscriptTranslatorProcessor.__init__"
+    ) as mock_translate:
+        mock_translate.return_value = TestTranscriptTranslatorProcessor()
         yield
 
 
