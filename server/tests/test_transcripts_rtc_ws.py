@@ -62,7 +62,7 @@ async def dummy_transcript():
 
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+    tmpdir, nltk, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
@@ -204,7 +204,7 @@ async def test_transcript_rtc_and_websocket(
 
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket_and_fr(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+    tmpdir, nltk, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
