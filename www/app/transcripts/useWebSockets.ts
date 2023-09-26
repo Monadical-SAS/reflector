@@ -31,7 +31,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     const text = textQueue[0];
     setTranscriptText(text);
 
-    const delay = text.length * 100;
+    const WPM_READING = 200; // words per minute to read
+    const wordCount = text.split(/\s+/).length;
+    const delay = (wordCount / WPM_READING) * 60 * 1000;
     setTimeout(() => {
       setIsProcessing(false);
       setTextQueue((prevQueue) => prevQueue.slice(1));
