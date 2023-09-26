@@ -61,9 +61,11 @@ export function TopicList({
   }, [activeTopic, autoscroll]);
 
   return (
-    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:p-4 flex flex-col justify-center align-center">
+    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 flex flex-col justify-center align-center">
       {topics.length > 0 ? (
         <>
+          <h2 className="md:text-lg font-bold mb-2">Topics</h2>
+
           {autoscroll && (
             <ScrollToBottom
               visible={!autoscrollEnabled}
@@ -108,7 +110,7 @@ export function TopicList({
           </div>
         </>
       ) : (
-        <div className="text-center text-gray-500 p-4">
+        <div className="text-center text-gray-500">
           Discussion topics will appear here after you start recording.
           <br />
           It may take up to 5 minutes of conversation for the first topic to

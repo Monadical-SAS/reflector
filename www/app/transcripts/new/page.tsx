@@ -44,6 +44,12 @@ const TranscriptCreate = () => {
     getAudioStream,
   } = useAudioDevice();
   const [hasRecorded, setHasRecorded] = useState(false);
+  const [transcriptStarted, setTranscriptStarted] = useState(false);
+
+  useEffect(() => {
+    if (!transcriptStarted && webSockets.transcriptText.length !== 0)
+      setTranscriptStarted(true);
+  }, [webSockets.transcriptText]);
 
   return (
     <>
@@ -69,15 +75,30 @@ const TranscriptCreate = () => {
               useActiveTopic={useActiveTopic}
               autoscroll={true}
             />
+
             <section
-              className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center`}
+              className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4`}
             >
               {!hasRecorded ? (
-                <div className="py-2 h-auto">
-                  <LiveTrancription text={webSockets.transcriptText} />
-                </div>
+                <>
+                  {transcriptStarted && (
+                    <h2 className="md:text-lg font-bold">Transcription</h2>
+                  )}
+                  <div className="flex flex-col justify-center align center text-center h-full">
+                    <div className="py-2 h-auto">
+                      {!transcriptStarted ? (
+                        <div className="text-center text-gray-500">
+                          The conversation transcript will appear here after you
+                          start recording.
+                        </div>
+                      ) : (
+                        <LiveTrancription text={webSockets.transcriptText} />
+                      )}
+                    </div>
+                  </div>
+                </>
               ) : (
-                <div className="flex flex-col justify-center align center text-center">
+                <div className="flex flex-col justify-center align center text-center h-full text-gray-500">
                   <div className="p-2 md:p-4">
                     <FontAwesomeIcon
                       icon={faGear}
