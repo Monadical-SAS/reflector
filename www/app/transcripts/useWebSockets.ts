@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Topic, FinalSummary, Status } from "./webSocketTypes";
+import { Topic, FinalSummary, Status, TranslatedTopic } from "./webSocketTypes";
 import { useError } from "../(errors)/errorContext";
 import { isDevelopment } from "../lib/utils";
 import { useRouter } from "next/navigation";
@@ -15,7 +15,7 @@ type UseWebSockets = {
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
   const [translationText, setTranslationText] = useState<string>("");
-  const [textQueue, setTextQueue] = useState<string[]>([]);
+  const [textQueue, setTextQueue] = useState<TranslatedTopic[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
