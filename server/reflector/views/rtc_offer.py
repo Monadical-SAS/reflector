@@ -26,6 +26,7 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
+    TranscriptTranslatorProcessor,
 )
 from reflector.processors.base import BroadcastProcessor
 from reflector.processors.types import FinalTitle
@@ -219,8 +220,9 @@ async def rtc_offer_base(
     processors += [
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
-        AudioTranscriptAutoProcessor.as_threaded(callback=on_transcript),
+        AudioTranscriptAutoProcessor.as_threaded(),
         TranscriptLinerProcessor(),
+        TranscriptTranslatorProcessor.as_threaded(callback=on_transcript),
         TranscriptTopicDetectorProcessor.as_threaded(callback=on_topic),
         BroadcastProcessor(
             processors=[

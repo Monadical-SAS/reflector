@@ -30,6 +30,7 @@ async def test_basic_process(
 
     # validate the events
     assert marks["TranscriptLinerProcessor"] == 5
+    assert marks["TranscriptTranslatorProcessor"] == 5
     assert marks["TranscriptTopicDetectorProcessor"] == 1
     assert marks["TranscriptFinalLongSummaryProcessor"] == 1
     assert marks["TranscriptFinalShortSummaryProcessor"] == 1

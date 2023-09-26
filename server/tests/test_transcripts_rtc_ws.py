@@ -40,19 +40,12 @@ async def dummy_transcript():
     class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
         async def _transcript(self, data: AudioFile):
             source_language = self.get_pref("audio:source_language", "en")
-            target_language = self.get_pref("audio:target_language", "en")
-            print("transcripting", source_language, target_language)
+            print("transcripting", source_language)
             print("pipeline", self.pipeline)
             print("prefs", self.pipeline.prefs)
 
-            translation = None
-            if source_language != target_language:
-                if target_language == "fr":
-                    translation = "Bonjour le monde"
-
             return Transcript(
                 text="Hello world",
-                translation=translation,
                 words=[
                     Word(start=0.0, end=1.0, text="Hello"),
                     Word(start=1.0, end=2.0, text="world"),
@@ -165,8 +158,8 @@ async def test_transcript_rtc_and_websocket(
     # check events
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
-    assert ev["data"]["text"] == "Hello world"
-    assert ev["data"]["translation"] is None
+    assert ev["data"]["text"].startswith("Hello world")
+    assert ev["data"]["translation"] == "Bonjour le monde"
 
     assert "TOPIC" in eventnames
     ev = events[eventnames.index("TOPIC")]
@@ -310,7 +303,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     # check events
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
-    assert ev["data"]["text"] == "Hello world"
+    assert ev["data"]["text"].startswith("Hello world")
     assert ev["data"]["translation"] == "Bonjour le monde"
 
     assert "TOPIC" in eventnames

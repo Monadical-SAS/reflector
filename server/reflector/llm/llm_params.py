@@ -124,7 +124,7 @@ class TopicParams(LLMTaskParams):
                 For the title field, generate a very detailed and self-explanatory
                  title for the given text. Let the title be as descriptive as possible.
                 For the summary field, summarize the given text in a maximum of
-                three sentences.
+                two sentences.
             """
         self._schema = {
             "type": "object",
