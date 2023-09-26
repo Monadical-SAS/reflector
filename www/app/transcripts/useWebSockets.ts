@@ -15,6 +15,8 @@ type UseWebSockets = {
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
   const [translationText, setTranslationText] = useState<string>("");
+  const [textQueue, setTextQueue] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
@@ -22,6 +24,24 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [status, setStatus] = useState<Status>({ value: "disconnected" });
   const { setError } = useError();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isProcessing || textQueue.length === 0) {
+      return;
+    }
+
+    setIsProcessing(true);
+    const text = textQueue[0].text;
+    const translation = textQueue[0].translation;
+    setTranscriptText(text);
+    setTranslationText(translation);
+
+    const delay = text.length * 100;
+    setTimeout(() => {
+      setIsProcessing(false);
+      setTextQueue((prevQueue) => prevQueue.slice(1));
+    }, delay);
+  }, [textQueue, isProcessing]);
 
   const setupDebugKeys = () => {
     document.onkeyup = (e) => {
@@ -147,11 +167,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       try {
         switch (message.event) {
           case "TRANSCRIPT":
-            if (message.data.text) {
-              setTranscriptText((message.data.text ?? "").trim());
-              setTranslationText((message.data.translation ?? "").trim());
-              console.debug("TRANSCRIPT event:", message.data);
-            }
+            const newText = (message.data.text ?? "").trim();
+            const newTranslation = (message.data.translation ?? "").trim();
+
+            if (!newText) break;
+
+            console.debug("TRANSCRIPT event:", newText);
+            setTextQueue((prevQueue) => [...prevQueue, {
+              "text": newText,
+              "translation": newTranslation,
+            }]);
             break;
 
           case "TOPIC":
