@@ -83,7 +83,7 @@ export default function RootLayout({ children }) {
                     alt="Reflector"
                   />
                   <div className="hidden flex-col ml-2 md:block">
-                    <h1 className="text-4xl font-bold tracking-wide">
+                    <h1 className="text-[38px] font-bold tracking-wide leading-tight">
                       Reflector
                     </h1>
                     <p className="text-gray-500 text-xs tracking-tighter">
