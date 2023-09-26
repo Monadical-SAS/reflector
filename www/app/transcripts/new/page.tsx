@@ -132,7 +132,7 @@ const TranscriptCreate = () => {
                     transforms audio into knowledge. The output is meeting
                     minutes and topic summaries enabling topic-specific analyses
                     stored in your systems of record. This is accomplished on
-                    your infrastructure - without 3rd parties - keeping your
+                    your infrastructure – without 3rd parties – keeping your
                     data private, secure, and organized.
                   </p>
                   <About buttonText="Learn more" />
