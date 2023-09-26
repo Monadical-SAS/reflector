@@ -55,15 +55,14 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               useActiveTopic={useActiveTopic}
               autoscroll={false}
             />
-            <section className="relative w-full h-auto max-h-full bg-blue-400/20 rounded-lg md:rounded-xl px-2 md:px-4 flex flex-col justify-center align-center">
-              <ShareLink />
-
-              <div className="py-2 h-full">
+            <div className="w-full h-full grid grid-rows-layout-one gap-2 lg:gap-4">
+              <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
                 {transcript?.response?.longSummary && (
                   <FinalSummary text={transcript?.response?.longSummary} />
                 )}
-              </div>
-            </section>
+              </section>
+              <ShareLink />
+            </div>
           </div>
         </>
       )}
