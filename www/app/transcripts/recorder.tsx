@@ -57,7 +57,7 @@ export default function Recorder(props: RecorderProps) {
     const handleKeyPress = (event: KeyboardEvent) => {
       switch (event.key) {
         case "~":
-          location.href = ""
+          location.href = "";
           break;
         case ",":
           location.href = "/transcripts/new";

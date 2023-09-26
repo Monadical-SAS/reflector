@@ -44,6 +44,7 @@ const TranscriptCreate = () => {
     requestPermission,
     getAudioStream,
   } = useAudioDevice();
+
   const [hasRecorded, setHasRecorded] = useState(false);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
 

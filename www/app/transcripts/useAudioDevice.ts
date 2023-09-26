@@ -21,6 +21,21 @@ const useAudioDevice = () => {
   }, [permissionOk]);
 
   const checkPermission = (): void => {
+    if (navigator.userAgent.includes("Firefox")) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true, video: false })
+        .then((stream) => {
+          setPermissionOk(true);
+          setPermissionDenied(false);
+        })
+        .catch((e) => {
+          setPermissionOk(false);
+          setPermissionDenied(false);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
     navigator.permissions
       .query(MIC_QUERY)
       .then((permissionStatus) => {
