@@ -15,6 +15,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import About from "../../(aboutAndPrivacy)/about";
 import Privacy from "../../(aboutAndPrivacy)/privacy";
+import { lockWakeState, releaseWakeState } from "../../lib/wakeLock";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -44,6 +45,13 @@ const TranscriptCreate = () => {
     getAudioStream,
   } = useAudioDevice();
   const [hasRecorded, setHasRecorded] = useState(false);
+
+  useEffect(() => {
+    lockWakeState();
+    return () => {
+      releaseWakeState();
+    };
+  }, []);
 
   return (
     <>
