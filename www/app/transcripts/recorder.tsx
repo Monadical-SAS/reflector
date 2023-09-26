@@ -138,7 +138,7 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     topicsRef.current = props.topics;
     if (!isRecording) renderMarkers();
-  }, [props.topics]);
+  }, [props.topics, waveRegions]);
 
   const renderMarkers = () => {
     if (!waveRegions) return;
