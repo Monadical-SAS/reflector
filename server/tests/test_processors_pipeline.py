@@ -5,6 +5,7 @@ import pytest
 async def test_basic_process(
     event_loop,
     nltk,
+    dummy_translator,
     dummy_translate,
     dummy_transcript,
     dummy_llm,
