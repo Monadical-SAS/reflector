@@ -7,6 +7,7 @@ services:
       - 1250:1250
     environment:
       LLM_URL: "${LLM_URL}"
+      MIN_TRANSCRIPT_LENGTH: "${MIN_TRANSCRIPT_LENGTH}"
     volumes:
       - model-cache:/root/.cache
 
