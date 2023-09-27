@@ -68,6 +68,7 @@ export default function Recorder(props: RecorderProps) {
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordStartTime, setRecordStartTime] = useState<null | number>(null);
   const [hasRecorded, setHasRecorded] = useState<boolean>(props.isPastMeeting);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -250,12 +251,9 @@ export default function Recorder(props: RecorderProps) {
 
   useEffect(() => {
     if (isRecording) {
-      const interval = window.setInterval(() => {
-        props.setRecordingTime && props.setRecordingTime((prev) => prev + 1);
-      }, 1000);
-      setTimeInterval(interval);
-      return () => clearInterval(interval);
+      setRecordStartTime(Date.now());
     } else {
+      setRecordStartTime(null);
       clearInterval(timeInterval as number);
       setCurrentTime((prev) => {
         setDuration(prev);
@@ -263,6 +261,19 @@ export default function Recorder(props: RecorderProps) {
       });
     }
   }, [isRecording]);
+
+  useEffect(() => {
+    if (recordStartTime) {
+      const interval = window.setInterval(() => {
+        props.setRecordingTime &&
+          props.setRecordingTime(
+            Math.floor((Date.now() - recordStartTime) / 1000),
+          );
+      }, 1000);
+      setTimeInterval(interval);
+      return () => clearInterval(interval);
+    }
+  }, [recordStartTime]);
 
   useEffect(() => {
     if (activeTopic) {
