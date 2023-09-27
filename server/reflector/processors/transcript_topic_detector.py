@@ -1,6 +1,7 @@
 from reflector.llm import LLM, LLMTaskParams
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
+from reflector.settings import settings
 
 
 class TranscriptTopicDetectorProcessor(Processor):
@@ -12,7 +13,9 @@ class TranscriptTopicDetectorProcessor(Processor):
     OUTPUT_TYPE = TitleSummary
     TASK = "topic"
 
-    def __init__(self, min_transcript_length: int = 750, **kwargs):
+    def __init__(
+        self, min_transcript_length: int = int(settings.MIN_TRANSCRIPT_LENGTH), **kwargs
+    ):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length

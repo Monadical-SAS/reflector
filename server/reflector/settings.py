@@ -97,5 +97,8 @@ class Settings(BaseSettings):
     # Cache directory for all model storage
     CACHE_DIR: str = "./data"
 
+    # Min transcript length to generate topic + summary
+    MIN_TRANSCRIPT_LENGTH: int = 1800
+
 
 settings = Settings()
