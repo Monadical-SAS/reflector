@@ -141,6 +141,11 @@ export default function Recorder(props: RecorderProps) {
           : undefined,
       });
 
+      // hack for RPI to prevent creating too much elements;
+      // we don't use it anyway.
+      const _wshack: any = _wavesurfer;
+      _wshack.renderer.renderSingleCanvas = () => {};
+
       const wsWrapper = _wavesurfer.getWrapper();
       // wsWrapper.style.cursor = "pointer";
       wsWrapper.style.borderRadius = "15px";
