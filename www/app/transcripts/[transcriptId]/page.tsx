@@ -63,9 +63,13 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 )}
               </section>
 
-              <section className="flex">
-                <div className="mr-4">
-                <QRCode value={`${process.env.NEXT_PUBLIC_SITE_URL}transcripts/${details.params.transcriptId}`} level="L" size={98} />
+              <section className="flex items-center">
+                <div className="mr-4 hidden md:block h-auto">
+                  <QRCode
+                    value={`${process.env.NEXT_PUBLIC_SITE_URL}transcripts/${details.params.transcriptId}`}
+                    level="L"
+                    size={98}
+                  />
                 </div>
                 <div className="flex-grow">
                   <ShareLink />
