@@ -307,9 +307,9 @@ export default function Recorder(props: RecorderProps) {
     <div className="relative w-full">
       <div ref={waveformRef} className="w-full rounded-2xl bg-white/10"></div>
       <div className="absolute bottom-0 right-2 text-xs text-black z-10">
-        {isRecording && (
+        {/**isRecording && (
           <div className="inline-block bg-white rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
-        )}
+        )**/}
         <span className="font-mono">{timeLabel()}</span>
       </div>
     </div>

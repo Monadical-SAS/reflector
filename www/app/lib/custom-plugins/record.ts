@@ -86,7 +86,7 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
 
     let animationId: number, previousTimeStamp: number;
     const DATA_SIZE = 128.0;
-    const BUFFER_SIZE = 2 ** 8;
+    const BUFFER_SIZE = 2 ** 7;
     const dataBuffer = new Array(BUFFER_SIZE).fill(DATA_SIZE);
 
     const drawWaveform = (timeStamp: number) => {
@@ -102,7 +102,7 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
         dataBuffer.splice(0, 1);
       }
       const elapsed = timeStamp - previousTimeStamp;
-      if (elapsed > 10) {
+      if (elapsed > 1000 / 7) {
         previousTimeStamp = timeStamp;
         dataBuffer.push(Math.min(...dataArray));
         dataBuffer.splice(0, 1);
@@ -162,17 +162,17 @@ class RecordPlugin extends BasePlugin<RecordPluginEvents, RecordPluginOptions> {
       mimeType: this.options.mimeType || findSupportedMimeType(),
       audioBitsPerSecond: this.options.audioBitsPerSecond,
     });
-    const recordedChunks: Blob[] = [];
+    // const recordedChunks: Blob[] = [];
 
-    mediaRecorder.addEventListener("dataavailable", (event) => {
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
-      }
-    });
+    // mediaRecorder.addEventListener("dataavailable", (event) => {
+    //   if (event.data.size > 0) {
+    //     recordedChunks.push(event.data);
+    //   }
+    // });
 
     mediaRecorder.addEventListener("stop", () => {
       onStop();
-      this.loadBlob(recordedChunks, mediaRecorder.mimeType);
+      // this.loadBlob(recordedChunks, mediaRecorder.mimeType);
       this.emit("stopRecording");
     });
 
