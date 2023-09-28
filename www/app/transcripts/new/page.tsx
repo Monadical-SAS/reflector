@@ -188,16 +188,23 @@ const TranscriptCreate = () => {
         />
         <div className="flex items-end">
           <Image
-            src="/canada-flag.svg"
+            src="/Flag_of_Quebec.svg"
             width={40}
             height={40}
-            className="h-8 lg:auto w-auto mr-1 mb-3"
+            className="h-8 lg:auto w-auto mr-1 mb-3 opacity-80 ml-2 lg:relative lg:bottom-1.5"
+            alt="Flag of Quebec"
+          />
+          <Image
+            src="/canada-flag.svg"
+            width={30}
+            height={30}
+            className="h-8 lg:auto w-auto mr-1 mb-3 opacity-80 ml-2 lg:relative lg:bottom-1.5"
             alt="Canada flag"
           />
           <Image
             src="/Monadical-BW-with-name.svg"
-            width={40}
-            height={40}
+            width={30}
+            height={30}
             className="h-12 lg:h-16 mr-[-4px] w-auto"
             alt="Monadical Logo"
           />
