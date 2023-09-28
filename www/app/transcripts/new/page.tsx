@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Recorder from "../recorder";
-import { Dashboard } from "../dashboard";
 import useWebRTC from "../useWebRTC";
 import useTranscript from "../useTranscript";
 import { useWebSockets } from "../useWebSockets";
@@ -187,13 +186,22 @@ const TranscriptCreate = () => {
           className="h-12 lg:h-16 ml-[-3px] w-auto"
           alt="All In Logo"
         />
-        <Image
-          src="/Monadical-BW-with-name.svg"
-          width={40}
-          height={40}
-          className="h-12 lg:h-16 mr-[-4px] w-auto"
-          alt="Monadical Logo"
-        />
+        <div className="flex items-end">
+          <Image
+            src="/canada-flag.svg"
+            width={40}
+            height={40}
+            className="h-8 lg:auto w-auto mr-1 mb-3"
+            alt="Canada flag"
+          />
+          <Image
+            src="/Monadical-BW-with-name.svg"
+            width={40}
+            height={40}
+            className="h-12 lg:h-16 mr-[-4px] w-auto"
+            alt="Monadical Logo"
+          />
+        </div>
       </footer>
     </div>
   );
