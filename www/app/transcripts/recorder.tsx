@@ -110,6 +110,12 @@ export default function Recorder(props: RecorderProps) {
           : undefined,
       });
 
+      if (!props.transcriptId)
+      {
+        const _wshack: any = _wavesurfer;
+        _wshack.renderer.renderSingleCanvas = () => {};
+      }
+
       const wsWrapper = _wavesurfer.getWrapper();
       wsWrapper.style.cursor = "pointer";
       wsWrapper.style.backgroundColor = "RGB(240 240 240)";
