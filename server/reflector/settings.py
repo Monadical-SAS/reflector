@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     CACHE_DIR: str = "./data"
 
     # Min transcript length to generate topic + summary
-    MIN_TRANSCRIPT_LENGTH: int = 1800
+    MIN_TRANSCRIPT_LENGTH: int = 750
 
 
 settings = Settings()

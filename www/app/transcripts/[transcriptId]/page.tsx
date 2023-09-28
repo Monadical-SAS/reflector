@@ -11,6 +11,7 @@ import React, { useEffect, useState } from "react";
 import "../../styles/button.css";
 import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
+import QRCode from "react-qr-code";
 
 type TranscriptDetails = {
   params: {
@@ -61,7 +62,19 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                   <FinalSummary text={transcript?.response?.longSummary} />
                 )}
               </section>
-              <ShareLink />
+
+              <section className="flex items-center">
+                <div className="mr-4 hidden md:block h-auto">
+                  <QRCode
+                    value={`${process.env.NEXT_PUBLIC_SITE_URL}transcripts/${details.params.transcriptId}`}
+                    level="L"
+                    size={98}
+                  />
+                </div>
+                <div className="flex-grow">
+                  <ShareLink />
+                </div>
+              </section>
             </div>
           </div>
         </>
