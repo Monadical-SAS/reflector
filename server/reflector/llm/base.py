@@ -6,12 +6,11 @@ from typing import TypeVar
 
 import nltk
 from prometheus_client import Counter, Histogram
-from transformers import GenerationConfig
-
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from transformers import GenerationConfig
 
 T = TypeVar("T", bound="LLM")
 
@@ -214,10 +213,16 @@ class LLM:
             # The result can have words in braces with additional space.
             # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
             pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
-            title = re.sub(pattern, "", modified_title)
+            modified_title = re.sub(pattern, "", modified_title)
+
+            # Punctuations are treated as a separate entity, hence
+            # preceded by a space. Remove extra space.
+            pattern = r"\s*([.,;!?\'])"
+            modified_title = re.sub(pattern, r"\1", modified_title)
+
             # Irrespective of casing changes, the starting letter
             # of title is always upper-cased
-            title = title[0].upper() + title[1:]
+            title = modified_title[0].upper() + modified_title[1:]
         except Exception as e:
             reflector_logger.info(
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
