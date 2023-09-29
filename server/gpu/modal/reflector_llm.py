@@ -66,7 +66,7 @@ llm_image = (
 @stub.cls(
     gpu="A100",
     timeout=60 * 5,
-    container_idle_timeout=60 * 5,
+    container_idle_timeout=60,
     concurrency_limit=2,
     image=llm_image,
 )
