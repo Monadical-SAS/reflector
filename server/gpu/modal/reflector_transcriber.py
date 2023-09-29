@@ -158,11 +158,12 @@ transcriber_image = (
 
 
 @stub.cls(
-    gpu="A100",
+    gpu="A10G",
     timeout=60 * 5,
-    container_idle_timeout=60 * 5,
-    concurrency_limit=3,
+    container_idle_timeout=1200,
+    concurrency_limit=2,
     image=transcriber_image,
+    keep_warm=1
 )
 class Transcriber:
     def __enter__(self):
