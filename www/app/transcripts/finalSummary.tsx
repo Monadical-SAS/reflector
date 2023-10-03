@@ -36,7 +36,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
     <div className="overflow-y-auto h-auto max-h-full">
       <div className="flex flex-row justify-between items-center">
         <h2 className="text-xl md:text-2xl font-bold">Final Summary</h2>
-        <div class="ml-auto flex space-x-2">
+        <div className="ml-auto flex space-x-2">
         <button
           onClick={handleCopyTranscriptClick}
           className={
