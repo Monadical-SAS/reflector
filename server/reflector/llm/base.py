@@ -208,17 +208,9 @@ class LLM:
                     camel_cased.append(word[0].upper() + word[1:])
                 else:
                     camel_cased.append(word)
-            modified_title = " ".join(camel_cased)
-
-            # The result can have words in braces with additional space.
-            # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
-            pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
-            modified_title = re.sub(pattern, "", modified_title)
-
-            # Punctuations are treated as a separate entity, hence
-            # preceded by a space. Remove extra space.
-            pattern = r"\s*([.,;!?\'])"
-            modified_title = re.sub(pattern, r"\1", modified_title)
+            modified_title = (
+                nltk.tokenize.treebank.TreebankWordDetokenizer().detokenize(camel_cased)
+            )
 
             # Irrespective of casing changes, the starting letter
             # of title is always upper-cased
