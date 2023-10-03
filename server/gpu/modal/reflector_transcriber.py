@@ -160,7 +160,7 @@ transcriber_image = (
 @stub.cls(
     gpu="A10G",
     timeout=60 * 5,
-    container_idle_timeout=60,
+    container_idle_timeout=60 * 5,
     image=transcriber_image,
 )
 class Transcriber:
