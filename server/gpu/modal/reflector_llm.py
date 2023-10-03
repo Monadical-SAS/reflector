@@ -69,7 +69,6 @@ llm_image = (
     container_idle_timeout=60 * 5,
     concurrency_limit=2,
     image=llm_image,
-    keep_warm=1
 )
 class LLM:
     def __enter__(self):
