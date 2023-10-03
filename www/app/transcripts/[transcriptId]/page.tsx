@@ -35,7 +35,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
-  const fullTranscript = topics.topics?.map(topic => topic.transcript).join(' ').replace(/ +/g, ' ').trim() || '';
+  const fullTranscript = topics.topics?.map(topic => topic.transcript).join('\n\n').replace(/ +/g, ' ').trim() || '';
 
   return (
     <>
