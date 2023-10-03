@@ -1,21 +1,34 @@
 import { useRef, useState } from "react";
 
 type FinalSummaryProps = {
-  text: string;
+  summary: string;
+  fullTranscript: string;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
   const finalSummaryRef = useRef<HTMLParagraphElement>(null);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isCopiedSummary, setIsCopiedSummary] = useState(false);
+  const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
 
-  const handleCopyClick = () => {
+  const handleCopySummaryClick = () => {
     let text_to_copy = finalSummaryRef.current?.innerText;
 
     text_to_copy &&
       navigator.clipboard.writeText(text_to_copy).then(() => {
-        setIsCopied(true);
+        setIsCopiedSummary(true);
         // Reset the copied state after 2 seconds
-        setTimeout(() => setIsCopied(false), 2000);
+        setTimeout(() => setIsCopiedSummary(false), 2000);
+      });
+  };
+
+  const handleCopyTranscriptClick = () => {
+    let text_to_copy = props.fullTranscript;
+
+    text_to_copy &&
+      navigator.clipboard.writeText(text_to_copy).then(() => {
+        setIsCopiedTranscript(true);
+        // Reset the copied state after 2 seconds
+        setTimeout(() => setIsCopiedTranscript(false), 2000);
       });
   };
 
@@ -23,19 +36,31 @@ export default function FinalSummary(props: FinalSummaryProps) {
     <div className="overflow-y-auto h-auto max-h-full">
       <div className="flex flex-row justify-between items-center">
         <h2 className="text-xl md:text-2xl font-bold">Final Summary</h2>
+        <div class="ml-auto flex space-x-2">
         <button
-          onClick={handleCopyClick}
+          onClick={handleCopyTranscriptClick}
           className={
-            (isCopied ? "bg-blue-500" : "bg-blue-400") +
+            (isCopiedTranscript ? "bg-blue-500" : "bg-blue-400") +
             " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
           }
           style={{ minHeight: "30px" }}
         >
-          {isCopied ? "Copied!" : "Copy"}
+          {isCopiedTranscript ? "Copied!" : "Copy Full Transcript"}
         </button>
+        <button
+          onClick={handleCopySummaryClick}
+          className={
+            (isCopiedSummary ? "bg-blue-500" : "bg-blue-400") +
+            " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
+          }
+          style={{ minHeight: "30px" }}
+        >
+          {isCopiedSummary ? "Copied!" : "Copy Summary"}
+        </button>
+        </div>
       </div>
 
-      <p ref={finalSummaryRef}>{props.text}</p>
+      <p ref={finalSummaryRef}>{props.summary}</p>
     </div>
   );
 }
