@@ -110,6 +110,7 @@ class LLM:
         self.m_generate_call = self.m_generate_call.labels(name)
         self.m_generate_success = self.m_generate_success.labels(name)
         self.m_generate_failure = self.m_generate_failure.labels(name)
+        self.detokenizer = nltk.tokenize.treebank.TreebankWordDetokenizer()
 
     async def warmup(self, logger: reflector_logger):
         start = monotonic()
@@ -208,9 +209,7 @@ class LLM:
                     camel_cased.append(word[0].upper() + word[1:])
                 else:
                     camel_cased.append(word)
-            modified_title = (
-                nltk.tokenize.treebank.TreebankWordDetokenizer().detokenize(camel_cased)
-            )
+            modified_title = self.detokenizer.detokenize(camel_cased)
 
             # Irrespective of casing changes, the starting letter
             # of title is always upper-cased
