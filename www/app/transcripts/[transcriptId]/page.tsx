@@ -35,6 +35,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
+  const fullTranscript = topics.topics?.map(topic => topic.transcript).join('\n\n').replace(/ +/g, ' ').trim() || '';
+
   return (
     <>
       {transcript?.loading === true ||
@@ -59,7 +61,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <div className="w-full h-full grid grid-rows-layout-one gap-2 lg:gap-4">
               <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
                 {transcript?.response?.longSummary && (
-                  <FinalSummary text={transcript?.response?.longSummary} />
+                  <FinalSummary fullTranscript={fullTranscript} summary={transcript?.response?.longSummary} />
                 )}
               </section>
 
