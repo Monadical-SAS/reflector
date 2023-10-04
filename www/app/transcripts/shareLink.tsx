@@ -39,7 +39,7 @@ const ShareLink = () => {
           value={currentUrl}
           ref={inputRef}
           onChange={() => {}}
-          className="border rounded-lg md:rounded-xl p-2 flex-grow mr-2 text-sm bg-slate-100 outline-slate-400"
+          className="border rounded-lg md:rounded-xl p-2 flex-grow flex-shrink overflow-auto mr-2 text-sm bg-slate-100 outline-slate-400"
         />
         <button
           onClick={handleCopyClick}

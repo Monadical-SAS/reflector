@@ -110,8 +110,7 @@ export default function Recorder(props: RecorderProps) {
           : undefined,
       });
 
-      if (!props.transcriptId)
-      {
+      if (!props.transcriptId) {
         const _wshack: any = _wavesurfer;
         _wshack.renderer.renderSingleCanvas = () => {};
       }

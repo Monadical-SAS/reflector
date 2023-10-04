@@ -35,7 +35,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
-  const fullTranscript = topics.topics?.map(topic => topic.transcript).join('\n\n').replace(/ +/g, ' ').trim() || '';
+  const fullTranscript =
+    topics.topics
+      ?.map((topic) => topic.transcript)
+      .join("\n\n")
+      .replace(/ +/g, " ")
+      .trim() || "";
 
   return (
     <>
@@ -58,10 +63,13 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               useActiveTopic={useActiveTopic}
               autoscroll={false}
             />
-            <div className="w-full h-full grid grid-rows-layout-one gap-2 lg:gap-4">
+            <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
               <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
                 {transcript?.response?.longSummary && (
-                  <FinalSummary fullTranscript={fullTranscript} summary={transcript?.response?.longSummary} />
+                  <FinalSummary
+                    fullTranscript={fullTranscript}
+                    summary={transcript?.response?.longSummary}
+                  />
                 )}
               </section>
 
@@ -73,7 +81,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                     size={98}
                   />
                 </div>
-                <div className="flex-grow">
+                <div className="flex-grow max-w-full">
                   <ShareLink />
                 </div>
               </section>
