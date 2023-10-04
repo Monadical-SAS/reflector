@@ -61,10 +61,10 @@ export function TopicList({
   }, [activeTopic, autoscroll]);
 
   return (
-    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 flex flex-col justify-center align-center">
+    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-1 sm:p-2 md:px-4 flex flex-col justify-center align-center">
       {topics.length > 0 ? (
         <>
-          <h2 className="md:text-lg font-bold mb-2">Topics</h2>
+          <h2 className="ml-2 md:text-lg font-bold mb-2">Topics</h2>
 
           {autoscroll && (
             <ScrollToBottom
@@ -86,7 +86,7 @@ export function TopicList({
                   setActiveTopic(activeTopic?.id == topic.id ? null : topic)
                 }
               >
-                <div className="w-full flex justify-between items-center rounded-lg md:rounded-xl text-lg md:text-xl font-bold leading-tight">
+                <div className="w-full flex justify-between items-center rounded-lg md:rounded-xl xs:text-base sm:text-lg md:text-xl font-bold leading-tight">
                   <p>
                     <span className="font-light font-mono text-slate-500 text-base md:text-lg">
                       [{formatTime(topic.timestamp)}]&nbsp;
