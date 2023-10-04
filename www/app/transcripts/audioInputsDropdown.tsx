@@ -6,19 +6,9 @@ const AudioInputsDropdown: React.FC<{
   audioDevices: Option[];
   disabled: boolean;
   hide: () => void;
+  deviceId: string;
   setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
 }> = (props) => {
-  const [ddOptions, setDdOptions] = useState<Option[]>([]);
-
-  useEffect(() => {
-    if (props.audioDevices) {
-      setDdOptions(props.audioDevices);
-      props.setDeviceId(
-        props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
-      );
-    }
-  }, [props.audioDevices]);
-
   const handleDropdownChange = (option: Option) => {
     props.setDeviceId(option.value);
     props.hide();
@@ -26,9 +16,9 @@ const AudioInputsDropdown: React.FC<{
 
   return (
     <Dropdown
-      options={ddOptions}
+      options={props.audioDevices}
       onChange={handleDropdownChange}
-      value={ddOptions[0]}
+      value={props.deviceId}
       className="flex-grow w-full"
       disabled={props.disabled}
     />
