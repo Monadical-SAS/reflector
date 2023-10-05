@@ -186,10 +186,6 @@ class Transcriber:
         )
 
     @method()
-    def warmup(self):
-        return {"status": "ok"}
-
-    @method()
     def transcribe_segment(
         self,
         audio_data: str,
@@ -333,9 +329,5 @@ def web():
         )
         result = func.get()
         return result
-
-    @app.post("/warmup", dependencies=[Depends(apikey_auth)])
-    async def warmup():
-        return transcriberstub.warmup.spawn().get()
 
     return app

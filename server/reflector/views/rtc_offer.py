@@ -8,7 +8,6 @@ from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from fastapi import APIRouter, Request
 from prometheus_client import Gauge
 from pydantic import BaseModel
-
 from reflector.events import subscribers_shutdown
 from reflector.logger import logger
 from reflector.processors import (
@@ -239,8 +238,6 @@ async def rtc_offer_base(
     ctx.pipeline = Pipeline(*processors)
     ctx.pipeline.set_pref("audio:source_language", source_language)
     ctx.pipeline.set_pref("audio:target_language", target_language)
-    # FIXME: warmup is not working well yet
-    # await ctx.pipeline.warmup()
 
     # handle RTC peer connection
     pc = RTCPeerConnection()

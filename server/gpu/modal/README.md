@@ -43,17 +43,6 @@ Authentication must be passed with the `Authorization` header, using the `bearer
 Authorization: bearer <REFLECTOR_APIKEY>
 ```
 
-### Warmup (both)
-
-`POST /warmup`
-
-**response**
-```
-{
-    "status": "ok"
-}
-```
-
 ### LLM
 
 `POST /llm`

@@ -52,9 +52,6 @@ class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
     def off(self, callback):
         self.processor.off(callback)
 
-    async def _warmup(self):
-        return await self.processor._warmup()
-
     async def _push(self, data: AudioFile):
         return await self.processor._push(data)
 
