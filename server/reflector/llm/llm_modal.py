@@ -1,10 +1,9 @@
 import httpx
-from transformers import AutoTokenizer, GenerationConfig
-
 from reflector.llm.base import LLM
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from transformers import AutoTokenizer, GenerationConfig
 
 
 class ModalLLM(LLM):
@@ -12,7 +11,6 @@ class ModalLLM(LLM):
         super().__init__()
         self.timeout = settings.LLM_TIMEOUT
         self.llm_url = settings.LLM_URL + "/llm"
-        self.llm_warmup_url = settings.LLM_URL + "/warmup"
         self.headers = {
             "Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}",
         }
@@ -26,15 +24,6 @@ class ModalLLM(LLM):
         # TODO: Query the specific GPU platform
         # Replace this with a HTTP call
         return ["lmsys/vicuna-13b-v1.5"]
-
-    async def _warmup(self, logger):
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.llm_warmup_url,
-                headers=self.headers,
-                timeout=60 * 5,
-            )
-            response.raise_for_status()
 
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
