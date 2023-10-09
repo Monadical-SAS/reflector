@@ -14,6 +14,7 @@ import { AudioWaveform } from "../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { useError } from "../(errors)/errorContext";
+import { waveSurferStyles } from "../styles/recorder";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -94,20 +95,30 @@ export default function Recorder(props: RecorderProps) {
     };
   };
 
+  // Setup Shortcuts
+  useEffect(() => {
+    if (!record) return;
+
+    return setupProjectorKeys();
+  }, [record, deviceId]);
+
+  // Waveform setup
   useEffect(() => {
     if (waveformRef.current) {
+      console.log(props.waveform);
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        waveColor: "#777",
-        progressColor: "#222",
-        cursorColor: "OrangeRed",
+        url: props.transcriptId
+          ? `${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`
+          : undefined,
+        peaks: props.waveform?.data,
+
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
         height: "auto",
-        url: props.transcriptId
-          ? `${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`
-          : undefined,
+
+        ...waveSurferStyles.player,
       });
 
       if (!props.transcriptId) {
@@ -115,10 +126,12 @@ export default function Recorder(props: RecorderProps) {
         _wshack.renderer.renderSingleCanvas = () => {};
       }
 
+      // styling
       const wsWrapper = _wavesurfer.getWrapper();
-      wsWrapper.style.cursor = "pointer";
-      wsWrapper.style.backgroundColor = "RGB(240 240 240)";
-      wsWrapper.style.borderRadius = "15px";
+      wsWrapper.style.cursor = waveSurferStyles.playerStyle.cursor;
+      wsWrapper.style.backgroundColor =
+        waveSurferStyles.playerStyle.backgroundColor;
+      wsWrapper.style.borderRadius = waveSurferStyles.playerStyle.borderRadius;
 
       _wavesurfer.on("play", () => {
         setIsPlaying(true);
@@ -131,9 +144,10 @@ export default function Recorder(props: RecorderProps) {
       setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
       setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
 
-      if (props.transcriptId) _wavesurfer.toggleInteraction(true);
+      if (props.isPastMeeting) _wavesurfer.toggleInteraction(true);
 
       setWavesurfer(_wavesurfer);
+
       return () => {
         _wavesurfer.destroy();
         setIsRecording(false);
@@ -152,35 +166,18 @@ export default function Recorder(props: RecorderProps) {
     if (!waveRegions) return;
 
     waveRegions.clearRegions();
+
     for (let topic of topicsRef.current) {
       const content = document.createElement("div");
-      content.setAttribute(
-        "style",
-        `
-        position: absolute;
-        border-left: solid 1px orange;
-        padding: 0 2px 0 5px;
-        font-size: 0.7rem;
-        width: 100px;
-        max-width: fit-content;
-        cursor: pointer;
-        background-color: white;
-        border-radius: 0 3px 3px 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        transition: width 100ms linear;
-      `,
-      );
+      content.setAttribute("style", waveSurferStyles.marker);
       content.onmouseover = () => {
-        content.style.backgroundColor = "orange";
+        content.style.backgroundColor =
+          waveSurferStyles.markerHover.backgroundColor;
         content.style.zIndex = "999";
         content.style.width = "300px";
       };
       content.onmouseout = () => {
-        content.style.backgroundColor = "white";
-        content.style.zIndex = "0";
-        content.style.width = "100px";
+        content.setAttribute("style", waveSurferStyles.marker);
       };
       content.textContent = topic.title;
 
@@ -201,12 +198,6 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     if (!record) return;
 
-    return setupProjectorKeys();
-  }, [record, deviceId]);
-
-  useEffect(() => {
-    if (!record) return;
-
     return record.on("stopRecording", () => {
       const link = document.getElementById("download-recording");
       if (!link) return;
@@ -214,6 +205,7 @@ export default function Recorder(props: RecorderProps) {
       link.setAttribute("href", record.getRecordedUrl());
       link.setAttribute("download", "reflector-recording.webm");
       link.style.visibility = "visible";
+
       renderMarkers();
     });
   }, [record]);
