@@ -90,6 +90,7 @@ class Transcript(BaseModel):
     events: list[TranscriptEvent] = []
     source_language: str = "en"
     target_language: str = "en"
+    allow_indexing: bool = True
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -234,6 +235,7 @@ class CreateTranscript(BaseModel):
     name: str
     source_language: str = Field("en")
     target_language: str = Field("en")
+    allow_indexing: bool = True
 
 
 class UpdateTranscript(BaseModel):

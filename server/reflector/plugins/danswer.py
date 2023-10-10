@@ -31,6 +31,9 @@ class Danswer(Plugin):
             task.add_done_callback(self.background_task.discard)
 
     async def upload_topic(self, transcript: Transcript, topic: TranscriptTopic):
+        if not transcript.allow_indexing:
+            # filter out non-indexable transcripts
+            return None
         try:
             return await self._upload_topic(transcript, topic)
         except Exception:
