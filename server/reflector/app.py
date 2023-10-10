@@ -1,16 +1,16 @@
 from contextlib import asynccontextmanager
 
+import reflector.auth  # noqa
+import reflector.db  # noqa
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi_pagination import add_pagination
 from prometheus_fastapi_instrumentator import Instrumentator
-
-import reflector.auth  # noqa
-import reflector.db  # noqa
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
+from reflector.plugins.manager import PluginManager
 from reflector.settings import settings
 from reflector.views.rtc_offer import router as rtc_offer_router
 from reflector.views.transcripts import router as transcripts_router
@@ -25,11 +25,13 @@ except ImportError:
 # lifespan events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await PluginManager.load_plugins()
     for func in subscribers_startup:
         await func(app)
     yield
     for func in subscribers_shutdown:
         await func(app)
+    await PluginManager.unload_plugins()
 
 
 # use sentry if available

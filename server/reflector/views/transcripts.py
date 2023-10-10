@@ -17,6 +17,7 @@ from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
 from reflector.db import database, transcripts
 from reflector.logger import logger
+from reflector.plugins.manager import PluginManager
 from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
 from starlette.concurrency import run_in_threadpool
@@ -510,6 +511,12 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
                 "events": transcript.events_dump(),
                 "topics": transcript.topics_dump(),
             },
+        )
+
+        await PluginManager.hook(
+            PluginManager.Hook.TRANSCRIPT_TOPIC,
+            transcript=transcript,
+            topic=topic,
         )
 
     elif event == PipelineEvent.FINAL_TITLE:

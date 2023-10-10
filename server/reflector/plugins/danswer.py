@@ -1,3 +1,4 @@
+import asyncio
 import io
 import uuid
 from datetime import datetime
@@ -5,45 +6,64 @@ from json import dumps, loads
 
 from httpx import AsyncClient
 from reflector.logger import logger
+from reflector.plugins.manager import Plugin, PluginManager
 from reflector.settings import settings
 from reflector.views.transcripts import Transcript, TranscriptTopic
 
 
-class Danswer:
+class Danswer(Plugin):
     def __init__(self):
-        self.base_url = settings.DANSWER_URL
+        self.base_url = settings.PLUGIN_DANSWER_URL
         self.client = AsyncClient(base_url=self.base_url, timeout=120)
+        self.background_task = set()
 
-    def is_enabled(self):
-        return self.base_url is not None
+    async def load(self):
+        pass
 
-    async def upload_chunk(self, transcript: Transcript, chunk: TranscriptTopic):
+    async def unload(self):
+        logger.info("Flushing background tasks")
+        await asyncio.gather(*self.background_task)
+
+    async def hook(self, name, **kwargs):
+        if name == PluginManager.Hook.TRANSCRIPT_TOPIC:
+            task = asyncio.create_task(self.upload_topic(**kwargs))
+            self.background_task.add(task)
+            task.add_done_callback(self.background_task.discard)
+
+    async def upload_topic(self, transcript: Transcript, topic: TranscriptTopic):
+        try:
+            return await self._upload_topic(transcript, topic)
+        except Exception:
+            logger.exception("Error uploading topic")
+            return None
+
+    async def _upload_topic(self, transcript: Transcript, topic: TranscriptTopic):
         ### /api/manage/admin/connector/file/upload
         metadata = {
             "link": (
                 f"https://reflector.media/transcripts/{transcript.id}"
-                f"#topic:{chunk.id},timestamp:{chunk.timestamp}"
+                f"#topic:{topic.id},timestamp:{topic.timestamp}"
             ),
             "transcript_id": transcript.id,
             "transcript_created_at": transcript.created_at.isoformat(),
-            "chunk_id": chunk.id,
-            "chunk_created_at": datetime.utcnow().isoformat(),
-            "chunk_relative_timestamp": chunk.timestamp,
+            "topic_id": topic.id,
+            "topic_created_at": datetime.utcnow().isoformat(),
+            "topic_relative_timestamp": topic.timestamp,
         }
         content = "\n".join(
             (
                 f"#DANSWER_METADATA={dumps(metadata)}",
                 "",
-                f"# {chunk.title}",
+                f"# {topic.title}",
                 "",
-                chunk.transcript,
+                topic.transcript,
             )
         )
 
         fd = io.BytesIO(content.encode("utf-8"))
-        filename = f"{transcript.id}_{chunk.id}.txt"
+        filename = f"{transcript.id}_{topic.id}.txt"
 
-        # upload the chunk
+        # upload the topic
         response = await self.client.post(
             "/api/manage/admin/connector/file/upload",
             files={"files": (filename, fd, "text/plain")},
@@ -118,7 +138,6 @@ class Danswer:
 
 if __name__ == "__main__":
     import argparse
-    import asyncio
 
     danswer = Danswer()
 
@@ -134,12 +153,12 @@ if __name__ == "__main__":
             print(ret)
 
     elif args.upload:
-        dbtranscript = Transcript(
+        transcript = Transcript(
             id=uuid.uuid4().hex,
             created_at=datetime.utcnow(),
         )
 
-        chunk = TranscriptTopic(
+        topic = TranscriptTopic(
             id=uuid.uuid4().hex,
             title="Test danswer integration",
             summary="This is a test",
@@ -148,9 +167,11 @@ if __name__ == "__main__":
         )
 
         async def main():
-            result = await danswer.upload_chunk(dbtranscript, chunk)
+            result = await danswer.upload_topic(transcript, topic)
             from pprint import pprint
 
             pprint(result)
 
     asyncio.run(main())
+
+PluginManager.register("danswer", Danswer)
