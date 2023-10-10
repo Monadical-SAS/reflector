@@ -100,5 +100,8 @@ class Settings(BaseSettings):
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750
 
+    # Danswer integration
+    DANSWER_URL: str | None = "http://danswer.reflector.media:3000/"
+
 
 settings = Settings()
