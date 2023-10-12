@@ -177,6 +177,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           case "FINAL_LONG_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
+            }
+            break;
+
+          case "FINAL_TITLE":
+            console.debug("FINAL_TITLE event:", message.data);
+            break;
+
+          case "STATUS":
+            console.log("STATUS event:", message.data);
+            if (message.data.value === "ended") {
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
               console.debug(
@@ -186,13 +196,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 newUrl,
               );
             }
-            break;
-
-          case "FINAL_TITLE":
-            console.debug("FINAL_TITLE event:", message.data);
-            break;
-
-          case "STATUS":
             setStatus(message.data);
             break;
 
