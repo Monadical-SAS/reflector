@@ -261,7 +261,7 @@ class LLM:
         """
         Choose the token size to set as the threshold to pack the LLM calls
         """
-        buffer_token_size = 25
+        buffer_token_size = 100
         default_output_tokens = 1000
         context_window = self.tokenizer.model_max_length
         tokens = self.tokenizer.tokenize(

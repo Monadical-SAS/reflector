@@ -144,7 +144,35 @@ class TopicParams(LLMTaskParams):
         return self._task_params
 
 
+class FinalBulletedSummaryParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
+            max_new_tokens=1500,
+            num_beams=1,
+            do_sample=True,
+            temperature=0.7,
+            early_stopping=True,
+        )
+        self._instruct = """
+            Given the transcript of a meeting, find the most important topics discussed
+            and summarize what was discussed with relevance to each topic.
+            For each topic summarization, have a bullet point heading.
+            Do not remove or modify the content, except to fix spelling or punctuation.
+          """
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=None, gen_cfg=self._gen_cfg
+        )
+
+    def _get_task_params(self) -> TaskParams:
+        """gen_schema
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
+
+
 LLMTaskParams.register("topic", TopicParams)
 LLMTaskParams.register("final_title", FinalTitleParams)
 LLMTaskParams.register("final_short_summary", FinalShortSummaryParams)
 LLMTaskParams.register("final_long_summary", FinalLongSummaryParams)
+LLMTaskParams.register("final_summary", FinalBulletedSummaryParams)

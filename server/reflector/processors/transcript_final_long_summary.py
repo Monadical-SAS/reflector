@@ -10,12 +10,12 @@ class TranscriptFinalLongSummaryProcessor(Processor):
 
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = FinalLongSummary
-    TASK = "final_long_summary"
+    TASK = "final_summary"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
-        self.llm = LLM.get_instance()
+        self.llm = LLM.get_instance(model_name="HuggingFaceH4/zephyr-7b-alpha")
         self.params = LLMTaskParams.get_instance(self.TASK).task_params
 
     async def _push(self, data: TitleSummary):
@@ -37,7 +37,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
                 gen_cfg=self.params.gen_cfg,
                 logger=self.logger,
             )
-            accumulated_summaries += summary_result["long_summary"]
+            accumulated_summaries += summary_result
 
         return accumulated_summaries
 
@@ -46,8 +46,10 @@ class TranscriptFinalLongSummaryProcessor(Processor):
             self.logger.warning("No summary to output")
             return
 
-        accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
-        long_summary = await self.get_long_summary(accumulated_summaries)
+        accumulated_transcripts = " ".join(
+            [chunk.transcript.text for chunk in self.chunks]
+        )
+        long_summary = await self.get_long_summary(accumulated_transcripts)
 
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
