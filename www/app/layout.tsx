@@ -6,7 +6,7 @@ import FiefWrapper from "./(auth)/fiefWrapper";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 
-const roboto = Poppins({ subsets: ["latin"], weight: ["400", "600", "200"] });
+const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
 export const metadata: Metadata = {
   title: {
@@ -50,12 +50,14 @@ export const metadata: Metadata = {
     initialScale: 1,
     maximumScale: 1,
   },
+
+  robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={roboto.className}>
+      <body className={poppins.className}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />

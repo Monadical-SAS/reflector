@@ -6,45 +6,14 @@ import CustomRegionsPlugin from "../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-
-import Dropdown, { Option } from "react-dropdown";
 import "react-dropdown/style.css";
 
 import { formatTime } from "../lib/time";
 import { Topic } from "./webSocketTypes";
-import { useError } from "../(errors)/errorContext";
-
 import { AudioWaveform } from "../api";
-
-const AudioInputsDropdown: React.FC<{
-  audioDevices?: Option[];
-  setDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
-  disabled: boolean;
-}> = (props) => {
-  const [ddOptions, setDdOptions] = useState<Option[]>([]);
-
-  useEffect(() => {
-    if (props.audioDevices) {
-      setDdOptions(props.audioDevices);
-      props.setDeviceId(
-        props.audioDevices.length > 0 ? props.audioDevices[0].value : null,
-      );
-    }
-  }, [props.audioDevices]);
-
-  const handleDropdownChange = (option: Option) => {
-    props.setDeviceId(option.value);
-  };
-
-  return (
-    <Dropdown
-      options={ddOptions}
-      onChange={handleDropdownChange}
-      value={ddOptions[0]}
-      disabled={props.disabled}
-    />
-  );
-};
+import AudioInputsDropdown from "./audioInputsDropdown";
+import { Option } from "react-dropdown";
+import { useError } from "../(errors)/errorContext";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;

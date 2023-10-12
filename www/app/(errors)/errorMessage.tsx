@@ -13,23 +13,23 @@ const ErrorMessage: React.FC = () => {
       //      setIsVisible(true);
       console.log("Sentry capture exception", error, typeof error);
       Sentry.captureException(error);
-      console.error(error);
+      console.error("Error", error.message, error);
     }
   }, [error]);
 
   if (!isVisible || !error) return null;
 
   return (
-    <div
+    <button
       onClick={() => {
         setIsVisible(false);
         setError(null);
       }}
-      className="max-w-xs z-50 fixed top-16 right-10 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded transition-opacity duration-300 ease-out opacity-100 hover:opacity-75 cursor-pointer transform hover:scale-105"
+      className="max-w-xs z-50 fixed bottom-5 right-5 md:bottom-10 md:right-10 border-solid bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded transition-opacity duration-300 ease-out opacity-100 hover:opacity-80 focus-visible:opacity-80 cursor-pointer transform hover:scale-105 focus-visible:scale-105"
       role="alert"
     >
       <span className="block sm:inline">{error?.message}</span>
-    </div>
+    </button>
   );
 };
 
