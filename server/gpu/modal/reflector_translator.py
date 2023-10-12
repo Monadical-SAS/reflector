@@ -20,7 +20,7 @@ HF_SEAMLESS_M4T_VOCODEREPO: str = "facebook/seamless-m4t-vocoder"
 SEAMLESS_GITEPO: str = "https://github.com/facebookresearch/seamless_communication.git"
 SEAMLESS_MODEL_DIR: str = "m4t"
 
-stub = Stub(name="reflector-translate")
+stub = Stub(name="reflector-translator")
 
 
 def install_seamless_communication():

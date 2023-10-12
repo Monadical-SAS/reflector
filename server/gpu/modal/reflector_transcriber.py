@@ -17,7 +17,7 @@ WHISPER_NUM_WORKERS: int = 1
 
 WHISPER_MODEL_DIR = "/root/transcription_models"
 
-stub = Stub(name="reflector-transcribe")
+stub = Stub(name="reflector-transcriber")
 
 
 def download_whisper():
