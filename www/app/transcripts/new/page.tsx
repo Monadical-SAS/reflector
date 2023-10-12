@@ -67,7 +67,7 @@ const TranscriptCreate = () => {
           <Recorder
             setStream={setStream}
             onStop={() => {
-              webRTC?.peer?.send(JSON.stringify({ cmd: "STOP" }));
+              webRTC?.send(JSON.stringify({ cmd: "STOP" }));
               setStream(null);
               setHasRecorded(true);
             }}
