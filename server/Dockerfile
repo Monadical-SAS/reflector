@@ -7,16 +7,14 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
     PYTHONUNBUFFERED=1 \
     POETRY_VERSION=1.3.1
 
-# install packages needed for base
-# RUN apt-get update && apt-get install -y make gettext
-
-# builder
+# builder install base dependencies
 FROM base AS builder
 WORKDIR /tmp
-# RUN apt-get install -y build-essential libffi-dev zlib1g-dev
-COPY pyproject.toml poetry.lock /tmp
 RUN pip install "poetry==$POETRY_VERSION"
 RUN python -m venv /venv
+
+# install application dependencies
+COPY pyproject.toml poetry.lock /tmp
 RUN . /venv/bin/activate && poetry config virtualenvs.create false
 RUN . /venv/bin/activate && poetry install --only main,aws --no-root --no-interaction --no-ansi
 
