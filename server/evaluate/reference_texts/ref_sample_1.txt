@@ -1,0 +1,1544 @@
+CEO of Google cloud and Alexander Wang
+
+CEO and founder of scale AI Thomas
+
+joined Google in November 2018 as the
+
+CEO of Google Cloud prior to Google
+
+Thomas spent 22 years at Oracle where
+
+most recently he was president of
+
+product development before that Thomas
+
+worked at McKinsey as a business analyst
+
+and engagement manager his nearly 30
+
+years of experience have given him a
+
+deep knowledge of engineering Enterprise
+
+relationships and Leadership of large
+
+organizations Thomas's degrees include
+
+an MBA in administration and management
+
+from Stanford University as an RJ Miller
+
+scholar and a bsee in electrical
+
+engineering and computer science from
+
+Princeton University where he graduated
+
+summa laude Thomas serves as a
+
+member of the Stanford Graduate School
+
+of Business advisory Council and
+
+Princeton University School of
+
+Engineering advisory Council please
+
+welcome to the stage Thomas kurian and
+
+Alexander Wang
+
+[Music]
+
+this is a super exciting conversation
+
+thanks for uh thanks so much for being
+
+here Thomas thank you for having me you
+
+all just came off of uh your incredible
+
+Google Cloud next conference Where You
+
+released a wide variety of functionality
+
+and features and sort of new products
+
+across artificial intelligence but also
+
+across the entire sort of cloud
+
+ecosystem do you want to just first by
+
+walking through uh first start by
+
+walking through uh all the innovations
+
+that that you sort of released and uh
+
+and what you're excited about when it
+
+comes to Google Cloud
+
+you know our vision is super simple if
+
+you look at
+
+what smartphones did for a consumer you
+
+know they took
+
+a computer
+
+an internet browser a communication
+
+device and a camera and made it so that
+
+it's in everybody's pocket so it really
+
+brought computation to every person
+
+we feel that you know our our what we're
+
+trying to do is take all the
+
+technological innovation that Google's
+
+doing
+
+but make it super simple so that
+
+everyone can consume it and so that
+
+includes our global data center
+
+footprint
+
+all the new types of hardware and
+
+large-scale systems we work on
+
+the software that we're making available
+
+for people to do high-scale computation
+
+tools for data processing tools for
+
+cyber security
+
+tools for machine learning but make it
+
+so simple that everyone can use it
+
+and every step that we do to simplify
+
+things for people we think adoption can
+
+grow and so that's a lot of what we've
+
+done these last three four years and we
+
+made a number of announcements that next
+
+in in machine learning and AI in
+
+particular you know we look at our work
+
+as four elements
+
+how we take our large-scale compute
+
+systems that we're building for AI and
+
+how we make that available to everybody
+
+second what we're doing with the
+
+software stacks on top of it things like
+
+Jacks and other things and how we're
+
+making those available to everybody
+
+third is advances because different
+
+people have different levels of
+
+expertise some people say I need the
+
+hardware to build my own large language
+
+model or algorithm other people say look
+
+I really need to use a building block
+
+you guys give me so third is we've done
+
+a lot with automl and we announced new
+
+capability for image video and
+
+translation to make it available to
+
+everybody and then lastly we're also
+
+building completely packaged solutions
+
+for some areas and we announced some new
+
+stuff so it was a busy conference but
+
+you know lots of exciting stuff going on
+
+yeah it's incredible I mean I want to
+
+zoom out for a second to start with
+
+which is that this is obviously not your
+
+first time taking and packaging new
+
+technology breakthroughs for for the
+
+Enterprise you know both in your time at
+
+Oracle and now CEO of Google Cloud this
+
+is something that you've been doing for
+
+quite some time now when you sort of
+
+Zoom all the way out what do you think
+
+are some of the things that have some of
+
+of your principles or some of your
+
+thoughts and enabling these
+
+technological breakthroughs and actually
+
+enabling the Enterprise with them and
+
+what are sort of the key insights that
+
+you have there thank you a lot of the
+
+work so first of all we've really built
+
+out the organization the last three
+
+years we've seen a huge ramp up in our
+
+business credit to all the people you
+
+know who joined us
+
+at one point over 70 percent of
+
+organizations that joined during covid
+
+so they hadn't met anybody they couldn't
+
+meet their managers but they all did an
+
+amazing job together
+
+the adoption of Technology by companies
+
+and I'll give you just some elements
+
+particularly in the application of AI in
+
+different domains that we've seen
+
+we work with a large financial
+
+institution in Hong Kong and Shanghai
+
+bank which uses our machine learning to
+
+detect fraud
+
+you know fraud detection and banking
+
+there's a lot of false positives which
+
+makes it hard to really you know to it's
+
+very expensive for people doing
+
+something called anti-money laundering
+
+and our AI algorithms are really able to
+
+be super precise on detection
+
+explainability is a critical thing there
+
+right so people ask why did you why did
+
+you approve why did you flag this one
+
+and not that one because Regulators are
+
+involved so explainability becomes a big
+
+deal
+
+um we helped we helped uh Renault for
+
+example monitor all of the factories
+
+they process roughly a billion data sets
+
+every day obviously humans can process
+
+that
+
+but making it super simple to and you
+
+guys had given all your expertise in
+
+labeling and other things you would get
+
+a sense Factory floor data is not clean
+
+data and so you have to actually clean
+
+imagine doing a billion data sets into
+
+an environment every single day you have
+
+to get the data pipelines really good
+
+and so a lot of Technology work happens
+
+to make that possible for companies
+
+um third is if you shop at Ikea for
+
+example behind Ikea is systems it's our
+
+recommendation system
+
+and the way that people shop for
+
+furniture
+
+and products is not the same in all
+
+countries and so how are you able to one
+
+deal with the benefits you get from a
+
+global model
+
+but also take contextually the specific
+
+elements in each country because people
+
+have different buying habits those are
+
+all things that we've learned applying
+
+our AI in different contexts in
+
+different parts of the world yeah you
+
+know you've you've you're uh you sort of
+
+uh glossed over this but you've LED
+
+since you took over at Google Cloud just
+
+a meteoric growth of the of the platform
+
+you know I think in the past few years
+
+you've tripled your sales force and
+
+ending last year you obviously can't
+
+comment on this but ended last year at I
+
+believe 20 billion uh of annual revenue
+
+which is which is incredible and and
+
+this incredible growth Journey what do
+
+you attribute your success to and how do
+
+you think you've been able to to drive
+
+to such an incredible incredible growth
+
+and success
+
+you know from our point of view every
+
+every industry virtually in the world is
+
+now becoming a software powered you know
+
+technology industry right if you talk to
+
+automobile companies they're
+
+increasingly their vehicles are more
+
+about software than mechanical systems
+
+if you talk to telecommunications
+
+companies their networks are Commodities
+
+unless they can make them platforms to
+
+deliver applications so they need new
+
+ways to slice manage the network
+
+if you look at banks at the end of the
+
+day they're about all the products of a
+
+bank are data and all of that becomes
+
+how do you differentiate in the value
+
+you're delivering clients through a
+
+digital medium because increasingly I'm
+
+sure all of you look at yourselves and
+
+go when was the last time I went to a
+
+branch of a bank so a lot of our work
+
+has been pushing the Technology
+
+Innovation really far but bringing that
+
+technology super easily to people in
+
+different Industries and given the
+
+demand that people have for a hey I
+
+really want I need the technology to
+
+help me power my industry that the
+
+change I'm seeing in my industry the
+
+more accessible we can make it the
+
+easier and the faster we get adoption
+
+and our approach has been to be
+
+completely open and when I say
+
+completely open we offer every part of
+
+the stack that we have from the hardware
+
+and network to the software abstractions
+
+above
+
+two things that are more packaged
+
+because different organizations have
+
+different levels at which they have
+
+expertise and want to adopt technology
+
+yeah yeah I mean it's been I mean it's
+
+been obviously incredible you know going
+
+back to AI for a second Google Google
+
+obviously is is an early mover in Ai and
+
+Google cloud has also been through you
+
+know or starting with tensorflow and
+
+vertex Ai and automl and so many
+
+incredibly Innovative Technologies and
+
+uh ai's been obviously kind of a a
+
+buzzword for some time now within the
+
+industry and and
+
+um you know I think we see this and you
+
+see as well the adoption has maybe been
+
+a bit slower than we would have expected
+
+until now what do you think have been
+
+the barriers to Greater levels of AI
+
+adoption greater levels of of
+
+Enterprises seeing value from Ai and and
+
+what do you think the future holds
+
+so we work with a huge number of
+
+companies doing work having them adopt
+
+AI
+
+a lot of the lessons we've seen and
+
+observed from it
+
+are the barriers to adoption are rarely
+
+about the algorithm itself right it's
+
+often the barriers to adoption about
+
+very different things so when we work
+
+with customers in many many Industries
+
+take retail as an example
+
+and you think of a very mundane example
+
+like recommendations to make product
+
+discovery on the web much easier for
+
+their own products the biggest challenge
+
+is standardizing the meaning of the
+
+product and the catalog Because unless
+
+you have a standardized definition of
+
+the products and the data behind the
+
+algorithm is clean it's super hard to
+
+actually get a recommendation and so in
+
+the work we did with h m for example or
+
+at Macy's or at Ikea or Bloomingdale's a
+
+huge number of these Brands the big part
+
+of the program is actually how do you
+
+label and clean the data up front and
+
+standardize it before you get into the
+
+algorithmic phase so that's one part of
+
+things we see
+
+second part is for large organizations
+
+to adopt AI they have to need to
+
+integrate the the the results of the
+
+algorithm back into their core processes
+
+so you know practical example we work
+
+with Angie Angie is a large large
+
+electric producer electricity and power
+
+producer in Europe
+
+they are probably the one of the largest
+
+renewable energy producer in the world
+
+they use wind farms
+
+one of the things they really struggled
+
+with was how do you predict how much
+
+wind is going to be there three days
+
+from now because the power grid requires
+
+that prediction in order to capacity
+
+plan how much power is going into the
+
+grid so they work with us and they use
+
+our AI to do that
+
+but that needs to be tied into how
+
+they're telling the rest of the power
+
+sources that work on the grade hey if
+
+this much wind is coming in here's all
+
+the other sources need to generate so
+
+tying it back in is not as simple as
+
+people think and so a lot of time is
+
+that
+
+the third on the people side there's
+
+change management you go through to get
+
+people to trust the algorithm so one of
+
+the things we've done work with many
+
+banks particularly during the pandemic
+
+when the government issued small
+
+business loans
+
+there was a giant bottleneck in being
+
+able to get loans out to individual
+
+consumers
+
+and frankly because the banks didn't
+
+want to bring a huge Army of loan
+
+officers in
+
+they had to use software and algorithms
+
+to process it now the challenge people
+
+had is they needed to trust the
+
+algorithm was being fair in saying yes
+
+to some and no to others
+
+and that it would mirror for example the
+
+recommendations that their best mortgage
+
+you know Bankers would do right just as
+
+a loan officers would do so it gave them
+
+the benefit of scale because we
+
+processed literally millions and
+
+millions of mortgages through our
+
+technology but it required them to get
+
+comfortable that things like fairness
+
+and other things were working so often
+
+when people look at AI they think it's a
+
+skills issue there's certainly a skill
+
+issue involved there's not enough talent
+
+in the ecosystem but things are getting
+
+easier and easier as the models get more
+
+and more sophisticated often people
+
+forget about these other issues that are
+
+important in getting adoption yeah I
+
+mean you're uh you're preaching in the
+
+choir when you mentioned the the data
+
+challenges that all these Enterprises uh
+
+face and uh and how critical that is to
+
+getting AI working in the early days
+
+um you know one of one of the things
+
+that I think is interesting about Google
+
+Cloud strategy is that you really have
+
+products that different layers of sort
+
+of the stack and different layers of of
+
+um you know closest to the bare metal
+
+all the way up to these package
+
+Solutions you know I'm with in what way
+
+do you think that the Enterprise world
+
+and even the the sort of broader
+
+business world is going to adopt these
+
+AI Technologies do you think that the
+
+end stated that a lot of them are using
+
+your lower level more infrastructure uh
+
+products or do you think that many of
+
+them are going to adopt Solutions how do
+
+you think this plays out over the the
+
+next few years
+
+so we offer four layers of technology
+
+for people
+
+there's a set of people who say look I
+
+just need your
+
+you know computational infrastructure
+
+your large systems we build something
+
+called tensor Processing Unit which is
+
+our large scale systems we're also
+
+working with Nvidia to build a really
+
+high scale gpu-based system
+
+but many people some some customers say
+
+look I just need access to that and we
+
+make that available because the tpus are
+
+what we use within Google and we make
+
+that available along with the
+
+compilation software to optimize models
+
+on the tpus
+
+take as an example of LG you know the
+
+the Korean company that makes appliances
+
+their team has built a a large I mean
+
+multi-hundred billion parameter model
+
+because they wanted to make that a way
+
+that people can interact with appliances
+
+without having to press buttons on them
+
+they so they built a model they said I
+
+just need access to your infrastructure
+
+so that's one way we offer capability
+
+a second level is people say look I
+
+really don't need access to the raw
+
+infrastructure itself what I need is the
+
+ability to build models using your
+
+platform and so we offer a platform
+
+called vertex and people build models
+
+and push them using our machine learning
+
+platform and there are many many
+
+organizations in logistics and financial
+
+services in retail and others who build
+
+their own models on top of the platform
+
+the third is to make things even easier
+
+we've taken some of the core pieces
+
+translation documents
+
+uh image processing video
+
+and we've said we can offer an automl
+
+based solution which further simplifies
+
+how you use our platforms
+
+and so for example translation we have a
+
+capability to handle translation in 135
+
+languages
+
+one of the important things that people
+
+ask when they go to many languages is
+
+the if you look at the data sets that
+
+are used to
+
+to train models
+
+they are primarily there's a large set
+
+in English because you have the whole
+
+internet is primarily in a very small
+
+number of languages but once you get to
+
+more narrow languages for instance
+
+Swahili or some of the African languages
+
+or even in Asia there are many languages
+
+even from where I grew up in India there
+
+are languages that are not as widely
+
+represented on the internet can you
+
+model in Translation provide equivalent
+
+Fidelity in sparse languages because
+
+it's always important to those people
+
+who only understand that language that
+
+they get a high fidelity result
+
+so we built something called translation
+
+Hub and it's being used in very mundane
+
+places but with extraordinary impact for
+
+example when people announce covet
+
+guidelines or recently monkey pox for
+
+example which is another thing they need
+
+to translate in many many languages and
+
+normally the process would take a long
+
+time
+
+we have movie studios for example in a
+
+in a different example saying hey when
+
+we launch a movie
+
+uh we have a high fidelity set of
+
+languages we're actually going to hold
+
+the movie up and show that people do it
+
+but for the long tail we just need
+
+captioning uh we're not necessarily
+
+going to do voice dubbing we're going to
+
+do captioning and they use our
+
+translation solutions to go to that even
+
+within companies Avery Dennison for
+
+example uses it to translate all their
+
+instruction manuals into many languages
+
+for their technicians
+
+and then lastly in some places there are
+
+companies like retailers who tell us
+
+look a handful of the largest retailers
+
+May build their own software teams
+
+but some of us who are small Merchants
+
+we're not software companies and telling
+
+us you got to be a software company to
+
+use AI is not fair
+
+so for some Industries we actually build
+
+fully packaged Solutions if you if you
+
+call many telephone companies their
+
+contact center behind it sits a voice
+
+agent
+
+and the rationale behind that was super
+
+simple when a new smartphone launches
+
+like an iPhone or a pixel typically in
+
+the morning of the launch some of these
+
+contact centers get three four million
+
+calls in an hour
+
+and it's hard to hire that many agents
+
+to handle the phones so we said why
+
+wouldn't software be able to handle it
+
+we then evolved it so that the natural
+
+language interface can become actually
+
+the workflow for these organizations but
+
+that's a much more of a package solution
+
+so that telephone companies don't have
+
+to have armies of data scientists to do
+
+it so our work spans all of these
+
+because people have different needs and
+
+we find that you know as you improve the
+
+maturation of this and you make it more
+
+easy for people to adopt it you will get
+
+broader proliferation and Adoption of AI
+
+as a whole
+
+yeah you know you walk through so many
+
+different use cases and so many
+
+applications of the technology I imagine
+
+one um and they're so desperate you know
+
+everywhere from uh you know fraud
+
+detection to translation to sort of
+
+translation of manuals you know there's
+
+such a wide array of use cases how do
+
+you you all at Google Cloud think about
+
+helping businesses understand what what
+
+is AI good for you know what what can
+
+they use AI for you know there's there's
+
+obviously such a wide
+
+um uh diversity of different use cases
+
+but what at a framework level do you do
+
+you tell them like how can I use AI
+
+within my business
+
+it's a really good question I mean a lot
+
+of our work actually comes from clients
+
+asking us now and that's actually
+
+an encouraging thing because you know
+
+see from our point of view some simple
+
+things how many of you believe in a few
+
+years time there's going to be
+
+intelligent software and
+
+non-intelligence software
+
+right I mean nobody would say in three
+
+four years time we're going to write
+
+software that has not powered in some
+
+form of fashion by AI so you know and
+
+most companies actually it's really
+
+encouraging to see that they look at
+
+domain problems they're having and say
+
+for instance I used to do it using a
+
+rules engine which is an older model for
+
+defining kind of workflow within
+
+organizations can you apply AI to do it
+
+in a new way
+
+um I used to do this in a specific way I
+
+heard about image recognition but you
+
+know one example really fun or
+
+interesting one U.S Navy
+
+um when you have corrosion on the base
+
+of ships the old way was to lift it into
+
+Dry Dock and take a look at it if you've
+
+ever seen one of these ships you can
+
+imagine lifting into dry dock is not an
+
+easy thing so they said can we fly a
+
+drone with Geo camera image recognition
+
+around it and detect corrosion and it's
+
+so the what we've seen is that as you
+
+lift up the capability where image audio
+
+text Etc all these forms of input
+
+can be processed extremely accurately
+
+most customers start figuring it out and
+
+so they call us with most of our work
+
+has come from customers calling us
+
+saying hey I have this need can I apply
+
+AI to it and so we talk to them about
+
+how and when it makes sense to use AI
+
+but we also talk to them about the
+
+consequences if the models are not you
+
+know handling things like skew in the
+
+data how do you ensure that for example
+
+you're treating fairness properly how do
+
+you ensure that the model is safe etc
+
+etc
+
+yeah you know I think uh it's it's
+
+exciting I mean all the use cases the
+
+variety is is incredibly exciting it's
+
+cool that these customers are coming to
+
+you
+
+um directly with many of them what what
+
+is you know again kind of uh thinking
+
+bigger picture what is machine learning
+
+and AI mean for Google Cloud on the
+
+whole over the next call it five ten
+
+years
+
+so we feel that the boundary of what
+
+machine learning and what AI can do will
+
+change over time
+
+uh when it's started it was about doing
+
+what you know what we would call
+
+assistive things
+
+assist if things are where a human being
+
+is able to do it but the computer
+
+assists the human being in some ways to
+
+do it better right so common examples
+
+people talk about is hey you're a doctor
+
+or radiologist
+
+you used to look at x-ray images now a
+
+computer is going to look at it and
+
+detect tumors but it's assisting you to
+
+find something that you may have done
+
+another way
+
+so that's the first phase and a lot of
+
+the work we see is is primarily in that
+
+phase today
+
+the the second phase is to do something
+
+where you couldn't do it with a human
+
+because the quantity of data you need to
+
+process or the amount of people you need
+
+would be just far too significant and so
+
+the machine is doing something that
+
+humans couldn't do but it's still an
+
+incremental element on top of what
+
+humans could do themselves
+
+the third phase I think is where we
+
+think generative AI for example goes
+
+because it's about enabling people to
+
+express themselves in a different way
+
+right and to assist them in
+
+expressiveness so I'll give you a
+
+practical example a lot of you probably
+
+use tools uh like slides and things like
+
+that in your day-to-day job right
+
+PowerPoint was invented a long time ago
+
+and was really just about drawing things
+
+you know I've got a 14 year old and so
+
+if you look at the younger generation
+
+if you look at what slides were they
+
+were really tools to help people draw
+
+and then to take what was on the slide
+
+projector and present it
+
+then P you know the the younger
+
+generation says hey I don't want to draw
+
+things that's like really old-fashioned
+
+I'm going to go to the internet and copy
+
+images right because they when they do
+
+class projects They're copying images
+
+into the slides
+
+and then you know as as people observe
+
+you know on the social media environment
+
+people going from text which may have
+
+been Facebook to short to images which
+
+is Instagram to short video Tick Tock
+
+people say hey why wouldn't we able to
+
+record short video and we use that as a
+
+mechanism to share but recording short
+
+video is still capturing the real world
+
+through the lens of the camera
+
+what people want is a more expressive
+
+way of saying I have an idea can I
+
+translate it and it may not be something
+
+I can capture imagine a kid in
+
+California in a school saying I want to
+
+capture how
+
+the landscape and outside of Paris and
+
+Francis right now I think they need to
+
+be able to generate some of the ideas
+
+that they couldn't capture by physically
+
+being there and so we're working on all
+
+of this and we're bringing some of these
+
+into our products to change what people
+
+could possibly do through the
+
+application of AI so they improve
+
+expressiveness for people
+
+and so every boundary as the technology
+
+gets more sophisticated we think it
+
+moves from just assistance to assistance
+
+on things that human beings may not have
+
+been able to just linearly do
+
+to now things like expressiveness which
+
+is a very different capability than
+
+people could actually do themselves
+
+uh yeah it's an it's I mean all this is
+
+very is obviously incredibly exciting
+
+and we're all watching it happen in real
+
+time you know there's an artist uh who
+
+actually described the these sort of
+
+image generation models as he was he
+
+sort of said like you kind of have to
+
+think about like a like a camera like
+
+it's a new tool that allows you to
+
+create fundamentally new uh you know
+
+forms of art that's right yeah and not
+
+just one medium of art right because if
+
+you look in the past people said you
+
+were a painter you were a sculpture
+
+you're a musician and now these
+
+Technologies allow you to blend all of
+
+it as a form of expressiveness yeah you
+
+know the the last question I have for
+
+you is you you know you obviously sit
+
+down with many of the sort of leading
+
+CEOs and Business Leaders of many of the
+
+the sort of largest uh organizations in
+
+the world and I'm sure one thing that is
+
+on many of their minds is sort of um as
+
+AI technology develops and it continues
+
+to progress is potential disruption that
+
+might come from from artificial
+
+intelligence what sort of how do you
+
+approach that conversation what's sort
+
+of your advice to these these Business
+
+Leaders who are looking at this powerful
+
+new technology and thinking about what
+
+that might mean for for the businesses
+
+and and the business landscape
+
+when we talk to CEOs I mean the biggest
+
+things we talk to them about number one
+
+you know uh productivity in the long
+
+term
+
+productivity has always been the primary
+
+driver of improving you know both
+
+company productivity meaning their own
+
+companies as well as societal you know
+
+benefit things like affluence of a
+
+society Etc and the means and equality
+
+of distribution of income to people
+
+across all Spectrum Society eventually
+
+the most important metric and you can
+
+look at any economics textbook is
+
+productivity
+
+uh software and technology has probably
+
+been the biggest Boon of productivity
+
+over the last 30 40 years
+
+this is the next evolution of that and
+
+so we always say if you approach it the
+
+right way for example labor shortages
+
+are going on right now
+
+the biggest potential benefit is the
+
+application of some of these platforms
+
+like AI to doing that
+
+the second
+
+with any technological generation
+
+Revolution like artificial intelligence
+
+but if you went back in time and looked
+
+at the Industrial Revolution Etc they're
+
+always During the period of transition
+
+anxiety about the consequences of that
+
+technology
+
+and it doesn't mean that technology by
+
+itself is good or bad it's the
+
+application of the technology that's
+
+good or bad
+
+so it's incumbent upon both the
+
+technology providers and the users of
+
+the technology to ensure that the
+
+negative consequences of it are managed
+
+properly right
+
+the obvious example is for instance if
+
+you look at a very simple thing image
+
+recognition
+
+image recognition can help doctors find
+
+tumors way better than having the best
+
+radiographer
+
+it's assistive in that context and it's
+
+like helping people with a better
+
+quality microscope than they had before
+
+object recognition is helping people
+
+find for example people who are in the
+
+ocean much more accurately so the Coast
+
+Guard can rescue them
+
+at the same time being able to use a
+
+camera and say that's Thomas kurian
+
+has uh you know a lot of potential
+
+negative consequences and so as a
+
+provider of Technology we at Google have
+
+chosen not to do that third part but we
+
+also tell companies it's important not
+
+just to say this is what's regulatory
+
+Allowed by the legal framework because
+
+law in many countries is not yet keeping
+
+up with how fast AI Technologies is
+
+moving but to take the responsibility as
+
+a Company CEO to say here's what I'd be
+
+comfortable with and here's what I won't
+
+be comfortable with yeah well Thomas
+
+thank you so much for uh such an
+
+incredible conversations I think uh I
+
+think I'm I'm very heartened to hear all
+
+the incredible work that Google cloud is
+
+doing to make artificial intelligence
+
+accessible to you know the entire
+
+business world and all of every
+
+Enterprise around the globe and uh I'm
+
+so excited that you're able to join us
+
+thank you so much thank you so much for
+
+having me
+
+[Music]
+
