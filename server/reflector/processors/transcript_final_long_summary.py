@@ -37,7 +37,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
                 gen_cfg=self.params.gen_cfg,
                 logger=self.logger,
             )
-            accumulated_summaries += summary_result
+            accumulated_summaries += summary_result["long_summary"]
 
         return accumulated_summaries
 

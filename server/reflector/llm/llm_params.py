@@ -159,6 +159,9 @@ class FinalBulletedSummaryParams(LLMTaskParams):
             and summarize what was discussed with relevance to each topic.
             For each topic summarization, have a bullet point heading.
             Do not remove or modify the content, except to fix spelling or punctuation.
+            Do not number the list, use "*" as the bullet icon.
+            Do not include any conclusion in the response.
+            The reponse should only have the topic summarization.
           """
         self._task_params = TaskParams(
             instruct=self._instruct, gen_schema=None, gen_cfg=self._gen_cfg

@@ -153,6 +153,9 @@ class LLM:
             # decode output
             response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
             response = response[len(prompt):]
+            response = {
+                "long_summary": response
+            }
         print(f"Generated {response=}")
         return {"text": response}
 

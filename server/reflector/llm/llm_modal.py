@@ -37,7 +37,9 @@ class ModalLLM(LLM):
         # Handing over generation of the final summary to Zephyr model
         # but replacing the Vicuna model will happen after more testing
         if self.model_name == "HuggingFaceH4/zephyr-7b-alpha":
-            self.llm_url = "https://monadical-sas--reflector-llm-zephyr-web.modal.run"
+            self.llm_url = (
+                "https://monadical-sas--reflector-llm-zephyr-web.modal.run" + "/llm"
+            )
 
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
