@@ -112,11 +112,6 @@ class LLM:
         print("Exit llm")
 
     @method()
-    def warmup(self):
-        print("Warmup ok")
-        return {"status": "ok"}
-
-    @method()
     def generate(self, prompt: str, gen_schema: str | None, gen_cfg: str | None) -> dict:
         """
         Perform a generation action using the LLM
@@ -200,9 +195,5 @@ def web():
         func = llmstub.generate.spawn(prompt=req.prompt, gen_schema=gen_schema, gen_cfg=gen_cfg)
         result = func.get()
         return result
-
-    @app.post("/warmup", dependencies=[Depends(apikey_auth)])
-    async def warmup():
-        return llmstub.warmup.spawn().get()
 
     return app

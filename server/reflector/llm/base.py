@@ -1,17 +1,15 @@
 import importlib
 import json
 import re
-from time import monotonic
 from typing import TypeVar
 
 import nltk
 from prometheus_client import Counter, Histogram
-from transformers import GenerationConfig
-
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from transformers import GenerationConfig
 
 T = TypeVar("T", bound="LLM")
 
@@ -111,20 +109,7 @@ class LLM:
         self.m_generate_call = self.m_generate_call.labels(name)
         self.m_generate_success = self.m_generate_success.labels(name)
         self.m_generate_failure = self.m_generate_failure.labels(name)
-
-    async def warmup(self, logger: reflector_logger):
-        start = monotonic()
-        name = self.__class__.__name__
-        logger.info(f"LLM[{name}] warming up...")
-        try:
-            await self._warmup(logger=logger)
-            duration = monotonic() - start
-            logger.info(f"LLM[{name}] warmup took {duration:.2f} seconds")
-        except Exception:
-            logger.exception(f"LLM[{name}] warmup failed, ignoring")
-
-    async def _warmup(self, logger: reflector_logger):
-        pass
+        self.detokenizer = nltk.tokenize.treebank.TreebankWordDetokenizer()
 
     @property
     def tokenizer(self):
@@ -209,15 +194,11 @@ class LLM:
                     camel_cased.append(word[0].upper() + word[1:])
                 else:
                     camel_cased.append(word)
-            modified_title = " ".join(camel_cased)
+            modified_title = self.detokenizer.detokenize(camel_cased)
 
-            # The result can have words in braces with additional space.
-            # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
-            pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
-            title = re.sub(pattern, "", modified_title)
             # Irrespective of casing changes, the starting letter
             # of title is always upper-cased
-            title = title[0].upper() + title[1:]
+            title = modified_title[0].upper() + modified_title[1:]
         except Exception as e:
             reflector_logger.info(
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
