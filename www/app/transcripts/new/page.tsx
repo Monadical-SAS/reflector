@@ -16,6 +16,7 @@ import { faGear } from "@fortawesome/free-solid-svg-icons";
 import About from "../../(aboutAndPrivacy)/about";
 import Privacy from "../../(aboutAndPrivacy)/privacy";
 import { lockWakeState, releaseWakeState } from "../../lib/wakeLock";
+import { useRouter } from "next/navigation";
 
 const TranscriptCreate = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -36,6 +37,7 @@ const TranscriptCreate = () => {
   const transcript = useTranscript(stream, api);
   const webRTC = useWebRTC(stream, transcript?.response?.id, api);
   const webSockets = useWebSockets(transcript?.response?.id);
+  const router = useRouter();
   const {
     loading,
     permissionOk,
@@ -52,6 +54,17 @@ const TranscriptCreate = () => {
     if (!transcriptStarted && webSockets.transcriptText.length !== 0)
       setTranscriptStarted(true);
   }, [webSockets.transcriptText]);
+
+  useEffect(() => {
+    if (transcript?.response?.id) {
+      const newUrl = `/transcripts/${transcript.response.id}`;
+      // Shallow redirection does not work on NextJS 13
+      // https://github.com/vercel/next.js/discussions/48110
+      // https://github.com/vercel/next.js/discussions/49540
+      // router.push(newUrl, undefined, { shallow: true });
+      history.replaceState({}, "", newUrl);
+    }
+  });
 
   useEffect(() => {
     lockWakeState();
