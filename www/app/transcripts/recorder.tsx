@@ -105,7 +105,6 @@ export default function Recorder(props: RecorderProps) {
   // Waveform setup
   useEffect(() => {
     if (waveformRef.current) {
-      console.log(props.waveform);
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
         url: props.transcriptId
