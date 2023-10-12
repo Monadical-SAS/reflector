@@ -101,7 +101,7 @@ transcriber_image = (
     .pip_install(
         "requests",
         "torch",
-        "git+https://github.com/huggingface/transformers",
+        "transformers==4.34.0",
         "sentencepiece",
         "protobuf",
         "huggingface_hub==0.16.4",
