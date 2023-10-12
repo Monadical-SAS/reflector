@@ -110,8 +110,7 @@ export default function Recorder(props: RecorderProps) {
           : undefined,
       });
 
-      if (!props.transcriptId)
-      {
+      if (!props.transcriptId) {
         const _wshack: any = _wavesurfer;
         _wshack.renderer.renderSingleCanvas = () => {};
       }
@@ -280,7 +279,7 @@ export default function Recorder(props: RecorderProps) {
 
   useEffect(() => {
     if (props.audioDevices && props.audioDevices.length > 0) {
-      setDeviceId[props.audioDevices[0].value];
+      setDeviceId(props.audioDevices[0].value);
     }
   }, [props.audioDevices]);
 
@@ -348,7 +347,7 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
-          {props.audioDevices && props.audioDevices?.length > 0 && (
+          {props.audioDevices && props.audioDevices?.length > 0 && deviceId && (
             <>
               <button
                 className="text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg focus-visible:outline outline-blue-400"
@@ -366,6 +365,7 @@ export default function Recorder(props: RecorderProps) {
                   audioDevices={props.audioDevices}
                   disabled={recordStarted}
                   hide={() => setShowDevices(false)}
+                  deviceId={deviceId}
                 />
               </div>
             </>

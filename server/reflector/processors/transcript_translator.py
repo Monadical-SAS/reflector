@@ -1,5 +1,3 @@
-from time import monotonic
-
 import httpx
 from reflector.processors.base import Processor
 from reflector.processors.types import Transcript, TranslationLanguages
@@ -21,22 +19,6 @@ class TranscriptTranslatorProcessor(Processor):
         self.transcript_url = settings.TRANSCRIPT_URL
         self.timeout = settings.TRANSCRIPT_TIMEOUT
         self.headers = {"Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}"}
-
-    async def _warmup(self):
-        try:
-            async with httpx.AsyncClient() as client:
-                start = monotonic()
-                self.logger.debug("Translate modal: warming up...")
-                response = await client.post(
-                    settings.TRANSCRIPT_URL + "/warmup",
-                    headers=self.headers,
-                    timeout=self.timeout,
-                )
-                response.raise_for_status()
-                duration = monotonic() - start
-                self.logger.debug(f"Translate modal: warmup took {duration:.2f}s")
-        except Exception:
-            self.logger.exception("Translate modal: warmup failed")
 
     async def _push(self, data: Transcript):
         self.transcript = data

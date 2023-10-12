@@ -1,7 +1,6 @@
 import importlib
 import json
 import re
-from time import monotonic
 from typing import TypeVar
 
 import nltk
@@ -111,20 +110,6 @@ class LLM:
         self.m_generate_success = self.m_generate_success.labels(name)
         self.m_generate_failure = self.m_generate_failure.labels(name)
         self.detokenizer = nltk.tokenize.treebank.TreebankWordDetokenizer()
-
-    async def warmup(self, logger: reflector_logger):
-        start = monotonic()
-        name = self.__class__.__name__
-        logger.info(f"LLM[{name}] warming up...")
-        try:
-            await self._warmup(logger=logger)
-            duration = monotonic() - start
-            logger.info(f"LLM[{name}] warmup took {duration:.2f} seconds")
-        except Exception:
-            logger.exception(f"LLM[{name}] warmup failed, ignoring")
-
-    async def _warmup(self, logger: reflector_logger):
-        pass
 
     @property
     def tokenizer(self):
