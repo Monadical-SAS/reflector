@@ -61,6 +61,9 @@ class TranscriptFinalLongSummaryProcessor(Processor):
 
         return merged_summary
 
+    def sentence_tokenize(self, text: str) -> [str]:
+        return nltk.sent_tokenize(text)
+
     async def _flush(self):
         if not self.chunks:
             self.logger.warning("No summary to output")
@@ -68,7 +71,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
 
         accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
         long_summary = await self.get_long_summary(accumulated_summaries)
-        sentences = nltk.sent_tokenize(long_summary)
+        sentences = self.sentence_tokenize(long_summary)
         formatted_sentences = ["* " + sentence + " \n" for sentence in sentences]
         formatted_long_summary = "".join(formatted_sentences)
 
