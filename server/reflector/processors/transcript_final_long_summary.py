@@ -75,7 +75,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
         # Format the output as much as possible to be handled
         # by front-end for displaying
         summary_sentences = []
-        for sentence in nltk.sent_tokenize(long_summary):
+        for sentence in self.sentence_tokenize(long_summary):
             sentence = str(sentence).strip()
             if sentence.startswith("- "):
                 sentence.replace("- ", "* ")
