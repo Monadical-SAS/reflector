@@ -167,7 +167,7 @@ async def test_transcript_rtc_and_websocket(
     # check that audio/mp3 is available
     resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
     assert resp.status_code == 200
-    assert resp.headers["Content-Type"] == "audio/mp3"
+    assert resp.headers["Content-Type"] == "audio/mpeg"
 
     # stop server
     server.stop()
