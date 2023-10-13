@@ -38,7 +38,9 @@ def _get_range_header(range_header: str, file_size: int) -> tuple[int, int]:
     return start, end
 
 
-def range_requests_response(request: Request, file_path: str, content_type: str):
+def range_requests_response(
+    request: Request, file_path: str, content_type: str, content_disposition: str
+):
     """Returns StreamingResponse using Range Requests of a given file"""
 
     file_size = os.stat(file_path).st_size
@@ -54,6 +56,10 @@ def range_requests_response(request: Request, file_path: str, content_type: str)
             "content-range, content-encoding"
         ),
     }
+
+    if content_disposition:
+        headers["Content-Disposition"] = content_disposition
+
     start = 0
     end = file_size - 1
     status_code = status.HTTP_200_OK
