@@ -102,7 +102,7 @@ class Settings(BaseSettings):
 
     # Plugin configuration
     PLUGINS: list[str] = []
-    PLUGIN_DANSWER_URL: str | None = "http://danswer.reflector.media:3000/"
+    PLUGIN_DANSWER_URL: str | None = "https://search.reflector.media/"
 
 
 settings = Settings()

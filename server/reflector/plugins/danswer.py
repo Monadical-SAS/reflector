@@ -76,8 +76,8 @@ class Danswer(Plugin):
 
         # update connector
         data = {
-            "name": f"FileConnector-{uuid.uuid4().hex}",
-            "source": "file",
+            "name": f"ReflectorConnector-{uuid.uuid4().hex}",
+            "source": "reflector",
             "input_type": "load_state",
             "connector_specific_config": {
                 "file_locations": r1.get("file_paths"),
