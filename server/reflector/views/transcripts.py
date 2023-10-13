@@ -13,6 +13,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import FileResponse
 from fastapi_pagination import Page, paginate
 from pydantic import BaseModel, Field
 from reflector.db import database, transcripts
@@ -21,7 +22,6 @@ from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
 from starlette.concurrency import run_in_threadpool
 
-from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
 
 router = APIRouter()
@@ -356,10 +356,13 @@ async def transcript_get_audio_mp3(
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
-    return range_requests_response(
-        request,
+    truncated_id = str(transcript.id).split("-")[0]
+    filename = f"recording_{truncated_id}.mp3"
+
+    return FileResponse(
         transcript.audio_mp3_filename,
-        content_type="audio/mp3",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        media_type="audio/mpeg",
     )
 
 
