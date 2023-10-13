@@ -4,7 +4,7 @@ Reflector GPU backend - transcriber
 """
 
 import os
-import tempfile
+import threading
 
 from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
@@ -129,6 +129,7 @@ transcriber_image = (
     gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
+    allow_concurrent_inputs=4,
     image=transcriber_image,
 )
 class Translator:
@@ -136,6 +137,7 @@ class Translator:
         import torch
         from seamless_communication.models.inference.translator import Translator
 
+        self.lock = threading.Lock()
         self.use_gpu = torch.cuda.is_available()
         self.device = "cuda" if self.use_gpu else "cpu"
         self.translator = Translator(
@@ -168,13 +170,14 @@ class Translator:
             source_language: str,
             target_language: str
     ):
-        translated_text, _, _ = self.translator.predict(
-            text,
-            "t2tt",
-            src_lang=self.get_seamless_lang_code(source_language),
-            tgt_lang=self.get_seamless_lang_code(target_language),
-            ngram_filtering=True
-        )
+        with self.lock:
+            translated_text, _, _ = self.translator.predict(
+                text,
+                "t2tt",
+                src_lang=self.get_seamless_lang_code(source_language),
+                tgt_lang=self.get_seamless_lang_code(target_language),
+                ngram_filtering=True
+            )
         return {
             "text": {
                 source_language: text,
@@ -189,6 +192,7 @@ class Translator:
 @stub.function(
     container_idle_timeout=60,
     timeout=60,
+    allow_concurrent_inputs=40,
     secrets=[
         Secret.from_name("reflector-gpu"),
     ],
@@ -217,7 +221,7 @@ def web():
         result: dict
 
     @app.post("/translate", dependencies=[Depends(apikey_auth)])
-    async def translate(
+    def translate(
             text: str,
             source_language: Annotated[str, Body(...)] = "en",
             target_language: Annotated[str, Body(...)] = "fr",
@@ -229,9 +233,5 @@ def web():
         )
         result = func.get()
         return result
-
-    @app.post("/warmup", dependencies=[Depends(apikey_auth)])
-    async def warmup():
-        return translatorstub.warmup.spawn().get()
 
     return app
