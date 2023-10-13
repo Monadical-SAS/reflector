@@ -41,7 +41,7 @@ def generate_transcript_name():
 
 
 class AudioWaveform(BaseModel):
-    data: list[int]
+    data: list[float]
 
 
 class TranscriptText(BaseModel):
