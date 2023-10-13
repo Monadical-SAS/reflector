@@ -144,25 +144,62 @@ class TopicParams(LLMTaskParams):
         return self._task_params
 
 
-class FinalBulletedSummaryParams(LLMTaskParams):
+class BulletedSummaryParams(LLMTaskParams):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._gen_cfg = GenerationConfig(
-            max_new_tokens=1500,
+            max_new_tokens=800,
             num_beams=1,
             do_sample=True,
-            temperature=0.7,
+            temperature=0.2,
             early_stopping=True,
         )
         self._instruct = """
-            Given the transcript of a meeting, find the most important topics discussed
-            and summarize what was discussed with relevance to each topic.
-            For each topic summarization, have a bullet point heading.
-            Do not remove or modify the content, except to fix spelling or punctuation.
-            Do not number the list, use "*" as the bullet icon.
-            Do not include any conclusion in the response.
-            The reponse should only have the topic summarization.
-          """
+        Given a meeting transcript, extract the key things discussed in the
+         form of a list.
+
+        While generating the response, follow the constraints mentioned below.
+
+        Summary constraints:
+        i) Do not add new content, except to fix spelling or punctuation.
+        ii) Do not add any prefixes or numbering in the response.
+        iii) The summarization should be as information dense as possible.
+        iv) Do not add any additional sections like Note, Conclusion, etc. in
+        the response.
+
+        Response format:
+        i) The response should be in the form of a bulleted list.
+        ii) Iteratively merge all the relevant paragraphs together to keep the
+         number of paragraphs to a minimum.
+        iii) Remove any unfinished sentences from the final response.
+        iv) Do not include narrative or reporting clauses.
+        v) Use "*" as the bullet icon.
+    """
+        self._task_params = TaskParams(
+            instruct=self._instruct, gen_schema=None, gen_cfg=self._gen_cfg
+        )
+
+    def _get_task_params(self) -> TaskParams:
+        """gen_schema
+        Return the parameters associated with a specific LLM task
+        """
+        return self._task_params
+
+
+class MergedSummaryParams(LLMTaskParams):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._gen_cfg = GenerationConfig(
+            max_new_tokens=600,
+            num_beams=1,
+            do_sample=True,
+            temperature=0.2,
+            early_stopping=True,
+        )
+        self._instruct = """
+        Given the key points of a meeting, summarize the points to describe the
+         meeting in the form of paragraphs.
+        """
         self._task_params = TaskParams(
             instruct=self._instruct, gen_schema=None, gen_cfg=self._gen_cfg
         )
@@ -178,4 +215,5 @@ LLMTaskParams.register("topic", TopicParams)
 LLMTaskParams.register("final_title", FinalTitleParams)
 LLMTaskParams.register("final_short_summary", FinalShortSummaryParams)
 LLMTaskParams.register("final_long_summary", FinalLongSummaryParams)
-LLMTaskParams.register("final_summary", FinalBulletedSummaryParams)
+LLMTaskParams.register("bullet_summary", BulletedSummaryParams)
+LLMTaskParams.register("merged_summary", MergedSummaryParams)
