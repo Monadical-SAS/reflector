@@ -57,12 +57,9 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
 
     # number of decimals to use when rounding the peak value
     digits = 2
-    max_val = float(max(volumes))
-    new_volumes = []
-    for x in volumes:
-        new_volumes.append(round(x / max_val, digits))
+    volumes = np.round(volumes / volumes.max(), digits)
 
-    return new_volumes
+    return volumes
 
 
 if __name__ == "__main__":
