@@ -17,3 +17,8 @@ export type FinalSummary = {
 export type Status = {
   value: string;
 };
+
+export type TranslatedTopic = {
+  text: string;
+  translation: string;
+};

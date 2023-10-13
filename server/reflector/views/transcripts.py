@@ -356,10 +356,14 @@ async def transcript_get_audio_mp3(
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
+    truncated_id = str(transcript.id).split("-")[0]
+    filename = f"recording_{truncated_id}.mp3"
+
     return range_requests_response(
         request,
         transcript.audio_mp3_filename,
-        content_type="audio/mp3",
+        content_type="audio/mpeg",
+        content_disposition=f"attachment; filename={filename}",
     )
 
 
