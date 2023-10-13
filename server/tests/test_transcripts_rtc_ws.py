@@ -31,28 +31,43 @@ class ThreadedUvicorn:
                 continue
 
 
-@pytest.mark.asyncio
-async def test_transcript_rtc_and_websocket(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
-):
-    # goal: start the server, exchange RTC, receive websocket events
-    # because of that, we need to start the server in a thread
-    # to be able to connect with aiortc
-
+@pytest.fixture
+async def appserver(tmpdir):
     from reflector.settings import settings
     from reflector.app import app
 
+    DATA_DIR = settings.DATA_DIR
     settings.DATA_DIR = Path(tmpdir)
 
     # start server
     host = "127.0.0.1"
     port = 1255
-    base_url = f"http://{host}:{port}/v1"
     config = Config(app=app, host=host, port=port)
     server = ThreadedUvicorn(config)
     await server.start()
 
+    yield (server, host, port)
+
+    server.stop()
+    settings.DATA_DIR = DATA_DIR
+
+
+@pytest.mark.asyncio
+async def test_transcript_rtc_and_websocket(
+    tmpdir,
+    dummy_llm,
+    dummy_transcript,
+    dummy_processors,
+    ensure_casing,
+    appserver,
+):
+    # goal: start the server, exchange RTC, receive websocket events
+    # because of that, we need to start the server in a thread
+    # to be able to connect with aiortc
+    server, host, port = appserver
+
     # create a transcript
+    base_url = f"http://{host}:{port}/v1"
     ac = AsyncClient(base_url=base_url)
     response = await ac.post("/transcripts", json={"name": "Test RTC"})
     assert response.status_code == 200
@@ -169,33 +184,24 @@ async def test_transcript_rtc_and_websocket(
     assert resp.status_code == 200
     assert resp.headers["Content-Type"] == "audio/mpeg"
 
-    # stop server
-    server.stop()
-
 
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket_and_fr(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+    tmpdir,
+    dummy_llm,
+    dummy_transcript,
+    dummy_processors,
+    ensure_casing,
+    appserver,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
     # to be able to connect with aiortc
     # with target french language
-
-    from reflector.settings import settings
-    from reflector.app import app
-
-    settings.DATA_DIR = Path(tmpdir)
-
-    # start server
-    host = "127.0.0.1"
-    port = 1255
-    base_url = f"http://{host}:{port}/v1"
-    config = Config(app=app, host=host, port=port)
-    server = ThreadedUvicorn(config)
-    await server.start()
+    server, host, port = appserver
 
     # create a transcript
+    base_url = f"http://{host}:{port}/v1"
     ac = AsyncClient(base_url=base_url)
     response = await ac.post(
         "/transcripts", json={"name": "Test RTC", "target_language": "fr"}
@@ -303,6 +309,3 @@ async def test_transcript_rtc_and_websocket_and_fr(
     # ensure the last event received is ended
     assert events[-1]["event"] == "STATUS"
     assert events[-1]["data"]["value"] == "ended"
-
-    # stop server
-    server.stop()
