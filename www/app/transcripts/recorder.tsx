@@ -311,6 +311,9 @@ export default function Recorder(props: RecorderProps) {
             <a
               title="Download recording"
               className="text-center cursor-pointer text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg outline-blue-400"
+              download={`recording-${
+                props.transcriptId?.split("-")[0] || "0000"
+              }`}
               href={`${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`}
             >
               <FontAwesomeIcon icon={faDownload} className="h-5 w-auto" />
