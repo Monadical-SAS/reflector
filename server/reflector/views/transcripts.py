@@ -363,7 +363,7 @@ async def transcript_get_audio_mp3(
         request,
         transcript.audio_mp3_filename,
         content_type="audio/mpeg",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        content_disposition=f"attachment; filename={filename}",
     )
 
 
