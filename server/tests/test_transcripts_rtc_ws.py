@@ -60,6 +60,7 @@ async def test_transcript_rtc_and_websocket(
     dummy_processors,
     ensure_casing,
     appserver,
+    sentence_tokenize,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
@@ -156,7 +157,7 @@ async def test_transcript_rtc_and_websocket(
 
     assert "FINAL_LONG_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
-    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+    assert ev["data"]["long_summary"] == "* LLM LONG SUMMARY \n"
 
     assert "FINAL_SHORT_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
@@ -193,6 +194,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     dummy_processors,
     ensure_casing,
     appserver,
+    sentence_tokenize,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
@@ -292,7 +294,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     assert "FINAL_LONG_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
-    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+    assert ev["data"]["long_summary"] == "* LLM LONG SUMMARY \n"
 
     assert "FINAL_SHORT_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]

@@ -12,6 +12,7 @@ import "../../styles/button.css";
 import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
+import TranscriptTitle from "../transcriptTitle";
 
 type TranscriptDetails = {
   params: {
@@ -50,13 +51,18 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
-          <Recorder
-            topics={topics?.topics || []}
-            useActiveTopic={useActiveTopic}
-            waveform={waveform?.waveform}
-            isPastMeeting={true}
-            transcriptId={transcript?.response?.id}
-          />
+          <div className="flex flex-col">
+            {transcript?.response?.title && (
+              <TranscriptTitle title={transcript.response.title} />
+            )}
+            <Recorder
+              topics={topics?.topics || []}
+              useActiveTopic={useActiveTopic}
+              waveform={waveform?.waveform}
+              isPastMeeting={true}
+              transcriptId={transcript?.response?.id}
+            />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
             <TopicList
               topics={topics?.topics || []}

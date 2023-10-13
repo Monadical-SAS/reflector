@@ -9,11 +9,12 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
         path = path.as_posix()
 
     container = av.open(path)
-    stream = container.streams.get(audio=0)[0]
+    stream = container.streams.audio[0]
     duration = container.duration / av.time_base
 
     chunk_size_secs = duration / segments_count
     chunk_size = int(chunk_size_secs * stream.rate * stream.channels)
+
     if chunk_size == 0:
         # there is not enough data to fill the chunks
         # so basically we use chunk_size of 1.
@@ -22,7 +23,7 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
     # 1.1 is a safety margin as it seems that pyav decode
     # does not always return the exact number of chunks
     # that we expect.
-    volumes = np.zeros(int(segments_count * 1.1), dtype=int)
+    volumes = np.zeros(int(segments_count * 1.1), dtype=float)
     current_chunk_idx = 0
     current_chunk_size = 0
     current_chunk_volume = 0
@@ -35,7 +36,6 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
         count += len(data)
         frames += 1
         samples += frame.samples
-
         while len(data) > 0:
             datalen = len(data)
 
@@ -53,13 +53,13 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
                 current_chunk_idx += 1
                 current_chunk_size = 0
                 current_chunk_volume = 0
-
     volumes = volumes[:current_chunk_idx]
 
-    # normalize the volumes 0-128
-    volumes = volumes * 128 / volumes.max()
+    # number of decimals to use when rounding the peak value
+    digits = 2
+    volumes = np.round(volumes / volumes.max(), digits)
 
-    return volumes.astype("uint8").tolist()
+    return volumes.tolist()
 
 
 if __name__ == "__main__":
