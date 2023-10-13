@@ -16,20 +16,10 @@ jobs:
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: '3.11'
+        cache: 'poetry'
+        cache-dependency-path: 'server/poetry.lock'
     - uses: Gr1N/setup-poetry@v8
-    - name: Cache Python requirements
-      uses: actions/cache@v2
-      id: cache-pip
-      with:
-        path: ~/.cache/pypoetry/virtualenvs
-        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-        restore-keys: |
-          - ${{ runner.os }}-poetry-
-    - name: Install tests dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y portaudio19-dev build-essential
     - name: Install requirements
       run: |
         cd server
