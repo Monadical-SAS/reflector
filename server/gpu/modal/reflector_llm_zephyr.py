@@ -5,6 +5,7 @@ Reflector GPU backend - LLM
 """
 import json
 import os
+import threading
 from typing import Optional
 
 import modal
@@ -67,7 +68,7 @@ llm_image = (
     gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
-    concurrency_limit=2,
+    allow_concurrent_inputs=10,
     image=llm_image,
 )
 class LLM:
@@ -111,6 +112,7 @@ class LLM:
         self.tokenizer = tokenizer
         self.gen_cfg = gen_cfg
         self.GenerationConfig = GenerationConfig
+        self.lock = threading.Lock()
 
     def __exit__(self, *args):
         print("Exit llm")
@@ -129,33 +131,34 @@ class LLM:
             gen_cfg = self.gen_cfg
 
         # If a gen_schema is given, conform to gen_schema
-        if gen_schema:
-            import jsonformer
+        with self.lock:
+            if gen_schema:
+                import jsonformer
 
-            print(f"Schema {gen_schema=}")
-            jsonformer_llm = jsonformer.Jsonformer(
-                model=self.model,
-                tokenizer=self.tokenizer,
-                json_schema=json.loads(gen_schema),
-                prompt=prompt,
-                max_string_token_length=gen_cfg.max_new_tokens
-            )
-            response = jsonformer_llm()
-        else:
-            # If no gen_schema, perform prompt only generation
+                print(f"Schema {gen_schema=}")
+                jsonformer_llm = jsonformer.Jsonformer(
+                    model=self.model,
+                    tokenizer=self.tokenizer,
+                    json_schema=json.loads(gen_schema),
+                    prompt=prompt,
+                    max_string_token_length=gen_cfg.max_new_tokens
+                )
+                response = jsonformer_llm()
+            else:
+                # If no gen_schema, perform prompt only generation
 
-            # tokenize prompt
-            input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
-                self.model.device
-            )
-            output = self.model.generate(input_ids, generation_config=gen_cfg)
+                # tokenize prompt
+                input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(
+                    self.model.device
+                )
+                output = self.model.generate(input_ids, generation_config=gen_cfg)
 
-            # decode output
-            response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
-            response = response[len(prompt):]
-            response = {
-                "long_summary": response
-            }
+                # decode output
+                response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
+                response = response[len(prompt):]
+                response = {
+                    "long_summary": response
+                }
         print(f"Generated {response=}")
         return {"text": response}
 
@@ -167,6 +170,7 @@ class LLM:
 @stub.function(
     container_idle_timeout=60 * 10,
     timeout=60 * 5,
+    allow_concurrent_inputs=30,
     secrets=[
         Secret.from_name("reflector-gpu"),
     ],
@@ -196,7 +200,7 @@ def web():
         gen_cfg: Optional[dict] = None
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
-    async def llm(
+    def llm(
             req: LLMRequest,
     ):
         gen_schema = json.dumps(req.gen_schema) if req.gen_schema else None
