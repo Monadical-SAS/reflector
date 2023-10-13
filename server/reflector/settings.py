@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 60 * 5  # take cold start into account
     LLM_MAX_TOKENS: int = 1024
     LLM_TEMPERATURE: float = 0.7
+    ZEPHYR_LLM_URL: str | None = None
 
     # LLM Banana configuration
     LLM_BANANA_API_KEY: str | None = None

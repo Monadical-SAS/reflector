@@ -1,0 +1,91 @@
+/* Headings */
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+/* Paragraphs */
+.markdown p {
+  margin: 1em 0;
+}
+
+/* Lists */
+.markdown ul,
+.markdown ol {
+  margin: 1em;
+  padding-left: 1em;
+}
+
+.markdown li {
+  margin: 0.2em 0;
+}
+
+/* Bold and italic */
+.markdown b,
+.markdown strong {
+  font-weight: bold;
+}
+
+.markdown i,
+.markdown em {
+  font-style: italic;
+}
+
+/* Blockquotes */
+.markdown blockquote {
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 2px solid #ccc;
+}
+
+/* Code blocks and inline code */
+.markdown code {
+  font-family: "Courier New", monospace;
+}
+
+.markdown pre {
+  background-color: #f4f4f4;
+  padding: 1em;
+  overflow-x: auto;
+}
+
+/* Links */
+.markdown a {
+  color: blue;
+  text-decoration: underline;
+}
+
+/* Horizontal rule */
+.markdown hr {
+  border: 0;
+  border-bottom: 1px solid #ccc;
+  margin: 1em 0;
+}
+
+/* Images */
+.markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Lists */
+.markdown ul {
+  margin: 1em;
+  padding-left: 1em;
+  list-style-type: disc;
+}
+
+.markdown ol {
+  margin: 1em;
+  padding-left: 1em;
+  list-style-type: decimal;
+}
+
+.markdown li {
+  margin: 0.2em 0;
+}

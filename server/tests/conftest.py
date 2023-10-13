@@ -93,3 +93,12 @@ def ensure_casing():
     with patch("reflector.llm.base.LLM.ensure_casing") as mock_casing:
         mock_casing.return_value = "LLM TITLE"
         yield
+
+
+@pytest.fixture
+def sentence_tokenize():
+    with patch(
+        "reflector.processors.TranscriptFinalLongSummaryProcessor" ".sentence_tokenize"
+    ) as mock_sent_tokenize:
+        mock_sent_tokenize.return_value = ["LLM LONG SUMMARY"]
+        yield
