@@ -9,6 +9,7 @@ async def test_basic_process(
     dummy_llm,
     dummy_processors,
     ensure_casing,
+    sentence_tokenize,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
