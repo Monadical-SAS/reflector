@@ -171,8 +171,8 @@ class Translator:
         translated_text, _, _ = self.translator.predict(
             text,
             "t2tt",
-            src_lang=self.get_seamless_lang_code(source_language),
-            tgt_lang=self.get_seamless_lang_code(target_language),
+            src_lang=source_language,
+            tgt_lang=target_language,
             ngram_filtering=True
         )
         return {
