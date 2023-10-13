@@ -71,9 +71,20 @@ class TranscriptFinalLongSummaryProcessor(Processor):
 
         accumulated_summaries = " ".join([chunk.summary for chunk in self.chunks])
         long_summary = await self.get_long_summary(accumulated_summaries)
-        sentences = self.sentence_tokenize(long_summary)
-        formatted_sentences = ["* " + sentence + " \n" for sentence in sentences]
-        formatted_long_summary = "".join(formatted_sentences)
+
+        # Format the output as much as possible to be handled
+        # by front-end for displaying
+        summary_sentences = []
+        for sentence in nltk.sent_tokenize(long_summary):
+            sentence = str(sentence).strip()
+            if sentence.startswith("- "):
+                sentence.replace("- ", "* ")
+            else:
+                sentence = "* " + sentence
+            sentence += " \n"
+            summary_sentences.append(sentence)
+
+        formatted_long_summary = "".join(summary_sentences)
 
         last_chunk = self.chunks[-1]
         duration = last_chunk.timestamp + last_chunk.duration
