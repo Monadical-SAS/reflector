@@ -59,7 +59,7 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
     digits = 2
     volumes = np.round(volumes / volumes.max(), digits)
 
-    return volumes
+    return volumes.tolist()
 
 
 if __name__ == "__main__":
