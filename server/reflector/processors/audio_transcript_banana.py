@@ -8,20 +8,21 @@ API will be a POST request to TRANSCRIPT_URL:
     "audio_url": "https://...",
     "audio_ext": "wav",
     "timestamp": 123.456
-    "language": "en"
+    "language": "eng"
 }
 ```
 
 """
 
+from pathlib import Path
+
+import httpx
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word
 from reflector.settings import settings
 from reflector.storage import Storage
 from reflector.utils.retry import retry
-from pathlib import Path
-import httpx
 
 
 class AudioTranscriptBananaProcessor(AudioTranscriptProcessor):
