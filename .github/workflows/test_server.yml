@@ -13,13 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Install poetry
+      run: pipx install poetry
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
         cache: 'poetry'
         cache-dependency-path: 'server/poetry.lock'
-    - uses: Gr1N/setup-poetry@v8
     - name: Install requirements
       run: |
         cd server
