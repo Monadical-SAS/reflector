@@ -2088,6 +2088,11 @@ react-qr-code@^2.0.12:
     prop-types "^15.8.1"
     qr.js "0.0.0"
 
+react-select-search@^4.1.7:
+  version "4.1.7"
+  resolved "https://registry.yarnpkg.com/react-select-search/-/react-select-search-4.1.7.tgz#5662729b9052282bde52e1352006d495d9c5ed6e"
+  integrity sha512-pU7ONAdK+bmz2tbhBWYQv9m5mnXOn8yImuiy+5UhimIG80d5iKv3nSYJIjJWjDbdrrdoXiCRwQm8xbA8llTjmQ==
+
 react@^18.2.0:
   version "18.2.0"
   resolved "https://registry.npmjs.org/react/-/react-18.2.0.tgz"

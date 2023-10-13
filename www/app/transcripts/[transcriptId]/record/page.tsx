@@ -41,14 +41,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const webRTC = useWebRTC(stream, details.params.transcriptId, api);
   const webSockets = useWebSockets(details.params.transcriptId);
 
-  const {
-    loading,
-    permissionOk,
-    permissionDenied,
-    audioDevices,
-    requestPermission,
-    getAudioStream,
-  } = useAudioDevice();
+  const { audioDevices, getAudioStream } = useAudioDevice();
 
   const [hasRecorded, setHasRecorded] = useState(false);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
@@ -115,7 +108,10 @@ const TranscriptRecord = (details: TranscriptDetails) => {
                       you start recording.
                     </div>
                   ) : (
-                    <LiveTrancription text={webSockets.transcriptText} />
+                    <LiveTrancription
+                      text={webSockets.transcriptText}
+                      translateText={webSockets.translateText}
+                    />
                   )}
                 </div>
               </div>
