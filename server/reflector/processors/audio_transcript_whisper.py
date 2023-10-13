@@ -1,7 +1,7 @@
+from faster_whisper import WhisperModel
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word
-from faster_whisper import WhisperModel
 
 
 class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
@@ -14,7 +14,7 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
     async def _transcript(self, data: AudioFile):
         segments, _ = self.model.transcribe(
             data.path.as_posix(),
-            language="en",
+            language="eng",
             beam_size=5,
             # condition_on_previous_text=True,
             word_timestamps=True,

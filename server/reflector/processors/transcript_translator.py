@@ -28,8 +28,8 @@ class TranscriptTranslatorProcessor(Processor):
         # FIXME this should be a processor after, as each user may want
         # different languages
 
-        source_language = self.get_pref("audio:source_language", "en")
-        target_language = self.get_pref("audio:target_language", "en")
+        source_language = self.get_pref("audio:source_language", "eng")
+        target_language = self.get_pref("audio:target_language", "eng")
         if source_language == target_language:
             return
 

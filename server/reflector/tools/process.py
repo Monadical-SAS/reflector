@@ -1,7 +1,6 @@
 import asyncio
 
 import av
-
 from reflector.logger import logger
 from reflector.processors import (
     AudioChunkerProcessor,
@@ -23,8 +22,8 @@ async def process_audio_file(
     filename,
     event_callback,
     only_transcript=False,
-    source_language="en",
-    target_language="en",
+    source_language="eng",
+    target_language="eng",
 ):
     # build pipeline for audio processing
     processors = [
@@ -73,8 +72,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
     parser.add_argument("--only-transcript", "-t", action="store_true")
-    parser.add_argument("--source-language", default="en")
-    parser.add_argument("--target-language", default="en")
+    parser.add_argument("--source-language", default="eng")
+    parser.add_argument("--target-language", default="eng")
     parser.add_argument("--output", "-o", help="Output file (output.jsonl)")
     args = parser.parse_args()
 

@@ -90,8 +90,8 @@ async def rtc_offer_base(
     event_callback=None,
     event_callback_args=None,
     audio_filename: Path | None = None,
-    source_language: str = "en",
-    target_language: str = "en",
+    source_language: str = "eng",
+    target_language: str = "eng",
 ):
     # build an rtc session
     offer = RTCSessionDescription(sdp=params.sdp, type=params.type)

@@ -178,7 +178,7 @@ def web():
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     async def transcribe(
         file: UploadFile,
-        source_language: Annotated[str, Body(...)] = "en",
+        source_language: Annotated[str, Body(...)] = "eng",
         timestamp: Annotated[float, Body()] = 0.0
     ) -> TranscriptResponse:
         audio_data = await file.read()

@@ -219,8 +219,8 @@ def web():
     @app.post("/translate", dependencies=[Depends(apikey_auth)])
     async def translate(
             text: str,
-            source_language: Annotated[str, Body(...)] = "en",
-            target_language: Annotated[str, Body(...)] = "fr",
+            source_language: Annotated[str, Body(...)] = "eng",
+            target_language: Annotated[str, Body(...)] = "fra",
     ) -> TranslateResponse:
         func = translatorstub.translate_text.spawn(
             text=text,
