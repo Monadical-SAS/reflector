@@ -317,6 +317,4 @@ class TranslationLanguages(BaseModel):
         return self.language_to_id_mapping.keys()
 
     def is_supported(self, lang_id: str) -> bool:
-        if lang_id in self.supported_languages:
-            return True
-        return False
+        return lang_id in self.supported_languages
