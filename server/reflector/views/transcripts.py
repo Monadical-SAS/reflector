@@ -87,8 +87,8 @@ class Transcript(BaseModel):
     long_summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
-    source_language: str = "eng"
-    target_language: str = "eng"
+    source_language: str = "en"
+    target_language: str = "en"
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -170,8 +170,8 @@ class TranscriptController:
     async def add(
         self,
         name: str,
-        source_language: str = "eng",
-        target_language: str = "eng",
+        source_language: str = "en",
+        target_language: str = "en",
         user_id: str | None = None,
     ):
         transcript = Transcript(
@@ -231,8 +231,8 @@ class GetTranscript(BaseModel):
 
 class CreateTranscript(BaseModel):
     name: str
-    source_language: str = Field("eng")
-    target_language: str = Field("eng")
+    source_language: str = Field("en")
+    target_language: str = Field("en")
 
 
 class UpdateTranscript(BaseModel):
