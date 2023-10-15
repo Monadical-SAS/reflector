@@ -34,7 +34,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     const text = textQueue[0];
     setTranscriptText(text);
     setTranslateText(translationQueue[0]);
-    console.log("displaying " + translateText);
 
     const WPM_READING = 200 + textQueue.length * 10; // words per minute to read
     const wordCount = text.split(/\s+/).length;
