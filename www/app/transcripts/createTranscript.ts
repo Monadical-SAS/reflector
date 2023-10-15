@@ -24,7 +24,7 @@ const useCreateTranscript = (): CreateTranscript => {
     setLoading(true);
     const requestParameters: V1TranscriptsCreateRequest = {
       createTranscript: {
-        name: params.name || "Weekly All-Hands", // Default
+        name: params.name || "Unnamed Transcript", // Default
         targetLanguage: params.targetLanguage || "en", // Default
       },
     };
