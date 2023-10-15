@@ -103,7 +103,7 @@ const TranscriptCreate = () => {
             </label>
 
             {loading ? (
-              <p className="">Checking permission...</p>
+              <p className="">Checking permissions...</p>
             ) : permissionOk ? (
               <p className=""> Microphone permission granted </p>
             ) : permissionDenied ? (
