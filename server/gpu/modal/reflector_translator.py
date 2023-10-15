@@ -167,194 +167,196 @@ class Translator:
         """
         # TODO: Enhance with complete list of lang codes
         seamless_lang_code = {
+            # Afrikaans
+            'af': 'afr',
             # Amharic
-            "am": "amh",
+            'am': 'amh',
             # Modern Standard Arabic
-            "ar": "arb",
+            'ar': 'arb',
             # Moroccan Arabic
-            # (No 2-letter code)
+            'ary': 'ary',
             # Egyptian Arabic
-            # (No 2-letter code)
+            'arz': 'arz',
             # Assamese
-            "as": "asm",
+            'as': 'asm',
             # North Azerbaijani
-            "az": "azj",
+            'az': 'azj',
             # Belarusian
-            "be": "bel",
+            'be': 'bel',
             # Bengali
-            "bn": "ben",
+            'bn': 'ben',
             # Bosnian
-            "bs": "bos",
+            'bs': 'bos',
             # Bulgarian
-            "bg": "bul",
+            'bg': 'bul',
             # Catalan
-            "ca": "cat",
+            'ca': 'cat',
             # Cebuano
-            "ceb": "ceb",
+            'ceb': 'ceb',
             # Czech
-            "cs": "ces",
+            'cs': 'ces',
             # Central Kurdish
-            "ckb": "ckb",
-            # Mandarin Chinese (Simplified)
-            "zh": "cmn",
-            # Mandarin Chinese (Traditional)
-            # (No separate 2-letter code)
+            'ku': 'ckb',
+            # Mandarin Chinese
+            'cmn': 'cmn_Hant',
             # Welsh
-            "cy": "cym",
+            'cy': 'cym',
             # Danish
-            "da": "dan",
+            'da': 'dan',
             # German
-            "de": "deu",
+            'de': 'deu',
             # Greek
-            "el": "ell",
+            'el': 'ell',
             # English
-            "en": "eng",
+            'en': 'eng',
             # Estonian
-            "et": "est",
+            'et': 'est',
             # Basque
-            "eu": "eus",
+            'eu': 'eus',
             # Finnish
-            "fi": "fin",
+            'fi': 'fin',
             # French
-            "fr": "fra",
-            # West Central Oromo
-            # (No 2-letter code)
+            'fr': 'fra',
             # Irish
-            "ga": "gle",
+            'ga': 'gle',
+            # West Central Oromo,
+            'gaz': 'gaz',
             # Galician
-            "gl": "glg",
+            'gl': 'glg',
             # Gujarati
-            "gu": "guj",
+            'gu': 'guj',
             # Hebrew
-            "he": "heb",
+            'he': 'heb',
             # Hindi
-            "hi": "hin",
+            'hi': 'hin',
             # Croatian
-            "hr": "hrv",
+            'hr': 'hrv',
             # Hungarian
-            "hu": "hun",
+            'hu': 'hun',
             # Armenian
-            "hy": "hye",
+            'hy': 'hye',
             # Igbo
-            "ig": "ibo",
+            'ig': 'ibo',
             # Indonesian
-            "id": "ind",
+            'id': 'ind',
             # Icelandic
-            "is": "isl",
+            'is': 'isl',
             # Italian
-            "it": "ita",
+            'it': 'ita',
             # Javanese
-            "jv": "jav",
+            'jv': 'jav',
             # Japanese
-            "ja": "jpn",
+            'ja': 'jpn',
             # Kannada
-            "kn": "kan",
+            'kn': 'kan',
             # Georgian
-            "ka": "kat",
+            'ka': 'kat',
             # Kazakh
-            "kk": "kaz",
+            'kk': 'kaz',
             # Halh Mongolian
-            # (No 2-letter code)
+            'khk': 'khk',
             # Khmer
-            "km": "khm",
+            'km': 'khm',
             # Kyrgyz
-            "ky": "kir",
+            'ky': 'kir',
             # Korean
-            "ko": "kor",
+            'ko': 'kor',
             # Lao
-            "lo": "lao",
+            'lo': 'lao',
             # Lithuanian
-            "lt": "lit",
+            'lt': 'lit',
             # Ganda
-            "lg": "lug",
+            'lg': 'lug',
             # Luo
-            "luo": "luo",
+            'luo': 'luo',
             # Standard Latvian
-            "lv": "lvs",
+            'lv': 'lvs',
             # Maithili
-            # (No 2-letter code)
+            'mai': 'mai',
             # Malayalam
-            "ml": "mal",
+            'ml': 'mal',
             # Marathi
-            "mr": "mar",
+            'mr': 'mar',
             # Macedonian
-            "mk": "mkd",
+            'mk': 'mkd',
             # Maltese
-            "mt": "mlt",
+            'mt': 'mlt',
             # Meitei
-            # (No 2-letter code)
+            'mni': 'mni',
             # Burmese
-            "my": "mya",
+            'my': 'mya',
             # Dutch
-            "nl": "nld",
+            'nl': 'nld',
             # Norwegian Nynorsk
-            "nn": "nno",
+            'nn': 'nno',
             # Norwegian Bokmål
-            "nb": "nob",
+            'nb': 'nob',
             # Nepali
-            "ne": "npi",
+            'ne': 'npi',
             # Nyanja
-            "ny": "nya",
+            'ny': 'nya',
             # Odia
-            "or": "ory",
+            'or': 'ory',
             # Punjabi
-            "pa": "pan",
+            'pa': 'pan',
             # Southern Pashto
-            # (No 2-letter code)
+            'pbt': 'pbt',
             # Western Persian
-            "fa": "pes",
+            'pes': 'pes',
             # Polish
-            "pl": "pol",
+            'pl': 'pol',
             # Portuguese
-            "pt": "por",
+            'pt': 'por',
             # Romanian
-            "ro": "ron",
+            'ro': 'ron',
             # Russian
-            "ru": "rus",
+            'ru': 'rus',
             # Slovak
-            "sk": "slk",
+            'sk': 'slk',
             # Slovenian
-            "sl": "slv",
+            'sl': 'slv',
             # Shona
-            "sn": "sna",
+            'sn': 'sna',
             # Sindhi
-            "sd": "snd",
+            'sd': 'snd',
             # Somali
-            "so": "som",
+            'so': 'som',
             # Spanish
-            "es": "spa",
+            'es': 'spa',
             # Serbian
-            "sr": "srp",
+            'sr': 'srp',
             # Swedish
-            "sv": "swe",
+            'sv': 'swe',
             # Swahili
-            "sw": "swh",
+            'sw': 'swh',
             # Tamil
-            "ta": "tam",
+            'ta': 'tam',
             # Telugu
-            "te": "tel",
+            'te': 'tel',
             # Tajik
-            "tg": "tgk",
+            'tg': 'tgk',
             # Tagalog
-            "tl": "tgl",
+            'tl': 'tgl',
             # Thai
-            "th": "tha",
+            'th': 'tha',
             # Turkish
-            "tr": "tur",
+            'tr': 'tur',
             # Ukrainian
-            "uk": "ukr",
+            'uk': 'ukr',
             # Urdu
-            "ur": "urd",
+            'ur': 'urd',
             # Northern Uzbek
-            "uz": "uzn",
+            'uz': 'uzn',
             # Vietnamese
-            "vi": "vie",
+            'vi': 'vie',
             # Yoruba
-            "yo": "yor",
+            'yo': 'yor',
             # Cantonese
-            # (No separate 2-letter code)
+            'yue': 'yue',
+            # Standard Malay
+            'ms': 'zsm',
             # Zulu
-            "zu": "zul",
+            'zu': 'zul'
         }
         return seamless_lang_code.get(lang_code, "eng")
 
@@ -408,10 +410,10 @@ def web():
         result: dict
 
     @app.post("/translate", dependencies=[Depends(apikey_auth)])
-    def translate(
-        text: str,
-        source_language: Annotated[str, Body(...)] = "en",
-        target_language: Annotated[str, Body(...)] = "fr",
+    async def translate(
+            text: str,
+            source_language: Annotated[str, Body(...)] = "en",
+            target_language: Annotated[str, Body(...)] = "fr",
     ) -> TranslateResponse:
         func = translatorstub.translate_text.spawn(
             text=text,
