@@ -91,7 +91,7 @@ const TranscriptCreate = () => {
             </label>
 
             <label className="mb-3">
-              <p>Live translate to </p>
+              <p>Do you want to enable live translation?</p>
               <SelectSearch
                 search
                 options={supportedLatinLanguages}
@@ -124,7 +124,7 @@ const TranscriptCreate = () => {
               onClick={send}
               disabled={!permissionOk || loadingSend}
             >
-              {loadingSend ? "loading" : "Send"}
+              {loadingSend ? "Loading..." : "Confirm"}
             </button>
           </div>
         </section>
