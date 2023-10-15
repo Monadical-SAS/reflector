@@ -22,7 +22,7 @@ type TranscriptDetails = {
 
 export default function TranscriptDetails(details: TranscriptDetails) {
   const api = getApi();
-  const transcript = useTranscript(null, api, details.params.transcriptId);
+  const transcript = useTranscript(details.params.transcriptId);
   const topics = useTopics(api, details.params.transcriptId);
   const waveform = useWaveform(api, details.params.transcriptId);
   const useActiveTopic = useState<Topic | null>(null);

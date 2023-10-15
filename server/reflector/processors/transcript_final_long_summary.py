@@ -79,7 +79,7 @@ class TranscriptFinalLongSummaryProcessor(Processor):
             sentence = str(sentence).strip()
             if sentence.startswith("- "):
                 sentence.replace("- ", "* ")
-            else:
+            elif not sentence.startswith("*"):
                 sentence = "* " + sentence
             sentence += " \n"
             summary_sentences.append(sentence)
