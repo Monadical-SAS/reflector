@@ -24,7 +24,7 @@ const TranscriptCreate = () => {
   const [targetLanguage, setTargetLanguage] = useState<string>();
 
   const onLanguageChange = (newval) => {
-    typeof newval === "string" && setTargetLanguage(newval);
+    (!newval || typeof newval === "string") && setTargetLanguage(newval);
   };
 
   const createTranscript = useCreateTranscript();
