@@ -46,7 +46,7 @@ async def dummy_transcript():
 
     class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
         async def _transcript(self, data: AudioFile):
-            source_language = self.get_pref("audio:source_language", "eng")
+            source_language = self.get_pref("audio:source_language", "en")
             print("transcripting", source_language)
             print("pipeline", self.pipeline)
             print("prefs", self.pipeline.prefs)

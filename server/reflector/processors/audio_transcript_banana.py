@@ -8,7 +8,7 @@ API will be a POST request to TRANSCRIPT_URL:
     "audio_url": "https://...",
     "audio_ext": "wav",
     "timestamp": 123.456
-    "language": "eng"
+    "language": "en"
 }
 ```
 

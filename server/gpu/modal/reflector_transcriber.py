@@ -5,6 +5,7 @@ Reflector GPU backend - transcriber
 
 import os
 import tempfile
+import threading
 
 from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
@@ -78,6 +79,7 @@ transcriber_image = (
     gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
+    allow_concurrent_inputs=6,
     image=transcriber_image,
 )
 class Transcriber:
@@ -85,6 +87,7 @@ class Transcriber:
         import faster_whisper
         import torch
 
+        self.lock = threading.Lock()
         self.use_gpu = torch.cuda.is_available()
         self.device = "cuda" if self.use_gpu else "cpu"
         self.model = faster_whisper.WhisperModel(
@@ -106,14 +109,15 @@ class Transcriber:
         with tempfile.NamedTemporaryFile("wb+", suffix=f".{audio_suffix}") as fp:
             fp.write(audio_data)
 
-            segments, _ = self.model.transcribe(
-                fp.name,
-                language=source_language,
-                beam_size=5,
-                word_timestamps=True,
-                vad_filter=True,
-                vad_parameters={"min_silence_duration_ms": 500},
-            )
+            with self.lock:
+                segments, _ = self.model.transcribe(
+                    fp.name,
+                    language=source_language,
+                    beam_size=5,
+                    word_timestamps=True,
+                    vad_filter=True,
+                    vad_parameters={"min_silence_duration_ms": 500},
+                )
 
             multilingual_transcript = {}
             transcript_source_lang = ""
@@ -147,6 +151,7 @@ class Transcriber:
 @stub.function(
     container_idle_timeout=60,
     timeout=60,
+    allow_concurrent_inputs=40,
     secrets=[
         Secret.from_name("reflector-gpu"),
     ],
@@ -176,12 +181,12 @@ def web():
         result: dict
 
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
-    async def transcribe(
+    def transcribe(
         file: UploadFile,
-        source_language: Annotated[str, Body(...)] = "eng",
+        source_language: Annotated[str, Body(...)] = "en",
         timestamp: Annotated[float, Body()] = 0.0
     ) -> TranscriptResponse:
-        audio_data = await file.read()
+        audio_data = file.file.read()
         audio_suffix = file.filename.split(".")[-1]
         assert audio_suffix in supported_audio_file_types
 

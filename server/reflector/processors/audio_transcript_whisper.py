@@ -14,7 +14,7 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
     async def _transcript(self, data: AudioFile):
         segments, _ = self.model.transcribe(
             data.path.as_posix(),
-            language="eng",
+            language="en",
             beam_size=5,
             # condition_on_previous_text=True,
             word_timestamps=True,
