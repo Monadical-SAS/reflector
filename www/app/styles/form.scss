@@ -1,0 +1,37 @@
+@media (prefers-color-scheme: dark) {
+  .select-search-container,
+  .input-container {
+    --select-search-background: #fff;
+    --select-search-border: #dce0e8;
+    --select-search-selected: #1e66f5;
+    --select-search-text: #000;
+    --select-search-subtle-text: #6c6f85;
+    --select-search-highlight: #eff1f5;
+  }
+}
+
+body.is-dark-mode .select-search-container,
+body.is-dark-mode .input-container {
+  --select-search-background: #fff;
+  --select-search-border: #dce0e8;
+  --select-search-selected: #1e66f5;
+  --select-search-text: #000;
+  --select-search-subtle-text: #6c6f85;
+  --select-search-highlight: #eff1f5;
+}
+
+body.is-light-mode .select-search-container,
+body.is-light-mode .input-container {
+  --select-search-background: #fff;
+  --select-search-border: #dce0e8;
+  --select-search-selected: #1e66f5;
+  --select-search-text: #000;
+  --select-search-subtle-text: #6c6f85;
+  --select-search-highlight: #eff1f5;
+}
+
+.input-container,
+.select-search-container {
+  max-width: 100%;
+  width: auto;
+}
