@@ -80,12 +80,13 @@ const TranscriptCreate = () => {
           <div className="rounded-xl md:bg-blue-200 md:w-96 p-4 lg:p-6 flex flex-col mb-4 md:mb-10">
             <h2 className="text-2xl font-bold mt-2 mb-2"> Try Reflector</h2>
             <label className="mb-3">
-              <p>Enter the name of your recording</p>
+              <p>Recording name</p>
               <div className="select-search-container">
                 <input
                   className="select-search-input"
                   type="text"
                   onChange={nameChange}
+                  placeholder="Optional"
                 />
               </div>
             </label>
