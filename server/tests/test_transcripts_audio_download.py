@@ -35,7 +35,7 @@ async def fake_transcript(tmpdir):
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["/mp3", "audio/mp3"],
+        ["/mp3", "audio/mpeg"],
     ],
 )
 async def test_transcript_audio_download(fake_transcript, url_suffix, content_type):
@@ -51,7 +51,7 @@ async def test_transcript_audio_download(fake_transcript, url_suffix, content_ty
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["/mp3", "audio/mp3"],
+        ["/mp3", "audio/mpeg"],
     ],
 )
 async def test_transcript_audio_download_range(
@@ -74,7 +74,7 @@ async def test_transcript_audio_download_range(
 @pytest.mark.parametrize(
     "url_suffix,content_type",
     [
-        ["/mp3", "audio/mp3"],
+        ["/mp3", "audio/mpeg"],
     ],
 )
 async def test_transcript_audio_download_range_with_seek(

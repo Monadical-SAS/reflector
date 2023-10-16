@@ -117,115 +117,204 @@ class FinalTitle(BaseModel):
     title: str
 
 
+# https://github.com/facebookresearch/seamless_communication/tree/main/scripts/m4t/predict#supported-languages
 class TranslationLanguages(BaseModel):
     language_to_id_mapping: dict = {
-        "Afrikaans": "af",
-        "Albanian": "sq",
-        "Amharic": "am",
-        "Arabic": "ar",
-        "Armenian": "hy",
-        "Asturian": "ast",
-        "Azerbaijani": "az",
-        "Bashkir": "ba",
-        "Belarusian": "be",
-        "Bengali": "bn",
-        "Bosnian": "bs",
-        "Breton": "br",
-        "Bulgarian": "bg",
-        "Burmese": "my",
-        "Catalan; Valencian": "ca",
-        "Cebuano": "ceb",
-        "Central Khmer": "km",
-        "Chinese": "zh",
-        "Croatian": "hr",
-        "Czech": "cs",
-        "Danish": "da",
-        "Dutch; Flemish": "nl",
-        "English": "en",
-        "Estonian": "et",
-        "Finnish": "fi",
-        "French": "fr",
-        "Fulah": "ff",
-        "Gaelic; Scottish Gaelic": "gd",
-        "Galician": "gl",
-        "Ganda": "lg",
-        "Georgian": "ka",
-        "German": "de",
-        "Greeek": "el",
-        "Gujarati": "gu",
-        "Haitian; Haitian Creole": "ht",
-        "Hausa": "ha",
-        "Hebrew": "he",
-        "Hindi": "hi",
-        "Hungarian": "hu",
-        "Icelandic": "is",
-        "Igbo": "ig",
-        "Iloko": "ilo",
-        "Indonesian": "id",
-        "Irish": "ga",
-        "Italian": "it",
-        "Japanese": "ja",
-        "Javanese": "jv",
-        "Kannada": "kn",
-        "Kazakh": "kk",
-        "Korean": "ko",
-        "Lao": "lo",
-        "Latvian": "lv",
-        "Lingala": "ln",
-        "Lithuanian": "lt",
-        "Luxembourgish; Letzeburgesch": "lb",
-        "Macedonian": "mk",
-        "Malagasy": "mg",
-        "Malay": "ms",
-        "Malayalam": "ml",
-        "Marathi": "mr",
-        "Mongolian": "mn",
-        "Nepali": "ne",
-        "Northern Sotho": "ns",
-        "Norwegian": "no",
-        "Occitan": "oc",
-        "Oriya": "or",
-        "Panjabi; Punjabi": "pa",
-        "Persian": "fa",
-        "Polish": "pl",
-        "Portuguese": "pt",
-        "Pushto; Pashto": "ps",
-        "Romanian; Moldavian; Moldovan": "ro",
-        "Russian": "ru",
-        "Serbian": "sr",
-        "Sindhi": "sd",
-        "Sinhala; Sinhalese": "si",
-        "Slovak": "sk",
-        "Slovenian": "sl",
-        "Somali": "so",
-        "Spanish": "es",
-        "Sundanese": "su",
-        "Swahili": "sw",
-        "Swati": "ss",
-        "Swedish": "sv",
-        "Tagalog": "tl",
-        "Tamil": "ta",
-        "Thai": "th",
-        "Tswana": "tn",
-        "Turkish": "tr",
-        "Ukrainian": "uk",
-        "Urdu": "ur",
-        "Uzbek": "uz",
-        "Vietnamese": "vi",
-        "Welsh": "cy",
-        "Western Frisian": "fy",
-        "Wolof": "wo",
-        "Xhosa": "xh",
-        "Yiddish": "yi",
-        "Yoruba": "yo",
-        "Zulu": "zu",
+        # Afrikaans
+        "af": "afr",
+        # Amharic
+        "am": "amh",
+        # Modern Standard Arabic
+        "ar": "arb",
+        # Moroccan Arabic
+        "ary": "ary",
+        # Egyptian Arabic
+        "arz": "arz",
+        # Assamese
+        "as": "asm",
+        # North Azerbaijani
+        "az": "azj",
+        # Belarusian
+        "be": "bel",
+        # Bengali
+        "bn": "ben",
+        # Bosnian
+        "bs": "bos",
+        # Bulgarian
+        "bg": "bul",
+        # Catalan
+        "ca": "cat",
+        # Cebuano
+        "ceb": "ceb",
+        # Czech
+        "cs": "ces",
+        # Central Kurdish
+        "ku": "ckb",
+        # Mandarin Chinese
+        "cmn": "cmn_Hant",
+        # Welsh
+        "cy": "cym",
+        # Danish
+        "da": "dan",
+        # German
+        "de": "deu",
+        # Greek
+        "el": "ell",
+        # English
+        "en": "eng",
+        # Estonian
+        "et": "est",
+        # Basque
+        "eu": "eus",
+        # Finnish
+        "fi": "fin",
+        # French
+        "fr": "fra",
+        # Irish
+        "ga": "gle",
+        # West Central Oromo,
+        "gaz": "gaz",
+        # Galician
+        "gl": "glg",
+        # Gujarati
+        "gu": "guj",
+        # Hebrew
+        "he": "heb",
+        # Hindi
+        "hi": "hin",
+        # Croatian
+        "hr": "hrv",
+        # Hungarian
+        "hu": "hun",
+        # Armenian
+        "hy": "hye",
+        # Igbo
+        "ig": "ibo",
+        # Indonesian
+        "id": "ind",
+        # Icelandic
+        "is": "isl",
+        # Italian
+        "it": "ita",
+        # Javanese
+        "jv": "jav",
+        # Japanese
+        "ja": "jpn",
+        # Kannada
+        "kn": "kan",
+        # Georgian
+        "ka": "kat",
+        # Kazakh
+        "kk": "kaz",
+        # Halh Mongolian
+        "khk": "khk",
+        # Khmer
+        "km": "khm",
+        # Kyrgyz
+        "ky": "kir",
+        # Korean
+        "ko": "kor",
+        # Lao
+        "lo": "lao",
+        # Lithuanian
+        "lt": "lit",
+        # Ganda
+        "lg": "lug",
+        # Luo
+        "luo": "luo",
+        # Standard Latvian
+        "lv": "lvs",
+        # Maithili
+        "mai": "mai",
+        # Malayalam
+        "ml": "mal",
+        # Marathi
+        "mr": "mar",
+        # Macedonian
+        "mk": "mkd",
+        # Maltese
+        "mt": "mlt",
+        # Meitei
+        "mni": "mni",
+        # Burmese
+        "my": "mya",
+        # Dutch
+        "nl": "nld",
+        # Norwegian Nynorsk
+        "nn": "nno",
+        # Norwegian Bokmål
+        "nb": "nob",
+        # Nepali
+        "ne": "npi",
+        # Nyanja
+        "ny": "nya",
+        # Odia
+        "or": "ory",
+        # Punjabi
+        "pa": "pan",
+        # Southern Pashto
+        "pbt": "pbt",
+        # Western Persian
+        "pes": "pes",
+        # Polish
+        "pl": "pol",
+        # Portuguese
+        "pt": "por",
+        # Romanian
+        "ro": "ron",
+        # Russian
+        "ru": "rus",
+        # Slovak
+        "sk": "slk",
+        # Slovenian
+        "sl": "slv",
+        # Shona
+        "sn": "sna",
+        # Sindhi
+        "sd": "snd",
+        # Somali
+        "so": "som",
+        # Spanish
+        "es": "spa",
+        # Serbian
+        "sr": "srp",
+        # Swedish
+        "sv": "swe",
+        # Swahili
+        "sw": "swh",
+        # Tamil
+        "ta": "tam",
+        # Telugu
+        "te": "tel",
+        # Tajik
+        "tg": "tgk",
+        # Tagalog
+        "tl": "tgl",
+        # Thai
+        "th": "tha",
+        # Turkish
+        "tr": "tur",
+        # Ukrainian
+        "uk": "ukr",
+        # Urdu
+        "ur": "urd",
+        # Northern Uzbek
+        "uz": "uzn",
+        # Vietnamese
+        "vi": "vie",
+        # Yoruba
+        "yo": "yor",
+        # Cantonese
+        "yue": "yue",
+        # Standard Malay
+        "ms": "zsm",
+        # Zulu
+        "zu": "zul",
     }
 
     @property
     def supported_languages(self):
-        return self.language_to_id_mapping.values()
+        return self.language_to_id_mapping.keys()
 
     def is_supported(self, lang_id: str) -> bool:
-        if lang_id in self.supported_languages:
-            return True
-        return False
+        return lang_id in self.supported_languages

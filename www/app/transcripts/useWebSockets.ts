@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 type UseWebSockets = {
   transcriptText: string;
+  translateText: string;
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
@@ -12,7 +13,9 @@ type UseWebSockets = {
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
+  const [translateText, setTranslateText] = useState<string>("");
   const [textQueue, setTextQueue] = useState<string[]>([]);
+  const [translationQueue, setTranslationQueue] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
@@ -30,6 +33,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     setIsProcessing(true);
     const text = textQueue[0];
     setTranscriptText(text);
+    setTranslateText(translationQueue[0]);
 
     const WPM_READING = 200 + textQueue.length * 10; // words per minute to read
     const wordCount = text.split(/\s+/).length;
@@ -38,6 +42,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     setTimeout(() => {
       setIsProcessing(false);
       setTextQueue((prevQueue) => prevQueue.slice(1));
+      setTranslationQueue((prevQueue) => prevQueue.slice(1));
     }, delay);
   }, [textQueue, isProcessing]);
 
@@ -158,11 +163,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         switch (message.event) {
           case "TRANSCRIPT":
             const newText = (message.data.text ?? "").trim();
+            const newTranslation = (message.data.translation ?? "").trim();
 
             if (!newText) break;
 
             console.debug("TRANSCRIPT event:", newText);
             setTextQueue((prevQueue) => [...prevQueue, newText]);
+            setTranslationQueue((prevQueue) => [...prevQueue, newTranslation]);
             break;
 
           case "TOPIC":
@@ -177,6 +184,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           case "FINAL_LONG_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
+            }
+            break;
+
+          case "FINAL_TITLE":
+            console.debug("FINAL_TITLE event:", message.data);
+            break;
+
+          case "STATUS":
+            console.log("STATUS event:", message.data);
+            if (message.data.value === "ended") {
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
               console.debug(
@@ -186,13 +203,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 newUrl,
               );
             }
-            break;
-
-          case "FINAL_TITLE":
-            console.debug("FINAL_TITLE event:", message.data);
-            break;
-
-          case "STATUS":
             setStatus(message.data);
             break;
 
@@ -230,5 +240,5 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
   }, [transcriptId]);
 
-  return { transcriptText, topics, finalSummary, status };
+  return { transcriptText, translateText, topics, finalSummary, status };
 };

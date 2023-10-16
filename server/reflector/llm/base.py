@@ -109,6 +109,7 @@ class LLM:
         self.m_generate_call = self.m_generate_call.labels(name)
         self.m_generate_success = self.m_generate_success.labels(name)
         self.m_generate_failure = self.m_generate_failure.labels(name)
+        self.detokenizer = nltk.tokenize.treebank.TreebankWordDetokenizer()
 
     @property
     def tokenizer(self):
@@ -193,15 +194,11 @@ class LLM:
                     camel_cased.append(word[0].upper() + word[1:])
                 else:
                     camel_cased.append(word)
-            modified_title = " ".join(camel_cased)
+            modified_title = self.detokenizer.detokenize(camel_cased)
 
-            # The result can have words in braces with additional space.
-            # Change ( ABC ), [ ABC ], etc. ==> (ABC), [ABC], etc.
-            pattern = r"(?<=[\[\{\(])\s+|\s+(?=[\]\}\)])"
-            title = re.sub(pattern, "", modified_title)
             # Irrespective of casing changes, the starting letter
             # of title is always upper-cased
-            title = title[0].upper() + title[1:]
+            title = modified_title[0].upper() + modified_title[1:]
         except Exception as e:
             reflector_logger.info(
                 f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
@@ -261,7 +258,7 @@ class LLM:
         """
         Choose the token size to set as the threshold to pack the LLM calls
         """
-        buffer_token_size = 25
+        buffer_token_size = 100
         default_output_tokens = 1000
         context_window = self.tokenizer.model_max_length
         tokens = self.tokenizer.tokenize(
