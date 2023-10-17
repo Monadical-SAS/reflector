@@ -6,6 +6,9 @@ class Settings(BaseSettings):
 
     OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
 
+    # CORS
+    CORS_ORIGIN: str = "*"
+
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
 
