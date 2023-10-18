@@ -4,18 +4,19 @@ import useAudioDevice from "../useAudioDevice";
 import "react-select-search/style.css";
 import "../../styles/button.css";
 import "../../styles/form.scss";
-import getApi from "../../lib/getApi";
 import About from "../../(aboutAndPrivacy)/about";
 import Privacy from "../../(aboutAndPrivacy)/privacy";
 import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLatinLanguages } from "../../supportedLanguages";
+import { featRequireLogin } from "../../lib/utils";
+import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 
 const TranscriptCreate = () => {
-  // const transcript = useTranscript(stream, api);
   const router = useRouter();
-  const api = getApi();
+  const isAuthenticated = useFiefIsAuthenticated();
+  const requireLogin = featRequireLogin();
 
   const [name, setName] = useState<string>();
   const nameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,57 +78,66 @@ const TranscriptCreate = () => {
           </div>
         </section>
         <section className="flex flex-col justify-center items-center w-full h-full">
-          <div className="rounded-xl md:bg-blue-200 md:w-96 p-4 lg:p-6 flex flex-col mb-4 md:mb-10">
-            <h2 className="text-2xl font-bold mt-2 mb-2"> Try Reflector</h2>
-            <label className="mb-3">
-              <p>Recording name</p>
-              <div className="select-search-container">
-                <input
-                  className="select-search-input"
-                  type="text"
-                  onChange={nameChange}
-                  placeholder="Optional"
-                />
-              </div>
-            </label>
-
-            <label className="mb-3">
-              <p>Do you want to enable live translation?</p>
-              <SelectSearch
-                search
-                options={supportedLatinLanguages}
-                value={targetLanguage}
-                onChange={onLanguageChange}
-                placeholder="Choose your language"
-              />
-            </label>
-
-            {loading ? (
-              <p className="">Checking permissions...</p>
-            ) : permissionOk ? (
-              <p className=""> Microphone permission granted </p>
-            ) : permissionDenied ? (
-              <p className="">
-                Permission to use your microphone was denied, please change the
-                permission setting in your browser and refresh this page.
-              </p>
-            ) : (
-              <button
-                className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
-                onClick={requestPermission}
-                disabled={permissionDenied}
-              >
-                Request Microphone Permission
-              </button>
-            )}
+          {requireLogin && !isAuthenticated ? (
             <button
               className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
-              onClick={send}
-              disabled={!permissionOk || loadingSend}
+              onClick={() => router.push("/login")}
             >
-              {loadingSend ? "Loading..." : "Confirm"}
+              Log in
             </button>
-          </div>
+          ) : (
+            <div className="rounded-xl md:bg-blue-200 md:w-96 p-4 lg:p-6 flex flex-col mb-4 md:mb-10">
+              <h2 className="text-2xl font-bold mt-2 mb-2">Try Reflector</h2>
+              <label className="mb-3">
+                <p>Recording name</p>
+                <div className="select-search-container">
+                  <input
+                    className="select-search-input"
+                    type="text"
+                    onChange={nameChange}
+                    placeholder="Optional"
+                  />
+                </div>
+              </label>
+
+              <label className="mb-3">
+                <p>Do you want to enable live translation?</p>
+                <SelectSearch
+                  search
+                  options={supportedLatinLanguages}
+                  value={targetLanguage}
+                  onChange={onLanguageChange}
+                  placeholder="Choose your language"
+                />
+              </label>
+
+              {loading ? (
+                <p className="">Checking permissions...</p>
+              ) : permissionOk ? (
+                <p className=""> Microphone permission granted </p>
+              ) : permissionDenied ? (
+                <p className="">
+                  Permission to use your microphone was denied, please change
+                  the permission setting in your browser and refresh this page.
+                </p>
+              ) : (
+                <button
+                  className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
+                  onClick={requestPermission}
+                  disabled={permissionDenied}
+                >
+                  Request Microphone Permission
+                </button>
+              )}
+              <button
+                className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
+                onClick={send}
+                disabled={!permissionOk || loadingSend}
+              >
+                {loadingSend ? "Loading..." : "Confirm"}
+              </button>
+            </div>
+          )}
         </section>
       </div>
     </>
