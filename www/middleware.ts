@@ -2,19 +2,21 @@ import type { NextRequest } from "next/server";
 
 import { fiefAuth } from "./app/lib/fief";
 
-const authMiddleware = fiefAuth.middleware([
-  {
-    matcher: "/private",
-    parameters: {},
-  },
-  {
-    matcher: "/castles/:path*",
-    parameters: {
-      permissions: ["castles:read"],
+let protectedPath: any = [];
+if (process.env.NEXT_PUBLIC_FEAT_LOGIN_REQUIRED === "1") {
+  protectedPath = [
+    {
+      matcher: "/transcripts/((?!new).*)",
+      parameters: {},
     },
-  },
-]);
+    {
+      matcher: "/browse",
+      parameters: {},
+    },
+  ];
+}
 
+const authMiddleware = fiefAuth.middleware(protectedPath);
 export async function middleware(request: NextRequest) {
   return authMiddleware(request);
 }
