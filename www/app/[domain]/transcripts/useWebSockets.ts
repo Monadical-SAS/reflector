@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
-import { useError } from "../(errors)/errorContext";
+import { useError } from "../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
+import { DomainContext } from "../domainContext";
 
 type UseWebSockets = {
   transcriptText: string;
+  translateText: string;
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
@@ -12,7 +14,9 @@ type UseWebSockets = {
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
+  const [translateText, setTranslateText] = useState<string>("");
   const [textQueue, setTextQueue] = useState<string[]>([]);
+  const [translationQueue, setTranslationQueue] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
@@ -22,6 +26,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const { setError } = useError();
   const router = useRouter();
 
+  const { websocket_url } = useContext(DomainContext);
+
   useEffect(() => {
     if (isProcessing || textQueue.length === 0) {
       return;
@@ -30,6 +36,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     setIsProcessing(true);
     const text = textQueue[0];
     setTranscriptText(text);
+    setTranslateText(translationQueue[0]);
 
     const WPM_READING = 200 + textQueue.length * 10; // words per minute to read
     const wordCount = text.split(/\s+/).length;
@@ -38,6 +45,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     setTimeout(() => {
       setIsProcessing(false);
       setTextQueue((prevQueue) => prevQueue.slice(1));
+      setTranslationQueue((prevQueue) => prevQueue.slice(1));
     }, delay);
   }, [textQueue, isProcessing]);
 
@@ -53,6 +61,39 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+              ,
+              {
+                speaker: 3,
+                start: 90,
+                text: "This is the third speaker",
+              },
+              {
+                speaker: 4,
+                start: 90,
+                text: "This is the fourth speaker",
+              },
+              {
+                speaker: 5,
+                start: 123,
+                text: "This is the fifth speaker",
+              },
+              {
+                speaker: 6,
+                start: 300,
+                text: "This is the sixth speaker",
+              },
+            ],
           },
           {
             id: "2",
@@ -61,6 +102,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 2: Machine Learning Algorithms",
             transcript:
               "Understanding the different types of machine learning algorithms.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "3",
@@ -68,6 +121,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 3",
             title: "Topic 3: Mental Health Awareness",
             transcript: "Ways to improve mental health and reduce stigma.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "4",
@@ -75,6 +140,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 4",
             title: "Topic 4: Basics of Productivity",
             transcript: "Tips and tricks to increase daily productivity.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "5",
@@ -83,6 +160,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 5: Future of Aviation",
             transcript:
               "Exploring the advancements and possibilities in aviation.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
         ]);
 
@@ -101,6 +190,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               "Topic 1: Introduction to Quantum Mechanics, a brief overview of quantum mechanics and its principles.",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "2",
@@ -110,6 +211,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               "Topic 2: Machine Learning Algorithms, understanding the different types of machine learning algorithms.",
             transcript:
               "Understanding the different types of machine learning algorithms.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "3",
@@ -118,6 +231,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title:
               "Topic 3: Mental Health Awareness, ways to improve mental health and reduce stigma.",
             transcript: "Ways to improve mental health and reduce stigma.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "4",
@@ -126,6 +251,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title:
               "Topic 4: Basics of Productivity, tips and tricks to increase daily productivity.",
             transcript: "Tips and tricks to increase daily productivity.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "5",
@@ -135,6 +272,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               "Topic 5: Future of Aviation, exploring the advancements and possibilities in aviation.",
             transcript:
               "Exploring the advancements and possibilities in aviation.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
         ]);
 
@@ -144,7 +293,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId) return;
 
-    const url = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
+    const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     const ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -158,15 +307,27 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         switch (message.event) {
           case "TRANSCRIPT":
             const newText = (message.data.text ?? "").trim();
+            const newTranslation = (message.data.translation ?? "").trim();
 
             if (!newText) break;
 
             console.debug("TRANSCRIPT event:", newText);
             setTextQueue((prevQueue) => [...prevQueue, newText]);
+            setTranslationQueue((prevQueue) => [...prevQueue, newTranslation]);
             break;
 
           case "TOPIC":
-            setTopics((prevTopics) => [...prevTopics, message.data]);
+            setTopics((prevTopics) => {
+              const topic = message.data as Topic;
+              const index = prevTopics.findIndex(
+                (prevTopic) => prevTopic.id === topic.id,
+              );
+              if (index >= 0) {
+                prevTopics[index] = topic;
+                return prevTopics;
+              }
+              return [...prevTopics, topic];
+            });
             console.debug("TOPIC event:", message.data);
             break;
 
@@ -233,5 +394,5 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
   }, [transcriptId]);
 
-  return { transcriptText, topics, finalSummary, status };
+  return { transcriptText, translateText, topics, finalSummary, status };
 };

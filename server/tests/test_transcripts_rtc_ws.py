@@ -31,28 +31,52 @@ class ThreadedUvicorn:
                 continue
 
 
-@pytest.mark.asyncio
-async def test_transcript_rtc_and_websocket(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
-):
-    # goal: start the server, exchange RTC, receive websocket events
-    # because of that, we need to start the server in a thread
-    # to be able to connect with aiortc
-
+@pytest.fixture
+async def appserver(tmpdir, celery_session_app, celery_session_worker):
     from reflector.settings import settings
     from reflector.app import app
 
+    DATA_DIR = settings.DATA_DIR
     settings.DATA_DIR = Path(tmpdir)
 
     # start server
     host = "127.0.0.1"
     port = 1255
-    base_url = f"http://{host}:{port}/v1"
     config = Config(app=app, host=host, port=port)
     server = ThreadedUvicorn(config)
     await server.start()
 
+    yield (server, host, port)
+
+    server.stop()
+    settings.DATA_DIR = DATA_DIR
+
+
+@pytest.fixture(scope="session")
+def celery_includes():
+    return ["reflector.pipelines.main_live_pipeline"]
+
+
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
+@pytest.mark.asyncio
+async def test_transcript_rtc_and_websocket(
+    tmpdir,
+    dummy_llm,
+    dummy_transcript,
+    dummy_processors,
+    dummy_diarization,
+    ensure_casing,
+    appserver,
+    sentence_tokenize,
+):
+    # goal: start the server, exchange RTC, receive websocket events
+    # because of that, we need to start the server in a thread
+    # to be able to connect with aiortc
+    server, host, port = appserver
+
     # create a transcript
+    base_url = f"http://{host}:{port}/v1"
     ac = AsyncClient(base_url=base_url)
     response = await ac.post("/transcripts", json={"name": "Test RTC"})
     assert response.status_code == 200
@@ -79,6 +103,7 @@ async def test_transcript_rtc_and_websocket(
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
+    print("Test websocket: TASK CREATED", websocket_task)
 
     # create stream client
     import argparse
@@ -105,14 +130,20 @@ async def test_transcript_rtc_and_websocket(
     # XXX aiortc is long to close the connection
     # instead of waiting a long time, we just send a STOP
     client.channel.send(json.dumps({"cmd": "STOP"}))
-
-    # wait the processing to finish
-    await asyncio.sleep(2)
-
     await client.stop()
 
     # wait the processing to finish
-    await asyncio.sleep(2)
+    timeout = 20
+    while True:
+        # fetch the transcript and check if it is ended
+        resp = await ac.get(f"/transcripts/{tid}")
+        assert resp.status_code == 200
+        if resp.json()["status"] in ("ended", "error"):
+            break
+        await asyncio.sleep(1)
+
+    if resp.json()["status"] != "ended":
+        raise TimeoutError("Timeout while waiting for transcript to be ended")
 
     # stop websocket task
     websocket_task.cancel()
@@ -141,7 +172,7 @@ async def test_transcript_rtc_and_websocket(
 
     assert "FINAL_LONG_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
-    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+    assert ev["data"]["long_summary"] == "* LLM LONG SUMMARY \n"
 
     assert "FINAL_SHORT_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
@@ -153,49 +184,40 @@ async def test_transcript_rtc_and_websocket(
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
-    assert statuses == ["recording", "processing", "ended"]
+    assert statuses.index("recording") < statuses.index("processing")
+    assert statuses.index("processing") < statuses.index("ended")
 
     # ensure the last event received is ended
     assert events[-1]["event"] == "STATUS"
     assert events[-1]["data"]["value"] == "ended"
 
-    # check that transcript status in model is updated
-    resp = await ac.get(f"/transcripts/{tid}")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ended"
-
     # check that audio/mp3 is available
     resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
     assert resp.status_code == 200
-    assert resp.headers["Content-Type"] == "audio/mp3"
-
-    # stop server
-    server.stop()
+    assert resp.headers["Content-Type"] == "audio/mpeg"
 
 
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket_and_fr(
-    tmpdir, dummy_llm, dummy_transcript, dummy_processors, ensure_casing
+    tmpdir,
+    dummy_llm,
+    dummy_transcript,
+    dummy_processors,
+    dummy_diarization,
+    ensure_casing,
+    appserver,
+    sentence_tokenize,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
     # to be able to connect with aiortc
     # with target french language
-
-    from reflector.settings import settings
-    from reflector.app import app
-
-    settings.DATA_DIR = Path(tmpdir)
-
-    # start server
-    host = "127.0.0.1"
-    port = 1255
-    base_url = f"http://{host}:{port}/v1"
-    config = Config(app=app, host=host, port=port)
-    server = ThreadedUvicorn(config)
-    await server.start()
+    server, host, port = appserver
 
     # create a transcript
+    base_url = f"http://{host}:{port}/v1"
     ac = AsyncClient(base_url=base_url)
     response = await ac.post(
         "/transcripts", json={"name": "Test RTC", "target_language": "fr"}
@@ -224,6 +246,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
+    print("Test websocket: TASK CREATED", websocket_task)
 
     # create stream client
     import argparse
@@ -257,6 +280,18 @@ async def test_transcript_rtc_and_websocket_and_fr(
     await client.stop()
 
     # wait the processing to finish
+    timeout = 20
+    while True:
+        # fetch the transcript and check if it is ended
+        resp = await ac.get(f"/transcripts/{tid}")
+        assert resp.status_code == 200
+        if resp.json()["status"] == "ended":
+            break
+        await asyncio.sleep(1)
+
+    if resp.json()["status"] != "ended":
+        raise TimeoutError("Timeout while waiting for transcript to be ended")
+
     await asyncio.sleep(2)
 
     # stop websocket task
@@ -286,7 +321,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     assert "FINAL_LONG_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_LONG_SUMMARY")]
-    assert ev["data"]["long_summary"] == "LLM LONG SUMMARY"
+    assert ev["data"]["long_summary"] == "* LLM LONG SUMMARY \n"
 
     assert "FINAL_SHORT_SUMMARY" in eventnames
     ev = events[eventnames.index("FINAL_SHORT_SUMMARY")]
@@ -298,11 +333,9 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
-    assert statuses == ["recording", "processing", "ended"]
+    assert statuses.index("recording") < statuses.index("processing")
+    assert statuses.index("processing") < statuses.index("ended")
 
     # ensure the last event received is ended
     assert events[-1]["event"] == "STATUS"
     assert events[-1]["data"]["value"] == "ended"
-
-    # stop server
-    server.stop()

@@ -23,7 +23,7 @@ class ModalLLM(LLM):
         """
         # TODO: Query the specific GPU platform
         # Replace this with a HTTP call
-        return ["lmsys/vicuna-13b-v1.5"]
+        return ["lmsys/vicuna-13b-v1.5", "HuggingFaceH4/zephyr-7b-alpha"]
 
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
@@ -33,6 +33,13 @@ class ModalLLM(LLM):
             json_payload["gen_schema"] = gen_schema
         if gen_cfg:
             json_payload["gen_cfg"] = gen_cfg
+
+        # Handing over generation of the final summary to Zephyr model
+        # but replacing the Vicuna model will happen after more testing
+        # TODO: Create a mapping of model names and cloud deployments
+        if self.model_name == "HuggingFaceH4/zephyr-7b-alpha":
+            self.llm_url = settings.ZEPHYR_LLM_URL + "/llm"
+
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
                 self.llm_url,
@@ -40,6 +47,7 @@ class ModalLLM(LLM):
                 json=json_payload,
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
+                follow_redirects=True,
             )
             response.raise_for_status()
             text = response.json()["text"]

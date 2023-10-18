@@ -16,8 +16,8 @@ class TranscriptTranslatorProcessor(Processor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.transcript_url = settings.TRANSCRIPT_URL
-        self.timeout = settings.TRANSCRIPT_TIMEOUT
+        self.translate_url = settings.TRANSLATE_URL
+        self.timeout = settings.TRANSLATE_TIMEOUT
         self.headers = {"Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}"}
 
     async def _push(self, data: Transcript):
@@ -46,10 +46,11 @@ class TranscriptTranslatorProcessor(Processor):
 
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
-                settings.TRANSCRIPT_URL + "/translate",
+                self.translate_url + "/translate",
                 headers=self.headers,
                 params=json_payload,
                 timeout=self.timeout,
+                follow_redirects=True,
             )
             response.raise_for_status()
             result = response.json()["text"]

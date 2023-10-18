@@ -1,12 +1,14 @@
 # Reflector
 
-Reflector is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
+Reflector Audio Management and Analysis is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
 
 The project architecture consists of three primary components:
 
 * **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 * **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-* **AI Models**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+* **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+
+It also uses https://github.com/fief-dev for authentication, and Vercel for deployment and configuration of the front-end.
 
 ## Table of Contents
 
@@ -31,12 +33,18 @@ The project architecture consists of three primary components:
 
 ### Contribution Guidelines
 
-All new contributions should be made in a separate branch. Before any code is merged into `master`, it requires a code review.
+All new contributions should be made in a separate branch. Before any code is merged into `main`, it requires a code review.
 
 ### How to Install Blackhole (Mac Only)
+To record both your voice and the meeting you're taking part in, you need :
+- For an in-person meeting, make sure your microphone is in range of all participants.
+- If using several miscrophones, make sure to merge the audio feeds into one with an external tool.
+- For an online meeting, if you do not use headphones, your microphone should be able to pick up both your voice and the audio feed of the meeting.
+- If you want to use headphones, you need to merge the audio feeds with an external tool.
 
+
+This is an external tool for merging the audio feeds as explained in the previous section of this document.
 Note: We currently do not have instructions for Windows users.
-
 * Install [Blackhole](https://github.com/ExistentialAudio/BlackHole)-2ch (2 ch is enough) by 1 of 2 options listed.
 * Setup ["Aggregate device"](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and local microphone input.
 * Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
@@ -59,6 +67,15 @@ To install the application, run:
 
 ```bash
 yarn install
+```
+Then create an `.env` with:
+
+```
+FIEF_URL=https://auth.reflector-ui.dev/reflector-local
+FIEF_CLIENT_ID=s03<omitted>
+FIEF_CLIENT_SECRET=<omitted>
+
+EDGE_CONFIG=<omitted>
 ```
 
 ### Run the Application
@@ -103,11 +120,17 @@ TRANSCRIPT_MODAL_API_KEY=<omitted>
 LLM_BACKEND=modal
 LLM_URL=https://monadical-sas--reflector-llm-web.modal.run
 LLM_MODAL_API_KEY=<omitted>
+TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
+ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
+DIARIZATION_URL=https://monadical-sas--reflector-diarizer-web.modal.run
 
 AUTH_BACKEND=fief
 AUTH_FIEF_URL=https://auth.reflector.media/reflector-local
 AUTH_FIEF_CLIENT_ID=KQzRsNgoY<omitted>
 AUTH_FIEF_CLIENT_SECRET=<omitted>
+
+TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
+ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
 ```
 
 ### Start the project
@@ -117,6 +140,10 @@ Use:
 ```bash
 poetry run python3 -m reflector.app
 ```
+
+And start the background worker
+
+celery -A reflector.worker.app worker --loglevel=info
 
 #### Using docker
 
@@ -142,3 +169,4 @@ poetry run python -m reflector.tools.process path/to/audio.wav
 ## AI Models
 
 *(Documentation for this section is pending.)*
+

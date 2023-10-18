@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import {
   DefaultApi,
   V1TranscriptGetAudioWaveformRequest,
-} from "../api/apis/DefaultApi";
-import { AudioWaveform } from "../api";
-import { useError } from "../(errors)/errorContext";
+} from "../../api/apis/DefaultApi";
+import { AudioWaveform } from "../../api";
+import { useError } from "../../(errors)/errorContext";
+import getApi from "../../lib/getApi";
 
 type AudioWaveFormResponse = {
   waveform: AudioWaveform | null;
@@ -12,15 +13,15 @@ type AudioWaveFormResponse = {
   error: Error | null;
 };
 
-const useWaveform = (api: DefaultApi, id: string): AudioWaveFormResponse => {
+const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
   const [waveform, setWaveform] = useState<AudioWaveform | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
+  const api = getApi(protectedPath);
 
-  const getWaveform = (id: string) => {
-    if (!id)
-      throw new Error("Transcript ID is required to get transcript waveform");
+  useEffect(() => {
+    if (!id || !api) return;
 
     setLoading(true);
     const requestParameters: V1TranscriptGetAudioWaveformRequest = {
@@ -37,11 +38,7 @@ const useWaveform = (api: DefaultApi, id: string): AudioWaveFormResponse => {
         setError(err);
         setErrorState(err);
       });
-  };
-
-  useEffect(() => {
-    getWaveform(id);
-  }, [id]);
+  }, [id, api]);
 
   return { waveform, loading, error };
 };

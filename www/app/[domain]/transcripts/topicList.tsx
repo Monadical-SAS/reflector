@@ -4,9 +4,10 @@ import {
   faChevronRight,
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
-import { formatTime } from "../lib/time";
+import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
+import { generateHighContrastColor } from "../../lib/utils";
 
 type TopicListProps = {
   topics: Topic[];
@@ -103,7 +104,37 @@ export function TopicList({
                   />
                 </div>
                 {activeTopic?.id == topic.id && (
-                  <div className="p-2">{topic.transcript}</div>
+                  <div className="p-2">
+                    {topic.segments ? (
+                      <>
+                        {topic.segments.map((segment, index: number) => (
+                          <p
+                            key={index}
+                            className="text-left text-slate-500 text-sm md:text-base"
+                          >
+                            <span className="font-mono text-slate-500">
+                              [{formatTime(segment.start)}]
+                            </span>
+                            <span
+                              className="font-bold text-slate-500"
+                              style={{
+                                color: generateHighContrastColor(
+                                  `Speaker ${segment.speaker}`,
+                                  [96, 165, 250],
+                                ),
+                              }}
+                            >
+                              {" "}
+                              (Speaker {segment.speaker}):
+                            </span>{" "}
+                            <span>{segment.text}</span>
+                          </p>
+                        ))}
+                      </>
+                    ) : (
+                      <>{topic.transcript}</>
+                    )}
+                  </div>
                 )}
               </button>
             ))}

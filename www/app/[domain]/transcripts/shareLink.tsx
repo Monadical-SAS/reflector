@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, use } from "react";
+import { featureEnabled } from "../domainContext";
 
 const ShareLink = () => {
   const [isCopied, setIsCopied] = useState(false);
@@ -22,16 +23,25 @@ const ShareLink = () => {
     }
   };
 
+  const privacyEnabled = featureEnabled("privacy");
+
   return (
     <div
       className="p-2 md:p-4 rounded"
       style={{ background: "rgba(96, 165, 250, 0.2)" }}
     >
-      <p className="text-sm mb-2">
-        You can share this link with others. Anyone with the link will have
-        access to the page, including the full audio recording, for the next 7
-        days.
-      </p>
+      {privacyEnabled ? (
+        <p className="text-sm mb-2">
+          You can share this link with others. Anyone with the link will have
+          access to the page, including the full audio recording, for the next 7
+          days.
+        </p>
+      ) : (
+        <p className="text-sm mb-2">
+          You can share this link with others. Anyone with the link will have
+          access to the page, including the full audio recording.
+        </p>
+      )}
       <div className="flex items-center">
         <input
           type="text"

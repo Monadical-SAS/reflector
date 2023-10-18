@@ -1,7 +1,7 @@
+from faster_whisper import WhisperModel
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word
-from faster_whisper import WhisperModel
 
 
 class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
@@ -30,7 +30,6 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
         ts = data.timestamp
 
         for segment in segments:
-            transcript.text += segment.text
             for word in segment.words:
                 transcript.words.append(
                     Word(
