@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLatinLanguages } from "../../supportedLanguages";
-import { featRequireLogin } from "../../lib/utils";
+import { featRequireLogin, featPrivacy } from "../../lib/utils";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 
 const TranscriptCreate = () => {
@@ -74,7 +74,7 @@ const TranscriptCreate = () => {
               In order to use Reflector, we kindly request permission to access
               your microphone during meetings and events.
             </p>
-            <Privacy buttonText="Privacy policy" />
+            {featPrivacy() && <Privacy buttonText="Privacy policy" />}
           </div>
         </section>
         <section className="flex flex-col justify-center items-center w-full h-full">
