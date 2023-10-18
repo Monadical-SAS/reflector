@@ -6,6 +6,10 @@ class Settings(BaseSettings):
 
     OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
 
+    # CORS
+    CORS_ORIGIN: str = "*"
+    CORS_ALLOW_CREDENTIALS: bool = False
+
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
 
@@ -38,6 +42,10 @@ class Settings(BaseSettings):
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
 
+    # Translate into the target language
+    TRANSLATE_URL: str | None = None
+    TRANSLATE_TIMEOUT: int = 90
+
     # Audio transcription banana.dev configuration
     TRANSCRIPT_BANANA_API_KEY: str | None = None
     TRANSCRIPT_BANANA_MODEL_KEY: str | None = None
@@ -68,6 +76,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 60 * 5  # take cold start into account
     LLM_MAX_TOKENS: int = 1024
     LLM_TEMPERATURE: float = 0.7
+    ZEPHYR_LLM_URL: str | None = None
 
     # LLM Banana configuration
     LLM_BANANA_API_KEY: str | None = None

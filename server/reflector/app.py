@@ -1,13 +1,12 @@
 from contextlib import asynccontextmanager
 
+import reflector.auth  # noqa
+import reflector.db  # noqa
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi_pagination import add_pagination
 from prometheus_fastapi_instrumentator import Instrumentator
-
-import reflector.auth  # noqa
-import reflector.db  # noqa
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
@@ -47,7 +46,8 @@ else:
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS or False,
+    allow_origins=settings.CORS_ORIGIN.split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
