@@ -12,14 +12,14 @@ import modal
 from modal import Image, Secret, Stub, asgi_app, method
 
 # LLM
-LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
+LLM_MODEL: str = "HuggingFaceH4/zephyr-7b-alpha"
 LLM_LOW_CPU_MEM_USAGE: bool = True
 LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/root/llm_models"
 
-stub = Stub(name="reflector-llm")
+stub = Stub(name="reflector-llm-zephyr")
 
 
 def download_llm():
@@ -48,7 +48,7 @@ llm_image = (
     Image.debian_slim(python_version="3.10.8")
     .apt_install("git")
     .pip_install(
-        "transformers",
+        "transformers==4.34.0",
         "torch",
         "sentencepiece",
         "protobuf",
@@ -65,10 +65,10 @@ llm_image = (
 
 
 @stub.cls(
-    gpu="A100",
+    gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
-    allow_concurrent_inputs=15,
+    allow_concurrent_inputs=10,
     image=llm_image,
 )
 class LLM:
@@ -98,6 +98,10 @@ class LLM:
             LLM_MODEL,
             cache_dir=IMAGE_MODEL_DIR
         )
+        gen_cfg.pad_token_id = tokenizer.eos_token_id
+        gen_cfg.eos_token_id = tokenizer.eos_token_id
+        tokenizer.pad_token = tokenizer.eos_token
+        model.config.pad_token_id = tokenizer.eos_token_id
 
         # move model to gpu
         print("Move llm model to GPU")
@@ -108,7 +112,6 @@ class LLM:
         self.tokenizer = tokenizer
         self.gen_cfg = gen_cfg
         self.GenerationConfig = GenerationConfig
-
         self.lock = threading.Lock()
 
     def __exit__(self, *args):
@@ -122,6 +125,8 @@ class LLM:
         print(f"Generate {prompt=}")
         if gen_cfg:
             gen_cfg = self.GenerationConfig.from_dict(json.loads(gen_cfg))
+            gen_cfg.pad_token_id = self.tokenizer.eos_token_id
+            gen_cfg.eos_token_id = self.tokenizer.eos_token_id
         else:
             gen_cfg = self.gen_cfg
 
@@ -151,6 +156,9 @@ class LLM:
                 # decode output
                 response = self.tokenizer.decode(output[0].cpu(), skip_special_tokens=True)
                 response = response[len(prompt):]
+                response = {
+                    "long_summary": response
+                }
         print(f"Generated {response=}")
         return {"text": response}
 
@@ -162,7 +170,7 @@ class LLM:
 @stub.function(
     container_idle_timeout=60 * 10,
     timeout=60 * 5,
-    allow_concurrent_inputs=45,
+    allow_concurrent_inputs=30,
     secrets=[
         Secret.from_name("reflector-gpu"),
     ],
@@ -193,7 +201,7 @@ def web():
 
     @app.post("/llm", dependencies=[Depends(apikey_auth)])
     def llm(
-        req: LLMRequest,
+            req: LLMRequest,
     ):
         gen_schema = json.dumps(req.gen_schema) if req.gen_schema else None
         gen_cfg = json.dumps(req.gen_cfg) if req.gen_cfg else None

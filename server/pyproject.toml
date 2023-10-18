@@ -40,10 +40,6 @@ black = "^23.7.0"
 stamina = "^23.1.0"
 
 
-[tool.poetry.group.client.dependencies]
-pyaudio = "^0.2.13"
-
-
 [tool.poetry.group.tests.dependencies]
 pytest-cov = "^4.1.0"
 pytest-aiohttp = "^1.0.4"

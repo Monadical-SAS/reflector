@@ -42,7 +42,7 @@ export interface TranscriptTopic {
    * @type {any}
    * @memberof TranscriptTopic
    */
-  transcript: any | null;
+  transcript?: any | null;
   /**
    *
    * @type {any}
@@ -58,7 +58,6 @@ export function instanceOfTranscriptTopic(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && "title" in value;
   isInstance = isInstance && "summary" in value;
-  isInstance = isInstance && "transcript" in value;
   isInstance = isInstance && "timestamp" in value;
 
   return isInstance;
@@ -79,7 +78,7 @@ export function TranscriptTopicFromJSONTyped(
     id: !exists(json, "id") ? undefined : json["id"],
     title: json["title"],
     summary: json["summary"],
-    transcript: json["transcript"],
+    transcript: !exists(json, "transcript") ? undefined : json["transcript"],
     timestamp: json["timestamp"],
   };
 }

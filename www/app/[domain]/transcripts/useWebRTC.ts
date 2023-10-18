@@ -3,8 +3,8 @@ import Peer from "simple-peer";
 import {
   DefaultApi,
   V1TranscriptRecordWebrtcRequest,
-} from "../api/apis/DefaultApi";
-import { useError } from "../(errors)/errorContext";
+} from "../../api/apis/DefaultApi";
+import { useError } from "../../(errors)/errorContext";
 
 const useWebRTC = (
   stream: MediaStream | null,

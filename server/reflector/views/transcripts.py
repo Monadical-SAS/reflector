@@ -41,7 +41,7 @@ def generate_transcript_name():
 
 
 class AudioWaveform(BaseModel):
-    data: list[int]
+    data: list[float]
 
 
 class TranscriptText(BaseModel):
@@ -53,7 +53,7 @@ class TranscriptTopic(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     title: str
     summary: str
-    transcript: str
+    transcript: str | None = None
     timestamp: float
 
 
@@ -153,8 +153,27 @@ class Transcript(BaseModel):
 
 
 class TranscriptController:
-    async def get_all(self, user_id: str | None = None) -> list[Transcript]:
+    async def get_all(
+        self,
+        user_id: str | None = None,
+        order_by: str | None = None,
+        filter_empty: bool | None = False,
+        filter_recording: bool | None = False,
+    ) -> list[Transcript]:
         query = transcripts.select().where(transcripts.c.user_id == user_id)
+
+        if order_by is not None:
+            field = getattr(transcripts.c, order_by[1:])
+            if order_by.startswith("-"):
+                field = field.desc()
+            query = query.order_by(field)
+
+        if filter_empty:
+            query = query.filter(transcripts.c.status != "idle")
+
+        if filter_recording:
+            query = query.filter(transcripts.c.status != "recording")
+
         results = await database.fetch_all(query)
         return results
 
@@ -225,8 +244,8 @@ class GetTranscript(BaseModel):
     short_summary: str | None
     long_summary: str | None
     created_at: datetime
-    source_language: str
-    target_language: str
+    source_language: str | None
+    target_language: str | None
 
 
 class CreateTranscript(BaseModel):
@@ -255,7 +274,9 @@ async def transcripts_list(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
-    return paginate(await transcripts_controller.get_all(user_id=user_id))
+    return paginate(
+        await transcripts_controller.get_all(user_id=user_id, order_by="-created_at")
+    )
 
 
 @router.post("/transcripts", response_model=GetTranscript)
@@ -363,7 +384,7 @@ async def transcript_get_audio_mp3(
         request,
         transcript.audio_mp3_filename,
         content_type="audio/mpeg",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        content_disposition=f"attachment; filename={filename}",
     )
 
 

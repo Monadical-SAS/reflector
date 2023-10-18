@@ -1,4 +1,8 @@
 import { useRef, useState } from "react";
+import React from "react";
+import ReactDom from "react-dom";
+import Markdown from "react-markdown";
+import "../../styles/markdown.css";
 
 type FinalSummaryProps = {
   summary: string;
@@ -62,7 +66,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
         </div>
       </div>
 
-      <p ref={finalSummaryRef}>{props.summary}</p>
+      <p ref={finalSummaryRef} className="markdown">
+        <Markdown>{props.summary}</Markdown>
+      </p>
     </div>
   );
 }
