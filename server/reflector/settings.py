@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGIN: str = "*"
+    CORS_ALLOW_CREDENTIALS: bool = False
 
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
