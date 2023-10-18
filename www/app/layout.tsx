@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import About from "./(aboutAndPrivacy)/about";
 import Privacy from "./(aboutAndPrivacy)/privacy";
-import { featPrivacy } from "./lib/utils";
+import { featPrivacy, featRequireLogin } from "./lib/utils";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -60,6 +60,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const requireLogin = featRequireLogin();
   return (
     <html lang="en">
       <body className={poppins.className + " h-screen relative"}>
@@ -113,6 +114,14 @@ export default function RootLayout({ children }) {
                     <>
                       &nbsp;·&nbsp;
                       <Privacy buttonText="Privacy" />
+                    </>
+                  ) : (
+                    <></>
+                  )}
+                  {requireLogin ? (
+                    <>
+                      &nbsp;·&nbsp;
+                      <UserInfo />
                     </>
                   ) : (
                     <></>
