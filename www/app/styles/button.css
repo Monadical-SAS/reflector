@@ -46,18 +46,18 @@ button.block {
 }
 
 /* Disabled styles */
-input[type="button"][disabled],
-button[disabled] {
-  border-color: #ccc;
-  background: #b8b8b8 !important;
-  cursor: not-allowed;
-}
-
-input[type="button"][disabled]:hover,
-button[disabled]:hover {
-  background: #b8b8b8 !important;
-  cursor: not-allowed !important;
-}
+/* input[type="button"][disabled], */
+/* button[disabled] { */
+/*   border-color: #ccc; */
+/*   background: #b8b8b8 !important; */
+/*   cursor: not-allowed; */
+/* } */
+/**/
+/* input[type="button"][disabled]:hover, */
+/* button[disabled]:hover { */
+/*   background: #b8b8b8 !important; */
+/*   cursor: not-allowed !important; */
+/* } */
 
 /* Red button states */
 input[type="button"][data-color="red"],
