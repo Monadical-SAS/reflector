@@ -48,10 +48,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
             )
             response.raise_for_status()
             result = response.json()
-            text = result["text"][source_language]
-            text = self.filter_profanity(text)
             transcript = Transcript(
-                text=text,
                 words=[
                     Word(
                         text=word["text"],

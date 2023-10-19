@@ -30,7 +30,6 @@ class AudioTranscriptWhisperProcessor(AudioTranscriptProcessor):
         ts = data.timestamp
 
         for segment in segments:
-            transcript.text += segment.text
             for word in segment.words:
                 transcript.words.append(
                     Word(
