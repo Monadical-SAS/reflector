@@ -36,7 +36,6 @@ class TranscriptLinerProcessor(Processor):
         # cut to the next .
         partial = Transcript(words=[])
         for word in self.transcript.words[:]:
-            partial.text += word.text
             partial.words.append(word)
             if not self.is_sentence_terminated(word.text):
                 continue
