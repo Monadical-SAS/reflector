@@ -103,7 +103,17 @@ export function TopicList({
                   />
                 </div>
                 {activeTopic?.id == topic.id && (
-                  <div className="p-2">{topic.transcript}</div>
+                  <div className="p-2">
+                    {topic.segments.map((segment, index) => (
+                      <p
+                        key={index}
+                        className="text-left text-slate-500 text-sm md:text-base"
+                      >
+                        [{formatTime(segment.timestamp)}] Speaker{" "}
+                        {segment.speaker}: {segment.text}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </button>
             ))}

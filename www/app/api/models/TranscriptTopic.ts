@@ -42,13 +42,13 @@ export interface TranscriptTopic {
    * @type {any}
    * @memberof TranscriptTopic
    */
-  transcript: any | null;
+  timestamp: any | null;
   /**
    *
    * @type {any}
    * @memberof TranscriptTopic
    */
-  timestamp: any | null;
+  segments?: any | null;
 }
 
 /**
@@ -58,7 +58,6 @@ export function instanceOfTranscriptTopic(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && "title" in value;
   isInstance = isInstance && "summary" in value;
-  isInstance = isInstance && "transcript" in value;
   isInstance = isInstance && "timestamp" in value;
 
   return isInstance;
@@ -79,8 +78,8 @@ export function TranscriptTopicFromJSONTyped(
     id: !exists(json, "id") ? undefined : json["id"],
     title: json["title"],
     summary: json["summary"],
-    transcript: json["transcript"],
     timestamp: json["timestamp"],
+    segments: !exists(json, "segments") ? undefined : json["segments"],
   };
 }
 
@@ -95,7 +94,7 @@ export function TranscriptTopicToJSON(value?: TranscriptTopic | null): any {
     id: value.id,
     title: value.title,
     summary: value.summary,
-    transcript: value.transcript,
     timestamp: value.timestamp,
+    segments: value.segments,
   };
 }
