@@ -8,6 +8,7 @@ models/GetTranscript.ts
 models/HTTPValidationError.ts
 models/PageGetTranscript.ts
 models/RtcOffer.ts
+models/TranscriptSegmentTopic.ts
 models/TranscriptTopic.ts
 models/UpdateTranscript.ts
 models/UserInfo.ts

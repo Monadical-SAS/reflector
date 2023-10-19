@@ -1,9 +1,15 @@
+export type SegmentTopic = {
+  speaker: number;
+  start: number;
+  text: string;
+};
+
 export type Topic = {
   timestamp: number;
   title: string;
-  transcript: string;
   summary: string;
   id: string;
+  segments: SegmentTopic[];
 };
 
 export type Transcript = {
