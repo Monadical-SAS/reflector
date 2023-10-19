@@ -2,7 +2,11 @@ import io
 import tempfile
 from pathlib import Path
 
+from profanityfilter import ProfanityFilter
 from pydantic import BaseModel, PrivateAttr
+
+profanity_filter = ProfanityFilter()
+profanity_filter.set_censor("*")
 
 
 class AudioFile(BaseModel):
@@ -43,12 +47,28 @@ class Word(BaseModel):
     text: str
     start: float
     end: float
+    speaker: int = 0
+
+
+class TranscriptSegment(BaseModel):
+    text: str
+    start: float
+    speaker: int = 0
 
 
 class Transcript(BaseModel):
-    text: str = ""
     translation: str | None = None
     words: list[Word] = None
+
+    @property
+    def raw_text(self):
+        # Uncensored text
+        return "".join([word.text for word in self.words])
+
+    @property
+    def text(self):
+        # Censored text
+        return profanity_filter.censor(self.raw_text).strip()
 
     @property
     def human_timestamp(self):
@@ -74,7 +94,6 @@ class Transcript(BaseModel):
             self.words = other.words
         else:
             self.words.extend(other.words)
-        self.text += other.text
 
     def add_offset(self, offset: float):
         for word in self.words:
@@ -86,6 +105,48 @@ class Transcript(BaseModel):
             Word(text=word.text, start=word.start, end=word.end) for word in self.words
         ]
         return Transcript(text=self.text, translation=self.translation, words=words)
+
+    def as_segments(self):
+        # from a list of word, create a list of segments
+        # join the word that are less than 2 seconds apart
+        # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
+        segments = []
+        current_segment = None
+        last_word = None
+        BLANK_TIME_SECS = 2
+        MAX_SEGMENT_LENGTH = 80
+        for word in self.words:
+            if current_segment is None:
+                current_segment = TranscriptSegment(
+                    text=word.text,
+                    start=word.start,
+                    speaker=word.speaker,
+                )
+                continue
+            is_blank = False
+            if last_word:
+                is_blank = word.start - last_word.end > BLANK_TIME_SECS
+            if (
+                word.speaker != current_segment.speaker
+                or (
+                    word.text in ".;:?!…"
+                    and len(current_segment.text) > MAX_SEGMENT_LENGTH
+                )
+                or is_blank
+            ):
+                # check which condition triggered
+                segments.append(current_segment)
+                current_segment = TranscriptSegment(
+                    text=word.text,
+                    start=word.start,
+                    speaker=word.speaker,
+                )
+            else:
+                current_segment.text += word.text
+            last_word = word
+        if current_segment:
+            segments.append(current_segment)
+        return segments
 
 
 class TitleSummary(BaseModel):

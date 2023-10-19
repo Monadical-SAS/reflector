@@ -49,12 +49,18 @@ class TranscriptText(BaseModel):
     translation: str | None
 
 
+class TranscriptSegmentTopic(BaseModel):
+    speaker: int
+    text: str
+    timestamp: float
+
+
 class TranscriptTopic(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     title: str
     summary: str
-    transcript: str | None = None
     timestamp: float
+    segments: list[TranscriptSegmentTopic] = []
 
 
 class TranscriptFinalShortSummary(BaseModel):
@@ -523,8 +529,15 @@ async def handle_rtc_event(event: PipelineEvent, args, data):
         topic = TranscriptTopic(
             title=data.title,
             summary=data.summary,
-            transcript=data.transcript.text,
             timestamp=data.timestamp,
+            segments=[
+                TranscriptSegmentTopic(
+                    speaker=segment.speaker,
+                    text=segment.text,
+                    timestamp=segment.start,
+                )
+                for segment in data.transcript.as_segments()
+            ],
         )
         resp = transcript.add_event(event=event, data=topic)
         transcript.upsert_topic(topic)
