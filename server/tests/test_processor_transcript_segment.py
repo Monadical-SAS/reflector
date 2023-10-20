@@ -142,5 +142,20 @@ def test_processor_transcript_segment():
         ]
     )
 
-    for segment in transcript.as_segments():
-        print(segment)
+    segments = transcript.as_segments()
+    assert len(segments) == 7
+
+    # check speaker order
+    assert segments[0].speaker == 0
+    assert segments[1].speaker == 0
+    assert segments[2].speaker == 0
+    assert segments[3].speaker == 1
+    assert segments[4].speaker == 2
+    assert segments[5].speaker == 0
+    assert segments[6].speaker == 0
+
+    # check the timing (first entry, and first of others speakers)
+    assert segments[0].start == 5.12
+    assert segments[3].start == 30.72
+    assert segments[4].start == 31.56
+    assert segments[5].start == 32.38
