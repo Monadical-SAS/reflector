@@ -113,5 +113,9 @@ class Settings(BaseSettings):
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750
 
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+
 
 settings = Settings()
