@@ -33,6 +33,7 @@ prometheus-fastapi-instrumentator = "^6.1.0"
 sentencepiece = "^0.1.99"
 protobuf = "^4.24.3"
 profanityfilter = "^2.0.6"
+celery = "^5.3.4"
 
 
 [tool.poetry.group.dev.dependencies]
