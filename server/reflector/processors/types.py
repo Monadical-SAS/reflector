@@ -125,16 +125,30 @@ class Transcript(BaseModel):
                     speaker=word.speaker,
                 )
                 continue
+
+            # If the word is attach to another speaker, push the current segment
+            # and start a new one
+            if word.speaker != current_segment.speaker:
+                segments.append(current_segment)
+                current_segment = TranscriptSegment(
+                    text=word.text,
+                    start=word.start,
+                    speaker=word.speaker,
+                )
+                continue
+
+            # if the word is the end of a sentence, and we have enough content,
+            # add the word to the current segment and push it
             current_segment.text += word.text
 
             have_punc = PUNC_RE.search(word.text)
-            if word.speaker != current_segment.speaker or (
-                have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH)
-            ):
+            if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
                 segments.append(current_segment)
                 current_segment = None
+
         if current_segment:
             segments.append(current_segment)
+
         return segments
 
 
