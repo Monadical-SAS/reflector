@@ -5,11 +5,11 @@ models/AudioWaveform.ts
 models/CreateTranscript.ts
 models/DeletionStatus.ts
 models/GetTranscript.ts
+models/GetTranscriptSegmentTopic.ts
+models/GetTranscriptTopic.ts
 models/HTTPValidationError.ts
 models/PageGetTranscript.ts
 models/RtcOffer.ts
-models/TranscriptSegmentTopic.ts
-models/TranscriptTopic.ts
 models/UpdateTranscript.ts
 models/UserInfo.ts
 models/ValidationError.ts
