@@ -1,9 +1,12 @@
 import io
+import re
 import tempfile
 from pathlib import Path
 
 from profanityfilter import ProfanityFilter
 from pydantic import BaseModel, PrivateAttr
+
+PUNC_RE = re.compile(r"[.;:?!…]")
 
 profanity_filter = ProfanityFilter()
 profanity_filter.set_censor("*")
@@ -106,15 +109,14 @@ class Transcript(BaseModel):
         ]
         return Transcript(text=self.text, translation=self.translation, words=words)
 
-    def as_segments(self):
+    def as_segments(self) -> list[TranscriptSegment]:
         # from a list of word, create a list of segments
         # join the word that are less than 2 seconds apart
         # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
         segments = []
         current_segment = None
-        last_word = None
-        BLANK_TIME_SECS = 2
-        MAX_SEGMENT_LENGTH = 80
+        MAX_SEGMENT_LENGTH = 120
+
         for word in self.words:
             if current_segment is None:
                 current_segment = TranscriptSegment(
@@ -123,27 +125,14 @@ class Transcript(BaseModel):
                     speaker=word.speaker,
                 )
                 continue
-            is_blank = False
-            if last_word:
-                is_blank = word.start - last_word.end > BLANK_TIME_SECS
-            if (
-                word.speaker != current_segment.speaker
-                or (
-                    word.text in ".;:?!…"
-                    and len(current_segment.text) > MAX_SEGMENT_LENGTH
-                )
-                or is_blank
+            current_segment.text += word.text
+
+            have_punc = PUNC_RE.search(word.text)
+            if word.speaker != current_segment.speaker or (
+                have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH)
             ):
-                # check which condition triggered
                 segments.append(current_segment)
-                current_segment = TranscriptSegment(
-                    text=word.text,
-                    start=word.start,
-                    speaker=word.speaker,
-                )
-            else:
-                current_segment.text += word.text
-            last_word = word
+                current_segment = None
         if current_segment:
             segments.append(current_segment)
         return segments
