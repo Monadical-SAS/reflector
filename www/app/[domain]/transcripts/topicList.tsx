@@ -104,15 +104,26 @@ export function TopicList({
                 </div>
                 {activeTopic?.id == topic.id && (
                   <div className="p-2">
-                    {topic.segments.map((segment, index) => (
-                      <p
-                        key={index}
-                        className="text-left text-slate-500 text-sm md:text-base"
-                      >
-                        [{formatTime(segment.timestamp)}] Speaker{" "}
-                        {segment.speaker}: {segment.text}
-                      </p>
-                    ))}
+                    {topic.segments ? (
+                      <>
+                        {topic.segments.map((segment, index: number) => (
+                          <p
+                            key={index}
+                            className="text-left text-slate-500 text-sm md:text-base"
+                          >
+                            <span className="font-mono text-slate-500">
+                              [{formatTime(segment.start)}]
+                            </span>
+                            <span className="font-bold text-slate-500">
+                              &nbsp;Speaker {segment.speaker}
+                            </span>
+                            <span>{segment.text}</span>
+                          </p>
+                        ))}
+                      </>
+                    ) : (
+                      <>{topic.text}</>
+                    )}
                   </div>
                 )}
               </button>
