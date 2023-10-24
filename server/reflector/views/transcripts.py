@@ -53,7 +53,7 @@ class TranscriptTopic(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     title: str
     summary: str
-    transcript: str
+    transcript: str | None = None
     timestamp: float
 
 
