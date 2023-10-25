@@ -33,6 +33,8 @@ class RedisPubSubManager:
         )
 
     async def connect(self) -> None:
+        if self.redis_connection is not None:
+            return
         self.redis_connection = await self.get_redis_connection()
         self.pubsub = self.redis_connection.pubsub()
 
@@ -43,6 +45,8 @@ class RedisPubSubManager:
         self.redis_connection = None
 
     async def send_json(self, room_id: str, message: str) -> None:
+        if not self.redis_connection:
+            await self.connect()
         message = json.dumps(message)
         await self.redis_connection.publish(room_id, message)
 
@@ -94,18 +98,6 @@ class WebsocketManager:
                     await socket.send_json(data)
 
 
-def get_pubsub_client() -> RedisPubSubManager:
-    """
-    Returns the RedisPubSubManager instance for managing Redis pubsub.
-    """
-    from reflector.settings import settings
-
-    return RedisPubSubManager(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-    )
-
-
 def get_ws_manager() -> WebsocketManager:
     """
     Returns the WebsocketManager instance for managing websockets.
@@ -122,6 +114,11 @@ def get_ws_manager() -> WebsocketManager:
         RedisConnectionError: If there is an error connecting to the Redis server.
     """
     global ws_manager
-    pubsub_client = get_pubsub_client()
+    from reflector.settings import settings
+
+    pubsub_client = RedisPubSubManager(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+    )
     ws_manager = WebsocketManager(pubsub_client=pubsub_client)
     return ws_manager
