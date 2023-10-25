@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import About from "./(aboutAndPrivacy)/about";
 import Privacy from "./(aboutAndPrivacy)/privacy";
+import { featPrivacy, featRequireLogin } from "./lib/utils";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -59,6 +60,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const requireLogin = featRequireLogin();
   return (
     <html lang="en">
       <body className={poppins.className + " h-screen relative"}>
@@ -93,9 +95,37 @@ export default function RootLayout({ children }) {
                 </Link>
                 <div>
                   {/* Text link on the right */}
-                  <About buttonText="About" />
+                  <Link
+                    href="/transcripts/new"
+                    className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                  >
+                    Create
+                  </Link>
                   &nbsp;·&nbsp;
-                  <Privacy buttonText="Privacy" />
+                  <Link
+                    href="/browse"
+                    className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                  >
+                    Browse
+                  </Link>
+                  &nbsp;·&nbsp;
+                  <About buttonText="About" />
+                  {featPrivacy() ? (
+                    <>
+                      &nbsp;·&nbsp;
+                      <Privacy buttonText="Privacy" />
+                    </>
+                  ) : (
+                    <></>
+                  )}
+                  {requireLogin ? (
+                    <>
+                      &nbsp;·&nbsp;
+                      <UserInfo />
+                    </>
+                  ) : (
+                    <></>
+                  )}
                 </div>
               </header>
 

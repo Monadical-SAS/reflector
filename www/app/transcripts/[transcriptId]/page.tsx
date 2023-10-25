@@ -13,6 +13,8 @@ import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
+import { featRequireLogin } from "../../../app/lib/utils";
+import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 
 type TranscriptDetails = {
   params: {
@@ -21,13 +23,20 @@ type TranscriptDetails = {
 };
 
 export default function TranscriptDetails(details: TranscriptDetails) {
+  const isAuthenticated = useFiefIsAuthenticated();
   const api = getApi();
-  const transcript = useTranscript(details.params.transcriptId);
-  const topics = useTopics(api, details.params.transcriptId);
-  const waveform = useWaveform(api, details.params.transcriptId);
+  const [transcriptId, setTranscriptId] = useState<string>("");
+  const transcript = useTranscript(api, transcriptId);
+  const topics = useTopics(api, transcriptId);
+  const waveform = useWaveform(api, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
 
-  if (transcript?.error || topics?.error || waveform?.error) {
+  useEffect(() => {
+    if (featRequireLogin() && !isAuthenticated) return;
+    setTranscriptId(details.params.transcriptId);
+  }, [api]);
+
+  if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
       <Modal
         title="Transcription Not Found"
@@ -45,9 +54,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      {transcript?.loading === true ||
-      waveform?.loading == true ||
-      topics?.loading == true ? (
+      {transcript?.loading === true || topics?.loading === true ? (
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
@@ -55,13 +62,15 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             {transcript?.response?.title && (
               <TranscriptTitle title={transcript.response.title} />
             )}
-            <Recorder
-              topics={topics?.topics || []}
-              useActiveTopic={useActiveTopic}
-              waveform={waveform?.waveform}
-              isPastMeeting={true}
-              transcriptId={transcript?.response?.id}
-            />
+            {waveform?.loading === false && (
+              <Recorder
+                topics={topics?.topics || []}
+                useActiveTopic={useActiveTopic}
+                waveform={waveform?.waveform}
+                isPastMeeting={true}
+                transcriptId={transcript?.response?.id}
+              />
+            )}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
             <TopicList
