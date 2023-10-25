@@ -101,8 +101,6 @@ export const generateHighContrastColor = (
   backgroundColor: [number, number, number] | null = null,
 ) => {
   const hash = murmurhash3_32_gc(name);
-  console.log(name, hash);
-
   let red = (hash & 0xff0000) >> 16;
   let green = (hash & 0x00ff00) >> 8;
   let blue = hash & 0x0000ff;
