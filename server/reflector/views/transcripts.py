@@ -483,14 +483,14 @@ async def transcript_get_topics(
     ]
 
 
-@router.get("/transcripts/{transcript_id}/events")
-async def transcript_get_websocket_events(transcript_id: str):
-    pass
-
-
 # ==============================================================
 # Websocket
 # ==============================================================
+
+
+@router.get("/transcripts/{transcript_id}/events")
+async def transcript_get_websocket_events(transcript_id: str):
+    pass
 
 
 @router.websocket("/transcripts/{transcript_id}/events")
@@ -512,6 +512,13 @@ async def transcript_events_websocket(
     try:
         # on first connection, send all events only to the current user
         for event in transcript.events:
+            # for now, do not send TRANSCRIPT or STATUS options - theses are live event
+            # not necessary to be sent to the client; but keep the rest
+            name = event.event
+            if name == PipelineEvent.TRANSCRIPT:
+                continue
+            if name == PipelineEvent.STATUS:
+                continue
             await websocket.send_json(event.model_dump(mode="json"))
 
         # XXX if transcript is final (locked=True and status=ended)
