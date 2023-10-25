@@ -290,12 +290,12 @@ class BroadcastProcessor(Processor):
             processor.set_pipeline(pipeline)
 
     async def _push(self, data):
-        for processor in self.processors:
-            await processor.push(data)
+        coros = [processor.push(data) for processor in self.processors]
+        await asyncio.gather(*coros)
 
     async def _flush(self):
-        for processor in self.processors:
-            await processor.flush()
+        coros = [processor.flush() for processor in self.processors]
+        await asyncio.gather(*coros)
 
     def connect(self, processor: Processor):
         for processor in self.processors:
@@ -333,6 +333,7 @@ class Pipeline(Processor):
         self.logger.info("Pipeline created")
 
         self.processors = processors
+        self.options = None
         self.prefs = {}
 
         for processor in processors:
