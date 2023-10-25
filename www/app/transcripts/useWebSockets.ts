@@ -56,38 +56,116 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 10,
             summary: "This is test topic 1",
             title: "Topic 1: Introduction to Quantum Mechanics",
-            transcript:
-              "A brief overview of quantum mechanics and its principles.",
+            text: "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+              ,
+              {
+                speaker: 3,
+                start: 90,
+                text: "This is the third speaker",
+              },
+              {
+                speaker: 4,
+                start: 90,
+                text: "This is the fourth speaker",
+              },
+              {
+                speaker: 5,
+                start: 123,
+                text: "This is the fifth speaker",
+              },
+              {
+                speaker: 6,
+                start: 300,
+                text: "This is the sixth speaker",
+              },
+            ],
           },
           {
             id: "2",
             timestamp: 20,
             summary: "This is test topic 2",
             title: "Topic 2: Machine Learning Algorithms",
-            transcript:
-              "Understanding the different types of machine learning algorithms.",
+            text: "Understanding the different types of machine learning algorithms.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "3",
             timestamp: 30,
             summary: "This is test topic 3",
             title: "Topic 3: Mental Health Awareness",
-            transcript: "Ways to improve mental health and reduce stigma.",
+            text: "Ways to improve mental health and reduce stigma.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "4",
             timestamp: 40,
             summary: "This is test topic 4",
             title: "Topic 4: Basics of Productivity",
-            transcript: "Tips and tricks to increase daily productivity.",
+            text: "Tips and tricks to increase daily productivity.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "5",
             timestamp: 50,
             summary: "This is test topic 5",
             title: "Topic 5: Future of Aviation",
-            transcript:
-              "Exploring the advancements and possibilities in aviation.",
+            text: "Exploring the advancements and possibilities in aviation.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
         ]);
 
@@ -104,8 +182,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 1",
             title:
               "Topic 1: Introduction to Quantum Mechanics, a brief overview of quantum mechanics and its principles.",
-            transcript:
-              "A brief overview of quantum mechanics and its principles.",
+            text: "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "2",
@@ -113,8 +202,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 2",
             title:
               "Topic 2: Machine Learning Algorithms, understanding the different types of machine learning algorithms.",
-            transcript:
-              "Understanding the different types of machine learning algorithms.",
+            text: "Understanding the different types of machine learning algorithms.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "3",
@@ -122,7 +222,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 3",
             title:
               "Topic 3: Mental Health Awareness, ways to improve mental health and reduce stigma.",
-            transcript: "Ways to improve mental health and reduce stigma.",
+            text: "Ways to improve mental health and reduce stigma.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "4",
@@ -130,7 +242,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 4",
             title:
               "Topic 4: Basics of Productivity, tips and tricks to increase daily productivity.",
-            transcript: "Tips and tricks to increase daily productivity.",
+            text: "Tips and tricks to increase daily productivity.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
           {
             id: "5",
@@ -138,8 +262,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 5",
             title:
               "Topic 5: Future of Aviation, exploring the advancements and possibilities in aviation.",
-            transcript:
-              "Exploring the advancements and possibilities in aviation.",
+            text: "Exploring the advancements and possibilities in aviation.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+              {
+                speaker: 2,
+                start: 10,
+                text: "This is the second speaker",
+              },
+            ],
           },
         ]);
 
