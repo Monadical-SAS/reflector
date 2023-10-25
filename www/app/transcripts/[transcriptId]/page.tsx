@@ -54,7 +54,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      {transcript?.loading === true || topics?.loading == true ? (
+      {transcript?.loading === true || topics?.loading === true ? (
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
@@ -62,7 +62,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             {transcript?.response?.title && (
               <TranscriptTitle title={transcript.response.title} />
             )}
-            {waveform?.loading == true && (
+            {waveform?.loading === false && (
               <Recorder
                 topics={topics?.topics || []}
                 useActiveTopic={useActiveTopic}
