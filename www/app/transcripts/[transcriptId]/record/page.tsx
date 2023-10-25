@@ -14,6 +14,8 @@ import DisconnectedIndicator from "../../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../lib/wakeLock";
+import { featRequireLogin } from "../../../../app/lib/utils";
+import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 
 type TranscriptDetails = {
   params: {
@@ -36,15 +38,22 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     }
   }, []);
 
+  const isAuthenticated = useFiefIsAuthenticated();
   const api = getApi();
-  const transcript = useTranscript(api, details.params.transcriptId);
-  const webRTC = useWebRTC(stream, details.params.transcriptId, api);
-  const webSockets = useWebSockets(details.params.transcriptId);
+  const [transcriptId, setTranscriptId] = useState<string>("");
+  const transcript = useTranscript(api, transcriptId);
+  const webRTC = useWebRTC(stream, transcriptId, api);
+  const webSockets = useWebSockets(transcriptId);
 
   const { audioDevices, getAudioStream } = useAudioDevice();
 
   const [hasRecorded, setHasRecorded] = useState(false);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
+
+  useEffect(() => {
+    if (featRequireLogin() && !isAuthenticated) return;
+    setTranscriptId(details.params.transcriptId);
+  }, [api, details.params.transcriptId, isAuthenticated]);
 
   useEffect(() => {
     if (!transcriptStarted && webSockets.transcriptText.length !== 0)

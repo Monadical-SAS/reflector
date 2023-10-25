@@ -34,7 +34,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   useEffect(() => {
     if (featRequireLogin() && !isAuthenticated) return;
     setTranscriptId(details.params.transcriptId);
-  }, [api]);
+  }, [api, details.params.transcriptId, isAuthenticated]);
 
   if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
