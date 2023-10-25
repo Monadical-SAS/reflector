@@ -21,12 +21,14 @@ from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.utils.audio_waveform import get_audio_waveform
+from reflector.ws_manager import get_ws_manager
 from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
 
 router = APIRouter()
+ws_manager = get_ws_manager()
 
 # ==============================================================
 # Models to move to a database, but required for the API to work
@@ -487,38 +489,8 @@ async def transcript_get_websocket_events(transcript_id: str):
 
 
 # ==============================================================
-# Websocket Manager
+# Websocket
 # ==============================================================
-
-
-class WebsocketManager:
-    def __init__(self):
-        self.active_connections = {}
-
-    async def connect(self, transcript_id: str, websocket: WebSocket):
-        await websocket.accept()
-        if transcript_id not in self.active_connections:
-            self.active_connections[transcript_id] = []
-        self.active_connections[transcript_id].append(websocket)
-
-    def disconnect(self, transcript_id: str, websocket: WebSocket):
-        if transcript_id not in self.active_connections:
-            return
-        self.active_connections[transcript_id].remove(websocket)
-        if not self.active_connections[transcript_id]:
-            del self.active_connections[transcript_id]
-
-    async def send_json(self, transcript_id: str, message):
-        if transcript_id not in self.active_connections:
-            return
-        for connection in self.active_connections[transcript_id][:]:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                self.active_connections[transcript_id].remove(connection)
-
-
-ws_manager = WebsocketManager()
 
 
 @router.websocket("/transcripts/{transcript_id}/events")
@@ -532,21 +504,25 @@ async def transcript_events_websocket(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    await ws_manager.connect(transcript_id, websocket)
+    # connect to websocket manager
+    # use ts:transcript_id as room id
+    room_id = f"ts:{transcript_id}"
+    await ws_manager.add_user_to_room(room_id, websocket)
 
-    # on first connection, send all events
-    for event in transcript.events:
-        await websocket.send_json(event.model_dump(mode="json"))
-
-    # XXX if transcript is final (locked=True and status=ended)
-    # XXX send a final event to the client and close the connection
-
-    # endless loop to wait for new events
     try:
+        # on first connection, send all events only to the current user
+        for event in transcript.events:
+            await websocket.send_json(event.model_dump(mode="json"))
+
+        # XXX if transcript is final (locked=True and status=ended)
+        # XXX send a final event to the client and close the connection
+
+        # endless loop to wait for new events
+        # we do not have command system now,
         while True:
             await websocket.receive()
     except (RuntimeError, WebSocketDisconnect):
-        ws_manager.disconnect(transcript_id, websocket)
+        await ws_manager.remove_user_from_room(room_id, websocket)
 
 
 # ==============================================================
@@ -658,7 +634,8 @@ async def handle_rtc_event_once(event: PipelineEvent, args, data):
         return
 
     # transmit to websocket clients
-    await ws_manager.send_json(transcript_id, resp.model_dump(mode="json"))
+    room_id = f"ts:{transcript_id}"
+    await ws_manager.send_json(room_id, resp.model_dump(mode="json"))
 
 
 @router.post("/transcripts/{transcript_id}/record/webrtc")
