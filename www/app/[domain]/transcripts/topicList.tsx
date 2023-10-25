@@ -7,6 +7,7 @@ import {
 import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
+import { generateHighContrastColor } from "../lib/utils";
 
 type TopicListProps = {
   topics: Topic[];
@@ -114,9 +115,18 @@ export function TopicList({
                             <span className="font-mono text-slate-500">
                               [{formatTime(segment.start)}]
                             </span>
-                            <span className="font-bold text-slate-500">
-                              &nbsp;Speaker {segment.speaker}
-                            </span>
+                            <span
+                              className="font-bold text-slate-500"
+                              style={{
+                                color: generateHighContrastColor(
+                                  `Speaker ${segment.speaker}`,
+                                  [96, 165, 250],
+                                ),
+                              }}
+                            >
+                              {" "}
+                              (Speaker {segment.speaker}):
+                            </span>{" "}
                             <span>{segment.text}</span>
                           </p>
                         ))}
