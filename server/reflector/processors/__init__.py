@@ -3,7 +3,13 @@ from .audio_file_writer import AudioFileWriterProcessor  # noqa: F401
 from .audio_merge import AudioMergeProcessor  # noqa: F401
 from .audio_transcript import AudioTranscriptProcessor  # noqa: F401
 from .audio_transcript_auto import AudioTranscriptAutoProcessor  # noqa: F401
-from .base import Pipeline, PipelineEvent, Processor, ThreadedProcessor  # noqa: F401
+from .base import (  # noqa: F401
+    BroadcastProcessor,
+    Pipeline,
+    PipelineEvent,
+    Processor,
+    ThreadedProcessor,
+)
 from .transcript_final_long_summary import (  # noqa: F401
     TranscriptFinalLongSummaryProcessor,
 )
