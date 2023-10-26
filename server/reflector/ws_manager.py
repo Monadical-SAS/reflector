@@ -14,6 +14,7 @@ import json
 
 import redis.asyncio as redis
 from fastapi import WebSocket
+from reflector.settings import settings
 
 ws_manager = None
 
@@ -114,7 +115,8 @@ def get_ws_manager() -> WebsocketManager:
         RedisConnectionError: If there is an error connecting to the Redis server.
     """
     global ws_manager
-    from reflector.settings import settings
+    if ws_manager:
+        return ws_manager
 
     pubsub_client = RedisPubSubManager(
         host=settings.REDIS_HOST,
