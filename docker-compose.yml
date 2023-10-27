@@ -5,10 +5,19 @@ services:
       context: server
     ports:
       - 1250:1250
-    environment:
-      LLM_URL: "${LLM_URL}"
     volumes:
       - model-cache:/root/.cache
+    environment: ENTRYPOINT=server
+  worker:
+    build:
+      context: server
+    volumes:
+      - model-cache:/root/.cache
+    environment: ENTRYPOINT=worker
+  redis:
+    image: redis:7.2
+    ports:
+      - 6379:6379
   web:
     build:
       context: www
@@ -17,4 +26,3 @@ services:
 
 volumes:
   model-cache:
-
