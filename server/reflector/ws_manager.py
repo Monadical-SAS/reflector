@@ -11,12 +11,11 @@ broadcast messages to all connected websockets.
 
 import asyncio
 import json
+import threading
 
 import redis.asyncio as redis
 from fastapi import WebSocket
 from reflector.settings import settings
-
-ws_manager = None
 
 
 class RedisPubSubManager:
@@ -114,13 +113,14 @@ def get_ws_manager() -> WebsocketManager:
         ImportError: If the 'reflector.settings' module cannot be imported.
         RedisConnectionError: If there is an error connecting to the Redis server.
     """
-    global ws_manager
-    if ws_manager:
-        return ws_manager
+    local = threading.local()
+    if hasattr(local, "ws_manager"):
+        return local.ws_manager
 
     pubsub_client = RedisPubSubManager(
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
     )
     ws_manager = WebsocketManager(pubsub_client=pubsub_client)
+    local.ws_manager = ws_manager
     return ws_manager
