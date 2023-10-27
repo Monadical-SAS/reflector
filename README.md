@@ -6,7 +6,7 @@ The project architecture consists of three primary components:
 
 * **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 * **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-* **AI Models**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+* **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
 
 ## Table of Contents
 
@@ -103,6 +103,9 @@ TRANSCRIPT_MODAL_API_KEY=<omitted>
 LLM_BACKEND=modal
 LLM_URL=https://monadical-sas--reflector-llm-web.modal.run
 LLM_MODAL_API_KEY=<omitted>
+TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
+ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
+DIARIZATION_URL=https://monadical-sas--reflector-diarizer-web.modal.run
 
 AUTH_BACKEND=fief
 AUTH_FIEF_URL=https://auth.reflector.media/reflector-local
@@ -117,6 +120,10 @@ Use:
 ```bash
 poetry run python3 -m reflector.app
 ```
+
+And start the background worker
+
+celery -A reflector.worker.app worker --loglevel=info
 
 #### Using docker
 
