@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import React from "react";
 import ReactDom from "react-dom";
 import Markdown from "react-markdown";
-import "../styles/markdown.css";
+import "../../styles/markdown.css";
 
 type FinalSummaryProps = {
   summary: string;

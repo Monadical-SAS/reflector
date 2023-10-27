@@ -4,7 +4,7 @@ import {
   faChevronRight,
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
-import { formatTime } from "../lib/time";
+import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
 
