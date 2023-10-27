@@ -23,10 +23,9 @@ from reflector.ws_manager import get_ws_manager
 from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
-from .rtc_offer import PipelineEvent, RtcOffer, rtc_offer_base
+from .rtc_offer import RtcOffer, rtc_offer_base
 
 router = APIRouter()
-ws_manager = get_ws_manager()
 
 # ==============================================================
 # Transcripts list
@@ -166,32 +165,17 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    values = {"events": []}
+    values = {}
     if info.name is not None:
         values["name"] = info.name
     if info.locked is not None:
         values["locked"] = info.locked
     if info.long_summary is not None:
         values["long_summary"] = info.long_summary
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
-                transcript_event["long_summary"] = info.long_summary
-                break
-        values["events"].extend(transcript.events)
     if info.short_summary is not None:
         values["short_summary"] = info.short_summary
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
-                transcript_event["short_summary"] = info.short_summary
-                break
-        values["events"].extend(transcript.events)
     if info.title is not None:
         values["title"] = info.title
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_TITLE:
-                transcript_event["title"] = info.title
-                break
-        values["events"].extend(transcript.events)
     await transcripts_controller.update(transcript, values)
     return transcript
 
@@ -295,6 +279,7 @@ async def transcript_events_websocket(
     # connect to websocket manager
     # use ts:transcript_id as room id
     room_id = f"ts:{transcript_id}"
+    ws_manager = get_ws_manager()
     await ws_manager.add_user_to_room(room_id, websocket)
 
     try:
@@ -303,9 +288,7 @@ async def transcript_events_websocket(
             # for now, do not send TRANSCRIPT or STATUS options - theses are live event
             # not necessary to be sent to the client; but keep the rest
             name = event.event
-            if name == PipelineEvent.TRANSCRIPT:
-                continue
-            if name == PipelineEvent.STATUS:
+            if name in ("TRANSCRIPT", "STATUS"):
                 continue
             await websocket.send_json(event.model_dump(mode="json"))
 

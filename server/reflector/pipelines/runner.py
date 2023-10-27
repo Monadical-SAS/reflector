@@ -16,7 +16,6 @@ During its lifecycle, it will emit the following status:
 """
 
 import asyncio
-from typing import Callable
 
 from pydantic import BaseModel, ConfigDict
 from reflector.logger import logger
@@ -27,8 +26,6 @@ class PipelineRunner(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     status: str = "idle"
-    on_status: Callable | None = None
-    on_ended: Callable | None = None
     pipeline: Pipeline | None = None
 
     def __init__(self, **kwargs):
@@ -36,6 +33,10 @@ class PipelineRunner(BaseModel):
         self._q_cmd = asyncio.Queue()
         self._ev_done = asyncio.Event()
         self._is_first_push = True
+        self._logger = logger.bind(
+            runner=id(self),
+            runner_cls=self.__class__.__name__,
+        )
 
     def create(self) -> Pipeline:
         """
@@ -50,33 +51,51 @@ class PipelineRunner(BaseModel):
         """
         asyncio.get_event_loop().create_task(self.run())
 
-    async def push(self, data):
+    def start_sync(self):
+        """
+        Start the pipeline synchronously (for non-asyncio apps)
+        """
+        asyncio.run(self.run())
+
+    def push(self, data):
         """
         Push data to the pipeline
         """
-        await self._add_cmd("PUSH", data)
+        self._add_cmd("PUSH", data)
 
-    async def flush(self):
+    def flush(self):
         """
         Flush the pipeline
         """
-        await self._add_cmd("FLUSH", None)
+        self._add_cmd("FLUSH", None)
 
-    async def _add_cmd(self, cmd: str, data):
+    async def on_status(self, status):
+        """
+        Called when the status of the pipeline changes
+        """
+        pass
+
+    async def on_ended(self):
+        """
+        Called when the pipeline ends
+        """
+        pass
+
+    def _add_cmd(self, cmd: str, data):
         """
         Enqueue a command to be executed in the runner.
         Currently supported commands: PUSH, FLUSH
         """
-        await self._q_cmd.put([cmd, data])
+        self._q_cmd.put_nowait([cmd, data])
 
     async def _set_status(self, status):
-        print("set_status", status)
+        self._logger.debug("Runner status updated", status=status)
         self.status = status
         if self.on_status:
             try:
                 await self.on_status(status)
-            except Exception as e:
-                logger.error("PipelineRunner status_callback error", error=e)
+            except Exception:
+                self._logger.exception("Runer error while setting status")
 
     async def run(self):
         try:
@@ -95,8 +114,8 @@ class PipelineRunner(BaseModel):
                     await func(data)
                 else:
                     raise Exception(f"Unknown command {cmd}")
-        except Exception as e:
-            logger.error("PipelineRunner error", error=e)
+        except Exception:
+            self._logger.exception("Runner error")
             await self._set_status("error")
             self._ev_done.set()
             if self.on_ended:
