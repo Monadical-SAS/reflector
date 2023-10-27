@@ -1,5 +1,4 @@
 import asyncio
-from enum import StrEnum
 from json import loads
 
 import av
@@ -41,7 +40,7 @@ class AudioStreamTrack(MediaStreamTrack):
         ctx = self.ctx
         frame = await self.track.recv()
         try:
-            await ctx.pipeline_runner.push(frame)
+            ctx.pipeline_runner.push(frame)
         except Exception as e:
             ctx.logger.error("Pipeline error", error=e)
         return frame
@@ -50,19 +49,6 @@ class AudioStreamTrack(MediaStreamTrack):
 class RtcOffer(BaseModel):
     sdp: str
     type: str
-
-
-class StrValue(BaseModel):
-    value: str
-
-
-class PipelineEvent(StrEnum):
-    TRANSCRIPT = "TRANSCRIPT"
-    TOPIC = "TOPIC"
-    FINAL_LONG_SUMMARY = "FINAL_LONG_SUMMARY"
-    STATUS = "STATUS"
-    FINAL_SHORT_SUMMARY = "FINAL_SHORT_SUMMARY"
-    FINAL_TITLE = "FINAL_TITLE"
 
 
 async def rtc_offer_base(
@@ -90,7 +76,7 @@ async def rtc_offer_base(
         #    - when we receive the close event, we do nothing.
         # 2. or the client close the connection
         #    and there is nothing to do because it is already closed
-        await ctx.pipeline_runner.flush()
+        ctx.pipeline_runner.flush()
         if close:
             ctx.logger.debug("Closing peer connection")
             await pc.close()

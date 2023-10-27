@@ -11,8 +11,12 @@ It is decoupled to:
 It is directly linked to our data model.
 """
 
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
+from celery import shared_task
+from pydantic import BaseModel
 from reflector.db.transcripts import (
     Transcript,
     TranscriptFinalLongSummary,
@@ -25,6 +29,7 @@ from reflector.db.transcripts import (
 from reflector.pipelines.runner import PipelineRunner
 from reflector.processors import (
     AudioChunkerProcessor,
+    AudioDiarizationProcessor,
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
@@ -37,11 +42,13 @@ from reflector.processors import (
     TranscriptTopicDetectorProcessor,
     TranscriptTranslatorProcessor,
 )
-from reflector.tasks.worker import celery
+from reflector.processors.types import AudioDiarizationInput
+from reflector.processors.types import TitleSummary as TitleSummaryProcessorType
+from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 
 
-def broadcast_to_socket(func):
+def broadcast_to_sockets(func):
     """
     Decorator to broadcast transcript event to websockets
     concerning this transcript
@@ -59,6 +66,10 @@ def broadcast_to_socket(func):
     return wrapper
 
 
+class StrValue(BaseModel):
+    value: str
+
+
 class PipelineMainBase(PipelineRunner):
     transcript_id: str
     ws_room_id: str | None = None
@@ -66,6 +77,7 @@ class PipelineMainBase(PipelineRunner):
 
     def prepare(self):
         # prepare websocket
+        self._lock = asyncio.Lock()
         self.ws_room_id = f"ts:{self.transcript_id}"
         self.ws_manager = get_ws_manager()
 
@@ -78,15 +90,59 @@ class PipelineMainBase(PipelineRunner):
             raise Exception("Transcript not found")
         return result
 
+    @asynccontextmanager
+    async def transaction(self):
+        async with self._lock:
+            async with transcripts_controller.transaction():
+                yield
 
-class PipelineMainLive(PipelineMainBase):
-    audio_filename: Path | None = None
-    source_language: str = "en"
-    target_language: str = "en"
+    @broadcast_to_sockets
+    async def on_status(self, status):
+        # if it's the first part, update the status of the transcript
+        # but do not set the ended status yet.
+        if isinstance(self, PipelineMainLive):
+            status_mapping = {
+                "started": "recording",
+                "push": "recording",
+                "flush": "processing",
+                "error": "error",
+            }
+        elif isinstance(self, PipelineMainDiarization):
+            status_mapping = {
+                "push": "processing",
+                "flush": "processing",
+                "error": "error",
+                "ended": "ended",
+            }
+        else:
+            raise Exception(f"Runner {self.__class__} is missing status mapping")
 
-    @broadcast_to_socket
+        # mutate to model status
+        status = status_mapping.get(status)
+        if not status:
+            return
+
+        # when the status of the pipeline changes, update the transcript
+        async with self.transaction():
+            transcript = await self.get_transcript()
+            if status == transcript.status:
+                return
+            resp = await transcripts_controller.append_event(
+                transcript=transcript,
+                event="STATUS",
+                data=StrValue(value=status),
+            )
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "status": status,
+                },
+            )
+            return resp
+
+    @broadcast_to_sockets
     async def on_transcript(self, data):
-        async with transcripts_controller.transaction():
+        async with self.transaction():
             transcript = await self.get_transcript()
             return await transcripts_controller.append_event(
                 transcript=transcript,
@@ -94,7 +150,7 @@ class PipelineMainLive(PipelineMainBase):
                 data=TranscriptText(text=data.text, translation=data.translation),
             )
 
-    @broadcast_to_socket
+    @broadcast_to_sockets
     async def on_topic(self, data):
         topic = TranscriptTopic(
             title=data.title,
@@ -103,13 +159,74 @@ class PipelineMainLive(PipelineMainBase):
             text=data.transcript.text,
             words=data.transcript.words,
         )
-        async with transcripts_controller.transaction():
+        async with self.transaction():
             transcript = await self.get_transcript()
+            await transcripts_controller.upsert_topic(transcript, topic)
             return await transcripts_controller.append_event(
                 transcript=transcript,
                 event="TOPIC",
                 data=topic,
             )
+
+    @broadcast_to_sockets
+    async def on_title(self, data):
+        final_title = TranscriptFinalTitle(title=data.title)
+        async with self.transaction():
+            transcript = await self.get_transcript()
+            if not transcript.title:
+                transcripts_controller.update(
+                    transcript,
+                    {
+                        "title": final_title.title,
+                    },
+                )
+            return await transcripts_controller.append_event(
+                transcript=transcript,
+                event="FINAL_TITLE",
+                data=final_title,
+            )
+
+    @broadcast_to_sockets
+    async def on_long_summary(self, data):
+        final_long_summary = TranscriptFinalLongSummary(long_summary=data.long_summary)
+        async with self.transaction():
+            transcript = await self.get_transcript()
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "long_summary": final_long_summary.long_summary,
+                },
+            )
+            return await transcripts_controller.append_event(
+                transcript=transcript,
+                event="FINAL_LONG_SUMMARY",
+                data=final_long_summary,
+            )
+
+    @broadcast_to_sockets
+    async def on_short_summary(self, data):
+        final_short_summary = TranscriptFinalShortSummary(
+            short_summary=data.short_summary
+        )
+        async with self.transaction():
+            transcript = await self.get_transcript()
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "short_summary": final_short_summary.short_summary,
+                },
+            )
+            return await transcripts_controller.append_event(
+                transcript=transcript,
+                event="FINAL_SHORT_SUMMARY",
+                data=final_short_summary,
+            )
+
+
+class PipelineMainLive(PipelineMainBase):
+    audio_filename: Path | None = None
+    source_language: str = "en"
+    target_language: str = "en"
 
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
@@ -125,96 +242,49 @@ class PipelineMainLive(PipelineMainBase):
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
+            BroadcastProcessor(
+                processors=[
+                    TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
+                    TranscriptFinalLongSummaryProcessor.as_threaded(
+                        callback=self.on_long_summary
+                    ),
+                    TranscriptFinalShortSummaryProcessor.as_threaded(
+                        callback=self.on_short_summary
+                    ),
+                ]
+            ),
         ]
         pipeline = Pipeline(*processors)
         pipeline.options = self
         pipeline.set_pref("audio:source_language", transcript.source_language)
         pipeline.set_pref("audio:target_language", transcript.target_language)
 
-        # when the pipeline ends, connect to the post pipeline
-        async def on_ended():
-            task_pipeline_main_post.delay(transcript_id=self.transcript_id)
-
-        pipeline.on_ended = self
-
         return pipeline
 
+    async def on_ended(self):
+        # when the pipeline ends, connect to the post pipeline
+        task_pipeline_main_post.delay(transcript_id=self.transcript_id)
 
-class PipelineMainPost(PipelineMainBase):
+
+class PipelineMainDiarization(PipelineMainBase):
     """
-    Implement the rest of the main pipeline, triggered after PipelineMainLive ended.
+    Diarization is a long time process, so we do it in a separate pipeline
+    When done, adjust the short and final summary
     """
-
-    @broadcast_to_socket
-    async def on_final_title(self, data):
-        final_title = TranscriptFinalTitle(title=data.title)
-        async with transcripts_controller.transaction():
-            transcript = await self.get_transcript()
-            if not transcript.title:
-                transcripts_controller.update(
-                    self.transcript,
-                    {
-                        "title": final_title.title,
-                    },
-                )
-            return await transcripts_controller.append_event(
-                transcript=transcript,
-                event="FINAL_TITLE",
-                data=final_title,
-            )
-
-    @broadcast_to_socket
-    async def on_final_long_summary(self, data):
-        final_long_summary = TranscriptFinalLongSummary(long_summary=data.long_summary)
-        async with transcripts_controller.transaction():
-            transcript = await self.get_transcript()
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "long_summary": final_long_summary.long_summary,
-                },
-            )
-            return await transcripts_controller.append_event(
-                transcript=transcript,
-                event="FINAL_LONG_SUMMARY",
-                data=final_long_summary,
-            )
-
-    @broadcast_to_socket
-    async def on_final_short_summary(self, data):
-        final_short_summary = TranscriptFinalShortSummary(
-            short_summary=data.short_summary
-        )
-        async with transcripts_controller.transaction():
-            transcript = await self.get_transcript()
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "short_summary": final_short_summary.short_summary,
-                },
-            )
-            return await transcripts_controller.append_event(
-                transcript=transcript,
-                event="FINAL_SHORT_SUMMARY",
-                data=final_short_summary,
-            )
 
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
         self.prepare()
         processors = [
-            # add diarization
+            AudioDiarizationProcessor(),
             BroadcastProcessor(
                 processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(
-                        callback=self.on_final_title
-                    ),
                     TranscriptFinalLongSummaryProcessor.as_threaded(
-                        callback=self.on_final_long_summary
+                        callback=self.on_long_summary
                     ),
                     TranscriptFinalShortSummaryProcessor.as_threaded(
-                        callback=self.on_final_short_summary
+                        callback=self.on_short_summary
                     ),
                 ]
             ),
@@ -222,9 +292,35 @@ class PipelineMainPost(PipelineMainBase):
         pipeline = Pipeline(*processors)
         pipeline.options = self
 
+        # now let's start the pipeline by pushing information to the
+        # first processor diarization processor
+        # XXX translation is lost when converting our data model to the processor model
+        transcript = await self.get_transcript()
+        topics = [
+            TitleSummaryProcessorType(
+                title=topic.title,
+                summary=topic.summary,
+                timestamp=topic.timestamp,
+                duration=topic.duration,
+                transcript=TranscriptProcessorType(words=topic.words),
+            )
+            for topic in transcript.topics
+        ]
+
+        audio_diarization_input = AudioDiarizationInput(
+            audio_filename=transcript.audio_mp3_filename,
+            topics=topics,
+        )
+
+        # as tempting to use pipeline.push, prefer to use the runner
+        # to let the start just do one job.
+        self.push(audio_diarization_input)
+        self.flush()
+
         return pipeline
 
 
-@celery.task
+@shared_task
 def task_pipeline_main_post(transcript_id: str):
-    pass
+    runner = PipelineMainDiarization(transcript_id=transcript_id)
+    runner.start_sync()

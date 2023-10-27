@@ -382,3 +382,8 @@ class TranslationLanguages(BaseModel):
 
     def is_supported(self, lang_id: str) -> bool:
         return lang_id in self.supported_languages
+
+
+class AudioDiarizationInput(BaseModel):
+    audio_filename: Path
+    topics: list[TitleSummary]

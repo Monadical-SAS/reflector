@@ -32,7 +32,7 @@ class ThreadedUvicorn:
 
 
 @pytest.fixture
-async def appserver(tmpdir):
+async def appserver(tmpdir, celery_session_app, celery_session_worker):
     from reflector.settings import settings
     from reflector.app import app
 
@@ -52,6 +52,13 @@ async def appserver(tmpdir):
     settings.DATA_DIR = DATA_DIR
 
 
+@pytest.fixture(scope="session")
+def celery_includes():
+    return ["reflector.pipelines.main_live_pipeline"]
+
+
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket(
     tmpdir,
@@ -121,14 +128,20 @@ async def test_transcript_rtc_and_websocket(
     # XXX aiortc is long to close the connection
     # instead of waiting a long time, we just send a STOP
     client.channel.send(json.dumps({"cmd": "STOP"}))
-
-    # wait the processing to finish
-    await asyncio.sleep(2)
-
     await client.stop()
 
     # wait the processing to finish
-    await asyncio.sleep(2)
+    timeout = 20
+    while True:
+        # fetch the transcript and check if it is ended
+        resp = await ac.get(f"/transcripts/{tid}")
+        assert resp.status_code == 200
+        if resp.json()["status"] in ("ended", "error"):
+            break
+        await asyncio.sleep(1)
+
+    if resp.json()["status"] != "ended":
+        raise TimeoutError("Timeout while waiting for transcript to be ended")
 
     # stop websocket task
     websocket_task.cancel()
@@ -152,7 +165,7 @@ async def test_transcript_rtc_and_websocket(
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["transcript"].startswith("Hello world.")
+    assert ev["data"]["text"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames
@@ -169,16 +182,12 @@ async def test_transcript_rtc_and_websocket(
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
-    assert statuses == ["recording", "processing", "ended"]
+    assert statuses.index("recording") < statuses.index("processing")
+    assert statuses.index("processing") < statuses.index("ended")
 
     # ensure the last event received is ended
     assert events[-1]["event"] == "STATUS"
     assert events[-1]["data"]["value"] == "ended"
-
-    # check that transcript status in model is updated
-    resp = await ac.get(f"/transcripts/{tid}")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ended"
 
     # check that audio/mp3 is available
     resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
@@ -186,6 +195,8 @@ async def test_transcript_rtc_and_websocket(
     assert resp.headers["Content-Type"] == "audio/mpeg"
 
 
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
 async def test_transcript_rtc_and_websocket_and_fr(
     tmpdir,
@@ -265,6 +276,18 @@ async def test_transcript_rtc_and_websocket_and_fr(
     await client.stop()
 
     # wait the processing to finish
+    timeout = 20
+    while True:
+        # fetch the transcript and check if it is ended
+        resp = await ac.get(f"/transcripts/{tid}")
+        assert resp.status_code == 200
+        if resp.json()["status"] == "ended":
+            break
+        await asyncio.sleep(1)
+
+    if resp.json()["status"] != "ended":
+        raise TimeoutError("Timeout while waiting for transcript to be ended")
+
     await asyncio.sleep(2)
 
     # stop websocket task
@@ -289,7 +312,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["transcript"].startswith("Hello world.")
+    assert ev["data"]["text"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames
@@ -306,7 +329,8 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
-    assert statuses == ["recording", "processing", "ended"]
+    assert statuses.index("recording") < statuses.index("processing")
+    assert statuses.index("processing") < statuses.index("ended")
 
     # ensure the last event received is ended
     assert events[-1]["event"] == "STATUS"
