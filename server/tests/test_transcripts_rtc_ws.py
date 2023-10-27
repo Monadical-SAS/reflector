@@ -102,6 +102,7 @@ async def test_transcript_rtc_and_websocket(
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
+    print("Test websocket: TASK CREATED", websocket_task)
 
     # create stream client
     import argparse
@@ -243,6 +244,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
+    print("Test websocket: TASK CREATED", websocket_task)
 
     # create stream client
     import argparse
