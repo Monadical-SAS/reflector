@@ -62,6 +62,7 @@ class TranscriptTopic(BaseModel):
     title: str
     summary: str
     timestamp: float
+    duration: float | None = 0
     text: str | None = None
     words: list[ProcessorWord] = []
 
@@ -264,7 +265,7 @@ class TranscriptController:
         """
         A context manager for database transaction
         """
-        async with database.transaction():
+        async with database.transaction(isolation="serializable"):
             yield
 
     async def append_event(
@@ -279,6 +280,17 @@ class TranscriptController:
         resp = transcript.add_event(event=event, data=data)
         await self.update(transcript, {"events": transcript.events_dump()})
         return resp
+
+    async def upsert_topic(
+        self,
+        transcript: Transcript,
+        topic: TranscriptTopic,
+    ) -> TranscriptEvent:
+        """
+        Append an event to a transcript
+        """
+        transcript.upsert_topic(topic)
+        await self.update(transcript, {"topics": transcript.topics_dump()})
 
 
 transcripts_controller = TranscriptController()
