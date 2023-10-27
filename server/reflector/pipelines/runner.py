@@ -55,7 +55,11 @@ class PipelineRunner(BaseModel):
         """
         Start the pipeline synchronously (for non-asyncio apps)
         """
-        asyncio.run(self.run())
+        loop = asyncio.get_event_loop()
+        if not loop:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.run())
 
     def push(self, data):
         """

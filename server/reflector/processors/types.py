@@ -385,5 +385,5 @@ class TranslationLanguages(BaseModel):
 
 
 class AudioDiarizationInput(BaseModel):
-    audio_filename: Path
+    audio_url: str
     topics: list[TitleSummary]
