@@ -1,13 +1,9 @@
 "use client";
-import {
-  useFiefIsAuthenticated,
-  useFiefUserinfo,
-} from "@fief/fief/nextjs/react";
+import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import Link from "next/link";
 
 export default function UserInfo() {
   const isAuthenticated = useFiefIsAuthenticated();
-  const userinfo = useFiefUserinfo();
 
   return !isAuthenticated ? (
     <span className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2">

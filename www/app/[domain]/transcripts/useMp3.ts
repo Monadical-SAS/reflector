@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import {
   DefaultApi,
   V1TranscriptGetAudioMp3Request,
-} from "../api/apis/DefaultApi";
-import {} from "../api";
-import { useError } from "../(errors)/errorContext";
+} from "../../api/apis/DefaultApi";
+import {} from "../../api";
+import { useError } from "../../(errors)/errorContext";
 
 type Mp3Response = {
   url: string | null;

@@ -1,20 +1,20 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
-import RecordPlugin from "../lib/custom-plugins/record";
-import CustomRegionsPlugin from "../lib/custom-plugins/regions";
+import RecordPlugin from "../../lib/custom-plugins/record";
+import CustomRegionsPlugin from "../../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
 
-import { formatTime } from "../lib/time";
+import { formatTime } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
-import { AudioWaveform } from "../api";
+import { AudioWaveform } from "../../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
-import { useError } from "../(errors)/errorContext";
-import { waveSurferStyles } from "../styles/recorder";
+import { useError } from "../../(errors)/errorContext";
+import { waveSurferStyles } from "../../styles/recorder";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
