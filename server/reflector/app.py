@@ -64,6 +64,9 @@ app.include_router(transcripts_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
 add_pagination(app)
 
+# prepare celery
+from reflector.worker import app as celery_app  # noqa
+
 
 # simpler openapi id
 def use_route_names_as_operation_ids(app: FastAPI) -> None:

@@ -13,10 +13,12 @@ It is directly linked to our data model.
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from pathlib import Path
 
 from celery import shared_task
 from pydantic import BaseModel
+from reflector.app import app
 from reflector.db.transcripts import (
     Transcript,
     TranscriptFinalLongSummary,
@@ -29,7 +31,7 @@ from reflector.db.transcripts import (
 from reflector.pipelines.runner import PipelineRunner
 from reflector.processors import (
     AudioChunkerProcessor,
-    AudioDiarizationProcessor,
+    AudioDiarizationAutoProcessor,
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
@@ -45,6 +47,7 @@ from reflector.processors import (
 from reflector.processors.types import AudioDiarizationInput
 from reflector.processors.types import TitleSummary as TitleSummaryProcessorType
 from reflector.processors.types import Transcript as TranscriptProcessorType
+from reflector.settings import settings
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 
 
@@ -174,7 +177,7 @@ class PipelineMainBase(PipelineRunner):
         async with self.transaction():
             transcript = await self.get_transcript()
             if not transcript.title:
-                transcripts_controller.update(
+                await transcripts_controller.update(
                     transcript,
                     {
                         "title": final_title.title,
@@ -238,19 +241,13 @@ class PipelineMainLive(PipelineMainBase):
             AudioFileWriterProcessor(path=transcript.audio_mp3_filename),
             AudioChunkerProcessor(),
             AudioMergeProcessor(),
-            AudioTranscriptAutoProcessor.as_threaded(),
+            AudioTranscriptAutoProcessor.get_instance().as_threaded(),
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
-                    TranscriptFinalLongSummaryProcessor.as_threaded(
-                        callback=self.on_long_summary
-                    ),
-                    TranscriptFinalShortSummaryProcessor.as_threaded(
-                        callback=self.on_short_summary
-                    ),
                 ]
             ),
         ]
@@ -277,7 +274,7 @@ class PipelineMainDiarization(PipelineMainBase):
         # add a customised logger to the context
         self.prepare()
         processors = [
-            AudioDiarizationProcessor(),
+            AudioDiarizationAutoProcessor.get_instance(callback=self.on_topic),
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalLongSummaryProcessor.as_threaded(
@@ -307,8 +304,19 @@ class PipelineMainDiarization(PipelineMainBase):
             for topic in transcript.topics
         ]
 
+        # we need to create an url to be used for diarization
+        # we can't use the audio_mp3_filename because it's not accessible
+        # from the diarization processor
+        from reflector.views.transcripts import create_access_token
+
+        token = create_access_token(
+            {"sub": transcript.user_id},
+            expires_delta=timedelta(minutes=15),
+        )
+        path = app.url_path_for("transcript_get_audio_mp3", transcript_id=transcript.id)
+        url = f"{settings.BASE_URL}{path}?token={token}"
         audio_diarization_input = AudioDiarizationInput(
-            audio_filename=transcript.audio_mp3_filename,
+            audio_url=url,
             topics=topics,
         )
 

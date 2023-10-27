@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
 import reflector.auth as auth
@@ -9,8 +9,10 @@ from fastapi import (
     Request,
     WebSocket,
     WebSocketDisconnect,
+    status,
 )
 from fastapi_pagination import Page, paginate
+from jose import jwt
 from pydantic import BaseModel, Field
 from reflector.db.transcripts import (
     AudioWaveform,
@@ -26,6 +28,18 @@ from ._range_requests_response import range_requests_response
 from .rtc_offer import RtcOffer, rtc_offer_base
 
 router = APIRouter()
+
+ALGORITHM = "HS256"
+DOWNLOAD_EXPIRE_MINUTES = 60
+
+
+def create_access_token(data: dict, expires_delta: timedelta):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 
 # ==============================================================
 # Transcripts list
@@ -198,8 +212,21 @@ async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    token: str | None = None,
 ):
     user_id = user["sub"] if user else None
+    if not user_id and token:
+        unauthorized_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+            user_id: str = payload.get("sub")
+        except jwt.JWTError:
+            raise unauthorized_exception
+
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
