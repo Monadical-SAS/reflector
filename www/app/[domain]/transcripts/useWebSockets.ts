@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
-import { useError } from "../(errors)/errorContext";
+import { useError } from "../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
 
 type UseWebSockets = {

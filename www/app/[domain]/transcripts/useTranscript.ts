@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { DefaultApi, V1TranscriptGetRequest } from "../api/apis/DefaultApi";
-import { GetTranscript } from "../api";
-import { useError } from "../(errors)/errorContext";
+import { DefaultApi, V1TranscriptGetRequest } from "../../api/apis/DefaultApi";
+import { GetTranscript } from "../../api";
+import { useError } from "../../(errors)/errorContext";
 
 type Transcript = {
   response: GetTranscript | null;

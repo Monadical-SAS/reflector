@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import {
   DefaultApi,
   V1TranscriptGetTopicsRequest,
-} from "../api/apis/DefaultApi";
-import { TranscriptTopic } from "../api";
-import { useError } from "../(errors)/errorContext";
+} from "../../api/apis/DefaultApi";
+import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
 
 type TranscriptTopics = {
