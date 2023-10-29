@@ -4,7 +4,6 @@ import useAudioDevice from "../useAudioDevice";
 import "react-select-search/style.css";
 import "../../styles/button.css";
 import "../../styles/form.scss";
-import getApi from "../../lib/getApi";
 import About from "../../(aboutAndPrivacy)/about";
 import Privacy from "../../(aboutAndPrivacy)/privacy";
 import { useRouter } from "next/navigation";
@@ -15,7 +14,6 @@ import { supportedLatinLanguages } from "../../supportedLanguages";
 const TranscriptCreate = () => {
   // const transcript = useTranscript(stream, api);
   const router = useRouter();
-  const api = getApi();
 
   const [name, setName] = useState<string>();
   const nameChange = (event: React.ChangeEvent<HTMLInputElement>) => {

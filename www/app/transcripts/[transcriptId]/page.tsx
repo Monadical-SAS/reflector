@@ -53,7 +53,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         <>
           <div className="flex flex-col">
             {transcript?.response?.title && (
-              <TranscriptTitle title={transcript.response.title} />
+              <TranscriptTitle
+                title={transcript.response.title}
+                transcriptId={transcript.response.id}
+              />
             )}
             <Recorder
               topics={topics?.topics || []}
@@ -75,6 +78,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                   <FinalSummary
                     fullTranscript={fullTranscript}
                     summary={transcript?.response?.longSummary}
+                    transcriptId={transcript?.response?.id}
                   />
                 )}
               </section>

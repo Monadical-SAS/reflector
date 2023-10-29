@@ -73,6 +73,9 @@ class TranscriptEvent(BaseModel):
     event: str
     data: dict
 
+    def to_dict(self):
+        return {"event": self.event, "data": self.data}
+
 
 class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
@@ -185,6 +188,10 @@ class TranscriptController:
         return transcript
 
     async def update(self, transcript: Transcript, values: dict):
+        # Convert TranscriptEvent objects to dictionaries
+        if "events" in values:
+            values["events"] = [event.to_dict() for event in values["events"]]
+
         query = (
             transcripts.update()
             .where(transcripts.c.id == transcript.id)
@@ -299,32 +306,27 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
+
     values = {"events": []}
-    if info.name is not None:
-        values["name"] = info.name
+
+    def update_summary_and_event(field_name, event_type):
+        field_value = getattr(info, field_name)
+        if field_value is not None:
+            values[field_name] = field_value
+            for transcript_event in transcript.events:
+                if transcript_event.event == event_type:
+                    transcript_event.data[field_name] = field_value
+                    break
+
+    update_summary_and_event("long_summary", PipelineEvent.FINAL_LONG_SUMMARY)
+    update_summary_and_event("short_summary", PipelineEvent.FINAL_SHORT_SUMMARY)
+    update_summary_and_event("title", PipelineEvent.FINAL_TITLE)
+
     if info.locked is not None:
         values["locked"] = info.locked
-    if info.long_summary is not None:
-        values["long_summary"] = info.long_summary
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_LONG_SUMMARY:
-                transcript_event["long_summary"] = info.long_summary
-                break
-        values["events"].extend(transcript.events)
-    if info.short_summary is not None:
-        values["short_summary"] = info.short_summary
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_SHORT_SUMMARY:
-                transcript_event["short_summary"] = info.short_summary
-                break
-        values["events"].extend(transcript.events)
-    if info.title is not None:
-        values["title"] = info.title
-        for transcript_event in transcript.events:
-            if transcript_event["event"] == PipelineEvent.FINAL_TITLE:
-                transcript_event["title"] = info.title
-                break
-        values["events"].extend(transcript.events)
+
+    values["events"].extend(transcript.events)
+
     await transcripts_controller.update(transcript, values)
     return transcript
 
