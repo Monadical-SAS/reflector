@@ -1,18 +1,38 @@
 import { useRef, useState } from "react";
 import React from "react";
-import ReactDom from "react-dom";
 import Markdown from "react-markdown";
 import "../../styles/markdown.css";
+import getApi from "../../lib/getApi";
 
 type FinalSummaryProps = {
+  protectedPath: boolean;
   summary: string;
   fullTranscript: string;
+  transcriptId: string;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
   const finalSummaryRef = useRef<HTMLParagraphElement>(null);
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedSummary, setEditedSummary] = useState(props.summary);
+  const api = getApi(props.protectedPath);
+
+  const updateSummary = async (newSummary: string, transcriptId: string) => {
+    try {
+      setEditedSummary(newSummary);
+      const updatedTranscript = await api.v1TranscriptUpdate({
+        transcriptId,
+        updateTranscript: {
+          longSummary: newSummary,
+        },
+      });
+      console.log("Updated long summary:", updatedTranscript);
+    } catch (err) {
+      console.error("Failed to update long summary:", err);
+    }
+  };
 
   const handleCopySummaryClick = () => {
     let text_to_copy = finalSummaryRef.current?.innerText;
@@ -36,6 +56,10 @@ export default function FinalSummary(props: FinalSummaryProps) {
       });
   };
 
+  const handleEditMode = () => {
+    setIsEditMode(!isEditMode);
+  };
+
   return (
     <div className="overflow-y-auto h-auto max-h-full">
       <div className="flex flex-row flex-wrap-reverse justify-between items-center">
@@ -43,6 +67,14 @@ export default function FinalSummary(props: FinalSummaryProps) {
           Final Summary
         </h2>
         <div className="ml-auto flex space-x-2 mb-2">
+          <button
+            onClick={handleEditMode}
+            className={
+              "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
+            }
+          >
+            {isEditMode ? "Save" : "Edit Summary"}
+          </button>
           <button
             onClick={handleCopyTranscriptClick}
             className={
@@ -65,10 +97,17 @@ export default function FinalSummary(props: FinalSummaryProps) {
           </button>
         </div>
       </div>
-
-      <p ref={finalSummaryRef} className="markdown">
-        <Markdown>{props.summary}</Markdown>
-      </p>
+      {isEditMode ? (
+        <textarea
+          value={editedSummary}
+          onChange={(e) => updateSummary(e.target.value, props.transcriptId)}
+          className="markdown"
+        />
+      ) : (
+        <p ref={finalSummaryRef} className="markdown">
+          <Markdown>{editedSummary}</Markdown>
+        </p>
+      )}{" "}
     </div>
   );
 }
