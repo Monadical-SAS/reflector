@@ -55,7 +55,11 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         <>
           <div className="flex flex-col">
             {transcript?.response?.title && (
-              <TranscriptTitle title={transcript.response.title} />
+              <TranscriptTitle
+                protectedPath={protectedPath}
+                title={transcript.response.title}
+                transcriptId={transcript.response.id}
+              />
             )}
             {waveform?.loading === false && (
               <Recorder
@@ -78,8 +82,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
                 {transcript?.response?.longSummary && (
                   <FinalSummary
+                    protectedPath={protectedPath}
                     fullTranscript={fullTranscript}
                     summary={transcript?.response?.longSummary}
+                    transcriptId={transcript?.response?.id}
                   />
                 )}
               </section>
