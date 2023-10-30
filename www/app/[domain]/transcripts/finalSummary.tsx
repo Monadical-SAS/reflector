@@ -16,12 +16,12 @@ export default function FinalSummary(props: FinalSummaryProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [preEditSummary, setPreEditSummary] = useState(props.summary);
   const [editedSummary, setEditedSummary] = useState(props.summary);
   const api = getApi(props.protectedPath);
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
     try {
-      setEditedSummary(newSummary);
       const updatedTranscript = await api.v1TranscriptUpdate({
         transcriptId,
         updateTranscript: {
@@ -34,7 +34,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
     }
   };
 
-  const handleCopySummaryClick = () => {
+  const onCopySummaryClick = () => {
     let text_to_copy = finalSummaryRef.current?.innerText;
 
     text_to_copy &&
@@ -45,7 +45,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
       });
   };
 
-  const handleCopyTranscriptClick = () => {
+  const onCopyTranscriptClick = () => {
     let text_to_copy = props.fullTranscript;
 
     text_to_copy &&
@@ -56,58 +56,113 @@ export default function FinalSummary(props: FinalSummaryProps) {
       });
   };
 
-  const handleEditMode = () => {
-    setIsEditMode(!isEditMode);
+  const onEditClick = () => {
+    setPreEditSummary(editedSummary);
+    setIsEditMode(true);
+  };
+
+  const onDiscardClick = () => {
+    setEditedSummary(preEditSummary);
+    setIsEditMode(false);
+  };
+
+  const onSaveClick = () => {
+    updateSummary(editedSummary, props.transcriptId);
+    setIsEditMode(false);
+  };
+
+  const handleTextAreaKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onDiscardClick();
+    }
+
+    if (e.key === "Enter" && e.shiftKey) {
+      onSaveClick();
+      e.preventDefault(); // prevent the default action of adding a new line
+    }
   };
 
   return (
-    <div className="overflow-y-auto h-auto max-h-full">
+    <div
+      className={
+        (isEditMode ? "overflow-y-none" : "overflow-y-auto") +
+        " h-auto max-h-full flex flex-col h-full"
+      }
+    >
       <div className="flex flex-row flex-wrap-reverse justify-between items-center">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold">
           Final Summary
         </h2>
+
         <div className="ml-auto flex space-x-2 mb-2">
-          <button
-            onClick={handleEditMode}
-            className={
-              "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
-            }
-          >
-            {isEditMode ? "Save" : "Edit Summary"}
-          </button>
-          <button
-            onClick={handleCopyTranscriptClick}
-            className={
-              (isCopiedTranscript ? "bg-blue-500" : "bg-blue-400") +
-              " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
-            }
-            style={{ minHeight: "30px" }}
-          >
-            {isCopiedTranscript ? "Copied!" : "Copy Full Transcript"}
-          </button>
-          <button
-            onClick={handleCopySummaryClick}
-            className={
-              (isCopiedSummary ? "bg-blue-500" : "bg-blue-400") +
-              " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
-            }
-            style={{ minHeight: "30px" }}
-          >
-            {isCopiedSummary ? "Copied!" : "Copy Summary"}
-          </button>
+          {isEditMode && (
+            <>
+              <button
+                onClick={onDiscardClick}
+                className={"text-gray-500 text-sm hover:underline"}
+              >
+                Discard Changes
+              </button>
+              <button
+                onClick={onSaveClick}
+                className={
+                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2"
+                }
+              >
+                Save Changes
+              </button>
+            </>
+          )}
+
+          {!isEditMode && (
+            <>
+              <button
+                onClick={onEditClick}
+                className={
+                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                }
+              >
+                Edit Summary
+              </button>
+              <button
+                onClick={onCopyTranscriptClick}
+                className={
+                  (isCopiedTranscript ? "bg-blue-500" : "bg-blue-400") +
+                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                }
+                style={{ minHeight: "30px" }}
+              >
+                {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
+              </button>
+              <button
+                onClick={onCopySummaryClick}
+                className={
+                  (isCopiedSummary ? "bg-blue-500" : "bg-blue-400") +
+                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                }
+                style={{ minHeight: "30px" }}
+              >
+                {isCopiedSummary ? "Copied!" : "Copy Summary"}
+              </button>
+            </>
+          )}
         </div>
       </div>
+
       {isEditMode ? (
-        <textarea
-          value={editedSummary}
-          onChange={(e) => updateSummary(e.target.value, props.transcriptId)}
-          className="markdown"
-        />
+        <div className="flex-grow overflow-y-none">
+          <textarea
+            value={editedSummary}
+            onChange={(e) => setEditedSummary(e.target.value)}
+            className="markdown w-full h-full d-block p-2 border rounded shadow-sm"
+            onKeyDown={(e) => handleTextAreaKeyDown(e)}
+          />
+        </div>
       ) : (
         <p ref={finalSummaryRef} className="markdown">
           <Markdown>{editedSummary}</Markdown>
         </p>
-      )}{" "}
+      )}
     </div>
   );
 }
