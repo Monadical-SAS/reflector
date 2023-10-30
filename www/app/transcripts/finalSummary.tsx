@@ -85,7 +85,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
     <div
       className={
         (isEditMode ? "overflow-y-none" : "overflow-y-auto") +
-        " h-auto max-h-full flex flex-col h-full"
+        " h-auto max-h-screen flex flex-col"
       }
     >
       <div className="flex flex-row flex-wrap-reverse justify-between items-center">

@@ -61,7 +61,13 @@ export function TopicList({
   }, [activeTopic, autoscroll]);
 
   return (
-    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-1 sm:p-2 md:px-4 flex flex-col justify-center align-center">
+    <section
+      className={
+        "relative w-full " +
+        (autoscroll ? "h-full" : "h-auto") +
+        " bg-blue-400/20 rounded-lg md:rounded-xl p-1 sm:p-2 md:px-4 flex flex-col justify-center align-center"
+      }
+    >
       {topics.length > 0 ? (
         <>
           <h2 className="ml-2 md:text-lg font-bold mb-2">Topics</h2>

@@ -66,14 +66,14 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               transcriptId={transcript?.response?.id}
             />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-auto min-h-0">
             <TopicList
               topics={topics?.topics || []}
               useActiveTopic={useActiveTopic}
               autoscroll={false}
             />
             <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
-              <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
+              <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-auto">
                 {transcript?.response?.longSummary && (
                   <FinalSummary
                     fullTranscript={fullTranscript}
