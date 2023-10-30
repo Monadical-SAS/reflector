@@ -8,10 +8,13 @@ type TranscriptTitle = {
 };
 
 const TranscriptTitle = (props: TranscriptTitle) => {
-  const [currentTitle, setCurrentTitle] = useState(props.title);
+  const [displayedTitle, setDisplayedTitle] = useState(props.title);
+  const [preEditTitle, setPreEditTitle] = useState(props.title);
+  const [isEditing, setIsEditing] = useState(false);
   const api = getApi(props.protectedPath);
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
+    if (!api) return;
     try {
       const updatedTranscript = await api.v1TranscriptUpdate({
         transcriptId,
@@ -24,21 +27,57 @@ const TranscriptTitle = (props: TranscriptTitle) => {
       console.error("Failed to update transcript:", err);
     }
   };
-  const handleClick = () => {
-    const newTitle = prompt("Please enter the new title:", currentTitle);
-    if (newTitle !== null) {
-      setCurrentTitle(newTitle);
-      updateTitle(newTitle, props.transcriptId);
+
+  const handleTitleClick = () => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // Use prompt
+      const newTitle = prompt("Please enter the new title:", displayedTitle);
+      if (newTitle !== null) {
+        setDisplayedTitle(newTitle);
+        updateTitle(newTitle, props.transcriptId);
+      }
+    } else {
+      setPreEditTitle(displayedTitle);
+      setIsEditing(true);
+    }
+  };
+
+  const handleChange = (e) => {
+    setDisplayedTitle(e.target.value);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      updateTitle(displayedTitle, props.transcriptId);
+      setIsEditing(false);
+    } else if (e.key === "Escape") {
+      setDisplayedTitle(preEditTitle);
+      setIsEditing(false);
     }
   };
 
   return (
-    <h2
-      className="text-2xl lg:text-4xl font-extrabold text-center mb-4"
-      onClick={handleClick}
-    >
-      {currentTitle}
-    </h2>
+    <>
+      {isEditing ? (
+        <input
+          type="text"
+          value={displayedTitle}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className="text-2xl lg:text-4xl font-extrabold text-center mb-4 w-full border-none bg-transparent overflow-hidden h-[fit-content]"
+        />
+      ) : (
+        <h2
+          className="text-2xl lg:text-4xl font-extrabold text-center mb-4 cursor-pointer"
+          onClick={handleTitleClick}
+        >
+          {displayedTitle}
+        </h2>
+      )}
+    </>
   );
 };
 
