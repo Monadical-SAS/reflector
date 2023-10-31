@@ -12,8 +12,6 @@ import Link from "next/link";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
-import { featureEnabled } from "../domainContext";
-import router from "next/router";
 
 export default function TranscriptBrowser() {
   const api = getApi();
@@ -21,7 +19,6 @@ export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const isAuthenticated = useFiefIsAuthenticated();
-  const browseEnabled = featureEnabled("browse");
 
   useEffect(() => {
     if (!isAuthenticated) return;
