@@ -1,4 +1,3 @@
-import { get } from "@vercel/edge-config";
 import { getFiefAuth } from "../../app/lib/fief";
 import { NextApiRequest, NextApiResponse } from "next";
 

@@ -69,11 +69,8 @@ type LayoutProps = {
 
 export default async function RootLayout({ children, params }: LayoutProps) {
   const config = await get(params.domain);
-  // console.log(config);
   const requireLogin = config ? config["features"]["requireLogin"] : false;
-  // console.log(requireLogin);
   const privacy = config ? config["features"]["privacy"] : true;
-
   const browse = config ? config["features"]["browse"] : true;
 
   return (
