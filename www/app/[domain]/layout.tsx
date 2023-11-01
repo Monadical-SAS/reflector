@@ -118,6 +118,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                         <Link
                           href="/browse"
                           className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                          prefetch={false}
                         >
                           Browse
                         </Link>
