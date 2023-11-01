@@ -1,8 +1,6 @@
 import { Fief, FiefUserInfo } from "@fief/fief";
 import { FiefAuth, IUserInfoCache } from "@fief/fief/nextjs";
-import { get } from "@vercel/edge-config";
-import { NextRequest, NextResponse } from "next/server";
-import { useError } from "../(errors)/errorContext";
+import { getConfig } from "./edgeConfig";
 
 export const SESSION_COOKIE_NAME = "reflector-auth";
 
@@ -46,12 +44,12 @@ export const getFiefAuth = async (url: URL) => {
   if (FIEF_AUTHS[url.hostname]) {
     return FIEF_AUTHS[url.hostname];
   } else {
-    const config = url && (await get(url.hostname));
+    const config = url && (await getConfig(url.hostname));
     if (config) {
       FIEF_AUTHS[url.hostname] = new FiefAuth({
         client: fiefClient,
         sessionCookieName: SESSION_COOKIE_NAME,
-        redirectURI: config["auth_callback_url"],
+        redirectURI: config.auth_callback_url,
         logoutRedirectURI: url.origin,
         userInfoCache: new MemoryUserInfoCache(),
       });

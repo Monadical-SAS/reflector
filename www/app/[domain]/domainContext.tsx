@@ -1,14 +1,8 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { DomainConfig } from "../lib/edgeConfig";
 
-type DomainContextType = {
-  features: {
-    requireLogin: boolean;
-    privacy: boolean;
-    browse: boolean;
-  };
-  apiUrl: string | null;
-};
+type DomainContextType = Omit<DomainConfig, "auth_callback_url">;
 
 export const DomainContext = createContext<DomainContextType>({
   features: {
@@ -16,22 +10,22 @@ export const DomainContext = createContext<DomainContextType>({
     privacy: true,
     browse: false,
   },
-  apiUrl: null,
+  api_url: "",
 });
 
-export const DomainContextProvider = ({ config, children }) => {
+export const DomainContextProvider = ({
+  config,
+  children,
+}: {
+  config: DomainConfig;
+  children: any;
+}) => {
   const [context, setContext] = useState<DomainContextType>();
 
   useEffect(() => {
     if (!config) return;
-    setContext({
-      features: {
-        requireLogin: !!config["features"]["requireLogin"],
-        privacy: !!config["features"]["privacy"],
-        browse: !!config["features"]["browse"],
-      },
-      apiUrl: config["api_url"],
-    });
+    const { auth_callback_url, ...others } = config;
+    setContext(others);
   }, [config]);
 
   if (!context) return;
@@ -41,9 +35,12 @@ export const DomainContextProvider = ({ config, children }) => {
   );
 };
 
+// Get feature config client-side with
 export const featureEnabled = (
   featureName: "requireLogin" | "privacy" | "browse",
 ) => {
   const context = useContext(DomainContext);
   return context.features[featureName] as boolean | undefined;
 };
+
+// Get config server-side (out of react) : see lib/edgeConfig.
