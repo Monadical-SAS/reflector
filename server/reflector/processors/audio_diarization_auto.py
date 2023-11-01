@@ -1,18 +1,17 @@
 import importlib
 
-from reflector.processors.base import Processor
+from reflector.processors.audio_diarization import AudioDiarizationProcessor
 from reflector.settings import settings
 
 
-class AudioDiarizationAutoProcessor(Processor):
+class AudioDiarizationAutoProcessor(AudioDiarizationProcessor):
     _registry = {}
 
     @classmethod
     def register(cls, name, kclass):
         cls._registry[name] = kclass
 
-    @classmethod
-    def get_instance(cls, name: str | None = None, **kwargs):
+    def __new__(cls, name: str | None = None, **kwargs):
         if name is None:
             name = settings.DIARIZATION_BACKEND
 
