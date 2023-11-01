@@ -9,7 +9,6 @@ import Image from "next/image";
 import Link from "next/link";
 import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
-import { get } from "@vercel/edge-config";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "../lib/edgeConfig";
 
