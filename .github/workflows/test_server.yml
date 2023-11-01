@@ -2,11 +2,11 @@ name: Unittests
 
 on:
   pull_request:
-    paths-ignore:
-      - 'www/**'
+    paths:
+      - 'server/'
   push:
-    paths-ignore:
-      - 'www/**'
+    paths:
+      - 'server/'
 
 jobs:
   pytest:
