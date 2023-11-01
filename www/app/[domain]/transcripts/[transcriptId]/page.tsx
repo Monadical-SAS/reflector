@@ -55,7 +55,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      {transcript?.loading === true || topics?.loading === true ? (
+      {!transcriptId || transcript?.loading || topics?.loading ? (
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
