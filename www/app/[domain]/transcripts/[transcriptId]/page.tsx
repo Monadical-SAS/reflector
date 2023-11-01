@@ -30,9 +30,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(api, transcriptId);
   const waveform = useWaveform(api, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
+  const requireLogin = featureEnabled("requireLogin");
 
   useEffect(() => {
-    if (featureEnabled("requireLogin") && !isAuthenticated) return;
+    if (requireLogin && !isAuthenticated) return;
     setTranscriptId(details.params.transcriptId);
   }, [api]);
 
