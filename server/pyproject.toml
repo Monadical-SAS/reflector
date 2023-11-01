@@ -35,6 +35,7 @@ protobuf = "^4.24.3"
 profanityfilter = "^2.0.6"
 celery = "^5.3.4"
 redis = "^5.0.1"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 
 
 [tool.poetry.group.dev.dependencies]
