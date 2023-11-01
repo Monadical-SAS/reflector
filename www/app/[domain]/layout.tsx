@@ -11,6 +11,7 @@ import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import { get } from "@vercel/edge-config";
 import { DomainContextProvider } from "./domainContext";
+import { getConfig } from "../lib/edgeConfig";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -68,10 +69,8 @@ type LayoutProps = {
 };
 
 export default async function RootLayout({ children, params }: LayoutProps) {
-  const config = await get(params.domain);
-  const requireLogin = config ? config["features"]["requireLogin"] : false;
-  const privacy = config ? config["features"]["privacy"] : true;
-  const browse = config ? config["features"]["browse"] : true;
+  const config = await getConfig(params.domain);
+  const { requireLogin, privacy, browse } = config.features;
 
   return (
     <html lang="en">

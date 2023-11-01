@@ -7,7 +7,7 @@ import { DomainContext } from "../[domain]/domainContext";
 
 export default function getApi(): DefaultApi {
   const accessTokenInfo = useFiefAccessTokenInfo();
-  const api_url = useContext(DomainContext).apiUrl;
+  const api_url = useContext(DomainContext).api_url;
   if (!api_url) throw new Error("no API URL");
 
   const apiConfiguration = new Configuration({
