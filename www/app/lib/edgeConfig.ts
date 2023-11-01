@@ -14,11 +14,11 @@ export type DomainConfig = EdgeConfig["domainWithDash"];
 
 // Edge config main keys can only be alphanumeric and _ or -
 export function edgeKeyToDomain(key: string) {
-  return key.replaceAll(".", "_");
+  return key.replaceAll("_", ".");
 }
 
 export function edgeDomainToKey(domain: string) {
-  return domain.replaceAll("_", ".");
+  return domain.replaceAll(".", "_");
 }
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
