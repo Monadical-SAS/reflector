@@ -63,23 +63,11 @@ export const getFiefAuth = async (url: URL) => {
 export const getFiefAuthMiddleware = async (url) => {
   const protectedPaths = [
     {
-      matcher: "/:domain/transcripts",
-      parameters: {},
-    },
-    {
-      matcher: "/:domain/transcripts/:path*",
-      parameters: {},
-    },
-    {
-      matcher: "/:domain/browse",
-      parameters: {},
-    },
-    {
       matcher: "/transcripts",
       parameters: {},
     },
     {
-      matcher: "/transcripts/:path*",
+      matcher: "/transcripts/((?!new).*)",
       parameters: {},
     },
     {
