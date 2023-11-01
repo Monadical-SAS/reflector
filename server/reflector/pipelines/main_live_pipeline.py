@@ -28,6 +28,7 @@ from reflector.db.transcripts import (
     TranscriptTopic,
     transcripts_controller,
 )
+from reflector.logger import logger
 from reflector.pipelines.runner import PipelineRunner
 from reflector.processors import (
     AudioChunkerProcessor,
@@ -241,7 +242,7 @@ class PipelineMainLive(PipelineMainBase):
             AudioFileWriterProcessor(path=transcript.audio_mp3_filename),
             AudioChunkerProcessor(),
             AudioMergeProcessor(),
-            AudioTranscriptAutoProcessor.get_instance().as_threaded(),
+            AudioTranscriptAutoProcessor.as_threaded(),
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
@@ -255,11 +256,18 @@ class PipelineMainLive(PipelineMainBase):
         pipeline.options = self
         pipeline.set_pref("audio:source_language", transcript.source_language)
         pipeline.set_pref("audio:target_language", transcript.target_language)
+        pipeline.logger.bind(transcript_id=transcript.id)
+        pipeline.logger.info(
+            "Pipeline main live created",
+            transcript_id=self.transcript_id,
+        )
 
         return pipeline
 
     async def on_ended(self):
         # when the pipeline ends, connect to the post pipeline
+        logger.info("Pipeline main live ended", transcript_id=self.transcript_id)
+        logger.info("Scheduling pipeline main post", transcript_id=self.transcript_id)
         task_pipeline_main_post.delay(transcript_id=self.transcript_id)
 
 
@@ -274,7 +282,7 @@ class PipelineMainDiarization(PipelineMainBase):
         # add a customised logger to the context
         self.prepare()
         processors = [
-            AudioDiarizationAutoProcessor.get_instance(callback=self.on_topic),
+            AudioDiarizationAutoProcessor(callback=self.on_topic),
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalLongSummaryProcessor.as_threaded(
@@ -313,7 +321,10 @@ class PipelineMainDiarization(PipelineMainBase):
             {"sub": transcript.user_id},
             expires_delta=timedelta(minutes=15),
         )
-        path = app.url_path_for("transcript_get_audio_mp3", transcript_id=transcript.id)
+        path = app.url_path_for(
+            "transcript_get_audio_mp3",
+            transcript_id=transcript.id,
+        )
         url = f"{settings.BASE_URL}{path}?token={token}"
         audio_diarization_input = AudioDiarizationInput(
             audio_url=url,
@@ -322,6 +333,10 @@ class PipelineMainDiarization(PipelineMainBase):
 
         # as tempting to use pipeline.push, prefer to use the runner
         # to let the start just do one job.
+        pipeline.logger.bind(transcript_id=transcript.id)
+        pipeline.logger.info(
+            "Pipeline main post created", transcript_id=self.transcript_id
+        )
         self.push(audio_diarization_input)
         self.flush()
 
@@ -330,5 +345,9 @@ class PipelineMainDiarization(PipelineMainBase):
 
 @shared_task
 def task_pipeline_main_post(transcript_id: str):
+    logger.info(
+        "Starting main post pipeline",
+        transcript_id=transcript_id,
+    )
     runner = PipelineMainDiarization(transcript_id=transcript_id)
     runner.start_sync()

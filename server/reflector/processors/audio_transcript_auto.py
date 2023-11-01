@@ -11,8 +11,7 @@ class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
     def register(cls, name, kclass):
         cls._registry[name] = kclass
 
-    @classmethod
-    def get_instance(cls, name: str | None = None, **kwargs):
+    def __new__(cls, name: str | None = None, **kwargs):
         if name is None:
             name = settings.TRANSCRIPT_BACKEND
         if name not in cls._registry:
