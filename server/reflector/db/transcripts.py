@@ -167,8 +167,8 @@ class TranscriptController:
         self,
         user_id: str | None = None,
         order_by: str | None = None,
-        filter_empty: bool | None = True,
-        filter_recording: bool | None = True,
+        filter_empty: bool | None = False,
+        filter_recording: bool | None = False,
     ) -> list[Transcript]:
         """
         Get all transcripts
