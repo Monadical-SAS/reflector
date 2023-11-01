@@ -60,9 +60,32 @@ async def dummy_transcript():
 
     with patch(
         "reflector.processors.audio_transcript_auto"
-        ".AudioTranscriptAutoProcessor.get_instance"
+        ".AudioTranscriptAutoProcessor.__new__"
     ) as mock_audio:
         mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_diarization():
+    from reflector.processors.audio_diarization import AudioDiarizationProcessor
+
+    class TestAudioDiarizationProcessor(AudioDiarizationProcessor):
+        _time_idx = 0
+
+        async def _diarize(self, data):
+            i = self._time_idx
+            self._time_idx += 2
+            return [
+                {"start": i, "end": i + 1, "speaker": 0},
+                {"start": i + 1, "end": i + 2, "speaker": 1},
+            ]
+
+    with patch(
+        "reflector.processors.audio_diarization_auto"
+        ".AudioDiarizationAutoProcessor.__new__"
+    ) as mock_audio:
+        mock_audio.return_value = TestAudioDiarizationProcessor()
         yield
 
 

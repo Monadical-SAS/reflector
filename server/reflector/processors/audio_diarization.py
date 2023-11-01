@@ -2,7 +2,7 @@ from reflector.processors.base import Processor
 from reflector.processors.types import AudioDiarizationInput, TitleSummary
 
 
-class AudioDiarizationBaseProcessor(Processor):
+class AudioDiarizationProcessor(Processor):
     INPUT_TYPE = AudioDiarizationInput
     OUTPUT_TYPE = TitleSummary
 
