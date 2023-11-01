@@ -1,22 +1,50 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import { get } from "@vercel/edge-config";
 
-import { fiefAuth } from "./app/lib/fief";
+import { getFiefAuthMiddleware } from "./app/lib/fief";
+import { getConfig } from "./app/lib/edgeConfig";
 
-let protectedPath: any = [];
-if (process.env.NEXT_PUBLIC_FEAT_LOGIN_REQUIRED === "1") {
-  protectedPath = [
-    {
-      matcher: "/transcripts/((?!new).*)",
-      parameters: {},
-    },
-    {
-      matcher: "/browse",
-      parameters: {},
-    },
-  ];
-}
-
-const authMiddleware = fiefAuth.middleware(protectedPath);
 export async function middleware(request: NextRequest) {
-  return authMiddleware(request);
+  const domain = request.nextUrl.hostname;
+  const config = await getConfig(domain);
+
+  // Feature-flag protedted paths
+  if (
+    !config.features.browse &&
+    request.nextUrl.pathname.startsWith("/browse")
+  ) {
+    return NextResponse.redirect(request.nextUrl.origin);
+  }
+
+  if (config.features.requireLogin) {
+    const fiefMiddleware = await getFiefAuthMiddleware(request.nextUrl);
+    const fiefResponse = await fiefMiddleware(request);
+
+    if (
+      request.nextUrl.pathname == "/" ||
+      request.nextUrl.pathname.startsWith("/transcripts") ||
+      request.nextUrl.pathname.startsWith("/browse")
+    ) {
+      if (!fiefResponse.headers.get("x-middleware-rewrite")) {
+        fiefResponse.headers.set(
+          "x-middleware-rewrite",
+          request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
+        );
+      }
+      console.log(fiefResponse);
+    }
+    return fiefResponse;
+  }
+
+  if (
+    request.nextUrl.pathname == "/" ||
+    request.nextUrl.pathname.startsWith("/transcripts") ||
+    request.nextUrl.pathname.startsWith("/browse")
+  ) {
+    return NextResponse.rewrite(
+      request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
+    );
+  }
+
+  return NextResponse.next();
 }

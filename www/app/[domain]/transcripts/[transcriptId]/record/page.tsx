@@ -6,14 +6,14 @@ import useWebRTC from "../../useWebRTC";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
 import useAudioDevice from "../../useAudioDevice";
-import "../../../styles/button.css";
+import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
-import getApi from "../../../lib/getApi";
+import getApi from "../../../../lib/getApi";
 import LiveTrancription from "../../liveTranscription";
 import DisconnectedIndicator from "../../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
-import { lockWakeState, releaseWakeState } from "../../../lib/wakeLock";
+import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 
 type TranscriptDetails = {
   params: {

@@ -1,12 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import getApi from "../lib/getApi";
+import getApi from "../../lib/getApi";
 import {
   PageGetTranscript,
   GetTranscript,
   GetTranscriptFromJSON,
-} from "../api";
-import { Title } from "../lib/textComponents";
+} from "../../api";
+import { Title } from "../../lib/textComponents";
 import Pagination from "./pagination";
 import Link from "next/link";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";

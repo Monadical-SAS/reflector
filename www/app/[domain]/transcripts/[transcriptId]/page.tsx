@@ -1,6 +1,6 @@
 "use client";
 import Modal from "../modal";
-import getApi from "../../lib/getApi";
+import getApi from "../../../lib/getApi";
 import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
@@ -8,13 +8,13 @@ import { TopicList } from "../topicList";
 import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
-import "../../styles/button.css";
+import "../../../styles/button.css";
 import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
-import { featRequireLogin } from "../../../app/lib/utils";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
+import { featureEnabled } from "../../domainContext";
 
 type TranscriptDetails = {
   params: {
@@ -30,9 +30,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(api, transcriptId);
   const waveform = useWaveform(api, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
+  const requireLogin = featureEnabled("requireLogin");
 
   useEffect(() => {
-    if (featRequireLogin() && !isAuthenticated) return;
+    if (requireLogin && !isAuthenticated) return;
     setTranscriptId(details.params.transcriptId);
   }, [api]);
 
