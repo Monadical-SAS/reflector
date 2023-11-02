@@ -106,9 +106,9 @@ class Transcript(BaseModel):
         return ev
 
     def upsert_topic(self, topic: TranscriptTopic):
-        existing_topic = next((t for t in self.topics if t.id == topic.id), None)
-        if existing_topic:
-            existing_topic.update_from(topic)
+        index = next((i for i, t in enumerate(self.topics) if t.id == topic.id), None)
+        if index is not None:
+            self.topics[index] = topic
         else:
             self.topics.append(topic)
 
