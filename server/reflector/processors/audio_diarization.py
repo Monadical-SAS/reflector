@@ -7,7 +7,13 @@ class AudioDiarizationProcessor(Processor):
     OUTPUT_TYPE = TitleSummary
 
     async def _push(self, data: AudioDiarizationInput):
-        diarization = await self._diarize(data)
+        try:
+            self.logger.info("Diarization started", audio_file_url=data.audio_url)
+            diarization = await self._diarize(data)
+            self.logger.info("Diarization finished")
+        except Exception:
+            self.logger.exception("Diarization failed after retrying")
+            raise
 
         # now reapply speaker to topics (if any)
         # topics is a list[BaseModel] with an attribute words
