@@ -15,6 +15,7 @@ import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { useError } from "../../(errors)/errorContext";
 import { waveSurferStyles } from "../../styles/recorder";
+import useMp3 from "./useMp3";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;

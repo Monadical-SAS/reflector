@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { DefaultApi, V1TranscriptGetRequest } from "../../api/apis/DefaultApi";
+import { V1TranscriptGetRequest } from "../../api/apis/DefaultApi";
 import { GetTranscript } from "../../api";
 import { useError } from "../../(errors)/errorContext";
+import getApi from "../../lib/getApi";
 
 type Transcript = {
   response: GetTranscript | null;
@@ -9,14 +10,18 @@ type Transcript = {
   error: Error | null;
 };
 
-const useTranscript = (api: DefaultApi, id: string | null): Transcript => {
+const useTranscript = (
+  protectedPath: boolean,
+  id: string | null,
+): Transcript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
+  const api = getApi(protectedPath);
 
-  const getTranscript = (id: string | null) => {
-    if (!id) return;
+  useEffect(() => {
+    if (!id || !api) return;
 
     setLoading(true);
     const requestParameters: V1TranscriptGetRequest = {
@@ -33,11 +38,7 @@ const useTranscript = (api: DefaultApi, id: string | null): Transcript => {
         setError(err);
         setErrorState(err);
       });
-  };
-
-  useEffect(() => {
-    getTranscript(id);
-  }, [id]);
+  }, [id, !api]);
 
   return { response, loading, error };
 };

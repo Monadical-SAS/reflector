@@ -5,14 +5,16 @@ import {
   V1TranscriptRecordWebrtcRequest,
 } from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
+import getApi from "../../lib/getApi";
 
 const useWebRTC = (
   stream: MediaStream | null,
   transcriptId: string | null,
-  api: DefaultApi,
+  protectedPath,
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const { setError } = useError();
+  const api = getApi(protectedPath);
 
   useEffect(() => {
     if (!stream || !transcriptId) {
@@ -35,6 +37,7 @@ const useWebRTC = (
     });
 
     p.on("signal", (data: any) => {
+      if (!api) return;
       if ("sdp" in data) {
         const requestParameters: V1TranscriptRecordWebrtcRequest = {
           transcriptId: transcriptId,
