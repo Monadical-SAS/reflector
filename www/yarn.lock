@@ -2638,10 +2638,10 @@ watchpack@2.4.0:
     glob-to-regexp "^0.4.1"
     graceful-fs "^4.1.2"
 
-wavesurfer.js@^7.0.3:
-  version "7.0.3"
-  resolved "https://registry.npmjs.org/wavesurfer.js/-/wavesurfer.js-7.0.3.tgz"
-  integrity sha512-gJ3P+Bd3Q4E8qETjjg0pneaVqm2J7jegG2Cc6vqEF5YDDKQ3m8sKsvVfgVhJkacKkO9jFAGDu58Hw4zLr7xD0A==
+wavesurfer.js@^7.4.2:
+  version "7.4.2"
+  resolved "https://registry.yarnpkg.com/wavesurfer.js/-/wavesurfer.js-7.4.2.tgz#59f5c87193d4eeeb199858688ddac1ad7ba86b3a"
+  integrity sha512-4pNQ1porOCUBYBmd2F1TqVuBnB2wBPipaw2qI920zYLuPnada0Rd1CURgh8HRuPGKxijj2iyZDFN2UZwsaEuhA==
 
 wcwidth@>=1.0.1, wcwidth@^1.0.1:
   version "1.0.1"
