@@ -167,6 +167,10 @@ class TitleSummary(BaseModel):
         return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
 
+class TitleSummaryWithId(TitleSummary):
+    id: str
+
+
 class FinalLongSummary(BaseModel):
     long_summary: str
     duration: float
@@ -386,4 +390,4 @@ class TranslationLanguages(BaseModel):
 
 class AudioDiarizationInput(BaseModel):
     audio_url: str
-    topics: list[TitleSummary]
+    topics: list[TitleSummaryWithId]

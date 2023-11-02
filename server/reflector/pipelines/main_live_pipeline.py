@@ -46,7 +46,9 @@ from reflector.processors import (
     TranscriptTranslatorProcessor,
 )
 from reflector.processors.types import AudioDiarizationInput
-from reflector.processors.types import TitleSummary as TitleSummaryProcessorType
+from reflector.processors.types import (
+    TitleSummaryWithId as TitleSummaryWithIdProcessorType,
+)
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.ws_manager import WebsocketManager, get_ws_manager
@@ -163,6 +165,8 @@ class PipelineMainBase(PipelineRunner):
             text=data.transcript.text,
             words=data.transcript.words,
         )
+        if isinstance(data, TitleSummaryWithIdProcessorType):
+            topic.id = data.id
         async with self.transaction():
             transcript = await self.get_transcript()
             await transcripts_controller.upsert_topic(transcript, topic)
@@ -302,7 +306,8 @@ class PipelineMainDiarization(PipelineMainBase):
         # XXX translation is lost when converting our data model to the processor model
         transcript = await self.get_transcript()
         topics = [
-            TitleSummaryProcessorType(
+            TitleSummaryWithIdProcessorType(
+                id=topic.id,
                 title=topic.title,
                 summary=topic.summary,
                 timestamp=topic.timestamp,
