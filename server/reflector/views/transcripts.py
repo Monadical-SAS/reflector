@@ -132,7 +132,7 @@ class GetTranscriptTopic(BaseModel):
             text = topic.transcript
             segments = [
                 GetTranscriptSegmentTopic(
-                    text=topic.text,
+                    text=topic.transcript,
                     start=topic.timestamp,
                     speaker=0,
                 )
