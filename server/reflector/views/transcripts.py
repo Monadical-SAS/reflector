@@ -117,6 +117,7 @@ class GetTranscriptSegmentTopic(BaseModel):
 
 
 class GetTranscriptTopic(BaseModel):
+    id: str
     title: str
     summary: str
     timestamp: float
@@ -149,6 +150,7 @@ class GetTranscriptTopic(BaseModel):
                 for segment in transcript.as_segments()
             ]
         return cls(
+            id=topic.id,
             title=topic.title,
             summary=topic.summary,
             timestamp=topic.timestamp,
