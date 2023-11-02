@@ -3,7 +3,7 @@ import { isDevelopment } from "./utils";
 
 const localConfig = {
   features: {
-    requireLogin: true,
+    requireLogin: false,
     privacy: true,
     browse: true,
   },

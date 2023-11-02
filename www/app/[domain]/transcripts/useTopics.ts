@@ -5,6 +5,7 @@ import {
 } from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
+import getApi from "../../lib/getApi";
 
 type TranscriptTopics = {
   topics: Topic[] | null;
@@ -12,14 +13,15 @@ type TranscriptTopics = {
   error: Error | null;
 };
 
-const useTopics = (api: DefaultApi, id: string): TranscriptTopics => {
+const useTopics = (protectedPath, id: string): TranscriptTopics => {
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
+  const api = getApi(protectedPath);
 
-  const getTopics = (id: string) => {
-    if (!id) return;
+  useEffect(() => {
+    if (!id || !api) return;
 
     setLoading(true);
     const requestParameters: V1TranscriptGetTopicsRequest = {
@@ -36,11 +38,7 @@ const useTopics = (api: DefaultApi, id: string): TranscriptTopics => {
         setError(err);
         setErrorState(err);
       });
-  };
-
-  useEffect(() => {
-    getTopics(id);
-  }, [id]);
+  }, [id, api]);
 
   return { topics, loading, error };
 };
