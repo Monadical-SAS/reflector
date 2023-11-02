@@ -39,11 +39,13 @@ export async function getConfig(domain: string) {
   }
 
   let config = await get(edgeDomainToKey(domain));
-  console.warn("No config for this domain, falling back to default");
 
-  config = await get(edgeDomainToKey("default"));
+  if (typeof config !== "object") {
+    console.warn("No config for this domain, falling back to default");
+    config = await get(edgeDomainToKey("default"));
+  }
 
-  if (typeof config !== "object") throw Error("Error fetchig config");
+  if (typeof config !== "object") throw Error("Error fetching config");
 
   return config as DomainConfig;
 }
