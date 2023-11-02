@@ -63,7 +63,7 @@ class TranscriptTopic(BaseModel):
     summary: str
     timestamp: float
     duration: float | None = 0
-    text: str | None = None
+    transcript: str | None = None
     words: list[ProcessorWord] = []
 
 

@@ -162,7 +162,7 @@ class PipelineMainBase(PipelineRunner):
             title=data.title,
             summary=data.summary,
             timestamp=data.timestamp,
-            text=data.transcript.text,
+            transcript=data.transcript.text,
             words=data.transcript.words,
         )
         if isinstance(data, TitleSummaryWithIdProcessorType):

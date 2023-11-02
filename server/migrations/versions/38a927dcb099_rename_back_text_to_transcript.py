@@ -1,8 +1,8 @@
-"""Migration transcript to text field in transcripts table
+"""rename back text to transcript
 
-Revision ID: 9920ecfe2735
-Revises: 99365b0cd87b
-Create Date: 2023-11-02 18:55:17.019498
+Revision ID: 38a927dcb099
+Revises: 9920ecfe2735
+Create Date: 2023-11-02 19:53:09.116240
 
 """
 from typing import Sequence, Union
@@ -14,8 +14,8 @@ from sqlalchemy import select
 
 
 # revision identifiers, used by Alembic.
-revision: str = "9920ecfe2735"
-down_revision: Union[str, None] = "99365b0cd87b"
+revision: str = '38a927dcb099'
+down_revision: Union[str, None] = '9920ecfe2735'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -37,9 +37,9 @@ def upgrade() -> None:
         # Process each topic in the topics JSON array
         updated_topics = []
         for topic in topics_json:
-            if "transcript" in topic:
-                # Rename key 'transcript' to 'text'
-                topic["text"] = topic.pop("transcript")
+            if "text" in topic:
+                # Rename key 'text' back to 'transcript'
+                topic["transcript"] = topic.pop("text")
             updated_topics.append(topic)
 
         # Update the transcript table
@@ -67,9 +67,9 @@ def downgrade() -> None:
         # Process each topic in the topics JSON array
         updated_topics = []
         for topic in topics_json:
-            if "text" in topic:
-                # Rename key 'text' back to 'transcript'
-                topic["transcript"] = topic.pop("text")
+            if "transcript" in topic:
+                # Rename key 'transcript' to 'text'
+                topic["text"] = topic.pop("transcript")
             updated_topics.append(topic)
 
         # Update the transcript table
