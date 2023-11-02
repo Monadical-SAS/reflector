@@ -35,7 +35,7 @@ const useTopics = (protectedPath, id: string): TranscriptTopics => {
         console.debug("Transcript topics loaded:", result);
       })
       .catch((err) => {
-        setError(err);
+        setError(err, "There was an error loading the topics");
         setErrorState(err);
       });
   }, [id, api]);

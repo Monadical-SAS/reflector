@@ -28,7 +28,7 @@ const useWebRTC = (
     try {
       p = new Peer({ initiator: true, stream: stream });
     } catch (error) {
-      setError(error);
+      setError(error, "Error creating WebRTC");
       return;
     }
 
@@ -57,7 +57,7 @@ const useWebRTC = (
             }
           })
           .catch((error) => {
-            setError(error);
+            setError(error, "Error loading WebRTCOffer");
           });
       }
     });

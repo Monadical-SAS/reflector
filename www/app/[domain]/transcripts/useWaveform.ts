@@ -35,7 +35,7 @@ const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
         console.debug("Transcript waveform loaded:", result);
       })
       .catch((err) => {
-        setError(err);
+        setError(err, "There was an error loading the waveform");
         setErrorState(err);
       });
   }, [id, api]);
