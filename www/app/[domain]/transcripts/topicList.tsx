@@ -132,7 +132,7 @@ export function TopicList({
                         ))}
                       </>
                     ) : (
-                      <>{topic.text}</>
+                      <>{topic.transcript}</>
                     )}
                   </div>
                 )}

@@ -167,7 +167,7 @@ async def test_transcript_rtc_and_websocket(
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["text"].startswith("Hello world.")
+    assert ev["data"]["transcript"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames
@@ -316,7 +316,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     ev = events[eventnames.index("TOPIC")]
     assert ev["data"]["id"]
     assert ev["data"]["summary"] == "LLM SUMMARY"
-    assert ev["data"]["text"].startswith("Hello world.")
+    assert ev["data"]["transcript"].startswith("Hello world.")
     assert ev["data"]["timestamp"] == 0.0
 
     assert "FINAL_LONG_SUMMARY" in eventnames

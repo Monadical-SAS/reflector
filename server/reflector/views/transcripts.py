@@ -121,7 +121,7 @@ class GetTranscriptTopic(BaseModel):
     title: str
     summary: str
     timestamp: float
-    text: str
+    transcript: str
     segments: list[GetTranscriptSegmentTopic] = []
 
     @classmethod
@@ -154,7 +154,7 @@ class GetTranscriptTopic(BaseModel):
             title=topic.title,
             summary=topic.summary,
             timestamp=topic.timestamp,
-            text=text,
+            transcript=text,
             segments=segments,
         )
 

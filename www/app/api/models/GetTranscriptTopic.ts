@@ -24,6 +24,12 @@ export interface GetTranscriptTopic {
    * @type {any}
    * @memberof GetTranscriptTopic
    */
+  id: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscriptTopic
+   */
   title: any | null;
   /**
    *
@@ -42,7 +48,7 @@ export interface GetTranscriptTopic {
    * @type {any}
    * @memberof GetTranscriptTopic
    */
-  text: any | null;
+  transcript: any | null;
   /**
    *
    * @type {any}
@@ -56,10 +62,11 @@ export interface GetTranscriptTopic {
  */
 export function instanceOfGetTranscriptTopic(value: object): boolean {
   let isInstance = true;
+  isInstance = isInstance && "id" in value;
   isInstance = isInstance && "title" in value;
   isInstance = isInstance && "summary" in value;
   isInstance = isInstance && "timestamp" in value;
-  isInstance = isInstance && "text" in value;
+  isInstance = isInstance && "transcript" in value;
 
   return isInstance;
 }
@@ -76,10 +83,11 @@ export function GetTranscriptTopicFromJSONTyped(
     return json;
   }
   return {
+    id: json["id"],
     title: json["title"],
     summary: json["summary"],
     timestamp: json["timestamp"],
-    text: json["text"],
+    transcript: json["transcript"],
     segments: !exists(json, "segments") ? undefined : json["segments"],
   };
 }
@@ -94,10 +102,11 @@ export function GetTranscriptTopicToJSON(
     return null;
   }
   return {
+    id: value.id,
     title: value.title,
     summary: value.summary,
     timestamp: value.timestamp,
-    text: value.text,
+    transcript: value.transcript,
     segments: value.segments,
   };
 }

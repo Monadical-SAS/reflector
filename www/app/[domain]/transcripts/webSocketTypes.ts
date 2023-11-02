@@ -9,7 +9,7 @@ export type Topic = {
   title: string;
   summary: string;
   id: string;
-  text: string;
+  transcript: string;
   segments: SegmentTopic[];
 };
 
