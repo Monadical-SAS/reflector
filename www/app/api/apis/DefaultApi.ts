@@ -42,10 +42,6 @@ import {
   UpdateTranscriptToJSON,
 } from "../models";
 
-export interface RtcOfferRequest {
-  rtcOffer: RtcOffer;
-}
-
 export interface V1TranscriptDeleteRequest {
   transcriptId: any;
 }
@@ -56,6 +52,7 @@ export interface V1TranscriptGetRequest {
 
 export interface V1TranscriptGetAudioMp3Request {
   transcriptId: any;
+  token?: any;
 }
 
 export interface V1TranscriptGetAudioWaveformRequest {
@@ -129,58 +126,6 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.metricsRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Rtc Offer
-   */
-  async rtcOfferRaw(
-    requestParameters: RtcOfferRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<any>> {
-    if (
-      requestParameters.rtcOffer === null ||
-      requestParameters.rtcOffer === undefined
-    ) {
-      throw new runtime.RequiredError(
-        "rtcOffer",
-        "Required parameter requestParameters.rtcOffer was null or undefined when calling rtcOffer.",
-      );
-    }
-
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/offer`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: RtcOfferToJSON(requestParameters.rtcOffer),
-      },
-      initOverrides,
-    );
-
-    if (this.isJsonMime(response.headers.get("content-type"))) {
-      return new runtime.JSONApiResponse<any>(response);
-    } else {
-      return new runtime.TextApiResponse(response) as any;
-    }
-  }
-
-  /**
-   * Rtc Offer
-   */
-  async rtcOffer(
-    requestParameters: RtcOfferRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<any> {
-    const response = await this.rtcOfferRaw(requestParameters, initOverrides);
     return await response.value();
   }
 
@@ -324,6 +269,10 @@ export class DefaultApi extends runtime.BaseAPI {
     }
 
     const queryParameters: any = {};
+
+    if (requestParameters.token !== undefined) {
+      queryParameters["token"] = requestParameters.token;
+    }
 
     const headerParameters: runtime.HTTPHeaders = {};
 
