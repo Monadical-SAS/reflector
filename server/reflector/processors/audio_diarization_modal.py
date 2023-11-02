@@ -22,15 +22,21 @@ class AudioDiarizationModalProcessor(AudioDiarizationProcessor):
             "audio_file_url": data.audio_url,
             "timestamp": 0,
         }
+        self.logger.info("Diarization started", audio_file_url=data.audio_url)
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.diarization_url,
-                headers=self.headers,
-                params=params,
-                timeout=None,
-            )
-            response.raise_for_status()
-            return response.json()["text"]
+            try:
+                response = await client.post(
+                    self.diarization_url,
+                    headers=self.headers,
+                    params=params,
+                    timeout=None,
+                )
+                response.raise_for_status()
+                self.logger.info("Diarization finished")
+                return response.json()["text"]
+            except Exception:
+                self.logger.exception("Diarization failed after retrying")
+                raise
 
 
 AudioDiarizationAutoProcessor.register("modal", AudioDiarizationModalProcessor)
