@@ -7,7 +7,7 @@ import {
 import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
-import { generateHighContrastColor } from "../lib/utils";
+import { generateHighContrastColor } from "../../lib/utils";
 
 type TopicListProps = {
   topics: Topic[];
