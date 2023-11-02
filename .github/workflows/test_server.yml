@@ -3,10 +3,10 @@ name: Unittests
 on:
   pull_request:
     paths:
-      - 'server/'
+      - 'server/**'
   push:
     paths:
-      - 'server/'
+      - 'server/**'
 
 jobs:
   pytest:
