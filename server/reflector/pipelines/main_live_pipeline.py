@@ -322,15 +322,19 @@ class PipelineMainDiarization(PipelineMainBase):
         # from the diarization processor
         from reflector.views.transcripts import create_access_token
 
-        token = create_access_token(
-            {"sub": transcript.user_id},
-            expires_delta=timedelta(minutes=15),
-        )
         path = app.url_path_for(
             "transcript_get_audio_mp3",
             transcript_id=transcript.id,
         )
-        url = f"{settings.BASE_URL}{path}?token={token}"
+        url = f"{settings.BASE_URL}{path}"
+        if transcript.user_id:
+            # we pass token only if the user_id is set
+            # otherwise, the audio is public
+            token = create_access_token(
+                {"sub": transcript.user_id},
+                expires_delta=timedelta(minutes=15),
+            )
+            url += f"?token={token}"
         audio_diarization_input = AudioDiarizationInput(
             audio_url=url,
             topics=topics,
