@@ -1,5 +1,4 @@
 import { NextResponse, NextRequest } from "next/server";
-import { get } from "@vercel/edge-config";
 
 import { getFiefAuthMiddleware } from "./app/lib/fief";
 import { getConfig } from "./app/lib/edgeConfig";
