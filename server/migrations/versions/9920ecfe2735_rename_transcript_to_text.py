@@ -1,4 +1,4 @@
-"""empty message
+"""Migration transcript to text field in transcripts table
 
 Revision ID: 9920ecfe2735
 Revises: 99365b0cd87b
