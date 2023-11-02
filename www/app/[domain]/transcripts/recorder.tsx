@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../../lib/custom-plugins/record";
@@ -247,6 +247,94 @@ export default function Recorder(props: RecorderProps) {
     }
   };
 
+  const [screenMediaStream, setScreenMediaStream] =
+    useState<MediaStream | null>(null);
+
+  const handleRecordTabClick = async () => {
+    if (!record) return console.log("no record");
+    const stream: MediaStream = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        displaySurface: "window",
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 44100,
+        suppressLocalAudioPlayback: true,
+      },
+      surfaceSwitching: "include",
+      selfBrowserSurface: "exclude",
+      systemAudio: "include",
+    });
+    console.log("stream", stream);
+    console.log(stream.getAudioTracks());
+    return;
+
+    const videoElem = document.getElementById(
+      "video-recording",
+    ) as HTMLVideoElement;
+    videoElem.onloadedmetadata = () => {
+      setScreenMediaStream(stream);
+    };
+    videoElem.srcObject = stream;
+    videoElem.play();
+  };
+
+  const audioContext = useMemo(() => {
+    return new AudioContext();
+  }, []);
+  const systemAudioGainNode = useMemo(() => {
+    return audioContext.createGain();
+  }, []);
+  const microphoneGainNode = useMemo(() => {
+    return audioContext.createGain();
+  }, []);
+
+  const audioDestNode = useMemo(() => {
+    const dest = audioContext.createMediaStreamDestination();
+    systemAudioGainNode.connect(dest);
+    microphoneGainNode.connect(dest);
+    return dest;
+  }, []);
+
+  useEffect(() => {
+    console.log("useEffect screenMediaStream", screenMediaStream);
+    console.log("useEffect record", record);
+    if (!screenMediaStream) return;
+    if (!record) return console.log("no record");
+
+    const videoElem = document.getElementById(
+      "video-recording",
+    ) as HTMLVideoElement;
+    const videoMS = videoElem.captureStream() as MediaStream;
+    console.log(videoMS);
+    console.log(videoMS.getAudioTracks());
+
+    if (videoMS.getAudioTracks().length == 0) {
+      console.log("no audio track");
+      return;
+    }
+
+    // connect system audio (tab audio)
+    const systemAudioSrc = audioContext.createMediaStreamSource(videoMS);
+    systemAudioSrc.connect(systemAudioGainNode);
+
+    // create a media stream having both system audio and microphone audio
+    // const ms = new MediaStream();
+    // videoMS.getVideoTracks().forEach((track) => ms.addTrack(track));
+    // audioDestNode.stream
+    //   .getAudioTracks()
+    //   .forEach((track) => ms.addTrack(track));
+
+    const stream = audioDestNode.stream;
+    if (props.setStream) props.setStream(stream);
+    waveRegions?.clearRegions();
+    if (stream) {
+      record.startRecording(stream);
+      setIsRecording(true);
+    }
+  }, [record, screenMediaStream]);
+
   const handlePlayClick = () => {
     wavesurfer?.playPause();
   };
@@ -327,6 +415,13 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
+          <button onClick={handleRecordTabClick}>Record a tab</button>
+          <video
+            className="body-main-video"
+            id="video-recording"
+            muted
+            style={{ maxWidth: "200px" }}
+          ></video>
           {props.audioDevices && props.audioDevices?.length > 0 && deviceId && (
             <>
               <button
