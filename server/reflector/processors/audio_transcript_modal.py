@@ -41,6 +41,7 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
                 timeout=self.timeout,
                 headers=self.headers,
                 params=json_payload,
+                follow_redirects=True,
             )
 
             self.logger.debug(
