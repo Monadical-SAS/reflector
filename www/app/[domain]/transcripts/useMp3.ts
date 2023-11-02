@@ -65,7 +65,7 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
         });
       })
       .catch((err) => {
-        setError(err);
+        setError(err, "There was an error loading the audio");
         setErrorState(err);
       });
   };

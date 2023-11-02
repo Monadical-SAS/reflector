@@ -22,7 +22,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
-  const [status, setStatus] = useState<Status>({ value: "disconnected" });
+  const [status, setStatus] = useState<Status>({ value: "initial" });
   const { setError } = useError();
   const router = useRouter();
 

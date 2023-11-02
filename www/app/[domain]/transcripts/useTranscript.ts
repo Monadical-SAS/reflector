@@ -35,7 +35,7 @@ const useTranscript = (
         console.debug("Transcript Loaded:", result);
       })
       .catch((err) => {
-        setError(err);
+        setError(err, "There was an error loading the transcript");
         setErrorState(err);
       });
   }, [id, !api]);

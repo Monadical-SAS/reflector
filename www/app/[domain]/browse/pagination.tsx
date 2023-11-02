@@ -52,7 +52,7 @@ export default function Pagination(props: PaginationProps) {
       {pageNumbers.map((pageNumber) => (
         <button
           key={pageNumber}
-          className={`w-10 h-10 rounded-full p-2 border rounded-full ${
+          className={`w-10 h-10 rounded-full p-2 border ${
             page === pageNumber ? "border-gray-600" : "border-gray-300"
           } rounded`}
           onClick={() => handlePageChange(pageNumber)}
@@ -62,7 +62,7 @@ export default function Pagination(props: PaginationProps) {
       ))}
 
       <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 rounded-full disabled:bg-white ${
+        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
           canGoNext ? "text-gray-500" : "text-gray-300"
         }`}
         onClick={() => handlePageChange(page + 1)}
