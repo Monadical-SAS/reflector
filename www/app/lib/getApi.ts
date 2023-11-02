@@ -27,7 +27,7 @@ export default function getApi(protectedPath: boolean): DefaultApi | undefined {
         : undefined,
     });
     setApi(new DefaultApi(apiConfiguration));
-  }, [!accessTokenInfo]);
+  }, [!accessTokenInfo, protectedPath]);
 
   return api;
 }
