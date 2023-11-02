@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
+import { DomainContext } from "../domainContext";
 
 type UseWebSockets = {
   transcriptText: string;
@@ -148,8 +149,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
 
     if (!transcriptId) return;
-
-    const url = `${process.env.NEXT_PUBLIC_WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
+    const { websocket_url } = useContext(DomainContext);
+    const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     const ws = new WebSocket(url);
 
     ws.onopen = () => {
