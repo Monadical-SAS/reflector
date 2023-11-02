@@ -129,7 +129,7 @@ class GetTranscriptTopic(BaseModel):
         if not topic.words:
             # In previous version, words were missing
             # Just output a segment with speaker 0
-            text = topic.text
+            text = topic.transcript
             segments = [
                 GetTranscriptSegmentTopic(
                     text=topic.text,
