@@ -21,6 +21,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
   const api = getApi(props.protectedPath);
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
+    if (!api) return;
     try {
       const updatedTranscript = await api.v1TranscriptUpdate({
         transcriptId,
