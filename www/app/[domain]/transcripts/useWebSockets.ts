@@ -27,7 +27,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const router = useRouter();
 
   const { websocket_url } = useContext(DomainContext);
-  const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
 
   useEffect(() => {
     if (isProcessing || textQueue.length === 0) {
@@ -153,6 +152,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId) return;
 
+    const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     const ws = new WebSocket(url);
 
     ws.onopen = () => {
