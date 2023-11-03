@@ -8,6 +8,7 @@ const localConfig = {
     browse: true,
   },
   api_url: "http://127.0.0.1:1250",
+  websocket_url: "ws://127.0.0.1:1250",
   auth_callback_url: "http://localhost:3000/auth-callback",
 };
 
@@ -17,6 +18,7 @@ type EdgeConfig = {
       [featureName in "requireLogin" | "privacy" | "browse"]: boolean;
     };
     auth_callback_url: string;
+    websocket_url: string;
     api_url: string;
   };
 };
