@@ -11,6 +11,7 @@ export const DomainContext = createContext<DomainContextType>({
     browse: false,
   },
   api_url: "",
+  websocket_url: "",
 });
 
 export const DomainContextProvider = ({
