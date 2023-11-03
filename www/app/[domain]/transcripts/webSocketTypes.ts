@@ -1,17 +1,6 @@
-export type SegmentTopic = {
-  speaker: number;
-  start: number;
-  text: string;
-};
+import { GetTranscriptTopic } from "../../api";
 
-export type Topic = {
-  timestamp: number;
-  title: string;
-  summary: string;
-  id: string;
-  transcript: string;
-  segments: SegmentTopic[];
-};
+export type Topic = GetTranscriptTopic;
 
 export type Transcript = {
   text: string;

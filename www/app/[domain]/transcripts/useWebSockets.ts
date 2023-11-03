@@ -56,7 +56,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 10,
             summary: "This is test topic 1",
             title: "Topic 1: Introduction to Quantum Mechanics",
-            text: "A brief overview of quantum mechanics and its principles.",
+            transcript:
+              "A brief overview of quantum mechanics and its principles.",
             segments: [
               {
                 speaker: 1,
@@ -96,7 +97,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 20,
             summary: "This is test topic 2",
             title: "Topic 2: Machine Learning Algorithms",
-            text: "Understanding the different types of machine learning algorithms.",
+            transcript:
+              "Understanding the different types of machine learning algorithms.",
             segments: [
               {
                 speaker: 1,
@@ -115,7 +117,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 30,
             summary: "This is test topic 3",
             title: "Topic 3: Mental Health Awareness",
-            text: "Ways to improve mental health and reduce stigma.",
+            transcript: "Ways to improve mental health and reduce stigma.",
             segments: [
               {
                 speaker: 1,
@@ -134,7 +136,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 40,
             summary: "This is test topic 4",
             title: "Topic 4: Basics of Productivity",
-            text: "Tips and tricks to increase daily productivity.",
+            transcript: "Tips and tricks to increase daily productivity.",
             segments: [
               {
                 speaker: 1,
@@ -153,7 +155,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             timestamp: 50,
             summary: "This is test topic 5",
             title: "Topic 5: Future of Aviation",
-            text: "Exploring the advancements and possibilities in aviation.",
+            transcript:
+              "Exploring the advancements and possibilities in aviation.",
             segments: [
               {
                 speaker: 1,
@@ -182,7 +185,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 1",
             title:
               "Topic 1: Introduction to Quantum Mechanics, a brief overview of quantum mechanics and its principles.",
-            text: "A brief overview of quantum mechanics and its principles.",
+            transcript:
+              "A brief overview of quantum mechanics and its principles.",
             segments: [
               {
                 speaker: 1,
@@ -202,7 +206,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 2",
             title:
               "Topic 2: Machine Learning Algorithms, understanding the different types of machine learning algorithms.",
-            text: "Understanding the different types of machine learning algorithms.",
+            transcript:
+              "Understanding the different types of machine learning algorithms.",
             segments: [
               {
                 speaker: 1,
@@ -222,7 +227,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 3",
             title:
               "Topic 3: Mental Health Awareness, ways to improve mental health and reduce stigma.",
-            text: "Ways to improve mental health and reduce stigma.",
+            transcript: "Ways to improve mental health and reduce stigma.",
             segments: [
               {
                 speaker: 1,
@@ -242,7 +247,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 4",
             title:
               "Topic 4: Basics of Productivity, tips and tricks to increase daily productivity.",
-            text: "Tips and tricks to increase daily productivity.",
+            transcript: "Tips and tricks to increase daily productivity.",
             segments: [
               {
                 speaker: 1,
@@ -262,7 +267,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             summary: "This is test topic 5",
             title:
               "Topic 5: Future of Aviation, exploring the advancements and possibilities in aviation.",
-            text: "Exploring the advancements and possibilities in aviation.",
+            transcript:
+              "Exploring the advancements and possibilities in aviation.",
             segments: [
               {
                 speaker: 1,
@@ -308,7 +314,17 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             break;
 
           case "TOPIC":
-            setTopics((prevTopics) => [...prevTopics, message.data]);
+            setTopics((prevTopics) => {
+              const topic = message.data as Topic;
+              const index = prevTopics.findIndex(
+                (prevTopic) => prevTopic.id === topic.id,
+              );
+              if (index >= 0) {
+                prevTopics[index] = topic;
+                return prevTopics;
+              }
+              return [...prevTopics, topic];
+            });
             console.debug("TOPIC event:", message.data);
             break;
 
