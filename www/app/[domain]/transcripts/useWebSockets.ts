@@ -357,6 +357,15 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 newUrl,
               );
             }
+            if (message.data.value === "error") {
+              const newUrl = "/transcripts/" + transcriptId;
+              router.push(newUrl);
+              // TODO Test
+              setError(
+                Error("Websocket error status"),
+                "There was an issue processing your transcript",
+              );
+            }
             setStatus(message.data);
             break;
 
