@@ -6,6 +6,8 @@ import {
 import {} from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
+import getApi from "../../lib/getApi";
+import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
 
 type Mp3Response = {
   url: string | null;
@@ -14,16 +16,18 @@ type Mp3Response = {
   error: Error | null;
 };
 
-const useMp3 = (api: DefaultApi, id: string): Mp3Response => {
+const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
   const [url, setUrl] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
+  const api = getApi(protectedPath);
   const { api_url } = useContext(DomainContext);
+  const accessTokenInfo = useFiefAccessTokenInfo();
 
   const getMp3 = (id: string) => {
-    if (!id) return;
+    if (!id || !api) return;
 
     setLoading(true);
     // XXX Current API interface does not output a blob, we need to to is manually
@@ -45,8 +49,8 @@ const useMp3 = (api: DefaultApi, id: string): Mp3Response => {
     if (localUrl == url) return;
     const headers = new Headers();
 
-    if (api.configuration.configuration.accessToken) {
-      headers.set("Authorization", api.configuration.configuration.accessToken);
+    if (accessTokenInfo) {
+      headers.set("Authorization", "Bearer " + accessTokenInfo.access_token);
     }
 
     fetch(localUrl, {
@@ -68,7 +72,7 @@ const useMp3 = (api: DefaultApi, id: string): Mp3Response => {
 
   useEffect(() => {
     getMp3(id);
-  }, [id]);
+  }, [id, api]);
 
   return { url, blob, loading, error };
 };

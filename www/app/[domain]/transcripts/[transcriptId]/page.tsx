@@ -29,7 +29,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
-  const mp3 = useMp3(api, transcriptId);
+  const mp3 = useMp3(protectedPath, transcriptId);
 
   if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
