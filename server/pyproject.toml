@@ -33,6 +33,9 @@ prometheus-fastapi-instrumentator = "^6.1.0"
 sentencepiece = "^0.1.99"
 protobuf = "^4.24.3"
 profanityfilter = "^2.0.6"
+celery = "^5.3.4"
+redis = "^5.0.1"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -47,6 +50,7 @@ pytest-asyncio = "^0.21.1"
 pytest = "^7.4.0"
 httpx-ws = "^0.4.1"
 pytest-httpx = "^0.23.1"
+pytest-celery = "^0.0.0"
 
 
 [tool.poetry.group.aws.dependencies]

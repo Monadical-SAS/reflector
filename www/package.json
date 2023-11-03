@@ -35,7 +35,7 @@
     "supports-color": "^9.4.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
-    "wavesurfer.js": "^7.0.3"
+    "wavesurfer.js": "^7.4.2"
   },
   "main": "index.js",
   "repository": "https://github.com/Monadical-SAS/reflector-ui.git",

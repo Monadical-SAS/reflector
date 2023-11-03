@@ -1,10 +1,6 @@
-export type Topic = {
-  timestamp: number;
-  title: string;
-  transcript: string;
-  summary: string;
-  id: string;
-};
+import { GetTranscriptTopic } from "../../api";
+
+export type Topic = GetTranscriptTopic;
 
 export type Transcript = {
   text: string;

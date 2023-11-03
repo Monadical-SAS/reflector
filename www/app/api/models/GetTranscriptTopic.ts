@@ -16,74 +16,85 @@ import { exists, mapValues } from "../runtime";
 /**
  *
  * @export
- * @interface TranscriptTopic
+ * @interface GetTranscriptTopic
  */
-export interface TranscriptTopic {
+export interface GetTranscriptTopic {
   /**
    *
    * @type {any}
-   * @memberof TranscriptTopic
+   * @memberof GetTranscriptTopic
    */
-  id?: any | null;
+  id: any | null;
   /**
    *
    * @type {any}
-   * @memberof TranscriptTopic
+   * @memberof GetTranscriptTopic
    */
   title: any | null;
   /**
    *
    * @type {any}
-   * @memberof TranscriptTopic
+   * @memberof GetTranscriptTopic
    */
   summary: any | null;
   /**
    *
    * @type {any}
-   * @memberof TranscriptTopic
+   * @memberof GetTranscriptTopic
    */
   timestamp: any | null;
   /**
    *
    * @type {any}
-   * @memberof TranscriptTopic
+   * @memberof GetTranscriptTopic
+   */
+  transcript: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscriptTopic
    */
   segments?: any | null;
 }
 
 /**
- * Check if a given object implements the TranscriptTopic interface.
+ * Check if a given object implements the GetTranscriptTopic interface.
  */
-export function instanceOfTranscriptTopic(value: object): boolean {
+export function instanceOfGetTranscriptTopic(value: object): boolean {
   let isInstance = true;
+  isInstance = isInstance && "id" in value;
   isInstance = isInstance && "title" in value;
   isInstance = isInstance && "summary" in value;
   isInstance = isInstance && "timestamp" in value;
+  isInstance = isInstance && "transcript" in value;
 
   return isInstance;
 }
 
-export function TranscriptTopicFromJSON(json: any): TranscriptTopic {
-  return TranscriptTopicFromJSONTyped(json, false);
+export function GetTranscriptTopicFromJSON(json: any): GetTranscriptTopic {
+  return GetTranscriptTopicFromJSONTyped(json, false);
 }
 
-export function TranscriptTopicFromJSONTyped(
+export function GetTranscriptTopicFromJSONTyped(
   json: any,
   ignoreDiscriminator: boolean,
-): TranscriptTopic {
+): GetTranscriptTopic {
   if (json === undefined || json === null) {
     return json;
   }
   return {
-    id: !exists(json, "id") ? undefined : json["id"],
+    id: json["id"],
     title: json["title"],
     summary: json["summary"],
     timestamp: json["timestamp"],
+    transcript: json["transcript"],
     segments: !exists(json, "segments") ? undefined : json["segments"],
   };
 }
 
-export function TranscriptTopicToJSON(value?: TranscriptTopic | null): any {
+export function GetTranscriptTopicToJSON(
+  value?: GetTranscriptTopic | null,
+): any {
   if (value === undefined) {
     return undefined;
   }
@@ -95,6 +106,7 @@ export function TranscriptTopicToJSON(value?: TranscriptTopic | null): any {
     title: value.title,
     summary: value.summary,
     timestamp: value.timestamp,
+    transcript: value.transcript,
     segments: value.segments,
   };
 }
