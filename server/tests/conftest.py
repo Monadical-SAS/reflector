@@ -45,25 +45,47 @@ async def dummy_transcript():
     from reflector.processors.types import AudioFile, Transcript, Word
 
     class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
-        async def _transcript(self, data: AudioFile):
-            source_language = self.get_pref("audio:source_language", "en")
-            print("transcripting", source_language)
-            print("pipeline", self.pipeline)
-            print("prefs", self.pipeline.prefs)
+        _time_idx = 0
 
+        async def _transcript(self, data: AudioFile):
+            i = self._time_idx
+            self._time_idx += 2
             return Transcript(
                 text="Hello world.",
                 words=[
-                    Word(start=0.0, end=1.0, text="Hello"),
-                    Word(start=1.0, end=2.0, text=" world."),
+                    Word(start=i, end=i + 1, text="Hello", speaker=0),
+                    Word(start=i + 1, end=i + 2, text=" world.", speaker=0),
                 ],
             )
 
     with patch(
         "reflector.processors.audio_transcript_auto"
-        ".AudioTranscriptAutoProcessor.get_instance"
+        ".AudioTranscriptAutoProcessor.__new__"
     ) as mock_audio:
         mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_diarization():
+    from reflector.processors.audio_diarization import AudioDiarizationProcessor
+
+    class TestAudioDiarizationProcessor(AudioDiarizationProcessor):
+        _time_idx = 0
+
+        async def _diarize(self, data):
+            i = self._time_idx
+            self._time_idx += 2
+            return [
+                {"start": i, "end": i + 1, "speaker": 0},
+                {"start": i + 1, "end": i + 2, "speaker": 1},
+            ]
+
+    with patch(
+        "reflector.processors.audio_diarization_auto"
+        ".AudioDiarizationAutoProcessor.__new__"
+    ) as mock_audio:
+        mock_audio.return_value = TestAudioDiarizationProcessor()
         yield
 
 
@@ -98,7 +120,17 @@ def ensure_casing():
 @pytest.fixture
 def sentence_tokenize():
     with patch(
-        "reflector.processors.TranscriptFinalLongSummaryProcessor" ".sentence_tokenize"
+        "reflector.processors.TranscriptFinalLongSummaryProcessor.sentence_tokenize"
     ) as mock_sent_tokenize:
         mock_sent_tokenize.return_value = ["LLM LONG SUMMARY"]
         yield
+
+
+@pytest.fixture(scope="session")
+def celery_enable_logging():
+    return True
+
+
+@pytest.fixture(scope="session")
+def celery_config():
+    return {"broker_url": "memory://", "result_backend": "rpc"}

@@ -1,10 +1,10 @@
 import importlib
 
-from reflector.processors.audio_transcript import AudioTranscriptProcessor
+from reflector.processors.audio_diarization import AudioDiarizationProcessor
 from reflector.settings import settings
 
 
-class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
+class AudioDiarizationAutoProcessor(AudioDiarizationProcessor):
     _registry = {}
 
     @classmethod
@@ -13,16 +13,17 @@ class AudioTranscriptAutoProcessor(AudioTranscriptProcessor):
 
     def __new__(cls, name: str | None = None, **kwargs):
         if name is None:
-            name = settings.TRANSCRIPT_BACKEND
+            name = settings.DIARIZATION_BACKEND
+
         if name not in cls._registry:
-            module_name = f"reflector.processors.audio_transcript_{name}"
+            module_name = f"reflector.processors.audio_diarization_{name}"
             importlib.import_module(module_name)
 
         # gather specific configuration for the processor
-        # search `TRANSCRIPT_BACKEND_XXX_YYY`, push to constructor as `backend_xxx_yyy`
+        # search `DIARIZATION_BACKEND_XXX_YYY`, push to constructor as `backend_xxx_yyy`
         config = {}
         name_upper = name.upper()
-        settings_prefix = "TRANSCRIPT_"
+        settings_prefix = "DIARIZATION_"
         config_prefix = f"{settings_prefix}{name_upper}_"
         for key, value in settings:
             if key.startswith(config_prefix):

@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
+    # Diarization
+    DIARIZATION_BACKEND: str = "modal"
+    DIARIZATION_URL: str | None = None
+
     # Sentry
     SENTRY_DSN: str | None = None
 
@@ -112,6 +116,20 @@ class Settings(BaseSettings):
 
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750
+
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+
+    # Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
+    # Secret key
+    SECRET_KEY: str = "changeme-f02f86fd8b3e4fd892c6043e5a298e21"
+
+    # Current hosting/domain
+    BASE_URL: str = "http://localhost:1250"
 
 
 settings = Settings()

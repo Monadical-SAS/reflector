@@ -3,6 +3,7 @@ import Modal from "../modal";
 import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
+import useMp3 from "../useMp3";
 import { TopicList } from "../topicList";
 import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
@@ -28,6 +29,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
+  const mp3 = useMp3(api, transcriptId);
 
   if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
@@ -62,6 +64,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 waveform={waveform?.waveform}
                 isPastMeeting={true}
                 transcriptId={transcript?.response?.id}
+                mp3Blob={mp3.blob}
               />
             )}
           </div>

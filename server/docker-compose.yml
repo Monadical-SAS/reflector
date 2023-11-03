@@ -5,11 +5,23 @@ services:
       context: .
     ports:
       - 1250:1250
-    environment:
-      LLM_URL: "${LLM_URL}"
-      MIN_TRANSCRIPT_LENGTH: "${MIN_TRANSCRIPT_LENGTH}"
     volumes:
       - model-cache:/root/.cache
+    environment:
+      ENTRYPOINT: server
+      REDIS_HOST: redis
+  worker:
+    build:
+      context: .
+    volumes:
+      - model-cache:/root/.cache
+    environment:
+      ENTRYPOINT: worker
+      REDIS_HOST: redis
+  redis:
+    image: redis:7.2
+    ports:
+      - 6379:6379
 
 volumes:
   model-cache:
