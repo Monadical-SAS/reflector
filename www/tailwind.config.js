@@ -21,5 +21,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require("./plugins/tailwind-extensions.ts")],
 };

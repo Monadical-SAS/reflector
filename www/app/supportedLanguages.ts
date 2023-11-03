@@ -488,7 +488,7 @@ const supportedLanguages: LanguageOption[] = [
 const supportedLatinLanguages = supportedLanguages.filter(
   (lan) => lan.script == "Latn",
 );
-supportedLatinLanguages.push({ value: undefined, name: "No Translation" });
+supportedLatinLanguages.push({ value: "", name: "No Translation" });
 
 export { supportedLatinLanguages };
 

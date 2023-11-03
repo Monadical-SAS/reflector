@@ -10,7 +10,10 @@ import Link from "next/link";
 import About from "./(splashScreen)/about";
 import Privacy from "./(splashScreen)/privacy";
 
-const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
 
 export const metadata: Metadata = {
   title: {
@@ -60,14 +63,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-hidden">
       <body className={poppins.className + " h-screen relative"}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
             <div
               id="container"
-              className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
+              className="items-center min-h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
             >
               <header className="flex justify-between items-center w-full">
                 {/* Logo on the left */}

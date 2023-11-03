@@ -12,10 +12,7 @@ export default function Privacy({ buttonText }: PrivacyProps) {
 
   return (
     <>
-      <button
-        className="inline-flex items-start justify-start text-left hover:no-underline underline underline-offset-2 decoration-[.5px] font-light pl-0 text-white text-[15px] font-poppins font-normal leading-normal"
-        onClick={() => setModalOpen(true)}
-      >
+      <button className="open-modal-button" onClick={() => setModalOpen(true)}>
         {buttonText}
       </button>
       {modalOpen && (
