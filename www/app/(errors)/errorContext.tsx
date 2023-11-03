@@ -28,6 +28,9 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
   const declareError = (error, humanMessage?) => {
     setError(error);
     setHumanMessage(humanMessage);
+    console.log(error.message, { ...error });
+    //TODO ignore not found in request errors (in useTopics, useTranscript...)
+    // if (error.name == ResponseError && error.response.status == 404)
   };
   return (
     <ErrorContext.Provider
