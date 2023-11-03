@@ -1,20 +1,18 @@
 "use client";
 import Modal from "../modal";
-import getApi from "../../../lib/getApi";
 import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
+import useMp3 from "../useMp3";
 import { TopicList } from "../topicList";
 import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "../../../styles/button.css";
 import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
-import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
-import { featureEnabled } from "../../domainContext";
 
 type TranscriptDetails = {
   params: {
@@ -22,20 +20,16 @@ type TranscriptDetails = {
   };
 };
 
-export default function TranscriptDetails(details: TranscriptDetails) {
-  const isAuthenticated = useFiefIsAuthenticated();
-  const api = getApi();
-  const [transcriptId, setTranscriptId] = useState<string>("");
-  const transcript = useTranscript(api, transcriptId);
-  const topics = useTopics(api, transcriptId);
-  const waveform = useWaveform(api, transcriptId);
-  const useActiveTopic = useState<Topic | null>(null);
-  const requireLogin = featureEnabled("requireLogin");
+const protectedPath = true;
 
-  useEffect(() => {
-    if (requireLogin && !isAuthenticated) return;
-    setTranscriptId(details.params.transcriptId);
-  }, [api, details.params.transcriptId, isAuthenticated]);
+export default function TranscriptDetails(details: TranscriptDetails) {
+  const transcriptId = details.params.transcriptId;
+
+  const transcript = useTranscript(protectedPath, transcriptId);
+  const topics = useTopics(protectedPath, transcriptId);
+  const waveform = useWaveform(protectedPath, transcriptId);
+  const useActiveTopic = useState<Topic | null>(null);
+  const mp3 = useMp3(protectedPath, transcriptId);
 
   if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
@@ -70,6 +64,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 waveform={waveform?.waveform}
                 isPastMeeting={true}
                 transcriptId={transcript?.response?.id}
+                mp3Blob={mp3.blob}
               />
             )}
           </div>
