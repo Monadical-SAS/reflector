@@ -15,6 +15,7 @@ import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { useError } from "../../(errors)/errorContext";
 import { waveSurferStyles } from "../../styles/recorder";
+import useMp3 from "./useMp3";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -29,6 +30,7 @@ type RecorderProps = {
   waveform?: AudioWaveform | null;
   isPastMeeting: boolean;
   transcriptId?: string | null;
+  mp3Blob?: Blob | null;
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -107,11 +109,7 @@ export default function Recorder(props: RecorderProps) {
     if (waveformRef.current) {
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        url: props.transcriptId
-          ? `${process.env.NEXT_PUBLIC_API_URL}/v1/transcripts/${props.transcriptId}/audio/mp3`
-          : undefined,
         peaks: props.waveform?.data,
-
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
@@ -145,6 +143,10 @@ export default function Recorder(props: RecorderProps) {
 
       if (props.isPastMeeting) _wavesurfer.toggleInteraction(true);
 
+      if (props.mp3Blob) {
+        _wavesurfer.loadBlob(props.mp3Blob);
+      }
+
       setWavesurfer(_wavesurfer);
 
       return () => {
@@ -155,6 +157,12 @@ export default function Recorder(props: RecorderProps) {
       };
     }
   }, []);
+
+  useEffect(() => {
+    if (!wavesurfer) return;
+    if (!props.mp3Blob) return;
+    wavesurfer.loadBlob(props.mp3Blob);
+  }, [props.mp3Blob]);
 
   useEffect(() => {
     topicsRef.current = props.topics;

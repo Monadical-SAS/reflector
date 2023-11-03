@@ -1,43 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import getApi from "../../lib/getApi";
-import {
-  PageGetTranscript,
-  GetTranscript,
-  GetTranscriptFromJSON,
-} from "../../api";
+import React, { useState } from "react";
+
+import { GetTranscript } from "../../api";
 import { Title } from "../../lib/textComponents";
 import Pagination from "./pagination";
 import Link from "next/link";
-import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
+import useTranscriptList from "../transcripts/useTranscriptList";
 
 export default function TranscriptBrowser() {
-  const api = getApi();
-  const [results, setResults] = useState<PageGetTranscript | null>(null);
   const [page, setPage] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const isAuthenticated = useFiefIsAuthenticated();
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    setIsLoading(true);
-    api
-      .v1TranscriptsList({ page })
-      .then((response) => {
-        // issue with API layer, conversion for items is not happening
-        response.items = response.items.map((item) =>
-          GetTranscriptFromJSON(item),
-        );
-        setResults(response);
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setResults(null);
-        setIsLoading(false);
-      });
-  }, [page, isAuthenticated]);
+  const { loading, response } = useTranscriptList(page);
 
   return (
     <div>
@@ -52,12 +26,12 @@ export default function TranscriptBrowser() {
         <Pagination
           page={page}
           setPage={setPage}
-          total={results?.total || 0}
-          size={results?.size || 0}
+          total={response?.total || 0}
+          size={response?.size || 0}
         />
       </div>
 
-      {isLoading && (
+      {loading && (
         <div className="full-screen flex flex-col items-center justify-center">
           <FontAwesomeIcon
             icon={faGear}
@@ -65,7 +39,7 @@ export default function TranscriptBrowser() {
           />
         </div>
       )}
-      {!isLoading && !results ? (
+      {!loading && !response && (
         <div className="text-gray-500">
           No transcripts found, but you can&nbsp;
           <Link href="/transcripts/new" className="underline">
@@ -73,12 +47,10 @@ export default function TranscriptBrowser() {
           </Link>
           &nbsp;to get started.
         </div>
-      ) : (
-        <></>
       )}
       <div /** center and max 900px wide */ className="mx-auto max-w-[900px]">
         <div className="grid grid-cols-1 gap-2 lg:gap-4 h-full">
-          {results?.items.map((item: GetTranscript) => (
+          {response?.items.map((item: GetTranscript) => (
             <div
               key={item.id}
               className="flex flex-col bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4"

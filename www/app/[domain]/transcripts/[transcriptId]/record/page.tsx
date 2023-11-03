@@ -36,9 +36,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     }
   }, []);
 
-  const api = getApi();
-  const transcript = useTranscript(api, details.params.transcriptId);
-  const webRTC = useWebRTC(stream, details.params.transcriptId, api);
+  const transcript = useTranscript(true, details.params.transcriptId);
+  const webRTC = useWebRTC(stream, details.params.transcriptId, true);
   const webSockets = useWebSockets(details.params.transcriptId);
 
   const { audioDevices, getAudioStream } = useAudioDevice();
