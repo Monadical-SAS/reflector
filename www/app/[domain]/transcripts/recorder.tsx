@@ -157,7 +157,7 @@ export default function Recorder(props: RecorderProps) {
     if (!wavesurfer) return;
     if (!props.mp3Blob) return;
     wavesurfer.loadBlob(props.mp3Blob);
-  }, [props.mp3Blob]);
+  }, [props.mp3Blob, wavesurfer]);
 
   useEffect(() => {
     topicsRef.current = props.topics;

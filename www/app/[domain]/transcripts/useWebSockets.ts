@@ -350,20 +350,14 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             if (message.data.value === "ended") {
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
-              console.debug(
-                "FINAL_LONG_SUMMARY event:",
-                message.data,
-                "newUrl",
-                newUrl,
-              );
+              console.debug("FINAL_LONG_SUMMARY event:", message.data);
             }
             if (message.data.value === "error") {
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
-              // TODO Test
               setError(
                 Error("Websocket error status"),
-                "There was an issue processing your transcript",
+                "There was an error processing this meeting.",
               );
             }
             setStatus(message.data);

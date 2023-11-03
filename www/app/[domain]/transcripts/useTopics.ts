@@ -6,6 +6,7 @@ import {
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
 import getApi from "../../lib/getApi";
+import { shouldShowGet } from "../../lib/errorUtils";
 
 type TranscriptTopics = {
   topics: Topic[] | null;
@@ -35,8 +36,13 @@ const useTopics = (protectedPath, id: string): TranscriptTopics => {
         console.debug("Transcript topics loaded:", result);
       })
       .catch((err) => {
-        setError(err, "There was an error loading the topics");
         setErrorState(err);
+        const shouldShowHuman = shouldShowGet(err);
+        if (shouldShowHuman) {
+          setError(err, "There was an error loading the topics");
+        } else {
+          setError(err);
+        }
       });
   }, [id, api]);
 
