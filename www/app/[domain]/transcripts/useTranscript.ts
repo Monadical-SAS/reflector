@@ -3,6 +3,7 @@ import { V1TranscriptGetRequest } from "../../api/apis/DefaultApi";
 import { GetTranscript } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";
+import { shouldShowGet } from "../../lib/errorUtils";
 
 type Transcript = {
   response: GetTranscript | null;
@@ -34,9 +35,15 @@ const useTranscript = (
         setLoading(false);
         console.debug("Transcript Loaded:", result);
       })
-      .catch((err) => {
-        setError(err, "There was an error loading the transcript");
-        setErrorState(err);
+      .catch((error) => {
+        const shouldShowHuman = shouldShowGet(error);
+        console.log({ ...error });
+        if (shouldShowHuman) {
+          setError(error, "There was an error loading the transcript");
+        } else {
+          setError(error);
+        }
+        setErrorState(error);
       });
   }, [id, !api]);
 

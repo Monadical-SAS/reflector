@@ -1,13 +1,9 @@
 import { useContext, useEffect, useState } from "react";
-import {
-  DefaultApi,
-  // V1TranscriptGetAudioMp3Request,
-} from "../../api/apis/DefaultApi";
-import {} from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
 import getApi from "../../lib/getApi";
 import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
+import { shouldShowGet } from "../../lib/errorUtils";
 
 type Mp3Response = {
   url: string | null;
@@ -52,7 +48,6 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
     if (accessTokenInfo) {
       headers.set("Authorization", "Bearer " + accessTokenInfo.access_token);
     }
-
     fetch(localUrl, {
       method: "GET",
       headers,
@@ -65,8 +60,13 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
         });
       })
       .catch((err) => {
-        setError(err, "There was an error loading the audio");
         setErrorState(err);
+        const shouldShowHuman = shouldShowGet(error);
+        if (shouldShowHuman) {
+          setError(err, "There was an error loading the audio");
+        } else {
+          setError(err);
+        }
       });
   };
 

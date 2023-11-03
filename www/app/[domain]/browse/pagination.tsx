@@ -40,7 +40,7 @@ export default function Pagination(props: PaginationProps) {
   return (
     <div className="flex justify-center space-x-4 my-4">
       <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 rounded-full disabled:bg-white ${
+        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
           canGoPrevious ? "text-gray-500" : "text-gray-300"
         }`}
         onClick={() => handlePageChange(page - 1)}
