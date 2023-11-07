@@ -3,16 +3,18 @@ type SimpleProps = {
   className?: string;
 };
 
-const Title = ({ children, className }: SimpleProps) => (
-  <h2 className={`text-lg font-bold md:text-xl ${className || ""}`}>
+const Title = ({ children }: SimpleProps) => (
+  <h2 className="self-stretch font-semibold text-white mb-2 mt-8 text-2xl">
     {children}
   </h2>
 );
 const Subtitle = ({ children, className }: SimpleProps) => (
-  <h3 className={`text-base md:text-lg ${className || ""}`}>{children}</h3>
+  <h3 className={`mb-1 text-white text-lg font-semibold ${className || ""}`}>
+    {children}
+  </h3>
 );
 const Paragraph = ({ children, className }: SimpleProps) => (
-  <p className={`mb-2 md:mb-4 ${className || ""}`}>{children}</p>
+  <p className={`${className || ""} mb-1 md:mb-4 text-slate-300`}>{children}</p>
 );
 
 export { Title, Subtitle, Paragraph };

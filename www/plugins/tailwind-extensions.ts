@@ -3,10 +3,6 @@ const plugin = require("tailwindcss/plugin");
 module.exports = plugin(function ({ addUtilities }) {
   const newUtilities = {
     ".open-modal-button": {
-      display: "inline-flex",
-      alignItems: "flex-start",
-      justifyContent: "flex-start",
-      textAlign: "left",
       textDecoration: "underline",
       textDecorationThickness: ".5px",
       textDecorationStyle: "solid",
@@ -32,6 +28,19 @@ module.exports = plugin(function ({ addUtilities }) {
       color: "white",
       fontSize: "1rem", // text-base
       fontWeight: 600, // font-semibold
+    },
+    ".splash-screen": {
+      display: "flex", // flex
+      flex: "1", // flex-1
+      flexDirection: "row", // flex-row
+      padding: "0.75rem", // p-3
+      alignItems: "flex-start", // items-start
+      alignSelf: "stretch", // self-stretch
+      borderRadius: "0.75rem", // rounded-lg
+      backgroundColor: "rgba(255, 255, 255, var(--tw-bg-opacity))",
+      boxShadow: "0px 4px 4px 0px rgba(0, 0, 0, 0.25)",
+      "--tw-border-radius": "20px",
+      "--tw-bg-opacity": "1",
     },
   };
 

@@ -4,6 +4,7 @@ import Privacy from "./privacy";
 import SelectSearch from "react-select-search";
 import { V1TranscriptsCreateRequest } from "../api/apis/DefaultApi";
 import Image from "next/image";
+import { useState } from "react";
 
 type SplashScreen = {
   handleNameChange: React.ChangeEventHandler<HTMLInputElement>;
@@ -22,46 +23,85 @@ type SplashScreen = {
 function SplashScreen(props: SplashScreen) {
   const displayMicText =
     props.loading || props.permissionOk || props.permissionDenied;
+
+  const [modalContents, setModalContents] = useState<React.ReactNode | null>(
+    null,
+  );
+
   return (
     <>
-      <div className="hidden lg:block"></div>
-      <div className="lg:grid lg:grid-cols-2 lg:grid-rows-1 lg:gap-4 lg:h-full h-auto flex flex-col">
-        <section className="flex flex-col items-center justify-center p-8 px-9 gap-6 flex-1 border rounded-md bg-[#3158E2]">
-          <div className="flex flex-col max-w-xl items-left justify-center">
-            <h1 className="self-stretch text-white text-4xl font-poppins font-extrabold leading-normal pb-9">
-              Welcome to Reflector!
-            </h1>
-            <p className="self-stretch text-white text-[15px] font-poppins font-normal leading-normal pb-4">
-              Reflector is a transcription and summarization pipeline that
-              transforms audio into knowledge.
-            </p>
-            <p className="self-stretch text-white text-[15px] font-poppins font-normal leading-normal pb-4">
-              The output is meeting minutes and topic summaries enabling
-              topic-specific analyses stored in your systems of record. This is
-              accomplished on your infrastructure, without 3rd parties, keeping
-              your data private, secure, and organized.
-            </p>
-            <About buttonText="Learn more" />
-            <p className="self-stretch text-white text-[15px] font-poppins font-normal leading-normal pb-4">
-              In order to use Reflector, we need microphone permissions to
-              access the audio during meetings and events.
-            </p>
-            <Privacy buttonText="Privacy policy" />
+      <main className="flex flex-1 flex-row p-3 items-start self-stretch rounded-lg">
+        <section className="gap-4 flex flex-1 flex-col p-9 border rounded-md items-start justify-center self-stretch rounded-xl bg-[#3158E2]">
+          {modalContents ? (
+            <>
+              <button
+                className="flex gap-2.5 px-4 py-1.5 rounded bg-[var(--Light-Blue,#B1CBFF)]  justify-start"
+                onClick={() => setModalContents(null)}
+              >
+                Back
+              </button>
+              {modalContents}
+            </>
+          ) : (
+            <>
+              <h1 className="text-white text-4xl font-extrabold mb-8">
+                Welcome to Reflector!
+              </h1>
+              <p className="text-white">
+                Reflector is a transcription and summarization pipeline that
+                transforms audio into knowledge.
+              </p>
+              <p className="text-white">
+                The output is meeting minutes and topic summaries enabling
+                topic-specific analyses stored in your systems of record. This
+                is accomplished on your infrastructure, without 3rd parties,
+                keeping your data private, secure, and organized.
+              </p>
+              <a
+                className="text-white cursor-pointer underline font-semibold hover:no-underline mb-8"
+                onClick={() => setModalContents(<About />)}
+              >
+                Learn More
+              </a>
 
-            <div className="mx-auto">
+              <p className="text-white">
+                In order to use Reflector, we need microphone permissions to
+                access the audio during meetings and events.
+              </p>
+              <a
+                className="text-white cursor-pointer underline font-semibold hover:no-underline mb-8"
+                onClick={() => setModalContents(<Privacy />)}
+              >
+                Privacy Policy
+              </a>
+
               <Image
-                src="/waveform.png"
-                width={403}
-                height={102}
                 alt="Reflector Logo"
+                loading="lazy"
+                width="403"
+                height="102"
+                decoding="async"
+                data-nimg="1"
+                src="/waveform.png"
+                style={{ color: "transparent", width: "100%", height: "102px" }}
               />
-            </div>
-          </div>
+            </>
+          )}
         </section>
-        <section className="flex flex-col justify-center gap-1 flex-1 self-stretch p-8">
+
+        {/* Right side */}
+
+        <section
+          className="flex flex-1 flex-col items-left justify-center p-9"
+          style={{
+            padding: "86px 24px",
+            gap: "25px",
+            alignSelf: "stretch",
+          }}
+        >
           <div className="flex flex-col items-center justify-center self-stretch">
             <Image
-              src="/reach-logo.png"
+              src="/reach.png"
               width={87}
               height={87}
               alt="Reflector Logo"
@@ -125,35 +165,42 @@ function SplashScreen(props: SplashScreen) {
                   Microphone permission granted
                 </div>
               ) : props.permissionDenied ? (
-                <>
-                  Permission to use your microphone was denied, please change
-                  the permission setting in your browser and refresh this page.
-                </>
+                <p className="font-medium text-rose-600">
+                  We're unable to access your microphone because permission has
+                  been declined. Please update your browser's permission
+                  settings to allow microphone access and then reload the page.
+                </p>
               ) : (
                 <></>
               )}
             </>
           ) : (
-            <button
-              className="blue-button"
-              onClick={props.requestPermission}
-              disabled={props.permissionDenied}
-            >
-              Request Microphone Permission
-            </button>
+            <></>
           )}
 
-          <div className="inline-block mt-4">
+          <div className="inline-block">
+            {!displayMicText ? (
+              <button
+                className="inline-flex justify-center items-center px-4 py-1.5 gap-2.5 rounded bg-[#3158E2] text-white text-base font-poppins font-semibold mr-2"
+                onClick={props.requestPermission}
+                disabled={props.permissionDenied}
+              >
+                Request Permissions
+              </button>
+            ) : (
+              <></>
+            )}
+
             <button
               onClick={props.send}
               disabled={!props.permissionOk || props.loadingSend}
               className="inline-flex justify-center items-center px-4 py-1.5 gap-2.5 rounded bg-[#3158E2] text-white text-base font-poppins font-semibold"
             >
-              {props.loadingSend ? "Loading..." : "Start new recording"}
+              {props.loadingSend ? "Loading..." : "Start Recording"}
             </button>
           </div>
         </section>
-      </div>
+      </main>
     </>
   );
 }

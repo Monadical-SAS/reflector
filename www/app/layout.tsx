@@ -7,8 +7,6 @@ import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import Image from "next/image";
 import Link from "next/link";
-import About from "./(splashScreen)/about";
-import Privacy from "./(splashScreen)/privacy";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -85,21 +83,7 @@ export default function RootLayout({ children }) {
                     className="h-10 w-auto"
                     alt="Reflector"
                   />
-                  <div className="hidden flex-col ml-2 md:block">
-                    <h1 className="text-[38px] font-bold tracking-wide leading-tight">
-                      Reflector
-                    </h1>
-                    <p className="text-gray-500 text-xs tracking-tighter">
-                      Capture the signal, not the noise
-                    </p>
-                  </div>
                 </Link>
-                <div>
-                  {/* Text link on the right */}
-                  <About buttonText="About" />
-                  &nbsp;·&nbsp;
-                  <Privacy buttonText="Privacy" />
-                </div>
               </header>
 
               {children}
