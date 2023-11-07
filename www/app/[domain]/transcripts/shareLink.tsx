@@ -65,13 +65,15 @@ const ShareLink = (props: ShareLinkProps) => {
       {requireLogin && (
         <p className="text-sm mb-2">
           {shareMode === "private" && (
-            <p>This transcript is only accessible by you.</p>
+            <p>This transcript is private and can only be accessed by you.</p>
           )}
           {shareMode === "semi-private" && (
-            <p>This transcript is accessible by any authenticated users.</p>
+            <p>
+              This transcript is secure. Only authenticated users can access it.
+            </p>
           )}
           {shareMode === "public" && (
-            <p>This transcript is accessible by anyone.</p>
+            <p>This transcript is public. Everyone can access it.</p>
           )}
 
           {isOwner && api && (
@@ -80,7 +82,7 @@ const ShareLink = (props: ShareLinkProps) => {
                 className="select-search--top select-search"
                 options={[
                   { name: "Private", value: "private" },
-                  { name: "Semi-private", value: "semi-private" },
+                  { name: "Secure", value: "semi-private" },
                   { name: "Public", value: "public" },
                 ]}
                 value={shareMode}
@@ -94,14 +96,14 @@ const ShareLink = (props: ShareLinkProps) => {
         <>
           {privacyEnabled ? (
             <p className="text-sm mb-2">
-              You can share this link with others. Anyone with the link will
-              have access to the page, including the full audio recording, for
-              the next 7 days.
+              Share this link to grant others access to this page. The link
+              includes the full audio recording and is valid for the next 7
+              days.
             </p>
           ) : (
             <p className="text-sm mb-2">
-              You can share this link with others. Anyone with the link will
-              have access to the page, including the full audio recording.
+              Share this link to allow others to view this page and listen to
+              the full audio recording.
             </p>
           )}
         </>
