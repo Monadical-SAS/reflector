@@ -35,3 +35,8 @@ body.is-light-mode .input-container {
   max-width: 100%;
   width: auto;
 }
+
+body .select-search-container .select-search--top.select-search-select {
+  top: auto;
+  bottom: 46px;
+}

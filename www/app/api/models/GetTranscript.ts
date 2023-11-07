@@ -30,6 +30,12 @@ export interface GetTranscript {
    * @type {any}
    * @memberof GetTranscript
    */
+  userId: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
   name: any | null;
   /**
    *
@@ -78,6 +84,12 @@ export interface GetTranscript {
    * @type {any}
    * @memberof GetTranscript
    */
+  shareMode?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscript
+   */
   sourceLanguage: any | null;
   /**
    *
@@ -93,6 +105,7 @@ export interface GetTranscript {
 export function instanceOfGetTranscript(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && "id" in value;
+  isInstance = isInstance && "userId" in value;
   isInstance = isInstance && "name" in value;
   isInstance = isInstance && "status" in value;
   isInstance = isInstance && "locked" in value;
@@ -120,6 +133,7 @@ export function GetTranscriptFromJSONTyped(
   }
   return {
     id: json["id"],
+    userId: json["user_id"],
     name: json["name"],
     status: json["status"],
     locked: json["locked"],
@@ -128,6 +142,7 @@ export function GetTranscriptFromJSONTyped(
     shortSummary: json["short_summary"],
     longSummary: json["long_summary"],
     createdAt: json["created_at"],
+    shareMode: !exists(json, "share_mode") ? undefined : json["share_mode"],
     sourceLanguage: json["source_language"],
     targetLanguage: json["target_language"],
   };
@@ -142,6 +157,7 @@ export function GetTranscriptToJSON(value?: GetTranscript | null): any {
   }
   return {
     id: value.id,
+    user_id: value.userId,
     name: value.name,
     status: value.status,
     locked: value.locked,
@@ -150,6 +166,7 @@ export function GetTranscriptToJSON(value?: GetTranscript | null): any {
     short_summary: value.shortSummary,
     long_summary: value.longSummary,
     created_at: value.createdAt,
+    share_mode: value.shareMode,
     source_language: value.sourceLanguage,
     target_language: value.targetLanguage,
   };
