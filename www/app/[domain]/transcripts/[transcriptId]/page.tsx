@@ -99,7 +99,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                   />
                 </div>
                 <div className="flex-grow max-w-full">
-                  <ShareLink />
+                  <ShareLink
+                    protectedPath={protectedPath}
+                    transcriptId={transcript?.response?.id}
+                    userId={transcript?.response?.userId}
+                    shareMode={transcript?.response?.shareMode}
+                  />
                 </div>
               </section>
             </div>
