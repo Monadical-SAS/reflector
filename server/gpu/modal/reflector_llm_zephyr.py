@@ -17,7 +17,7 @@ LLM_LOW_CPU_MEM_USAGE: bool = True
 LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
 
-IMAGE_MODEL_DIR = "/root/llm_models"
+IMAGE_MODEL_DIR = "/root/llm_models/zephyr"
 
 stub = Stub(name="reflector-llm-zephyr")
 
@@ -26,7 +26,8 @@ def download_llm():
     from huggingface_hub import snapshot_download
 
     print("Downloading LLM model")
-    snapshot_download(LLM_MODEL, cache_dir=IMAGE_MODEL_DIR)
+    snapshot_download(LLM_MODEL,
+                      cache_dir=IMAGE_MODEL_DIR)
     print("LLM model downloaded")
 
 
@@ -81,7 +82,8 @@ class LLM:
             LLM_MODEL,
             torch_dtype=getattr(torch, LLM_TORCH_DTYPE),
             low_cpu_mem_usage=LLM_LOW_CPU_MEM_USAGE,
-            cache_dir=IMAGE_MODEL_DIR
+            cache_dir=IMAGE_MODEL_DIR,
+            local_files_only=True
         )
 
         # JSONFormer doesn't yet support generation configs
@@ -96,7 +98,8 @@ class LLM:
         print("Instance llm tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(
             LLM_MODEL,
-            cache_dir=IMAGE_MODEL_DIR
+            cache_dir=IMAGE_MODEL_DIR,
+            local_files_only=True
         )
         gen_cfg.pad_token_id = tokenizer.eos_token_id
         gen_cfg.eos_token_id = tokenizer.eos_token_id
