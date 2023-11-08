@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../../lib/custom-plugins/record";
@@ -14,7 +14,6 @@ import { AudioWaveform } from "../../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { waveSurferStyles } from "../../styles/recorder";
-import useMp3 from "./useMp3";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -235,6 +234,7 @@ export default function Recorder(props: RecorderProps) {
       record.stopRecording();
       setIsRecording(false);
       setHasRecorded(true);
+      setDestinationStream(null);
     } else {
       const stream = await getCurrentStream();
 
@@ -253,86 +253,71 @@ export default function Recorder(props: RecorderProps) {
   const handleRecordTabClick = async () => {
     if (!record) return console.log("no record");
     const stream: MediaStream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        displaySurface: "window",
-      },
+      video: true,
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 44100,
-        suppressLocalAudioPlayback: true,
       },
-      surfaceSwitching: "include",
-      selfBrowserSurface: "exclude",
-      systemAudio: "include",
     });
-    console.log("stream", stream);
-    console.log(stream.getAudioTracks());
-    return;
 
-    const videoElem = document.getElementById(
-      "video-recording",
-    ) as HTMLVideoElement;
-    videoElem.onloadedmetadata = () => {
-      setScreenMediaStream(stream);
-    };
-    videoElem.srcObject = stream;
-    videoElem.play();
+    if (stream.getAudioTracks().length == 0) {
+      setError(new Error("No audio track found in screen recording."));
+      return;
+    }
+    setScreenMediaStream(stream);
   };
 
-  const audioContext = useMemo(() => {
-    return new AudioContext();
-  }, []);
-  const systemAudioGainNode = useMemo(() => {
-    return audioContext.createGain();
-  }, []);
-  const microphoneGainNode = useMemo(() => {
-    return audioContext.createGain();
-  }, []);
+  const [destinationStream, setDestinationStream] =
+    useState<MediaStream | null>(null);
 
-  const audioDestNode = useMemo(() => {
-    const dest = audioContext.createMediaStreamDestination();
-    systemAudioGainNode.connect(dest);
-    microphoneGainNode.connect(dest);
-    return dest;
-  }, []);
-
-  useEffect(() => {
-    console.log("useEffect screenMediaStream", screenMediaStream);
-    console.log("useEffect record", record);
+  const startTabRecording = async () => {
     if (!screenMediaStream) return;
-    if (!record) return console.log("no record");
+    if (!record) return;
+    if (destinationStream !== null) return console.log("already recording");
 
-    const videoElem = document.getElementById(
-      "video-recording",
-    ) as HTMLVideoElement;
-    const videoMS = videoElem.captureStream() as MediaStream;
-    console.log(videoMS);
-    console.log(videoMS.getAudioTracks());
+    console.log("startTabRecording");
 
-    if (videoMS.getAudioTracks().length == 0) {
-      console.log("no audio track");
+    // connect mic audio (microphone)
+    const micStream = await getCurrentStream();
+    if (!micStream) {
+      console.log("no microphone audio");
       return;
     }
 
-    // connect system audio (tab audio)
-    const systemAudioSrc = audioContext.createMediaStreamSource(videoMS);
-    systemAudioSrc.connect(systemAudioGainNode);
+    // Create MediaStreamSource nodes for the microphone and tab
+    const audioContext = new AudioContext();
+    const micSource = audioContext.createMediaStreamSource(micStream);
+    const tabSource = audioContext.createMediaStreamSource(screenMediaStream);
 
-    // create a media stream having both system audio and microphone audio
-    // const ms = new MediaStream();
-    // videoMS.getVideoTracks().forEach((track) => ms.addTrack(track));
-    // audioDestNode.stream
-    //   .getAudioTracks()
-    //   .forEach((track) => ms.addTrack(track));
+    // Merge channels
+    // XXX If the length is not the same, we do not receive audio in WebRTC.
+    // So for now, merge the channels to have only one stereo source
+    const channelMerger = audioContext.createChannelMerger(1);
+    micSource.connect(channelMerger, 0, 0);
+    tabSource.connect(channelMerger, 0, 0);
 
-    const stream = audioDestNode.stream;
-    if (props.setStream) props.setStream(stream);
+    // Create a MediaStreamDestination node
+    const destination = audioContext.createMediaStreamDestination();
+    channelMerger.connect(destination);
+
+    // Use the destination's stream for the WebRTC connection
+    setDestinationStream(destination.stream);
+  };
+
+  useEffect(() => {
+    if (!record) return;
+    if (!destinationStream) return;
+    if (props.setStream) props.setStream(destinationStream);
     waveRegions?.clearRegions();
-    if (stream) {
-      record.startRecording(stream);
+    if (destinationStream) {
+      record.startRecording(destinationStream);
       setIsRecording(true);
     }
+  }, [record, destinationStream]);
+
+  useEffect(() => {
+    startTabRecording();
   }, [record, screenMediaStream]);
 
   const handlePlayClick = () => {
@@ -415,13 +400,19 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
-          <button onClick={handleRecordTabClick}>Record a tab</button>
-          <video
-            className="body-main-video"
-            id="video-recording"
-            muted
-            style={{ maxWidth: "200px" }}
-          ></video>
+          {!isRecording && (
+            <button
+              className={`${
+                isRecording
+                  ? "bg-red-400 hover:bg-red-500 focus-visible:bg-red-500"
+                  : "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500"
+              } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
+              onClick={handleRecordTabClick}
+            >
+              Record
+              <br />a tab
+            </button>
+          )}
           {props.audioDevices && props.audioDevices?.length > 0 && deviceId && (
             <>
               <button
