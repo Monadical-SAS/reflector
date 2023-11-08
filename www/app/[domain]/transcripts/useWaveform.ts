@@ -6,6 +6,7 @@ import {
 import { AudioWaveform } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";
+import { shouldShowError } from "../../lib/errorUtils";
 
 type AudioWaveFormResponse = {
   waveform: AudioWaveform | null;
@@ -22,7 +23,6 @@ const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
 
   useEffect(() => {
     if (!id || !api) return;
-
     setLoading(true);
     const requestParameters: V1TranscriptGetAudioWaveformRequest = {
       transcriptId: id,
@@ -35,8 +35,13 @@ const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
         console.debug("Transcript waveform loaded:", result);
       })
       .catch((err) => {
-        setError(err);
         setErrorState(err);
+        const shouldShowHuman = shouldShowError(err);
+        if (shouldShowHuman) {
+          setError(err, "There was an error loading the waveform");
+        } else {
+          setError(err);
+        }
       });
   }, [id, api]);
 
