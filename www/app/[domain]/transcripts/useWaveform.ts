@@ -36,7 +36,6 @@ const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
       })
       .catch((err) => {
         setErrorState(err);
-        console.log(err);
         const shouldShowHuman = shouldShowError(err);
         if (shouldShowHuman) {
           setError(err, "There was an error loading the waveform");
