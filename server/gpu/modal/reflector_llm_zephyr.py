@@ -26,8 +26,7 @@ def download_llm():
     from huggingface_hub import snapshot_download
 
     print("Downloading LLM model")
-    snapshot_download(LLM_MODEL,
-                      cache_dir=IMAGE_MODEL_DIR)
+    snapshot_download(LLM_MODEL, cache_dir=IMAGE_MODEL_DIR)
     print("LLM model downloaded")
 
 
