@@ -95,7 +95,8 @@ class Transcriber:
             device=self.device,
             compute_type=WHISPER_COMPUTE_TYPE,
             num_workers=WHISPER_NUM_WORKERS,
-            download_root=WHISPER_MODEL_DIR
+            download_root=WHISPER_MODEL_DIR,
+            local_files_only=True
         )
 
     @method()
