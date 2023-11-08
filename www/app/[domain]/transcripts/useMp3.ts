@@ -3,7 +3,7 @@ import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
 import getApi from "../../lib/getApi";
 import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
-import { shouldShowGet } from "../../lib/errorUtils";
+import { shouldShowError } from "../../lib/errorUtils";
 
 type Mp3Response = {
   url: string | null;
@@ -61,7 +61,7 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
       })
       .catch((err) => {
         setErrorState(err);
-        const shouldShowHuman = shouldShowGet(error);
+        const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman) {
           setError(err, "There was an error loading the audio");
         } else {

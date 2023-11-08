@@ -6,7 +6,7 @@ import {
 import { AudioWaveform } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";
-import { shouldShowGet } from "../../lib/errorUtils";
+import { shouldShowError } from "../../lib/errorUtils";
 
 type AudioWaveFormResponse = {
   waveform: AudioWaveform | null;
@@ -37,7 +37,7 @@ const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
       })
       .catch((err) => {
         setErrorState(err);
-        const shouldShowHuman = shouldShowGet(err);
+        const shouldShowHuman = shouldShowError(err);
         if (shouldShowHuman) {
           setError(err, "There was an error loading the waveform");
         } else {
