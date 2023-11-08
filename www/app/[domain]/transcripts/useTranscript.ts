@@ -37,7 +37,6 @@ const useTranscript = (
       })
       .catch((error) => {
         const shouldShowHuman = shouldShowError(error);
-        console.log({ ...error });
         if (shouldShowHuman) {
           setError(error, "There was an error loading the transcript");
         } else {
