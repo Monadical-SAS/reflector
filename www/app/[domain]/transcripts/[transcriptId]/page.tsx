@@ -61,7 +61,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 transcriptId={transcript.response.id}
               />
             )}
-            {waveform?.loading === false && (
+            {!waveform?.loading && (
               <Recorder
                 topics={topics?.topics || []}
                 useActiveTopic={useActiveTopic}

@@ -22,7 +22,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
-  const [status, setStatus] = useState<Status>({ value: "disconnected" });
+  const [status, setStatus] = useState<Status>({ value: "initial" });
   const { setError } = useError();
   const router = useRouter();
 
@@ -350,11 +350,14 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             if (message.data.value === "ended") {
               const newUrl = "/transcripts/" + transcriptId;
               router.push(newUrl);
-              console.debug(
-                "FINAL_LONG_SUMMARY event:",
-                message.data,
-                "newUrl",
-                newUrl,
+              console.debug("FINAL_LONG_SUMMARY event:", message.data);
+            }
+            if (message.data.value === "error") {
+              const newUrl = "/transcripts/" + transcriptId;
+              router.push(newUrl);
+              setError(
+                Error("Websocket error status"),
+                "There was an error processing this meeting.",
               );
             }
             setStatus(message.data);

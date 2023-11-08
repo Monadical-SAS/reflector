@@ -13,7 +13,6 @@ import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
-import { useError } from "../../(errors)/errorContext";
 import { waveSurferStyles } from "../../styles/recorder";
 import useMp3 from "./useMp3";
 
@@ -51,7 +50,6 @@ export default function Recorder(props: RecorderProps) {
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
   const [showDevices, setShowDevices] = useState(false);
-  const { setError } = useError();
 
   // Function used to setup keyboard shortcuts for the streamdeck
   const setupProjectorKeys = (): (() => void) => {
@@ -72,9 +70,6 @@ export default function Recorder(props: RecorderProps) {
         case "@":
           if (!record.isRecording()) return;
           handleRecClick();
-          break;
-        case "%":
-          setError(new Error("Error triggered by '%' shortcut"));
           break;
         case "^":
           throw new Error("Unhandled Exception thrown by '^' shortcut");
@@ -162,7 +157,7 @@ export default function Recorder(props: RecorderProps) {
     if (!wavesurfer) return;
     if (!props.mp3Blob) return;
     wavesurfer.loadBlob(props.mp3Blob);
-  }, [props.mp3Blob]);
+  }, [props.mp3Blob, wavesurfer]);
 
   useEffect(() => {
     topicsRef.current = props.topics;

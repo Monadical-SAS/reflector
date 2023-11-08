@@ -14,9 +14,7 @@ export default function getApi(protectedPath: boolean): DefaultApi | undefined {
   if (!api_url) throw new Error("no API URL");
 
   useEffect(() => {
-    // console.log('trying auth', protectedPath, requireLogin, accessTokenInfo)
     if (protectedPath && requireLogin && !accessTokenInfo) {
-      // console.log('waiting auth')
       return;
     }
 
