@@ -237,8 +237,12 @@ export default function Recorder(props: RecorderProps) {
     if (record.isRecording()) {
       if (props.onStop) props.onStop();
       record.stopRecording();
+      if (screenMediaStream) {
+        screenMediaStream.getTracks().forEach((t) => t.stop());
+      }
       setIsRecording(false);
       setHasRecorded(true);
+      setScreenMediaStream(null);
       setDestinationStream(null);
     } else {
       const stream = await getCurrentStream();
