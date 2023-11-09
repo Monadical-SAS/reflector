@@ -14,6 +14,7 @@ import { AudioWaveform } from "../../api";
 import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { waveSurferStyles } from "../../styles/recorder";
+import { useError } from "../../(errors)/errorContext";
 
 type RecorderProps = {
   setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -49,6 +50,7 @@ export default function Recorder(props: RecorderProps) {
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
   const [showDevices, setShowDevices] = useState(false);
+  const { setError } = useError();
 
   // Function used to setup keyboard shortcuts for the streamdeck
   const setupProjectorKeys = (): (() => void) => {
