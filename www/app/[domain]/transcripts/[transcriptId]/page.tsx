@@ -68,7 +68,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 waveform={waveform?.waveform}
                 isPastMeeting={true}
                 transcriptId={transcript?.response?.id}
-                mp3Blob={mp3.blob}
+                media={mp3?.media}
+                mediaDuration={transcript?.response?.duration}
               />
             )}
           </div>
