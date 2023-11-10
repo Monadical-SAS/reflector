@@ -41,7 +41,6 @@ if settings.SENTRY_DSN:
 else:
     logger.info("Sentry disabled")
 
-
 # build app
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -101,6 +100,23 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
 
 
 use_route_names_as_operation_ids(app)
+
+if settings.PROFILING:
+    from fastapi import Request
+    from fastapi.responses import HTMLResponse
+    from pyinstrument import Profiler
+
+    @app.middleware("http")
+    async def profile_request(request: Request, call_next):
+        profiling = request.query_params.get("profile", False)
+        if profiling:
+            profiler = Profiler(async_mode="enabled")
+            profiler.start()
+            await call_next(request)
+            profiler.stop()
+            return HTMLResponse(profiler.output_html())
+        else:
+            return await call_next(request)
 
 
 if __name__ == "__main__":

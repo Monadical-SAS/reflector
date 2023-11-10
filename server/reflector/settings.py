@@ -131,5 +131,8 @@ class Settings(BaseSettings):
     # Current hosting/domain
     BASE_URL: str = "http://localhost:1250"
 
+    # Profiling
+    PROFILING: bool = False
+
 
 settings = Settings()
