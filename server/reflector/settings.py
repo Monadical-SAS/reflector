@@ -124,6 +124,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_CACHE_DB: int = 2
 
     # Secret key
     SECRET_KEY: str = "changeme-f02f86fd8b3e4fd892c6043e5a298e21"
