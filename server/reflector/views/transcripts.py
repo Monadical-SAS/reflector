@@ -210,6 +210,7 @@ async def transcript_delete(
 
 
 @router.get("/transcripts/{transcript_id}/audio/mp3")
+@router.head("/transcripts/{transcript_id}/audio/mp3")
 async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,

@@ -1,7 +1,7 @@
 import os
 from typing import BinaryIO
 
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 
 
@@ -56,6 +56,9 @@ def range_requests_response(
             "content-range, content-encoding"
         ),
     }
+
+    if request.method == "HEAD":
+        return Response(headers=headers)
 
     if content_disposition:
         headers["Content-Disposition"] = content_disposition
