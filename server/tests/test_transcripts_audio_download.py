@@ -46,6 +46,34 @@ async def test_transcript_audio_download(fake_transcript, url_suffix, content_ty
     assert response.status_code == 200
     assert response.headers["content-type"] == content_type
 
+    # test get 404
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.get(f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "url_suffix,content_type",
+    [
+        ["/mp3", "audio/mpeg"],
+    ],
+)
+async def test_transcript_audio_download_head(
+    fake_transcript, url_suffix, content_type
+):
+    from reflector.app import app
+
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.head(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == content_type
+
+    # test head 404
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.head(f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}")
+    assert response.status_code == 404
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
