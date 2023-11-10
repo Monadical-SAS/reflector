@@ -9,10 +9,15 @@ metadata = sqlalchemy.MetaData()
 # import models
 import reflector.db.transcripts  # noqa
 
+connect_args = {}
+if settings.DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
+
 engine = sqlalchemy.create_engine(
-    settings.DATABASE_URL, connect_args={"check_same_thread": False}
-)
-metadata.create_all(engine)
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+)  # noqa
 
 
 @subscribers_startup.append

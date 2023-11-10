@@ -36,6 +36,7 @@ profanityfilter = "^2.0.6"
 celery = "^5.3.4"
 redis = "^5.0.1"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+psycopg2-binary = "^2.9.9"
 
 
 [tool.poetry.group.dev.dependencies]
