@@ -29,7 +29,8 @@ type RecorderProps = {
   waveform?: AudioWaveform | null;
   isPastMeeting: boolean;
   transcriptId?: string | null;
-  mp3Blob?: Blob | null;
+  media?: HTMLMediaElement | null;
+  mediaDuration?: number | null;
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -103,6 +104,11 @@ export default function Recorder(props: RecorderProps) {
   // Waveform setup
   useEffect(() => {
     if (waveformRef.current) {
+      // XXX duration is required to prevent recomputing peaks from audio
+      // However, the current waveform returns only the peaks, and no duration
+      // And the backend does not save duration properly.
+      // So at the moment, we deduct the duration from the topics.
+      // This is not ideal, but it works for now.
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
         peaks: props.waveform?.data,
@@ -110,6 +116,7 @@ export default function Recorder(props: RecorderProps) {
         autoCenter: true,
         barWidth: 2,
         height: "auto",
+        duration: props.mediaDuration || 1,
 
         ...waveSurferStyles.player,
       });
@@ -139,8 +146,8 @@ export default function Recorder(props: RecorderProps) {
 
       if (props.isPastMeeting) _wavesurfer.toggleInteraction(true);
 
-      if (props.mp3Blob) {
-        _wavesurfer.loadBlob(props.mp3Blob);
+      if (props.media) {
+        _wavesurfer.setMediaElement(props.media);
       }
 
       setWavesurfer(_wavesurfer);
@@ -156,9 +163,9 @@ export default function Recorder(props: RecorderProps) {
 
   useEffect(() => {
     if (!wavesurfer) return;
-    if (!props.mp3Blob) return;
-    wavesurfer.loadBlob(props.mp3Blob);
-  }, [props.mp3Blob, wavesurfer]);
+    if (!props.media) return;
+    wavesurfer.setMediaElement(props.media);
+  }, [props.media, wavesurfer]);
 
   useEffect(() => {
     topicsRef.current = props.topics;
@@ -281,8 +288,6 @@ export default function Recorder(props: RecorderProps) {
     if (!screenMediaStream) return;
     if (!record) return;
     if (destinationStream !== null) return console.log("already recording");
-
-    console.log("startTabRecording");
 
     // connect mic audio (microphone)
     const micStream = await getCurrentStream();
