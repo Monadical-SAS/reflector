@@ -230,6 +230,16 @@ class PipelineMainBase(PipelineRunner):
                 data=final_short_summary,
             )
 
+    async def on_duration(self, duration: float):
+        async with self.transaction():
+            transcript = await self.get_transcript()
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "duration": duration,
+                },
+            )
+
 
 class PipelineMainLive(PipelineMainBase):
     audio_filename: Path | None = None
@@ -243,7 +253,10 @@ class PipelineMainLive(PipelineMainBase):
         transcript = await self.get_transcript()
 
         processors = [
-            AudioFileWriterProcessor(path=transcript.audio_mp3_filename),
+            AudioFileWriterProcessor(
+                path=transcript.audio_mp3_filename,
+                on_duration=self.on_duration,
+            ),
             AudioChunkerProcessor(),
             AudioMergeProcessor(),
             AudioTranscriptAutoProcessor.as_threaded(),

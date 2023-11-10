@@ -191,6 +191,9 @@ async def test_transcript_rtc_and_websocket(
     assert events[-1]["event"] == "STATUS"
     assert events[-1]["data"]["value"] == "ended"
 
+    # check on the latest response that the audio duration is > 0
+    assert resp.json()["duration"] > 0
+
     # check that audio/mp3 is available
     resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
     assert resp.status_code == 200

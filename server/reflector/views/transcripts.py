@@ -51,7 +51,7 @@ class GetTranscript(BaseModel):
     name: str
     status: str
     locked: bool
-    duration: int
+    duration: float
     title: str | None
     short_summary: str | None
     long_summary: str | None
