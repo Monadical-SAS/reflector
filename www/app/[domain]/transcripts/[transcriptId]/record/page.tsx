@@ -11,9 +11,12 @@ import { Topic } from "../../webSocketTypes";
 import LiveTrancription from "../../liveTranscription";
 import DisconnectedIndicator from "../../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear } from "@fortawesome/free-solid-svg-icons";
+import { faGear, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
+import Player from "../../player";
+import useMp3 from "../../useMp3";
+import WaveformLoading from "../../waveformLoading";
 
 type TranscriptDetails = {
   params: {
@@ -42,8 +45,10 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   const { audioDevices, getAudioStream } = useAudioDevice();
 
-  const [hasRecorded, setHasRecorded] = useState(false);
+  const [recordedTime, setRecordedTime] = useState(0);
+  const [startTime, setStartTime] = useState(0);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
+  const mp3 = useMp3(true, "");
 
   const router = useRouter();
 
@@ -54,8 +59,6 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   useEffect(() => {
     const statusToRedirect = ["ended", "error"];
-    console.log(webSockets.status, "hey");
-    console.log(transcript.response, "ho");
 
     //TODO if has no topic and is error, get back to new
     if (
@@ -80,16 +83,31 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   return (
     <>
-      <Recorder
-        setStream={setStream}
-        onStop={() => {
-          setStream(null);
-          setHasRecorded(true);
-          webRTC?.send(JSON.stringify({ cmd: "STOP" }));
-        }}
-        getAudioStream={getAudioStream}
-        audioDevices={audioDevices}
-      />
+      {webSockets.waveform && mp3.media ? (
+        <Player
+          topics={webSockets.topics || []}
+          useActiveTopic={useActiveTopic}
+          waveform={webSockets.waveform}
+          media={mp3.media}
+          mediaDuration={recordedTime}
+        />
+      ) : recordedTime ? (
+        <WaveformLoading />
+      ) : (
+        <Recorder
+          setStream={setStream}
+          onStop={() => {
+            setStream(null);
+            setRecordedTime(Date.now() - startTime);
+            webRTC?.send(JSON.stringify({ cmd: "STOP" }));
+          }}
+          onRecord={() => {
+            setStartTime(Date.now());
+          }}
+          getAudioStream={getAudioStream}
+          audioDevices={audioDevices}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-mobile-inner lg:grid-rows-1 gap-2 lg:gap-4 h-full">
         <TopicList
@@ -101,7 +119,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         <section
           className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4`}
         >
-          {!hasRecorded ? (
+          {!recordedTime ? (
             <>
               {transcriptStarted && (
                 <h2 className="md:text-lg font-bold">Transcription</h2>
@@ -135,7 +153,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
                 couple of minutes. Please do not navigate away from the page
                 during this time.
               </p>
-              {/* TODO If login required remove last sentence */}
+              {/* NTH If login required remove last sentence */}
             </div>
           )}
         </section>
