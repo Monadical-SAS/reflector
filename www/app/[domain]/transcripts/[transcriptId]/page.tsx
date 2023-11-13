@@ -5,7 +5,6 @@ import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
 import { TopicList } from "../topicList";
-import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
 import React, { useState } from "react";
 import "../../../styles/button.css";
@@ -13,6 +12,7 @@ import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
+import Player from "../player";
 
 type TranscriptDetails = {
   params: {
@@ -62,14 +62,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               />
             )}
             {!waveform?.loading && (
-              <Recorder
+              <Player
                 topics={topics?.topics || []}
                 useActiveTopic={useActiveTopic}
                 waveform={waveform?.waveform}
-                isPastMeeting={true}
-                transcriptId={transcript?.response?.id}
-                media={mp3?.media}
-                mediaDuration={transcript?.response?.duration}
+                media={mp3.media}
+                mediaDuration={transcript.response.duration}
               />
             )}
           </div>
