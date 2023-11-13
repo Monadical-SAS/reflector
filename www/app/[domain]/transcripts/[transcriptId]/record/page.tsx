@@ -8,12 +8,12 @@ import { useWebSockets } from "../../useWebSockets";
 import useAudioDevice from "../../useAudioDevice";
 import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
-import getApi from "../../../../lib/getApi";
 import LiveTrancription from "../../liveTranscription";
 import DisconnectedIndicator from "../../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
+import { useRouter } from "next/navigation";
 
 type TranscriptDetails = {
   params: {
@@ -45,21 +45,31 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const [hasRecorded, setHasRecorded] = useState(false);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     if (!transcriptStarted && webSockets.transcriptText.length !== 0)
       setTranscriptStarted(true);
   }, [webSockets.transcriptText]);
 
   useEffect(() => {
-    if (transcript?.response?.longSummary) {
-      const newUrl = `/transcripts/${transcript.response.id}`;
+    const statusToRedirect = ["ended", "error"];
+    console.log(webSockets.status, "hey");
+    console.log(transcript.response, "ho");
+
+    //TODO if has no topic and is error, get back to new
+    if (
+      statusToRedirect.includes(transcript.response?.status) ||
+      statusToRedirect.includes(webSockets.status.value)
+    ) {
+      const newUrl = "/transcripts/" + details.params.transcriptId;
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
-      // router.push(newUrl, undefined, { shallow: true });
-      history.replaceState({}, "", newUrl);
+      router.push(newUrl, undefined);
+      // history.replaceState({}, "", newUrl);
     }
-  });
+  }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
     lockWakeState();
@@ -77,10 +87,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           setHasRecorded(true);
           webRTC?.send(JSON.stringify({ cmd: "STOP" }));
         }}
-        topics={webSockets.topics}
         getAudioStream={getAudioStream}
-        useActiveTopic={useActiveTopic}
-        isPastMeeting={false}
         audioDevices={audioDevices}
       />
 
@@ -128,6 +135,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
                 couple of minutes. Please do not navigate away from the page
                 during this time.
               </p>
+              {/* TODO If login required remove last sentence */}
             </div>
           )}
         </section>

@@ -4,9 +4,10 @@ import { useError } from "../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
 import { DomainContext } from "../domainContext";
 
-type UseWebSockets = {
+export type UseWebSockets = {
   transcriptText: string;
   translateText: string;
+  title: string;
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
@@ -15,6 +16,7 @@ type UseWebSockets = {
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [transcriptText, setTranscriptText] = useState<string>("");
   const [translateText, setTranslateText] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
   const [textQueue, setTextQueue] = useState<string[]>([]);
   const [translationQueue, setTranslationQueue] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -24,7 +26,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   });
   const [status, setStatus] = useState<Status>({ value: "initial" });
   const { setError } = useError();
-  const router = useRouter();
 
   const { websocket_url } = useContext(DomainContext);
 
@@ -294,7 +295,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     if (!transcriptId) return;
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
-    const ws = new WebSocket(url);
+    let ws = new WebSocket(url);
 
     ws.onopen = () => {
       console.debug("WebSocket connection opened");
@@ -343,24 +344,23 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
           case "FINAL_TITLE":
             console.debug("FINAL_TITLE event:", message.data);
+            if (message.data) {
+              setTitle(message.data.title);
+            }
             break;
 
           case "STATUS":
             console.log("STATUS event:", message.data);
-            if (message.data.value === "ended") {
-              const newUrl = "/transcripts/" + transcriptId;
-              router.push(newUrl);
-              console.debug("FINAL_LONG_SUMMARY event:", message.data);
-            }
             if (message.data.value === "error") {
-              const newUrl = "/transcripts/" + transcriptId;
-              router.push(newUrl);
               setError(
                 Error("Websocket error status"),
                 "There was an error processing this meeting.",
               );
             }
             setStatus(message.data);
+            if (message.data.value === "ended") {
+              ws.close();
+            }
             break;
 
           default:
@@ -388,8 +388,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
+            "Disconnected",
           );
       }
+      console.log(
+        "Socket is closed. Reconnect will be attempted in 1 second.",
+        event.reason,
+      );
+      setTimeout(function () {
+        ws = new WebSocket(url);
+      }, 1000);
     };
 
     return () => {
@@ -397,5 +405,5 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
   }, [transcriptId]);
 
-  return { transcriptText, translateText, topics, finalSummary, status };
+  return { transcriptText, translateText, topics, finalSummary, title, status };
 };
