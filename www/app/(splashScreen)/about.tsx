@@ -13,10 +13,10 @@ export default () => (
     <Title>FAQs</Title>
     <Subtitle>How does it work?</Subtitle>
     <Paragraph>
-      Reflector simplifies tasks, turning spoken words into
-      organizedinformation. Just press "record" to start and "stop" to finish.
-      You'll get notes divided by topic, a meeting summary, and the option to
-      download recordings.
+      Reflector simplifies tasks, turning spoken words into organized
+      information. Just press "record" to start and "stop" to finish. You'll get
+      notes divided by topic, a meeting summary, and the option to download
+      recordings.
     </Paragraph>
     <Subtitle>What makes Reflector different?</Subtitle>
     <Paragraph>

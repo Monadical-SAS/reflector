@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="overflow-x-hidden">
-      <body className={poppins.className + " h-screen relative"}>
+      <body className={poppins.className + " relative"}>
         <FiefWrapper>
           <ErrorProvider>
             <ErrorMessage />
@@ -78,8 +78,8 @@ export default function RootLayout({ children }) {
                 >
                   <Image
                     src="/reach.png"
-                    width={16}
-                    height={16}
+                    width={40}
+                    height={40}
                     className="h-10 w-auto"
                     alt="Reflector"
                   />
