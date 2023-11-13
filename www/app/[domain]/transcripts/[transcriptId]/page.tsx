@@ -13,6 +13,7 @@ import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
+import WaveformLoading from "../waveformLoading";
 
 type TranscriptDetails = {
   params: {
@@ -83,9 +84,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 mediaDuration={transcript.response.duration}
               />
             ) : mp3.error || waveform.error ? (
-              "error loading this recording"
+              <div>"error loading this recording"</div>
             ) : (
-              "Loading Recording"
+              <WaveformLoading />
             )}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
@@ -104,10 +105,17 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                     summary={transcript.response.longSummary}
                     transcriptId={transcript.response.id}
                   />
-                ) : transcript.response.status == "processing" ? (
-                  "Loading Transcript"
                 ) : (
-                  "error final summary"
+                  <div className="flex flex-col h-full justify-center content-center">
+                    {transcript.response.status == "processing" ? (
+                      <p>Loading Transcript</p>
+                    ) : (
+                      <p>
+                        There was an error generating the final summary, please
+                        come back later
+                      </p>
+                    )}
+                  </div>
                 )}
               </section>
 

@@ -14,11 +14,11 @@ import { waveSurferStyles } from "../../styles/recorder";
 import { useError } from "../../(errors)/errorContext";
 
 type RecorderProps = {
-  setStream?: React.Dispatch<React.SetStateAction<MediaStream | null>>;
-  onStop?: () => void;
-  getAudioStream?: (deviceId) => Promise<MediaStream | null>;
-  audioDevices?: Option[];
-  mediaDuration?: number | null;
+  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
+  onStop: () => void;
+  onRecord?: () => void;
+  getAudioStream: (deviceId) => Promise<MediaStream | null>;
+  audioDevices: Option[];
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -94,7 +94,6 @@ export default function Recorder(props: RecorderProps) {
         autoCenter: true,
         barWidth: 2,
         height: "auto",
-        duration: props.mediaDuration || 1,
 
         ...waveSurferStyles.player,
       });
@@ -161,10 +160,10 @@ export default function Recorder(props: RecorderProps) {
       setScreenMediaStream(null);
       setDestinationStream(null);
     } else {
+      if (props.onRecord) props.onRecord();
       const stream = await getCurrentStream();
 
       if (props.setStream) props.setStream(stream);
-      waveRegions?.clearRegions();
       if (stream) {
         await record.startRecording(stream);
         setIsRecording(true);

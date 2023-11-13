@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
-import { useRouter } from "next/navigation";
 import { DomainContext } from "../domainContext";
+import { AudioWaveform } from "../../api";
 
 export type UseWebSockets = {
   transcriptText: string;
@@ -11,6 +11,7 @@ export type UseWebSockets = {
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
+  waveform: AudioWaveform | null;
 };
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
@@ -21,6 +22,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [translationQueue, setTranslationQueue] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [waveform, setWaveForm] = useState<AudioWaveform | null>(null);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
@@ -405,5 +407,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
   }, [transcriptId]);
 
-  return { transcriptText, translateText, topics, finalSummary, title, status };
+  return {
+    transcriptText,
+    translateText,
+    topics,
+    finalSummary,
+    title,
+    status,
+    waveform,
+  };
 };
