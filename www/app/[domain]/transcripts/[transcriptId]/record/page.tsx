@@ -69,9 +69,9 @@ const TranscriptRecord = (details: TranscriptDetails) => {
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
-      router.push(newUrl, undefined);
+      router.replace(newUrl);
       // history.replaceState({}, "", newUrl);
-    }
+    } // history.replaceState({}, "", newUrl);
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
