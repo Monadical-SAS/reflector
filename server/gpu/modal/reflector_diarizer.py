@@ -12,7 +12,7 @@ from pydantic import BaseModel
 PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.0"
 MODEL_DIR = "/root/diarization_models"
 
-stub = Stub(name="reflector-diarizer")
+stub = Stub(name="reflector-diarizer-test")
 
 
 def migrate_cache_llm():
@@ -135,8 +135,6 @@ class Diarizer:
 )
 @asgi_app()
 def web():
-    from urllib.parse import urlparse
-
     import requests
     from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
@@ -146,12 +144,6 @@ def web():
     app = FastAPI()
 
     oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-    # Supported file type suffixes
-    url_suffix_mapping = {
-        "mp3": "mp3",
-        "waveform": "wav"
-    }
 
     def apikey_auth(apikey: str = Depends(oauth2_scheme)):
         if apikey != os.environ["REFLECTOR_GPU_APIKEY"]:
@@ -178,9 +170,8 @@ def web():
             audio_file_url: str,
             timestamp: float = 0.0
     ) -> HTTPException | DiarizationResponse:
-        parsed_url_components = urlparse(audio_file_url).path.split('/')
-        audio_type = parsed_url_components[-1]
-        audio_suffix = url_suffix_mapping[audio_type]
+        # Currently the uploaded files are in mp3 format
+        audio_suffix = "mp3"
 
         print("Downloading audio file")
         response = requests.get(audio_file_url, allow_redirects=True)
