@@ -21,11 +21,13 @@ from pydantic import BaseModel
 from reflector.app import app
 from reflector.db.transcripts import (
     Transcript,
+    TranscriptDuration,
     TranscriptFinalLongSummary,
     TranscriptFinalShortSummary,
     TranscriptFinalTitle,
     TranscriptText,
     TranscriptTopic,
+    TranscriptWaveform,
     transcripts_controller,
 )
 from reflector.logger import logger
@@ -45,6 +47,7 @@ from reflector.processors import (
     TranscriptTopicDetectorProcessor,
     TranscriptTranslatorProcessor,
 )
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import AudioDiarizationInput
 from reflector.processors.types import (
     TitleSummaryWithId as TitleSummaryWithIdProcessorType,
@@ -230,15 +233,29 @@ class PipelineMainBase(PipelineRunner):
                 data=final_short_summary,
             )
 
-    async def on_duration(self, duration: float):
+    async def on_duration(self, data):
         async with self.transaction():
+            duration = TranscriptDuration(duration=data)
+
             transcript = await self.get_transcript()
             await transcripts_controller.update(
                 transcript,
                 {
-                    "duration": duration,
+                    "duration": duration.duration,
                 },
             )
+            return await transcripts_controller.append_event(
+                transcript=transcript, event="DURATION", data=duration
+            )
+
+    async def on_waveform(self, data):
+        waveform = TranscriptWaveform(waveform=data)
+
+        transcript = await self.get_transcript()
+
+        return await transcripts_controller.append_event(
+            transcript=transcript, event="WAVEFORM", data=waveform
+        )
 
 
 class PipelineMainLive(PipelineMainBase):
@@ -266,6 +283,11 @@ class PipelineMainLive(PipelineMainBase):
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
+                    AudioWaveformProcessor(
+                        audio_path=transcript.audio_mp3_filename,
+                        waveform_path=transcript.audio_waveform_filename,
+                        on_waveform=self.on_waveform,
+                    ),
                 ]
             ),
         ]
