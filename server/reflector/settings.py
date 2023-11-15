@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     LLM_MODAL_API_KEY: str | None = None
 
     # Diarization
+    DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
 
