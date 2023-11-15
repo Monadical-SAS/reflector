@@ -1,6 +1,6 @@
 import aioboto3
-from reflector.storage.base import Storage, FileResult
 from reflector.logger import logger
+from reflector.storage.base import FileResult, Storage
 
 
 class AwsStorage(Storage):
@@ -22,9 +22,14 @@ class AwsStorage(Storage):
 
         super().__init__()
         self.aws_bucket_name = aws_bucket_name
-        self.aws_folder = ""
+        folder = ""
         if "/" in aws_bucket_name:
-            self.aws_bucket_name, self.aws_folder = aws_bucket_name.split("/", 1)
+            self.aws_bucket_name, folder = aws_bucket_name.split("/", 1)
+        if folder:
+            if not self.folder:
+                self.folder = folder
+            else:
+                self.folder = f"{self.folder}/{folder}"
         self.session = aioboto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
@@ -34,7 +39,7 @@ class AwsStorage(Storage):
 
     async def _put_file(self, filename: str, data: bytes) -> FileResult:
         bucket = self.aws_bucket_name
-        folder = self.aws_folder
+        folder = self.folder
         logger.info(f"Uploading {filename} to S3 {bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
         async with self.session.client("s3") as client:
@@ -44,6 +49,11 @@ class AwsStorage(Storage):
                 Body=data,
             )
 
+    async def get_file_url(self, filename: str) -> FileResult:
+        bucket = self.aws_bucket_name
+        folder = self.folder
+        s3filename = f"{folder}/{filename}" if folder else filename
+        async with self.session.client("s3") as client:
             presigned_url = await client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket, "Key": s3filename},
@@ -57,7 +67,7 @@ class AwsStorage(Storage):
 
     async def _delete_file(self, filename: str):
         bucket = self.aws_bucket_name
-        folder = self.aws_folder
+        folder = self.folder
         logger.info(f"Deleting {filename} from S3 {bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
         async with self.session.client("s3") as client:

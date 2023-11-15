@@ -106,6 +106,7 @@ class Transcript(BaseModel):
     events: list[TranscriptEvent] = []
     source_language: str = "en"
     target_language: str = "en"
+    audio_location: str = "local"
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -139,6 +140,10 @@ class Transcript(BaseModel):
     @property
     def audio_waveform_filename(self):
         return self.data_path / "audio.json"
+
+    @property
+    def storage_audio_path(self):
+        return f"{self.id}/audio.mp3"
 
     @property
     def audio_waveform(self):
@@ -282,6 +287,20 @@ class TranscriptController:
         """
         transcript.upsert_topic(topic)
         await self.update(transcript, {"topics": transcript.topics_dump()})
+
+    async def move_mp3_to_storage(self, transcript: Transcript):
+        """
+        Move mp3 file to storage
+        """
+        from reflector.storage import Storage
+
+        storage = Storage.get_instance(settings.TRANSCRIPT_STORAGE)
+        await storage.put_file(
+            transcript.storage_audio_path,
+            self.audio_mp3_filename.read_bytes(),
+        )
+
+        await self.update(transcript, {"audio_location": "storage"})
 
 
 transcripts_controller = TranscriptController()
