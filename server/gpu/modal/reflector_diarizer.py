@@ -12,7 +12,7 @@ from pydantic import BaseModel
 PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.0"
 MODEL_DIR = "/root/diarization_models"
 
-stub = Stub(name="reflector-diarizer-test")
+stub = Stub(name="reflector-diarizer")
 
 
 def migrate_cache_llm():
