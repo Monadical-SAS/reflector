@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.utils.audio_waveform import get_audio_waveform
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -79,6 +78,14 @@ class TranscriptFinalTitle(BaseModel):
     title: str
 
 
+class TranscriptDuration(BaseModel):
+    duration: float
+
+
+class TranscriptWaveform(BaseModel):
+    waveform: list[float]
+
+
 class TranscriptEvent(BaseModel):
     event: str
     data: dict
@@ -117,22 +124,6 @@ class Transcript(BaseModel):
 
     def topics_dump(self, mode="json"):
         return [topic.model_dump(mode=mode) for topic in self.topics]
-
-    def convert_audio_to_waveform(self, segments_count=256):
-        fn = self.audio_waveform_filename
-        if fn.exists():
-            return
-        waveform = get_audio_waveform(
-            path=self.audio_mp3_filename, segments_count=segments_count
-        )
-        try:
-            with open(fn, "w") as fd:
-                json.dump(waveform, fd)
-        except Exception:
-            # remove file if anything happen during the write
-            fn.unlink(missing_ok=True)
-            raise
-        return waveform
 
     def unlink(self):
         self.data_path.unlink(missing_ok=True)
