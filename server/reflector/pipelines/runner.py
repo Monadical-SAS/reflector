@@ -119,8 +119,7 @@ class PipelineRunner(BaseModel):
             self._logger.exception("Runner error")
             await self._set_status("error")
             self._ev_done.set()
-            if self.on_ended:
-                await self.on_ended()
+            raise
 
     async def cmd_push(self, data):
         if self._is_first_push:

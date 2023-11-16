@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
+from reflector.storage import Storage
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -27,18 +28,31 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column(
+        "audio_location",
+        sqlalchemy.String,
+        nullable=False,
+        server_default="local",
+    ),
     # with user attached, optional
     sqlalchemy.Column("user_id", sqlalchemy.String),
 )
 
 
-def generate_uuid4():
+def generate_uuid4() -> str:
     return str(uuid4())
 
 
-def generate_transcript_name():
+def generate_transcript_name() -> str:
     now = datetime.utcnow()
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
+
+
+def get_storage() -> Storage:
+    return Storage.get_instance(
+        name=settings.TRANSCRIPT_STORAGE_BACKEND,
+        settings_prefix="TRANSCRIPT_STORAGE_",
+    )
 
 
 class AudioWaveform(BaseModel):
@@ -134,6 +148,10 @@ class Transcript(BaseModel):
         return Path(settings.DATA_DIR) / self.id
 
     @property
+    def audio_wav_filename(self):
+        return self.data_path / "audio.wav"
+
+    @property
     def audio_mp3_filename(self):
         return self.data_path / "audio.mp3"
 
@@ -156,6 +174,40 @@ class Transcript(BaseModel):
             return None
 
         return AudioWaveform(data=data)
+
+    async def get_audio_url(self) -> str:
+        if self.audio_location == "local":
+            return self._generate_local_audio_link()
+        elif self.audio_location == "storage":
+            return await self._generate_storage_audio_link()
+        raise Exception(f"Unknown audio location {self.audio_location}")
+
+    async def _generate_storage_audio_link(self) -> str:
+        return await get_storage().get_file_url(self.storage_audio_path)
+
+    def _generate_local_audio_link(self) -> str:
+        # we need to create an url to be used for diarization
+        # we can't use the audio_mp3_filename because it's not accessible
+        # from the diarization processor
+        from datetime import timedelta
+
+        from reflector.app import app
+        from reflector.views.transcripts import create_access_token
+
+        path = app.url_path_for(
+            "transcript_get_audio_mp3",
+            transcript_id=self.id,
+        )
+        url = f"{settings.BASE_URL}{path}"
+        if self.user_id:
+            # we pass token only if the user_id is set
+            # otherwise, the audio is public
+            token = create_access_token(
+                {"sub": self.user_id},
+                expires_delta=timedelta(minutes=15),
+            )
+            url += f"?token={token}"
+        return url
 
 
 class TranscriptController:
@@ -292,15 +344,18 @@ class TranscriptController:
         """
         Move mp3 file to storage
         """
-        from reflector.storage import Storage
 
-        storage = Storage.get_instance(settings.TRANSCRIPT_STORAGE)
-        await storage.put_file(
+        # store the audio on external storage
+        await get_storage().put_file(
             transcript.storage_audio_path,
-            self.audio_mp3_filename.read_bytes(),
+            transcript.audio_mp3_filename.read_bytes(),
         )
 
+        # indicate on the transcript that the audio is now on storage
         await self.update(transcript, {"audio_location": "storage"})
+
+        # unlink the local file
+        transcript.audio_mp3_filename.unlink(missing_ok=True)
 
 
 transcripts_controller = TranscriptController()
