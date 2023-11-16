@@ -18,14 +18,14 @@ class Storage:
         cls._registry[name] = kclass
 
     @classmethod
-    def get_instance(cls, name: str, settings_prefix: str = "", folder: str = ""):
+    def get_instance(cls, name: str, settings_prefix: str = ""):
         if name not in cls._registry:
             module_name = f"reflector.storage.storage_{name}"
             importlib.import_module(module_name)
 
         # gather specific configuration for the processor
         # search `TRANSCRIPT_BACKEND_XXX_YYY`, push to constructor as `backend_xxx_yyy`
-        config = {"folder": folder}
+        config = {}
         name_upper = name.upper()
         config_prefix = f"{settings_prefix}{name_upper}_"
         for key, value in settings:
@@ -34,10 +34,6 @@ class Storage:
                 config[config_name] = value
 
         return cls._registry[name](**config)
-
-    def __init__(self):
-        self.folder = ""
-        super().__init__()
 
     async def put_file(self, filename: str, data: bytes) -> FileResult:
         return await self._put_file(filename, data)
@@ -49,4 +45,10 @@ class Storage:
         return await self._delete_file(filename)
 
     async def _delete_file(self, filename: str):
+        raise NotImplementedError
+
+    async def get_file_url(self, filename: str) -> str:
+        return await self._get_file_url(filename)
+
+    async def _get_file_url(self, filename: str) -> str:
         raise NotImplementedError
