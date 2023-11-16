@@ -263,11 +263,7 @@ class PipelineMainLive(PipelineMainBase):
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
-                ]
-            ),
+            TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
         ]
         pipeline = Pipeline(*processors)
         pipeline.options = self
@@ -298,8 +294,13 @@ class PipelineMainDiarization(PipelineMainBase):
         # create a context for the whole rtc transaction
         # add a customised logger to the context
         self.prepare()
-        processors = [
-            AudioDiarizationAutoProcessor(callback=self.on_topic),
+        processors = []
+        if settings.DIARIZATION_ENABLED:
+            processors += [
+                AudioDiarizationAutoProcessor(callback=self.on_topic),
+            ]
+
+        processors += [
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalLongSummaryProcessor.as_threaded(
