@@ -10,16 +10,12 @@ type Transcript = {
   error: Error | null;
 };
 
-const useTranscript = (
-  protectedPath: boolean,
-  id: string | null,
-): Transcript => {
+const useTranscript = (id: string | null): Transcript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(protectedPath);
-
+  const api = getApi(false);
   useEffect(() => {
     if (!id || !api) return;
 
@@ -34,11 +30,19 @@ const useTranscript = (
         setLoading(false);
         console.debug("Transcript Loaded:", result);
       })
-      .catch((err) => {
-        setError(err);
-        setErrorState(err);
+      .catch((error) => {
+        if (error?.name == "ResponseError" && error["response"].status == 403) {
+          return;
+        }
+        const shouldShowHuman = shouldShowError(error);
+        if (shouldShowHuman) {
+          setError(error, "There was an error loading the transcript");
+        } else {
+          setError(error);
+        }
+        setErrorState(error);
       });
-  }, [id, !api]);
+  }, [id, api]);
 
   return { response, loading, error };
 };

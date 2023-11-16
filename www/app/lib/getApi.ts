@@ -5,7 +5,9 @@ import { useFiefAccessTokenInfo } from "@fief/fief/nextjs/react";
 import { useContext, useEffect, useState } from "react";
 import { DomainContext, featureEnabled } from "../[domain]/domainContext";
 
-export default function getApi(protectedPath: boolean): DefaultApi | undefined {
+export default function getApi(
+  protectedPath: boolean | "maybe",
+): DefaultApi | undefined {
   const accessTokenInfo = useFiefAccessTokenInfo();
   const api_url = useContext(DomainContext).api_url;
   const requireLogin = featureEnabled("requireLogin");

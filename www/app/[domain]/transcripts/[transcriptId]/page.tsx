@@ -25,7 +25,7 @@ const protectedPath = true;
 export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptId = details.params.transcriptId;
 
-  const transcript = useTranscript(protectedPath, transcriptId);
+  const transcript = useTranscript(transcriptId);
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);

@@ -36,7 +36,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     }
   }, []);
 
-  const transcript = useTranscript(true, details.params.transcriptId);
+  const transcript = useTranscript(details.params.transcriptId);
   const webRTC = useWebRTC(stream, details.params.transcriptId, true);
   const webSockets = useWebSockets(details.params.transcriptId);
 
