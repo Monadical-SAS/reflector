@@ -133,4 +133,10 @@ def celery_enable_logging():
 
 @pytest.fixture(scope="session")
 def celery_config():
-    return {"broker_url": "memory://", "result_backend": "rpc"}
+    import tempfile
+
+    with tempfile.NamedTemporaryFile() as fd:
+        yield {
+            "broker_url": "memory://",
+            "result_backend": "db+sqlite://" + fd.name,
+        }
