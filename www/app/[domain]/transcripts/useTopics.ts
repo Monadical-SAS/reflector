@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptGetTopicsRequest,
-} from "../../api/apis/DefaultApi";
+import { V1TranscriptGetTopicsRequest } from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
 import getApi from "../../lib/getApi";

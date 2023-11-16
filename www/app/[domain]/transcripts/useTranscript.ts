@@ -34,12 +34,7 @@ const useTranscript = (id: string | null): Transcript => {
         if (error?.name == "ResponseError" && error["response"].status == 403) {
           return;
         }
-        const shouldShowHuman = shouldShowError(error);
-        if (shouldShowHuman) {
-          setError(error, "There was an error loading the transcript");
-        } else {
-          setError(error);
-        }
+        setError(error);
         setErrorState(error);
       });
   }, [id, api]);
