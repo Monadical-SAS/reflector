@@ -183,8 +183,14 @@ async def test_transcript_rtc_and_websocket(
     assert ev["data"]["title"] == "LLM TITLE"
 
     assert "WAVEFORM" in eventnames
-    ev = events[eventnames.index("FINAL_TITLE")]
-    assert ev["data"]["title"] == "LLM TITLE"
+    ev = events[eventnames.index("WAVEFORM")]
+    assert isinstance(ev["data"]["waveform"], list)
+    assert len(ev["data"]["waveform"]) >= 250
+    waveform_resp = await ac.get(f"/transcripts/{tid}/audio/waveform")
+    assert waveform_resp.status_code == 200
+    assert waveform_resp.headers["content-type"] == "application/json"
+    assert isinstance(waveform_resp.json()["data"], list)
+    assert len(waveform_resp.json()["data"]) >= 250
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
@@ -197,11 +203,12 @@ async def test_transcript_rtc_and_websocket(
 
     # check on the latest response that the audio duration is > 0
     assert resp.json()["duration"] > 0
+    assert "DURATION" in eventnames
 
     # check that audio/mp3 is available
-    resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
-    assert resp.status_code == 200
-    assert resp.headers["Content-Type"] == "audio/mpeg"
+    audio_resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
+    assert audio_resp.status_code == 200
+    assert audio_resp.headers["Content-Type"] == "audio/mpeg"
 
 
 @pytest.mark.usefixtures("celery_session_app")
