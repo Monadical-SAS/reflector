@@ -22,7 +22,7 @@ class AudioWaveformProcessor(Processor):
         self.audio_path = audio_path
         self.waveform_path = waveform_path
 
-    async def _push(self, _data):
+    async def _flush(self):
         self.waveform_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger.info("Waveform Processing Started")
         waveform = get_audio_waveform(path=self.audio_path, segments_count=255)
@@ -31,3 +31,6 @@ class AudioWaveformProcessor(Processor):
             json.dump(waveform, fd)
         self.logger.info("Waveform Processing Finished")
         await self.emit(waveform, name="waveform")
+
+    async def _push(_self, _data):
+        return

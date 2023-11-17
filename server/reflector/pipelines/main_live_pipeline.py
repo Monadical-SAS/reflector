@@ -233,6 +233,7 @@ class PipelineMainBase(PipelineRunner):
                 data=final_short_summary,
             )
 
+    @broadcast_to_sockets
     async def on_duration(self, data):
         async with self.transaction():
             duration = TranscriptDuration(duration=data)
@@ -248,14 +249,16 @@ class PipelineMainBase(PipelineRunner):
                 transcript=transcript, event="DURATION", data=duration
             )
 
+    @broadcast_to_sockets
     async def on_waveform(self, data):
-        waveform = TranscriptWaveform(waveform=data)
+        async with self.transaction():
+            waveform = TranscriptWaveform(waveform=data)
 
-        transcript = await self.get_transcript()
+            transcript = await self.get_transcript()
 
-        return await transcripts_controller.append_event(
-            transcript=transcript, event="WAVEFORM", data=waveform
-        )
+            return await transcripts_controller.append_event(
+                transcript=transcript, event="WAVEFORM", data=waveform
+            )
 
 
 class PipelineMainLive(PipelineMainBase):
@@ -283,7 +286,7 @@ class PipelineMainLive(PipelineMainBase):
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
-                    AudioWaveformProcessor(
+                    AudioWaveformProcessor.as_threaded(
                         audio_path=transcript.audio_mp3_filename,
                         waveform_path=transcript.audio_waveform_filename,
                         on_waveform=self.on_waveform,
