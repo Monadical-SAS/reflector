@@ -11,7 +11,8 @@ export type UseWebSockets = {
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
-  waveform: AudioWaveform | null;
+  waveform: AudioWaveform["data"] | null;
+  duration: number | null;
 };
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
@@ -23,6 +24,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [waveform, setWaveForm] = useState<AudioWaveform | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
@@ -351,6 +353,22 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             }
             break;
 
+          case "WAVEFORM":
+            console.debug(
+              "WAVEFORM event length:",
+              message.data.waveform.length,
+            );
+            if (message.data) {
+              setWaveForm(message.data.waveform);
+            }
+            break;
+          case "DURATION":
+            console.debug("DURATION event:", message.data);
+            if (message.data) {
+              setDuration(message.data.duration);
+            }
+            break;
+
           case "STATUS":
             console.log("STATUS event:", message.data);
             if (message.data.value === "error") {
@@ -415,5 +433,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     title,
     status,
     waveform,
+    duration,
   };
 };
