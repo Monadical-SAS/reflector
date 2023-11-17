@@ -2,3 +2,5 @@
 server/.env
 .env
 server/exportdanswer
+.vercel
+.env*.local
