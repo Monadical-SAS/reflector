@@ -11,11 +11,11 @@ import { Topic } from "../../webSocketTypes";
 import LiveTrancription from "../../liveTranscription";
 import DisconnectedIndicator from "../../disconnectedIndicator";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import Player from "../../player";
-import useMp3 from "../../useMp3";
+import useMp3, { Mp3Response } from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 
 type TranscriptDetails = {
@@ -48,7 +48,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const [recordedTime, setRecordedTime] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
-  const mp3 = useMp3(true, "");
+  let mp3 = useMp3(details.params.transcriptId, true);
 
   const router = useRouter();
 
@@ -75,6 +75,12 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
+    if (webSockets.duration) {
+      mp3.getNow();
+    }
+  }, [webSockets.duration]);
+
+  useEffect(() => {
     lockWakeState();
     return () => {
       releaseWakeState();
@@ -83,13 +89,13 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   return (
     <>
-      {webSockets.waveform && mp3.media ? (
+      {webSockets.waveform && webSockets.duration && mp3?.media ? (
         <Player
           topics={webSockets.topics || []}
           useActiveTopic={useActiveTopic}
           waveform={webSockets.waveform}
           media={mp3.media}
-          mediaDuration={recordedTime}
+          mediaDuration={webSockets.duration}
         />
       ) : recordedTime ? (
         <WaveformLoading />

@@ -30,7 +30,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
-  const mp3 = useMp3(protectedPath, transcriptId);
+  const mp3 = useMp3(transcriptId);
 
   if (transcript?.error || topics?.error) {
     return (
@@ -59,7 +59,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       .join("\n\n")
       .replace(/ +/g, " ")
       .trim() || "";
-  console.log("calf full transcript");
 
   return (
     <>
@@ -79,11 +78,11 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               <Player
                 topics={topics?.topics || []}
                 useActiveTopic={useActiveTopic}
-                waveform={waveform?.waveform}
+                waveform={waveform.waveform.data}
                 media={mp3.media}
                 mediaDuration={transcript.response.duration}
               />
-            ) : mp3.error || waveform.error ? (
+            ) : waveform.error ? (
               <div>"error loading this recording"</div>
             ) : (
               <WaveformLoading />

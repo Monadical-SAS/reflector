@@ -14,7 +14,7 @@ type PlayerProps = {
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
-  waveform: AudioWaveform;
+  waveform: AudioWaveform["data"];
   media: HTMLMediaElement;
   mediaDuration: number;
 };
@@ -29,7 +29,6 @@ export default function Player(props: PlayerProps) {
   );
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
-
   // Waveform setup
   useEffect(() => {
     if (waveformRef.current) {
@@ -40,7 +39,7 @@ export default function Player(props: PlayerProps) {
       // This is not ideal, but it works for now.
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        peaks: props.waveform.data,
+        peaks: props.waveform,
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
