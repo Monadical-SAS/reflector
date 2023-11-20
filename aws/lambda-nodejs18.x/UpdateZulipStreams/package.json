@@ -1,0 +1,16 @@
+{
+  "name": "updatezulipstreams",
+  "version": "1.0.0",
+  "description": "Updates the JSON with the zulip streams and topics on S3",
+  "main": "index.js",
+  "author": "Andreas Bonini",
+  "license": "All rights reserved",
+  "dependencies": {
+    "aws-sdk": "^2.1498.0",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.6",
+    "mocha": "^10.1.0"
+  }
+}
