@@ -260,8 +260,6 @@ async def transcript_get_audio_waveform(
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
-    # await run_in_threadpool(transcript.convert_audio_to_waveform)
-
     return transcript.audio_waveform
 
 

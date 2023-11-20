@@ -402,22 +402,19 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       console.debug("WebSocket connection closed");
       switch (event.code) {
         case 1000: // Normal Closure:
-        case 1001: // Going Away:
-        case 1005:
-          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
             "Disconnected",
           );
+          console.log(
+            "Socket is closed. Reconnect will be attempted in 1 second.",
+            event.reason,
+          );
+          setTimeout(function () {
+            ws = new WebSocket(url);
+          }, 1000);
       }
-      console.log(
-        "Socket is closed. Reconnect will be attempted in 1 second.",
-        event.reason,
-      );
-      setTimeout(function () {
-        ws = new WebSocket(url);
-      }, 1000);
     };
 
     return () => {
