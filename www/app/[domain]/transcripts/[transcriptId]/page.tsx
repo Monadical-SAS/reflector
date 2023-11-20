@@ -13,6 +13,7 @@ import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
+import ShareModal from "./shareModal";
 
 type TranscriptDetails = {
   params: {
@@ -30,6 +31,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(protectedPath, transcriptId);
+  const [showModal, setShowModal] = useState(false);
 
   if (transcript?.error /** || topics?.error || waveform?.error **/) {
     return (
@@ -53,6 +55,13 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
+          <ShareModal
+            show={showModal}
+            setShow={(v) => setShowModal(v)}
+            title={transcript?.response?.title}
+            summary={transcript?.response?.longSummary}
+            url={window.location.href}
+          />
           <div className="flex flex-col">
             {transcript?.response?.title && (
               <TranscriptTitle
@@ -81,6 +90,13 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             />
             <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
               <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
+                <button
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => setShowModal(true)}
+                >
+                  Open Modal
+                </button>
+
                 {transcript?.response?.longSummary && (
                   <FinalSummary
                     protectedPath={protectedPath}
