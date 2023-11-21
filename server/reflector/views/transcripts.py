@@ -23,7 +23,6 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.settings import settings
 from reflector.ws_manager import get_ws_manager
-from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import RtcOffer, rtc_offer_base
@@ -53,7 +52,7 @@ class GetTranscript(BaseModel):
     name: str
     status: str
     locked: bool
-    duration: int
+    duration: float
     title: str | None
     short_summary: str | None
     long_summary: str | None
@@ -222,6 +221,7 @@ async def transcript_delete(
 
 
 @router.get("/transcripts/{transcript_id}/audio/mp3")
+@router.head("/transcripts/{transcript_id}/audio/mp3")
 async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,
@@ -271,8 +271,6 @@ async def transcript_get_audio_waveform(
 
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=500, detail="Audio not found")
-
-    await run_in_threadpool(transcript.convert_audio_to_waveform)
 
     return transcript.audio_waveform
 

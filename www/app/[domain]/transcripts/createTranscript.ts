@@ -45,7 +45,10 @@ const useCreateTranscript = (): CreateTranscript => {
         console.debug("New transcript created:", result);
       })
       .catch((err) => {
-        setError(err);
+        setError(
+          err,
+          "There was an issue creating a transcript, please try again.",
+        );
         setErrorState(err);
         setLoading(false);
       });
