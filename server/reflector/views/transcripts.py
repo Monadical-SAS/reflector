@@ -233,6 +233,12 @@ async def transcript_get_audio_mp3(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
+    if transcript.audio_location == "storage":
+        url = transcript.get_audio_url()
+        from fastapi.responses import RedirectResponse
+
+        return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
