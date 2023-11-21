@@ -1,12 +1,14 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
+import httpx
 import reflector.auth as auth
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     Request,
+    Response,
     WebSocket,
     WebSocketDisconnect,
     status,
@@ -234,10 +236,22 @@ async def transcript_get_audio_mp3(
         raise HTTPException(status_code=404, detail="Transcript not found")
 
     if transcript.audio_location == "storage":
-        url = transcript.get_audio_url()
-        from fastapi.responses import RedirectResponse
+        # proxy S3 file, to prevent issue with CORS
+        url = await transcript.get_audio_url()
+        headers = {}
 
-        return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+        copy_headers = ["range", "accept-encoding"]
+        for header in copy_headers:
+            if header in request.headers:
+                headers[header] = request.headers[header]
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.request(request.method, url, headers=headers)
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                headers=resp.headers,
+            )
 
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
@@ -263,7 +277,7 @@ async def transcript_get_audio_waveform(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
-    if not transcript.audio_mp3_filename.exists():
+    if not transcript.audio_waveform_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
     return transcript.audio_waveform

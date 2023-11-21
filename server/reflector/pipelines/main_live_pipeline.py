@@ -332,12 +332,6 @@ class PipelineMainLive(PipelineMainBase):
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
-            # XXX move as a task
-            AudioWaveformProcessor.as_threaded(
-                audio_path=transcript.audio_mp3_filename,
-                waveform_path=transcript.audio_waveform_filename,
-                on_waveform=self.on_waveform,
-            ),
         ]
         pipeline = Pipeline(*processors)
         pipeline.options = self
@@ -406,12 +400,14 @@ class PipelineMainFromTopics(PipelineMainBase):
 
     async def create(self) -> Pipeline:
         self.prepare()
+
+        # get transcript
+        self._transcript = transcript = await self.get_transcript()
+
+        # create pipeline
         processors = self.get_processors()
         pipeline = Pipeline(*processors)
         pipeline.options = self
-
-        # get transcript
-        transcript = await self.get_transcript()
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
 
@@ -461,6 +457,29 @@ class PipelineMainFinalSummaries(PipelineMainFromTopics):
                 ]
             ),
         ]
+
+
+class PipelineMainWaveform(PipelineMainFromTopics):
+    """
+    Generate waveform
+    """
+
+    def get_processors(self) -> list:
+        return [
+            AudioWaveformProcessor.as_threaded(
+                audio_path=self._transcript.audio_wav_filename,
+                waveform_path=self._transcript.audio_waveform_filename,
+                on_waveform=self.on_waveform,
+            ),
+        ]
+
+
+@get_transcript
+async def pipeline_waveform(transcript: Transcript, logger: Logger):
+    logger.info("Starting waveform")
+    runner = PipelineMainWaveform(transcript_id=transcript.id)
+    await runner.run()
+    logger.info("Waveform done")
 
 
 @get_transcript
@@ -543,6 +562,12 @@ async def pipeline_summaries(transcript: Transcript, logger: Logger):
 
 @shared_task
 @asynctask
+async def task_pipeline_waveform(*, transcript_id: str):
+    await pipeline_waveform(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
 async def task_pipeline_convert_to_mp3(*, transcript_id: str):
     await pipeline_convert_to_mp3(transcript_id=transcript_id)
 
@@ -576,7 +601,8 @@ def pipeline_post(*, transcript_id: str):
     Run the post pipeline
     """
     chain_mp3_and_diarize = (
-        task_pipeline_convert_to_mp3.si(transcript_id=transcript_id)
+        task_pipeline_waveform.si(transcript_id=transcript_id)
+        | task_pipeline_convert_to_mp3.si(transcript_id=transcript_id)
         | task_pipeline_upload_mp3.si(transcript_id=transcript_id)
         | task_pipeline_diarization.si(transcript_id=transcript_id)
     )
