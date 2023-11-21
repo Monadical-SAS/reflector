@@ -3,7 +3,8 @@ import React, { createContext, useContext, useState } from "react";
 
 interface ErrorContextProps {
   error: Error | null;
-  setError: React.Dispatch<React.SetStateAction<Error | null>>;
+  humanMessage?: string;
+  setError: (error: Error, humanMessage?: string) => void;
 }
 
 const ErrorContext = createContext<ErrorContextProps | undefined>(undefined);
@@ -22,9 +23,16 @@ interface ErrorProviderProps {
 
 export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
   const [error, setError] = useState<Error | null>(null);
+  const [humanMessage, setHumanMessage] = useState<string | undefined>();
 
+  const declareError = (error, humanMessage?) => {
+    setError(error);
+    setHumanMessage(humanMessage);
+  };
   return (
-    <ErrorContext.Provider value={{ error, setError }}>
+    <ErrorContext.Provider
+      value={{ error, setError: declareError, humanMessage }}
+    >
       {children}
     </ErrorContext.Provider>
   );

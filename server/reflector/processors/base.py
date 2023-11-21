@@ -14,7 +14,42 @@ class PipelineEvent(BaseModel):
     data: Any
 
 
-class Processor:
+class Emitter:
+    def __init__(self, **kwargs):
+        self._callbacks = {}
+
+        # register callbacks from kwargs (on_*)
+        for key, value in kwargs.items():
+            if key.startswith("on_"):
+                self.on(value, name=key[3:])
+
+    def on(self, callback, name="default"):
+        """
+        Register a callback to be called when data is emitted
+        """
+        # ensure callback is asynchronous
+        if not asyncio.iscoroutinefunction(callback):
+            raise ValueError("Callback must be a coroutine function")
+        if name not in self._callbacks:
+            self._callbacks[name] = []
+        self._callbacks[name].append(callback)
+
+    def off(self, callback, name="default"):
+        """
+        Unregister a callback to be called when data is emitted
+        """
+        if name not in self._callbacks:
+            return
+        self._callbacks[name].remove(callback)
+
+    async def emit(self, data, name="default"):
+        if name not in self._callbacks:
+            return
+        for callback in self._callbacks[name]:
+            await callback(data)
+
+
+class Processor(Emitter):
     INPUT_TYPE: type = None
     OUTPUT_TYPE: type = None
 
@@ -59,7 +94,8 @@ class Processor:
         ["processor"],
     )
 
-    def __init__(self, callback=None, custom_logger=None):
+    def __init__(self, callback=None, custom_logger=None, **kwargs):
+        super().__init__(**kwargs)
         self.name = name = self.__class__.__name__
         self.m_processor = self.m_processor.labels(name)
         self.m_processor_call = self.m_processor_call.labels(name)
@@ -70,9 +106,11 @@ class Processor:
         self.m_processor_flush_success = self.m_processor_flush_success.labels(name)
         self.m_processor_flush_failure = self.m_processor_flush_failure.labels(name)
         self._processors = []
-        self._callbacks = []
+
+        # register callbacks
         if callback:
             self.on(callback)
+
         self.uid = uuid4().hex
         self.flushed = False
         self.logger = (custom_logger or logger).bind(processor=self.__class__.__name__)
@@ -100,21 +138,6 @@ class Processor:
         """
         self._processors.remove(processor)
 
-    def on(self, callback):
-        """
-        Register a callback to be called when data is emitted
-        """
-        # ensure callback is asynchronous
-        if not asyncio.iscoroutinefunction(callback):
-            raise ValueError("Callback must be a coroutine function")
-        self._callbacks.append(callback)
-
-    def off(self, callback):
-        """
-        Unregister a callback to be called when data is emitted
-        """
-        self._callbacks.remove(callback)
-
     def get_pref(self, key: str, default: Any = None):
         """
         Get a preference from the pipeline prefs
@@ -123,15 +146,16 @@ class Processor:
             return self.pipeline.get_pref(key, default)
         return default
 
-    async def emit(self, data):
-        if self.pipeline:
-            await self.pipeline.emit(
-                PipelineEvent(processor=self.name, uid=self.uid, data=data)
-            )
-        for callback in self._callbacks:
-            await callback(data)
-        for processor in self._processors:
-            await processor.push(data)
+    async def emit(self, data, name="default"):
+        if name == "default":
+            if self.pipeline:
+                await self.pipeline.emit(
+                    PipelineEvent(processor=self.name, uid=self.uid, data=data)
+                )
+        await super().emit(data, name=name)
+        if name == "default":
+            for processor in self._processors:
+                await processor.push(data)
 
     async def push(self, data):
         """
@@ -254,11 +278,11 @@ class ThreadedProcessor(Processor):
     def disconnect(self, processor: Processor):
         self.processor.disconnect(processor)
 
-    def on(self, callback):
-        self.processor.on(callback)
+    def on(self, callback, name="default"):
+        self.processor.on(callback, name=name)
 
-    def off(self, callback):
-        self.processor.off(callback)
+    def off(self, callback, name="default"):
+        self.processor.off(callback, name=name)
 
     def describe(self, level=0):
         super().describe(level)
@@ -305,13 +329,13 @@ class BroadcastProcessor(Processor):
         for processor in self.processors:
             processor.disconnect(processor)
 
-    def on(self, callback):
+    def on(self, callback, name="default"):
         for processor in self.processors:
-            processor.on(callback)
+            processor.on(callback, name=name)
 
-    def off(self, callback):
+    def off(self, callback, name="default"):
         for processor in self.processors:
-            processor.off(callback)
+            processor.off(callback, name=name)
 
     def describe(self, level=0):
         super().describe(level)

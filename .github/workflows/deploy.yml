@@ -3,7 +3,7 @@ name: Deploy to Amazon ECS
 on: [workflow_dispatch]
 
 env:
-  # 384658522150.dkr.ecr.us-east-1.amazonaws.com/reflector
+  # 950402358378.dkr.ecr.us-east-1.amazonaws.com/reflector
   AWS_REGION: us-east-1
   ECR_REPOSITORY: reflector
 
