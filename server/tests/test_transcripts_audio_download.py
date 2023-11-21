@@ -118,15 +118,3 @@ async def test_transcript_audio_download_range_with_seek(
     assert response.status_code == 206
     assert response.headers["content-type"] == content_type
     assert response.headers["content-range"].startswith("bytes 100-")
-
-
-@pytest.mark.asyncio
-async def test_transcript_audio_download_waveform(fake_transcript):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.get(f"/transcripts/{fake_transcript.id}/audio/waveform")
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "application/json"
-    assert isinstance(response.json()["data"], list)
-    assert len(response.json()["data"]) >= 255

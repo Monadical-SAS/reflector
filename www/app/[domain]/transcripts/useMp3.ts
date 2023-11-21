@@ -1,24 +1,19 @@
 import { useContext, useEffect, useState } from "react";
-import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
 import getApi from "../../lib/getApi";
 import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
-import { shouldShowError } from "../../lib/errorUtils";
 
-type Mp3Response = {
-  url: string | null;
+export type Mp3Response = {
   media: HTMLMediaElement | null;
   loading: boolean;
-  error: Error | null;
+  getNow: () => void;
 };
 
-const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
-  const [url, setUrl] = useState<string | null>(null);
+const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
   const [media, setMedia] = useState<HTMLMediaElement | null>(null);
+  const [later, setLater] = useState(waiting);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setErrorState] = useState<Error | null>(null);
-  const { setError } = useError();
-  const api = getApi(protectedPath);
+  const api = getApi(true);
   const { api_url } = useContext(DomainContext);
   const accessTokenInfo = useFiefAccessTokenInfo();
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
@@ -42,8 +37,8 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
     });
   }, [navigator.serviceWorker, serviceWorkerReady, accessTokenInfo]);
 
-  const getMp3 = (id: string) => {
-    if (!id || !api) return;
+  useEffect(() => {
+    if (!id || !api || later) return;
 
     // createa a audio element and set the source
     setLoading(true);
@@ -53,13 +48,13 @@ const useMp3 = (protectedPath: boolean, id: string): Mp3Response => {
     audioElement.preload = "auto";
     setMedia(audioElement);
     setLoading(false);
+  }, [id, api, later]);
+
+  const getNow = () => {
+    setLater(false);
   };
 
-  useEffect(() => {
-    getMp3(id);
-  }, [id, api]);
-
-  return { url, media, loading, error };
+  return { media, loading, getNow };
 };
 
 export default useMp3;

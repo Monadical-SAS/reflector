@@ -5,14 +5,15 @@ import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
 import { TopicList } from "../topicList";
-import Recorder from "../recorder";
 import { Topic } from "../webSocketTypes";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "../../../styles/button.css";
 import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
+import Player from "../player";
+import WaveformLoading from "../waveformLoading";
 
 type TranscriptDetails = {
   params: {
@@ -29,9 +30,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
-  const mp3 = useMp3(protectedPath, transcriptId);
+  const mp3 = useMp3(transcriptId);
 
-  if (transcript?.error /** || topics?.error || waveform?.error **/) {
+  if (transcript?.error || topics?.error) {
     return (
       <Modal
         title="Transcription Not Found"
@@ -39,6 +40,18 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       />
     );
   }
+
+  useEffect(() => {
+    const statusToRedirect = ["idle", "recording", "processing"];
+    if (statusToRedirect.includes(transcript.response?.status)) {
+      const newUrl = "/transcripts/" + details.params.transcriptId + "/record";
+      // Shallow redirection does not work on NextJS 13
+      // https://github.com/vercel/next.js/discussions/48110
+      // https://github.com/vercel/next.js/discussions/49540
+      // router.push(newUrl, undefined, { shallow: true });
+      history.replaceState({}, "", newUrl);
+    }
+  }, [transcript.response?.status]);
 
   const fullTranscript =
     topics.topics
@@ -49,7 +62,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      {!transcriptId || transcript?.loading || topics?.loading ? (
+      {transcript?.loading || topics?.loading ? (
         <Modal title="Loading" text={"Loading transcript..."} />
       ) : (
         <>
@@ -61,33 +74,47 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 transcriptId={transcript.response.id}
               />
             )}
-            {!waveform?.loading && (
-              <Recorder
+            {waveform.waveform && mp3.media ? (
+              <Player
                 topics={topics?.topics || []}
                 useActiveTopic={useActiveTopic}
-                waveform={waveform?.waveform}
-                isPastMeeting={true}
-                transcriptId={transcript?.response?.id}
-                media={mp3?.media}
-                mediaDuration={transcript?.response?.duration}
+                waveform={waveform.waveform.data}
+                media={mp3.media}
+                mediaDuration={transcript.response.duration}
               />
+            ) : waveform.error ? (
+              <div>"error loading this recording"</div>
+            ) : (
+              <WaveformLoading />
             )}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
             <TopicList
-              topics={topics?.topics || []}
+              topics={topics.topics || []}
               useActiveTopic={useActiveTopic}
               autoscroll={false}
             />
+
             <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
               <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
-                {transcript?.response?.longSummary && (
+                {transcript.response.longSummary ? (
                   <FinalSummary
                     protectedPath={protectedPath}
                     fullTranscript={fullTranscript}
-                    summary={transcript?.response?.longSummary}
-                    transcriptId={transcript?.response?.id}
+                    summary={transcript.response.longSummary}
+                    transcriptId={transcript.response.id}
                   />
+                ) : (
+                  <div className="flex flex-col h-full justify-center content-center">
+                    {transcript.response.status == "processing" ? (
+                      <p>Loading Transcript</p>
+                    ) : (
+                      <p>
+                        There was an error generating the final summary, please
+                        come back later
+                      </p>
+                    )}
+                  </div>
                 )}
               </section>
 

@@ -5,16 +5,28 @@ import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";
 import { shouldShowError } from "../../lib/errorUtils";
 
-type Transcript = {
-  response: GetTranscript | null;
-  loading: boolean;
-  error: Error | null;
+type ErrorTranscript = {
+  error: Error;
+  loading: false;
+  response: any;
+};
+
+type LoadingTranscript = {
+  response: any;
+  loading: true;
+  error: false;
+};
+
+type SuccessTranscript = {
+  response: GetTranscript;
+  loading: false;
+  error: null;
 };
 
 const useTranscript = (
   protectedPath: boolean,
   id: string | null,
-): Transcript => {
+): ErrorTranscript | LoadingTranscript | SuccessTranscript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
@@ -46,7 +58,10 @@ const useTranscript = (
       });
   }, [id, !api]);
 
-  return { response, loading, error };
+  return { response, loading, error } as
+    | ErrorTranscript
+    | LoadingTranscript
+    | SuccessTranscript;
 };
 
 export default useTranscript;

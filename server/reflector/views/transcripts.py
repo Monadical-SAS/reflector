@@ -22,7 +22,6 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.settings import settings
 from reflector.ws_manager import get_ws_manager
-from starlette.concurrency import run_in_threadpool
 
 from ._range_requests_response import range_requests_response
 from .rtc_offer import RtcOffer, rtc_offer_base
@@ -260,8 +259,6 @@ async def transcript_get_audio_waveform(
 
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
-
-    await run_in_threadpool(transcript.convert_audio_to_waveform)
 
     return transcript.audio_waveform
 
