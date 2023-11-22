@@ -16,26 +16,30 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
   const api = getApi(true);
   const { api_url } = useContext(DomainContext);
   const accessTokenInfo = useFiefAccessTokenInfo();
-  const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
+  const [serviceWorker, setServiceWorker] =
+    useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js").then(() => {
-        setServiceWorkerReady(true);
+      navigator.serviceWorker.register("/service-worker.js").then((worker) => {
+        setServiceWorker(worker);
       });
     }
+    return () => {
+      serviceWorker?.unregister();
+    };
   }, []);
 
   useEffect(() => {
     if (!navigator.serviceWorker) return;
     if (!navigator.serviceWorker.controller) return;
-    if (!serviceWorkerReady) return;
+    if (!serviceWorker) return;
     // Send the token to the service worker
     navigator.serviceWorker.controller.postMessage({
       type: "SET_AUTH_TOKEN",
       token: accessTokenInfo?.access_token,
     });
-  }, [navigator.serviceWorker, serviceWorkerReady, accessTokenInfo]);
+  }, [navigator.serviceWorker, !serviceWorker, accessTokenInfo]);
 
   useEffect(() => {
     if (!id || !api || later) return;
