@@ -13,7 +13,7 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
   const [media, setMedia] = useState<HTMLMediaElement | null>(null);
   const [later, setLater] = useState(waiting);
   const [loading, setLoading] = useState<boolean>(false);
-  const api = getApi(true);
+  const api = getApi();
   const { api_url } = useContext(DomainContext);
   const accessTokenInfo = useFiefAccessTokenInfo();
   const [serviceWorker, setServiceWorker] =

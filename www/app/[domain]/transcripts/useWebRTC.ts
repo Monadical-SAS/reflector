@@ -10,11 +10,10 @@ import getApi from "../../lib/getApi";
 const useWebRTC = (
   stream: MediaStream | null,
   transcriptId: string | null,
-  protectedPath,
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const { setError } = useError();
-  const api = getApi(protectedPath);
+  const api = getApi();
 
   useEffect(() => {
     if (!stream || !transcriptId) {
