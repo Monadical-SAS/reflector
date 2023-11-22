@@ -6,6 +6,8 @@ import SelectSearch from "react-select-search";
 import "react-select-search/style.css";
 import "../../styles/button.css";
 import "../../styles/form.scss";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 type ShareLinkProps = {
   transcriptId: string;
@@ -20,6 +22,7 @@ const ShareLink = (props: ShareLinkProps) => {
   const requireLogin = featureEnabled("requireLogin");
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState(props.shareMode);
+  const [shareLoading, setShareLoading] = useState(false);
   const userinfo = useFiefUserinfo();
   const api = getApi();
 
@@ -46,6 +49,7 @@ const ShareLink = (props: ShareLinkProps) => {
 
   const updateShareMode = async (selectedShareMode: string) => {
     if (!api) return;
+    setShareLoading(true);
     const updatedTranscript = await api.v1TranscriptUpdate({
       transcriptId: props.transcriptId,
       updateTranscript: {
@@ -53,6 +57,7 @@ const ShareLink = (props: ShareLinkProps) => {
       },
     });
     setShareMode(updatedTranscript.shareMode);
+    setShareLoading(false);
   };
   const privacyEnabled = featureEnabled("privacy");
 
@@ -62,7 +67,7 @@ const ShareLink = (props: ShareLinkProps) => {
       style={{ background: "rgba(96, 165, 250, 0.2)" }}
     >
       {requireLogin && (
-        <p className="text-sm mb-2">
+        <div className="text-sm mb-2">
           {shareMode === "private" && (
             <p>This transcript is private and can only be accessed by you.</p>
           )}
@@ -76,7 +81,7 @@ const ShareLink = (props: ShareLinkProps) => {
           )}
 
           {isOwner && api && (
-            <p>
+            <div className="relative">
               <SelectSearch
                 className="select-search--top select-search"
                 options={[
@@ -86,10 +91,19 @@ const ShareLink = (props: ShareLinkProps) => {
                 ]}
                 value={shareMode}
                 onChange={updateShareMode}
+                closeOnSelect={true}
               />
-            </p>
+              {shareLoading && (
+                <div className="h-4 w-4 absolute top-1/3 right-3 z-10">
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="animate-spin-slow text-gray-600 flex-grow rounded-lg md:rounded-xl h-4 w-4"
+                  />
+                </div>
+              )}
+            </div>
           )}
-        </p>
+        </div>
       )}
       {!requireLogin && (
         <>

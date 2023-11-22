@@ -15,6 +15,8 @@ import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 type TranscriptDetails = {
   params: {
