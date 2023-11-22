@@ -402,6 +402,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       console.debug("WebSocket connection closed");
       switch (event.code) {
         case 1000: // Normal Closure:
+        case 1005: // Closure by client FF
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),

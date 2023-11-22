@@ -11,6 +11,7 @@ import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "../lib/edgeConfig";
+import { ErrorBoundary } from "@sentry/nextjs";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -76,80 +77,82 @@ export default async function RootLayout({ children, params }: LayoutProps) {
       <body className={poppins.className + " h-screen relative"}>
         <FiefWrapper>
           <DomainContextProvider config={config}>
-            <ErrorProvider>
-              <ErrorMessage />
-              <div
-                id="container"
-                className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
-              >
-                <header className="flex justify-between items-center w-full">
-                  {/* Logo on the left */}
-                  <Link
-                    href="/"
-                    className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
-                  >
-                    <Image
-                      src="/reach.png"
-                      width={16}
-                      height={16}
-                      className="h-10 w-auto"
-                      alt="Reflector"
-                    />
-                    <div className="hidden flex-col ml-2 md:block">
-                      <h1 className="text-[38px] font-bold tracking-wide leading-tight">
-                        Reflector
-                      </h1>
-                      <p className="text-gray-500 text-xs tracking-tighter">
-                        Capture the signal, not the noise
-                      </p>
-                    </div>
-                  </Link>
-                  <div>
-                    {/* Text link on the right */}
+            <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+              <ErrorProvider>
+                <ErrorMessage />
+                <div
+                  id="container"
+                  className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
+                >
+                  <header className="flex justify-between items-center w-full">
+                    {/* Logo on the left */}
                     <Link
-                      href="/transcripts/new"
-                      className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                      href="/"
+                      className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
                     >
-                      Create
+                      <Image
+                        src="/reach.png"
+                        width={16}
+                        height={16}
+                        className="h-10 w-auto"
+                        alt="Reflector"
+                      />
+                      <div className="hidden flex-col ml-2 md:block">
+                        <h1 className="text-[38px] font-bold tracking-wide leading-tight">
+                          Reflector
+                        </h1>
+                        <p className="text-gray-500 text-xs tracking-tighter">
+                          Capture the signal, not the noise
+                        </p>
+                      </div>
                     </Link>
-                    {browse ? (
-                      <>
-                        &nbsp;·&nbsp;
-                        <Link
-                          href="/browse"
-                          className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-                          prefetch={false}
-                        >
-                          Browse
-                        </Link>
-                      </>
-                    ) : (
-                      <></>
-                    )}
-                    &nbsp;·&nbsp;
-                    <About buttonText="About" />
-                    {privacy ? (
-                      <>
-                        &nbsp;·&nbsp;
-                        <Privacy buttonText="Privacy" />
-                      </>
-                    ) : (
-                      <></>
-                    )}
-                    {requireLogin ? (
-                      <>
-                        &nbsp;·&nbsp;
-                        <UserInfo />
-                      </>
-                    ) : (
-                      <></>
-                    )}
-                  </div>
-                </header>
+                    <div>
+                      {/* Text link on the right */}
+                      <Link
+                        href="/transcripts/new"
+                        className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                      >
+                        Create
+                      </Link>
+                      {browse ? (
+                        <>
+                          &nbsp;·&nbsp;
+                          <Link
+                            href="/browse"
+                            className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                            prefetch={false}
+                          >
+                            Browse
+                          </Link>
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                      &nbsp;·&nbsp;
+                      <About buttonText="About" />
+                      {privacy ? (
+                        <>
+                          &nbsp;·&nbsp;
+                          <Privacy buttonText="Privacy" />
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                      {requireLogin ? (
+                        <>
+                          &nbsp;·&nbsp;
+                          <UserInfo />
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                    </div>
+                  </header>
 
-                {children}
-              </div>
-            </ErrorProvider>
+                  {children}
+                </div>
+              </ErrorProvider>
+            </ErrorBoundary>
           </DomainContextProvider>
         </FiefWrapper>
       </body>

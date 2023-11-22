@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptGetAudioWaveformRequest,
-} from "../../api/apis/DefaultApi";
+import { V1TranscriptGetAudioWaveformRequest } from "../../api/apis/DefaultApi";
 import { AudioWaveform } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";

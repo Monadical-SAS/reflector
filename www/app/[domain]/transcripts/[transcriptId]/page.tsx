@@ -14,6 +14,7 @@ import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
+import { useRouter } from "next/navigation";
 
 type TranscriptDetails = {
   params: {
@@ -21,25 +22,17 @@ type TranscriptDetails = {
   };
 };
 
-const protectedPath = true;
+const protectedPath = false;
 
 export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptId = details.params.transcriptId;
+  const router = useRouter();
 
   const transcript = useTranscript(protectedPath, transcriptId);
   const topics = useTopics(protectedPath, transcriptId);
   const waveform = useWaveform(protectedPath, transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(transcriptId);
-
-  if (transcript?.error || topics?.error) {
-    return (
-      <Modal
-        title="Transcription Not Found"
-        text="A trascription with this ID does not exist."
-      />
-    );
-  }
 
   useEffect(() => {
     const statusToRedirect = ["idle", "recording", "processing"];
@@ -48,8 +41,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
-      // router.push(newUrl, undefined, { shallow: true });
-      history.replaceState({}, "", newUrl);
+      router.push(newUrl, undefined);
+      // history.replaceState({}, "", newUrl);
     }
   }, [transcript.response?.status]);
 
@@ -60,85 +53,92 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       .replace(/ +/g, " ")
       .trim() || "";
 
+  if (transcript.error || topics?.error) {
+    return (
+      <Modal
+        title="Transcription Not Found"
+        text="A trascription with this ID does not exist."
+      />
+    );
+  }
+
+  if (transcript?.loading || topics?.loading) {
+    return <Modal title="Loading" text={"Loading transcript..."} />;
+  }
+
   return (
     <>
-      {transcript?.loading || topics?.loading ? (
-        <Modal title="Loading" text={"Loading transcript..."} />
-      ) : (
-        <>
-          <div className="flex flex-col">
-            {transcript?.response?.title && (
-              <TranscriptTitle
+      <div className="flex flex-col">
+        {transcript?.response?.title && (
+          <TranscriptTitle
+            protectedPath={protectedPath}
+            title={transcript.response.title}
+            transcriptId={transcript.response.id}
+          />
+        )}
+        {waveform.waveform && mp3.media ? (
+          <Player
+            topics={topics?.topics || []}
+            useActiveTopic={useActiveTopic}
+            waveform={waveform.waveform.data}
+            media={mp3.media}
+            mediaDuration={transcript.response.duration}
+          />
+        ) : waveform.error ? (
+          <div>"error loading this recording"</div>
+        ) : (
+          <WaveformLoading />
+        )}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+        <TopicList
+          topics={topics.topics || []}
+          useActiveTopic={useActiveTopic}
+          autoscroll={false}
+        />
+
+        <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
+          <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
+            {transcript.response.longSummary ? (
+              <FinalSummary
                 protectedPath={protectedPath}
-                title={transcript.response.title}
+                fullTranscript={fullTranscript}
+                summary={transcript.response.longSummary}
                 transcriptId={transcript.response.id}
               />
-            )}
-            {waveform.waveform && mp3.media ? (
-              <Player
-                topics={topics?.topics || []}
-                useActiveTopic={useActiveTopic}
-                waveform={waveform.waveform.data}
-                media={mp3.media}
-                mediaDuration={transcript.response.duration}
-              />
-            ) : waveform.error ? (
-              <div>"error loading this recording"</div>
             ) : (
-              <WaveformLoading />
-            )}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
-            <TopicList
-              topics={topics.topics || []}
-              useActiveTopic={useActiveTopic}
-              autoscroll={false}
-            />
-
-            <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
-              <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
-                {transcript.response.longSummary ? (
-                  <FinalSummary
-                    protectedPath={protectedPath}
-                    fullTranscript={fullTranscript}
-                    summary={transcript.response.longSummary}
-                    transcriptId={transcript.response.id}
-                  />
+              <div className="flex flex-col h-full justify-center content-center">
+                {transcript.response.status == "processing" ? (
+                  <p>Loading Transcript</p>
                 ) : (
-                  <div className="flex flex-col h-full justify-center content-center">
-                    {transcript.response.status == "processing" ? (
-                      <p>Loading Transcript</p>
-                    ) : (
-                      <p>
-                        There was an error generating the final summary, please
-                        come back later
-                      </p>
-                    )}
-                  </div>
+                  <p>
+                    There was an error generating the final summary, please come
+                    back later
+                  </p>
                 )}
-              </section>
+              </div>
+            )}
+          </section>
 
-              <section className="flex items-center">
-                <div className="mr-4 hidden md:block h-auto">
-                  <QRCode
-                    value={`${location.origin}/transcripts/${details.params.transcriptId}`}
-                    level="L"
-                    size={98}
-                  />
-                </div>
-                <div className="flex-grow max-w-full">
-                  <ShareLink
-                    protectedPath={protectedPath}
-                    transcriptId={transcript?.response?.id}
-                    userId={transcript?.response?.userId}
-                    shareMode={transcript?.response?.shareMode}
-                  />
-                </div>
-              </section>
+          <section className="flex items-center">
+            <div className="mr-4 hidden md:block h-auto">
+              <QRCode
+                value={`${location.origin}/transcripts/${details.params.transcriptId}`}
+                level="L"
+                size={98}
+              />
             </div>
-          </div>
-        </>
-      )}
+            <div className="flex-grow max-w-full">
+              <ShareLink
+                protectedPath={protectedPath}
+                transcriptId={transcript?.response?.id}
+                userId={transcript?.response?.userId}
+                shareMode={transcript?.response?.shareMode}
+              />
+            </div>
+          </section>
+        </div>
+      </div>
     </>
   );
 }
