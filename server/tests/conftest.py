@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -7,7 +8,6 @@ import pytest
 @pytest.mark.asyncio
 async def setup_database():
     from reflector.settings import settings
-    from tempfile import NamedTemporaryFile
 
     with NamedTemporaryFile() as f:
         settings.DATABASE_URL = f"sqlite:///{f.name}"
@@ -104,6 +104,25 @@ async def dummy_llm():
 
 
 @pytest.fixture
+async def dummy_storage():
+    from reflector.storage.base import Storage
+
+    class DummyStorage(Storage):
+        async def _put_file(self, *args, **kwargs):
+            pass
+
+        async def _delete_file(self, *args, **kwargs):
+            pass
+
+        async def _get_file_url(self, *args, **kwargs):
+            return "http://fake_server/audio.mp3"
+
+    with patch("reflector.storage.base.Storage.get_instance") as mock_storage:
+        mock_storage.return_value = DummyStorage()
+        yield
+
+
+@pytest.fixture
 def nltk():
     with patch("reflector.llm.base.LLM.ensure_nltk") as mock_nltk:
         mock_nltk.return_value = "NLTK PACKAGE"
@@ -133,4 +152,17 @@ def celery_enable_logging():
 
 @pytest.fixture(scope="session")
 def celery_config():
-    return {"broker_url": "memory://", "result_backend": "rpc"}
+    with NamedTemporaryFile() as f:
+        yield {
+            "broker_url": "memory://",
+            "result_backend": f"db+sqlite:///{f.name}",
+        }
+
+
+@pytest.fixture(scope="session")
+def fake_mp3_upload():
+    with patch(
+        "reflector.db.transcripts.TranscriptController.move_mp3_to_storage"
+    ) as mock_move:
+        mock_move.return_value = True
+        yield

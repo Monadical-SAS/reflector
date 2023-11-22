@@ -1,6 +1,7 @@
+import importlib
+
 from pydantic import BaseModel
 from reflector.settings import settings
-import importlib
 
 
 class FileResult(BaseModel):
@@ -17,7 +18,7 @@ class Storage:
         cls._registry[name] = kclass
 
     @classmethod
-    def get_instance(cls, name, settings_prefix=""):
+    def get_instance(cls, name: str, settings_prefix: str = ""):
         if name not in cls._registry:
             module_name = f"reflector.storage.storage_{name}"
             importlib.import_module(module_name)
@@ -44,4 +45,10 @@ class Storage:
         return await self._delete_file(filename)
 
     async def _delete_file(self, filename: str):
+        raise NotImplementedError
+
+    async def get_file_url(self, filename: str) -> str:
+        return await self._get_file_url(filename)
+
+    async def _get_file_url(self, filename: str) -> str:
         raise NotImplementedError
