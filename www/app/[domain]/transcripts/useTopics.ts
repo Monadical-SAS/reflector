@@ -14,12 +14,12 @@ type TranscriptTopics = {
   error: Error | null;
 };
 
-const useTopics = (protectedPath, id: string): TranscriptTopics => {
+const useTopics = (id: string): TranscriptTopics => {
   const [topics, setTopics] = useState<Topic[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(protectedPath);
+  const api = getApi();
 
   useEffect(() => {
     if (!id || !api) return;

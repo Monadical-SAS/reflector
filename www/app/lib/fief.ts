@@ -67,10 +67,6 @@ export const getFiefAuthMiddleware = async (url) => {
       parameters: {},
     },
     {
-      matcher: "/transcripts/((?!new))",
-      parameters: {},
-    },
-    {
       matcher: "/browse",
       parameters: {},
     },

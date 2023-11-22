@@ -22,15 +22,13 @@ type TranscriptDetails = {
   };
 };
 
-const protectedPath = false;
-
 export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptId = details.params.transcriptId;
   const router = useRouter();
 
-  const transcript = useTranscript(protectedPath, transcriptId);
-  const topics = useTopics(protectedPath, transcriptId);
-  const waveform = useWaveform(protectedPath, transcriptId);
+  const transcript = useTranscript(transcriptId);
+  const topics = useTopics(transcriptId);
+  const waveform = useWaveform(transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(transcriptId);
 
@@ -71,7 +69,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       <div className="flex flex-col">
         {transcript?.response?.title && (
           <TranscriptTitle
-            protectedPath={protectedPath}
             title={transcript.response.title}
             transcriptId={transcript.response.id}
           />
@@ -101,7 +98,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
             {transcript.response.longSummary ? (
               <FinalSummary
-                protectedPath={protectedPath}
                 fullTranscript={fullTranscript}
                 summary={transcript.response.longSummary}
                 transcriptId={transcript.response.id}
@@ -130,7 +126,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             </div>
             <div className="flex-grow max-w-full">
               <ShareLink
-                protectedPath={protectedPath}
                 transcriptId={transcript?.response?.id}
                 userId={transcript?.response?.userId}
                 shareMode={transcript?.response?.shareMode}

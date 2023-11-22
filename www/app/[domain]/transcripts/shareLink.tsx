@@ -8,7 +8,6 @@ import "../../styles/button.css";
 import "../../styles/form.scss";
 
 type ShareLinkProps = {
-  protectedPath: boolean;
   transcriptId: string;
   userId: string | null;
   shareMode: string;
@@ -21,8 +20,8 @@ const ShareLink = (props: ShareLinkProps) => {
   const requireLogin = featureEnabled("requireLogin");
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState(props.shareMode);
-  const api = getApi(props.protectedPath);
   const userinfo = useFiefUserinfo();
+  const api = getApi();
 
   useEffect(() => {
     setCurrentUrl(window.location.href);

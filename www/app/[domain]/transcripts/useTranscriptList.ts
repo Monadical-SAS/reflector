@@ -15,7 +15,7 @@ const useTranscriptList = (page: number): TranscriptList => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(true);
+  const api = getApi();
 
   useEffect(() => {
     if (!api) return;

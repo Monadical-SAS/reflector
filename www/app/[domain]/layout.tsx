@@ -12,6 +12,8 @@ import Privacy from "../(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "../lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
+import { cookies } from "next/dist/client/components/headers";
+import { SESSION_COOKIE_NAME } from "../lib/fief";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -71,11 +73,12 @@ type LayoutProps = {
 export default async function RootLayout({ children, params }: LayoutProps) {
   const config = await getConfig(params.domain);
   const { requireLogin, privacy, browse } = config.features;
+  const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 
   return (
     <html lang="en">
       <body className={poppins.className + " h-screen relative"}>
-        <FiefWrapper>
+        <FiefWrapper hasAuthCookie={hasAuthCookie}>
           <DomainContextProvider config={config}>
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
               <ErrorProvider>
