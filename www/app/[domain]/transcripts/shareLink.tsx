@@ -1,14 +1,38 @@
 import React, { useState, useRef, useEffect, use } from "react";
 import { featureEnabled } from "../domainContext";
+import getApi from "../../lib/getApi";
+import { useFiefUserinfo } from "@fief/fief/nextjs/react";
+import SelectSearch from "react-select-search";
+import "react-select-search/style.css";
+import "../../styles/button.css";
+import "../../styles/form.scss";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
-const ShareLink = () => {
+type ShareLinkProps = {
+  transcriptId: string;
+  userId: string | null;
+  shareMode: string;
+};
+
+const ShareLink = (props: ShareLinkProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [currentUrl, setCurrentUrl] = useState<string>("");
+  const requireLogin = featureEnabled("requireLogin");
+  const [isOwner, setIsOwner] = useState(false);
+  const [shareMode, setShareMode] = useState(props.shareMode);
+  const [shareLoading, setShareLoading] = useState(false);
+  const userinfo = useFiefUserinfo();
+  const api = getApi();
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
   }, []);
+
+  useEffect(() => {
+    setIsOwner(!!(requireLogin && userinfo?.sub === props.userId));
+  }, [userinfo, props.userId]);
 
   const handleCopyClick = () => {
     if (inputRef.current) {
@@ -23,6 +47,18 @@ const ShareLink = () => {
     }
   };
 
+  const updateShareMode = async (selectedShareMode: string) => {
+    if (!api) return;
+    setShareLoading(true);
+    const updatedTranscript = await api.v1TranscriptUpdate({
+      transcriptId: props.transcriptId,
+      updateTranscript: {
+        shareMode: selectedShareMode,
+      },
+    });
+    setShareMode(updatedTranscript.shareMode);
+    setShareLoading(false);
+  };
   const privacyEnabled = featureEnabled("privacy");
 
   return (
@@ -30,17 +66,60 @@ const ShareLink = () => {
       className="p-2 md:p-4 rounded"
       style={{ background: "rgba(96, 165, 250, 0.2)" }}
     >
-      {privacyEnabled ? (
-        <p className="text-sm mb-2">
-          You can share this link with others. Anyone with the link will have
-          access to the page, including the full audio recording, for the next 7
-          days.
-        </p>
-      ) : (
-        <p className="text-sm mb-2">
-          You can share this link with others. Anyone with the link will have
-          access to the page, including the full audio recording.
-        </p>
+      {requireLogin && (
+        <div className="text-sm mb-2">
+          {shareMode === "private" && (
+            <p>This transcript is private and can only be accessed by you.</p>
+          )}
+          {shareMode === "semi-private" && (
+            <p>
+              This transcript is secure. Only authenticated users can access it.
+            </p>
+          )}
+          {shareMode === "public" && (
+            <p>This transcript is public. Everyone can access it.</p>
+          )}
+
+          {isOwner && api && (
+            <div className="relative">
+              <SelectSearch
+                className="select-search--top select-search"
+                options={[
+                  { name: "Private", value: "private" },
+                  { name: "Secure", value: "semi-private" },
+                  { name: "Public", value: "public" },
+                ]}
+                value={shareMode}
+                onChange={updateShareMode}
+                closeOnSelect={true}
+              />
+              {shareLoading && (
+                <div className="h-4 w-4 absolute top-1/3 right-3 z-10">
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="animate-spin-slow text-gray-600 flex-grow rounded-lg md:rounded-xl h-4 w-4"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      {!requireLogin && (
+        <>
+          {privacyEnabled ? (
+            <p className="text-sm mb-2">
+              Share this link to grant others access to this page. The link
+              includes the full audio recording and is valid for the next 7
+              days.
+            </p>
+          ) : (
+            <p className="text-sm mb-2">
+              Share this link to allow others to view this page and listen to
+              the full audio recording.
+            </p>
+          )}
+        </>
       )}
       <div className="flex items-center">
         <input

@@ -49,6 +49,12 @@ export interface UpdateTranscript {
    * @memberof UpdateTranscript
    */
   longSummary?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof UpdateTranscript
+   */
+  shareMode?: any | null;
 }
 
 /**
@@ -81,6 +87,7 @@ export function UpdateTranscriptFromJSONTyped(
     longSummary: !exists(json, "long_summary")
       ? undefined
       : json["long_summary"],
+    shareMode: !exists(json, "share_mode") ? undefined : json["share_mode"],
   };
 }
 
@@ -97,5 +104,6 @@ export function UpdateTranscriptToJSON(value?: UpdateTranscript | null): any {
     title: value.title,
     short_summary: value.shortSummary,
     long_summary: value.longSummary,
+    share_mode: value.shareMode,
   };
 }

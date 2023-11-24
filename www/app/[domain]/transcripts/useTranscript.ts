@@ -24,14 +24,13 @@ type SuccessTranscript = {
 };
 
 const useTranscript = (
-  protectedPath: boolean,
   id: string | null,
 ): ErrorTranscript | LoadingTranscript | SuccessTranscript => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(protectedPath);
+  const api = getApi();
 
   useEffect(() => {
     if (!id || !api) return;

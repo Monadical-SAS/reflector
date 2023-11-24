@@ -2,7 +2,6 @@ import { useState } from "react";
 import getApi from "../../lib/getApi";
 
 type TranscriptTitle = {
-  protectedPath: boolean;
   title: string;
   transcriptId: string;
 };
@@ -11,7 +10,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
-  const api = getApi(props.protectedPath);
+  const api = getApi();
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
     if (!api) return;
