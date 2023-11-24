@@ -15,7 +15,7 @@ import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import Player from "../../player";
-import useMp3, { Mp3Response } from "../../useMp3";
+import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 
 type TranscriptDetails = {
@@ -39,8 +39,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     }
   }, []);
 
-  const transcript = useTranscript(true, details.params.transcriptId);
-  const webRTC = useWebRTC(stream, details.params.transcriptId, true);
+  const transcript = useTranscript(details.params.transcriptId);
+  const webRTC = useWebRTC(stream, details.params.transcriptId);
   const webSockets = useWebSockets(details.params.transcriptId);
 
   const { audioDevices, getAudioStream } = useAudioDevice();

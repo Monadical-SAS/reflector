@@ -2,10 +2,11 @@ import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import sqlalchemy
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
@@ -36,6 +37,12 @@ transcripts = sqlalchemy.Table(
     ),
     # with user attached, optional
     sqlalchemy.Column("user_id", sqlalchemy.String),
+    sqlalchemy.Column(
+        "share_mode",
+        sqlalchemy.String,
+        nullable=False,
+        server_default="private",
+    ),
 )
 
 
@@ -120,6 +127,7 @@ class Transcript(BaseModel):
     events: list[TranscriptEvent] = []
     source_language: str = "en"
     target_language: str = "en"
+    share_mode: Literal["private", "semi-private", "public"] = "private"
     audio_location: str = "local"
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
@@ -217,6 +225,7 @@ class TranscriptController:
         order_by: str | None = None,
         filter_empty: bool | None = False,
         filter_recording: bool | None = False,
+        return_query: bool = False,
     ) -> list[Transcript]:
         """
         Get all transcripts
@@ -243,6 +252,9 @@ class TranscriptController:
         if filter_recording:
             query = query.filter(transcripts.c.status != "recording")
 
+        if return_query:
+            return query
+
         results = await database.fetch_all(query)
         return results
 
@@ -257,6 +269,47 @@ class TranscriptController:
         if not result:
             return None
         return Transcript(**result)
+
+    async def get_by_id_for_http(
+        self,
+        transcript_id: str,
+        user_id: str | None,
+    ) -> Transcript:
+        """
+        Get a transcript by ID for HTTP request.
+
+        If not found, it will raise a 404 error.
+        If the user is not allowed to access the transcript, it will raise a 403 error.
+
+        This method checks the share mode of the transcript and the user_id
+        to determine if the user can access the transcript.
+        """
+        query = transcripts.select().where(transcripts.c.id == transcript_id)
+        result = await database.fetch_one(query)
+        if not result:
+            raise HTTPException(status_code=404, detail="Transcript not found")
+
+        # if the transcript is anonymous, share mode is not checked
+        transcript = Transcript(**result)
+        if transcript.user_id is None:
+            return transcript
+
+        if transcript.share_mode == "private":
+            # in private mode, only the owner can access the transcript
+            if transcript.user_id == user_id:
+                return transcript
+
+        elif transcript.share_mode == "semi-private":
+            # in semi-private mode, only the owner and the users with the link
+            # can access the transcript
+            if user_id is not None:
+                return transcript
+
+        elif transcript.share_mode == "public":
+            # in public mode, everyone can access the transcript
+            return transcript
+
+        raise HTTPException(status_code=403, detail="Transcript access denied")
 
     async def add(
         self,
