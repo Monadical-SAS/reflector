@@ -69,9 +69,9 @@ diarizer_image = (
 
 @stub.cls(
     gpu=modal.gpu.A100(memory=40),
-    timeout=60 * 10,
-    container_idle_timeout=60 * 3,
-    allow_concurrent_inputs=6,
+    timeout=60 * 30,
+    container_idle_timeout=60,
+    allow_concurrent_inputs=1,
     image=diarizer_image,
 )
 class Diarizer:
