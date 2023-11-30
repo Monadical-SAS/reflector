@@ -19,7 +19,7 @@ const useCreateTranscript = (): CreateTranscript => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(true);
+  const api = getApi();
 
   const create = (params: V1TranscriptsCreateRequest["createTranscript"]) => {
     if (loading || !api) return;

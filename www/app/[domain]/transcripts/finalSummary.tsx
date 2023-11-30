@@ -5,7 +5,6 @@ import "../../styles/markdown.css";
 import getApi from "../../lib/getApi";
 
 type FinalSummaryProps = {
-  protectedPath: boolean;
   summary: string;
   fullTranscript: string;
   transcriptId: string;
@@ -18,7 +17,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [preEditSummary, setPreEditSummary] = useState(props.summary);
   const [editedSummary, setEditedSummary] = useState(props.summary);
-  const api = getApi(props.protectedPath);
+  const api = getApi();
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
     if (!api) return;
@@ -87,7 +86,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
     <div
       className={
         (isEditMode ? "overflow-y-none" : "overflow-y-auto") +
-        " h-auto max-h-full flex flex-col h-full"
+        " max-h-full flex flex-col h-full"
       }
     >
       <div className="flex flex-row flex-wrap-reverse justify-between items-center">

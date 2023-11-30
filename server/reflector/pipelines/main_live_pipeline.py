@@ -12,20 +12,20 @@ It is directly linked to our data model.
 """
 
 import asyncio
+import functools
 from contextlib import asynccontextmanager
-from datetime import timedelta
-from pathlib import Path
 
-from celery import shared_task
+from celery import chord, group, shared_task
 from pydantic import BaseModel
-from reflector.app import app
 from reflector.db.transcripts import (
     Transcript,
+    TranscriptDuration,
     TranscriptFinalLongSummary,
     TranscriptFinalShortSummary,
     TranscriptFinalTitle,
     TranscriptText,
     TranscriptTopic,
+    TranscriptWaveform,
     transcripts_controller,
 )
 from reflector.logger import logger
@@ -45,6 +45,7 @@ from reflector.processors import (
     TranscriptTopicDetectorProcessor,
     TranscriptTranslatorProcessor,
 )
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import AudioDiarizationInput
 from reflector.processors.types import (
     TitleSummaryWithId as TitleSummaryWithIdProcessorType,
@@ -52,6 +53,22 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.ws_manager import WebsocketManager, get_ws_manager
+from structlog import BoundLogger as Logger
+
+
+def asynctask(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        coro = f(*args, **kwargs)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            return loop.run_until_complete(coro)
+        return asyncio.run(coro)
+
+    return wrapper
 
 
 def broadcast_to_sockets(func):
@@ -68,6 +85,26 @@ def broadcast_to_sockets(func):
             room_id=self.ws_room_id,
             message=resp.model_dump(mode="json"),
         )
+
+    return wrapper
+
+
+def get_transcript(func):
+    """
+    Decorator to fetch the transcript from the database from the first argument
+    """
+
+    async def wrapper(**kwargs):
+        transcript_id = kwargs.pop("transcript_id")
+        transcript = await transcripts_controller.get_by_id(transcript_id=transcript_id)
+        if not transcript:
+            raise Exception("Transcript {transcript_id} not found")
+        tlogger = logger.bind(transcript_id=transcript.id)
+        try:
+            return await func(transcript=transcript, logger=tlogger, **kwargs)
+        except Exception as exc:
+            tlogger.error("Pipeline error", exc_info=exc)
+            raise
 
     return wrapper
 
@@ -96,6 +133,19 @@ class PipelineMainBase(PipelineRunner):
             raise Exception("Transcript not found")
         return result
 
+    def get_transcript_topics(self, transcript: Transcript) -> list[TranscriptTopic]:
+        return [
+            TitleSummaryWithIdProcessorType(
+                id=topic.id,
+                title=topic.title,
+                summary=topic.summary,
+                timestamp=topic.timestamp,
+                duration=topic.duration,
+                transcript=TranscriptProcessorType(words=topic.words),
+            )
+            for topic in transcript.topics
+        ]
+
     @asynccontextmanager
     async def transaction(self):
         async with self._lock:
@@ -113,7 +163,7 @@ class PipelineMainBase(PipelineRunner):
                 "flush": "processing",
                 "error": "error",
             }
-        elif isinstance(self, PipelineMainDiarization):
+        elif isinstance(self, PipelineMainFinalSummaries):
             status_mapping = {
                 "push": "processing",
                 "flush": "processing",
@@ -121,7 +171,8 @@ class PipelineMainBase(PipelineRunner):
                 "ended": "ended",
             }
         else:
-            raise Exception(f"Runner {self.__class__} is missing status mapping")
+            # intermediate pipeline don't update status
+            return
 
         # mutate to model status
         status = status_mapping.get(status)
@@ -230,21 +281,39 @@ class PipelineMainBase(PipelineRunner):
                 data=final_short_summary,
             )
 
-    async def on_duration(self, duration: float):
+    @broadcast_to_sockets
+    async def on_duration(self, data):
         async with self.transaction():
+            duration = TranscriptDuration(duration=data)
+
             transcript = await self.get_transcript()
             await transcripts_controller.update(
                 transcript,
                 {
-                    "duration": duration,
+                    "duration": duration.duration,
                 },
+            )
+            return await transcripts_controller.append_event(
+                transcript=transcript, event="DURATION", data=duration
+            )
+
+    @broadcast_to_sockets
+    async def on_waveform(self, data):
+        async with self.transaction():
+            waveform = TranscriptWaveform(waveform=data)
+
+            transcript = await self.get_transcript()
+
+            return await transcripts_controller.append_event(
+                transcript=transcript, event="WAVEFORM", data=waveform
             )
 
 
 class PipelineMainLive(PipelineMainBase):
-    audio_filename: Path | None = None
-    source_language: str = "en"
-    target_language: str = "en"
+    """
+    Main pipeline for live streaming, attach to RTC connection
+    Any long post process should be done in the post pipeline
+    """
 
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
@@ -254,7 +323,7 @@ class PipelineMainLive(PipelineMainBase):
 
         processors = [
             AudioFileWriterProcessor(
-                path=transcript.audio_mp3_filename,
+                path=transcript.audio_wav_filename,
                 on_duration=self.on_duration,
             ),
             AudioChunkerProcessor(),
@@ -263,21 +332,13 @@ class PipelineMainLive(PipelineMainBase):
             TranscriptLinerProcessor(),
             TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
-                ]
-            ),
         ]
         pipeline = Pipeline(*processors)
         pipeline.options = self
         pipeline.set_pref("audio:source_language", transcript.source_language)
         pipeline.set_pref("audio:target_language", transcript.target_language)
         pipeline.logger.bind(transcript_id=transcript.id)
-        pipeline.logger.info(
-            "Pipeline main live created",
-            transcript_id=self.transcript_id,
-        )
+        pipeline.logger.info("Pipeline main live created")
 
         return pipeline
 
@@ -285,21 +346,106 @@ class PipelineMainLive(PipelineMainBase):
         # when the pipeline ends, connect to the post pipeline
         logger.info("Pipeline main live ended", transcript_id=self.transcript_id)
         logger.info("Scheduling pipeline main post", transcript_id=self.transcript_id)
-        task_pipeline_main_post.delay(transcript_id=self.transcript_id)
+        pipeline_post(transcript_id=self.transcript_id)
 
 
 class PipelineMainDiarization(PipelineMainBase):
     """
-    Diarization is a long time process, so we do it in a separate pipeline
-    When done, adjust the short and final summary
+    Diarize the audio and update topics
     """
 
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
         self.prepare()
-        processors = [
+        pipeline = Pipeline(
             AudioDiarizationAutoProcessor(callback=self.on_topic),
+        )
+        pipeline.options = self
+
+        # now let's start the pipeline by pushing information to the
+        # first processor diarization processor
+        # XXX translation is lost when converting our data model to the processor model
+        transcript = await self.get_transcript()
+
+        # diarization works only if the file is uploaded to an external storage
+        if transcript.audio_location == "local":
+            pipeline.logger.info("Audio is local, skipping diarization")
+            return
+
+        topics = self.get_transcript_topics(transcript)
+        audio_url = await transcript.get_audio_url()
+        audio_diarization_input = AudioDiarizationInput(
+            audio_url=audio_url,
+            topics=topics,
+        )
+
+        # as tempting to use pipeline.push, prefer to use the runner
+        # to let the start just do one job.
+        pipeline.logger.bind(transcript_id=transcript.id)
+        pipeline.logger.info("Diarization pipeline created")
+        self.push(audio_diarization_input)
+        self.flush()
+
+        return pipeline
+
+
+class PipelineMainFromTopics(PipelineMainBase):
+    """
+    Pseudo class for generating a pipeline from topics
+    """
+
+    def get_processors(self) -> list:
+        raise NotImplementedError
+
+    async def create(self) -> Pipeline:
+        self.prepare()
+
+        # get transcript
+        self._transcript = transcript = await self.get_transcript()
+
+        # create pipeline
+        processors = self.get_processors()
+        pipeline = Pipeline(*processors)
+        pipeline.options = self
+        pipeline.logger.bind(transcript_id=transcript.id)
+        pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
+
+        # push topics
+        topics = self.get_transcript_topics(transcript)
+        for topic in topics:
+            self.push(topic)
+
+        self.flush()
+
+        return pipeline
+
+
+class PipelineMainTitleAndShortSummary(PipelineMainFromTopics):
+    """
+    Generate title from the topics
+    """
+
+    def get_processors(self) -> list:
+        return [
+            BroadcastProcessor(
+                processors=[
+                    TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
+                    TranscriptFinalShortSummaryProcessor.as_threaded(
+                        callback=self.on_short_summary
+                    ),
+                ]
+            )
+        ]
+
+
+class PipelineMainFinalSummaries(PipelineMainFromTopics):
+    """
+    Generate summaries from the topics
+    """
+
+    def get_processors(self) -> list:
+        return [
             BroadcastProcessor(
                 processors=[
                     TranscriptFinalLongSummaryProcessor.as_threaded(
@@ -311,65 +457,164 @@ class PipelineMainDiarization(PipelineMainBase):
                 ]
             ),
         ]
-        pipeline = Pipeline(*processors)
-        pipeline.options = self
 
-        # now let's start the pipeline by pushing information to the
-        # first processor diarization processor
-        # XXX translation is lost when converting our data model to the processor model
-        transcript = await self.get_transcript()
-        topics = [
-            TitleSummaryWithIdProcessorType(
-                id=topic.id,
-                title=topic.title,
-                summary=topic.summary,
-                timestamp=topic.timestamp,
-                duration=topic.duration,
-                transcript=TranscriptProcessorType(words=topic.words),
-            )
-            for topic in transcript.topics
+
+class PipelineMainWaveform(PipelineMainFromTopics):
+    """
+    Generate waveform
+    """
+
+    def get_processors(self) -> list:
+        return [
+            AudioWaveformProcessor.as_threaded(
+                audio_path=self._transcript.audio_wav_filename,
+                waveform_path=self._transcript.audio_waveform_filename,
+                on_waveform=self.on_waveform,
+            ),
         ]
 
-        # we need to create an url to be used for diarization
-        # we can't use the audio_mp3_filename because it's not accessible
-        # from the diarization processor
-        from reflector.views.transcripts import create_access_token
 
-        path = app.url_path_for(
-            "transcript_get_audio_mp3",
-            transcript_id=transcript.id,
-        )
-        url = f"{settings.BASE_URL}{path}"
-        if transcript.user_id:
-            # we pass token only if the user_id is set
-            # otherwise, the audio is public
-            token = create_access_token(
-                {"sub": transcript.user_id},
-                expires_delta=timedelta(minutes=15),
-            )
-            url += f"?token={token}"
-        audio_diarization_input = AudioDiarizationInput(
-            audio_url=url,
-            topics=topics,
-        )
+@get_transcript
+async def pipeline_waveform(transcript: Transcript, logger: Logger):
+    logger.info("Starting waveform")
+    runner = PipelineMainWaveform(transcript_id=transcript.id)
+    await runner.run()
+    logger.info("Waveform done")
 
-        # as tempting to use pipeline.push, prefer to use the runner
-        # to let the start just do one job.
-        pipeline.logger.bind(transcript_id=transcript.id)
-        pipeline.logger.info(
-            "Pipeline main post created", transcript_id=self.transcript_id
-        )
-        self.push(audio_diarization_input)
-        self.flush()
 
-        return pipeline
+@get_transcript
+async def pipeline_convert_to_mp3(transcript: Transcript, logger: Logger):
+    logger.info("Starting convert to mp3")
+
+    # If the audio wav is not available, just skip
+    wav_filename = transcript.audio_wav_filename
+    if not wav_filename.exists():
+        logger.warning("Wav file not found, may be already converted")
+        return
+
+    # Convert to mp3
+    mp3_filename = transcript.audio_mp3_filename
+
+    import av
+
+    with av.open(wav_filename.as_posix()) as in_container:
+        in_stream = in_container.streams.audio[0]
+        with av.open(mp3_filename.as_posix(), "w") as out_container:
+            out_stream = out_container.add_stream("mp3")
+            for frame in in_container.decode(in_stream):
+                for packet in out_stream.encode(frame):
+                    out_container.mux(packet)
+
+    # Delete the wav file
+    transcript.audio_wav_filename.unlink(missing_ok=True)
+
+    logger.info("Convert to mp3 done")
+
+
+@get_transcript
+async def pipeline_upload_mp3(transcript: Transcript, logger: Logger):
+    if not settings.TRANSCRIPT_STORAGE_BACKEND:
+        logger.info("No storage backend configured, skipping mp3 upload")
+        return
+
+    logger.info("Starting upload mp3")
+
+    # If the audio mp3 is not available, just skip
+    mp3_filename = transcript.audio_mp3_filename
+    if not mp3_filename.exists():
+        logger.warning("Mp3 file not found, may be already uploaded")
+        return
+
+    # Upload to external storage and delete the file
+    await transcripts_controller.move_mp3_to_storage(transcript)
+
+    logger.info("Upload mp3 done")
+
+
+@get_transcript
+async def pipeline_diarization(transcript: Transcript, logger: Logger):
+    logger.info("Starting diarization")
+    runner = PipelineMainDiarization(transcript_id=transcript.id)
+    await runner.run()
+    logger.info("Diarization done")
+
+
+@get_transcript
+async def pipeline_title_and_short_summary(transcript: Transcript, logger: Logger):
+    logger.info("Starting title and short summary")
+    runner = PipelineMainTitleAndShortSummary(transcript_id=transcript.id)
+    await runner.run()
+    logger.info("Title and short summary done")
+
+
+@get_transcript
+async def pipeline_summaries(transcript: Transcript, logger: Logger):
+    logger.info("Starting summaries")
+    runner = PipelineMainFinalSummaries(transcript_id=transcript.id)
+    await runner.run()
+    logger.info("Summaries done")
+
+
+# ===================================================================
+# Celery tasks that can be called from the API
+# ===================================================================
 
 
 @shared_task
-def task_pipeline_main_post(transcript_id: str):
-    logger.info(
-        "Starting main post pipeline",
-        transcript_id=transcript_id,
+@asynctask
+async def task_pipeline_waveform(*, transcript_id: str):
+    await pipeline_waveform(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
+async def task_pipeline_convert_to_mp3(*, transcript_id: str):
+    await pipeline_convert_to_mp3(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
+async def task_pipeline_upload_mp3(*, transcript_id: str):
+    await pipeline_upload_mp3(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
+async def task_pipeline_diarization(*, transcript_id: str):
+    await pipeline_diarization(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
+async def task_pipeline_title_and_short_summary(*, transcript_id: str):
+    await pipeline_title_and_short_summary(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
+async def task_pipeline_final_summaries(*, transcript_id: str):
+    await pipeline_summaries(transcript_id=transcript_id)
+
+
+def pipeline_post(*, transcript_id: str):
+    """
+    Run the post pipeline
+    """
+    chain_mp3_and_diarize = (
+        task_pipeline_waveform.si(transcript_id=transcript_id)
+        | task_pipeline_convert_to_mp3.si(transcript_id=transcript_id)
+        | task_pipeline_upload_mp3.si(transcript_id=transcript_id)
+        | task_pipeline_diarization.si(transcript_id=transcript_id)
     )
-    runner = PipelineMainDiarization(transcript_id=transcript_id)
-    runner.start_sync()
+    chain_title_preview = task_pipeline_title_and_short_summary.si(
+        transcript_id=transcript_id
+    )
+    chain_final_summaries = task_pipeline_final_summaries.si(
+        transcript_id=transcript_id
+    )
+
+    chain = chord(
+        group(chain_mp3_and_diarize, chain_title_preview),
+        chain_final_summaries,
+    )
+    chain.delay()

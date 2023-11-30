@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     AUDIO_BUFFER_SIZE: int = 256 * 960
 
     # Audio Transcription
-    # backends: whisper, banana, modal
+    # backends: whisper, modal
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
@@ -50,24 +50,20 @@ class Settings(BaseSettings):
     TRANSLATE_URL: str | None = None
     TRANSLATE_TIMEOUT: int = 90
 
-    # Audio transcription banana.dev configuration
-    TRANSCRIPT_BANANA_API_KEY: str | None = None
-    TRANSCRIPT_BANANA_MODEL_KEY: str | None = None
-
     # Audio transcription modal.com configuration
     TRANSCRIPT_MODAL_API_KEY: str | None = None
 
     # Audio transcription storage
-    TRANSCRIPT_STORAGE_BACKEND: str = "aws"
+    TRANSCRIPT_STORAGE_BACKEND: str | None = None
 
     # Storage configuration for AWS
-    TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket/chunks"
+    TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket"
     TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, banana, modal, oobabooga
+    # available backend: openai, modal, oobabooga
     LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
@@ -82,14 +78,11 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     ZEPHYR_LLM_URL: str | None = None
 
-    # LLM Banana configuration
-    LLM_BANANA_API_KEY: str | None = None
-    LLM_BANANA_MODEL_KEY: str | None = None
-
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
     # Diarization
+    DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
 
