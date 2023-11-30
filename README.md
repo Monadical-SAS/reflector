@@ -133,17 +133,25 @@ TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
 ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
 ```
 
-### Start the project
+### Start the API/Backend
 
-Use:
+Start the API server:
 
 ```bash
 poetry run python3 -m reflector.app
 ```
 
-And start the background worker
+Start the background worker:
 
+```bash
 celery -A reflector.worker.app worker --loglevel=info
+```
+
+For crontab (only healthcheck for now), start the celery beat:
+
+```bash
+celery -A reflector.worker.app beat
+```
 
 #### Using docker
 
