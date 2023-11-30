@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
@@ -27,6 +27,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("long_summary", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
+    sqlalchemy.Column("participants", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
     sqlalchemy.Column(
@@ -112,6 +113,13 @@ class TranscriptEvent(BaseModel):
     data: dict
 
 
+class TranscriptParticipant(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str = Field(default_factory=generate_uuid4)
+    speaker: int | None
+    name: str
+
+
 class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
@@ -125,6 +133,7 @@ class Transcript(BaseModel):
     long_summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
+    participants: list[TranscriptParticipant] = []
     source_language: str = "en"
     target_language: str = "en"
     share_mode: Literal["private", "semi-private", "public"] = "private"
@@ -142,11 +151,33 @@ class Transcript(BaseModel):
         else:
             self.topics.append(topic)
 
+    def upsert_participant(self, participant: TranscriptParticipant):
+        index = next(
+            (i for i, p in enumerate(self.participants) if p.id == participant.id),
+            None,
+        )
+        if index is not None:
+            self.participants[index] = participant
+        else:
+            self.participants.append(participant)
+        return participant
+
+    def delete_participant(self, participant_id: str):
+        index = next(
+            (i for i, p in enumerate(self.participants) if p.id == participant_id),
+            None,
+        )
+        if index is not None:
+            del self.participants[index]
+
     def events_dump(self, mode="json"):
         return [event.model_dump(mode=mode) for event in self.events]
 
     def topics_dump(self, mode="json"):
         return [topic.model_dump(mode=mode) for topic in self.topics]
+
+    def participants_dump(self, mode="json"):
+        return [participant.model_dump(mode=mode) for participant in self.participants]
 
     def unlink(self):
         self.data_path.unlink(missing_ok=True)
@@ -409,6 +440,29 @@ class TranscriptController:
 
         # unlink the local file
         transcript.audio_mp3_filename.unlink(missing_ok=True)
+
+    async def upsert_participant(
+        self,
+        transcript: Transcript,
+        participant: TranscriptParticipant,
+    ) -> TranscriptParticipant:
+        """
+        Add/update a participant to a transcript
+        """
+        result = transcript.upsert_participant(participant)
+        await self.update(transcript, {"participants": transcript.participants_dump()})
+        return result
+
+    async def delete_participant(
+        self,
+        transcript: Transcript,
+        participant_id: str,
+    ):
+        """
+        Delete a participant from a transcript
+        """
+        transcript.delete_participant(participant_id)
+        await self.update(transcript, {"participants": transcript.participants_dump()})
 
 
 transcripts_controller = TranscriptController()
