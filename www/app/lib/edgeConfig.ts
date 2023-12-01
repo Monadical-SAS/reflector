@@ -1,18 +1,6 @@
 import { get } from "@vercel/edge-config";
 import { isDevelopment } from "./utils";
-
-const localConfig = {
-  features: {
-    requireLogin: false,
-    privacy: true,
-    browse: false,
-    sendToZulip: true,
-  },
-  api_url: "http://127.0.0.1:1250",
-  websocket_url: "ws://127.0.0.1:1250",
-  auth_callback_url: "http://localhost:3000/auth-callback",
-  zulip_streams: "https://d3ow1y42gqfmk.cloudfront.net",
-};
+import { localConfig } from "../../config";
 
 type EdgeConfig = {
   [domainWithDash: string]: {
