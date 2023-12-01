@@ -133,7 +133,7 @@ class Transcript(BaseModel):
     long_summary: str | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
-    participants: list[TranscriptParticipant] = []
+    participants: list[TranscriptParticipant] | None = []
     source_language: str = "en"
     target_language: str = "en"
     share_mode: Literal["private", "semi-private", "public"] = "private"
