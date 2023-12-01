@@ -128,5 +128,8 @@ class Settings(BaseSettings):
     # Profiling
     PROFILING: bool = False
 
+    # Healthcheck
+    HEALTHCHECK_URL: str | None = None
+
 
 settings = Settings()
