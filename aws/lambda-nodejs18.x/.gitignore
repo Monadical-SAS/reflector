@@ -185,6 +185,8 @@ Thumbs.db:encryptable
 ehthumbs.db
 ehthumbs_vista.db
 
+.aws-sam
+
 # Dump file
 *.stackdump
 
