@@ -106,6 +106,14 @@ class PipelineRunner(BaseModel):
             if not self.pipeline:
                 self.pipeline = await self.create()
 
+            if not self.pipeline:
+                # no pipeline created in create, just finish it then.
+                await self._set_status("ended")
+                self._ev_done.set()
+                if self.on_ended:
+                    await self.on_ended()
+                return
+
             # start the loop
             await self._set_status("started")
             while not self._ev_done.is_set():
@@ -119,8 +127,7 @@ class PipelineRunner(BaseModel):
             self._logger.exception("Runner error")
             await self._set_status("error")
             self._ev_done.set()
-            if self.on_ended:
-                await self.on_ended()
+            raise
 
     async def cmd_push(self, data):
         if self._is_first_push:

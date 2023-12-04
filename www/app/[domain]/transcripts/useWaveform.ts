@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptGetAudioWaveformRequest,
-} from "../../api/apis/DefaultApi";
+import { V1TranscriptGetAudioWaveformRequest } from "../../api/apis/DefaultApi";
 import { AudioWaveform } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import getApi from "../../lib/getApi";
@@ -14,12 +11,12 @@ type AudioWaveFormResponse = {
   error: Error | null;
 };
 
-const useWaveform = (protectedPath, id: string): AudioWaveFormResponse => {
+const useWaveform = (id: string): AudioWaveFormResponse => {
   const [waveform, setWaveform] = useState<AudioWaveform | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi(protectedPath);
+  const api = getApi();
 
   useEffect(() => {
     if (!id || !api) return;

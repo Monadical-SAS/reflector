@@ -31,7 +31,7 @@ class AudioDiarizationModalProcessor(AudioDiarizationProcessor):
                 follow_redirects=True,
             )
             response.raise_for_status()
-            return response.json()["text"]
+            return response.json()["diarization"]
 
 
 AudioDiarizationAutoProcessor.register("modal", AudioDiarizationModalProcessor)
