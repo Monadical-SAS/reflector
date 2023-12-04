@@ -54,7 +54,7 @@ export function getZulipMessage(
   const domain = window.location.origin; // Gives you "http://localhost:3000" or your deployment base URL
   const link = `${domain}/transcripts/${transcript.id}`;
 
-  let headerText = `# Reflector – ${transcript.title}
+  let headerText = `# Reflector – ${transcript.title ?? "Unnamed recording"}
 
 **Date**: <time:${dateTimeString}>
 **Link**: [${extractDomain(link)}](${link})

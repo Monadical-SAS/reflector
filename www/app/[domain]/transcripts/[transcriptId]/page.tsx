@@ -60,43 +60,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     transcript &&
     transcript.response
   ) {
-    transcript.response.longSummary = `
-**Meeting Summary:**
-
-**Date:** November 21, 2023
-**Attendees:** Alice Johnson, Bob Smith, Carlos Gomez, Dana Lee
-**Agenda Items:**
-
-1. **Project Alpha Update:**
-   - Discussed current progress and minor setbacks.
-   - Agreed on extending the deadline by two weeks.
-   - Assigned new tasks to team members.
-
-2. **Budget Review for Quarter 4:**
-   - Reviewed financial performance.
-   - Identified areas of overspending and discussed cost-cutting measures.
-   - Decided to allocate additional funds to marketing.
-
-3. **New Product Launch Strategy:**
-   - Brainstormed ideas for the upcoming product launch.
-   - Agreed on a digital-first marketing approach.
-   - Set a tentative launch date for January 15, 2024.
-
-**Key Decisions:**
-- Extend Project Alpha's deadline to allow for quality enhancement.
-- Implement cost-saving strategies in non-essential departments.
-- Proceed with the digital marketing plan for the new product launch.
-
-**Action Items:**
-- Alice to coordinate with the marketing team for the new campaign.
-- Bob to oversee the budget adjustments and report back in one week.
-- Carlos to lead the task force for Project Alpha's final phase.
-- Dana to prepare a detailed report on competitor analysis for the next meeting.
-
-**Next Meeting:**
-Scheduled for December 5, 2023, to review progress and finalize the new product launch details.
-`;
-
     if (transcript.error || topics?.error) {
       return (
         <Modal
