@@ -23,7 +23,7 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
     - [OpenAPI Code Generation](#openapi-code-generation)
   - [Back-End](#back-end)
     - [Installation](#installation-1)
-    - [Start the project](#start-the-project)
+    - [Start the API/Backend](#start-the-apibackend)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -133,15 +133,15 @@ TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
 ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
 ```
 
-### Start the project
+### Start the API/Backend
 
-Use:
+Start the API server:
 
 ```bash
 poetry run python3 -m reflector.app
 ```
 
-And start the background worker
+Start the background worker:
 
 ```bash
 celery -A reflector.worker.app worker --loglevel=info
@@ -151,6 +151,12 @@ Redis:
 
 ```bash
 TODO
+```
+
+For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
+
+```bash
+celery -A reflector.worker.app beat
 ```
 
 #### Using docker

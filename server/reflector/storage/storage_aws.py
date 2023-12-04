@@ -1,6 +1,6 @@
 import aioboto3
-from reflector.storage.base import Storage, FileResult
 from reflector.logger import logger
+from reflector.storage.base import FileResult, Storage
 
 
 class AwsStorage(Storage):
@@ -44,16 +44,18 @@ class AwsStorage(Storage):
                 Body=data,
             )
 
+    async def _get_file_url(self, filename: str) -> FileResult:
+        bucket = self.aws_bucket_name
+        folder = self.aws_folder
+        s3filename = f"{folder}/{filename}" if folder else filename
+        async with self.session.client("s3") as client:
             presigned_url = await client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": bucket, "Key": s3filename},
                 ExpiresIn=3600,
             )
 
-            return FileResult(
-                filename=filename,
-                url=presigned_url,
-            )
+            return presigned_url
 
     async def _delete_file(self, filename: str):
         bucket = self.aws_bucket_name

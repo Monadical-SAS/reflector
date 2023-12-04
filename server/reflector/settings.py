@@ -54,16 +54,13 @@ class Settings(BaseSettings):
     TRANSCRIPT_MODAL_API_KEY: str | None = None
 
     # Audio transcription storage
-    TRANSCRIPT_STORAGE_BACKEND: str = "aws"
+    TRANSCRIPT_STORAGE_BACKEND: str | None = None
 
     # Storage configuration for AWS
     TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket"
     TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
-
-    # Transcript MP3 storage
-    TRANSCRIPT_MP3_STORAGE_BACKEND: str = "aws"
 
     # LLM
     # available backend: openai, modal, oobabooga
@@ -130,6 +127,9 @@ class Settings(BaseSettings):
 
     # Profiling
     PROFILING: bool = False
+
+    # Healthcheck
+    HEALTHCHECK_URL: str | None = None
 
 
 settings = Settings()
