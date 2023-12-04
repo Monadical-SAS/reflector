@@ -3,9 +3,9 @@ import { isDevelopment } from "./utils";
 
 const localConfig = {
   features: {
-    requireLogin: false,
+    requireLogin: true,
     privacy: true,
-    browse: false,
+    browse: true,
   },
   api_url: "http://127.0.0.1:1250",
   websocket_url: "ws://127.0.0.1:1250",
