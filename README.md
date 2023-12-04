@@ -143,7 +143,15 @@ poetry run python3 -m reflector.app
 
 And start the background worker
 
+```bash
 celery -A reflector.worker.app worker --loglevel=info
+```
+
+Redis:
+
+```bash
+TODO
+```
 
 #### Using docker
 

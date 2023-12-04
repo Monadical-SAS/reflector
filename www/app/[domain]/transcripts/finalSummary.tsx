@@ -9,6 +9,7 @@ type FinalSummaryProps = {
   summary: string;
   fullTranscript: string;
   transcriptId: string;
+  openZulipModal: () => void;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
@@ -118,32 +119,44 @@ export default function FinalSummary(props: FinalSummaryProps) {
           {!isEditMode && (
             <>
               <button
+                className={
+                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
+                }
+                onClick={() => props.openZulipModal()}
+              >
+                <span className="text-xs">➡️ Zulip</span>
+              </button>
+              <button
                 onClick={onEditClick}
                 className={
-                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
                 }
               >
-                Edit Summary
+                <span className="text-xs">✏️ Summary</span>
               </button>
               <button
                 onClick={onCopyTranscriptClick}
                 className={
                   (isCopiedTranscript ? "bg-blue-500" : "bg-blue-400") +
-                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
                 }
                 style={{ minHeight: "30px" }}
               >
-                {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
+                <span className="text-xs">
+                  {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
+                </span>
               </button>
               <button
                 onClick={onCopySummaryClick}
                 className={
                   (isCopiedSummary ? "bg-blue-500" : "bg-blue-400") +
-                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base text-xs"
+                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
                 }
                 style={{ minHeight: "30px" }}
               >
-                {isCopiedSummary ? "Copied!" : "Copy Summary"}
+                <span className="text-xs">
+                  {isCopiedSummary ? "Copied!" : "Copy Summary"}
+                </span>
               </button>
             </>
           )}
