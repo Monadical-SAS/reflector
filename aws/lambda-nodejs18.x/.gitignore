@@ -187,6 +187,9 @@ ehthumbs_vista.db
 
 .aws-sam
 
+UpdateZulipStreams/node_modules
+UpdateZulipStreams/node_modules copy
+
 # Dump file
 *.stackdump
 
