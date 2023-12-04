@@ -43,7 +43,7 @@ const ShareModal = (props: ShareModal) => {
   const [streams, setStreams] = useState<Stream[]>([]);
 
   useEffect(() => {
-    fetch("/streams.json")
+    fetch(process.env.NEXT_PUBLIC_ZULIIPSTREAMS_HOSTNAME + "/streams.json")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
