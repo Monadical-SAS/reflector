@@ -3,6 +3,7 @@ import React from "react";
 import Markdown from "react-markdown";
 import "../../styles/markdown.css";
 import getApi from "../../lib/getApi";
+import { featureEnabled } from "../domainContext";
 
 type FinalSummaryProps = {
   summary: string;
@@ -117,14 +118,17 @@ export default function FinalSummary(props: FinalSummaryProps) {
 
           {!isEditMode && (
             <>
-              <button
-                className={
-                  "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
-                }
-                onClick={() => props.openZulipModal()}
-              >
-                <span className="text-xs">➡️ Zulip</span>
-              </button>
+              {featureEnabled("sendToZulip") && (
+                <button
+                  className={
+                    "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
+                  }
+                  onClick={() => props.openZulipModal()}
+                >
+                  <span className="text-xs">➡️ Zulip</span>
+                </button>
+              )}
+
               <button
                 onClick={onEditClick}
                 className={

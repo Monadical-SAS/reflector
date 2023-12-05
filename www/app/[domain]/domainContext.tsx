@@ -9,6 +9,7 @@ export const DomainContext = createContext<DomainContextType>({
     requireLogin: false,
     privacy: true,
     browse: false,
+    sendToZulip: false,
   },
   api_url: "",
   websocket_url: "",
@@ -38,7 +39,7 @@ export const DomainContextProvider = ({
 
 // Get feature config client-side with
 export const featureEnabled = (
-  featureName: "requireLogin" | "privacy" | "browse",
+  featureName: "requireLogin" | "privacy" | "browse" | "sendToZulip",
 ) => {
   const context = useContext(DomainContext);
   return context.features[featureName] as boolean | undefined;
