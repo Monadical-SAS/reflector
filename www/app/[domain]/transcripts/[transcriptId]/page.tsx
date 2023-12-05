@@ -18,6 +18,7 @@ import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { featureEnabled } from "../../domainContext";
 
 type TranscriptDetails = {
   params: {
@@ -75,16 +76,18 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
     return (
       <>
-        <ShareModal
-          transcript={transcript.response}
-          topics={topics ? topics.topics : null}
-          show={showModal}
-          setShow={(v) => setShowModal(v)}
-          title={transcript?.response?.title}
-          summary={transcript?.response?.longSummary}
-          date={transcript?.response?.createdAt}
-          url={window.location.href}
-        />
+        {featureEnabled("sendToZulip") && (
+          <ShareModal
+            transcript={transcript.response}
+            topics={topics ? topics.topics : null}
+            show={showModal}
+            setShow={(v) => setShowModal(v)}
+            title={transcript?.response?.title}
+            summary={transcript?.response?.longSummary}
+            date={transcript?.response?.createdAt}
+            url={window.location.href}
+          />
+        )}
         <div className="flex flex-col">
           {transcript?.response?.title && (
             <TranscriptTitle
