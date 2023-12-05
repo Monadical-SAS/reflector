@@ -147,10 +147,10 @@ Start the background worker:
 celery -A reflector.worker.app worker --loglevel=info
 ```
 
-Redis:
+Redis (mac specific command):
 
 ```bash
-TODO
+redis-server
 ```
 
 For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
