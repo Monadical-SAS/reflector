@@ -75,6 +75,6 @@ export function getZulipMessage(
   summary += transcript.longSummary;
   summary += "```\n\n";
 
-  const message = "----\n\n" + headerText + summary + topicText + "-----\n";
+  const message = headerText + summary + topicText + "-----\n";
   return message;
 }
