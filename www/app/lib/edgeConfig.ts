@@ -6,7 +6,7 @@ const localConfig = {
     requireLogin: true,
     privacy: true,
     browse: true,
-    sendToZulip: true,
+    sendToZulip: false,
   },
   api_url: "http://127.0.0.1:1250",
   websocket_url: "ws://127.0.0.1:1250",

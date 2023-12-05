@@ -42,6 +42,7 @@ export const featureEnabled = (
   featureName: "requireLogin" | "privacy" | "browse" | "sendToZulip",
 ) => {
   const context = useContext(DomainContext);
+  console.log(context.features, featureName);
   return context.features[featureName] as boolean | undefined;
 };
 
