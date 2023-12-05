@@ -1,13 +1,17 @@
 import axios from "axios";
 import { URLSearchParams } from "url";
+import { featureEnabled } from "../../app/[domain]/domainContext";
 
 export default async function handler(req, res) {
   if (req.method === "POST") {
     const { stream, topic, message } = req.body;
-    console.log("Sending zulip message", stream, topic);
 
     if (!stream || !topic || !message) {
       return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    if (!featureEnabled("sendToZulip")) {
+      return res.status(403).json({ error: "Zulip integration disabled" });
     }
 
     try {

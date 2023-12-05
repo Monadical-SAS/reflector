@@ -6,6 +6,7 @@ const localConfig = {
     requireLogin: true,
     privacy: true,
     browse: true,
+    sendToZulip: true,
   },
   api_url: "http://127.0.0.1:1250",
   websocket_url: "ws://127.0.0.1:1250",
@@ -15,7 +16,11 @@ const localConfig = {
 type EdgeConfig = {
   [domainWithDash: string]: {
     features: {
-      [featureName in "requireLogin" | "privacy" | "browse"]: boolean;
+      [featureName in
+        | "requireLogin"
+        | "privacy"
+        | "browse"
+        | "sendToZulip"]: boolean;
     };
     auth_callback_url: string;
     websocket_url: string;
