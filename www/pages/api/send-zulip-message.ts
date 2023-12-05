@@ -1,8 +1,12 @@
 import axios from "axios";
 import { URLSearchParams } from "url";
-import { featureEnabled } from "../../app/[domain]/domainContext";
+import { getConfig } from "../../app/lib/edgeConfig";
 
 export default async function handler(req, res) {
+  const domainName = req.headers.host;
+  const config = await getConfig(domainName);
+  const { requireLogin, privacy, browse, sendToZulip } = config.features;
+
   if (req.method === "POST") {
     const { stream, topic, message } = req.body;
 
@@ -10,7 +14,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    if (!featureEnabled("sendToZulip")) {
+    if (!sendToZulip) {
       return res.status(403).json({ error: "Zulip integration disabled" });
     }
 
