@@ -54,7 +54,6 @@ const ShareModal = (props: ShareModal) => {
         data = data.sort((a: Stream, b: Stream) =>
           a.name.localeCompare(b.name),
         );
-        console.log("Stream data:", data);
         setStreams(data);
         setIsLoading(false);
         // data now contains the JavaScript object decoded from JSON
@@ -75,8 +74,6 @@ const ShareModal = (props: ShareModal) => {
   if (props.show && isLoading) {
     return <div>Loading...</div>;
   }
-
-  console.log(stream);
 
   let streamOptions: SelectSearchOption[] = [];
   if (streams) {
