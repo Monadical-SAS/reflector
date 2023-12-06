@@ -1,3 +1,6 @@
+import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 type PaginationProps = {
   page: number;
   setPage: (page: number) => void;
@@ -40,13 +43,13 @@ export default function Pagination(props: PaginationProps) {
   return (
     <div className="flex justify-center space-x-4 my-4">
       <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
+        className={`w-10 h-10 rounded-full p-2 ${
           canGoPrevious ? "text-gray-500" : "text-gray-300"
         }`}
         onClick={() => handlePageChange(page - 1)}
         disabled={!canGoPrevious}
       >
-        <i className="fa fa-chevron-left">&lt;</i>
+        <FontAwesomeIcon icon={faArrowLeft} className="h-5 w-auto" />
       </button>
 
       {pageNumbers.map((pageNumber) => (
@@ -62,13 +65,13 @@ export default function Pagination(props: PaginationProps) {
       ))}
 
       <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
+        className={`w-10 h-10 rounded-full p-2 ${
           canGoNext ? "text-gray-500" : "text-gray-300"
         }`}
         onClick={() => handlePageChange(page + 1)}
         disabled={!canGoNext}
       >
-        <i className="fa fa-chevron-right">&gt;</i>
+        <FontAwesomeIcon icon={faArrowRight} className="h-5 w-auto" />
       </button>
     </div>
   );

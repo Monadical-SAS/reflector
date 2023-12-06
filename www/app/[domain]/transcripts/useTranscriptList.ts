@@ -7,6 +7,7 @@ type TranscriptList = {
   response: Page_GetTranscript_ | null;
   loading: boolean;
   error: Error | null;
+  refetch: () => void;
 };
 
 //always protected
@@ -16,6 +17,15 @@ const useTranscriptList = (page: number): TranscriptList => {
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = useApi();
+  const [refetchCount, setRefetchCount] = useState(0);
+
+  const refetch = () => {
+    setRefetchCount(refetchCount + 1);
+  };
+
+  useEffect(() => {
+    setResponse(null);
+  }, [page]);
 
   useEffect(() => {
     if (!api) return;
@@ -32,9 +42,9 @@ const useTranscriptList = (page: number): TranscriptList => {
         setError(err);
         setErrorState(err);
       });
-  }, [!api, page]);
+  }, [!api, page, refetchCount]);
 
-  return { response, loading, error };
+  return { response, loading, error, refetch };
 };
 
 export default useTranscriptList;
