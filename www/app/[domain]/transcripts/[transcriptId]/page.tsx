@@ -56,11 +56,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       .replace(/ +/g, " ")
       .trim() || "";
 
-  if (
-    (transcript?.response?.longSummary === null || true) &&
-    transcript &&
-    transcript.response
-  ) {
+  if (transcript && transcript.response) {
     if (transcript.error || topics?.error) {
       return (
         <Modal
@@ -82,10 +78,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             topics={topics ? topics.topics : null}
             show={showModal}
             setShow={(v) => setShowModal(v)}
-            title={transcript?.response?.title}
-            summary={transcript?.response?.longSummary}
-            date={transcript?.response?.createdAt}
-            url={window.location.href}
           />
         )}
         <div className="flex flex-col">
