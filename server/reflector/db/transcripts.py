@@ -1,4 +1,5 @@
 import json
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -188,7 +189,9 @@ class Transcript(BaseModel):
         return [participant.model_dump(mode=mode) for participant in self.participants]
 
     def unlink(self):
-        self.data_path.unlink(missing_ok=True)
+        for filename in os.listdir(self.data_path):
+            if os.path.isfile(os.path.join("directory_path", filename)):
+                os.remove(os.path.join("directory_path", filename))
 
     @property
     def data_path(self):
