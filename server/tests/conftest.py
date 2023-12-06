@@ -36,7 +36,13 @@ def dummy_processors():
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
         mock_translate.return_value = "Bonjour le monde"
-        yield mock_translate, mock_topic, mock_title, mock_long_summary, mock_short_summary  # noqa
+        yield (
+            mock_translate,
+            mock_topic,
+            mock_title,
+            mock_long_summary,
+            mock_short_summary,
+        )  # noqa
 
 
 @pytest.fixture
@@ -166,3 +172,64 @@ def fake_mp3_upload():
     ) as mock_move:
         mock_move.return_value = True
         yield
+
+
+@pytest.fixture
+async def fake_transcript_with_topics(tmpdir):
+    from reflector.settings import settings
+    from reflector.app import app
+    from reflector.views.transcripts import transcripts_controller
+    from reflector.db.transcripts import TranscriptTopic
+    from reflector.processors.types import Word
+    from pathlib import Path
+    from httpx import AsyncClient
+    import shutil
+
+    settings.DATA_DIR = Path(tmpdir)
+
+    # create a transcript
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.post("/transcripts", json={"name": "Test audio download"})
+    assert response.status_code == 200
+    tid = response.json()["id"]
+
+    transcript = await transcripts_controller.get_by_id(tid)
+    assert transcript is not None
+
+    await transcripts_controller.update(transcript, {"status": "finished"})
+
+    # manually copy a file at the expected location
+    audio_filename = transcript.audio_mp3_filename
+    path = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
+    audio_filename.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(path, audio_filename)
+
+    # create some topics
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 1",
+            summary="Topic 1 summary",
+            timestamp=0,
+            transcript="Hello world",
+            words=[
+                Word(text="Hello", start=0, end=1, speaker=0),
+                Word(text="world", start=1, end=2, speaker=0),
+            ],
+        ),
+    )
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 2",
+            summary="Topic 2 summary",
+            timestamp=2,
+            transcript="Hello world",
+            words=[
+                Word(text="Hello", start=2, end=3, speaker=0),
+                Word(text="world", start=3, end=4, speaker=0),
+            ],
+        ),
+    )
+
+    yield transcript
