@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from "react";
 import SelectSearch from "react-select-search";
-import {
-  getZulipMessage,
-  sendZulipMessage,
-  ZULIP_MSG_MAX_LENGTH,
-} from "../../../lib/zulip";
-import { Transcript } from "../webSocketTypes";
-import {
-  GetTranscript,
-  GetTranscriptSegmentTopic,
-  GetTranscriptTopic,
-} from "../../../api";
+import { getZulipMessage, sendZulipMessage } from "../../../lib/zulip";
+import { GetTranscript, GetTranscriptTopic } from "../../../api";
 import "react-select-search/style.css";
 
 type ShareModal = {
   show: boolean;
   setShow: (show: boolean) => void;
-  title: string;
-  url: string;
-  summary: string;
-  date: string;
   transcript: GetTranscript | null;
   topics: GetTranscriptTopic[] | null;
 };
