@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { useError } from "../../(errors)/errorContext";
-import { GetTranscript, CreateTranscript } from "../../api";
+import { CreateTranscript } from "../../api";
 import useApi from "../../lib/useApi";
 
-type UseTranscript = {
+type UseCreateTranscript = {
   transcript: GetTranscript | null;
   loading: boolean;
   error: Error | null;
   create: (transcriptCreationDetails: CreateTranscript) => void;
 };
 
-const useCreateTranscript = (): UseTranscript => {
+const useCreateTranscript = (): UseCreateTranscript => {
   const [transcript, setTranscript] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
