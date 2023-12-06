@@ -362,7 +362,7 @@ class TranscriptController:
         await database.execute(query)
         return transcript
 
-    async def update(self, transcript: Transcript, values: dict):
+    async def update(self, transcript: Transcript, values: dict, mutate=True):
         """
         Update a transcript fields with key/values in values
         """
@@ -372,8 +372,9 @@ class TranscriptController:
             .values(**values)
         )
         await database.execute(query)
-        for key, value in values.items():
-            setattr(transcript, key, value)
+        if mutate:
+            for key, value in values.items():
+                setattr(transcript, key, value)
 
     async def remove_by_id(
         self,
@@ -410,7 +411,11 @@ class TranscriptController:
         Append an event to a transcript
         """
         resp = transcript.add_event(event=event, data=data)
-        await self.update(transcript, {"events": transcript.events_dump()})
+        await self.update(
+            transcript,
+            {"events": transcript.events_dump()},
+            mutate=False,
+        )
         return resp
 
     async def upsert_topic(
@@ -422,7 +427,11 @@ class TranscriptController:
         Append an event to a transcript
         """
         transcript.upsert_topic(topic)
-        await self.update(transcript, {"topics": transcript.topics_dump()})
+        await self.update(
+            transcript,
+            {"topics": transcript.topics_dump()},
+            mutate=False,
+        )
 
     async def move_mp3_to_storage(self, transcript: Transcript):
         """
@@ -450,7 +459,11 @@ class TranscriptController:
         Add/update a participant to a transcript
         """
         result = transcript.upsert_participant(participant)
-        await self.update(transcript, {"participants": transcript.participants_dump()})
+        await self.update(
+            transcript,
+            {"participants": transcript.participants_dump()},
+            mutate=False,
+        )
         return result
 
     async def delete_participant(
@@ -462,7 +475,11 @@ class TranscriptController:
         Delete a participant from a transcript
         """
         transcript.delete_participant(participant_id)
-        await self.update(transcript, {"participants": transcript.participants_dump()})
+        await self.update(
+            transcript,
+            {"participants": transcript.participants_dump()},
+            mutate=False,
+        )
 
 
 transcripts_controller = TranscriptController()

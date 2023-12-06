@@ -13,6 +13,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.processors.types import Transcript as ProcessorTranscript
+from reflector.processors.types import Word
 from reflector.settings import settings
 
 router = APIRouter()
@@ -159,6 +160,17 @@ class GetTranscriptTopic(BaseModel):
         )
 
 
+class GetTranscriptTopicWithWords(GetTranscriptTopic):
+    words: list[Word] = []
+
+    @classmethod
+    def from_transcript_topic(cls, topic: TranscriptTopic):
+        instance = super().from_transcript_topic(topic)
+        if topic.words:
+            instance.words = topic.words
+        return instance
+
+
 @router.get("/transcripts/{transcript_id}", response_model=GetTranscript)
 async def transcript_get(
     transcript_id: str,
@@ -214,4 +226,24 @@ async def transcript_get_topics(
     # convert to GetTranscriptTopic
     return [
         GetTranscriptTopic.from_transcript_topic(topic) for topic in transcript.topics
+    ]
+
+
+@router.get(
+    "/transcripts/{transcript_id}/topics/with-words",
+    response_model=list[GetTranscriptTopicWithWords],
+)
+async def transcript_get_topics_with_words(
+    transcript_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id_for_http(
+        transcript_id, user_id=user_id
+    )
+
+    # convert to GetTranscriptTopicWithWords
+    return [
+        GetTranscriptTopicWithWords.from_transcript_topic(topic)
+        for topic in transcript.topics
     ]
