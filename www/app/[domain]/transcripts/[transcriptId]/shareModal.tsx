@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import SelectSearch from "react-select-search";
 import { getZulipMessage, sendZulipMessage } from "../../../lib/zulip";
 import { GetTranscript, GetTranscriptTopic } from "../../../api";
 import "react-select-search/style.css";
+import { DomainContext } from "../../domainContext";
 
 type ShareModal = {
   show: boolean;
@@ -28,9 +29,10 @@ const ShareModal = (props: ShareModal) => {
   const [includeTopics, setIncludeTopics] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [streams, setStreams] = useState<Stream[]>([]);
+  const { zulip_streams } = useContext(DomainContext);
 
   useEffect(() => {
-    fetch(process.env.NEXT_PUBLIC_ZULIIPSTREAMS_HOSTNAME + "/streams.json")
+    fetch(zulip_streams + "/streams.json")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
