@@ -1,0 +1,31 @@
+[
+  {
+    "id": "27c07e49-d7a3-4b86-905c-f1a047366f91",
+    "title": "Issue one",
+    "summary": "The team discusses the first issue in the list",
+    "timestamp": 0.0,
+    "transcript": "",
+    "segments": [
+      {
+        "text": "Let's start with issue one, Alice you've been working on that, can you give an update ?",
+        "start": 0.0,
+        "speaker": 0
+      },
+      {
+        "text": "Yes, I've run into an issue with the task system but Bob helped me out and I have a POC ready, should I present it now ?",
+        "start": 0.38,
+        "speaker": 1
+      },
+      {
+        "text": "Yeah, I had to modify the task system because it didn't account for incoming blobs",
+        "start": 4.5,
+        "speaker": 2
+      },
+      {
+        "text": "Cool, yeah lets see it",
+        "start": 5.96,
+        "speaker": 0
+      }
+    ]
+  }
+]
