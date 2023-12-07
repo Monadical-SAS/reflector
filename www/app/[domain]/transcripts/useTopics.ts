@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptGetTopicsRequest,
-} from "../../api/apis/DefaultApi";
+import { V1TranscriptGetTopicsRequest } from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
 import getApi from "../../lib/getApi";
 import { shouldShowError } from "../../lib/errorUtils";
+import mockTopics from "./mockTopics.json";
 
 type TranscriptTopics = {
   topics: Topic[] | null;
@@ -20,6 +18,14 @@ const useTopics = (id: string): TranscriptTopics => {
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = getApi();
+
+  useEffect(() => {
+    document.onkeyup = (e) => {
+      if (e.key === "t" && process.env.NEXT_PUBLIC_ENV === "development") {
+        setTopics(mockTopics);
+      }
+    };
+  });
 
   useEffect(() => {
     if (!id || !api) return;
