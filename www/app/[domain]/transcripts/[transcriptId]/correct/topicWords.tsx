@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useTopicWithWords from "../../useTopicWithWords";
 import WaveformLoading from "../../waveformLoading";
 
@@ -11,14 +11,21 @@ type Word = {
 
 type WordBySpeaker = { speaker: number; words: Word[] }[];
 
+// TODO fix selection reversed
+// TODO shortcuts
+// TODO fix key (using indexes might act up, not sure as we don't re-order per say)
+
 const topicWords = ({
   setSelectedTime,
   currentTopic,
   transcriptId,
   setTopicTime,
+  stateSelectedSpeaker,
+  participants,
 }) => {
   const topicWithWords = useTopicWithWords(currentTopic, transcriptId);
   const [wordsBySpeaker, setWordsBySpeaker] = useState<WordBySpeaker>();
+  const [selectedSpeaker, setSelectedSpeaker] = stateSelectedSpeaker;
 
   useEffect(() => {
     if (topicWithWords.loading) {
@@ -72,6 +79,7 @@ const topicWords = ({
         const focusOffset = focusIsWord
           ? focusNode.textContent?.length
           : focusNode.parentNode?.lastChild?.textContent?.length;
+
         if (
           correctedAnchor &&
           anchorOffset !== undefined &&
@@ -84,20 +92,32 @@ const topicWords = ({
             correctedfocus,
             focusOffset,
           );
-          setSelectedTime({
-            start:
-              selection.anchorNode.parentElement?.dataset["start"] ||
-              (selection.anchorNode.parentElement?.nextElementSibling as any)
-                ?.dataset["start"] ||
-              0,
-            end:
-              selection.focusNode.parentElement?.dataset["end"] ||
-              (
-                selection.focusNode.parentElement?.parentElement
-                  ?.previousElementSibling?.lastElementChild as any
-              )?.dataset ||
-              0,
-          });
+
+          if (
+            !anchorIsWord &&
+            !focusIsWord &&
+            anchorNode.parentElement == focusNode.parentElement
+          ) {
+            console.log(focusNode.parentElement?.dataset);
+            setSelectedSpeaker(focusNode.parentElement?.dataset["speaker"]);
+            setSelectedTime(undefined);
+          } else {
+            setSelectedSpeaker(undefined);
+            setSelectedTime({
+              start:
+                selection.anchorNode.parentElement?.dataset["start"] ||
+                (selection.anchorNode.parentElement?.nextElementSibling as any)
+                  ?.dataset["start"] ||
+                0,
+              end:
+                selection.focusNode.parentElement?.dataset["end"] ||
+                (
+                  selection.focusNode.parentElement?.parentElement
+                    ?.previousElementSibling?.lastElementChild as any
+                )?.dataset ||
+                0,
+            });
+          }
         }
       }
       if (
@@ -112,14 +132,34 @@ const topicWords = ({
     };
   }, []);
 
-  if (!topicWithWords.loading && wordsBySpeaker) {
+  const getSpeakerName = useCallback(
+    (speakerNumber: number) => {
+      return (
+        participants.response.find((participant) => {
+          participant.speaker == speakerNumber;
+        }) || `Speaker ${speakerNumber}`
+      );
+    },
+    [participants],
+  );
+
+  if (!topicWithWords.loading && wordsBySpeaker && participants) {
     return (
       <div>
-        {wordsBySpeaker?.map((speakerWithWords) => (
-          <p>
-            <span>Speaker&nbsp;{speakerWithWords.speaker}&nbsp;:&nbsp;</span>
-            {speakerWithWords.words.map((word) => (
-              <span data-start={word.start} data-end={word.end}>
+        {wordsBySpeaker?.map((speakerWithWords, index) => (
+          <p key={index}>
+            <span
+              data-speaker={speakerWithWords.speaker}
+              className={
+                selectedSpeaker == speakerWithWords.speaker
+                  ? "bg-yellow-200"
+                  : ""
+              }
+            >
+              {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
+            </span>
+            {speakerWithWords.words.map((word, index) => (
+              <span data-start={word.start} data-end={word.end} key={index}>
                 {word.text}
               </span>
             ))}

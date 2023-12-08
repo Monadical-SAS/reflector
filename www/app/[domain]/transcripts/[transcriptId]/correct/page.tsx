@@ -4,6 +4,8 @@ import useTranscript from "../../useTranscript";
 import TopicHeader from "./topicHeader";
 import TopicWords from "./topicWords";
 import TopicPlayer from "./topicPlayer";
+import getApi from "../../../../lib/getApi";
+import useParticipants from "../../useParticipants";
 
 type TranscriptCorrect = {
   params: {
@@ -22,6 +24,9 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
   const [currentTopic, setCurrentTopic] = useState("");
   const [selectedTime, setSelectedTime] = useState<TimeSlice>();
   const [topicTime, setTopicTime] = useState<TimeSlice>();
+  const api = getApi();
+  const participants = useParticipants(transcriptId);
+  const stateSelectedSpeaker = useState<number>();
 
   // TODO BE
   // Get one topic with words
@@ -30,6 +35,14 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
   // -> use full current topic instead of topicId here
   // -> remove time calculation and setting from TopicHeader
   // -> pass in topicTime to player directly
+  // Should we have participants by default, one for each speaker ?
+
+  const createParticipant = () => {
+    api?.v1TranscriptAddParticipant({
+      createParticipant: { name: "Samantha" },
+      transcriptId,
+    });
+  };
 
   return (
     <div className="h-full grid grid-cols-2 gap-4">
@@ -44,6 +57,8 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
           currentTopic={currentTopic}
           transcriptId={transcriptId}
           setTopicTime={setTopicTime}
+          stateSelectedSpeaker={stateSelectedSpeaker}
+          participants={participants}
         />
       </div>
       <div>
@@ -52,6 +67,7 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
           selectedTime={selectedTime}
           topicTime={topicTime}
         />
+        <button onClick={createParticipant}>Create</button>
       </div>
     </div>
   );

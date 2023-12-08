@@ -8,6 +8,8 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
   const [endSelectionCallback, setEndSelectionCallback] =
     useState<() => void>();
 
+  //TODO shortcuts
+
   useEffect(() => {
     setEndTopicCallback(
       () =>
@@ -29,7 +31,6 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
   }, [topicTime]);
 
   useEffect(() => {
-    console.log(endTopicCallback, "he");
     endTopicCallback &&
       mp3.media &&
       mp3.media.addEventListener("timeupdate", endTopicCallback);
@@ -77,7 +78,6 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
     endSelectionCallback &&
       mp3.media &&
       mp3.media.addEventListener("timeupdate", endSelectionCallback);
-    console.log(endSelectionCallback, "hi");
     return () => {
       endSelectionCallback &&
         mp3.media &&
