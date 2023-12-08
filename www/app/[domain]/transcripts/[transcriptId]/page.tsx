@@ -15,8 +15,6 @@ import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 type TranscriptDetails = {
   params: {
@@ -67,7 +65,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   }
 
   return (
-    <>
+    <div className="grid grid-rows-layout-topbar h-full max-h-full gap-2 lg:gap-4">
       <div className="flex flex-col">
         {transcript?.response?.title && (
           <TranscriptTitle
@@ -136,6 +134,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }
