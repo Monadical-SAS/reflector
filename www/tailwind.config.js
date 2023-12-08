@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     extend: {
       gridTemplateRows: {
-        layout: "auto auto minmax(0, 1fr)",
+        "layout-topbar": "auto minmax(0,1fr)",
         "mobile-inner": "minmax(0, 2fr) minmax(0, 1fr)",
         "layout-one": "minmax(0, 1fr) auto",
       },

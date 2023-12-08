@@ -77,7 +77,11 @@ export default async function RootLayout({ children, params }: LayoutProps) {
 
   return (
     <html lang="en">
-      <body className={poppins.className + " h-screen relative"}>
+      <body
+        className={
+          poppins.className + "h-[100svh] w-[100svw] overflow-hidden relative"
+        }
+      >
         <FiefWrapper hasAuthCookie={hasAuthCookie}>
           <DomainContextProvider config={config}>
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
@@ -85,7 +89,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                 <ErrorMessage />
                 <div
                   id="container"
-                  className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
+                  className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout-topbar max-h-full gap-2 md:gap-4"
                 >
                   <header className="flex justify-between items-center w-full">
                     {/* Logo on the left */}

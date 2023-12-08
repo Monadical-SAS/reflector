@@ -88,7 +88,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, []);
 
   return (
-    <>
+    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 max-h-full h-full">
       {webSockets.waveform && webSockets.duration && mp3?.media ? (
         <Player
           topics={webSockets.topics || []}
@@ -166,7 +166,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
       </div>
 
       {disconnected && <DisconnectedIndicator />}
-    </>
+    </div>
   );
 };
 
