@@ -14,7 +14,7 @@ type TranscriptTopics = {
 
 const useTopics = (id: string): TranscriptTopics => {
   const [topics, setTopics] = useState<Topic[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = getApi();
