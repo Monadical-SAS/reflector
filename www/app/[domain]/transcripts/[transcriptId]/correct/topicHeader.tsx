@@ -10,8 +10,9 @@ export default function TopicHeader({
 }) {
   const topics = useTopics(transcriptId);
   useEffect(() => {
-    !topics.loading && setCurrentTopic(topics?.topics?.at(0)?.id);
-    console.log(currentTopic);
+    if (!topics.loading && !currentTopic) {
+      setCurrentTopic(topics?.topics?.at(0)?.id);
+    }
   }, [topics.loading]);
 
   if (topics.topics) {

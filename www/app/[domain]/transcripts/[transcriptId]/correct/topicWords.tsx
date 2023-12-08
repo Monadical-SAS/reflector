@@ -11,7 +11,12 @@ type Word = {
 
 type WordBySpeaker = { speaker: number; words: Word[] }[];
 
-const topicWords = ({ setSelectedTime, currentTopic, transcriptId }) => {
+const topicWords = ({
+  setSelectedTime,
+  currentTopic,
+  transcriptId,
+  setTopicTime,
+}) => {
   const topicWithWords = useTopicWithWords(currentTopic, transcriptId);
   const [wordsBySpeaker, setWordsBySpeaker] = useState<WordBySpeaker>();
 
@@ -35,6 +40,10 @@ const topicWords = ({ setSelectedTime, currentTopic, transcriptId }) => {
         }
       }, [] as WordBySpeaker);
       setWordsBySpeaker(wordsSorted);
+      setTopicTime({
+        start: wordsFlat.at(0)?.start,
+        end: wordsFlat.at(wordsFlat.length - 1)?.end,
+      });
     }
   }, [topicWithWords.response]);
 
