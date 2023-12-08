@@ -59,12 +59,13 @@ async def transcript_add_participant(
     )
 
     # ensure the speaker is unique
-    for p in transcript.participants:
-        if p.speaker == participant.speaker:
-            raise HTTPException(
-                status_code=400,
-                detail="Speaker already assigned",
-            )
+    if transcript.participants:
+        for p in transcript.participants:
+            if p.speaker == participant.speaker:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Speaker already assigned",
+                )
 
     obj = await transcripts_controller.upsert_participant(
         transcript, TranscriptParticipant(**participant.dict())
