@@ -23,15 +23,29 @@ type SuccessTopicWithWords = {
   error: null;
 };
 
+type UseTopicWithWords = { refetch: () => void } & (
+  | ErrorTopicWithWords
+  | LoadingTopicWithWords
+  | SuccessTopicWithWords
+);
+
 const useTopicWithWords = (
   topicId: string | null,
   transcriptId: string,
-): ErrorTopicWithWords | LoadingTopicWithWords | SuccessTopicWithWords => {
+): UseTopicWithWords => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = getApi();
+
+  const [count, setCount] = useState(0);
+
+  const refetch = () => {
+    setCount(count + 1);
+    setLoading(true);
+    setErrorState(null);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -60,12 +74,9 @@ const useTopicWithWords = (
         }
         setErrorState(error);
       });
-  }, [transcriptId, !api, topicId]);
+  }, [transcriptId, !api, topicId, count]);
 
-  return { response, loading, error } as
-    | ErrorTopicWithWords
-    | LoadingTopicWithWords
-    | SuccessTopicWithWords;
+  return { response, loading, error, refetch } as UseTopicWithWords;
 };
 
 export default useTopicWithWords;
