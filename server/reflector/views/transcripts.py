@@ -122,6 +122,7 @@ class GetTranscriptTopic(BaseModel):
     title: str
     summary: str
     timestamp: float
+    duration: float | None
     transcript: str
     segments: list[GetTranscriptSegmentTopic] = []
 
@@ -131,6 +132,7 @@ class GetTranscriptTopic(BaseModel):
             # In previous version, words were missing
             # Just output a segment with speaker 0
             text = topic.transcript
+            duration = None
             segments = [
                 GetTranscriptSegmentTopic(
                     text=topic.transcript,
@@ -142,6 +144,7 @@ class GetTranscriptTopic(BaseModel):
             # New versions include words
             transcript = ProcessorTranscript(words=topic.words)
             text = transcript.text
+            duration = transcript.duration
             segments = [
                 GetTranscriptSegmentTopic(
                     text=segment.text,
@@ -157,6 +160,7 @@ class GetTranscriptTopic(BaseModel):
             timestamp=topic.timestamp,
             transcript=text,
             segments=segments,
+            duration=duration,
         )
 
 
@@ -168,6 +172,44 @@ class GetTranscriptTopicWithWords(GetTranscriptTopic):
         instance = super().from_transcript_topic(topic)
         if topic.words:
             instance.words = topic.words
+        return instance
+
+
+class SpeakerWords(BaseModel):
+    speaker: int
+    words: list[Word]
+
+
+class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
+    words_per_speaker: list[SpeakerWords] = []
+
+    @classmethod
+    def from_transcript_topic(cls, topic: TranscriptTopic):
+        instance = super().from_transcript_topic(topic)
+        if topic.words:
+            words_per_speakers = []
+            # group words by speaker
+            words = []
+            for word in topic.words:
+                if words and words[-1].speaker != word.speaker:
+                    words_per_speakers.append(
+                        SpeakerWords(
+                            speaker=words[-1].speaker,
+                            words=words,
+                        )
+                    )
+                    words = []
+                words.append(word)
+            if words:
+                words_per_speakers.append(
+                    SpeakerWords(
+                        speaker=words[-1].speaker,
+                        words=words,
+                    )
+                )
+
+            instance.words_per_speaker = words_per_speakers
+
         return instance
 
 
@@ -247,3 +289,26 @@ async def transcript_get_topics_with_words(
         GetTranscriptTopicWithWords.from_transcript_topic(topic)
         for topic in transcript.topics
     ]
+
+
+@router.get(
+    "/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker",
+    response_model=GetTranscriptTopicWithWordsPerSpeaker,
+)
+async def transcript_get_topics_with_words_per_speaker(
+    transcript_id: str,
+    topic_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id_for_http(
+        transcript_id, user_id=user_id
+    )
+
+    # get the topic from the transcript
+    topic = next((t for t in transcript.topics if t.id == topic_id), None)
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    # convert to GetTranscriptTopicWithWordsPerSpeaker
+    return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(topic)
