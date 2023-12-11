@@ -19,18 +19,29 @@ type LoadingParticipants = {
 
 type SuccessParticipants = {
   response: Participant[];
-  loading: false;
+  loading: boolean;
   error: null;
 };
 
-const useParticipants = (
-  transcriptId: string,
-): ErrorParticipants | LoadingParticipants | SuccessParticipants => {
+export type UseParticipants = (
+  | ErrorParticipants
+  | LoadingParticipants
+  | SuccessParticipants
+) & { refetch: () => void };
+
+const useParticipants = (transcriptId: string): UseParticipants => {
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = getApi();
+  const [count, setCount] = useState(0);
+
+  const refetch = () => {
+    setCount(count + 1);
+    setLoading(true);
+    setErrorState(null);
+  };
 
   useEffect(() => {
     if (!transcriptId || !api) return;
@@ -55,12 +66,9 @@ const useParticipants = (
         }
         setErrorState(error);
       });
-  }, [transcriptId, !api]);
+  }, [transcriptId, !api, count]);
 
-  return { response, loading, error } as
-    | ErrorParticipants
-    | LoadingParticipants
-    | SuccessParticipants;
+  return { response, loading, error, refetch } as UseParticipants;
 };
 
 export default useParticipants;

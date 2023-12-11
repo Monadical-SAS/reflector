@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import useTopicWithWords from "../../useTopicWithWords";
+import { SetStateAction, useCallback, useEffect, useState } from "react";
 import WaveformLoading from "../../waveformLoading";
+import { UseParticipants } from "../../useParticipants";
+import { Participant } from "../../../../api";
 
 type Word = {
   end: number;
@@ -11,19 +12,26 @@ type Word = {
 
 type WordBySpeaker = { speaker: number; words: Word[] }[];
 
-// TODO fix selection reversed
 // TODO shortcuts
 // TODO fix key (using indexes might act up, not sure as we don't re-order per say)
 
+type TopicWordsProps = {
+  setSelectedTime: SetStateAction<any>;
+  selectedTime: any;
+  setTopicTime: SetStateAction<any>;
+  stateSelectedSpeaker: any;
+  participants: UseParticipants;
+  topicWithWords: any;
+};
+
 const topicWords = ({
   setSelectedTime,
-  currentTopic,
-  transcriptId,
+  selectedTime,
   setTopicTime,
   stateSelectedSpeaker,
   participants,
-}) => {
-  const topicWithWords = useTopicWithWords(currentTopic, transcriptId);
+  topicWithWords,
+}: TopicWordsProps) => {
   const [wordsBySpeaker, setWordsBySpeaker] = useState<WordBySpeaker>();
   const [selectedSpeaker, setSelectedSpeaker] = stateSelectedSpeaker;
 
@@ -31,6 +39,7 @@ const topicWords = ({
     if (topicWithWords.loading) {
       setWordsBySpeaker([]);
       setSelectedTime(undefined);
+      console.log("unsetting topic changed");
     }
   }, [topicWithWords.loading]);
 
@@ -54,98 +63,92 @@ const topicWords = ({
     }
   }, [topicWithWords.response]);
 
-  useEffect(() => {
-    document.onmouseup = (e) => {
-      let selection = window.getSelection();
-      if (
-        selection &&
-        selection.anchorNode &&
-        selection.focusNode &&
-        (selection.anchorNode !== selection.focusNode ||
-          selection.anchorOffset !== selection.focusOffset)
-      ) {
-        const anchorNode = selection.anchorNode;
-        const anchorIsWord =
-          !!selection.anchorNode.parentElement?.dataset["start"];
-        const correctedAnchor = anchorIsWord
-          ? anchorNode
-          : anchorNode.parentNode?.firstChild;
-        const anchorOffset = anchorIsWord ? 1 : 0;
-        const focusNode = selection.focusNode;
-        const focusIsWord = !!selection.focusNode.parentElement?.dataset["end"];
-        const correctedfocus = focusIsWord
-          ? focusNode
-          : focusNode.parentNode?.lastChild;
-        const focusOffset = focusIsWord
-          ? focusNode.textContent?.length
-          : focusNode.parentNode?.lastChild?.textContent?.length;
+  const onMouseUp = (e) => {
+    let selection = window.getSelection();
+    if (
+      selection &&
+      selection.anchorNode &&
+      selection.focusNode &&
+      selection.anchorNode == selection.focusNode &&
+      selection.anchorOffset == selection.focusOffset
+    ) {
+      setSelectedTime(undefined);
+      selection.empty();
+      return;
+    }
+    if (
+      selection &&
+      selection.anchorNode &&
+      selection.focusNode &&
+      (selection.anchorNode !== selection.focusNode ||
+        selection.anchorOffset !== selection.focusOffset)
+    ) {
+      const anchorNode = selection.anchorNode;
+      const anchorIsWord =
+        !!selection.anchorNode.parentElement?.dataset["start"];
+      const focusNode = selection.focusNode;
+      const focusIsWord = !!selection.focusNode.parentElement?.dataset["end"];
 
-        if (
-          correctedAnchor &&
-          anchorOffset !== undefined &&
-          correctedfocus &&
-          focusOffset !== undefined
-        ) {
-          selection.setBaseAndExtent(
-            correctedAnchor,
-            anchorOffset,
-            correctedfocus,
-            focusOffset,
-          );
-
-          if (
-            !anchorIsWord &&
-            !focusIsWord &&
-            anchorNode.parentElement == focusNode.parentElement
-          ) {
-            console.log(focusNode.parentElement?.dataset);
-            setSelectedSpeaker(focusNode.parentElement?.dataset["speaker"]);
-            setSelectedTime(undefined);
-          } else {
-            setSelectedSpeaker(undefined);
-            setSelectedTime({
-              start:
-                selection.anchorNode.parentElement?.dataset["start"] ||
-                (selection.anchorNode.parentElement?.nextElementSibling as any)
-                  ?.dataset["start"] ||
-                0,
-              end:
-                selection.focusNode.parentElement?.dataset["end"] ||
-                (
-                  selection.focusNode.parentElement?.parentElement
-                    ?.previousElementSibling?.lastElementChild as any
-                )?.dataset ||
-                0,
-            });
-          }
-        }
-      }
+      // If selected a speaker :
       if (
-        selection &&
-        selection.anchorNode &&
-        selection.focusNode &&
-        selection.anchorNode == selection.focusNode &&
-        selection.anchorOffset == selection.focusOffset
+        !anchorIsWord &&
+        !focusIsWord &&
+        anchorNode.parentElement == focusNode.parentElement
       ) {
+        setSelectedSpeaker(focusNode.parentElement?.dataset["speaker"]);
         setSelectedTime(undefined);
+        console.log("Unset Time : selected Speaker");
+        return;
       }
-    };
-  }, []);
 
-  const getSpeakerName = useCallback(
-    (speakerNumber: number) => {
-      return (
-        participants.response.find((participant) => {
-          participant.speaker == speakerNumber;
-        }) || `Speaker ${speakerNumber}`
-      );
-    },
-    [participants],
-  );
+      const anchorStart = anchorIsWord
+        ? anchorNode.parentElement?.dataset["start"]
+        : (selection.anchorNode.parentElement?.nextElementSibling as any)
+            ?.dataset["start"];
+      const focusEnd =
+        selection.focusNode.parentElement?.dataset["end"] ||
+        (
+          selection.focusNode.parentElement?.parentElement
+            ?.previousElementSibling?.lastElementChild as any
+        )?.dataset["end"];
 
-  if (!topicWithWords.loading && wordsBySpeaker && participants) {
+      const reverse = anchorStart > focusEnd;
+      setSelectedTime(undefined);
+
+      if (!reverse) {
+        setSelectedTime({ start: anchorStart, end: focusEnd });
+        console.log("setting right");
+      } else {
+        const anchorEnd = anchorIsWord
+          ? anchorNode.parentElement?.dataset["end"]
+          : (selection.anchorNode.parentElement?.nextElementSibling as any)
+              ?.dataset["end"];
+        const focusStart =
+          selection.focusNode.parentElement?.dataset["start"] ||
+          (
+            selection.focusNode.parentElement?.parentElement
+              ?.previousElementSibling?.lastElementChild as any
+          )?.dataset["start"];
+        setSelectedTime({ start: focusStart, end: anchorEnd });
+        console.log("setting reverse");
+      }
+      setSelectedSpeaker();
+      selection.empty();
+    }
+  };
+
+  const getSpeakerName = (speakerNumber: number) => {
+    if (!participants.response) return;
     return (
-      <div>
+      (participants.response as Participant[]).find(
+        (participant) => participant.speaker == speakerNumber,
+      )?.name || `Speaker ${speakerNumber}`
+    );
+  };
+
+  if (!topicWithWords.loading && wordsBySpeaker && participants.response) {
+    return (
+      <div onMouseUp={onMouseUp} onBlur={(e) => console.log(e)}>
         {wordsBySpeaker?.map((speakerWithWords, index) => (
           <p key={index}>
             <span
@@ -159,7 +162,18 @@ const topicWords = ({
               {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
             </span>
             {speakerWithWords.words.map((word, index) => (
-              <span data-start={word.start} data-end={word.end} key={index}>
+              <span
+                data-start={word.start}
+                data-end={word.end}
+                key={index}
+                className={
+                  selectedTime &&
+                  selectedTime.start <= word.start &&
+                  selectedTime.end >= word.end
+                    ? "bg-yellow-200"
+                    : ""
+                }
+              >
                 {word.text}
               </span>
             ))}

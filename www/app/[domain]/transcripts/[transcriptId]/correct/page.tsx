@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useTranscript from "../../useTranscript";
 import TopicHeader from "./topicHeader";
 import TopicWords from "./topicWords";
 import TopicPlayer from "./topicPlayer";
 import getApi from "../../../../lib/getApi";
 import useParticipants from "../../useParticipants";
+import useTopicWithWords from "../../useTopicWithWords";
+import ParticipantList from "./participantList";
 
 type TranscriptCorrect = {
   params: {
@@ -22,6 +24,8 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
   const transcriptId = details.params.transcriptId;
   const transcript = useTranscript(transcriptId);
   const [currentTopic, setCurrentTopic] = useState("");
+  const topicWithWords = useTopicWithWords(currentTopic, transcriptId);
+
   const [selectedTime, setSelectedTime] = useState<TimeSlice>();
   const [topicTime, setTopicTime] = useState<TimeSlice>();
   const api = getApi();
@@ -36,13 +40,7 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
   // -> remove time calculation and setting from TopicHeader
   // -> pass in topicTime to player directly
   // Should we have participants by default, one for each speaker ?
-
-  const createParticipant = () => {
-    api?.v1TranscriptAddParticipant({
-      createParticipant: { name: "Samantha" },
-      transcriptId,
-    });
-  };
+  // Creating a participant and a speaker ?
 
   return (
     <div className="h-full grid grid-cols-2 gap-4">
@@ -54,20 +52,22 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
         />
         <TopicWords
           setSelectedTime={setSelectedTime}
-          currentTopic={currentTopic}
-          transcriptId={transcriptId}
+          selectedTime={selectedTime}
           setTopicTime={setTopicTime}
           stateSelectedSpeaker={stateSelectedSpeaker}
           participants={participants}
+          topicWithWords={topicWithWords}
         />
       </div>
-      <div>
+      <div className="flex flex-col justify-stretch">
         <TopicPlayer
           transcriptId={transcriptId}
           selectedTime={selectedTime}
           topicTime={topicTime}
         />
-        <button onClick={createParticipant}>Create</button>
+        <ParticipantList
+          {...{ transcriptId, participants, selectedTime, topicWithWords }}
+        />
       </div>
     </div>
   );
