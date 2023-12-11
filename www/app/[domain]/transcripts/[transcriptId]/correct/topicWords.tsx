@@ -97,6 +97,7 @@ const topicWords = ({
       ) {
         setSelectedSpeaker(focusNode.parentElement?.dataset["speaker"]);
         setSelectedTime(undefined);
+        selection.empty();
         console.log("Unset Time : selected Speaker");
         return;
       }
@@ -111,9 +112,7 @@ const topicWords = ({
           selection.focusNode.parentElement?.parentElement
             ?.previousElementSibling?.lastElementChild as any
         )?.dataset["end"];
-
-      const reverse = anchorStart > focusEnd;
-      setSelectedTime(undefined);
+      const reverse = parseFloat(anchorStart) > parseFloat(focusEnd);
 
       if (!reverse) {
         setSelectedTime({ start: anchorStart, end: focusEnd });

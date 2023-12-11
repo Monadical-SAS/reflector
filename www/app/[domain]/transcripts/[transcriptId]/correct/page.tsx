@@ -28,7 +28,6 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
 
   const [selectedTime, setSelectedTime] = useState<TimeSlice>();
   const [topicTime, setTopicTime] = useState<TimeSlice>();
-  const api = getApi();
   const participants = useParticipants(transcriptId);
   const stateSelectedSpeaker = useState<number>();
 
@@ -66,7 +65,13 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
           topicTime={topicTime}
         />
         <ParticipantList
-          {...{ transcriptId, participants, selectedTime, topicWithWords }}
+          {...{
+            transcriptId,
+            participants,
+            selectedTime,
+            topicWithWords,
+            stateSelectedSpeaker,
+          }}
         />
       </div>
     </div>
