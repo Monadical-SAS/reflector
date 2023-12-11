@@ -8,11 +8,11 @@ import { shouldShowError } from "../../lib/errorUtils";
 type ErrorParticipants = {
   error: Error;
   loading: false;
-  response: any;
+  response: null;
 };
 
 type LoadingParticipants = {
-  response: any;
+  response: Participant[] | null;
   loading: true;
   error: false;
 };
@@ -30,7 +30,7 @@ export type UseParticipants = (
 ) & { refetch: () => void };
 
 const useParticipants = (transcriptId: string): UseParticipants => {
-  const [response, setResponse] = useState<GetTranscript | null>(null);
+  const [response, setResponse] = useState<Participant[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
