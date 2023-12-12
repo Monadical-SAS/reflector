@@ -64,6 +64,7 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
         <TopicHeader
           stateCurrentTopic={stateCurrentTopic}
           transcriptId={transcriptId}
+          topicWithWordsLoading={topicWithWords.loading}
         />
         <TopicWords
           stateSelectedText={stateSelectedText}

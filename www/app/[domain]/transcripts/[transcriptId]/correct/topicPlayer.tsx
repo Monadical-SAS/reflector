@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useMp3 from "../../useMp3";
 import { formatTime } from "../../../../lib/time";
 import SoundWaveCss from "./soundWaveCss";
@@ -10,15 +10,18 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
   const [endSelectionCallback, setEndSelectionCallback] =
     useState<() => void>();
   const [showTime, setShowTime] = useState("");
+  const playButton = useRef<HTMLButtonElement>(null);
 
   const keyHandler = (e) => {
     if (e.key == " ") {
-      if (isPlaying) {
-        mp3.media?.pause();
-        setIsPlaying(false);
-      } else {
-        mp3.media?.play();
-        setIsPlaying(true);
+      if (e.target.id != "playButton") {
+        if (isPlaying) {
+          mp3.media?.pause();
+          setIsPlaying(false);
+        } else {
+          mp3.media?.play();
+          setIsPlaying(true);
+        }
       }
     } else if (selectedTime && e.key == ",") {
       playSelection();
@@ -66,6 +69,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
         },
     );
     if (mp3.media && topicTime) {
+      playButton.current?.focus();
       mp3.media?.pause();
       // there's no callback on pause but apparently changing the time while palying doesn't work... so here is a timeout
       setTimeout(() => {
@@ -166,7 +170,12 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
           </button>
         )}
         {!isPlaying ? (
-          <button className="p-2 bg-blue-200 w-full" onClick={playCurrent}>
+          <button
+            ref={playButton}
+            id="playButton"
+            className="p-2 bg-blue-200 w-full"
+            onClick={playCurrent}
+          >
             <span className="text-xs">[SPACE]</span> Play
           </button>
         ) : (

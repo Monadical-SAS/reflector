@@ -10,11 +10,13 @@ type TopicHeader = {
     Dispatch<SetStateAction<GetTranscriptTopic | undefined>>,
   ];
   transcriptId: string;
+  topicWithWordsLoading: boolean;
 };
 
 export default function TopicHeader({
   stateCurrentTopic,
   transcriptId,
+  topicWithWordsLoading,
 }: TopicHeader) {
   const [currentTopic, setCurrentTopic] = stateCurrentTopic;
   const topics = useTopics(transcriptId);
@@ -32,10 +34,14 @@ export default function TopicHeader({
   const total = topics.topics?.length;
   const canGoNext = total && typeof number == "number" && number + 1 < total;
 
-  const onPrev = () =>
+  const onPrev = () => {
+    if (topicWithWordsLoading) return;
     canGoPrevious && setCurrentTopic(topics.topics?.at(number - 1));
-  const onNext = () =>
+  };
+  const onNext = () => {
+    if (topicWithWordsLoading) return;
     canGoNext && setCurrentTopic(topics.topics?.at(number + 1));
+  };
 
   const keyHandler = (e) => {
     if (e.key == "ArrowLeft") {

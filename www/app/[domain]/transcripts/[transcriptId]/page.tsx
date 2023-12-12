@@ -92,6 +92,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           topics={topics.topics || []}
           useActiveTopic={useActiveTopic}
           autoscroll={false}
+          transcriptId={transcriptId}
         />
 
         <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
