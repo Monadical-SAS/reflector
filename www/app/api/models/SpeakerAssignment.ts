@@ -24,7 +24,13 @@ export interface SpeakerAssignment {
    * @type {any}
    * @memberof SpeakerAssignment
    */
-  speaker: any | null;
+  speaker?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof SpeakerAssignment
+   */
+  participant?: any | null;
   /**
    *
    * @type {any}
@@ -44,7 +50,6 @@ export interface SpeakerAssignment {
  */
 export function instanceOfSpeakerAssignment(value: object): boolean {
   let isInstance = true;
-  isInstance = isInstance && "speaker" in value;
   isInstance = isInstance && "timestampFrom" in value;
   isInstance = isInstance && "timestampTo" in value;
 
@@ -63,7 +68,8 @@ export function SpeakerAssignmentFromJSONTyped(
     return json;
   }
   return {
-    speaker: json["speaker"],
+    speaker: !exists(json, "speaker") ? undefined : json["speaker"],
+    participant: !exists(json, "participant") ? undefined : json["participant"],
     timestampFrom: json["timestamp_from"],
     timestampTo: json["timestamp_to"],
   };
@@ -78,6 +84,7 @@ export function SpeakerAssignmentToJSON(value?: SpeakerAssignment | null): any {
   }
   return {
     speaker: value.speaker,
+    participant: value.participant,
     timestamp_from: value.timestampFrom,
     timestamp_to: value.timestampTo,
   };

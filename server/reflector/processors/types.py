@@ -57,6 +57,7 @@ class Word(BaseModel):
 class TranscriptSegment(BaseModel):
     text: str
     start: float
+    end: float
     speaker: int = 0
 
 
@@ -127,6 +128,7 @@ class Transcript(BaseModel):
                 current_segment = TranscriptSegment(
                     text=word.text,
                     start=word.start,
+                    end=word.end,
                     speaker=word.speaker,
                 )
                 continue
@@ -138,6 +140,7 @@ class Transcript(BaseModel):
                 current_segment = TranscriptSegment(
                     text=word.text,
                     start=word.start,
+                    end=word.end,
                     speaker=word.speaker,
                 )
                 continue
@@ -145,6 +148,7 @@ class Transcript(BaseModel):
             # if the word is the end of a sentence, and we have enough content,
             # add the word to the current segment and push it
             current_segment.text += word.text
+            current_segment.end = word.end
 
             have_punc = PUNC_RE.search(word.text)
             if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):

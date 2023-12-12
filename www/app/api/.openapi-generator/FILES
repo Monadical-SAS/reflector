@@ -9,12 +9,15 @@ models/GetTranscript.ts
 models/GetTranscriptSegmentTopic.ts
 models/GetTranscriptTopic.ts
 models/GetTranscriptTopicWithWords.ts
+models/GetTranscriptTopicWithWordsPerSpeaker.ts
 models/HTTPValidationError.ts
 models/PageGetTranscript.ts
 models/Participant.ts
 models/RtcOffer.ts
 models/SpeakerAssignment.ts
 models/SpeakerAssignmentStatus.ts
+models/SpeakerMerge.ts
+models/SpeakerWords.ts
 models/TranscriptParticipant.ts
 models/UpdateParticipant.ts
 models/UpdateTranscript.ts

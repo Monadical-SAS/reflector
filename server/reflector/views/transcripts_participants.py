@@ -59,7 +59,7 @@ async def transcript_add_participant(
     )
 
     # ensure the speaker is unique
-    if transcript.participants:
+    if participant.speaker is not None:
         for p in transcript.participants:
             if p.speaker == participant.speaker:
                 raise HTTPException(

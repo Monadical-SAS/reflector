@@ -48,6 +48,12 @@ export interface GetTranscriptTopicWithWords {
    * @type {any}
    * @memberof GetTranscriptTopicWithWords
    */
+  duration: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscriptTopicWithWords
+   */
   transcript: any | null;
   /**
    *
@@ -72,6 +78,7 @@ export function instanceOfGetTranscriptTopicWithWords(value: object): boolean {
   isInstance = isInstance && "title" in value;
   isInstance = isInstance && "summary" in value;
   isInstance = isInstance && "timestamp" in value;
+  isInstance = isInstance && "duration" in value;
   isInstance = isInstance && "transcript" in value;
 
   return isInstance;
@@ -95,6 +102,7 @@ export function GetTranscriptTopicWithWordsFromJSONTyped(
     title: json["title"],
     summary: json["summary"],
     timestamp: json["timestamp"],
+    duration: json["duration"],
     transcript: json["transcript"],
     segments: !exists(json, "segments") ? undefined : json["segments"],
     words: !exists(json, "words") ? undefined : json["words"],
@@ -115,6 +123,7 @@ export function GetTranscriptTopicWithWordsToJSON(
     title: value.title,
     summary: value.summary,
     timestamp: value.timestamp,
+    duration: value.duration,
     transcript: value.transcript,
     segments: value.segments,
     words: value.words,
