@@ -121,3 +121,13 @@ export const generateHighContrastColor = (
 
   return getCssColor(red, green, blue);
 };
+
+export function extractDomain(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.host;
+  } catch (error) {
+    console.error("Invalid URL:", error.message);
+    return null;
+  }
+}
