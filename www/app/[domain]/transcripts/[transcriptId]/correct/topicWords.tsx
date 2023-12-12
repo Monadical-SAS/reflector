@@ -12,7 +12,7 @@ type Word = {
 
 type WordBySpeaker = { speaker: number; words: Word[] }[];
 
-// TODO shortcuts
+// TODO shortcuts ?
 // TODO fix key (using indexes might act up, not sure as we don't re-order per say)
 
 type TopicWordsProps = {
@@ -63,6 +63,25 @@ const topicWords = ({
     }
   }, [topicWithWords.response]);
 
+  const getStartTimeFromFirstNode = (node, offset, reverse) => {
+    // if the first element is a word
+    return node.parentElement?.dataset["start"]
+      ? // but after of the word (like on the blank space right of the word)
+        node.textContent?.length == offset
+        ? // if next element is a word, we need the start of it
+          (node.parentElement?.nextElementSibling as any)?.dataset?.["start"] ||
+          // otherwise we get the start of the first word of the next paragraph
+          (
+            node.parentElement?.parentElement?.nextElementSibling
+              ?.childNodes[1] as any
+          )?.dataset?.["start"] ||
+          (reverse ? 0 : 99)
+        : // otherwise it's just somewhere in the word and we get the start of the word
+          node.parentElement?.dataset["start"]
+      : // otherwise selection start is on a name and we get the start of the next word
+        (node.parentElement?.nextElementSibling as any)?.dataset["start"];
+  };
+
   const onMouseUp = (e) => {
     let selection = window.getSelection();
     if (
@@ -102,35 +121,47 @@ const topicWords = ({
         return;
       }
 
-      const anchorStart = anchorIsWord
-        ? anchorNode.parentElement?.dataset["start"]
-        : (selection.anchorNode.parentElement?.nextElementSibling as any)
-            ?.dataset["start"];
+      const anchorStart = getStartTimeFromFirstNode(
+        anchorNode,
+        selection.anchorOffset,
+        false,
+      );
+      // if selection end on a word, we get the end time from the span that contains it
       const focusEnd =
         selection.focusNode.parentElement?.dataset["end"] ||
+        // otherwise it was a name and we get the end of the last word of the previous paragraph
         (
           selection.focusNode.parentElement?.parentElement
             ?.previousElementSibling?.lastElementChild as any
-        )?.dataset["end"];
+        )?.dataset["end"] ||
+        0;
+
       const reverse = parseFloat(anchorStart) > parseFloat(focusEnd);
 
       if (!reverse) {
-        setSelectedTime({ start: anchorStart, end: focusEnd });
+        setSelectedTime({
+          start: parseFloat(anchorStart),
+          end: parseFloat(focusEnd),
+        });
         console.log("setting right");
       } else {
-        const anchorEnd = anchorIsWord
-          ? anchorNode.parentElement?.dataset["end"]
-          : (selection.anchorNode.parentElement?.nextElementSibling as any)
-              ?.dataset["end"];
-        const focusStart =
-          selection.focusNode.parentElement?.dataset["start"] ||
+        const anchorEnd =
+          anchorNode.parentElement?.dataset["end"] ||
           (
-            selection.focusNode.parentElement?.parentElement
+            selection.anchorNode.parentElement?.parentElement
               ?.previousElementSibling?.lastElementChild as any
-          )?.dataset["start"];
+          )?.dataset["end"];
+
+        const focusStart = getStartTimeFromFirstNode(
+          focusNode,
+          selection.focusOffset,
+          true,
+        );
+
         setSelectedTime({ start: focusStart, end: anchorEnd });
         console.log("setting reverse");
       }
+
       setSelectedSpeaker();
       selection.empty();
     }
@@ -147,7 +178,7 @@ const topicWords = ({
 
   if (!topicWithWords.loading && wordsBySpeaker && participants.response) {
     return (
-      <div onMouseUp={onMouseUp} onBlur={(e) => console.log(e)}>
+      <div onMouseUp={onMouseUp} className="p-5 h-full w-full">
         {wordsBySpeaker?.map((speakerWithWords, index) => (
           <p key={index}>
             <span

@@ -9,6 +9,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
     useState<() => void>();
 
   //TODO shortcuts
+  // TODO if selection changes while playing, don't play
 
   useEffect(() => {
     setEndTopicCallback(

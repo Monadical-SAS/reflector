@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Participant } from "../../../../api";
 import getApi from "../../../../lib/getApi";
 import { UseParticipants } from "../../useParticipants";
-import { unescapeLeadingUnderscores } from "typescript";
 
 type ParticipantList = {
   participants: UseParticipants;
@@ -27,6 +26,7 @@ const ParticipantList = ({
   const [participantInput, setParticipantInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedSpeaker, setSelectedSpeaker] = stateSelectedSpeaker;
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant>();
   const [action, setAction] = useState<
     "Create" | "Create to rename" | "Create and assign" | "Rename" | null
   >(null);
@@ -47,9 +47,11 @@ const ParticipantList = ({
         );
         if (participant) {
           setParticipantInput(participant.name);
+          setSelectedParticipant(participant);
           inputRef.current?.focus();
           setAction("Rename");
-        } else {
+        } else if (!selectedParticipant) {
+          setSelectedParticipant(undefined);
           setParticipantInput("");
           inputRef.current?.focus();
           setAction("Create to rename");
@@ -59,6 +61,10 @@ const ParticipantList = ({
         setParticipantInput("");
         inputRef.current?.focus();
         setAction("Create and assign");
+        setSelectedParticipant(undefined);
+      }
+      if (!selectedTime && !selectedSpeaker) {
+        setAction(null);
       }
     }
   }, [selectedTime, selectedSpeaker]);
@@ -78,6 +84,12 @@ const ParticipantList = ({
         setOneMatch(undefined);
       }
     }
+    if (participantInput && !action) {
+      setAction("Create");
+    }
+    if (!participantInput) {
+      setAction(null);
+    }
   }, [participantInput]);
 
   useEffect(() => {
@@ -88,11 +100,15 @@ const ParticipantList = ({
           setOneMatch(undefined);
           setParticipantInput("");
         }
+      } else if (e.key === "Enter") {
+        doAction();
       }
     };
   });
 
-  const doAction = (e) => {
+  const doAction = (e?) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     if (!participants.response) return;
     if (action == "Rename") {
       const participant = participants.response.find(
@@ -124,6 +140,7 @@ const ParticipantList = ({
         })
         .then(() => {
           participants.refetch();
+          setParticipantInput("");
         });
     } else if (action == "Create and assign") {
       setLoading(true);
@@ -138,11 +155,22 @@ const ParticipantList = ({
         .then((participant) => {
           assignTo(participant)();
           participants.refetch();
+          setParticipantInput("");
+        });
+    } else if (action == "Create") {
+      setLoading(true);
+      api
+        ?.v1TranscriptAddParticipant({
+          createParticipant: {
+            name: participantInput,
+          },
+          transcriptId,
+        })
+        .then(() => {
+          participants.refetch();
+          setParticipantInput("");
         });
     }
-    e.preventDefault();
-    console.log(e);
-    console.log(action);
   };
 
   const deleteParticipant = (participantId) => () => {
@@ -162,6 +190,7 @@ const ParticipantList = ({
     (participant) => (e?: React.MouseEvent<HTMLButtonElement>) => {
       e?.preventDefault();
       e?.stopPropagation();
+      // fix participant that doesnt have a speaker (wait API)
       if (selectedTime?.start == undefined || selectedTime?.end == undefined)
         return;
       api
@@ -179,22 +208,29 @@ const ParticipantList = ({
     };
 
   const selectParticipant = (participant) => (e) => {
-    console.log(participant, e);
+    setSelectedParticipant(participant);
     setSelectedSpeaker(participant.speaker);
+    setAction("Rename");
+    setParticipantInput(participant.name);
   };
   return (
     <>
-      <form onSubmit={doAction}>
+      <div>
         <input
           ref={inputRef}
           onChange={(e) => setParticipantInput(e.target.value)}
           value={participantInput}
         />
-        <button type="submit">
-          <FontAwesomeIcon icon={faArrowTurnDown} className="rotate-90 mr-2" />
-          {action}
-        </button>
-      </form>
+        {action && (
+          <button onClick={doAction}>
+            <FontAwesomeIcon
+              icon={faArrowTurnDown}
+              className="rotate-90 mr-2"
+            />
+            {action}
+          </button>
+        )}
+      </div>
 
       {participants.loading && (
         <FontAwesomeIcon
@@ -214,7 +250,7 @@ const ParticipantList = ({
                 participant.name.startsWith(participantInput)
                   ? "bg-blue-100 "
                   : "") +
-                (participant.speaker == selectedSpeaker
+                (participant.id == selectedParticipant?.id
                   ? "border-blue-400 border"
                   : "")
               }
