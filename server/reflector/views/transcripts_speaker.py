@@ -7,14 +7,15 @@ from typing import Annotated, Optional
 
 import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from reflector.db.transcripts import transcripts_controller
 
 router = APIRouter()
 
 
 class SpeakerAssignment(BaseModel):
-    speaker: int
+    speaker: Optional[int] = Field(None, ge=0)
+    participant: Optional[str] = Field(None)
     timestamp_from: float
     timestamp_to: float
 
@@ -42,6 +43,44 @@ async def transcript_assign_speaker(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
+    if assignment.speaker is None and assignment.participant is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Either speaker or participant must be provided",
+        )
+
+    if assignment.speaker is not None and assignment.participant is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Only one of speaker or participant must be provided",
+        )
+
+    # if it's a participant, search for it
+    if assignment.speaker is not None:
+        speaker = assignment.speaker
+
+    elif assignment.participant is not None:
+        participant = next(
+            (
+                participant
+                for participant in transcript.participants
+                if participant.id == assignment.participant
+            ),
+            None,
+        )
+        if not participant:
+            raise HTTPException(
+                status_code=404,
+                detail="Participant not found",
+            )
+
+        # if the participant does not have a speaker, create one
+        if participant.speaker is None:
+            participant.speaker = transcript.find_empty_speaker()
+            await transcripts_controller.upsert_participant(transcript, participant)
+
+        speaker = participant.speaker
+
     # reassign speakers from words in the transcript
     ts_from = assignment.timestamp_from
     ts_to = assignment.timestamp_to
@@ -50,7 +89,7 @@ async def transcript_assign_speaker(
         changed = False
         for word in topic.words:
             if ts_from <= word.start <= ts_to:
-                word.speaker = assignment.speaker
+                word.speaker = speaker
                 changed = True
         if changed:
             changed_topics.append(topic)
