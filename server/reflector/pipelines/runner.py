@@ -30,7 +30,8 @@ class PipelineRunner(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._q_cmd = asyncio.Queue()
+        self._task = None
+        self._q_cmd = asyncio.Queue(maxsize=4096)
         self._ev_done = asyncio.Event()
         self._is_first_push = True
         self._logger = logger.bind(
@@ -49,7 +50,14 @@ class PipelineRunner(BaseModel):
         """
         Start the pipeline as a coroutine task
         """
-        asyncio.get_event_loop().create_task(self.run())
+        self._task = asyncio.get_event_loop().create_task(self.run())
+
+    async def join(self):
+        """
+        Wait for the pipeline to finish
+        """
+        if self._task:
+            await self._task
 
     def start_sync(self):
         """
