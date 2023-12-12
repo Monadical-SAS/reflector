@@ -8,6 +8,7 @@ import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
 import { generateHighContrastColor } from "../../lib/utils";
+import useParticipants from "./useParticipants";
 
 type TopicListProps = {
   topics: Topic[];
@@ -16,15 +17,18 @@ type TopicListProps = {
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
   autoscroll: boolean;
+  transcriptId: string;
 };
 
 export function TopicList({
   topics,
   useActiveTopic,
   autoscroll,
+  transcriptId,
 }: TopicListProps) {
   const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
+  const participants = useParticipants(transcriptId);
 
   useEffect(() => {
     if (autoscroll && autoscrollEnabled) scrollToBottom();
@@ -60,6 +64,15 @@ export function TopicList({
       topicsDiv && toggleScroll(topicsDiv);
     }
   }, [activeTopic, autoscroll]);
+
+  const getSpeakerName = (speakerNumber: number) => {
+    if (!participants.response) return;
+    return (
+      participants.response.find(
+        (participant) => participant.speaker == speakerNumber,
+      )?.name || `Speaker ${speakerNumber}`
+    );
+  };
 
   return (
     <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-1 sm:p-2 md:px-4 flex flex-col justify-center align-center">
@@ -125,7 +138,7 @@ export function TopicList({
                               }}
                             >
                               {" "}
-                              (Speaker {segment.speaker}):
+                              {getSpeakerName(segment.speaker)}:
                             </span>{" "}
                             <span>{segment.text}</span>
                           </p>

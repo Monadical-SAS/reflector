@@ -151,7 +151,7 @@ const topicWords = ({
   const getSpeakerName = (speakerNumber: number) => {
     if (!participants.response) return;
     return (
-      (participants.response as Participant[]).find(
+      participants.response.find(
         (participant) => participant.speaker == speakerNumber,
       )?.name || `Speaker ${speakerNumber}`
     );
