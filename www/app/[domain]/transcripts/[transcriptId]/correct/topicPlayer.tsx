@@ -8,8 +8,23 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
   const [endSelectionCallback, setEndSelectionCallback] =
     useState<() => void>();
 
-  //TODO shortcuts
-  // TODO if selection changes while playing, don't play
+  const keyHandler = (e) => {
+    if (e.key == "!") {
+      if (isPlaying) {
+        mp3.media?.pause();
+        setIsPlaying(false);
+      } else {
+        mp3.media?.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+  useEffect(() => {
+    document.addEventListener("keyup", keyHandler);
+    return () => {
+      document.removeEventListener("keyup", keyHandler);
+    };
+  });
 
   useEffect(() => {
     setEndTopicCallback(
@@ -26,10 +41,17 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
           }
         },
     );
-    if (mp3.media) {
-      mp3.media.currentTime = topicTime.start;
+    if (mp3.media && topicTime) {
+      mp3.media?.pause();
+      // there's no callback on pause but apparently changing the time while palying doesn't work... so here is a timeout
+      setTimeout(() => {
+        if (mp3.media) {
+          mp3.media.currentTime = topicTime.start;
+        }
+      }, 10);
+      setIsPlaying(false);
     }
-  }, [topicTime]);
+  }, [topicTime, mp3.media]);
 
   useEffect(() => {
     endTopicCallback &&
@@ -43,17 +65,9 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
     };
   }, [endTopicCallback]);
 
-  const setEndTime = (time) => () => {
-    if (mp3.media && time && mp3.media.currentTime >= time) {
-      mp3.media.pause();
-      setIsPlaying(false);
-      mp3.media.removeEventListener("timeupdate", setEndTime);
-    }
-  };
-
   const playSelection = () => {
     if (mp3.media && selectedTime?.start !== undefined) {
-      mp3.media.currentTime = selectedTime?.start;
+      mp3.media.currentTime = selectedTime.start;
       setEndSelectionCallback(
         () =>
           function () {
@@ -64,8 +78,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
             ) {
               mp3.media.pause();
               setIsPlaying(false);
-              endSelectionCallback &&
-                removeEventListener("timeupdate", endSelectionCallback);
+
               setEndSelectionCallback(() => {});
             }
           },
@@ -101,7 +114,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
     setIsPlaying(true);
   };
 
-  const pause = () => {
+  const pause = (e) => {
     mp3.media?.pause();
     setIsPlaying(false);
   };

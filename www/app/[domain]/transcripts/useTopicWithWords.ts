@@ -42,7 +42,7 @@ const useTopicWithWords = (
 ): UseTopicWithWords => {
   const [response, setResponse] =
     useState<GetTranscriptTopicWithWordsPerSpeaker | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = getApi();
@@ -50,14 +50,12 @@ const useTopicWithWords = (
   const [count, setCount] = useState(0);
 
   const refetch = () => {
-    setCount(count + 1);
-    setLoading(true);
-    setErrorState(null);
+    if (!loading) {
+      setCount(count + 1);
+      setLoading(true);
+      setErrorState(null);
+    }
   };
-
-  useEffect(() => {
-    setLoading(true);
-  }, [transcriptId, topicId]);
 
   useEffect(() => {
     if (!transcriptId || !topicId || !api) return;

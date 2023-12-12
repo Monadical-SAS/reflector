@@ -12,7 +12,7 @@ type ParticipantList = {
   topicWithWords: any;
   stateSelectedText: any;
 };
-
+// NTH re-order list when searching
 const ParticipantList = ({
   transcriptId,
   participants,
@@ -30,12 +30,6 @@ const ParticipantList = ({
     "Create" | "Create to rename" | "Create and assign" | "Rename" | null
   >(null);
   const [oneMatch, setOneMatch] = useState<Participant>();
-
-  useEffect(() => {
-    if (loading) {
-      setLoading(false);
-    }
-  }, [participants.loading]);
 
   useEffect(() => {
     if (participants.response) {
@@ -93,6 +87,7 @@ const ParticipantList = ({
 
   useEffect(() => {
     document.onkeyup = (e) => {
+      if (loading || participants.loading || topicWithWords.loading) return;
       if (e.key === "Enter" && e.ctrlKey) {
         if (oneMatch) {
           if (action == "Create and assign") {
@@ -115,7 +110,9 @@ const ParticipantList = ({
 
   const mergeSpeaker =
     (speakerFrom, participantTo: Participant) => async () => {
+      if (loading || participants.loading || topicWithWords.loading) return;
       if (participantTo.speaker) {
+        setLoading(true);
         await api?.v1TranscriptMergeSpeaker({
           transcriptId,
           speakerMerge: {
@@ -134,17 +131,25 @@ const ParticipantList = ({
       topicWithWords.refetch();
       setAction(null);
       setParticipantInput("");
+      setLoading(false);
     };
 
   const doAction = (e?) => {
     e?.preventDefault();
     e?.stopPropagation();
-    if (!participants.response) return;
+    if (
+      loading ||
+      participants.loading ||
+      topicWithWords.loading ||
+      !participants.response
+    )
+      return;
     if (action == "Rename" && selectedTextIsSpeaker(selectedText)) {
       const participant = participants.response.find(
         (p) => p.speaker == selectedText,
       );
       if (participant && participant.name !== participantInput) {
+        setLoading(true);
         api
           ?.v1TranscriptUpdateParticipant({
             participantId: participant.id,
@@ -155,6 +160,7 @@ const ParticipantList = ({
           })
           .then(() => {
             participants.refetch();
+            setLoading(false);
           });
       }
     } else if (
@@ -173,6 +179,7 @@ const ParticipantList = ({
         .then(() => {
           participants.refetch();
           setParticipantInput("");
+          setLoading(false);
         });
     } else if (
       action == "Create and assign" &&
@@ -187,8 +194,8 @@ const ParticipantList = ({
           transcriptId,
         })
         .then((participant) => {
+          setLoading(false);
           assignTo(participant)();
-          participants.refetch();
           setParticipantInput("");
         });
     } else if (action == "Create") {
@@ -203,31 +210,34 @@ const ParticipantList = ({
         .then(() => {
           participants.refetch();
           setParticipantInput("");
+          setLoading(false);
         });
     }
   };
 
   const deleteParticipant = (participantId) => (e) => {
     e.stopPropagation();
-    if (!loading) {
-      api
-        ?.v1TranscriptDeleteParticipant({
-          transcriptId,
-          participantId,
-        })
-        .then(() => {
-          participants.refetch();
-        });
-    }
+    if (loading || participants.loading || topicWithWords.loading) return;
+    setLoading(true);
+    api
+      ?.v1TranscriptDeleteParticipant({
+        transcriptId,
+        participantId,
+      })
+      .then(() => {
+        participants.refetch();
+        setLoading(false);
+      });
   };
 
   const assignTo =
     (participant) => (e?: React.MouseEvent<HTMLButtonElement>) => {
       e?.preventDefault();
       e?.stopPropagation();
-      // fix participant that doesnt have a speaker (wait API)
+      if (loading || participants.loading || topicWithWords.loading) return;
       if (!selectedTextIsTimeSlice(selectedText)) return;
 
+      setLoading(true);
       api
         ?.v1TranscriptAssignSpeaker({
           speakerAssignment: {
@@ -239,6 +249,8 @@ const ParticipantList = ({
         })
         .then(() => {
           topicWithWords.refetch();
+          participants.refetch();
+          setLoading(false);
         });
     };
 
@@ -253,6 +265,7 @@ const ParticipantList = ({
     setSelectedParticipant(undefined);
     setSelectedText(undefined);
     setAction(null);
+    setParticipantInput("");
   };
   const preventClick = (e) => {
     e?.stopPropagation();
@@ -279,12 +292,14 @@ const ParticipantList = ({
           )}
         </div>
 
-        {participants.loading && (
-          <FontAwesomeIcon
-            icon={faSpinner}
-            className="animate-spin-slow text-gray-300 h-8"
-          />
-        )}
+        {loading ||
+          participants.loading ||
+          (topicWithWords.loading && (
+            <FontAwesomeIcon
+              icon={faSpinner}
+              className="animate-spin-slow text-gray-300 h-8"
+            />
+          ))}
         {participants.response && (
           <ul>
             {participants.response.map((participant: Participant) => (
@@ -306,23 +321,25 @@ const ParticipantList = ({
                 <span>{participant.name}</span>
 
                 <div>
-                  {selectedTextIsSpeaker(selectedText) && !loading && (
-                    <button onClick={mergeSpeaker(selectedText, participant)}>
-                      {oneMatch &&
-                        action == "Create to rename" &&
-                        participant.name.startsWith(participantInput) && (
-                          <>
-                            {" "}
-                            <span>CTRL + </span>{" "}
-                            <FontAwesomeIcon
-                              icon={faArrowTurnDown}
-                              className="rotate-90 mr-2"
-                            />{" "}
-                          </>
-                        )}{" "}
-                      Merge
-                    </button>
-                  )}
+                  {selectedTextIsSpeaker(selectedText) &&
+                    !selectedParticipant &&
+                    !loading && (
+                      <button onClick={mergeSpeaker(selectedText, participant)}>
+                        {oneMatch &&
+                          action == "Create to rename" &&
+                          participant.name.startsWith(participantInput) && (
+                            <>
+                              {" "}
+                              <span>CTRL + </span>{" "}
+                              <FontAwesomeIcon
+                                icon={faArrowTurnDown}
+                                className="rotate-90 mr-2"
+                              />{" "}
+                            </>
+                          )}{" "}
+                        Merge
+                      </button>
+                    )}
                   {selectedTextIsTimeSlice(selectedText) && !loading && (
                     <button onClick={assignTo(participant)}>
                       {oneMatch &&

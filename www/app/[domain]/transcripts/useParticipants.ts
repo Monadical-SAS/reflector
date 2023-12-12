@@ -38,9 +38,11 @@ const useParticipants = (transcriptId: string): UseParticipants => {
   const [count, setCount] = useState(0);
 
   const refetch = () => {
-    setCount(count + 1);
-    setLoading(true);
-    setErrorState(null);
+    if (!loading) {
+      setCount(count + 1);
+      setLoading(true);
+      setErrorState(null);
+    }
   };
 
   useEffect(() => {
