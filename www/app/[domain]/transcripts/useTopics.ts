@@ -5,9 +5,10 @@ import { Topic } from "./webSocketTypes";
 import getApi from "../../lib/getApi";
 import { shouldShowError } from "../../lib/errorUtils";
 import mockTopics from "./mockTopics.json";
+import { GetTranscriptTopic } from "../../api";
 
 type TranscriptTopics = {
-  topics: Topic[] | null;
+  topics: GetTranscriptTopic[] | null;
   loading: boolean;
   error: Error | null;
 };

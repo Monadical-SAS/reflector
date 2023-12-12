@@ -1,32 +1,41 @@
 import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useTopics from "../../useTopics";
-import { useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
+import { TranscriptTopic } from "../../../../api/models/TranscriptTopic";
+import { GetTranscriptTopic } from "../../../../api";
+
+type TopicHeader = {
+  stateCurrentTopic: [
+    GetTranscriptTopic | undefined,
+    Dispatch<SetStateAction<GetTranscriptTopic | undefined>>,
+  ];
+  transcriptId: string;
+};
 
 export default function TopicHeader({
-  currentTopic,
-  setCurrentTopic,
+  stateCurrentTopic,
   transcriptId,
-}) {
+}: TopicHeader) {
+  const [currentTopic, setCurrentTopic] = stateCurrentTopic;
   const topics = useTopics(transcriptId);
+
   useEffect(() => {
     if (!topics.loading && !currentTopic) {
-      setCurrentTopic(topics?.topics?.at(0)?.id);
+      setCurrentTopic(topics?.topics?.at(0));
     }
   }, [topics.loading]);
 
-  if (topics.topics) {
-    const title = topics.topics.find((topic) => topic.id == currentTopic)
-      ?.title;
-    const number = topics.topics.findIndex((topic) => topic.id == currentTopic);
+  if (topics.topics && currentTopic) {
+    const number = topics.topics.findIndex(
+      (topic) => topic.id == currentTopic.id,
+    );
     const canGoPrevious = number > 0;
     const total = topics.topics.length;
     const canGoNext = total && number < total + 1;
 
-    const onPrev = () =>
-      setCurrentTopic(topics.topics?.at(number - 1)?.id || "");
-    const onNext = () =>
-      setCurrentTopic(topics.topics?.at(number + 1)?.id || "");
+    const onPrev = () => setCurrentTopic(topics.topics?.at(number - 1));
+    const onNext = () => setCurrentTopic(topics.topics?.at(number + 1));
 
     return (
       <div className="flex flex-row">
@@ -40,7 +49,7 @@ export default function TopicHeader({
           <FontAwesomeIcon icon={faArrowLeft} />
         </button>
         <h1 className="flex-grow">
-          {title}{" "}
+          {currentTopic.title}{" "}
           <span>
             {number + 1}/{total}
           </span>

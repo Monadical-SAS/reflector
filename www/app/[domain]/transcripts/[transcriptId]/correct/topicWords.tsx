@@ -1,67 +1,42 @@
-import { SetStateAction, useCallback, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import WaveformLoading from "../../waveformLoading";
 import { UseParticipants } from "../../useParticipants";
 import { Participant } from "../../../../api";
-
-type Word = {
-  end: number;
-  speaker: number;
-  start: number;
-  text: string;
-};
-
-type WordBySpeaker = { speaker: number; words: Word[] }[];
+import { UseTopicWithWords } from "../../useTopicWithWords";
+import { TimeSlice, selectedTextIsTimeSlice } from "./page";
 
 // TODO shortcuts ?
 // TODO fix key (using indexes might act up, not sure as we don't re-order per say)
 
 type TopicWordsProps = {
-  setSelectedTime: SetStateAction<any>;
-  selectedTime: any;
-  setTopicTime: SetStateAction<any>;
-  stateSelectedSpeaker: any;
+  stateSelectedText: [
+    number | TimeSlice | undefined,
+    Dispatch<SetStateAction<number | TimeSlice | undefined>>,
+  ];
   participants: UseParticipants;
-  topicWithWords: any;
+  topicWithWords: UseTopicWithWords;
 };
 
 const topicWords = ({
-  setSelectedTime,
-  selectedTime,
-  setTopicTime,
-  stateSelectedSpeaker,
+  stateSelectedText,
   participants,
   topicWithWords,
 }: TopicWordsProps) => {
-  const [wordsBySpeaker, setWordsBySpeaker] = useState<WordBySpeaker>();
-  const [selectedSpeaker, setSelectedSpeaker] = stateSelectedSpeaker;
+  const [selectedText, setSelectedText] = stateSelectedText;
 
   useEffect(() => {
     if (topicWithWords.loading) {
-      setWordsBySpeaker([]);
-      setSelectedTime(undefined);
+      // setWordsBySpeaker([]);
+      setSelectedText(undefined);
       console.log("unsetting topic changed");
     }
   }, [topicWithWords.loading]);
-
-  useEffect(() => {
-    if (!topicWithWords.loading && !topicWithWords.error) {
-      const wordsFlat = topicWithWords.response.words as Word[];
-      const wordsSorted = wordsFlat.reduce((acc, curr) => {
-        if (acc.length > 0 && acc[acc.length - 1].speaker == curr.speaker) {
-          acc[acc.length - 1].words.push(curr);
-          return acc;
-        } else {
-          acc?.push({ speaker: curr.speaker, words: [curr] });
-          return acc;
-        }
-      }, [] as WordBySpeaker);
-      setWordsBySpeaker(wordsSorted);
-      setTopicTime({
-        start: wordsFlat.at(0)?.start,
-        end: wordsFlat.at(wordsFlat.length - 1)?.end,
-      });
-    }
-  }, [topicWithWords.response]);
 
   const getStartTimeFromFirstNode = (node, offset, reverse) => {
     // if the first element is a word
@@ -91,7 +66,7 @@ const topicWords = ({
       selection.anchorNode == selection.focusNode &&
       selection.anchorOffset == selection.focusOffset
     ) {
-      setSelectedTime(undefined);
+      setSelectedText(undefined);
       selection.empty();
       return;
     }
@@ -114,9 +89,11 @@ const topicWords = ({
         !focusIsWord &&
         anchorNode.parentElement == focusNode.parentElement
       ) {
-        setSelectedSpeaker(focusNode.parentElement?.dataset["speaker"]);
-        setSelectedTime(undefined);
-        selection.empty();
+        setSelectedText(
+          focusNode.parentElement?.dataset["speaker"]
+            ? parseInt(focusNode.parentElement?.dataset["speaker"])
+            : undefined,
+        );
         console.log("Unset Time : selected Speaker");
         return;
       }
@@ -139,7 +116,7 @@ const topicWords = ({
       const reverse = parseFloat(anchorStart) > parseFloat(focusEnd);
 
       if (!reverse) {
-        setSelectedTime({
+        setSelectedText({
           start: parseFloat(anchorStart),
           end: parseFloat(focusEnd),
         });
@@ -158,13 +135,14 @@ const topicWords = ({
           true,
         );
 
-        setSelectedTime({ start: focusStart, end: anchorEnd });
+        setSelectedText({
+          start: parseFloat(focusStart),
+          end: parseFloat(anchorEnd),
+        });
         console.log("setting reverse");
       }
-
-      setSelectedSpeaker();
-      selection.empty();
     }
+    selection && selection.empty();
   };
 
   const getSpeakerName = (speakerNumber: number) => {
@@ -176,39 +154,45 @@ const topicWords = ({
     );
   };
 
-  if (!topicWithWords.loading && wordsBySpeaker && participants.response) {
+  if (
+    !topicWithWords.loading &&
+    topicWithWords.response &&
+    participants.response
+  ) {
     return (
       <div onMouseUp={onMouseUp} className="p-5 h-full w-full">
-        {wordsBySpeaker?.map((speakerWithWords, index) => (
-          <p key={index}>
-            <span
-              data-speaker={speakerWithWords.speaker}
-              className={
-                selectedSpeaker == speakerWithWords.speaker
-                  ? "bg-yellow-200"
-                  : ""
-              }
-            >
-              {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
-            </span>
-            {speakerWithWords.words.map((word, index) => (
+        {topicWithWords.response.wordsPerSpeaker.map(
+          (speakerWithWords, index) => (
+            <p key={index}>
               <span
-                data-start={word.start}
-                data-end={word.end}
-                key={index}
+                data-speaker={speakerWithWords.speaker}
                 className={
-                  selectedTime &&
-                  selectedTime.start <= word.start &&
-                  selectedTime.end >= word.end
+                  selectedText == speakerWithWords.speaker
                     ? "bg-yellow-200"
                     : ""
                 }
               >
-                {word.text}
+                {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
               </span>
-            ))}
-          </p>
-        ))}
+              {speakerWithWords.words.map((word, index) => (
+                <span
+                  data-start={word.start}
+                  data-end={word.end}
+                  key={index}
+                  className={
+                    selectedTextIsTimeSlice(selectedText) &&
+                    selectedText.start <= word.start &&
+                    selectedText.end >= word.end
+                      ? "bg-yellow-200"
+                      : ""
+                  }
+                >
+                  {word.text}
+                </span>
+              ))}
+            </p>
+          ),
+        )}
       </div>
     );
   }
