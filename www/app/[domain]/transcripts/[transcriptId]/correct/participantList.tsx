@@ -1,6 +1,6 @@
 import { faArrowTurnDown, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Participant } from "../../../../api";
 import getApi from "../../../../lib/getApi";
 import { UseParticipants } from "../../useParticipants";
@@ -60,30 +60,7 @@ const ParticipantList = ({
         setAction(null);
       }
     }
-  }, [selectedText]);
-
-  useEffect(() => {
-    if (
-      participants.response &&
-      (action == "Create and assign" || action == "Create to rename")
-    ) {
-      if (
-        participants.response.filter((p) => p.name.startsWith(participantInput))
-          .length == 1
-      ) {
-        setOneMatch(
-          participants.response.find((p) =>
-            p.name.startsWith(participantInput),
-          ),
-        );
-      } else {
-        setOneMatch(undefined);
-      }
-    }
-    if (participantInput && !action) {
-      setAction("Create");
-    }
-  }, [participantInput]);
+  }, [selectedText, participants]);
 
   useEffect(() => {
     document.onkeyup = (e) => {
@@ -251,6 +228,9 @@ const ParticipantList = ({
           topicWithWords.refetch();
           participants.refetch();
           setLoading(false);
+          setAction(null);
+          setSelectedText(undefined);
+          setSelectedParticipant(undefined);
         });
     };
 
@@ -271,23 +251,48 @@ const ParticipantList = ({
     e?.stopPropagation();
     e?.preventDefault();
   };
+  const changeParticipantInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replaceAll(/,|\.| /g, "");
+    setParticipantInput(value);
+    if (
+      value.length > 0 &&
+      participants.response &&
+      (action == "Create and assign" || action == "Create to rename")
+    ) {
+      if (
+        participants.response.filter((p) => p.name.startsWith(value)).length ==
+        1
+      ) {
+        setOneMatch(
+          participants.response.find((p) => p.name.startsWith(value)),
+        );
+      } else {
+        setOneMatch(undefined);
+      }
+    }
+    if (value.length > 0 && !action) {
+      setAction("Create");
+    }
+  };
 
   return (
     <div className="h-full" onClick={clearSelection}>
       <div onClick={preventClick}>
-        <div>
+        <div className="grid grid-cols-2 gap-2 mb-2">
           <input
             ref={inputRef}
-            onChange={(e) => setParticipantInput(e.target.value)}
+            onChange={changeParticipantInput}
             value={participantInput}
+            className="border border-blue-400 p-1"
           />
           {action && (
-            <button onClick={doAction}>
+            <button onClick={doAction} className="p-2 bg-blue-200 w-full">
+              [
               <FontAwesomeIcon
                 icon={faArrowTurnDown}
-                className="rotate-90 mr-2"
+                className="rotate-90 h-2"
               />
-              {action}
+              ]{" " + action}
             </button>
           )}
         </div>
@@ -306,14 +311,14 @@ const ParticipantList = ({
               <li
                 onClick={selectParticipant(participant)}
                 className={
-                  "flex flex-row justify-between " +
+                  "flex flex-row justify-between border-b last:border-b-0 py-2 " +
                   (participantInput.length > 0 &&
                   selectedText &&
                   participant.name.startsWith(participantInput)
                     ? "bg-blue-100 "
                     : "") +
                   (participant.id == selectedParticipant?.id
-                    ? "border-blue-400 border"
+                    ? "bg-blue-200 border"
                     : "")
                 }
                 key={participant.id}
@@ -324,41 +329,52 @@ const ParticipantList = ({
                   {selectedTextIsSpeaker(selectedText) &&
                     !selectedParticipant &&
                     !loading && (
-                      <button onClick={mergeSpeaker(selectedText, participant)}>
-                        {oneMatch &&
-                          action == "Create to rename" &&
-                          participant.name.startsWith(participantInput) && (
+                      <button
+                        onClick={mergeSpeaker(selectedText, participant)}
+                        className="bg-blue-400 px-2 ml-2"
+                      >
+                        {oneMatch?.id == participant.id &&
+                          action == "Create to rename" && (
                             <>
-                              {" "}
-                              <span>CTRL + </span>{" "}
-                              <FontAwesomeIcon
-                                icon={faArrowTurnDown}
-                                className="rotate-90 mr-2"
-                              />{" "}
+                              <span className="text-xs">
+                                [CTRL +{" "}
+                                <FontAwesomeIcon
+                                  icon={faArrowTurnDown}
+                                  className="rotate-90 mr-2 h-2"
+                                />
+                                ]
+                              </span>
                             </>
                           )}{" "}
                         Merge
                       </button>
                     )}
                   {selectedTextIsTimeSlice(selectedText) && !loading && (
-                    <button onClick={assignTo(participant)}>
-                      {oneMatch &&
-                        action == "Create and assign" &&
-                        participant.name.startsWith(participantInput) && (
+                    <button
+                      onClick={assignTo(participant)}
+                      className="bg-blue-400 px-2 ml-2"
+                    >
+                      {oneMatch?.id == participant.id &&
+                        action == "Create and assign" && (
                           <>
-                            {" "}
-                            <span>CTRL + </span>{" "}
-                            <FontAwesomeIcon
-                              icon={faArrowTurnDown}
-                              className="rotate-90 mr-2"
-                            />{" "}
+                            <span className="text-xs">
+                              [CTRL +{" "}
+                              <FontAwesomeIcon
+                                icon={faArrowTurnDown}
+                                className="rotate-90 mr-2 h-2"
+                              />
+                              ]
+                            </span>
                           </>
                         )}{" "}
                       Assign
                     </button>
                   )}
 
-                  <button onClick={deleteParticipant(participant.id)}>
+                  <button
+                    onClick={deleteParticipant(participant.id)}
+                    className="bg-blue-400 px-2 ml-2"
+                  >
                     Delete
                   </button>
                 </div>
