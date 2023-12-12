@@ -16,57 +16,63 @@ import { exists, mapValues } from "../runtime";
 /**
  *
  * @export
- * @interface GetTranscriptTopic
+ * @interface GetTranscriptTopicWithWords
  */
-export interface GetTranscriptTopic {
+export interface GetTranscriptTopicWithWords {
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   id: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   title: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   summary: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   timestamp: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   duration: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   transcript: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWords
    */
   segments?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscriptTopicWithWords
+   */
+  words?: any | null;
 }
 
 /**
- * Check if a given object implements the GetTranscriptTopic interface.
+ * Check if a given object implements the GetTranscriptTopicWithWords interface.
  */
-export function instanceOfGetTranscriptTopic(value: object): boolean {
+export function instanceOfGetTranscriptTopicWithWords(value: object): boolean {
   let isInstance = true;
   isInstance = isInstance && "id" in value;
   isInstance = isInstance && "title" in value;
@@ -78,14 +84,16 @@ export function instanceOfGetTranscriptTopic(value: object): boolean {
   return isInstance;
 }
 
-export function GetTranscriptTopicFromJSON(json: any): GetTranscriptTopic {
-  return GetTranscriptTopicFromJSONTyped(json, false);
+export function GetTranscriptTopicWithWordsFromJSON(
+  json: any,
+): GetTranscriptTopicWithWords {
+  return GetTranscriptTopicWithWordsFromJSONTyped(json, false);
 }
 
-export function GetTranscriptTopicFromJSONTyped(
+export function GetTranscriptTopicWithWordsFromJSONTyped(
   json: any,
   ignoreDiscriminator: boolean,
-): GetTranscriptTopic {
+): GetTranscriptTopicWithWords {
   if (json === undefined || json === null) {
     return json;
   }
@@ -97,11 +105,12 @@ export function GetTranscriptTopicFromJSONTyped(
     duration: json["duration"],
     transcript: json["transcript"],
     segments: !exists(json, "segments") ? undefined : json["segments"],
+    words: !exists(json, "words") ? undefined : json["words"],
   };
 }
 
-export function GetTranscriptTopicToJSON(
-  value?: GetTranscriptTopic | null,
+export function GetTranscriptTopicWithWordsToJSON(
+  value?: GetTranscriptTopicWithWords | null,
 ): any {
   if (value === undefined) {
     return undefined;
@@ -117,5 +126,6 @@ export function GetTranscriptTopicToJSON(
     duration: value.duration,
     transcript: value.transcript,
     segments: value.segments,
+    words: value.words,
   };
 }
