@@ -207,7 +207,8 @@ const ParticipantList = ({
     }
   };
 
-  const deleteParticipant = (participantId) => () => {
+  const deleteParticipant = (participantId) => (e) => {
+    e.stopPropagation();
     if (!loading) {
       api
         ?.v1TranscriptDeleteParticipant({

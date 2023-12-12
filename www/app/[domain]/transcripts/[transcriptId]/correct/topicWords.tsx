@@ -9,7 +9,11 @@ import WaveformLoading from "../../waveformLoading";
 import { UseParticipants } from "../../useParticipants";
 import { Participant } from "../../../../api";
 import { UseTopicWithWords } from "../../useTopicWithWords";
-import { TimeSlice, selectedTextIsTimeSlice } from "./page";
+import {
+  TimeSlice,
+  selectedTextIsSpeaker,
+  selectedTextIsTimeSlice,
+} from "./page";
 
 // TODO shortcuts ?
 // TODO fix key (using indexes might act up, not sure as we don't re-order per say)
@@ -31,8 +35,7 @@ const topicWords = ({
   const [selectedText, setSelectedText] = stateSelectedText;
 
   useEffect(() => {
-    if (topicWithWords.loading) {
-      // setWordsBySpeaker([]);
+    if (topicWithWords.loading && selectedTextIsTimeSlice(selectedText)) {
       setSelectedText(undefined);
       console.log("unsetting topic changed");
     }
