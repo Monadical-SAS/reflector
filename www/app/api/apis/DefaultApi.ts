@@ -15,35 +15,71 @@
 import * as runtime from "../runtime";
 import type {
   AudioWaveform,
+  CreateParticipant,
   CreateTranscript,
   DeletionStatus,
   GetTranscript,
+  GetTranscriptTopicWithWordsPerSpeaker,
   HTTPValidationError,
   PageGetTranscript,
+  Participant,
   RtcOffer,
+  SpeakerAssignment,
+  SpeakerAssignmentStatus,
+  SpeakerMerge,
+  UpdateParticipant,
   UpdateTranscript,
 } from "../models";
 import {
   AudioWaveformFromJSON,
   AudioWaveformToJSON,
+  CreateParticipantFromJSON,
+  CreateParticipantToJSON,
   CreateTranscriptFromJSON,
   CreateTranscriptToJSON,
   DeletionStatusFromJSON,
   DeletionStatusToJSON,
   GetTranscriptFromJSON,
   GetTranscriptToJSON,
+  GetTranscriptTopicWithWordsPerSpeakerFromJSON,
+  GetTranscriptTopicWithWordsPerSpeakerToJSON,
   HTTPValidationErrorFromJSON,
   HTTPValidationErrorToJSON,
   PageGetTranscriptFromJSON,
   PageGetTranscriptToJSON,
+  ParticipantFromJSON,
+  ParticipantToJSON,
   RtcOfferFromJSON,
   RtcOfferToJSON,
+  SpeakerAssignmentFromJSON,
+  SpeakerAssignmentToJSON,
+  SpeakerAssignmentStatusFromJSON,
+  SpeakerAssignmentStatusToJSON,
+  SpeakerMergeFromJSON,
+  SpeakerMergeToJSON,
+  UpdateParticipantFromJSON,
+  UpdateParticipantToJSON,
   UpdateTranscriptFromJSON,
   UpdateTranscriptToJSON,
 } from "../models";
 
+export interface V1TranscriptAddParticipantRequest {
+  transcriptId: any;
+  createParticipant: CreateParticipant;
+}
+
+export interface V1TranscriptAssignSpeakerRequest {
+  transcriptId: any;
+  speakerAssignment: SpeakerAssignment;
+}
+
 export interface V1TranscriptDeleteRequest {
   transcriptId: any;
+}
+
+export interface V1TranscriptDeleteParticipantRequest {
+  transcriptId: any;
+  participantId: any;
 }
 
 export interface V1TranscriptGetRequest {
@@ -59,12 +95,35 @@ export interface V1TranscriptGetAudioWaveformRequest {
   transcriptId: any;
 }
 
+export interface V1TranscriptGetParticipantRequest {
+  transcriptId: any;
+  participantId: any;
+}
+
+export interface V1TranscriptGetParticipantsRequest {
+  transcriptId: any;
+}
+
 export interface V1TranscriptGetTopicsRequest {
   transcriptId: any;
 }
 
+export interface V1TranscriptGetTopicsWithWordsRequest {
+  transcriptId: any;
+}
+
+export interface V1TranscriptGetTopicsWithWordsPerSpeakerRequest {
+  transcriptId: any;
+  topicId: any;
+}
+
 export interface V1TranscriptGetWebsocketEventsRequest {
   transcriptId: any;
+}
+
+export interface V1TranscriptMergeSpeakerRequest {
+  transcriptId: any;
+  speakerMerge: SpeakerMerge;
 }
 
 export interface V1TranscriptRecordWebrtcRequest {
@@ -75,6 +134,12 @@ export interface V1TranscriptRecordWebrtcRequest {
 export interface V1TranscriptUpdateRequest {
   transcriptId: any;
   updateTranscript: UpdateTranscript;
+}
+
+export interface V1TranscriptUpdateParticipantRequest {
+  transcriptId: any;
+  participantId: any;
+  updateParticipant: UpdateParticipant;
 }
 
 export interface V1TranscriptsCreateRequest {
@@ -126,6 +191,154 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.metricsRaw(initOverrides);
+    return await response.value();
+  }
+
+  /**
+   * Transcript Add Participant
+   */
+  async v1TranscriptAddParticipantRaw(
+    requestParameters: V1TranscriptAddParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<Participant>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptAddParticipant.",
+      );
+    }
+
+    if (
+      requestParameters.createParticipant === null ||
+      requestParameters.createParticipant === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "createParticipant",
+        "Required parameter requestParameters.createParticipant was null or undefined when calling v1TranscriptAddParticipant.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/participants`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "POST",
+        headers: headerParameters,
+        query: queryParameters,
+        body: CreateParticipantToJSON(requestParameters.createParticipant),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      ParticipantFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Add Participant
+   */
+  async v1TranscriptAddParticipant(
+    requestParameters: V1TranscriptAddParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<Participant> {
+    const response = await this.v1TranscriptAddParticipantRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Assign Speaker
+   */
+  async v1TranscriptAssignSpeakerRaw(
+    requestParameters: V1TranscriptAssignSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<SpeakerAssignmentStatus>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptAssignSpeaker.",
+      );
+    }
+
+    if (
+      requestParameters.speakerAssignment === null ||
+      requestParameters.speakerAssignment === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "speakerAssignment",
+        "Required parameter requestParameters.speakerAssignment was null or undefined when calling v1TranscriptAssignSpeaker.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/speaker/assign`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "PATCH",
+        headers: headerParameters,
+        query: queryParameters,
+        body: SpeakerAssignmentToJSON(requestParameters.speakerAssignment),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      SpeakerAssignmentStatusFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Assign Speaker
+   */
+  async v1TranscriptAssignSpeaker(
+    requestParameters: V1TranscriptAssignSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<SpeakerAssignmentStatus> {
+    const response = await this.v1TranscriptAssignSpeakerRaw(
+      requestParameters,
+      initOverrides,
+    );
     return await response.value();
   }
 
@@ -184,6 +397,82 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<DeletionStatus> {
     const response = await this.v1TranscriptDeleteRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Delete Participant
+   */
+  async v1TranscriptDeleteParticipantRaw(
+    requestParameters: V1TranscriptDeleteParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<DeletionStatus>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptDeleteParticipant.",
+      );
+    }
+
+    if (
+      requestParameters.participantId === null ||
+      requestParameters.participantId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "participantId",
+        "Required parameter requestParameters.participantId was null or undefined when calling v1TranscriptDeleteParticipant.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/participants/{participant_id}`
+          .replace(
+            `{${"transcript_id"}}`,
+            encodeURIComponent(String(requestParameters.transcriptId)),
+          )
+          .replace(
+            `{${"participant_id"}}`,
+            encodeURIComponent(String(requestParameters.participantId)),
+          ),
+        method: "DELETE",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      DeletionStatusFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Delete Participant
+   */
+  async v1TranscriptDeleteParticipant(
+    requestParameters: V1TranscriptDeleteParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<DeletionStatus> {
+    const response = await this.v1TranscriptDeleteParticipantRaw(
       requestParameters,
       initOverrides,
     );
@@ -380,6 +669,145 @@ export class DefaultApi extends runtime.BaseAPI {
   }
 
   /**
+   * Transcript Get Participant
+   */
+  async v1TranscriptGetParticipantRaw(
+    requestParameters: V1TranscriptGetParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<Participant>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetParticipant.",
+      );
+    }
+
+    if (
+      requestParameters.participantId === null ||
+      requestParameters.participantId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "participantId",
+        "Required parameter requestParameters.participantId was null or undefined when calling v1TranscriptGetParticipant.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/participants/{participant_id}`
+          .replace(
+            `{${"transcript_id"}}`,
+            encodeURIComponent(String(requestParameters.transcriptId)),
+          )
+          .replace(
+            `{${"participant_id"}}`,
+            encodeURIComponent(String(requestParameters.participantId)),
+          ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      ParticipantFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Get Participant
+   */
+  async v1TranscriptGetParticipant(
+    requestParameters: V1TranscriptGetParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<Participant> {
+    const response = await this.v1TranscriptGetParticipantRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get Participants
+   */
+  async v1TranscriptGetParticipantsRaw(
+    requestParameters: V1TranscriptGetParticipantsRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetParticipants.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/participants`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Transcript Get Participants
+   */
+  async v1TranscriptGetParticipants(
+    requestParameters: V1TranscriptGetParticipantsRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1TranscriptGetParticipantsRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
    * Transcript Get Topics
    */
   async v1TranscriptGetTopicsRaw(
@@ -443,6 +871,145 @@ export class DefaultApi extends runtime.BaseAPI {
   }
 
   /**
+   * Transcript Get Topics With Words
+   */
+  async v1TranscriptGetTopicsWithWordsRaw(
+    requestParameters: V1TranscriptGetTopicsWithWordsRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetTopicsWithWords.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/topics/with-words`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Transcript Get Topics With Words
+   */
+  async v1TranscriptGetTopicsWithWords(
+    requestParameters: V1TranscriptGetTopicsWithWordsRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1TranscriptGetTopicsWithWordsRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get Topics With Words Per Speaker
+   */
+  async v1TranscriptGetTopicsWithWordsPerSpeakerRaw(
+    requestParameters: V1TranscriptGetTopicsWithWordsPerSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<GetTranscriptTopicWithWordsPerSpeaker>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetTopicsWithWordsPerSpeaker.",
+      );
+    }
+
+    if (
+      requestParameters.topicId === null ||
+      requestParameters.topicId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "topicId",
+        "Required parameter requestParameters.topicId was null or undefined when calling v1TranscriptGetTopicsWithWordsPerSpeaker.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker`
+          .replace(
+            `{${"transcript_id"}}`,
+            encodeURIComponent(String(requestParameters.transcriptId)),
+          )
+          .replace(
+            `{${"topic_id"}}`,
+            encodeURIComponent(String(requestParameters.topicId)),
+          ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      GetTranscriptTopicWithWordsPerSpeakerFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Get Topics With Words Per Speaker
+   */
+  async v1TranscriptGetTopicsWithWordsPerSpeaker(
+    requestParameters: V1TranscriptGetTopicsWithWordsPerSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<GetTranscriptTopicWithWordsPerSpeaker> {
+    const response = await this.v1TranscriptGetTopicsWithWordsPerSpeakerRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
    * Transcript Get Websocket Events
    */
   async v1TranscriptGetWebsocketEventsRaw(
@@ -491,6 +1058,80 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.v1TranscriptGetWebsocketEventsRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Merge Speaker
+   */
+  async v1TranscriptMergeSpeakerRaw(
+    requestParameters: V1TranscriptMergeSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<SpeakerAssignmentStatus>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptMergeSpeaker.",
+      );
+    }
+
+    if (
+      requestParameters.speakerMerge === null ||
+      requestParameters.speakerMerge === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "speakerMerge",
+        "Required parameter requestParameters.speakerMerge was null or undefined when calling v1TranscriptMergeSpeaker.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/speaker/merge`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "PATCH",
+        headers: headerParameters,
+        query: queryParameters,
+        body: SpeakerMergeToJSON(requestParameters.speakerMerge),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      SpeakerAssignmentStatusFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Merge Speaker
+   */
+  async v1TranscriptMergeSpeaker(
+    requestParameters: V1TranscriptMergeSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<SpeakerAssignmentStatus> {
+    const response = await this.v1TranscriptMergeSpeakerRaw(
       requestParameters,
       initOverrides,
     );
@@ -641,6 +1282,95 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<GetTranscript> {
     const response = await this.v1TranscriptUpdateRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Update Participant
+   */
+  async v1TranscriptUpdateParticipantRaw(
+    requestParameters: V1TranscriptUpdateParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<Participant>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptUpdateParticipant.",
+      );
+    }
+
+    if (
+      requestParameters.participantId === null ||
+      requestParameters.participantId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "participantId",
+        "Required parameter requestParameters.participantId was null or undefined when calling v1TranscriptUpdateParticipant.",
+      );
+    }
+
+    if (
+      requestParameters.updateParticipant === null ||
+      requestParameters.updateParticipant === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "updateParticipant",
+        "Required parameter requestParameters.updateParticipant was null or undefined when calling v1TranscriptUpdateParticipant.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/participants/{participant_id}`
+          .replace(
+            `{${"transcript_id"}}`,
+            encodeURIComponent(String(requestParameters.transcriptId)),
+          )
+          .replace(
+            `{${"participant_id"}}`,
+            encodeURIComponent(String(requestParameters.participantId)),
+          ),
+        method: "PATCH",
+        headers: headerParameters,
+        query: queryParameters,
+        body: UpdateParticipantToJSON(requestParameters.updateParticipant),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      ParticipantFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Update Participant
+   */
+  async v1TranscriptUpdateParticipant(
+    requestParameters: V1TranscriptUpdateParticipantRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<Participant> {
+    const response = await this.v1TranscriptUpdateParticipantRaw(
       requestParameters,
       initOverrides,
     );
