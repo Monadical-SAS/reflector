@@ -38,7 +38,6 @@ export function selectedTextIsTimeSlice(
 
 export default function TranscriptCorrect(details: TranscriptCorrect) {
   const transcriptId = details.params.transcriptId;
-  const transcript = useTranscript(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();
   const [currentTopic, _sct] = stateCurrentTopic;
   const topicWithWords = useTopicWithWords(currentTopic?.id, transcriptId);
@@ -47,7 +46,6 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
   const participants = useParticipants(transcriptId);
   const stateSelectedText = useState<SelectedText>();
   const [selectedText, _sst] = stateSelectedText;
-  console.log(selectedText);
 
   useEffect(() => {
     if (currentTopic) {
@@ -59,9 +57,6 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
       setTopicTime(undefined);
     }
   }, [currentTopic]);
-
-  // TODO BE
-  // Creating a participant and a speaker ?
 
   return (
     <div className="h-full grid grid-cols-2 gap-4">

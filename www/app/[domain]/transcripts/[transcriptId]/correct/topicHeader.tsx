@@ -2,7 +2,6 @@ import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useTopics from "../../useTopics";
 import { Dispatch, SetStateAction, useEffect } from "react";
-import { TranscriptTopic } from "../../../../api/models/TranscriptTopic";
 import { GetTranscriptTopic } from "../../../../api";
 
 type TopicHeader = {
@@ -26,17 +25,33 @@ export default function TopicHeader({
     }
   }, [topics.loading]);
 
-  if (topics.topics && currentTopic) {
-    const number = topics.topics.findIndex(
-      (topic) => topic.id == currentTopic.id,
-    );
-    const canGoPrevious = number > 0;
-    const total = topics.topics.length;
-    const canGoNext = total && number < total + 1;
+  const number = topics.topics?.findIndex(
+    (topic) => topic.id == currentTopic?.id,
+  );
+  const canGoPrevious = typeof number == "number" && number > 0;
+  const total = topics.topics?.length;
+  const canGoNext = total && typeof number == "number" && number + 1 < total;
 
-    const onPrev = () => setCurrentTopic(topics.topics?.at(number - 1));
-    const onNext = () => setCurrentTopic(topics.topics?.at(number + 1));
+  const onPrev = () =>
+    canGoPrevious && setCurrentTopic(topics.topics?.at(number - 1));
+  const onNext = () =>
+    canGoNext && setCurrentTopic(topics.topics?.at(number + 1));
 
+  const keyHandler = (e) => {
+    if (e.key == "ArrowLeft") {
+      onPrev();
+    } else if (e.key == "ArrowRight") {
+      onNext();
+    }
+  };
+  useEffect(() => {
+    document.addEventListener("keyup", keyHandler);
+    return () => {
+      document.removeEventListener("keyup", keyHandler);
+    };
+  });
+
+  if (topics.topics && currentTopic && typeof number == "number") {
     return (
       <div className="flex flex-row">
         <button
