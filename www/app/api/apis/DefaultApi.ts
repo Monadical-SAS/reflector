@@ -19,12 +19,14 @@ import type {
   CreateTranscript,
   DeletionStatus,
   GetTranscript,
+  GetTranscriptTopicWithWordsPerSpeaker,
   HTTPValidationError,
   PageGetTranscript,
   Participant,
   RtcOffer,
   SpeakerAssignment,
   SpeakerAssignmentStatus,
+  SpeakerMerge,
   UpdateParticipant,
   UpdateTranscript,
 } from "../models";
@@ -39,6 +41,8 @@ import {
   DeletionStatusToJSON,
   GetTranscriptFromJSON,
   GetTranscriptToJSON,
+  GetTranscriptTopicWithWordsPerSpeakerFromJSON,
+  GetTranscriptTopicWithWordsPerSpeakerToJSON,
   HTTPValidationErrorFromJSON,
   HTTPValidationErrorToJSON,
   PageGetTranscriptFromJSON,
@@ -51,6 +55,8 @@ import {
   SpeakerAssignmentToJSON,
   SpeakerAssignmentStatusFromJSON,
   SpeakerAssignmentStatusToJSON,
+  SpeakerMergeFromJSON,
+  SpeakerMergeToJSON,
   UpdateParticipantFromJSON,
   UpdateParticipantToJSON,
   UpdateTranscriptFromJSON,
@@ -106,8 +112,18 @@ export interface V1TranscriptGetTopicsWithWordsRequest {
   transcriptId: any;
 }
 
+export interface V1TranscriptGetTopicsWithWordsPerSpeakerRequest {
+  transcriptId: any;
+  topicId: any;
+}
+
 export interface V1TranscriptGetWebsocketEventsRequest {
   transcriptId: any;
+}
+
+export interface V1TranscriptMergeSpeakerRequest {
+  transcriptId: any;
+  speakerMerge: SpeakerMerge;
 }
 
 export interface V1TranscriptRecordWebrtcRequest {
@@ -918,6 +934,82 @@ export class DefaultApi extends runtime.BaseAPI {
   }
 
   /**
+   * Transcript Get Topics With Words Per Speaker
+   */
+  async v1TranscriptGetTopicsWithWordsPerSpeakerRaw(
+    requestParameters: V1TranscriptGetTopicsWithWordsPerSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<GetTranscriptTopicWithWordsPerSpeaker>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptGetTopicsWithWordsPerSpeaker.",
+      );
+    }
+
+    if (
+      requestParameters.topicId === null ||
+      requestParameters.topicId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "topicId",
+        "Required parameter requestParameters.topicId was null or undefined when calling v1TranscriptGetTopicsWithWordsPerSpeaker.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker`
+          .replace(
+            `{${"transcript_id"}}`,
+            encodeURIComponent(String(requestParameters.transcriptId)),
+          )
+          .replace(
+            `{${"topic_id"}}`,
+            encodeURIComponent(String(requestParameters.topicId)),
+          ),
+        method: "GET",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      GetTranscriptTopicWithWordsPerSpeakerFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Get Topics With Words Per Speaker
+   */
+  async v1TranscriptGetTopicsWithWordsPerSpeaker(
+    requestParameters: V1TranscriptGetTopicsWithWordsPerSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<GetTranscriptTopicWithWordsPerSpeaker> {
+    const response = await this.v1TranscriptGetTopicsWithWordsPerSpeakerRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
    * Transcript Get Websocket Events
    */
   async v1TranscriptGetWebsocketEventsRaw(
@@ -966,6 +1058,80 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.v1TranscriptGetWebsocketEventsRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Merge Speaker
+   */
+  async v1TranscriptMergeSpeakerRaw(
+    requestParameters: V1TranscriptMergeSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<SpeakerAssignmentStatus>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptMergeSpeaker.",
+      );
+    }
+
+    if (
+      requestParameters.speakerMerge === null ||
+      requestParameters.speakerMerge === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "speakerMerge",
+        "Required parameter requestParameters.speakerMerge was null or undefined when calling v1TranscriptMergeSpeaker.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/speaker/merge`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "PATCH",
+        headers: headerParameters,
+        query: queryParameters,
+        body: SpeakerMergeToJSON(requestParameters.speakerMerge),
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) =>
+      SpeakerAssignmentStatusFromJSON(jsonValue),
+    );
+  }
+
+  /**
+   * Transcript Merge Speaker
+   */
+  async v1TranscriptMergeSpeaker(
+    requestParameters: V1TranscriptMergeSpeakerRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<SpeakerAssignmentStatus> {
+    const response = await this.v1TranscriptMergeSpeakerRaw(
       requestParameters,
       initOverrides,
     );

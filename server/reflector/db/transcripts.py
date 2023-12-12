@@ -251,6 +251,23 @@ class Transcript(BaseModel):
             url += f"?token={token}"
         return url
 
+    def find_empty_speaker(self) -> int:
+        """
+        Find an empty speaker seat
+        """
+        speakers = set(
+            word.speaker
+            for topic in self.topics
+            for word in topic.words
+            if word.speaker is not None
+        )
+        i = 0
+        while True:
+            if i not in speakers:
+                return i
+            i += 1
+        raise Exception("No empty speaker found")
+
 
 class TranscriptController:
     async def get_all(
