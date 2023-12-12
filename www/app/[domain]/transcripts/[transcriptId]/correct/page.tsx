@@ -1,59 +1,77 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import useTranscript from "../../useTranscript";
 import TopicHeader from "./topicHeader";
 import TopicWords from "./topicWords";
 import TopicPlayer from "./topicPlayer";
-import getApi from "../../../../lib/getApi";
 import useParticipants from "../../useParticipants";
 import useTopicWithWords from "../../useTopicWithWords";
 import ParticipantList from "./participantList";
+import { GetTranscriptTopic } from "../../../../api";
 
-type TranscriptCorrect = {
+export type TranscriptCorrect = {
   params: {
     transcriptId: string;
   };
 };
 
-type TimeSlice = {
+export type TimeSlice = {
   start: number;
   end: number;
 };
 
+export type SelectedText = number | TimeSlice | undefined;
+
+export function selectedTextIsSpeaker(
+  selectedText: SelectedText,
+): selectedText is number {
+  return typeof selectedText == "number";
+}
+export function selectedTextIsTimeSlice(
+  selectedText: SelectedText,
+): selectedText is TimeSlice {
+  return (
+    typeof (selectedText as any)?.start == "number" &&
+    typeof (selectedText as any)?.end == "number"
+  );
+}
+
 export default function TranscriptCorrect(details: TranscriptCorrect) {
   const transcriptId = details.params.transcriptId;
   const transcript = useTranscript(transcriptId);
-  const [currentTopic, setCurrentTopic] = useState("");
-  const topicWithWords = useTopicWithWords(currentTopic, transcriptId);
+  const stateCurrentTopic = useState<GetTranscriptTopic>();
+  const [currentTopic, _sct] = stateCurrentTopic;
+  const topicWithWords = useTopicWithWords(currentTopic?.id, transcriptId);
 
-  const [selectedTime, setSelectedTime] = useState<TimeSlice>();
   const [topicTime, setTopicTime] = useState<TimeSlice>();
   const participants = useParticipants(transcriptId);
-  const stateSelectedSpeaker = useState<number>();
+  const stateSelectedText = useState<SelectedText>();
+  const [selectedText, _sst] = stateSelectedText;
+  console.log(selectedText);
+
+  useEffect(() => {
+    if (currentTopic) {
+      setTopicTime({
+        start: currentTopic.timestamp,
+        end: currentTopic.timestamp + currentTopic.duration,
+      });
+    } else {
+      setTopicTime(undefined);
+    }
+  }, [currentTopic]);
 
   // TODO BE
-  // Get one topic with words
-  // -> fix useTopicWithWords.ts
-  // Add start and end time of each topic in the topic list
-  // -> use full current topic instead of topicId here
-  // -> remove time calculation and setting from TopicHeader
-  // -> pass in topicTime to player directly
-  // Should we have participants by default, one for each speaker ?
   // Creating a participant and a speaker ?
 
   return (
     <div className="h-full grid grid-cols-2 gap-4">
       <div className="flex flex-col h-full">
         <TopicHeader
-          currentTopic={currentTopic}
-          setCurrentTopic={setCurrentTopic}
+          stateCurrentTopic={stateCurrentTopic}
           transcriptId={transcriptId}
         />
         <TopicWords
-          setSelectedTime={setSelectedTime}
-          selectedTime={selectedTime}
-          setTopicTime={setTopicTime}
-          stateSelectedSpeaker={stateSelectedSpeaker}
+          stateSelectedText={stateSelectedText}
           participants={participants}
           topicWithWords={topicWithWords}
         />
@@ -61,16 +79,17 @@ export default function TranscriptCorrect(details: TranscriptCorrect) {
       <div className="flex flex-col justify-stretch">
         <TopicPlayer
           transcriptId={transcriptId}
-          selectedTime={selectedTime}
+          selectedTime={
+            selectedTextIsTimeSlice(selectedText) ? selectedText : undefined
+          }
           topicTime={topicTime}
         />
         <ParticipantList
           {...{
             transcriptId,
             participants,
-            selectedTime,
             topicWithWords,
-            stateSelectedSpeaker,
+            stateSelectedText,
           }}
         />
       </div>
