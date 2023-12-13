@@ -323,15 +323,18 @@ const ParticipantList = ({
   return (
     <div className="h-full" onClick={clearSelection}>
       <div onClick={preventClick}>
-        <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-2 mb-2">
           <input
             ref={inputRef}
             onChange={changeParticipantInput}
             value={participantInput}
-            className="border border-blue-400 p-1"
+            className="border col-span-3 border-blue-400 p-1"
           />
-          {action && (
-            <button onClick={doAction} className="p-2 bg-blue-200 w-full">
+          {action ? (
+            <button
+              onClick={doAction}
+              className="p-2 bg-blue-200 w-full col-span-3"
+            >
               [
               <FontAwesomeIcon
                 icon={faArrowTurnDown}
@@ -339,17 +342,19 @@ const ParticipantList = ({
               />
               ]{" " + action}
             </button>
+          ) : (
+            <div className="col-span-3" />
           )}
+          {loading ||
+            participants.loading ||
+            (topicWithWords.loading && (
+              <FontAwesomeIcon
+                icon={faSpinner}
+                className="animate-spin-slow text-gray-300 h-8"
+              />
+            ))}
         </div>
 
-        {loading ||
-          participants.loading ||
-          (topicWithWords.loading && (
-            <FontAwesomeIcon
-              icon={faSpinner}
-              className="animate-spin-slow text-gray-300 h-8"
-            />
-          ))}
         {participants.response && (
           <ul>
             {participants.response.map((participant: Participant) => (
