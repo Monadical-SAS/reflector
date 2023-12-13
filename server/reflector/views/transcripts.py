@@ -50,6 +50,7 @@ class GetTranscript(BaseModel):
     source_language: str | None
     target_language: str | None
     participants: list[TranscriptParticipant] | None
+    reviewed: bool
 
 
 class CreateTranscript(BaseModel):
@@ -66,6 +67,7 @@ class UpdateTranscript(BaseModel):
     long_summary: Optional[str] = Field(None)
     share_mode: Optional[Literal["public", "semi-private", "private"]] = Field(None)
     participants: Optional[list[TranscriptParticipant]] = Field(None)
+    reviewed: Optional[bool] = Field(None)
 
 
 class DeletionStatus(BaseModel):
