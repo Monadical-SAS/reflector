@@ -1,22 +1,8 @@
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import WaveformLoading from "../../waveformLoading";
 import { UseParticipants } from "../../useParticipants";
-import { Participant } from "../../../../api";
 import { UseTopicWithWords } from "../../useTopicWithWords";
-import {
-  TimeSlice,
-  selectedTextIsSpeaker,
-  selectedTextIsTimeSlice,
-} from "./page";
-
-// TODO shortcuts ?
-// TODO fix key (using indexes might act up, not sure as we don't re-order per say)
+import { TimeSlice, selectedTextIsTimeSlice } from "./types";
 
 type TopicWordsProps = {
   stateSelectedText: [
@@ -199,8 +185,9 @@ const topicWords = ({
       </div>
     );
   }
-  if (topicWithWords.loading) return <WaveformLoading />;
-  if (topicWithWords.error) return <p>error</p>;
+  if (topicWithWords.loading || participants.loading)
+    return <WaveformLoading />;
+  if (topicWithWords.error || participants.error) return <p>error</p>;
   return null;
 };
 

@@ -2,8 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import useMp3 from "../../useMp3";
 import { formatTime } from "../../../../lib/time";
 import SoundWaveCss from "./soundWaveCss";
+import { TimeSlice } from "./types";
 
-const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
+type TopicPlayer = {
+  transcriptId: string;
+  selectedTime: TimeSlice | undefined;
+  topicTime: TimeSlice;
+};
+
+const TopicPlayer = ({
+  transcriptId,
+  selectedTime,
+  topicTime,
+}: TopicPlayer) => {
   const mp3 = useMp3(transcriptId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [endTopicCallback, setEndTopicCallback] = useState<() => void>();
@@ -56,11 +67,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
     setEndTopicCallback(
       () =>
         function () {
-          if (
-            mp3.media &&
-            topicTime.end &&
-            mp3.media.currentTime >= topicTime.end
-          ) {
+          if (mp3.media && mp3.media.currentTime >= topicTime.end) {
             mp3.media.pause();
             setIsPlaying(false);
             mp3.media.currentTime = topicTime.start;
@@ -68,7 +75,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
           }
         },
     );
-    if (mp3.media && topicTime) {
+    if (mp3.media) {
       playButton.current?.focus();
       mp3.media?.pause();
       // there's no callback on pause but apparently changing the time while palying doesn't work... so here is a timeout
@@ -80,7 +87,7 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
       }, 10);
       setIsPlaying(false);
     }
-  }, [topicTime, mp3.media]);
+  }, [!mp3.media, topicTime.start, topicTime.end]);
 
   useEffect(() => {
     endTopicCallback &&
@@ -164,11 +171,9 @@ const TopicPlayer = ({ transcriptId, selectedTime, topicTime }) => {
       <div className="mb-4 grid grid-cols-3 gap-2">
         <SoundWaveCss playing={isPlaying} />
         <div className="col-span-2">{showTime}</div>
-        {topicTime && (
-          <button className="p-2 bg-blue-200 w-full" onClick={playTopic}>
-            Play From Start
-          </button>
-        )}
+        <button className="p-2 bg-blue-200 w-full" onClick={playTopic}>
+          Play From Start
+        </button>
         {!isPlaying ? (
           <button
             ref={playButton}
