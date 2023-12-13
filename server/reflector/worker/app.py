@@ -4,7 +4,7 @@ from celery import Celery
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)
-if celery.current_app is not None:
+if celery.current_app.main != "default":
     logger.info(f"Celery already configured ({celery.current_app})")
     app = celery.current_app
 else:
