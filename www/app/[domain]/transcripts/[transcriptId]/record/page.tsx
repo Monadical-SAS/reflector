@@ -120,6 +120,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           topics={webSockets.topics}
           useActiveTopic={useActiveTopic}
           autoscroll={true}
+          transcriptId={details.params.transcriptId}
         />
 
         <section
