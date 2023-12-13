@@ -4,7 +4,8 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Participant } from "../../../../api";
 import getApi from "../../../../lib/getApi";
 import { UseParticipants } from "../../useParticipants";
-import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./page";
+import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./types";
+import { useError } from "../../../../(errors)/errorContext";
 
 type ParticipantList = {
   participants: UseParticipants;
@@ -13,6 +14,7 @@ type ParticipantList = {
   stateSelectedText: any;
 };
 // NTH re-order list when searching
+// HTH case-insensitive matching
 const ParticipantList = ({
   transcriptId,
   participants,
@@ -20,7 +22,7 @@ const ParticipantList = ({
   stateSelectedText,
 }: ParticipantList) => {
   const api = getApi();
-
+  const { setError } = useError();
   const [loading, setLoading] = useState(false);
   const [participantInput, setParticipantInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,40 +42,42 @@ const ParticipantList = ({
         );
         if (participant) {
           setParticipantInput(participant.name);
+          setOneMatch(undefined);
           setSelectedParticipant(participant);
-          inputRef.current?.focus();
           setAction("Rename");
         } else if (!selectedParticipant) {
           setSelectedParticipant(undefined);
           setParticipantInput("");
-          inputRef.current?.focus();
+          setOneMatch(undefined);
           setAction("Create to rename");
         }
       }
       if (selectedTextIsTimeSlice(selectedText)) {
-        setParticipantInput("");
         inputRef.current?.focus();
+        setParticipantInput("");
+        setOneMatch(undefined);
         setAction("Create and assign");
         setSelectedParticipant(undefined);
       }
       if (typeof selectedText == undefined) {
+        inputRef.current?.blur();
         setAction(null);
       }
     }
-  }, [selectedText, participants]);
+  }, [selectedText, participants.response]);
 
   useEffect(() => {
     document.onkeyup = (e) => {
       if (loading || participants.loading || topicWithWords.loading) return;
       if (e.key === "Enter" && e.ctrlKey) {
         if (oneMatch) {
-          if (action == "Create and assign") {
-            assignTo(oneMatch)();
-            setOneMatch(undefined);
-            setParticipantInput("");
+          if (
+            action == "Create and assign" &&
+            selectedTextIsTimeSlice(selectedText)
+          ) {
+            assignTo(oneMatch)().catch(() => {});
           } else if (
             action == "Create to rename" &&
-            oneMatch &&
             selectedTextIsSpeaker(selectedText)
           ) {
             mergeSpeaker(selectedText, oneMatch)();
@@ -85,33 +89,78 @@ const ParticipantList = ({
     };
   });
 
+  const onSuccess = () => {
+    topicWithWords.refetch();
+    participants.refetch();
+    setLoading(false);
+    setAction(null);
+    setSelectedText(undefined);
+    setSelectedParticipant(undefined);
+    setParticipantInput("");
+    setOneMatch(undefined);
+    inputRef?.current?.blur();
+  };
+
+  const assignTo =
+    (participant) => async (e?: React.MouseEvent<HTMLButtonElement>) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+
+      if (loading || participants.loading || topicWithWords.loading) return;
+      if (!selectedTextIsTimeSlice(selectedText)) return;
+
+      setLoading(true);
+      try {
+        await api?.v1TranscriptAssignSpeaker({
+          speakerAssignment: {
+            participant: participant.id,
+            timestampFrom: selectedText.start,
+            timestampTo: selectedText.end,
+          },
+          transcriptId,
+        });
+        onSuccess();
+      } catch (error) {
+        setError(error, "There was an error assigning");
+        setLoading(false);
+        throw error;
+      }
+    };
+
   const mergeSpeaker =
     (speakerFrom, participantTo: Participant) => async () => {
       if (loading || participants.loading || topicWithWords.loading) return;
+      setLoading(true);
       if (participantTo.speaker) {
-        setLoading(true);
-        await api?.v1TranscriptMergeSpeaker({
-          transcriptId,
-          speakerMerge: {
-            speakerFrom: speakerFrom,
-            speakerTo: participantTo.speaker,
-          },
-        });
+        try {
+          await api?.v1TranscriptMergeSpeaker({
+            transcriptId,
+            speakerMerge: {
+              speakerFrom: speakerFrom,
+              speakerTo: participantTo.speaker,
+            },
+          });
+          onSuccess();
+        } catch (error) {
+          setError(error, "There was an error merging");
+          setLoading(false);
+        }
       } else {
-        await api?.v1TranscriptUpdateParticipant({
-          transcriptId,
-          participantId: participantTo.id,
-          updateParticipant: { speaker: speakerFrom },
-        });
+        try {
+          await api?.v1TranscriptUpdateParticipant({
+            transcriptId,
+            participantId: participantTo.id,
+            updateParticipant: { speaker: speakerFrom },
+          });
+          onSuccess();
+        } catch (error) {
+          setError(error, "There was an error merging (update)");
+          setLoading(false);
+        }
       }
-      participants.refetch();
-      topicWithWords.refetch();
-      setAction(null);
-      setParticipantInput("");
-      setLoading(false);
     };
 
-  const doAction = (e?) => {
+  const doAction = async (e?) => {
     e?.preventDefault();
     e?.stopPropagation();
     if (
@@ -138,6 +187,10 @@ const ParticipantList = ({
           .then(() => {
             participants.refetch();
             setLoading(false);
+          })
+          .catch((e) => {
+            setError(e, "There was an error renaming");
+            setLoading(false);
           });
       }
     } else if (
@@ -156,6 +209,11 @@ const ParticipantList = ({
         .then(() => {
           participants.refetch();
           setParticipantInput("");
+          setOneMatch(undefined);
+          setLoading(false);
+        })
+        .catch((e) => {
+          setError(e, "There was an error creating");
           setLoading(false);
         });
     } else if (
@@ -163,18 +221,22 @@ const ParticipantList = ({
       selectedTextIsTimeSlice(selectedText)
     ) {
       setLoading(true);
-      api
-        ?.v1TranscriptAddParticipant({
+      try {
+        const participant = await api?.v1TranscriptAddParticipant({
           createParticipant: {
             name: participantInput,
           },
           transcriptId,
-        })
-        .then((participant) => {
-          setLoading(false);
-          assignTo(participant)();
-          setParticipantInput("");
         });
+        setLoading(false);
+        assignTo(participant)().catch(() => {
+          // error and loading are handled by assignTo catch
+          participants.refetch();
+        });
+      } catch (error) {
+        setError(e, "There was an error creating");
+        setLoading(false);
+      }
     } else if (action == "Create") {
       setLoading(true);
       api
@@ -187,6 +249,10 @@ const ParticipantList = ({
         .then(() => {
           participants.refetch();
           setParticipantInput("");
+          setLoading(false);
+        })
+        .catch((e) => {
+          setError(e, "There was an error creating");
           setLoading(false);
         });
     }
@@ -204,41 +270,19 @@ const ParticipantList = ({
       .then(() => {
         participants.refetch();
         setLoading(false);
+      })
+      .catch((e) => {
+        setError(e, "There was an error deleting");
+        setLoading(false);
       });
   };
-
-  const assignTo =
-    (participant) => (e?: React.MouseEvent<HTMLButtonElement>) => {
-      e?.preventDefault();
-      e?.stopPropagation();
-      if (loading || participants.loading || topicWithWords.loading) return;
-      if (!selectedTextIsTimeSlice(selectedText)) return;
-
-      setLoading(true);
-      api
-        ?.v1TranscriptAssignSpeaker({
-          speakerAssignment: {
-            participant: participant.id,
-            timestampFrom: selectedText.start,
-            timestampTo: selectedText.end,
-          },
-          transcriptId,
-        })
-        .then(() => {
-          topicWithWords.refetch();
-          participants.refetch();
-          setLoading(false);
-          setAction(null);
-          setSelectedText(undefined);
-          setSelectedParticipant(undefined);
-        });
-    };
 
   const selectParticipant = (participant) => (e) => {
     setSelectedParticipant(participant);
     setSelectedText(participant.speaker);
     setAction("Rename");
     setParticipantInput(participant.name);
+    oneMatch && setOneMatch(undefined);
   };
 
   const clearSelection = () => {
@@ -246,6 +290,7 @@ const ParticipantList = ({
     setSelectedText(undefined);
     setAction(null);
     setParticipantInput("");
+    oneMatch && setOneMatch(undefined);
   };
   const preventClick = (e) => {
     e?.stopPropagation();
