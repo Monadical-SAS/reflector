@@ -62,6 +62,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "1",
             timestamp: 10,
+            duration: 10,
             summary: "This is test topic 1",
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
