@@ -62,6 +62,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "1",
             timestamp: 10,
+            duration: 10,
             summary: "This is test topic 1",
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
@@ -103,6 +104,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "2",
             timestamp: 20,
+            duration: 10,
             summary: "This is test topic 2",
             title: "Topic 2: Machine Learning Algorithms",
             transcript:
@@ -123,6 +125,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "3",
             timestamp: 30,
+            duration: 10,
             summary: "This is test topic 3",
             title: "Topic 3: Mental Health Awareness",
             transcript: "Ways to improve mental health and reduce stigma.",
@@ -142,6 +145,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "4",
             timestamp: 40,
+            duration: 10,
             summary: "This is test topic 4",
             title: "Topic 4: Basics of Productivity",
             transcript: "Tips and tricks to increase daily productivity.",
@@ -161,6 +165,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "5",
             timestamp: 50,
+            duration: 10,
             summary: "This is test topic 5",
             title: "Topic 5: Future of Aviation",
             transcript:
@@ -190,6 +195,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "1",
             timestamp: 10,
+            duration: 10,
             summary: "This is test topic 1",
             title:
               "Topic 1: Introduction to Quantum Mechanics, a brief overview of quantum mechanics and its principles.",
@@ -211,6 +217,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "2",
             timestamp: 20,
+            duration: 10,
             summary: "This is test topic 2",
             title:
               "Topic 2: Machine Learning Algorithms, understanding the different types of machine learning algorithms.",
@@ -232,6 +239,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "3",
             timestamp: 30,
+            duration: 10,
             summary: "This is test topic 3",
             title:
               "Topic 3: Mental Health Awareness, ways to improve mental health and reduce stigma.",
@@ -252,6 +260,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "4",
             timestamp: 40,
+            duration: 10,
             summary: "This is test topic 4",
             title:
               "Topic 4: Basics of Productivity, tips and tricks to increase daily productivity.",
@@ -272,6 +281,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           {
             id: "5",
             timestamp: 50,
+            duration: 10,
             summary: "This is test topic 5",
             title:
               "Topic 5: Future of Aviation, exploring the advancements and possibilities in aviation.",
