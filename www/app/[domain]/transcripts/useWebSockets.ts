@@ -67,7 +67,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
-            duration: 10,
             segments: [
               {
                 speaker: 1,
