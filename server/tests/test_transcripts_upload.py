@@ -3,30 +3,9 @@ import asyncio
 from httpx import AsyncClient
 
 
-@pytest.fixture(scope="session")
-def celery_enable_logging():
-    return True
-
-
-@pytest.fixture(scope="session")
-def celery_config():
-    from tempfile import NamedTemporaryFile
-
-    with NamedTemporaryFile() as f:
-        yield {
-            "broker_url": "memory://",
-            "result_backend": f"db+sqlite:///{f.name}",
-        }
-
-
-@pytest.fixture(scope="session")
-def celery_includes():
-    return ["reflector.pipelines.main_live_pipeline"]
-
-
 @pytest.mark.usefixtures("setup_database")
-@pytest.mark.usefixtures("celery_app")
-@pytest.mark.usefixtures("celery_worker")
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
 async def test_transcript_upload_file(
     tmpdir,
