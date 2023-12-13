@@ -9,6 +9,7 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_transcript_upload_file(
     tmpdir,
+    ensure_casing,
     dummy_llm,
     dummy_processors,
     dummy_diarization,
@@ -29,8 +30,8 @@ async def test_transcript_upload_file(
         f"/transcripts/{tid}/record/upload",
         files={
             "file": (
-                "test_mathieu_hello.mp3",
-                open("tests/records/test_mathieu_hello.mp3", "rb"),
+                "test_short.wav",
+                open("tests/records/test_short.wav", "rb"),
                 "audio/mpeg",
             )
         },
