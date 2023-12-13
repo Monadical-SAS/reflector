@@ -12,6 +12,7 @@ from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import Storage
+from sqlalchemy.sql import false
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -30,6 +31,9 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("participants", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column(
+        "reviewed", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
     sqlalchemy.Column(
         "audio_location",
         sqlalchemy.String,
@@ -138,6 +142,7 @@ class Transcript(BaseModel):
     target_language: str = "en"
     share_mode: Literal["private", "semi-private", "public"] = "private"
     audio_location: str = "local"
+    reviewed: bool = False
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
