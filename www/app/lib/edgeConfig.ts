@@ -1,19 +1,6 @@
 import { get } from "@vercel/edge-config";
 import { isDevelopment } from "./utils";
 
-const localConfig = {
-  features: {
-    requireLogin: false,
-    privacy: true,
-    browse: false,
-    sendToZulip: true,
-  },
-  api_url: "http://127.0.0.1:1250",
-  websocket_url: "ws://127.0.0.1:1250",
-  auth_callback_url: "http://localhost:3000/auth-callback",
-  zulip_streams: "https://d3ow1y42gqfmk.cloudfront.net",
-};
-
 type EdgeConfig = {
   [domainWithDash: string]: {
     features: {
@@ -43,8 +30,8 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig(domain: string) {
-  if (isDevelopment()) {
-    return localConfig;
+  if (process.env.NEXT_PUBLIC_ENV === "development") {
+    return require("../../config").localConfig;
   }
 
   let config = await get(edgeDomainToKey(domain));
