@@ -11,6 +11,13 @@
     "openapi": "openapi-generator-cli generate -i http://localhost:1250/openapi.json -g typescript-fetch -o app/api && yarn format"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.1.1",
+    "@chakra-ui/menu": "^2.2.1",
+    "@chakra-ui/next-js": "^2.2.0",
+    "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/react-types": "^2.0.6",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
     "@fief/fief": "^0.13.5",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
@@ -19,7 +26,9 @@
     "@vercel/edge-config": "^0.4.1",
     "autoprefixer": "10.4.14",
     "axios": "^1.6.2",
+    "chakra-react-select": "^4.7.6",
     "fontawesome": "^5.6.3",
+    "framer-motion": "^10.16.16",
     "jest-worker": "^29.6.2",
     "next": "^13.4.9",
     "postcss": "8.4.25",
