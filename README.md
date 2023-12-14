@@ -75,8 +75,10 @@ FIEF_URL=https://auth.reflector-ui.dev/reflector-local
 FIEF_CLIENT_ID=s03<omitted>
 FIEF_CLIENT_SECRET=<omitted>
 
-EDGE_CONFIG=<omitted>
+EDGE_CONFIG=<omitted> (optional)
 ```
+
+Then copy config-template.ts to a new file called config.ts, this is where you will configure the features or your local project.
 
 ### Run the Application
 
