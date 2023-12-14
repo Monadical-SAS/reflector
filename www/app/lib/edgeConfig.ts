@@ -30,7 +30,7 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig(domain: string) {
-  if (isDevelopment()) {
+  if (process.env.NEXT_PUBLIC_ENV === "development") {
     return require("../../config").localConfig;
   }
 
