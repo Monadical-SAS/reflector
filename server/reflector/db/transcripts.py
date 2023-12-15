@@ -12,6 +12,7 @@ from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import Storage
+from sqlalchemy.sql import false
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -30,6 +31,9 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("participants", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column(
+        "reviewed", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
     sqlalchemy.Column(
         "audio_location",
         sqlalchemy.String,
@@ -138,6 +142,7 @@ class Transcript(BaseModel):
     target_language: str = "en"
     share_mode: Literal["private", "semi-private", "public"] = "private"
     audio_location: str = "local"
+    reviewed: bool = False
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -247,6 +252,23 @@ class Transcript(BaseModel):
             )
             url += f"?token={token}"
         return url
+
+    def find_empty_speaker(self) -> int:
+        """
+        Find an empty speaker seat
+        """
+        speakers = set(
+            word.speaker
+            for topic in self.topics
+            for word in topic.words
+            if word.speaker is not None
+        )
+        i = 0
+        while True:
+            if i not in speakers:
+                return i
+            i += 1
+        raise Exception("No empty speaker found")
 
 
 class TranscriptController:
@@ -362,7 +384,7 @@ class TranscriptController:
         await database.execute(query)
         return transcript
 
-    async def update(self, transcript: Transcript, values: dict):
+    async def update(self, transcript: Transcript, values: dict, mutate=True):
         """
         Update a transcript fields with key/values in values
         """
@@ -372,8 +394,9 @@ class TranscriptController:
             .values(**values)
         )
         await database.execute(query)
-        for key, value in values.items():
-            setattr(transcript, key, value)
+        if mutate:
+            for key, value in values.items():
+                setattr(transcript, key, value)
 
     async def remove_by_id(
         self,
@@ -410,7 +433,11 @@ class TranscriptController:
         Append an event to a transcript
         """
         resp = transcript.add_event(event=event, data=data)
-        await self.update(transcript, {"events": transcript.events_dump()})
+        await self.update(
+            transcript,
+            {"events": transcript.events_dump()},
+            mutate=False,
+        )
         return resp
 
     async def upsert_topic(
@@ -422,7 +449,11 @@ class TranscriptController:
         Append an event to a transcript
         """
         transcript.upsert_topic(topic)
-        await self.update(transcript, {"topics": transcript.topics_dump()})
+        await self.update(
+            transcript,
+            {"topics": transcript.topics_dump()},
+            mutate=False,
+        )
 
     async def move_mp3_to_storage(self, transcript: Transcript):
         """
@@ -450,7 +481,11 @@ class TranscriptController:
         Add/update a participant to a transcript
         """
         result = transcript.upsert_participant(participant)
-        await self.update(transcript, {"participants": transcript.participants_dump()})
+        await self.update(
+            transcript,
+            {"participants": transcript.participants_dump()},
+            mutate=False,
+        )
         return result
 
     async def delete_participant(
@@ -462,7 +497,11 @@ class TranscriptController:
         Delete a participant from a transcript
         """
         transcript.delete_participant(participant_id)
-        await self.update(transcript, {"participants": transcript.participants_dump()})
+        await self.update(
+            transcript,
+            {"participants": transcript.participants_dump()},
+            mutate=False,
+        )
 
 
 transcripts_controller = TranscriptController()

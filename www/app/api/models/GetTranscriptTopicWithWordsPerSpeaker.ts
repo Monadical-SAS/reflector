@@ -16,57 +16,65 @@ import { exists, mapValues } from "../runtime";
 /**
  *
  * @export
- * @interface GetTranscriptTopic
+ * @interface GetTranscriptTopicWithWordsPerSpeaker
  */
-export interface GetTranscriptTopic {
+export interface GetTranscriptTopicWithWordsPerSpeaker {
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   id: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   title: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   summary: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   timestamp: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   duration: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   transcript: any | null;
   /**
    *
    * @type {any}
-   * @memberof GetTranscriptTopic
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
    */
   segments?: any | null;
+  /**
+   *
+   * @type {any}
+   * @memberof GetTranscriptTopicWithWordsPerSpeaker
+   */
+  wordsPerSpeaker?: any | null;
 }
 
 /**
- * Check if a given object implements the GetTranscriptTopic interface.
+ * Check if a given object implements the GetTranscriptTopicWithWordsPerSpeaker interface.
  */
-export function instanceOfGetTranscriptTopic(value: object): boolean {
+export function instanceOfGetTranscriptTopicWithWordsPerSpeaker(
+  value: object,
+): boolean {
   let isInstance = true;
   isInstance = isInstance && "id" in value;
   isInstance = isInstance && "title" in value;
@@ -78,14 +86,16 @@ export function instanceOfGetTranscriptTopic(value: object): boolean {
   return isInstance;
 }
 
-export function GetTranscriptTopicFromJSON(json: any): GetTranscriptTopic {
-  return GetTranscriptTopicFromJSONTyped(json, false);
+export function GetTranscriptTopicWithWordsPerSpeakerFromJSON(
+  json: any,
+): GetTranscriptTopicWithWordsPerSpeaker {
+  return GetTranscriptTopicWithWordsPerSpeakerFromJSONTyped(json, false);
 }
 
-export function GetTranscriptTopicFromJSONTyped(
+export function GetTranscriptTopicWithWordsPerSpeakerFromJSONTyped(
   json: any,
   ignoreDiscriminator: boolean,
-): GetTranscriptTopic {
+): GetTranscriptTopicWithWordsPerSpeaker {
   if (json === undefined || json === null) {
     return json;
   }
@@ -97,11 +107,14 @@ export function GetTranscriptTopicFromJSONTyped(
     duration: json["duration"],
     transcript: json["transcript"],
     segments: !exists(json, "segments") ? undefined : json["segments"],
+    wordsPerSpeaker: !exists(json, "words_per_speaker")
+      ? undefined
+      : json["words_per_speaker"],
   };
 }
 
-export function GetTranscriptTopicToJSON(
-  value?: GetTranscriptTopic | null,
+export function GetTranscriptTopicWithWordsPerSpeakerToJSON(
+  value?: GetTranscriptTopicWithWordsPerSpeaker | null,
 ): any {
   if (value === undefined) {
     return undefined;
@@ -117,5 +130,6 @@ export function GetTranscriptTopicToJSON(
     duration: value.duration,
     transcript: value.transcript,
     segments: value.segments,
+    words_per_speaker: value.wordsPerSpeaker,
   };
 }
