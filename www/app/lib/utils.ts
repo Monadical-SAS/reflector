@@ -98,28 +98,33 @@ export function murmurhash3_32_gc(key: string, seed: number = 0) {
 
 export const generateHighContrastColor = (
   name: string,
-  backgroundColor: [number, number, number] | null = null,
+  backgroundColor: [number, number, number],
 ) => {
-  const hash = murmurhash3_32_gc(name);
-  let red = (hash & 0xff0000) >> 16;
-  let green = (hash & 0x00ff00) >> 8;
-  let blue = hash & 0x0000ff;
+  let loopNumber = 0;
+  let minAcceptedContrast = 3.5;
+  while (true && /* Just as a safeguard */ loopNumber < 100) {
+    ++loopNumber;
 
-  const getCssColor = (red: number, green: number, blue: number) =>
-    `rgb(${red}, ${green}, ${blue})`;
+    if (loopNumber > 5) minAcceptedContrast -= 0.5;
 
-  if (!backgroundColor) return getCssColor(red, green, blue);
+    const hash = murmurhash3_32_gc(name + loopNumber);
+    let red = (hash & 0xff0000) >> 16;
+    let green = (hash & 0x00ff00) >> 8;
+    let blue = hash & 0x0000ff;
 
-  const contrast = getContrastRatio([red, green, blue], backgroundColor);
+    let contrast = getContrastRatio([red, green, blue], backgroundColor);
 
-  // Adjust the color to achieve better contrast if necessary (WCAG recommends at least 4.5:1 for text)
-  if (contrast < 4.5) {
+    if (contrast > minAcceptedContrast) return `rgb(${red}, ${green}, ${blue})`;
+
+    // Try to invert the color to increase contrat - this works best the more away the color is from gray
     red = Math.abs(255 - red);
     green = Math.abs(255 - green);
     blue = Math.abs(255 - blue);
-  }
 
-  return getCssColor(red, green, blue);
+    contrast = getContrastRatio([red, green, blue], backgroundColor);
+
+    if (contrast > minAcceptedContrast) return `rgb(${red}, ${green}, ${blue})`;
+  }
 };
 
 export function extractDomain(url) {
