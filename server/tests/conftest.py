@@ -36,7 +36,13 @@ def dummy_processors():
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
         mock_translate.return_value = "Bonjour le monde"
-        yield mock_translate, mock_topic, mock_title, mock_long_summary, mock_short_summary  # noqa
+        yield (
+            mock_translate,
+            mock_topic,
+            mock_title,
+            mock_long_summary,
+            mock_short_summary,
+        )  # noqa
 
 
 @pytest.fixture
@@ -157,6 +163,11 @@ def celery_config():
             "broker_url": "memory://",
             "result_backend": f"db+sqlite:///{f.name}",
         }
+
+
+@pytest.fixture(scope="session")
+def celery_includes():
+    return ["reflector.pipelines.main_live_pipeline"]
 
 
 @pytest.fixture(scope="session")
