@@ -475,6 +475,15 @@ class PipelineMainWaveform(PipelineMainFromTopics):
 
 
 @get_transcript
+async def pipeline_remove_upload(transcript: Transcript, logger: Logger):
+    logger.info("Starting remove upload")
+    uploads = transcript.data_path.glob("upload.*")
+    for upload in uploads:
+        upload.unlink(missing_ok=True)
+    logger.info("Remove upload done")
+
+
+@get_transcript
 async def pipeline_waveform(transcript: Transcript, logger: Logger):
     logger.info("Starting waveform")
     runner = PipelineMainWaveform(transcript_id=transcript.id)
@@ -562,6 +571,12 @@ async def pipeline_summaries(transcript: Transcript, logger: Logger):
 
 @shared_task
 @asynctask
+async def task_pipeline_remove_upload(*, transcript_id: str):
+    await pipeline_remove_upload(transcript_id=transcript_id)
+
+
+@shared_task
+@asynctask
 async def task_pipeline_waveform(*, transcript_id: str):
     await pipeline_waveform(transcript_id=transcript_id)
 
@@ -604,6 +619,7 @@ def pipeline_post(*, transcript_id: str):
         task_pipeline_waveform.si(transcript_id=transcript_id)
         | task_pipeline_convert_to_mp3.si(transcript_id=transcript_id)
         | task_pipeline_upload_mp3.si(transcript_id=transcript_id)
+        | task_pipeline_remove_upload.si(transcript_id=transcript_id)
         | task_pipeline_diarization.si(transcript_id=transcript_id)
     )
     chain_title_preview = task_pipeline_title_and_short_summary.si(
@@ -618,3 +634,47 @@ def pipeline_post(*, transcript_id: str):
         chain_final_summaries,
     )
     chain.delay()
+
+
+@get_transcript
+async def pipeline_upload(transcript: Transcript, logger: Logger):
+    import av
+
+    try:
+        # open audio
+        upload_filename = next(transcript.data_path.glob("upload.*"))
+        container = av.open(upload_filename.as_posix())
+
+        # create pipeline
+        pipeline = PipelineMainLive(transcript_id=transcript.id)
+        pipeline.start()
+
+        # push audio to pipeline
+        try:
+            logger.info("Start pushing audio into the pipeline")
+            for frame in container.decode(audio=0):
+                pipeline.push(frame)
+        finally:
+            logger.info("Flushing the pipeline")
+            pipeline.flush()
+
+        logger.info("Waiting for the pipeline to end")
+        await pipeline.join()
+
+    except Exception as exc:
+        logger.error("Pipeline error", exc_info=exc)
+        await transcripts_controller.update(
+            transcript,
+            {
+                "status": "error",
+            },
+        )
+        raise
+
+    logger.info("Pipeline ended")
+
+
+@shared_task
+@asynctask
+async def task_pipeline_upload(*, transcript_id: str):
+    return await pipeline_upload(transcript_id=transcript_id)
