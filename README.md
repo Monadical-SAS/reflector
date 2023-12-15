@@ -23,7 +23,7 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
     - [OpenAPI Code Generation](#openapi-code-generation)
   - [Back-End](#back-end)
     - [Installation](#installation-1)
-    - [Start the project](#start-the-project)
+    - [Start the API/Backend](#start-the-apibackend)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -75,8 +75,10 @@ FIEF_URL=https://auth.reflector-ui.dev/reflector-local
 FIEF_CLIENT_ID=s03<omitted>
 FIEF_CLIENT_SECRET=<omitted>
 
-EDGE_CONFIG=<omitted>
+EDGE_CONFIG=<omitted> (optional)
 ```
+
+Then copy config-template.ts to a new file called config.ts, this is where you will configure the features or your local project.
 
 ### Run the Application
 
@@ -147,7 +149,13 @@ Start the background worker:
 celery -A reflector.worker.app worker --loglevel=info
 ```
 
-For crontab (only healthcheck for now), start the celery beat:
+Redis (mac specific command):
+
+```bash
+redis-server
+```
+
+For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
 
 ```bash
 celery -A reflector.worker.app beat
