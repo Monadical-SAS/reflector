@@ -121,6 +121,11 @@ export interface V1TranscriptGetWebsocketEventsRequest {
   transcriptId: any;
 }
 
+export interface V1TranscriptHeadAudioMp3Request {
+  transcriptId: any;
+  token?: any;
+}
+
 export interface V1TranscriptMergeSpeakerRequest {
   transcriptId: any;
   speakerMerge: SpeakerMerge;
@@ -1058,6 +1063,73 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<any> {
     const response = await this.v1TranscriptGetWebsocketEventsRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Get Audio Mp3
+   */
+  async v1TranscriptHeadAudioMp3Raw(
+    requestParameters: V1TranscriptHeadAudioMp3Request,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptHeadAudioMp3.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    if (requestParameters.token !== undefined) {
+      queryParameters["token"] = requestParameters.token;
+    }
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/audio/mp3`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "HEAD",
+        headers: headerParameters,
+        query: queryParameters,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Transcript Get Audio Mp3
+   */
+  async v1TranscriptHeadAudioMp3(
+    requestParameters: V1TranscriptHeadAudioMp3Request,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1TranscriptHeadAudioMp3Raw(
       requestParameters,
       initOverrides,
     );

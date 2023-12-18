@@ -100,7 +100,10 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
             version = None
             if route.path.startswith("/v"):
                 version = route.path.split("/")[1]
-                opid = f"{version}_{route.name}"
+                if route.operation_id is not None:
+                    opid = f"{version}_{route.operation_id}"
+                else:
+                    opid = f"{version}_{route.name}"
             else:
                 opid = route.name
 
@@ -110,7 +113,7 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
                     "Please rename the route or the view function."
                 )
             route.operation_id = opid
-            ensure_uniq_operation_ids.add(route.name)
+            ensure_uniq_operation_ids.add(opid)
 
 
 use_route_names_as_operation_ids(app)
