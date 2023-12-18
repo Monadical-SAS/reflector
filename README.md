@@ -114,12 +114,6 @@ Then fill `.env` with the omitted values (ask in Zulip). At the moment of this w
 
 ### Start the API/Backend
 
-Start the server:
-
-```bash
-poetry run python -m reflector.app
-```
-
 Start the background worker:
 
 ```bash
@@ -135,6 +129,14 @@ redis-server
 
 ### Redis (Windows)
 
+**Option 1**
+
+```bash
+docker compose up -d redis
+```
+
+**Option 2**
+
 Install:
 - [Git for Windows](https://gitforwindows.org/)
 - [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install)
@@ -145,6 +147,20 @@ Open your Linux distribution and update the package list:
 sudo apt update
 sudo apt install redis-server
 redis-server
+```
+
+## Update the database schema (run on first install, and after each pull containing a migration)
+
+```bash
+poetry run python alembic head
+```
+
+## Main Server
+
+Start the server:
+
+```bash
+poetry run python -m reflector.app
 ```
 
 ### Crontab (optional)
