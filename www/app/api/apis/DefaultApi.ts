@@ -131,6 +131,11 @@ export interface V1TranscriptMergeSpeakerRequest {
   speakerMerge: SpeakerMerge;
 }
 
+export interface V1TranscriptRecordUploadRequest {
+  transcriptId: any;
+  file: any | null;
+}
+
 export interface V1TranscriptRecordWebrtcRequest {
   transcriptId: any;
   rtcOffer: RtcOffer;
@@ -1204,6 +1209,103 @@ export class DefaultApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<SpeakerAssignmentStatus> {
     const response = await this.v1TranscriptMergeSpeakerRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
+  }
+
+  /**
+   * Transcript Record Upload
+   */
+  async v1TranscriptRecordUploadRaw(
+    requestParameters: V1TranscriptRecordUploadRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<any>> {
+    if (
+      requestParameters.transcriptId === null ||
+      requestParameters.transcriptId === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "transcriptId",
+        "Required parameter requestParameters.transcriptId was null or undefined when calling v1TranscriptRecordUpload.",
+      );
+    }
+
+    if (
+      requestParameters.file === null ||
+      requestParameters.file === undefined
+    ) {
+      throw new runtime.RequiredError(
+        "file",
+        "Required parameter requestParameters.file was null or undefined when calling v1TranscriptRecordUpload.",
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    if (this.configuration && this.configuration.accessToken) {
+      // oauth required
+      headerParameters["Authorization"] = await this.configuration.accessToken(
+        "OAuth2AuthorizationCodeBearer",
+        [],
+      );
+    }
+
+    const consumes: runtime.Consume[] = [
+      { contentType: "multipart/form-data" },
+    ];
+    // @ts-ignore: canConsumeForm may be unused
+    const canConsumeForm = runtime.canConsumeForm(consumes);
+
+    let formParams: { append(param: string, value: any): any };
+    let useForm = false;
+    if (useForm) {
+      formParams = new FormData();
+    } else {
+      formParams = new URLSearchParams();
+    }
+
+    if (requestParameters.file !== undefined) {
+      formParams.append(
+        "file",
+        new Blob([JSON.stringify(anyToJSON(requestParameters.file))], {
+          type: "application/json",
+        }),
+      );
+    }
+
+    const response = await this.request(
+      {
+        path: `/v1/transcripts/{transcript_id}/record/upload`.replace(
+          `{${"transcript_id"}}`,
+          encodeURIComponent(String(requestParameters.transcriptId)),
+        ),
+        method: "POST",
+        headers: headerParameters,
+        query: queryParameters,
+        body: formParams,
+      },
+      initOverrides,
+    );
+
+    if (this.isJsonMime(response.headers.get("content-type"))) {
+      return new runtime.JSONApiResponse<any>(response);
+    } else {
+      return new runtime.TextApiResponse(response) as any;
+    }
+  }
+
+  /**
+   * Transcript Record Upload
+   */
+  async v1TranscriptRecordUpload(
+    requestParameters: V1TranscriptRecordUploadRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<any> {
+    const response = await this.v1TranscriptRecordUploadRaw(
       requestParameters,
       initOverrides,
     );
