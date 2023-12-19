@@ -102,7 +102,7 @@ const topicWords = ({
         )?.dataset["end"] ||
         0;
 
-      const reverse = parseFloat(anchorStart) > parseFloat(focusEnd);
+      const reverse = parseFloat(anchorStart) >= parseFloat(focusEnd);
 
       if (!reverse) {
         setSelectedText({
