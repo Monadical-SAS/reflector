@@ -166,6 +166,11 @@ def celery_config():
 
 
 @pytest.fixture(scope="session")
+def celery_includes():
+    return ["reflector.pipelines.main_live_pipeline"]
+
+
+@pytest.fixture(scope="session")
 def fake_mp3_upload():
     with patch(
         "reflector.db.transcripts.TranscriptController.move_mp3_to_storage"

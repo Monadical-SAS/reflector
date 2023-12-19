@@ -4,3 +4,4 @@ server/.env
 server/exportdanswer
 .vercel
 .env*.local
+dump.rdb
