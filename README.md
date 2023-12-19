@@ -23,7 +23,7 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
     - [OpenAPI Code Generation](#openapi-code-generation)
   - [Back-End](#back-end)
     - [Installation](#installation-1)
-    - [Start the project](#start-the-project)
+    - [Start the API/Backend](#start-the-apibackend)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -67,16 +67,11 @@ To install the application, run:
 
 ```bash
 yarn install
+cp .env_template .env
+cp config-template.ts config.ts
 ```
-Then create an `.env` with:
 
-```
-FIEF_URL=https://auth.reflector-ui.dev/reflector-local
-FIEF_CLIENT_ID=s03<omitted>
-FIEF_CLIENT_SECRET=<omitted>
-
-EDGE_CONFIG=<omitted>
-```
+Then, fill in the environment variables in `.env` and the configuration in `config.ts` as needed. If you are unsure on how to proceed, ask in Zulip.
 
 ### Run the Application
 
@@ -86,7 +81,7 @@ To run the application in development mode, run:
 yarn dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Then (after completing server setup and starting it) open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 ### OpenAPI Code Generation
 
@@ -104,53 +99,76 @@ Start with `cd server`.
 
 ### Installation
 
+Download [Python 3.11 from the official website](https://www.python.org/downloads/) and ensure you have version 3.11 by running `python --version`.
+
 Run:
 
 ```bash
-poetry install
+python --version # It should say 3.11
+pip install poetry
+poetry install --no-root
+cp .env_template .env
 ```
 
-Then create an `.env` with:
-
-```
-TRANSCRIPT_BACKEND=modal
-TRANSCRIPT_URL=https://monadical-sas--reflector-transcriber-web.modal.run
-TRANSCRIPT_MODAL_API_KEY=<omitted>
-
-LLM_BACKEND=modal
-LLM_URL=https://monadical-sas--reflector-llm-web.modal.run
-LLM_MODAL_API_KEY=<omitted>
-TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
-ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
-DIARIZATION_URL=https://monadical-sas--reflector-diarizer-web.modal.run
-
-AUTH_BACKEND=fief
-AUTH_FIEF_URL=https://auth.reflector.media/reflector-local
-AUTH_FIEF_CLIENT_ID=KQzRsNgoY<omitted>
-AUTH_FIEF_CLIENT_SECRET=<omitted>
-
-TRANSLATE_URL=https://monadical-sas--reflector-translator-web.modal.run
-ZEPHYR_LLM_URL=https://monadical-sas--reflector-llm-zephyr-web.modal.run
-```
+Then fill `.env` with the omitted values (ask in Zulip). At the moment of this writing, the only value omitted is `AUTH_FIEF_CLIENT_SECRET`.
 
 ### Start the API/Backend
-
-Start the API server:
-
-```bash
-poetry run python3 -m reflector.app
-```
 
 Start the background worker:
 
 ```bash
-celery -A reflector.worker.app worker --loglevel=info
+poetry run celery -A reflector.worker.app worker --loglevel=info
 ```
 
-For crontab (only healthcheck for now), start the celery beat:
+### Redis (Mac)
 
 ```bash
-celery -A reflector.worker.app beat
+yarn add redis
+redis-server
+```
+
+### Redis (Windows)
+
+**Option 1**
+
+```bash
+docker compose up -d redis
+```
+
+**Option 2**
+
+Install:
+- [Git for Windows](https://gitforwindows.org/)
+- [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install)
+-  Install your preferred Linux distribution via the Microsoft Store (e.g., Ubuntu).
+
+Open your Linux distribution and update the package list:
+```bash
+sudo apt update
+sudo apt install redis-server
+redis-server
+```
+
+## Update the database schema (run on first install, and after each pull containing a migration)
+
+```bash
+poetry run python alembic head
+```
+
+## Main Server
+
+Start the server:
+
+```bash
+poetry run python -m reflector.app
+```
+
+### Crontab (optional)
+
+For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
+
+```bash
+poetry run celery -A reflector.worker.app beat
 ```
 
 #### Using docker

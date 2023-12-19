@@ -18,8 +18,14 @@ from ._range_requests_response import range_requests_response
 router = APIRouter()
 
 
-@router.get("/transcripts/{transcript_id}/audio/mp3")
-@router.head("/transcripts/{transcript_id}/audio/mp3")
+@router.get(
+    "/transcripts/{transcript_id}/audio/mp3",
+    operation_id="transcript_get_audio_mp3",
+)
+@router.head(
+    "/transcripts/{transcript_id}/audio/mp3",
+    operation_id="transcript_head_audio_mp3",
+)
 async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,

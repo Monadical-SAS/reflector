@@ -12,9 +12,11 @@ import FinalSummary from "../finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
+import ShareModal from "./shareModal";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
+import { featureEnabled } from "../../domainContext";
 
 type TranscriptDetails = {
   params: {
@@ -31,6 +33,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const waveform = useWaveform(transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(transcriptId);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const statusToRedirect = ["idle", "recording", "processing"];
@@ -66,6 +69,14 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <div className="grid grid-rows-layout-topbar h-full max-h-full gap-2 lg:gap-4">
+      {featureEnabled("sendToZulip") && (
+        <ShareModal
+          transcript={transcript.response}
+          topics={topics ? topics.topics : null}
+          show={showModal}
+          setShow={(v) => setShowModal(v)}
+        />
+      )}
       <div className="flex flex-col">
         {transcript?.response?.title && (
           <TranscriptTitle
@@ -102,6 +113,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 fullTranscript={fullTranscript}
                 summary={transcript.response.longSummary}
                 transcriptId={transcript.response.id}
+                openZulipModal={() => setShowModal(true)}
               />
             ) : (
               <div className="flex flex-col h-full justify-center content-center">

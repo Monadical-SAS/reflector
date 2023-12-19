@@ -1,0 +1,79 @@
+from typing import Annotated, Optional
+
+import av
+import reflector.auth as auth
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from pydantic import BaseModel
+from reflector.db.transcripts import transcripts_controller
+from reflector.pipelines.main_live_pipeline import task_pipeline_upload
+
+router = APIRouter()
+
+
+class UploadStatus(BaseModel):
+    status: str
+
+
+@router.post("/transcripts/{transcript_id}/record/upload")
+async def transcript_record_upload(
+    transcript_id: str,
+    file: UploadFile,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id_for_http(
+        transcript_id, user_id=user_id
+    )
+
+    if transcript.locked:
+        raise HTTPException(status_code=400, detail="Transcript is locked")
+
+    # ensure there is no other upload in the directory (searching data_path/upload.*)
+    if any(transcript.data_path.glob("upload.*")):
+        raise HTTPException(
+            status_code=400, detail="There is already an upload in progress"
+        )
+
+    # save the file to the transcript folder
+    extension = file.filename.split(".")[-1]
+    upload_filename = transcript.data_path / f"upload.{extension}"
+    upload_filename.parent.mkdir(parents=True, exist_ok=True)
+
+    # ensure the file is back to the beginning
+    await file.seek(0)
+
+    # save the file to the transcript folder
+    try:
+        with open(upload_filename, "wb") as f:
+            while True:
+                chunk = await file.read(16384)
+                if not chunk:
+                    break
+                f.write(chunk)
+    except Exception:
+        upload_filename.unlink()
+        raise
+
+    # ensure the file have audio part, using av
+    # XXX Trying to do this check on the initial UploadFile object is not
+    # possible, dunno why. UploadFile.file has no name.
+    # Trying to pass UploadFile.file with format=extension does not work
+    # it never detect audio stream...
+    container = av.open(upload_filename.as_posix())
+    try:
+        if not len(container.streams.audio):
+            raise HTTPException(status_code=400, detail="File has no audio stream")
+    except Exception:
+        # delete the uploaded file
+        upload_filename.unlink()
+        raise
+    finally:
+        container.close()
+
+    # set the status to "uploaded"
+    await transcripts_controller.update(transcript, {"status": "uploaded"})
+
+    # launch a background task to process the file
+    task_pipeline_upload.delay(transcript_id=transcript_id)
+
+    return UploadStatus(status="ok")
