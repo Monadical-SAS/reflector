@@ -23,7 +23,6 @@ const topicWords = ({
   useEffect(() => {
     if (topicWithWords.loading && selectedTextIsTimeSlice(selectedText)) {
       setSelectedText(undefined);
-      console.log("unsetting topic changed");
     }
   }, [topicWithWords.loading]);
 
@@ -94,13 +93,15 @@ const topicWords = ({
       );
       // if selection end on a word, we get the end time from the span that contains it
       const focusEnd =
-        selection.focusNode.parentElement?.dataset["end"] ||
-        // otherwise it was a name and we get the end of the last word of the previous paragraph
-        (
-          selection.focusNode.parentElement?.parentElement
-            ?.previousElementSibling?.lastElementChild as any
-        )?.dataset["end"] ||
-        0;
+        selection.focusOffset !== 0
+          ? selection.focusNode.parentElement?.dataset["end"] ||
+            // otherwise it was a name and we get the end of the last word of the previous paragraph
+            (
+              selection.focusNode.parentElement?.parentElement
+                ?.previousElementSibling?.lastElementChild as any
+            )?.dataset["end"]
+          : (selection.focusNode.parentElement?.previousElementSibling as any)
+              ?.dataset["end"] || 0;
 
       const reverse = parseFloat(anchorStart) >= parseFloat(focusEnd);
 
