@@ -14,7 +14,6 @@ type ParticipantList = {
   stateSelectedText: any;
 };
 // NTH re-order list when searching
-// HTH case-insensitive matching
 const ParticipantList = ({
   transcriptId,
   participants,
@@ -45,8 +44,8 @@ const ParticipantList = ({
           setOneMatch(undefined);
           setSelectedParticipant(participant);
           setAction("Rename");
-        } else if (!selectedParticipant) {
-          setSelectedParticipant(undefined);
+        } else {
+          setSelectedParticipant(participant);
           setParticipantInput("");
           setOneMatch(undefined);
           setAction("Create to rename");
@@ -187,6 +186,7 @@ const ParticipantList = ({
           .then(() => {
             participants.refetch();
             setLoading(false);
+            setAction(null);
           })
           .catch((e) => {
             setError(e, "There was an error renaming");
