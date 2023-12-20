@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { featureEnabled } from "../../domainContext";
+import { toShareMode } from "../../../lib/shareMode";
 
 type TranscriptDetails = {
   params: {
@@ -110,10 +111,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
           <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
             <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
-              {transcript.response.longSummary ? (
+              {transcript.response.long_summary ? (
                 <FinalSummary
                   fullTranscript={fullTranscript}
-                  summary={transcript.response.longSummary}
+                  summary={transcript.response.long_summary}
                   transcriptId={transcript.response.id}
                   openZulipModal={() => setShowModal(true)}
                 />
@@ -142,8 +143,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               <div className="flex-grow max-w-full">
                 <ShareLink
                   transcriptId={transcript?.response?.id}
-                  userId={transcript?.response?.userId}
-                  shareMode={transcript?.response?.shareMode}
+                  userId={transcript?.response?.user_id}
+                  shareMode={toShareMode(transcript?.response?.share_mode)}
                 />
               </div>
             </section>

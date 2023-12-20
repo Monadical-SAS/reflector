@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import React from "react";
 import Markdown from "react-markdown";
 import "../../styles/markdown.css";
-import getApi from "../../lib/getApi";
 import { featureEnabled } from "../domainContext";
+import { UpdateTranscript } from "../../api";
+import useApi from "../../lib/useApi"; 
 
 type FinalSummaryProps = {
   summary: string;
@@ -19,17 +20,17 @@ export default function FinalSummary(props: FinalSummaryProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [preEditSummary, setPreEditSummary] = useState(props.summary);
   const [editedSummary, setEditedSummary] = useState(props.summary);
-  const api = getApi();
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
-    if (!api) return;
     try {
-      const updatedTranscript = await api.v1TranscriptUpdate({
+      const api = useApi();
+      const requestBody: UpdateTranscript = {
+        long_summary: newSummary,
+      };
+      const updatedTranscript = await api?.v1TranscriptUpdate(
         transcriptId,
-        updateTranscript: {
-          longSummary: newSummary,
-        },
-      });
+        requestBody,
+      );
       console.log("Updated long summary:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update long summary:", err);

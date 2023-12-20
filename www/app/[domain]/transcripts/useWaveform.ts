@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { V1TranscriptGetAudioWaveformRequest } from "../../api/apis/DefaultApi";
 import { AudioWaveform } from "../../api";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
 
 type AudioWaveFormResponse = {
@@ -16,16 +15,13 @@ const useWaveform = (id: string): AudioWaveFormResponse => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     if (!id || !api) return;
     setLoading(true);
-    const requestParameters: V1TranscriptGetAudioWaveformRequest = {
-      transcriptId: id,
-    };
     api
-      .v1TranscriptGetAudioWaveform(requestParameters)
+      .v1TranscriptGetAudioWaveform(id)
       .then((result) => {
         setWaveform(result);
         setLoading(false);
