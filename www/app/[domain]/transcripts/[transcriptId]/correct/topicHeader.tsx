@@ -23,9 +23,20 @@ export default function TopicHeader({
 
   useEffect(() => {
     if (!topics.loading && !currentTopic) {
-      setCurrentTopic(topics?.topics?.at(0));
+      const sessionTopic = window.localStorage.getItem(
+        transcriptId + "correct",
+      );
+      console.log(sessionTopic, window.localStorage);
+      if (sessionTopic && topics?.topics?.find((t) => t.id == sessionTopic)) {
+        setCurrentTopic(topics?.topics?.find((t) => t.id == sessionTopic));
+        console.log("he", sessionTopic, !!sessionTopic);
+      } else {
+        setCurrentTopic(topics?.topics?.at(0));
+        console.log("hi");
+      }
     }
   }, [topics.loading]);
+  // console.log(currentTopic)
 
   const number = topics.topics?.findIndex(
     (topic) => topic.id == currentTopic?.id,
@@ -42,6 +53,13 @@ export default function TopicHeader({
     if (topicWithWordsLoading) return;
     canGoNext && setCurrentTopic(topics.topics?.at(number + 1));
   };
+
+  useEffect(() => {
+    console.log(currentTopic?.id);
+
+    currentTopic?.id &&
+      window.localStorage.setItem(transcriptId + "correct", currentTopic?.id);
+  }, [currentTopic?.id]);
 
   const keyHandler = (e) => {
     if (e.key == "ArrowLeft") {

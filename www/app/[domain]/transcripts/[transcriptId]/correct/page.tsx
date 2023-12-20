@@ -51,7 +51,7 @@ export default function TranscriptCorrect({
 
   return (
     <div className="h-full grid grid-cols-2 gap-4">
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full ">
         <TopicHeader
           stateCurrentTopic={stateCurrentTopic}
           transcriptId={transcriptId}

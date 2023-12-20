@@ -150,17 +150,18 @@ const topicWords = ({
     participants.response
   ) {
     return (
-      <div onMouseUp={onMouseUp} className="p-5 h-full w-full">
+      <div onMouseUp={onMouseUp} className="p-5 h-full w-full overflow-scroll">
         {topicWithWords.response.wordsPerSpeaker.map(
           (speakerWithWords, index) => (
-            <p key={index}>
+            <p key={index} className="mb-2 last:mb-0">
               <span
                 data-speaker={speakerWithWords.speaker}
-                className={
-                  selectedText == speakerWithWords.speaker
-                    ? "bg-yellow-200"
-                    : ""
-                }
+                className={`
+                  font-semibold ${
+                    selectedText == speakerWithWords.speaker
+                      ? "bg-yellow-200"
+                      : ""
+                  }`}
               >
                 {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
               </span>
