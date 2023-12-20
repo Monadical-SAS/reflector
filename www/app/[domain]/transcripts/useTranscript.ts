@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { V1TranscriptGetRequest } from "../../api/apis/DefaultApi";
 import { GetTranscript } from "../../api";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
 import { shouldShowError } from "../../lib/errorUtils";
+import useApi from "../../lib/useApi";
 
 type ErrorTranscript = {
   error: Error;
@@ -30,17 +29,14 @@ const useTranscript = (
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     if (!id || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptGetRequest = {
-      transcriptId: id,
-    };
-    api
-      .v1TranscriptGet(requestParameters)
+
+    api.v1TranscriptGet(id)
       .then((result) => {
         setResponse(result);
         setLoading(false);
@@ -55,7 +51,7 @@ const useTranscript = (
         }
         setErrorState(error);
       });
-  }, [id, !api]);
+  }, [id, api]);
 
   return { response, loading, error } as
     | ErrorTranscript

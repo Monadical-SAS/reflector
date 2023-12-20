@@ -1,5 +1,6 @@
-import { useState } from "react";
-import getApi from "../../lib/getApi";
+import { useEffect, useState } from "react";
+import { UpdateTranscript } from "../../api";
+import useApi from "../../lib/useApi";
 
 type TranscriptTitle = {
   title: string;
@@ -10,17 +11,17 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
-  const api = getApi();
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
-    if (!api) return;
     try {
-      const updatedTranscript = await api.v1TranscriptUpdate({
+      const requestBody: UpdateTranscript = {
+        title: newTitle,
+      };
+      const api = useApi();
+      const updatedTranscript = await api?.v1TranscriptUpdate(
         transcriptId,
-        updateTranscript: {
-          title: newTitle,
-        },
-      });
+        requestBody,
+      );
       console.log("Updated transcript:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update transcript:", err);

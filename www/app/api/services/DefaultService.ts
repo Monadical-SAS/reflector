@@ -22,18 +22,19 @@ import type { UpdateTranscript } from "../models/UpdateTranscript";
 import type { UserInfo } from "../models/UserInfo";
 
 import type { CancelablePromise } from "../core/CancelablePromise";
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
+import type { BaseHttpRequest } from "../core/BaseHttpRequest";
 
 export class DefaultService {
+  constructor(public readonly httpRequest: BaseHttpRequest) {}
+
   /**
    * Metrics
    * Endpoint that serves Prometheus metrics.
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static metrics(): CancelablePromise<any> {
-    return __request(OpenAPI, {
+  public metrics(): CancelablePromise<any> {
+    return this.httpRequest.request({
       method: "GET",
       url: "/metrics",
     });
@@ -46,11 +47,11 @@ export class DefaultService {
    * @returns Page_GetTranscript_ Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptsList(
+  public v1TranscriptsList(
     page: number = 1,
     size: number = 50,
   ): CancelablePromise<Page_GetTranscript_> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts",
       query: {
@@ -69,10 +70,10 @@ export class DefaultService {
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptsCreate(
+  public v1TranscriptsCreate(
     requestBody: CreateTranscript,
   ): CancelablePromise<GetTranscript> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts",
       body: requestBody,
@@ -89,10 +90,10 @@ export class DefaultService {
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGet(
+  public v1TranscriptGet(
     transcriptId: string,
   ): CancelablePromise<GetTranscript> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}",
       path: {
@@ -111,11 +112,11 @@ export class DefaultService {
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptUpdate(
+  public v1TranscriptUpdate(
     transcriptId: string,
     requestBody: UpdateTranscript,
   ): CancelablePromise<GetTranscript> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}",
       path: {
@@ -135,10 +136,10 @@ export class DefaultService {
    * @returns DeletionStatus Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptDelete(
+  public v1TranscriptDelete(
     transcriptId: string,
   ): CancelablePromise<DeletionStatus> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "DELETE",
       url: "/v1/transcripts/{transcript_id}",
       path: {
@@ -156,10 +157,10 @@ export class DefaultService {
    * @returns GetTranscriptTopic Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetTopics(
+  public v1TranscriptGetTopics(
     transcriptId: string,
   ): CancelablePromise<Array<GetTranscriptTopic>> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics",
       path: {
@@ -177,10 +178,10 @@ export class DefaultService {
    * @returns GetTranscriptTopicWithWords Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetTopicsWithWords(
+  public v1TranscriptGetTopicsWithWords(
     transcriptId: string,
   ): CancelablePromise<Array<GetTranscriptTopicWithWords>> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics/with-words",
       path: {
@@ -199,11 +200,11 @@ export class DefaultService {
    * @returns GetTranscriptTopicWithWordsPerSpeaker Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetTopicsWithWordsPerSpeaker(
+  public v1TranscriptGetTopicsWithWordsPerSpeaker(
     transcriptId: string,
     topicId: string,
   ): CancelablePromise<GetTranscriptTopicWithWordsPerSpeaker> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker",
       path: {
@@ -223,11 +224,11 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptHeadAudioMp3(
+  public v1TranscriptHeadAudioMp3(
     transcriptId: string,
     token?: string | null,
   ): CancelablePromise<any> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "HEAD",
       url: "/v1/transcripts/{transcript_id}/audio/mp3",
       path: {
@@ -249,11 +250,11 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetAudioMp3(
+  public v1TranscriptGetAudioMp3(
     transcriptId: string,
     token?: string | null,
   ): CancelablePromise<any> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/audio/mp3",
       path: {
@@ -274,10 +275,10 @@ export class DefaultService {
    * @returns AudioWaveform Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetAudioWaveform(
+  public v1TranscriptGetAudioWaveform(
     transcriptId: string,
   ): CancelablePromise<AudioWaveform> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/audio/waveform",
       path: {
@@ -295,10 +296,10 @@ export class DefaultService {
    * @returns Participant Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetParticipants(
+  public v1TranscriptGetParticipants(
     transcriptId: string,
   ): CancelablePromise<Array<Participant>> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/participants",
       path: {
@@ -317,11 +318,11 @@ export class DefaultService {
    * @returns Participant Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptAddParticipant(
+  public v1TranscriptAddParticipant(
     transcriptId: string,
     requestBody: CreateParticipant,
   ): CancelablePromise<Participant> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/participants",
       path: {
@@ -342,11 +343,11 @@ export class DefaultService {
    * @returns Participant Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetParticipant(
+  public v1TranscriptGetParticipant(
     transcriptId: string,
     participantId: string,
   ): CancelablePromise<Participant> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
       path: {
@@ -367,12 +368,12 @@ export class DefaultService {
    * @returns Participant Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptUpdateParticipant(
+  public v1TranscriptUpdateParticipant(
     transcriptId: string,
     participantId: string,
     requestBody: UpdateParticipant,
   ): CancelablePromise<Participant> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
       path: {
@@ -394,11 +395,11 @@ export class DefaultService {
    * @returns DeletionStatus Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptDeleteParticipant(
+  public v1TranscriptDeleteParticipant(
     transcriptId: string,
     participantId: string,
   ): CancelablePromise<DeletionStatus> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "DELETE",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
       path: {
@@ -418,11 +419,11 @@ export class DefaultService {
    * @returns SpeakerAssignmentStatus Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptAssignSpeaker(
+  public v1TranscriptAssignSpeaker(
     transcriptId: string,
     requestBody: SpeakerAssignment,
   ): CancelablePromise<SpeakerAssignmentStatus> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/speaker/assign",
       path: {
@@ -443,11 +444,11 @@ export class DefaultService {
    * @returns SpeakerAssignmentStatus Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptMergeSpeaker(
+  public v1TranscriptMergeSpeaker(
     transcriptId: string,
     requestBody: SpeakerMerge,
   ): CancelablePromise<SpeakerAssignmentStatus> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/speaker/merge",
       path: {
@@ -468,11 +469,11 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptRecordUpload(
+  public v1TranscriptRecordUpload(
     transcriptId: string,
     formData: Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post,
   ): CancelablePromise<any> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/record/upload",
       path: {
@@ -492,10 +493,10 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptGetWebsocketEvents(
+  public v1TranscriptGetWebsocketEvents(
     transcriptId: string,
   ): CancelablePromise<any> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/events",
       path: {
@@ -514,11 +515,11 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1TranscriptRecordWebrtc(
+  public v1TranscriptRecordWebrtc(
     transcriptId: string,
     requestBody: RtcOffer,
   ): CancelablePromise<any> {
-    return __request(OpenAPI, {
+    return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/record/webrtc",
       path: {
@@ -537,8 +538,8 @@ export class DefaultService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static v1UserMe(): CancelablePromise<UserInfo | null> {
-    return __request(OpenAPI, {
+  public v1UserMe(): CancelablePromise<UserInfo | null> {
+    return this.httpRequest.request({
       method: "GET",
       url: "/v1/me",
     });
