@@ -41,6 +41,9 @@ async def transcript_get_participants(
         transcript_id, user_id=user_id
     )
 
+    if transcript.participants is None:
+        return []
+
     return [
         Participant.model_validate(participant)
         for participant in transcript.participants
@@ -59,7 +62,7 @@ async def transcript_add_participant(
     )
 
     # ensure the speaker is unique
-    if participant.speaker is not None:
+    if participant.speaker is not None and transcript.participants is not None:
         for p in transcript.participants:
             if p.speaker == participant.speaker:
                 raise HTTPException(

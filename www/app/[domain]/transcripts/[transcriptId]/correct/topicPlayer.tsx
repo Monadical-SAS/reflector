@@ -3,18 +3,29 @@ import useMp3 from "../../useMp3";
 import { formatTime } from "../../../../lib/time";
 import SoundWaveCss from "./soundWaveCss";
 import { TimeSlice } from "./types";
+import {
+  BoxProps,
+  Button,
+  Wrap,
+  Text,
+  WrapItem,
+  Kbd,
+  Skeleton,
+  chakra,
+} from "@chakra-ui/react";
 
 type TopicPlayer = {
   transcriptId: string;
   selectedTime: TimeSlice | undefined;
-  topicTime: TimeSlice;
+  topicTime: TimeSlice | undefined;
 };
 
 const TopicPlayer = ({
   transcriptId,
   selectedTime,
   topicTime,
-}: TopicPlayer) => {
+  ...chakraProps
+}: TopicPlayer & BoxProps) => {
   const mp3 = useMp3(transcriptId);
   const [isPlaying, setIsPlaying] = useState(false);
   const [endTopicCallback, setEndTopicCallback] = useState<() => void>();
@@ -46,6 +57,7 @@ const TopicPlayer = ({
   });
 
   const calcShowTime = () => {
+    if (!topicTime) return;
     setShowTime(
       `${
         mp3.media?.currentTime
@@ -67,6 +79,7 @@ const TopicPlayer = ({
     setEndTopicCallback(
       () =>
         function () {
+          if (!topicTime) return;
           if (mp3.media && mp3.media.currentTime >= topicTime.end) {
             mp3.media.pause();
             setIsPlaying(false);
@@ -81,13 +94,14 @@ const TopicPlayer = ({
       // there's no callback on pause but apparently changing the time while palying doesn't work... so here is a timeout
       setTimeout(() => {
         if (mp3.media) {
+          if (!topicTime) return;
           mp3.media.currentTime = topicTime.start;
           setShowTime(`00:00/${formatTime(topicTime.end - topicTime.start)}`);
         }
       }, 10);
       setIsPlaying(false);
     }
-  }, [!mp3.media, topicTime.start, topicTime.end]);
+  }, [!mp3.media, topicTime?.start, topicTime?.end]);
 
   useEffect(() => {
     endTopicCallback &&
@@ -141,6 +155,7 @@ const TopicPlayer = ({
   const playTopic = (e) => {
     e?.preventDefault();
     e?.target?.blur();
+    if (!topicTime) return;
     if (mp3.media) {
       mp3.media.currentTime = topicTime.start;
       mp3.media.play();
@@ -165,37 +180,65 @@ const TopicPlayer = ({
     mp3.media?.pause();
     setIsPlaying(false);
   };
+  console.log(topicTime);
 
-  if (mp3.media) {
-    return (
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <SoundWaveCss playing={isPlaying} />
-        <div className="col-span-2">{showTime}</div>
-        <button className="p-2 bg-blue-200 w-full" onClick={playTopic}>
-          Play From Start
-        </button>
-        {!isPlaying ? (
-          <button
-            ref={playButton}
-            id="playButton"
-            className="p-2 bg-blue-200 w-full"
-            onClick={playCurrent}
+  const isLoaded = !!(mp3.media && topicTime);
+  return (
+    <Skeleton
+      isLoaded={isLoaded}
+      h={isLoaded ? "auto" : "40px"}
+      fadeDuration={1}
+      w={isLoaded ? "auto" : "container.md"}
+      margin="auto"
+      {...chakraProps}
+    >
+      <Wrap spacing="4" justify="center" align="center">
+        <WrapItem>
+          <SoundWaveCss playing={isPlaying} />
+          <Text fontSize="sm" pt="1" pl="2">
+            {showTime}
+          </Text>
+        </WrapItem>
+        <WrapItem>
+          <Button onClick={playTopic} colorScheme="blue">
+            Play from start
+          </Button>
+        </WrapItem>
+        <WrapItem>
+          {!isPlaying ? (
+            <Button
+              onClick={playCurrent}
+              ref={playButton}
+              id="playButton"
+              colorScheme="blue"
+              w="120px"
+            >
+              <Kbd color="blue.600">Space</Kbd>&nbsp;Play
+            </Button>
+          ) : (
+            <Button
+              onClick={pause}
+              ref={playButton}
+              id="playButton"
+              colorScheme="blue"
+              w="120px"
+            >
+              <Kbd color="blue.600">Space</Kbd>&nbsp;Pause
+            </Button>
+          )}
+        </WrapItem>
+        <WrapItem visibility={selectedTime ? "visible" : "hidden"}>
+          <Button
+            disabled={!selectedTime}
+            onClick={playSelection}
+            colorScheme="blue"
           >
-            <span className="text-xs">[SPACE]</span> Play
-          </button>
-        ) : (
-          <button className="p-2 bg-blue-200 w-full" onClick={pause}>
-            <span className="text-xs">[SPACE]</span> Pause
-          </button>
-        )}
-        {selectedTime && (
-          <button className="p-2 bg-blue-200 w-full" onClick={playSelection}>
-            <span className="text-xs">[,]</span>Play Selection
-          </button>
-        )}
-      </div>
-    );
-  }
+            <Kbd color="blue.600">,</Kbd>&nbsp;Play selection
+          </Button>
+        </WrapItem>
+      </Wrap>
+    </Skeleton>
+  );
 };
 
 export default TopicPlayer;

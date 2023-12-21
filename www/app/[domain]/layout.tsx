@@ -91,7 +91,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                 <Providers>
                   <div
                     id="container"
-                    className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout gap-2 md:gap-4"
+                    className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout-topbar gap-2 md:gap-4"
                   >
                     <header className="flex justify-between items-center w-full">
                       {/* Logo on the left */}
