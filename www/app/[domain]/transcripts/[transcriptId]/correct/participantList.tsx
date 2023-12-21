@@ -6,6 +6,18 @@ import getApi from "../../../../lib/getApi";
 import { UseParticipants } from "../../useParticipants";
 import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./types";
 import { useError } from "../../../../(errors)/errorContext";
+import {
+  Box,
+  Button,
+  Flex,
+  Text,
+  UnorderedList,
+  Input,
+  Kbd,
+  Spinner,
+  ListItem,
+  Grid,
+} from "@chakra-ui/react";
 
 type ParticipantList = {
   participants: UseParticipants;
@@ -13,7 +25,6 @@ type ParticipantList = {
   topicWithWords: any;
   stateSelectedText: any;
 };
-// NTH re-order list when searching
 const ParticipantList = ({
   transcriptId,
   participants,
@@ -58,12 +69,14 @@ const ParticipantList = ({
         setAction("Create and assign");
         setSelectedParticipant(undefined);
       }
-      if (typeof selectedText == undefined) {
+
+      if (typeof selectedText == "undefined") {
         inputRef.current?.blur();
+        setSelectedParticipant(undefined);
         setAction(null);
       }
     }
-  }, [selectedText, participants.response]);
+  }, [selectedText, !participants.response]);
 
   useEffect(() => {
     document.onkeyup = (e) => {
@@ -250,6 +263,7 @@ const ParticipantList = ({
           participants.refetch();
           setParticipantInput("");
           setLoading(false);
+          inputRef.current?.focus();
         })
         .catch((e) => {
           setError(e, "There was an error creating");
@@ -320,48 +334,56 @@ const ParticipantList = ({
     }
   };
 
+  const anyLoading = loading || participants.loading || topicWithWords.loading;
+
   return (
-    <div className="h-full" onClick={clearSelection}>
-      <div onClick={preventClick}>
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          <input
+    <Box h="100%" onClick={clearSelection} width="100%">
+      <Grid
+        onClick={preventClick}
+        maxH="100%"
+        templateRows="auto minmax(0, 1fr)"
+        min-w="100%"
+      >
+        <Flex direction="column" p="2">
+          <Input
             ref={inputRef}
             onChange={changeParticipantInput}
             value={participantInput}
-            className="border col-span-3 border-blue-400 p-1"
+            mb="2"
+            placeholder="Participant Name"
           />
-          {action ? (
-            <button
-              onClick={doAction}
-              className="p-2 bg-blue-200 w-full col-span-3"
-            >
-              [
-              <FontAwesomeIcon
-                icon={faArrowTurnDown}
-                className="rotate-90 h-2"
-              />
-              ]{" " + action}
-            </button>
-          ) : (
-            <div className="col-span-3" />
-          )}
-          {loading ||
-            participants.loading ||
-            (topicWithWords.loading && (
-              <FontAwesomeIcon
-                icon={faSpinner}
-                className="animate-spin-slow text-gray-300 h-8"
-              />
-            ))}
-        </div>
+          <Button
+            onClick={doAction}
+            colorScheme="blue"
+            disabled={!action || anyLoading}
+          >
+            {action || !anyLoading ? (
+              <>
+                <Kbd color="blue.500" pt="1" mr="1">
+                  <FontAwesomeIcon
+                    icon={faArrowTurnDown}
+                    className="rotate-90 h-3"
+                  />
+                </Kbd>
+                {action || "Create"}
+              </>
+            ) : (
+              <Spinner />
+            )}
+          </Button>
+        </Flex>
 
         {participants.response && (
-          <ul>
+          <UnorderedList
+            mx="0"
+            mb={{ base: 2, md: 4 }}
+            maxH="100%"
+            overflow="scroll"
+          >
             {participants.response.map((participant: Participant) => (
-              <li
+              <ListItem
                 onClick={selectParticipant(participant)}
                 className={
-                  "flex flex-row justify-between border-b last:border-b-0 py-2 " +
                   (participantInput.length > 0 &&
                   selectedText &&
                   participant.name.startsWith(participantInput)
@@ -371,69 +393,88 @@ const ParticipantList = ({
                     ? "bg-blue-200 border"
                     : "")
                 }
-                key={participant.id}
+                display="flex"
+                flexDirection="row"
+                justifyContent="space-between"
+                alignItems="center"
+                borderBottom="1px"
+                borderColor="gray.300"
+                py="2"
+                mx="2"
+                _last={{ borderBottom: "0" }}
+                key={participant.name}
               >
-                <span>{participant.name}</span>
+                <Text mt="1">{participant.name}</Text>
 
-                <div>
+                <Box>
                   {selectedTextIsSpeaker(selectedText) &&
                     !selectedParticipant &&
                     !loading && (
-                      <button
+                      <Button
                         onClick={mergeSpeaker(selectedText, participant)}
-                        className="bg-blue-400 px-2 ml-2"
+                        colorScheme="blue"
+                        ml="2"
+                        size="sm"
                       >
                         {oneMatch?.id == participant.id &&
                           action == "Create to rename" && (
-                            <>
-                              <span className="text-xs">
-                                [CTRL +{" "}
-                                <FontAwesomeIcon
-                                  icon={faArrowTurnDown}
-                                  className="rotate-90 mr-2 h-2"
-                                />
-                                ]
-                              </span>
-                            </>
-                          )}{" "}
+                            <Kbd
+                              letterSpacing="-1px"
+                              color="blue.500"
+                              mr="1"
+                              pt="3px"
+                            >
+                              Ctrl +&nbsp;
+                              <FontAwesomeIcon
+                                icon={faArrowTurnDown}
+                                className="rotate-90 h-2"
+                              />
+                            </Kbd>
+                          )}
                         Merge
-                      </button>
+                      </Button>
                     )}
                   {selectedTextIsTimeSlice(selectedText) && !loading && (
-                    <button
+                    <Button
                       onClick={assignTo(participant)}
-                      className="bg-blue-400 px-2 ml-2"
+                      colorScheme="blue"
+                      ml="2"
+                      size="sm"
                     >
                       {oneMatch?.id == participant.id &&
                         action == "Create and assign" && (
-                          <>
-                            <span className="text-xs">
-                              [CTRL +{" "}
-                              <FontAwesomeIcon
-                                icon={faArrowTurnDown}
-                                className="rotate-90 mr-2 h-2"
-                              />
-                              ]
-                            </span>
-                          </>
+                          <Kbd
+                            letterSpacing="-1px"
+                            color="blue.500"
+                            mr="1"
+                            pt="3px"
+                          >
+                            Ctrl +&nbsp;
+                            <FontAwesomeIcon
+                              icon={faArrowTurnDown}
+                              className="rotate-90 h-2"
+                            />
+                          </Kbd>
                         )}{" "}
                       Assign
-                    </button>
+                    </Button>
                   )}
 
-                  <button
+                  <Button
                     onClick={deleteParticipant(participant.id)}
-                    className="bg-blue-400 px-2 ml-2"
+                    colorScheme="blue"
+                    ml="2"
+                    size="sm"
                   >
                     Delete
-                  </button>
-                </div>
-              </li>
+                  </Button>
+                </Box>
+              </ListItem>
             ))}
-          </ul>
+          </UnorderedList>
         )}
-      </div>
-    </div>
+      </Grid>
+    </Box>
   );
 };
 
