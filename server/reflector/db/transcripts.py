@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -189,9 +190,8 @@ class Transcript(BaseModel):
         return [participant.model_dump(mode=mode) for participant in self.participants]
 
     def unlink(self):
-        for filename in os.listdir(self.data_path):
-            if os.path.isfile(os.path.join("directory_path", filename)):
-                os.remove(os.path.join("directory_path", filename))
+        if os.path.exists(self.data_path) and os.path.isdir(self.data_path):
+            shutil.rmtree(self.data_path)
 
     @property
     def data_path(self):
