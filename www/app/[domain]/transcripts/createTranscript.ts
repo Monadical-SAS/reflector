@@ -26,13 +26,27 @@ const useCreateTranscript = (): UseTranscript => {
     console.debug(
       "POST - /v1/transcripts/ - Requesting new transcription creation",
       transcriptCreationDetails,
+      api
     );
+
+    const aaa = async () => {
+      console.log("Calling API...");
+
+      await new Promise((res) => setTimeout(res, 500));
+
+      console.log("500 ms elapsed - calling api");
+
+      const test = await api.v1TranscriptsCreate(transcriptCreationDetails);
+      console.log(test);
+    };
+
+    aaa();
 
     api.v1TranscriptsCreate(transcriptCreationDetails)
       .then((transcript) => {
+        console.debug("New transcript created:", transcript);
         setTranscript(transcript);
         setLoading(false);
-        console.debug("New transcript created:", transcript);
       })
       .catch((err) => {
         setError(
