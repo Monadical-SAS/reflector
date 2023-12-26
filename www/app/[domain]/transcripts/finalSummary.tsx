@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import "../../styles/markdown.css";
 import { featureEnabled } from "../domainContext";
 import { UpdateTranscript } from "../../api";
-import useApi from "../../lib/useApi"; 
+import useApi from "../../lib/useApi";
 
 type FinalSummaryProps = {
   summary: string;

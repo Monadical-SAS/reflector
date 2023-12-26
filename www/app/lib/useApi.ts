@@ -19,14 +19,13 @@ export default function useApi(): DefaultService | null {
       return;
     }
 
-    if (!accessTokenInfo)
-      return;
+    if (!accessTokenInfo) return;
 
     const openApi = new OpenApi({
       BASE: api_url,
-      TOKEN: accessTokenInfo?.access_token
+      TOKEN: accessTokenInfo?.access_token,
     });
-    
+
     setApi(openApi);
   }, [!accessTokenInfo, hasAuthCookie]);
 
