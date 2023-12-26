@@ -112,6 +112,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           }}
           getAudioStream={getAudioStream}
           audioDevices={audioDevices}
+          transcriptId={details.params.transcriptId}
         />
       )}
 
