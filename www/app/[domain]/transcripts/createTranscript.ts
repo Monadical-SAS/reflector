@@ -28,8 +28,6 @@ const useCreateTranscript = (): UseTranscript => {
       api,
     );
 
-    console.log("START");
-
     api
       .v1TranscriptsCreate(transcriptCreationDetails)
       .then((transcript) => {
