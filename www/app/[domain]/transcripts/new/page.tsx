@@ -59,6 +59,7 @@ const TranscriptCreate = () => {
             <h1 className="text-2xl font-bold mb-2">
               Welcome to reflector.media
             </h1>
+            <button>Test upload</button>
             <p>
               Reflector is a transcription and summarization pipeline that
               transforms audio into knowledge.
