@@ -35,10 +35,10 @@ const useWebRTC = (
     p.on("signal", (data: any) => {
       if (!api) return;
       if ("sdp" in data) {
-          const rtcOffer : RtcOffer = {
-            sdp: data.sdp,
-            type: data.type,
-          };
+        const rtcOffer: RtcOffer = {
+          sdp: data.sdp,
+          type: data.type,
+        };
 
         api
           .v1TranscriptRecordWebrtc(transcriptId, rtcOffer)

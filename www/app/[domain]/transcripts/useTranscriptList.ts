@@ -19,10 +19,9 @@ const useTranscriptList = (page: number): TranscriptList => {
 
   useEffect(() => {
     setLoading(true);
-    if (!api)
-
-return;
-    api.v1TranscriptsList(page)
+    if (!api) return;
+    api
+      .v1TranscriptsList(page)
       .then((response) => {
         setResponse(response);
         setLoading(false);

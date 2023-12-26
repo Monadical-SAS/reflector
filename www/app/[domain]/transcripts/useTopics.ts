@@ -21,7 +21,8 @@ const useTopics = (id: string): TranscriptTopics => {
     if (!id || !api) return;
 
     setLoading(true);
-    api.v1TranscriptGetTopics(id)
+    api
+      .v1TranscriptGetTopics(id)
       .then((result) => {
         setTopics(result);
         setLoading(false);
