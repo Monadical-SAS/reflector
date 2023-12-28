@@ -3,6 +3,7 @@ import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
 import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
+import useApi from "../../lib/useApi";
 
 export type UseWebSockets = {
   transcriptText: string;
@@ -32,6 +33,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const { setError } = useError();
 
   const { websocket_url } = useContext(DomainContext);
+  const api = useApi();
 
   useEffect(() => {
     if (isProcessing || textQueue.length === 0) {
@@ -306,7 +308,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       }
     };
 
-    if (!transcriptId) return;
+    if (!transcriptId || !api) return;
+
+    api?.v1TranscriptGetWebsocketEvents(transcriptId).then((result) => {
+    });
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
@@ -412,7 +417,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       console.debug("WebSocket connection closed");
       switch (event.code) {
         case 1000: // Normal Closure:
+          break;
         case 1005: // Closure by client FF
+          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
@@ -431,7 +438,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId]);
+  }, [transcriptId, !api]);
 
   return {
     transcriptText,
