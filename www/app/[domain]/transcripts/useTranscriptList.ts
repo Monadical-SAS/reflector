@@ -18,8 +18,8 @@ const useTranscriptList = (page: number): TranscriptList => {
   const api = useApi();
 
   useEffect(() => {
-    setLoading(true);
     if (!api) return;
+    setLoading(true);
     api
       .v1TranscriptsList(page)
       .then((response) => {
@@ -32,7 +32,7 @@ const useTranscriptList = (page: number): TranscriptList => {
         setError(err);
         setErrorState(err);
       });
-  }, [api, page]);
+  }, [!api, page]);
 
   return { response, loading, error };
 };

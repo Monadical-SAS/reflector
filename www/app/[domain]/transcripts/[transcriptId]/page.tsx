@@ -92,7 +92,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <Player
               topics={topics?.topics || []}
               useActiveTopic={useActiveTopic}
-              waveform={waveform.waveform.data}
+              waveform={waveform.waveform}
               media={mp3.media}
               mediaDuration={transcript.response.duration}
             />

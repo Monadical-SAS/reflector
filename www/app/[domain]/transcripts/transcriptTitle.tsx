@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { UpdateTranscript } from "../../api";
 import useApi from "../../lib/useApi";
 
@@ -11,8 +11,10 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
+  const api = useApi();
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
+    if (!api) return;
     try {
       const requestBody: UpdateTranscript = {
         title: newTitle,

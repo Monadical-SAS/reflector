@@ -8,7 +8,6 @@ export default function useApi(): DefaultService | null {
   const accessTokenInfo = useFiefAccessTokenInfo();
   const api_url = useContext(DomainContext).api_url;
   const requireLogin = featureEnabled("requireLogin");
-  const [ready, setReady] = useState<boolean>(false);
   const [api, setApi] = useState<OpenApi | null>(null);
   const { hasAuthCookie } = useContext(CookieContext);
 

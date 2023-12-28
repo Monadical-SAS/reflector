@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
-import { AudioWaveform } from "../../api";
+import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
 
 export type UseWebSockets = {
   transcriptText: string;
@@ -11,7 +11,7 @@ export type UseWebSockets = {
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
-  waveform: AudioWaveform["data"] | null;
+  waveform: AudioWaveform | null;
   duration: number | null;
 };
 
@@ -57,6 +57,39 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   useEffect(() => {
     document.onkeyup = (e) => {
       if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
+        const segments : GetTranscriptSegmentTopic[] = [
+        {
+          speaker: 1,
+          start: 0,
+          text: "This is the transcription of an example title",
+        },
+        {
+          speaker: 2,
+          start: 10,
+          text: "This is the second speaker",
+        },
+        {
+          speaker: 3,
+          start: 90,
+          text: "This is the third speaker",
+        },
+        {
+          speaker: 4,
+          start: 90,
+          text: "This is the fourth speaker",
+        },
+        {
+          speaker: 5,
+          start: 123,
+          text: "This is the fifth speaker",
+        },
+        {
+          speaker: 6,
+          start: 300,
+          text: "This is the sixth speaker",
+        }
+        ];
+
         setTranscriptText("Lorem Ipsum");
         setTopics([
           {
@@ -67,39 +100,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
-            segments: [
-              {
-                speaker: 1,
-                start: 0,
-                text: "This is the transcription of an example title",
-              },
-              {
-                speaker: 2,
-                start: 10,
-                text: "This is the second speaker",
-              },
-              ,
-              {
-                speaker: 3,
-                start: 90,
-                text: "This is the third speaker",
-              },
-              {
-                speaker: 4,
-                start: 90,
-                text: "This is the fourth speaker",
-              },
-              {
-                speaker: 5,
-                start: 123,
-                text: "This is the fifth speaker",
-              },
-              {
-                speaker: 6,
-                start: 300,
-                text: "This is the sixth speaker",
-              },
-            ],
           },
           {
             id: "2",

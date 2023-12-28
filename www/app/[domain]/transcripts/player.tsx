@@ -14,7 +14,7 @@ type PlayerProps = {
     Topic | null,
     React.Dispatch<React.SetStateAction<Topic | null>>,
   ];
-  waveform: AudioWaveform["data"];
+  waveform: AudioWaveform;
   media: HTMLMediaElement;
   mediaDuration: number;
 };

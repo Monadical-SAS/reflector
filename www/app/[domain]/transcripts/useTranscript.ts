@@ -52,7 +52,7 @@ const useTranscript = (
         }
         setErrorState(error);
       });
-  }, [id, api]);
+  }, [id, !api]);
 
   return { response, loading, error } as
     | ErrorTranscript
