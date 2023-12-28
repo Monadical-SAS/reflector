@@ -7,7 +7,7 @@ import "../../styles/button.css";
 import "../../styles/form.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { DefaultService, UpdateTranscript } from "../../api";
+import { UpdateTranscript } from "../../api";
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import useApi from "../../lib/useApi";
 type ShareLinkProps = {
@@ -18,7 +18,6 @@ type ShareLinkProps = {
 
 const ShareLink = (props: ShareLinkProps) => {
   const [isCopied, setIsCopied] = useState(false);
-  const [api, setApi] = useState<DefaultService | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const requireLogin = featureEnabled("requireLogin");
@@ -26,11 +25,10 @@ const ShareLink = (props: ShareLinkProps) => {
   const [shareMode, setShareMode] = useState<ShareMode>(props.shareMode);
   const [shareLoading, setShareLoading] = useState(false);
   const userinfo = useFiefUserinfo();
+  const api = useApi();
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
-    const api = useApi();
-    setApi(api);
   }, []);
 
   useEffect(() => {
@@ -51,14 +49,13 @@ const ShareLink = (props: ShareLinkProps) => {
   };
 
   const updateShareMode = async (selectedShareMode: string) => {
+    if (!api)
+      throw new Error("ShareLink's API should always be ready at this point");
+
     setShareLoading(true);
     const requestBody: UpdateTranscript = {
       share_mode: toShareMode(selectedShareMode),
     };
-    const api = useApi();
-
-    if (!api)
-      throw new Error("ShareLink's API should always be ready at this point");
 
     const updatedTranscript = await api.v1TranscriptUpdate(
       props.transcriptId,
@@ -68,7 +65,6 @@ const ShareLink = (props: ShareLinkProps) => {
     setShareLoading(false);
   };
   const privacyEnabled = featureEnabled("privacy");
-  const apiReady = api != null;
 
   return (
     <div
@@ -89,8 +85,8 @@ const ShareLink = (props: ShareLinkProps) => {
             <p>This transcript is public. Everyone can access it.</p>
           )}
 
-          {isOwner &&
-            apiReady(
+          {isOwner && api && (
+            
               <div className="relative">
                 <SelectSearch
                   className="select-search--top select-search"
@@ -111,7 +107,7 @@ const ShareLink = (props: ShareLinkProps) => {
                     />
                   </div>
                 )}
-              </div>,
+              </div>
             )}
         </div>
       )}
