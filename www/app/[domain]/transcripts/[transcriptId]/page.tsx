@@ -16,8 +16,6 @@ import ShareModal from "./shareModal";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { featureEnabled } from "../../domainContext";
 import { toShareMode } from "../../../lib/shareMode";
 
