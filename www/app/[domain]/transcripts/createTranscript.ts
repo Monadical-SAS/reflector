@@ -22,16 +22,9 @@ const useCreateTranscript = (): UseTranscript => {
 
     setLoading(true);
 
-    console.log(
-      "POST - /v1/transcripts/ - Requesting new transcription creation",
-      transcriptCreationDetails,
-      api,
-    );
-
     api
       .v1TranscriptsCreate(transcriptCreationDetails)
       .then((transcript) => {
-        console.debug("New transcript created:", transcript);
         setTranscript(transcript);
         setLoading(false);
       })
@@ -43,9 +36,6 @@ const useCreateTranscript = (): UseTranscript => {
         setErrorState(err);
         setLoading(false);
       })
-      .finally(() => {
-        console.log("At least this should display?");
-      });
   };
 
   return { transcript, loading, error, create };

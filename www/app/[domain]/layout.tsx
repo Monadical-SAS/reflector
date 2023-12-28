@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  metadataBase: process.env.DEV_URL || "https://reflector.media",
+  metadataBase: new URL(process.env.DEV_URL || "https://reflector.media"),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
