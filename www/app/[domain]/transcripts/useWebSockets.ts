@@ -59,37 +59,37 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   useEffect(() => {
     document.onkeyup = (e) => {
       if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
-        const segments : GetTranscriptSegmentTopic[] = [
-        {
-          speaker: 1,
-          start: 0,
-          text: "This is the transcription of an example title",
-        },
-        {
-          speaker: 2,
-          start: 10,
-          text: "This is the second speaker",
-        },
-        {
-          speaker: 3,
-          start: 90,
-          text: "This is the third speaker",
-        },
-        {
-          speaker: 4,
-          start: 90,
-          text: "This is the fourth speaker",
-        },
-        {
-          speaker: 5,
-          start: 123,
-          text: "This is the fifth speaker",
-        },
-        {
-          speaker: 6,
-          start: 300,
-          text: "This is the sixth speaker",
-        }
+        const segments: GetTranscriptSegmentTopic[] = [
+          {
+            speaker: 1,
+            start: 0,
+            text: "This is the transcription of an example title",
+          },
+          {
+            speaker: 2,
+            start: 10,
+            text: "This is the second speaker",
+          },
+          {
+            speaker: 3,
+            start: 90,
+            text: "This is the third speaker",
+          },
+          {
+            speaker: 4,
+            start: 90,
+            text: "This is the fourth speaker",
+          },
+          {
+            speaker: 5,
+            start: 123,
+            text: "This is the fifth speaker",
+          },
+          {
+            speaker: 6,
+            start: 300,
+            text: "This is the sixth speaker",
+          },
         ];
 
         setTranscriptText("Lorem Ipsum");
@@ -310,8 +310,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId || !api) return;
 
-    api?.v1TranscriptGetWebsocketEvents(transcriptId).then((result) => {
-    });
+    api?.v1TranscriptGetWebsocketEvents(transcriptId).then((result) => {});
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);

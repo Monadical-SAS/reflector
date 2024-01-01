@@ -75,8 +75,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
-    if (transcript.response?.status === "ended")
-      mp3.getNow();
+    if (transcript.response?.status === "ended") mp3.getNow();
   }, [transcript.response]);
 
   useEffect(() => {

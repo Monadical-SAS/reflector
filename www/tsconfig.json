@@ -19,8 +19,7 @@
       }
     ],
     "strictNullChecks": true,
-    "downlevelIteration": true,
-    "target": "ES2020"
+    "downlevelIteration": true
   },
   "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
