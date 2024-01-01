@@ -18,11 +18,11 @@ import { SESSION_COOKIE_NAME } from "../lib/fief";
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
 export const viewport: Viewport = {
-  themeColor: 'black',
+  themeColor: "black",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-}
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.DEV_URL || "https://reflector.media"),

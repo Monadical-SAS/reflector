@@ -86,29 +86,28 @@ const ShareLink = (props: ShareLinkProps) => {
           )}
 
           {isOwner && api && (
-            
-              <div className="relative">
-                <SelectSearch
-                  className="select-search--top select-search"
-                  options={[
-                    { name: "Private", value: "private" },
-                    { name: "Secure", value: "semi-private" },
-                    { name: "Public", value: "public" },
-                  ]}
-                  value={shareMode?.toString()}
-                  onChange={updateShareMode}
-                  closeOnSelect={true}
-                />
-                {shareLoading && (
-                  <div className="h-4 w-4 absolute top-1/3 right-3 z-10">
-                    <FontAwesomeIcon
-                      icon={faSpinner}
-                      className="animate-spin-slow text-gray-600 flex-grow rounded-lg md:rounded-xl h-4 w-4"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="relative">
+              <SelectSearch
+                className="select-search--top select-search"
+                options={[
+                  { name: "Private", value: "private" },
+                  { name: "Secure", value: "semi-private" },
+                  { name: "Public", value: "public" },
+                ]}
+                value={shareMode?.toString()}
+                onChange={updateShareMode}
+                closeOnSelect={true}
+              />
+              {shareLoading && (
+                <div className="h-4 w-4 absolute top-1/3 right-3 z-10">
+                  <FontAwesomeIcon
+                    icon={faSpinner}
+                    className="animate-spin-slow text-gray-600 flex-grow rounded-lg md:rounded-xl h-4 w-4"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       {!requireLogin && (

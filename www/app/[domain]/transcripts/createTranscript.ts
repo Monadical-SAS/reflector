@@ -35,7 +35,7 @@ const useCreateTranscript = (): UseTranscript => {
         );
         setErrorState(err);
         setLoading(false);
-      })
+      });
   };
 
   return { transcript, loading, error, create };

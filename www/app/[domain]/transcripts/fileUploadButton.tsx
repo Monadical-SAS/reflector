@@ -21,11 +21,10 @@ export default function FileUploadButton(props: FileUploadButton) {
       console.log("Calling api.v1TranscriptRecordUpload()...");
 
       // Create an object of the expected type
-      const uploadData: Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post =
-        {
-          file: file,
-          // Add other properties if required by the type definition
-        };
+      const uploadData = {
+        file: file,
+        // Add other properties if required by the type definition
+      };
 
       api?.v1TranscriptRecordUpload(props.transcriptId, uploadData);
     }
