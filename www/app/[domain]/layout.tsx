@@ -19,6 +19,7 @@ import { Providers } from "../providers";
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.DEV_URL || "https://reflector.media"),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
@@ -55,12 +56,6 @@ export const metadata: Metadata = {
     shortcut: "/r-icon.png",
     apple: "/r-icon.png",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
-
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 

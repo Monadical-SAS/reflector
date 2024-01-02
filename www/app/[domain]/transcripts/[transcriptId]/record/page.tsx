@@ -62,8 +62,9 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
     //TODO if has no topic and is error, get back to new
     if (
-      statusToRedirect.includes(transcript.response?.status) ||
-      statusToRedirect.includes(webSockets.status.value)
+      transcript.response?.status &&
+      (statusToRedirect.includes(transcript.response?.status) ||
+        statusToRedirect.includes(webSockets.status.value))
     ) {
       const newUrl = "/transcripts/" + details.params.transcriptId;
       // Shallow redirection does not work on NextJS 13
@@ -75,10 +76,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
-    if (webSockets.duration) {
-      mp3.getNow();
-    }
-  }, [webSockets.duration]);
+    if (transcript.response?.status === "ended") mp3.getNow();
+  }, [transcript.response]);
 
   useEffect(() => {
     lockWakeState();
@@ -112,6 +111,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           }}
           getAudioStream={getAudioStream}
           audioDevices={audioDevices}
+          transcriptId={details.params.transcriptId}
         />
       )}
 

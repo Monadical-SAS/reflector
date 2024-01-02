@@ -24,6 +24,11 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
   - [Back-End](#back-end)
     - [Installation](#installation-1)
     - [Start the API/Backend](#start-the-apibackend)
+    - [Redis (Mac)](#redis-mac)
+    - [Redis (Windows)](#redis-windows)
+  - [Update the database schema (run on first install, and after each pull containing a migration)](#update-the-database-schema-run-on-first-install-and-after-each-pull-containing-a-migration)
+  - [Main Server](#main-server)
+    - [Crontab (optional)](#crontab-optional)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -97,6 +102,15 @@ You may need to run `yarn global add @openapitools/openapi-generator-cli` first.
 
 Start with `cd server`.
 
+### Quick-run instructions (only if you installed everything already)
+
+```bash
+redis-server # Mac
+docker compose up -d redis # Windows
+poetry run celery -A reflector.worker.app worker --loglevel=info
+poetry run python -m reflector.app
+```
+
 ### Installation
 
 Download [Python 3.11 from the official website](https://www.python.org/downloads/) and ensure you have version 3.11 by running `python --version`.
@@ -124,6 +138,7 @@ poetry run celery -A reflector.worker.app worker --loglevel=info
 
 ```bash
 yarn add redis
+poetry run celery -A reflector.worker.app worker --loglevel=info
 redis-server
 ```
 
@@ -152,12 +167,10 @@ redis-server
 ## Update the database schema (run on first install, and after each pull containing a migration)
 
 ```bash
-poetry run python alembic head
+poetry run alembic heads
 ```
 
 ## Main Server
-
-Start the server:
 
 ```bash
 poetry run python -m reflector.app

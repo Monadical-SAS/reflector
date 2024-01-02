@@ -8,7 +8,7 @@ import useTopicWithWords from "../../useTopicWithWords";
 import ParticipantList from "./participantList";
 import { GetTranscriptTopic } from "../../../../api";
 import { SelectedText, selectedTextIsTimeSlice } from "./types";
-import getApi from "../../../../lib/getApi";
+import useApi from "../../../../lib/useApi";
 import useTranscript from "../../useTranscript";
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
@@ -23,7 +23,7 @@ export type TranscriptCorrect = {
 export default function TranscriptCorrect({
   params: { transcriptId },
 }: TranscriptCorrect) {
-  const api = getApi();
+  const api = useApi();
   const transcript = useTranscript(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();
   const [currentTopic, _sct] = stateCurrentTopic;
@@ -37,10 +37,7 @@ export default function TranscriptCorrect({
   const markAsDone = () => {
     if (transcript.response && !transcript.response.reviewed) {
       api
-        ?.v1TranscriptUpdate({
-          transcriptId,
-          updateTranscript: { reviewed: true },
-        })
+        ?.v1TranscriptUpdate(transcriptId, { reviewed: true })
         .then(() => {
           router.push(`/transcripts/${transcriptId}`);
         })
@@ -75,7 +72,7 @@ export default function TranscriptCorrect({
             currentTopic
               ? {
                   start: currentTopic?.timestamp,
-                  end: currentTopic?.timestamp + currentTopic?.duration,
+                  end: currentTopic?.timestamp + (currentTopic?.duration || 0),
                 }
               : undefined
           }

@@ -11,7 +11,6 @@ import {
   WrapItem,
   Kbd,
   Skeleton,
-  chakra,
 } from "@chakra-ui/react";
 
 type TopicPlayer = {

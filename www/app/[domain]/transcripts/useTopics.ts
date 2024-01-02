@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { V1TranscriptGetTopicsRequest } from "../../api/apis/DefaultApi";
+
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
-import mockTopics from "./mockTopics.json";
 import { GetTranscriptTopic } from "../../api";
 
 type TranscriptTopics = {
@@ -18,25 +17,14 @@ const useTopics = (id: string): TranscriptTopics => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
-
-  useEffect(() => {
-    document.onkeyup = (e) => {
-      if (e.key === "t" && process.env.NEXT_PUBLIC_ENV === "development") {
-        setTopics(mockTopics);
-      }
-    };
-  });
+  const api = useApi();
 
   useEffect(() => {
     if (!id || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptGetTopicsRequest = {
-      transcriptId: id,
-    };
     api
-      .v1TranscriptGetTopics(requestParameters)
+      .v1TranscriptGetTopics(id)
       .then((result) => {
         setTopics(result);
         setLoading(false);

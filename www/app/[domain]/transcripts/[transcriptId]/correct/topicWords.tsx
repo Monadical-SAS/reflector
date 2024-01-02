@@ -3,14 +3,7 @@ import WaveformLoading from "../../waveformLoading";
 import { UseParticipants } from "../../useParticipants";
 import { UseTopicWithWords } from "../../useTopicWithWords";
 import { TimeSlice, selectedTextIsTimeSlice } from "./types";
-import {
-  BoxProps,
-  Box,
-  Container,
-  Text,
-  chakra,
-  Spinner,
-} from "@chakra-ui/react";
+import { BoxProps, Box, Container, Text, Spinner } from "@chakra-ui/react";
 
 type TopicWordsProps = {
   stateSelectedText: [
@@ -167,7 +160,7 @@ const topicWords = ({
         maxW={{ lg: "container.md" }}
         {...chakraProps}
       >
-        {topicWithWords.response.wordsPerSpeaker.map(
+        {topicWithWords.response.words_per_speaker?.map(
           (speakerWithWords, index) => (
             <Text key={index} className="mb-2 last:mb-0">
               <Box

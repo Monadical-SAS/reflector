@@ -2,7 +2,7 @@ import { faArrowTurnDown, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Participant } from "../../../../api";
-import getApi from "../../../../lib/getApi";
+import useApi from "../../../../lib/useApi";
 import { UseParticipants } from "../../useParticipants";
 import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./types";
 import { useError } from "../../../../(errors)/errorContext";
@@ -31,7 +31,7 @@ const ParticipantList = ({
   topicWithWords,
   stateSelectedText,
 }: ParticipantList) => {
-  const api = getApi();
+  const api = useApi();
   const { setError } = useError();
   const [loading, setLoading] = useState(false);
   const [participantInput, setParticipantInput] = useState("");
@@ -123,13 +123,10 @@ const ParticipantList = ({
 
       setLoading(true);
       try {
-        await api?.v1TranscriptAssignSpeaker({
-          speakerAssignment: {
-            participant: participant.id,
-            timestampFrom: selectedText.start,
-            timestampTo: selectedText.end,
-          },
-          transcriptId,
+        await api?.v1TranscriptAssignSpeaker(transcriptId, {
+          participant: participant.id,
+          timestamp_from: selectedText.start,
+          timestamp_to: selectedText.end,
         });
         onSuccess();
       } catch (error) {
@@ -145,12 +142,9 @@ const ParticipantList = ({
       setLoading(true);
       if (participantTo.speaker) {
         try {
-          await api?.v1TranscriptMergeSpeaker({
-            transcriptId,
-            speakerMerge: {
-              speakerFrom: speakerFrom,
-              speakerTo: participantTo.speaker,
-            },
+          await api?.v1TranscriptMergeSpeaker(transcriptId, {
+            speaker_from: speakerFrom,
+            speaker_to: participantTo.speaker,
           });
           onSuccess();
         } catch (error) {
@@ -159,11 +153,11 @@ const ParticipantList = ({
         }
       } else {
         try {
-          await api?.v1TranscriptUpdateParticipant({
+          await api?.v1TranscriptUpdateParticipant(
             transcriptId,
-            participantId: participantTo.id,
-            updateParticipant: { speaker: speakerFrom },
-          });
+            participantTo.id,
+            { speaker: speakerFrom },
+          );
           onSuccess();
         } catch (error) {
           setError(error, "There was an error merging (update)");
@@ -189,12 +183,8 @@ const ParticipantList = ({
       if (participant && participant.name !== participantInput) {
         setLoading(true);
         api
-          ?.v1TranscriptUpdateParticipant({
-            participantId: participant.id,
-            transcriptId,
-            updateParticipant: {
-              name: participantInput,
-            },
+          ?.v1TranscriptUpdateParticipant(participant.id, transcriptId, {
+            name: participantInput,
           })
           .then(() => {
             participants.refetch();
@@ -212,12 +202,9 @@ const ParticipantList = ({
     ) {
       setLoading(true);
       api
-        ?.v1TranscriptAddParticipant({
-          createParticipant: {
-            name: participantInput,
-            speaker: selectedText,
-          },
-          transcriptId,
+        ?.v1TranscriptAddParticipant(transcriptId, {
+          name: participantInput,
+          speaker: selectedText,
         })
         .then(() => {
           participants.refetch();
@@ -235,12 +222,12 @@ const ParticipantList = ({
     ) {
       setLoading(true);
       try {
-        const participant = await api?.v1TranscriptAddParticipant({
-          createParticipant: {
+        const participant = await api?.v1TranscriptAddParticipant(
+          transcriptId,
+          {
             name: participantInput,
           },
-          transcriptId,
-        });
+        );
         setLoading(false);
         assignTo(participant)().catch(() => {
           // error and loading are handled by assignTo catch
@@ -253,11 +240,8 @@ const ParticipantList = ({
     } else if (action == "Create") {
       setLoading(true);
       api
-        ?.v1TranscriptAddParticipant({
-          createParticipant: {
-            name: participantInput,
-          },
-          transcriptId,
+        ?.v1TranscriptAddParticipant(transcriptId, {
+          name: participantInput,
         })
         .then(() => {
           participants.refetch();
@@ -277,10 +261,7 @@ const ParticipantList = ({
     if (loading || participants.loading || topicWithWords.loading) return;
     setLoading(true);
     api
-      ?.v1TranscriptDeleteParticipant({
-        transcriptId,
-        participantId,
-      })
+      ?.v1TranscriptDeleteParticipant(transcriptId, participantId)
       .then(() => {
         participants.refetch();
         setLoading(false);

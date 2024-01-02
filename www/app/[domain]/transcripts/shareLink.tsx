@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, use } from "react";
 import { featureEnabled } from "../domainContext";
-import getApi from "../../lib/getApi";
 import { useFiefUserinfo } from "@fief/fief/nextjs/react";
 import SelectSearch from "react-select-search";
 import "react-select-search/style.css";
@@ -8,11 +7,13 @@ import "../../styles/button.css";
 import "../../styles/form.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-
+import { UpdateTranscript } from "../../api";
+import { ShareMode, toShareMode } from "../../lib/shareMode";
+import useApi from "../../lib/useApi";
 type ShareLinkProps = {
   transcriptId: string;
   userId: string | null;
-  shareMode: string;
+  shareMode: ShareMode;
 };
 
 const ShareLink = (props: ShareLinkProps) => {
@@ -21,10 +22,10 @@ const ShareLink = (props: ShareLinkProps) => {
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const requireLogin = featureEnabled("requireLogin");
   const [isOwner, setIsOwner] = useState(false);
-  const [shareMode, setShareMode] = useState(props.shareMode);
+  const [shareMode, setShareMode] = useState<ShareMode>(props.shareMode);
   const [shareLoading, setShareLoading] = useState(false);
   const userinfo = useFiefUserinfo();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
@@ -48,15 +49,19 @@ const ShareLink = (props: ShareLinkProps) => {
   };
 
   const updateShareMode = async (selectedShareMode: string) => {
-    if (!api) return;
+    if (!api)
+      throw new Error("ShareLink's API should always be ready at this point");
+
     setShareLoading(true);
-    const updatedTranscript = await api.v1TranscriptUpdate({
-      transcriptId: props.transcriptId,
-      updateTranscript: {
-        shareMode: selectedShareMode,
-      },
-    });
-    setShareMode(updatedTranscript.shareMode);
+    const requestBody: UpdateTranscript = {
+      share_mode: toShareMode(selectedShareMode),
+    };
+
+    const updatedTranscript = await api.v1TranscriptUpdate(
+      props.transcriptId,
+      requestBody,
+    );
+    setShareMode(toShareMode(updatedTranscript.share_mode));
     setShareLoading(false);
   };
   const privacyEnabled = featureEnabled("privacy");
@@ -89,7 +94,7 @@ const ShareLink = (props: ShareLinkProps) => {
                   { name: "Secure", value: "semi-private" },
                   { name: "Public", value: "public" },
                 ]}
-                value={shareMode}
+                value={shareMode?.toString()}
                 onChange={updateShareMode}
                 closeOnSelect={true}
               />

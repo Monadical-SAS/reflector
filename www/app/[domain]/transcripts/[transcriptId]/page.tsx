@@ -17,6 +17,7 @@ import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
 import { featureEnabled } from "../../domainContext";
+import { toShareMode } from "../../../lib/shareMode";
 
 type TranscriptDetails = {
   params: {
@@ -37,7 +38,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   useEffect(() => {
     const statusToRedirect = ["idle", "recording", "processing"];
-    if (statusToRedirect.includes(transcript.response?.status)) {
+    if (statusToRedirect.includes(transcript.response?.status || "")) {
       const newUrl = "/transcripts/" + details.params.transcriptId + "/record";
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
@@ -88,7 +89,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           <Player
             topics={topics?.topics || []}
             useActiveTopic={useActiveTopic}
-            waveform={waveform.waveform.data}
+            waveform={waveform.waveform}
             media={mp3.media}
             mediaDuration={transcript.response.duration}
           />
@@ -108,10 +109,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
         <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
           <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
-            {transcript.response.longSummary ? (
+            {transcript.response.long_summary ? (
               <FinalSummary
                 fullTranscript={fullTranscript}
-                summary={transcript.response.longSummary}
+                summary={transcript.response.long_summary}
                 transcriptId={transcript.response.id}
                 openZulipModal={() => setShowModal(true)}
               />
@@ -139,9 +140,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             </div>
             <div className="flex-grow max-w-full">
               <ShareLink
-                transcriptId={transcript?.response?.id}
-                userId={transcript?.response?.userId}
-                shareMode={transcript?.response?.shareMode}
+                transcriptId={transcript.response.id}
+                userId={transcript.response.user_id}
+                shareMode={toShareMode(transcript.response.share_mode)}
               />
             </div>
           </section>
