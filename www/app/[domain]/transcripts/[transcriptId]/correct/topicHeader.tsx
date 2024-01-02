@@ -1,8 +1,19 @@
-import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useTopics from "../../useTopics";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { GetTranscriptTopic } from "../../../../api";
+import {
+  BoxProps,
+  Box,
+  Circle,
+  Heading,
+  Kbd,
+  Skeleton,
+  SkeletonCircle,
+  chakra,
+  Flex,
+  Center,
+} from "@chakra-ui/react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 type TopicHeader = {
   stateCurrentTopic: [
@@ -17,7 +28,8 @@ export default function TopicHeader({
   stateCurrentTopic,
   transcriptId,
   topicWithWordsLoading,
-}: TopicHeader) {
+  ...chakraProps
+}: TopicHeader & BoxProps) {
   const [currentTopic, setCurrentTopic] = stateCurrentTopic;
   const topics = useTopics(transcriptId);
 
@@ -26,17 +38,13 @@ export default function TopicHeader({
       const sessionTopic = window.localStorage.getItem(
         transcriptId + "correct",
       );
-      console.log(sessionTopic, window.localStorage);
       if (sessionTopic && topics?.topics?.find((t) => t.id == sessionTopic)) {
         setCurrentTopic(topics?.topics?.find((t) => t.id == sessionTopic));
-        console.log("he", sessionTopic, !!sessionTopic);
       } else {
         setCurrentTopic(topics?.topics?.at(0));
-        console.log("hi");
       }
     }
   }, [topics.loading]);
-  // console.log(currentTopic)
 
   const number = topics.topics?.findIndex(
     (topic) => topic.id == currentTopic?.id,
@@ -75,35 +83,85 @@ export default function TopicHeader({
     };
   });
 
-  if (topics.topics && currentTopic && typeof number == "number") {
-    return (
-      <div className="flex flex-row">
-        <button
-          className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
-            canGoPrevious ? "text-gray-500" : "text-gray-300"
-          }`}
+  const isLoaded = !!(
+    topics.topics &&
+    currentTopic &&
+    typeof number == "number"
+  );
+  return (
+    <Box
+      display="flex"
+      w="100%"
+      justifyContent="space-between"
+      {...chakraProps}
+    >
+      <SkeletonCircle
+        isLoaded={isLoaded}
+        h={isLoaded ? "auto" : "40px"}
+        w={isLoaded ? "auto" : "40px"}
+        mb="2"
+        fadeDuration={1}
+      >
+        <Circle
+          as="button"
           onClick={onPrev}
           disabled={!canGoPrevious}
+          size="40px"
+          border="1px"
+          color={canGoPrevious ? "inherit" : "gray"}
+          borderColor={canGoNext ? "body-text" : "gray"}
         >
-          <FontAwesomeIcon icon={faArrowLeft} />
-        </button>
-        <h1 className="flex-grow">
-          {currentTopic.title}{" "}
-          <span>
-            {number + 1}/{total}
-          </span>
-        </h1>
-        <button
-          className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
-            canGoNext ? "text-gray-500" : "text-gray-300"
-          }`}
+          {canGoPrevious ? (
+            <Kbd>
+              <ChevronLeftIcon />
+            </Kbd>
+          ) : (
+            <ChevronLeftIcon />
+          )}
+        </Circle>
+      </SkeletonCircle>
+      <Skeleton
+        isLoaded={isLoaded}
+        h={isLoaded ? "auto" : "40px"}
+        mb="2"
+        fadeDuration={1}
+        flexGrow={1}
+        mx={6}
+      >
+        <Flex wrap="nowrap" justifyContent="center">
+          <Heading size="lg" textAlign="center" noOfLines={1}>
+            {currentTopic?.title}{" "}
+          </Heading>
+          <Heading size="lg" ml="3">
+            {(number || 0) + 1}/{total}
+          </Heading>
+        </Flex>
+      </Skeleton>
+      <SkeletonCircle
+        isLoaded={isLoaded}
+        h={isLoaded ? "auto" : "40px"}
+        w={isLoaded ? "auto" : "40px"}
+        mb="2"
+        fadeDuration={1}
+      >
+        <Circle
+          as="button"
           onClick={onNext}
           disabled={!canGoNext}
+          size="40px"
+          border="1px"
+          color={canGoNext ? "inherit" : "gray"}
+          borderColor={canGoNext ? "body-text" : "gray"}
         >
-          <FontAwesomeIcon icon={faArrowRight} />
-        </button>
-      </div>
-    );
-  }
-  return null;
+          {canGoNext ? (
+            <Kbd>
+              <ChevronRightIcon />
+            </Kbd>
+          ) : (
+            <ChevronRightIcon />
+          )}
+        </Circle>
+      </SkeletonCircle>
+    </Box>
+  );
 }

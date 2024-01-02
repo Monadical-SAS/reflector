@@ -3,6 +3,14 @@ import WaveformLoading from "../../waveformLoading";
 import { UseParticipants } from "../../useParticipants";
 import { UseTopicWithWords } from "../../useTopicWithWords";
 import { TimeSlice, selectedTextIsTimeSlice } from "./types";
+import {
+  BoxProps,
+  Box,
+  Container,
+  Text,
+  chakra,
+  Spinner,
+} from "@chakra-ui/react";
 
 type TopicWordsProps = {
   stateSelectedText: [
@@ -17,7 +25,8 @@ const topicWords = ({
   stateSelectedText,
   participants,
   topicWithWords,
-}: TopicWordsProps) => {
+  ...chakraProps
+}: TopicWordsProps & BoxProps) => {
   const [selectedText, setSelectedText] = stateSelectedText;
 
   useEffect(() => {
@@ -150,45 +159,54 @@ const topicWords = ({
     participants.response
   ) {
     return (
-      <div onMouseUp={onMouseUp} className="p-5 h-full w-full overflow-scroll">
+      <Container
+        onMouseUp={onMouseUp}
+        max-h="100%"
+        width="100%"
+        overflow="scroll"
+        maxW={{ lg: "container.md" }}
+        {...chakraProps}
+      >
         {topicWithWords.response.wordsPerSpeaker.map(
           (speakerWithWords, index) => (
-            <p key={index} className="mb-2 last:mb-0">
-              <span
+            <Text key={index} className="mb-2 last:mb-0">
+              <Box
+                as="span"
                 data-speaker={speakerWithWords.speaker}
-                className={`
-                  font-semibold ${
-                    selectedText == speakerWithWords.speaker
-                      ? "bg-yellow-200"
-                      : ""
-                  }`}
+                pt="1"
+                fontWeight="semibold"
+                bgColor={
+                  selectedText == speakerWithWords.speaker ? "yellow.200" : ""
+                }
               >
                 {getSpeakerName(speakerWithWords.speaker)}&nbsp;:&nbsp;
-              </span>
+              </Box>
               {speakerWithWords.words.map((word, index) => (
-                <span
+                <Box
+                  as="span"
                   data-start={word.start}
                   data-end={word.end}
                   key={index}
-                  className={
+                  pt="1"
+                  bgColor={
                     selectedTextIsTimeSlice(selectedText) &&
                     selectedText.start <= word.start &&
                     selectedText.end >= word.end
-                      ? "bg-yellow-200"
+                      ? "yellow.200"
                       : ""
                   }
                 >
                   {word.text}
-                </span>
+                </Box>
               ))}
-            </p>
+            </Text>
           ),
         )}
-      </div>
+      </Container>
     );
   }
   if (topicWithWords.loading || participants.loading)
-    return <WaveformLoading />;
+    return <Spinner size="xl" margin="auto" />;
   if (topicWithWords.error || participants.error) return <p>error</p>;
   return null;
 };
