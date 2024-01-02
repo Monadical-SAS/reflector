@@ -27,8 +27,7 @@ export async function middleware(request: NextRequest) {
       if (
         request.nextUrl.pathname == "/" ||
         request.nextUrl.pathname.startsWith("/transcripts") ||
-        request.nextUrl.pathname.startsWith("/browse") ||
-        request.nextUrl.pathname.startsWith("/chakra-showcase")
+        request.nextUrl.pathname.startsWith("/browse")
       ) {
         if (!fiefResponse.headers.get("x-middleware-rewrite")) {
           fiefResponse.headers.set(
@@ -43,8 +42,7 @@ export async function middleware(request: NextRequest) {
     if (
       request.nextUrl.pathname == "/" ||
       request.nextUrl.pathname.startsWith("/transcripts") ||
-      request.nextUrl.pathname.startsWith("/browse") ||
-      request.nextUrl.pathname.startsWith("/chakra-showcase")
+      request.nextUrl.pathname.startsWith("/browse")
     ) {
       return NextResponse.rewrite(
         request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
