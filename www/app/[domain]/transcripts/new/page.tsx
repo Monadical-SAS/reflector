@@ -18,7 +18,7 @@ const TranscriptCreate = () => {
   const isAuthenticated = useFiefIsAuthenticated();
   const requireLogin = featureEnabled("requireLogin");
 
-  const [name, setName] = useState<string>();
+  const [name, setName] = useState<string>("");
   const nameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
   };
@@ -35,13 +35,13 @@ const TranscriptCreate = () => {
   const send = () => {
     if (loadingSend || createTranscript.loading || permissionDenied) return;
     setLoadingSend(true);
-    createTranscript.create({ name, targetLanguage });
+    createTranscript.create({ name, target_language: targetLanguage });
   };
 
   useEffect(() => {
-    createTranscript.response &&
-      router.push(`/transcripts/${createTranscript.response.id}/record`);
-  }, [createTranscript.response]);
+    createTranscript.transcript &&
+      router.push(`/transcripts/${createTranscript.transcript.id}/record`);
+  }, [createTranscript.transcript]);
 
   useEffect(() => {
     if (createTranscript.error) setLoadingSend(false);
@@ -59,6 +59,7 @@ const TranscriptCreate = () => {
             <h1 className="text-2xl font-bold mb-2">
               Welcome to reflector.media
             </h1>
+            <button>Test upload</button>
             <p>
               Reflector is a transcription and summarization pipeline that
               transforms audio into knowledge.

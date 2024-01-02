@@ -2,7 +2,8 @@ import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../domainContext";
-import { AudioWaveform } from "../../api";
+import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
+import useApi from "../../lib/useApi";
 
 export type UseWebSockets = {
   transcriptText: string;
@@ -11,7 +12,7 @@ export type UseWebSockets = {
   topics: Topic[];
   finalSummary: FinalSummary;
   status: Status;
-  waveform: AudioWaveform["data"] | null;
+  waveform: AudioWaveform | null;
   duration: number | null;
 };
 
@@ -32,6 +33,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const { setError } = useError();
 
   const { websocket_url } = useContext(DomainContext);
+  const api = useApi();
 
   useEffect(() => {
     if (isProcessing || textQueue.length === 0) {
@@ -57,6 +59,39 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   useEffect(() => {
     document.onkeyup = (e) => {
       if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
+        const segments: GetTranscriptSegmentTopic[] = [
+          {
+            speaker: 1,
+            start: 0,
+            text: "This is the transcription of an example title",
+          },
+          {
+            speaker: 2,
+            start: 10,
+            text: "This is the second speaker",
+          },
+          {
+            speaker: 3,
+            start: 90,
+            text: "This is the third speaker",
+          },
+          {
+            speaker: 4,
+            start: 90,
+            text: "This is the fourth speaker",
+          },
+          {
+            speaker: 5,
+            start: 123,
+            text: "This is the fifth speaker",
+          },
+          {
+            speaker: 6,
+            start: 300,
+            text: "This is the sixth speaker",
+          },
+        ];
+
         setTranscriptText("Lorem Ipsum");
         setTopics([
           {
@@ -67,39 +102,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
-            segments: [
-              {
-                speaker: 1,
-                start: 0,
-                text: "This is the transcription of an example title",
-              },
-              {
-                speaker: 2,
-                start: 10,
-                text: "This is the second speaker",
-              },
-              ,
-              {
-                speaker: 3,
-                start: 90,
-                text: "This is the third speaker",
-              },
-              {
-                speaker: 4,
-                start: 90,
-                text: "This is the fourth speaker",
-              },
-              {
-                speaker: 5,
-                start: 123,
-                text: "This is the fifth speaker",
-              },
-              {
-                speaker: 6,
-                start: 300,
-                text: "This is the sixth speaker",
-              },
-            ],
           },
           {
             id: "2",
@@ -306,7 +308,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       }
     };
 
-    if (!transcriptId) return;
+    if (!transcriptId || !api) return;
+
+    api?.v1TranscriptGetWebsocketEvents(transcriptId).then((result) => {});
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
@@ -412,7 +416,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       console.debug("WebSocket connection closed");
       switch (event.code) {
         case 1000: // Normal Closure:
+          break;
         case 1005: // Closure by client FF
+          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
@@ -431,7 +437,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId]);
+  }, [transcriptId, !api]);
 
   return {
     transcriptText,

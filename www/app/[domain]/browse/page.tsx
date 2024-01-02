@@ -72,18 +72,18 @@ export default function TranscriptBrowser() {
                     <></>
                   )}
 
-                  {item.sourceLanguage ? (
+                  {item.source_language ? (
                     <div className="inline-block bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                      {item.sourceLanguage}
+                      {item.source_language}
                     </div>
                   ) : (
                     <></>
                   )}
                 </div>
                 <div className="text-xs text-gray-700">
-                  {new Date(item.createdAt).toLocaleDateString("en-US")}
+                  {new Date(item.created_at).toLocaleDateString("en-US")}
                 </div>
-                <div className="text-sm">{item.shortSummary}</div>
+                <div className="text-sm">{item.short_summary}</div>
               </div>
             </div>
           ))}

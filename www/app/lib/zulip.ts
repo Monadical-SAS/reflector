@@ -30,7 +30,7 @@ export function getZulipMessage(
   topics: GetTranscriptTopic[] | null,
   includeTopics: boolean,
 ) {
-  const date = new Date(transcript.createdAt);
+  const date = new Date(transcript.created_at);
 
   // Get the timezone offset in minutes and convert it to hours and minutes
   const timezoneOffset = -date.getTimezoneOffset();
@@ -72,7 +72,7 @@ export function getZulipMessage(
   }
 
   let summary = "```spoiler Summary\n";
-  summary += transcript.longSummary;
+  summary += transcript.long_summary;
   summary += "```\n\n";
 
   const message = headerText + summary + topicText + "-----\n";
