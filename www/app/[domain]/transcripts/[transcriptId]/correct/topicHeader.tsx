@@ -9,9 +9,7 @@ import {
   Kbd,
   Skeleton,
   SkeletonCircle,
-  chakra,
   Flex,
-  Center,
 } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 

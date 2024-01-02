@@ -1,32 +1,28 @@
 import { useEffect, useState } from "react";
-import { GetTranscriptFromJSON, PageGetTranscript } from "../../api";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
+import { Page_GetTranscript_ } from "../../api";
 
 type TranscriptList = {
-  response: PageGetTranscript | null;
+  response: Page_GetTranscript_ | null;
   loading: boolean;
   error: Error | null;
 };
 
 //always protected
 const useTranscriptList = (page: number): TranscriptList => {
-  const [response, setResponse] = useState<PageGetTranscript | null>(null);
+  const [response, setResponse] = useState<Page_GetTranscript_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     if (!api) return;
     setLoading(true);
     api
-      .v1TranscriptsList({ page })
+      .v1TranscriptsList(page)
       .then((response) => {
-        // issue with API layer, conversion for items is not happening
-        response.items = response.items.map((item) =>
-          GetTranscriptFromJSON(item),
-        );
         setResponse(response);
         setLoading(false);
       })

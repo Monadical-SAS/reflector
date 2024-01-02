@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { V1TranscriptGetParticipantsRequest } from "../../api/apis/DefaultApi";
-import { GetTranscript, Participant } from "../../api";
+import { Participant } from "../../api";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
 
 type ErrorParticipants = {
@@ -34,7 +33,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
   const [count, setCount] = useState(0);
 
   const refetch = () => {
@@ -49,11 +48,8 @@ const useParticipants = (transcriptId: string): UseParticipants => {
     if (!transcriptId || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptGetParticipantsRequest = {
-      transcriptId,
-    };
     api
-      .v1TranscriptGetParticipants(requestParameters)
+      .v1TranscriptGetParticipants(transcriptId)
       .then((result) => {
         setResponse(result);
         setLoading(false);

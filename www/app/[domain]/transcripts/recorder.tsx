@@ -12,6 +12,7 @@ import AudioInputsDropdown from "./audioInputsDropdown";
 import { Option } from "react-dropdown";
 import { waveSurferStyles } from "../../styles/recorder";
 import { useError } from "../../(errors)/errorContext";
+import FileUploadButton from "./fileUploadButton";
 
 type RecorderProps = {
   setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
@@ -19,6 +20,7 @@ type RecorderProps = {
   onRecord?: () => void;
   getAudioStream: (deviceId) => Promise<MediaStream | null>;
   audioDevices: Option[];
+  transcriptId: string;
 };
 
 export default function Recorder(props: RecorderProps) {
@@ -307,6 +309,11 @@ export default function Recorder(props: RecorderProps) {
           >
             {isRecording ? "Stop" : "Record"}
           </button>
+
+          <FileUploadButton
+            transcriptId={props.transcriptId}
+          ></FileUploadButton>
+
           {!isRecording && (
             <button
               className={`${

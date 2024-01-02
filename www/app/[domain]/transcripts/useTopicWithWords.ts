@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  V1TranscriptGetTopicsWithWordsPerSpeakerRequest,
-  V1TranscriptGetTopicsWithWordsRequest,
-} from "../../api/apis/DefaultApi";
-import {
-  GetTranscript,
-  GetTranscriptTopicWithWords,
-  GetTranscriptTopicWithWordsPerSpeaker,
-} from "../../api";
+
+import { GetTranscriptTopicWithWordsPerSpeaker } from "../../api";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
 
 type ErrorTopicWithWords = {
@@ -37,7 +30,7 @@ export type UseTopicWithWords = { refetch: () => void } & (
 );
 
 const useTopicWithWords = (
-  topicId: string | null,
+  topicId: string | undefined,
   transcriptId: string,
 ): UseTopicWithWords => {
   const [response, setResponse] =
@@ -45,7 +38,7 @@ const useTopicWithWords = (
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   const [count, setCount] = useState(0);
 
@@ -61,12 +54,9 @@ const useTopicWithWords = (
     if (!transcriptId || !topicId || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptGetTopicsWithWordsPerSpeakerRequest = {
-      transcriptId,
-      topicId,
-    };
+
     api
-      .v1TranscriptGetTopicsWithWordsPerSpeaker(requestParameters)
+      .v1TranscriptGetTopicsWithWordsPerSpeaker(transcriptId, topicId)
       .then((result) => {
         setResponse(result);
         setLoading(false);

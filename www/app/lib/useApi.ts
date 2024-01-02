@@ -1,16 +1,14 @@
-import { Configuration } from "../api/runtime";
-import { DefaultApi } from "../api/apis/DefaultApi";
-
 import { useFiefAccessTokenInfo } from "@fief/fief/nextjs/react";
 import { useContext, useEffect, useState } from "react";
 import { DomainContext, featureEnabled } from "../[domain]/domainContext";
 import { CookieContext } from "../(auth)/fiefWrapper";
+import { OpenApi, DefaultService } from "../api";
 
-export default function getApi(): DefaultApi | undefined {
+export default function useApi(): DefaultService | null {
   const accessTokenInfo = useFiefAccessTokenInfo();
   const api_url = useContext(DomainContext).api_url;
   const requireLogin = featureEnabled("requireLogin");
-  const [api, setApi] = useState<DefaultApi>();
+  const [api, setApi] = useState<OpenApi | null>(null);
   const { hasAuthCookie } = useContext(CookieContext);
 
   if (!api_url) throw new Error("no API URL");
@@ -20,14 +18,15 @@ export default function getApi(): DefaultApi | undefined {
       return;
     }
 
-    const apiConfiguration = new Configuration({
-      basePath: api_url,
-      accessToken: accessTokenInfo
-        ? "Bearer " + accessTokenInfo.access_token
-        : undefined,
+    if (!accessTokenInfo) return;
+
+    const openApi = new OpenApi({
+      BASE: api_url,
+      TOKEN: accessTokenInfo?.access_token,
     });
-    setApi(new DefaultApi(apiConfiguration));
+
+    setApi(openApi);
   }, [!accessTokenInfo, hasAuthCookie]);
 
-  return api;
+  return api?.default ?? null;
 }
