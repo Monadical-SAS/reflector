@@ -1,48 +1,32 @@
-import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptsCreateRequest,
-} from "../../api/apis/DefaultApi";
-import { GetTranscript } from "../../api";
+import { useState } from "react";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import { GetTranscript, CreateTranscript } from "../../api";
+import useApi from "../../lib/useApi";
 
-type CreateTranscript = {
-  response: GetTranscript | null;
+type UseTranscript = {
+  transcript: GetTranscript | null;
   loading: boolean;
   error: Error | null;
-  create: (params: V1TranscriptsCreateRequest["createTranscript"]) => void;
+  create: (transcriptCreationDetails: CreateTranscript) => void;
 };
 
-const useCreateTranscript = (): CreateTranscript => {
-  const [response, setResponse] = useState<GetTranscript | null>(null);
+const useCreateTranscript = (): UseTranscript => {
+  const [transcript, setTranscript] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
-  const create = (params: V1TranscriptsCreateRequest["createTranscript"]) => {
+  const create = (transcriptCreationDetails: CreateTranscript) => {
     if (loading || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptsCreateRequest = {
-      createTranscript: {
-        name: params.name || "Unnamed Transcript", // Default
-        targetLanguage: params.targetLanguage || "en", // Default
-      },
-    };
-
-    console.debug(
-      "POST - /v1/transcripts/ - Requesting new transcription creation",
-      requestParameters,
-    );
 
     api
-      .v1TranscriptsCreate(requestParameters)
-      .then((result) => {
-        setResponse(result);
+      .v1TranscriptsCreate(transcriptCreationDetails)
+      .then((transcript) => {
+        setTranscript(transcript);
         setLoading(false);
-        console.debug("New transcript created:", result);
       })
       .catch((err) => {
         setError(
@@ -54,7 +38,7 @@ const useCreateTranscript = (): CreateTranscript => {
       });
   };
 
-  return { response, loading, error, create };
+  return { transcript, loading, error, create };
 };
 
 export default useCreateTranscript;

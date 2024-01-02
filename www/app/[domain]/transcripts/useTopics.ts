@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  DefaultApi,
-  V1TranscriptGetTopicsRequest,
-} from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
 
 type TranscriptTopics = {
@@ -19,17 +15,14 @@ const useTopics = (id: string): TranscriptTopics => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     if (!id || !api) return;
 
     setLoading(true);
-    const requestParameters: V1TranscriptGetTopicsRequest = {
-      transcriptId: id,
-    };
     api
-      .v1TranscriptGetTopics(requestParameters)
+      .v1TranscriptGetTopics(id)
       .then((result) => {
         setTopics(result);
         setLoading(false);

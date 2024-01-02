@@ -24,6 +24,11 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
   - [Back-End](#back-end)
     - [Installation](#installation-1)
     - [Start the API/Backend](#start-the-apibackend)
+    - [Redis (Mac)](#redis-mac)
+    - [Redis (Windows)](#redis-windows)
+  - [Update the database schema (run on first install, and after each pull containing a migration)](#update-the-database-schema-run-on-first-install-and-after-each-pull-containing-a-migration)
+  - [Main Server](#main-server)
+    - [Crontab (optional)](#crontab-optional)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -152,7 +157,7 @@ redis-server
 ## Update the database schema (run on first install, and after each pull containing a migration)
 
 ```bash
-poetry run python alembic head
+poetry run alembic heads
 ```
 
 ## Main Server

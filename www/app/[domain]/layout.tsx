@@ -1,6 +1,6 @@
 import "../styles/globals.scss";
 import { Poppins } from "next/font/google";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import FiefWrapper from "../(auth)/fiefWrapper";
 import UserInfo from "../(auth)/userInfo";
 import { ErrorProvider } from "../(errors)/errorContext";
@@ -17,7 +17,15 @@ import { SESSION_COOKIE_NAME } from "../lib/fief";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
+export const viewport: Viewport = {
+  themeColor: "black",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.DEV_URL || "https://reflector.media"),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
@@ -54,12 +62,6 @@ export const metadata: Metadata = {
     shortcut: "/r-icon.png",
     apple: "/r-icon.png",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
-
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 

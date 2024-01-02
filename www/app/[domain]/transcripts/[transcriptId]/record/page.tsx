@@ -75,10 +75,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
-    if (webSockets.duration) {
-      mp3.getNow();
-    }
-  }, [webSockets.duration]);
+    if (transcript.response?.status === "ended") mp3.getNow();
+  }, [transcript.response]);
 
   useEffect(() => {
     lockWakeState();
@@ -112,6 +110,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           }}
           getAudioStream={getAudioStream}
           audioDevices={audioDevices}
+          transcriptId={details.params.transcriptId}
         />
       )}
 

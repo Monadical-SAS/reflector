@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
-import {
-  DefaultApi,
-  V1TranscriptRecordWebrtcRequest,
-} from "../../api/apis/DefaultApi";
 import { useError } from "../../(errors)/errorContext";
-import getApi from "../../lib/getApi";
+import useApi from "../../lib/useApi";
+import { RtcOffer } from "../../api";
 
 const useWebRTC = (
   stream: MediaStream | null,
@@ -13,7 +10,7 @@ const useWebRTC = (
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const { setError } = useError();
-  const api = getApi();
+  const api = useApi();
 
   useEffect(() => {
     if (!stream || !transcriptId) {
@@ -38,16 +35,13 @@ const useWebRTC = (
     p.on("signal", (data: any) => {
       if (!api) return;
       if ("sdp" in data) {
-        const requestParameters: V1TranscriptRecordWebrtcRequest = {
-          transcriptId: transcriptId,
-          rtcOffer: {
-            sdp: data.sdp,
-            type: data.type,
-          },
+        const rtcOffer: RtcOffer = {
+          sdp: data.sdp,
+          type: data.type,
         };
 
         api
-          .v1TranscriptRecordWebrtc(requestParameters)
+          .v1TranscriptRecordWebrtc(transcriptId, rtcOffer)
           .then((answer) => {
             try {
               p.signal(answer);
