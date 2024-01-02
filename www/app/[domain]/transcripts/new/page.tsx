@@ -9,7 +9,7 @@ import Privacy from "../../../(aboutAndPrivacy)/privacy";
 import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
-import { supportedLanguages } from "../../supportedLanguages";
+import { supportedLanguages } from "../../../supportedLanguages";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import { featureEnabled } from "../../domainContext";
 
