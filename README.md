@@ -102,6 +102,15 @@ You may need to run `yarn global add @openapitools/openapi-generator-cli` first.
 
 Start with `cd server`.
 
+### Quick-run instructions (only if you installed everything already)
+
+```bash
+redis-server # Mac
+docker compose up -d redis # Windows
+poetry run celery -A reflector.worker.app worker --loglevel=info
+poetry run python -m reflector.app
+```
+
 ### Installation
 
 Download [Python 3.11 from the official website](https://www.python.org/downloads/) and ensure you have version 3.11 by running `python --version`.
@@ -129,6 +138,7 @@ poetry run celery -A reflector.worker.app worker --loglevel=info
 
 ```bash
 yarn add redis
+poetry run celery -A reflector.worker.app worker --loglevel=info
 redis-server
 ```
 
@@ -161,8 +171,6 @@ poetry run alembic heads
 ```
 
 ## Main Server
-
-Start the server:
 
 ```bash
 poetry run python -m reflector.app
