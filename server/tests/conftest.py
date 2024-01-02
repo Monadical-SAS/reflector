@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -7,7 +8,6 @@ import pytest
 @pytest.mark.asyncio
 async def setup_database():
     from reflector.settings import settings
-    from tempfile import NamedTemporaryFile
 
     with NamedTemporaryFile() as f:
         settings.DATABASE_URL = f"sqlite:///{f.name}"
@@ -36,7 +36,13 @@ def dummy_processors():
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
         mock_translate.return_value = "Bonjour le monde"
-        yield mock_translate, mock_topic, mock_title, mock_long_summary, mock_short_summary  # noqa
+        yield (
+            mock_translate,
+            mock_topic,
+            mock_title,
+            mock_long_summary,
+            mock_short_summary,
+        )  # noqa
 
 
 @pytest.fixture
@@ -45,25 +51,47 @@ async def dummy_transcript():
     from reflector.processors.types import AudioFile, Transcript, Word
 
     class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
-        async def _transcript(self, data: AudioFile):
-            source_language = self.get_pref("audio:source_language", "en")
-            print("transcripting", source_language)
-            print("pipeline", self.pipeline)
-            print("prefs", self.pipeline.prefs)
+        _time_idx = 0
 
+        async def _transcript(self, data: AudioFile):
+            i = self._time_idx
+            self._time_idx += 2
             return Transcript(
                 text="Hello world.",
                 words=[
-                    Word(start=0.0, end=1.0, text="Hello"),
-                    Word(start=1.0, end=2.0, text=" world."),
+                    Word(start=i, end=i + 1, text="Hello", speaker=0),
+                    Word(start=i + 1, end=i + 2, text=" world.", speaker=0),
                 ],
             )
 
     with patch(
         "reflector.processors.audio_transcript_auto"
-        ".AudioTranscriptAutoProcessor.get_instance"
+        ".AudioTranscriptAutoProcessor.__new__"
     ) as mock_audio:
         mock_audio.return_value = TestAudioTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_diarization():
+    from reflector.processors.audio_diarization import AudioDiarizationProcessor
+
+    class TestAudioDiarizationProcessor(AudioDiarizationProcessor):
+        _time_idx = 0
+
+        async def _diarize(self, data):
+            i = self._time_idx
+            self._time_idx += 2
+            return [
+                {"start": i, "end": i + 1, "speaker": 0},
+                {"start": i + 1, "end": i + 2, "speaker": 1},
+            ]
+
+    with patch(
+        "reflector.processors.audio_diarization_auto"
+        ".AudioDiarizationAutoProcessor.__new__"
+    ) as mock_audio:
+        mock_audio.return_value = TestAudioDiarizationProcessor()
         yield
 
 
@@ -78,6 +106,25 @@ async def dummy_llm():
 
     with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
         mock_llm.return_value = TestLLM()
+        yield
+
+
+@pytest.fixture
+async def dummy_storage():
+    from reflector.storage.base import Storage
+
+    class DummyStorage(Storage):
+        async def _put_file(self, *args, **kwargs):
+            pass
+
+        async def _delete_file(self, *args, **kwargs):
+            pass
+
+        async def _get_file_url(self, *args, **kwargs):
+            return "http://fake_server/audio.mp3"
+
+    with patch("reflector.storage.base.Storage.get_instance") as mock_storage:
+        mock_storage.return_value = DummyStorage()
         yield
 
 
@@ -98,7 +145,96 @@ def ensure_casing():
 @pytest.fixture
 def sentence_tokenize():
     with patch(
-        "reflector.processors.TranscriptFinalLongSummaryProcessor" ".sentence_tokenize"
+        "reflector.processors.TranscriptFinalLongSummaryProcessor.sentence_tokenize"
     ) as mock_sent_tokenize:
         mock_sent_tokenize.return_value = ["LLM LONG SUMMARY"]
         yield
+
+
+@pytest.fixture(scope="session")
+def celery_enable_logging():
+    return True
+
+
+@pytest.fixture(scope="session")
+def celery_config():
+    with NamedTemporaryFile() as f:
+        yield {
+            "broker_url": "memory://",
+            "result_backend": f"db+sqlite:///{f.name}",
+        }
+
+
+@pytest.fixture(scope="session")
+def celery_includes():
+    return ["reflector.pipelines.main_live_pipeline"]
+
+
+@pytest.fixture(scope="session")
+def fake_mp3_upload():
+    with patch(
+        "reflector.db.transcripts.TranscriptController.move_mp3_to_storage"
+    ) as mock_move:
+        mock_move.return_value = True
+        yield
+
+
+@pytest.fixture
+async def fake_transcript_with_topics(tmpdir):
+    from reflector.settings import settings
+    from reflector.app import app
+    from reflector.views.transcripts import transcripts_controller
+    from reflector.db.transcripts import TranscriptTopic
+    from reflector.processors.types import Word
+    from pathlib import Path
+    from httpx import AsyncClient
+    import shutil
+
+    settings.DATA_DIR = Path(tmpdir)
+
+    # create a transcript
+    ac = AsyncClient(app=app, base_url="http://test/v1")
+    response = await ac.post("/transcripts", json={"name": "Test audio download"})
+    assert response.status_code == 200
+    tid = response.json()["id"]
+
+    transcript = await transcripts_controller.get_by_id(tid)
+    assert transcript is not None
+
+    await transcripts_controller.update(transcript, {"status": "finished"})
+
+    # manually copy a file at the expected location
+    audio_filename = transcript.audio_mp3_filename
+    path = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
+    audio_filename.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(path, audio_filename)
+
+    # create some topics
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 1",
+            summary="Topic 1 summary",
+            timestamp=0,
+            transcript="Hello world",
+            words=[
+                Word(text="Hello", start=0, end=1, speaker=0),
+                Word(text="world", start=1, end=2, speaker=0),
+            ],
+        ),
+    )
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 2",
+            summary="Topic 2 summary",
+            timestamp=2,
+            transcript="Hello world",
+            words=[
+                Word(text="Hello", start=2, end=3, speaker=0),
+                Word(text="world", start=3, end=4, speaker=0),
+            ],
+        ),
+    )
+
+    yield transcript

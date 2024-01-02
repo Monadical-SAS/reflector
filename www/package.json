@@ -8,20 +8,23 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "openapi": "openapi-generator-cli generate -i http://localhost:1250/openapi.json -g typescript-fetch -o app/api && yarn format"
+    "openapi": "openapi --input http://127.0.0.1:1250/openapi.json --name OpenApi --output app/api && yarn format"
   },
   "dependencies": {
     "@fief/fief": "^0.13.5",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@sentry/nextjs": "^7.64.0",
+    "@sentry/nextjs": "^7.77.0",
+    "@vercel/edge-config": "^0.4.1",
     "autoprefixer": "10.4.14",
-    "axios": "^1.4.0",
+    "axios": "^1.6.2",
+    "eslint-config-next": "^14.0.4",
     "fontawesome": "^5.6.3",
     "jest-worker": "^29.6.2",
-    "next": "^13.4.9",
+    "next": "^14.0.4",
     "postcss": "8.4.25",
+    "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropdown": "^1.11.0",
@@ -34,7 +37,7 @@
     "supports-color": "^9.4.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
-    "wavesurfer.js": "^7.0.3"
+    "wavesurfer.js": "^7.4.2"
   },
   "main": "index.js",
   "repository": "https://github.com/Monadical-SAS/reflector-ui.git",
@@ -43,6 +46,7 @@
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.7.0",
     "@types/react": "18.2.20",
+    "openapi-typescript-codegen": "^0.25.0",
     "prettier": "^3.0.0"
   }
 }

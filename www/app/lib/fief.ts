@@ -1,6 +1,6 @@
-"use client";
 import { Fief, FiefUserInfo } from "@fief/fief";
 import { FiefAuth, IUserInfoCache } from "@fief/fief/nextjs";
+import { getConfig } from "./edgeConfig";
 
 export const SESSION_COOKIE_NAME = "reflector-auth";
 
@@ -38,13 +38,38 @@ class MemoryUserInfoCache implements IUserInfoCache {
   }
 }
 
-export const fiefAuth = new FiefAuth({
-  client: fiefClient,
-  sessionCookieName: SESSION_COOKIE_NAME,
-  redirectURI:
-    process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ||
-    "http://localhost:3000/auth-callback",
-  logoutRedirectURI:
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-  userInfoCache: new MemoryUserInfoCache(),
-});
+const FIEF_AUTHS = {} as { [domain: string]: FiefAuth };
+
+export const getFiefAuth = async (url: URL) => {
+  if (FIEF_AUTHS[url.hostname]) {
+    return FIEF_AUTHS[url.hostname];
+  } else {
+    const config = url && (await getConfig(url.hostname));
+    if (config) {
+      FIEF_AUTHS[url.hostname] = new FiefAuth({
+        client: fiefClient,
+        sessionCookieName: SESSION_COOKIE_NAME,
+        redirectURI: config.auth_callback_url,
+        logoutRedirectURI: url.origin,
+        userInfoCache: new MemoryUserInfoCache(),
+      });
+      return FIEF_AUTHS[url.hostname];
+    } else {
+      throw new Error("Fief intanciation failed");
+    }
+  }
+};
+
+export const getFiefAuthMiddleware = async (url) => {
+  const protectedPaths = [
+    {
+      matcher: "/transcripts",
+      parameters: {},
+    },
+    {
+      matcher: "/browse",
+      parameters: {},
+    },
+  ];
+  return (await getFiefAuth(url))?.middleware(protectedPaths);
+};

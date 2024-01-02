@@ -12,8 +12,8 @@ class AudioFileWriterProcessor(Processor):
     INPUT_TYPE = av.AudioFrame
     OUTPUT_TYPE = av.AudioFrame
 
-    def __init__(self, path: Path | str):
-        super().__init__()
+    def __init__(self, path: Path | str, **kwargs):
+        super().__init__(**kwargs)
         if isinstance(path, str):
             path = Path(path)
         if path.suffix not in (".mp3", ".wav"):
@@ -21,6 +21,7 @@ class AudioFileWriterProcessor(Processor):
         self.path = path
         self.out_container = None
         self.out_stream = None
+        self.last_packet = None
 
     async def _push(self, data: av.AudioFrame):
         if not self.out_container:
@@ -40,12 +41,30 @@ class AudioFileWriterProcessor(Processor):
                 raise ValueError("Only mp3 and wav files are supported")
         for packet in self.out_stream.encode(data):
             self.out_container.mux(packet)
+            self.last_packet = packet
         await self.emit(data)
 
     async def _flush(self):
         if self.out_container:
             for packet in self.out_stream.encode():
                 self.out_container.mux(packet)
+                self.last_packet = packet
+            try:
+                if self.last_packet is not None:
+                    duration = round(
+                        float(
+                            (self.last_packet.pts * self.last_packet.duration)
+                            * self.last_packet.time_base
+                        ),
+                        2,
+                    )
+            except Exception:
+                self.logger.exception("Failed to get duration")
+                duration = 0
+
             self.out_container.close()
             self.out_container = None
             self.out_stream = None
+
+            if duration > 0:
+                await self.emit(duration, name="duration")

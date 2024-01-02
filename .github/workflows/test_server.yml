@@ -2,15 +2,20 @@ name: Unittests
 
 on:
   pull_request:
-    paths-ignore:
-      - 'www/**'
+    paths:
+      - 'server/**'
   push:
-    paths-ignore:
-      - 'www/**'
+    paths:
+      - 'server/**'
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
     steps:
     - uses: actions/checkout@v3
     - name: Install poetry
