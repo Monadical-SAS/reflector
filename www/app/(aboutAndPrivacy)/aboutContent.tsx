@@ -26,11 +26,11 @@ export default () => (
     <Subtitle>3. Are there any industry-specific use cases?</Subtitle>
     <p>Absolutely! We have two custom deployments pre-built:</p>
     <ul className="mb-2 md:mb-4">
-      <li key="1">
+      <li>
         · Reflector Media: Ideal for meetings, providing real-time notes and
         topic summaries.
       </li>
-      <li key="2">
+      <li>
         · Projector Reflector: Suited for larger events, offering live topic
         summaries, translations, and agenda tracking.
       </li>

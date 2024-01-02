@@ -5,18 +5,18 @@ export default () => (
     <Title>Privacy Policy</Title>
     <Paragraph className="italic">Last updated on September 22, 2023</Paragraph>
     <ul className="mb-2 md:mb-4">
-      <li key="2" className="mb-2">
+      <li className="mb-2">
         · Recording Consent: By using Reflector, you grant us permission to
         record your interactions for the purpose of showcasing Reflector's
         capabilities during the All In AI conference.
       </li>
-      <li key="3" className="mb-2">
+      <li className="mb-2">
         · Data Access: You will have convenient access to your recorded sessions
         and transcriptions via a unique URL, which remains active for a period
         of seven days. After this time, your recordings and transcripts will be
         deleted.
       </li>
-      <li key="5" className="mb-2">
+      <li className="mb-2">
         · Data Confidentiality: Rest assured that none of your audio data will
         be shared with third parties.
       </li>
