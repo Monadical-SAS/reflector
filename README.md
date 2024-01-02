@@ -1,12 +1,14 @@
 # Reflector
 
-Reflector is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
+Reflector Audio Management and Analysis is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
 
 The project architecture consists of three primary components:
 
 * **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 * **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-* **AI Models**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+* **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+
+It also uses https://github.com/fief-dev for authentication, and Vercel for deployment and configuration of the front-end.
 
 ## Table of Contents
 
@@ -21,7 +23,12 @@ The project architecture consists of three primary components:
     - [OpenAPI Code Generation](#openapi-code-generation)
   - [Back-End](#back-end)
     - [Installation](#installation-1)
-    - [Start the project](#start-the-project)
+    - [Start the API/Backend](#start-the-apibackend)
+    - [Redis (Mac)](#redis-mac)
+    - [Redis (Windows)](#redis-windows)
+  - [Update the database schema (run on first install, and after each pull containing a migration)](#update-the-database-schema-run-on-first-install-and-after-each-pull-containing-a-migration)
+  - [Main Server](#main-server)
+    - [Crontab (optional)](#crontab-optional)
       - [Using docker](#using-docker)
     - [Using local GPT4All](#using-local-gpt4all)
     - [Using local files](#using-local-files)
@@ -31,12 +38,18 @@ The project architecture consists of three primary components:
 
 ### Contribution Guidelines
 
-All new contributions should be made in a separate branch. Before any code is merged into `master`, it requires a code review.
+All new contributions should be made in a separate branch. Before any code is merged into `main`, it requires a code review.
 
 ### How to Install Blackhole (Mac Only)
+To record both your voice and the meeting you're taking part in, you need :
+- For an in-person meeting, make sure your microphone is in range of all participants.
+- If using several miscrophones, make sure to merge the audio feeds into one with an external tool.
+- For an online meeting, if you do not use headphones, your microphone should be able to pick up both your voice and the audio feed of the meeting.
+- If you want to use headphones, you need to merge the audio feeds with an external tool.
 
+
+This is an external tool for merging the audio feeds as explained in the previous section of this document.
 Note: We currently do not have instructions for Windows users.
-
 * Install [Blackhole](https://github.com/ExistentialAudio/BlackHole)-2ch (2 ch is enough) by 1 of 2 options listed.
 * Setup ["Aggregate device"](https://github.com/ExistentialAudio/BlackHole/wiki/Aggregate-Device) to route web audio and local microphone input.
 * Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
@@ -59,7 +72,11 @@ To install the application, run:
 
 ```bash
 yarn install
+cp .env_template .env
+cp config-template.ts config.ts
 ```
+
+Then, fill in the environment variables in `.env` and the configuration in `config.ts` as needed. If you are unsure on how to proceed, ask in Zulip.
 
 ### Run the Application
 
@@ -69,7 +86,7 @@ To run the application in development mode, run:
 yarn dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Then (after completing server setup and starting it) open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 ### OpenAPI Code Generation
 
@@ -87,35 +104,76 @@ Start with `cd server`.
 
 ### Installation
 
+Download [Python 3.11 from the official website](https://www.python.org/downloads/) and ensure you have version 3.11 by running `python --version`.
+
 Run:
 
 ```bash
-poetry install
+python --version # It should say 3.11
+pip install poetry
+poetry install --no-root
+cp .env_template .env
 ```
 
-Then create an `.env` with:
+Then fill `.env` with the omitted values (ask in Zulip). At the moment of this writing, the only value omitted is `AUTH_FIEF_CLIENT_SECRET`.
 
-```
-TRANSCRIPT_BACKEND=modal
-TRANSCRIPT_URL=https://monadical-sas--reflector-transcriber-web.modal.run
-TRANSCRIPT_MODAL_API_KEY=<omitted>
+### Start the API/Backend
 
-LLM_BACKEND=modal
-LLM_URL=https://monadical-sas--reflector-llm-web.modal.run
-LLM_MODAL_API_KEY=<omitted>
-
-AUTH_BACKEND=fief
-AUTH_FIEF_URL=https://auth.reflector.media/reflector-local
-AUTH_FIEF_CLIENT_ID=KQzRsNgoY<omitted>
-AUTH_FIEF_CLIENT_SECRET=<omitted>
-```
-
-### Start the project
-
-Use:
+Start the background worker:
 
 ```bash
-poetry run python3 -m reflector.app
+poetry run celery -A reflector.worker.app worker --loglevel=info
+```
+
+### Redis (Mac)
+
+```bash
+yarn add redis
+redis-server
+```
+
+### Redis (Windows)
+
+**Option 1**
+
+```bash
+docker compose up -d redis
+```
+
+**Option 2**
+
+Install:
+- [Git for Windows](https://gitforwindows.org/)
+- [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install)
+-  Install your preferred Linux distribution via the Microsoft Store (e.g., Ubuntu).
+
+Open your Linux distribution and update the package list:
+```bash
+sudo apt update
+sudo apt install redis-server
+redis-server
+```
+
+## Update the database schema (run on first install, and after each pull containing a migration)
+
+```bash
+poetry run alembic heads
+```
+
+## Main Server
+
+Start the server:
+
+```bash
+poetry run python -m reflector.app
+```
+
+### Crontab (optional)
+
+For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
+
+```bash
+poetry run celery -A reflector.worker.app beat
 ```
 
 #### Using docker
@@ -142,3 +200,4 @@ poetry run python -m reflector.tools.process path/to/audio.wav
 ## AI Models
 
 *(Documentation for this section is pending.)*
+

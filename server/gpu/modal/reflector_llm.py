@@ -81,7 +81,8 @@ class LLM:
             LLM_MODEL,
             torch_dtype=getattr(torch, LLM_TORCH_DTYPE),
             low_cpu_mem_usage=LLM_LOW_CPU_MEM_USAGE,
-            cache_dir=IMAGE_MODEL_DIR
+            cache_dir=IMAGE_MODEL_DIR,
+            local_files_only=True
         )
 
         # JSONFormer doesn't yet support generation configs
@@ -96,7 +97,8 @@ class LLM:
         print("Instance llm tokenizer")
         tokenizer = AutoTokenizer.from_pretrained(
             LLM_MODEL,
-            cache_dir=IMAGE_MODEL_DIR
+            cache_dir=IMAGE_MODEL_DIR,
+            local_files_only=True
         )
 
         # move model to gpu

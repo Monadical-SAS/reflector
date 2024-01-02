@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 import httpx
 from reflector.utils.retry import (
@@ -6,6 +7,31 @@ from reflector.utils.retry import (
     RetryHTTPException,
     RetryException,
 )
+
+
+@pytest.mark.asyncio
+async def test_retry_redirect(httpx_mock):
+    async def custom_response(request: httpx.Request):
+        if request.url.path == "/hello":
+            await asyncio.sleep(1)
+            return httpx.Response(
+                status_code=303, headers={"location": "https://test_url/redirected"}
+            )
+        elif request.url.path == "/redirected":
+            return httpx.Response(status_code=200, json={"hello": "world"})
+        else:
+            raise Exception("Unexpected path")
+
+    httpx_mock.add_callback(custom_response)
+    async with httpx.AsyncClient() as client:
+        # timeout should not triggered, as it will end up ok
+        # even though the first request is a 303 and took more that 0.5
+        resp = await retry(client.get)(
+            "https://test_url/hello",
+            retry_timeout=0.5,
+            follow_redirects=True,
+        )
+        assert resp.json() == {"hello": "world"}
 
 
 @pytest.mark.asyncio

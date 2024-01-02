@@ -13,6 +13,14 @@ from reflector.metrics import metrics_init
 from reflector.settings import settings
 from reflector.views.rtc_offer import router as rtc_offer_router
 from reflector.views.transcripts import router as transcripts_router
+from reflector.views.transcripts_audio import router as transcripts_audio_router
+from reflector.views.transcripts_participants import (
+    router as transcripts_participants_router,
+)
+from reflector.views.transcripts_speaker import router as transcripts_speaker_router
+from reflector.views.transcripts_upload import router as transcripts_upload_router
+from reflector.views.transcripts_webrtc import router as transcripts_webrtc_router
+from reflector.views.transcripts_websocket import router as transcripts_websocket_router
 from reflector.views.user import router as user_router
 
 try:
@@ -41,7 +49,6 @@ if settings.SENTRY_DSN:
 else:
     logger.info("Sentry disabled")
 
-
 # build app
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -61,8 +68,17 @@ metrics_init(app, instrumentator)
 # register views
 app.include_router(rtc_offer_router)
 app.include_router(transcripts_router, prefix="/v1")
+app.include_router(transcripts_audio_router, prefix="/v1")
+app.include_router(transcripts_participants_router, prefix="/v1")
+app.include_router(transcripts_speaker_router, prefix="/v1")
+app.include_router(transcripts_upload_router, prefix="/v1")
+app.include_router(transcripts_websocket_router, prefix="/v1")
+app.include_router(transcripts_webrtc_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
 add_pagination(app)
+
+# prepare celery
+from reflector.worker import app as celery_app  # noqa
 
 
 # simpler openapi id
@@ -84,7 +100,10 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
             version = None
             if route.path.startswith("/v"):
                 version = route.path.split("/")[1]
-                opid = f"{version}_{route.name}"
+                if route.operation_id is not None:
+                    opid = f"{version}_{route.operation_id}"
+                else:
+                    opid = f"{version}_{route.name}"
             else:
                 opid = route.name
 
@@ -94,10 +113,27 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
                     "Please rename the route or the view function."
                 )
             route.operation_id = opid
-            ensure_uniq_operation_ids.add(route.name)
+            ensure_uniq_operation_ids.add(opid)
 
 
 use_route_names_as_operation_ids(app)
+
+if settings.PROFILING:
+    from fastapi import Request
+    from fastapi.responses import HTMLResponse
+    from pyinstrument import Profiler
+
+    @app.middleware("http")
+    async def profile_request(request: Request, call_next):
+        profiling = request.query_params.get("profile", False)
+        if profiling:
+            profiler = Profiler(async_mode="enabled")
+            profiler.start()
+            await call_next(request)
+            profiler.stop()
+            return HTMLResponse(profiler.output_html())
+        else:
+            return await call_next(request)
 
 
 if __name__ == "__main__":

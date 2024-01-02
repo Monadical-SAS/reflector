@@ -47,6 +47,7 @@ class ModalLLM(LLM):
                 json=json_payload,
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
+                follow_redirects=True,
             )
             response.raise_for_status()
             text = response.json()["text"]

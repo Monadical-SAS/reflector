@@ -2,7 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
 
@@ -37,7 +41,7 @@ class Settings(BaseSettings):
     AUDIO_BUFFER_SIZE: int = 256 * 960
 
     # Audio Transcription
-    # backends: whisper, banana, modal
+    # backends: whisper, modal
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
@@ -46,24 +50,20 @@ class Settings(BaseSettings):
     TRANSLATE_URL: str | None = None
     TRANSLATE_TIMEOUT: int = 90
 
-    # Audio transcription banana.dev configuration
-    TRANSCRIPT_BANANA_API_KEY: str | None = None
-    TRANSCRIPT_BANANA_MODEL_KEY: str | None = None
-
     # Audio transcription modal.com configuration
     TRANSCRIPT_MODAL_API_KEY: str | None = None
 
     # Audio transcription storage
-    TRANSCRIPT_STORAGE_BACKEND: str = "aws"
+    TRANSCRIPT_STORAGE_BACKEND: str | None = None
 
     # Storage configuration for AWS
-    TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket/chunks"
+    TRANSCRIPT_STORAGE_AWS_BUCKET_NAME: str = "reflector-bucket"
     TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, banana, modal, oobabooga
+    # available backend: openai, modal, oobabooga
     LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
@@ -78,12 +78,13 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.7
     ZEPHYR_LLM_URL: str | None = None
 
-    # LLM Banana configuration
-    LLM_BANANA_API_KEY: str | None = None
-    LLM_BANANA_MODEL_KEY: str | None = None
-
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
+
+    # Diarization
+    DIARIZATION_ENABLED: bool = True
+    DIARIZATION_BACKEND: str = "modal"
+    DIARIZATION_URL: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None
@@ -108,6 +109,27 @@ class Settings(BaseSettings):
 
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750
+
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+
+    # Redis
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_CACHE_DB: int = 2
+
+    # Secret key
+    SECRET_KEY: str = "changeme-f02f86fd8b3e4fd892c6043e5a298e21"
+
+    # Current hosting/domain
+    BASE_URL: str = "http://localhost:1250"
+
+    # Profiling
+    PROFILING: bool = False
+
+    # Healthcheck
+    HEALTHCHECK_URL: str | None = None
 
 
 settings = Settings()
