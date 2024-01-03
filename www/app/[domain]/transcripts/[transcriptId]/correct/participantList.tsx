@@ -1,4 +1,4 @@
-import { faArrowTurnDown, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowTurnDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Participant } from "../../../../api";
@@ -338,7 +338,7 @@ const ParticipantList = ({
             colorScheme="blue"
             disabled={!action || anyLoading}
           >
-            {action || !anyLoading ? (
+            {!anyLoading ? (
               <>
                 <Kbd color="blue.500" pt="1" mr="1">
                   <FontAwesomeIcon

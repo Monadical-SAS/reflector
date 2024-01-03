@@ -179,7 +179,6 @@ const TopicPlayer = ({
     mp3.media?.pause();
     setIsPlaying(false);
   };
-  console.log(topicTime);
 
   const isLoaded = !!(mp3.media && topicTime);
   return (

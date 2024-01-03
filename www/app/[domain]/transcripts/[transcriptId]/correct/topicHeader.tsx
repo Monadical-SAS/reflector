@@ -61,8 +61,6 @@ export default function TopicHeader({
   };
 
   useEffect(() => {
-    console.log(currentTopic?.id);
-
     currentTopic?.id &&
       window.localStorage.setItem(transcriptId + "correct", currentTopic?.id);
   }, [currentTopic?.id]);
