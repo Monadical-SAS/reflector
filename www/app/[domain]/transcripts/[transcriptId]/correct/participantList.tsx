@@ -364,6 +364,7 @@ const ParticipantList = ({
             {participants.response.map((participant: Participant) => (
               <ListItem
                 onClick={selectParticipant(participant)}
+                cursor="pointer"
                 className={
                   (participantInput.length > 0 &&
                   selectedText &&
@@ -380,7 +381,7 @@ const ParticipantList = ({
                 alignItems="center"
                 borderBottom="1px"
                 borderColor="gray.300"
-                py="2"
+                p="2"
                 mx="2"
                 _last={{ borderBottom: "0" }}
                 key={participant.name}
