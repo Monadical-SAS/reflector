@@ -183,7 +183,7 @@ const ParticipantList = ({
       if (participant && participant.name !== participantInput) {
         setLoading(true);
         api
-          ?.v1TranscriptUpdateParticipant(participant.id, transcriptId, {
+          ?.v1TranscriptUpdateParticipant(transcriptId, participant.id, {
             name: participantInput,
           })
           .then(() => {
