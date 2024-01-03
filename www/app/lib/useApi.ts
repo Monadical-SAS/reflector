@@ -18,11 +18,9 @@ export default function useApi(): DefaultService | null {
       return;
     }
 
-    if (!accessTokenInfo) return;
-
     const openApi = new OpenApi({
       BASE: api_url,
-      TOKEN: accessTokenInfo?.access_token,
+      TOKEN: accessTokenInfo ? accessTokenInfo?.access_token : undefined,
     });
 
     setApi(openApi);
