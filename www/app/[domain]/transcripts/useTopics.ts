@@ -18,7 +18,6 @@ const useTopics = (id: string): TranscriptTopics => {
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
   const api = useApi();
-
   useEffect(() => {
     if (!id || !api) return;
 
