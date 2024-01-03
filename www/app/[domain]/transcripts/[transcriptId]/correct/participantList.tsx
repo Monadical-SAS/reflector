@@ -389,7 +389,7 @@ const ParticipantList = ({
                 <Text mt="1">{participant.name}</Text>
 
                 <Box>
-                  {selectedTextIsSpeaker(selectedText) &&
+                  {action == "Create to rename" &&
                     !selectedParticipant &&
                     !loading && (
                       <Button
