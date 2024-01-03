@@ -1,6 +1,6 @@
 import "../styles/globals.scss";
 import { Poppins } from "next/font/google";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import FiefWrapper from "../(auth)/fiefWrapper";
 import UserInfo from "../(auth)/userInfo";
 import { ErrorProvider } from "../(errors)/errorContext";
@@ -17,6 +17,13 @@ import { SESSION_COOKIE_NAME } from "../lib/fief";
 import { Providers } from "../providers";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
+
+export const viewport: Viewport = {
+  themeColor: "black",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.DEV_URL || "https://reflector.media"),
