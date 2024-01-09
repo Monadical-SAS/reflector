@@ -78,13 +78,16 @@ const TopicPlayer = ({
     setEndTopicCallback(
       () =>
         function () {
-          if (!topicTime) return;
-          if (mp3.media && mp3.media.currentTime >= topicTime.end) {
-            mp3.media.pause();
-            setIsPlaying(false);
-            mp3.media.currentTime = topicTime.start;
-            calcShowTime();
-          }
+          if (
+            !topicTime ||
+            !mp3.media ||
+            !(mp3.media.currentTime >= topicTime.end)
+          )
+            return;
+          mp3.media.pause();
+          setIsPlaying(false);
+          mp3.media.currentTime = topicTime.start;
+          calcShowTime();
         },
     );
     if (mp3.media) {

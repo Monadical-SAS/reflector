@@ -28,22 +28,39 @@ const topicWords = ({
   }, [topicWithWords.loading]);
 
   const getStartTimeFromFirstNode = (node, offset, reverse) => {
-    // if the first element is a word
-    return node.parentElement?.dataset["start"]
-      ? // but after of the word (like on the blank space right of the word)
-        node.textContent?.length == offset
-        ? // if next element is a word, we need the start of it
-          (node.parentElement?.nextElementSibling as any)?.dataset?.["start"] ||
-          // otherwise we get the start of the first word of the next paragraph
-          (
-            node.parentElement?.parentElement?.nextElementSibling
-              ?.childNodes[1] as any
-          )?.dataset?.["start"] ||
-          (reverse ? 0 : 99)
-        : // otherwise it's just somewhere in the word and we get the start of the word
-          node.parentElement?.dataset["start"]
-      : // otherwise selection start is on a name and we get the start of the next word
-        (node.parentElement?.nextElementSibling as any)?.dataset["start"];
+    // Check if the current node represents a word with a start time
+    if (node.parentElement?.dataset["start"]) {
+      // Check if the position is at the end of the word
+      if (node.textContent?.length == offset) {
+        // Try to get the start time of the next word
+        const nextWordStartTime =
+          node.parentElement.nextElementSibling?.dataset["start"];
+        if (nextWordStartTime) {
+          return nextWordStartTime;
+        }
+
+        // If no next word, get start of the first word in the next paragraph
+        const nextParaFirstWordStartTime =
+          node.parentElement.parentElement.nextElementSibling?.childNodes[1]
+            ?.dataset["start"];
+        if (nextParaFirstWordStartTime) {
+          return nextParaFirstWordStartTime;
+        }
+
+        // Return default values based on 'reverse' flag
+        // If reverse is false, means the node is the last word of the topic transcript,
+        // so reverse should be true, and we set a high value to make sure this is not picked as the start time.
+        // Reverse being true never happens given how we use this function, but for consistency in case things change,
+        // we set a low value.
+        return reverse ? 0 : 9999999999999;
+      } else {
+        // Position is within the word, return start of this word
+        return node.parentElement.dataset["start"];
+      }
+    } else {
+      // Selection is on a name, return start of the next word
+      return node.parentElement.nextElementSibling?.dataset["start"];
+    }
   };
 
   const onMouseUp = (e) => {
@@ -83,7 +100,6 @@ const topicWords = ({
             ? parseInt(focusNode.parentElement?.dataset["speaker"])
             : undefined,
         );
-        console.log("Unset Time : selected Speaker");
         return;
       }
 
@@ -107,11 +123,12 @@ const topicWords = ({
       const reverse = parseFloat(anchorStart) >= parseFloat(focusEnd);
 
       if (!reverse) {
-        setSelectedText({
-          start: parseFloat(anchorStart),
-          end: parseFloat(focusEnd),
-        });
-        console.log("setting right");
+        anchorStart &&
+          focusEnd &&
+          setSelectedText({
+            start: parseFloat(anchorStart),
+            end: parseFloat(focusEnd),
+          });
       } else {
         const anchorEnd =
           anchorNode.parentElement?.dataset["end"] ||
@@ -130,7 +147,6 @@ const topicWords = ({
           start: parseFloat(focusStart),
           end: parseFloat(anchorEnd),
         });
-        console.log("setting reverse");
       }
     }
     selection && selection.empty();
@@ -144,7 +160,6 @@ const topicWords = ({
       )?.name || `Speaker ${speakerNumber}`
     );
   };
-
   if (
     !topicWithWords.loading &&
     topicWithWords.response &&
@@ -199,7 +214,6 @@ const topicWords = ({
   }
   if (topicWithWords.loading || participants.loading)
     return <Spinner size="xl" margin="auto" />;
-  if (topicWithWords.error || participants.error) return <p>error</p>;
   return null;
 };
 
