@@ -13,7 +13,7 @@ type ErrorParticipants = {
 type LoadingParticipants = {
   response: Participant[] | null;
   loading: true;
-  error: false;
+  error: null;
 };
 
 type SuccessParticipants = {
@@ -63,6 +63,8 @@ const useParticipants = (transcriptId: string): UseParticipants => {
           setError(error);
         }
         setErrorState(error);
+        setResponse(null);
+        setLoading(false);
       });
   }, [transcriptId, !api, count]);
 
