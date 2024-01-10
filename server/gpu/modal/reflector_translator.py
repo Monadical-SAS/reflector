@@ -110,10 +110,10 @@ transcriber_image = (
     .pip_install(
         "requests",
         "torch",
-        "transformers==4.34.0",
+        "transformers==4.36.2",
         "sentencepiece",
         "protobuf",
-        "huggingface_hub==0.16.4",
+        "huggingface_hub==0.19.3",
         "gitpython",
         "torchaudio",
         "fairseq2",

@@ -56,7 +56,7 @@ llm_image = (
         "accelerate==0.21.0",
         "einops==0.6.1",
         "hf-transfer~=0.1",
-        "huggingface_hub==0.16.4"
+        "huggingface_hub==0.19.3"
     )
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
     .run_function(download_llm)

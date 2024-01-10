@@ -11,7 +11,7 @@ from modal import Image, Secret, Stub, asgi_app, method
 from pydantic import BaseModel
 
 # Whisper
-WHISPER_MODEL: str = "large-v2"
+WHISPER_MODEL: str = "large-v3"
 WHISPER_COMPUTE_TYPE: str = "float16"
 WHISPER_NUM_WORKERS: int = 1
 
@@ -49,13 +49,13 @@ transcriber_image = (
     .apt_install("wget")
     .apt_install("libsndfile-dev")
     .pip_install(
-        "faster-whisper",
+        "faster-whisper==0.10.0",
         "requests",
-        "torch",
-        "transformers==4.34.0",
+        "torch==2.0.1",
+        "transformers==4.36.2",
         "sentencepiece",
         "protobuf",
-        "huggingface_hub==0.16.4",
+        "huggingface_hub==0.19.3",
         "gitpython",
         "torchaudio",
         "fairseq2",
@@ -68,7 +68,8 @@ transcriber_image = (
         {
             "LD_LIBRARY_PATH": (
                 "/usr/local/lib/python3.10/site-packages/nvidia/cudnn/lib/:"
-                "/opt/conda/lib/python3.10/site-packages/nvidia/cublas/lib/"
+                "/opt/conda/lib/python3.10/site-packages/nvidia/cublas/lib/:"
+                "/opt/conda/lib/python3.10/site-packages/nvidia/cublas/lib64/"
             )
         }
     )
@@ -101,11 +102,11 @@ class Transcriber:
 
     @method()
     def transcribe_segment(
-        self,
-        audio_data: str,
-        audio_suffix: str,
-        source_language: str,
-        timestamp: float = 0
+            self,
+            audio_data: str,
+            audio_suffix: str,
+            source_language: str,
+            timestamp: float = 0
     ):
         with tempfile.NamedTemporaryFile("wb+", suffix=f".{audio_suffix}") as fp:
             fp.write(audio_data)
@@ -183,9 +184,9 @@ def web():
 
     @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
     def transcribe(
-        file: UploadFile,
-        source_language: Annotated[str, Body(...)] = "en",
-        timestamp: Annotated[float, Body()] = 0.0
+            file: UploadFile,
+            source_language: Annotated[str, Body(...)] = "en",
+            timestamp: Annotated[float, Body()] = 0.0
     ) -> TranscriptResponse:
         audio_data = file.file.read()
         audio_suffix = file.filename.split(".")[-1]

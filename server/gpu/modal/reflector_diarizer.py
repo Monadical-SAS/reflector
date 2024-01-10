@@ -47,7 +47,7 @@ diarizer_image = (
         "torchaudio",
         "onnxruntime-gpu",
         "torch==2.0.0",
-        "transformers==4.34.0",
+        "transformers==4.36.2",
         "sentencepiece",
         "protobuf",
         "numpy",

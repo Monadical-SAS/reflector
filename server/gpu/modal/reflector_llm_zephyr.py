@@ -12,7 +12,7 @@ import modal
 from modal import Image, Secret, Stub, asgi_app, method
 
 # LLM
-LLM_MODEL: str = "HuggingFaceH4/zephyr-7b-alpha"
+LLM_MODEL: str = "HuggingFaceH4/zephyr-7b-beta"
 LLM_LOW_CPU_MEM_USAGE: bool = True
 LLM_TORCH_DTYPE: str = "bfloat16"
 LLM_MAX_NEW_TOKENS: int = 300
@@ -48,7 +48,7 @@ llm_image = (
     Image.debian_slim(python_version="3.10.8")
     .apt_install("git")
     .pip_install(
-        "transformers==4.34.0",
+        "transformers==4.36.2",
         "torch",
         "sentencepiece",
         "protobuf",
