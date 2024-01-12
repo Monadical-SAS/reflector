@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
-import CustomRegionsPlugin from "../../lib/custom-plugins/regions";
+import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 
 import { formatTime } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
@@ -24,9 +24,7 @@ export default function Player(props: PlayerProps) {
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [waveRegions, setWaveRegions] = useState<CustomRegionsPlugin | null>(
-    null,
-  );
+  const [waveRegions, setWaveRegions] = useState<RegionsPlugin | null>(null);
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
   // Waveform setup
@@ -39,12 +37,13 @@ export default function Player(props: PlayerProps) {
       // This is not ideal, but it works for now.
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        peaks: props.waveform,
+        peaks: props.waveform.data,
         hideScrollbar: true,
         autoCenter: true,
         barWidth: 2,
         height: "auto",
-        duration: props.mediaDuration,
+        duration: Math.floor(props.mediaDuration / 1000),
+        media: props.media,
 
         ...waveSurferStyles.player,
       });
@@ -64,11 +63,9 @@ export default function Player(props: PlayerProps) {
       });
       _wavesurfer.on("timeupdate", setCurrentTime);
 
-      setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
+      setWaveRegions(_wavesurfer.registerPlugin(RegionsPlugin.create()));
 
       _wavesurfer.toggleInteraction(true);
-
-      _wavesurfer.setMediaElement(props.media);
 
       setWavesurfer(_wavesurfer);
 

@@ -15,7 +15,6 @@ export const waveSurferStyles = {
     font-size: 0.7rem;
     border-radius: 0 3px 3px 0;
 
-    position: absolute;
     width: 100px;
     max-width: fit-content;
     cursor: pointer;
