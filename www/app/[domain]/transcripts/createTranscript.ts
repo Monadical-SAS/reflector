@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useError } from "../../(errors)/errorContext";
-import { CreateTranscript } from "../../api";
+import { CreateTranscript, GetTranscript } from "../../api";
 import useApi from "../../lib/useApi";
 
 type UseCreateTranscript = {
