@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { GetTranscript } from "../../api";
 import Pagination from "./pagination";
 import Link from "next/link";
+import { FaGear } from "react-icons/fa6";
 import { FaCheck, FaTrash, FaStar, FaMicrophone } from "react-icons/fa";
 import { MdError } from "react-icons/md";
 import useTranscriptList from "../transcripts/useTranscriptList";
@@ -31,6 +32,7 @@ import {
   PopoverHeader,
   PopoverBody,
   PopoverFooter,
+  IconButton,
 } from "@chakra-ui/react";
 import { PlusSquareIcon } from "@chakra-ui/icons";
 // import { useFiefUserinfo } from "@fief/fief/nextjs/react";
@@ -39,7 +41,6 @@ export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useTranscriptList(page);
   const [deletionLoading, setDeletionLoading] = useState(false);
-  const [deletedItems, setDeletedItems] = useState<string[]>([]);
   const api = useApi();
   const { setError } = useError();
 
@@ -67,18 +68,14 @@ export default function TranscriptBrowser() {
       </Flex>
     );
 
-  const prevent = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
   const handleDeleteTranscript = (transcriptToDeleteId) => (e) => {
-    if (!deletionLoading) {
+    e.stopPropagation();
+    if (api && !deletionLoading) {
+      setDeletionLoading(true);
       api
-        ?.v1TranscriptDelete(transcriptToDeleteId)
+        .v1TranscriptDelete(transcriptToDeleteId)
         .then(() => {
           setDeletionLoading(false);
-          setDeletedItems([...deletedItems, transcriptToDeleteId]);
           refetch();
         })
         .catch((err) => {
@@ -101,7 +98,7 @@ export default function TranscriptBrowser() {
         {/* <Heading>{user?.fields?.name}'s Meetings</Heading> */}
         <Heading>Your Meetings</Heading>
         <Flex flexDir="row" align="center">
-          {loading && <Spinner></Spinner>}
+          {loading || (deletionLoading && <Spinner></Spinner>)}
 
           <Pagination
             page={page}
@@ -130,74 +127,73 @@ export default function TranscriptBrowser() {
         overflowY={"scroll"}
         mb="4"
       >
-        {response?.items
-          .filter((item) => !deletedItems.includes(item.id))
-          .map((item: GetTranscript) => (
-            <Card as={Link} key={item.id} href={`/transcripts/${item.id}`}>
-              <CardBody>
-                <Heading size="md">
-                  {item.title || item.name || "Unamed Transcript"}
+        {response?.items.map((item: GetTranscript) => (
+          <Card key={item.id}>
+            <CardBody as={Link} href={`/transcripts/${item.id}`}>
+              <Heading size="md">
+                {item.title || item.name || "Unamed Transcript"}
 
-                  {item.status == "ended" && (
-                    <Icon color="green" as={FaCheck} ml="2" />
-                  )}
-                  {item.status == "error" && (
-                    <Icon color="red" as={MdError} ml="2" />
-                  )}
-                  {item.status == "idle" && (
-                    <Icon color="yellow" as={FaStar} ml="2" />
-                  )}
-                  {item.status == "processing" && (
-                    <Icon color="grey" as={FaMicrophone} ml="2" />
-                  )}
-                  {item.status == "recording" && (
-                    <Icon color="blue" as={FaMicrophone} ml="2" />
-                  )}
-                </Heading>
-                <Stack mt="6" spacing="3">
-                  <Text fontSize="small">
-                    {new Date(item.created_at).toLocaleString("en-US")}
-                    {"\u00A0"}-{"\u00A0"}
-                    {formatTime(Math.floor(item.duration / 1000))}
-                  </Text>
-                  <Text>{item.short_summary}</Text>
-                </Stack>
-              </CardBody>
+                {item.status == "ended" && (
+                  <Icon color="green" as={FaCheck} ml="2" />
+                )}
+                {item.status == "error" && (
+                  <Icon color="red.primary" as={MdError} ml="2" />
+                )}
+                {item.status == "idle" && (
+                  <Icon color="yellow.500" as={FaStar} ml="2" />
+                )}
+                {item.status == "processing" && (
+                  <Icon color="grey.primary" as={FaGear} ml="2" />
+                )}
+                {item.status == "recording" && (
+                  <Icon color="blue.primary" as={FaMicrophone} ml="2" />
+                )}
+              </Heading>
+              <Stack mt="6" spacing="3">
+                <Text fontSize="small">
+                  {new Date(item.created_at).toLocaleString("en-US")}
+                  {"\u00A0"}-{"\u00A0"}
+                  {formatTime(Math.floor(item.duration / 1000))}
+                </Text>
+                <Text>{item.short_summary}</Text>
+              </Stack>
+            </CardBody>
 
-              {item.status !== "ended" && (
-                <>
-                  <Divider />
-                  <CardFooter onClick={prevent}>
-                    <Popover>
-                      <PopoverTrigger>
-                        <Button colorScheme="red" disabled={deletionLoading}>
-                          <Icon as={FaTrash}></Icon>
+            {item.status !== "ended" && (
+              <>
+                <Divider />
+                <CardFooter>
+                  <Popover>
+                    <PopoverTrigger>
+                      <IconButton
+                        colorScheme="red"
+                        disabled={deletionLoading}
+                        icon={<FaTrash />}
+                        aria-label="Delete"
+                      />
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <PopoverArrow />
+                      <PopoverCloseButton />
+                      <PopoverHeader>
+                        Are you sure you want to delete {item.title} ?
+                      </PopoverHeader>
+                      <PopoverBody>This action is not reversible.</PopoverBody>
+                      <PopoverFooter>
+                        <Button
+                          colorScheme="red"
+                          onClick={handleDeleteTranscript(item.id)}
+                        >
+                          Confirm
                         </Button>
-                      </PopoverTrigger>
-                      <PopoverContent>
-                        <PopoverArrow />
-                        <PopoverCloseButton />
-                        <PopoverHeader>
-                          Are you sure you want to delete {item.title} ?
-                        </PopoverHeader>
-                        <PopoverBody>
-                          This action is not reversible.
-                        </PopoverBody>
-                        <PopoverFooter>
-                          <Button
-                            colorScheme="red"
-                            onClick={handleDeleteTranscript(item.id)}
-                          >
-                            Confirm
-                          </Button>
-                        </PopoverFooter>
-                      </PopoverContent>
-                    </Popover>
-                  </CardFooter>
-                </>
-              )}
-            </Card>
-          ))}
+                      </PopoverFooter>
+                    </PopoverContent>
+                  </Popover>
+                </CardFooter>
+              </>
+            )}
+          </Card>
+        ))}
       </Grid>
     </Flex>
   );
