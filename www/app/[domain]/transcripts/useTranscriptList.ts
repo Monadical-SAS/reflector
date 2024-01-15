@@ -24,10 +24,6 @@ const useTranscriptList = (page: number): TranscriptList => {
   };
 
   useEffect(() => {
-    setResponse(null);
-  }, [page]);
-
-  useEffect(() => {
     if (!api) return;
     setLoading(true);
     api
