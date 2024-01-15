@@ -128,7 +128,7 @@ export default function TranscriptBrowser() {
         mb="4"
       >
         {response?.items.map((item: GetTranscript) => (
-          <Card key={item.id}>
+          <Card key={item.id} border="gray.light" variant="outline">
             <CardBody as={Link} href={`/transcripts/${item.id}`}>
               <Heading size="md">
                 {item.title || item.name || "Unamed Transcript"}
