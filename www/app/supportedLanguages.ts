@@ -9,6 +9,10 @@ type LanguageOption = {
 
 const supportedLanguages: LanguageOption[] = [
   {
+    value: "",
+    name: "No translation",
+  },
+  {
     value: "af",
     name: "Afrikaans",
     script: "Latn",

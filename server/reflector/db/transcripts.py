@@ -157,14 +157,17 @@ class Transcript(BaseModel):
             self.topics.append(topic)
 
     def upsert_participant(self, participant: TranscriptParticipant):
-        index = next(
-            (i for i, p in enumerate(self.participants) if p.id == participant.id),
-            None,
-        )
-        if index is not None:
-            self.participants[index] = participant
+        if self.participants:
+            index = next(
+                (i for i, p in enumerate(self.participants) if p.id == participant.id),
+                None,
+            )
+            if index is not None:
+                self.participants[index] = participant
+            else:
+                self.participants.append(participant)
         else:
-            self.participants.append(participant)
+            self.participants = [participant]
         return participant
 
     def delete_participant(self, participant_id: str):
