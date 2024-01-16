@@ -14,13 +14,7 @@ export default function TranscriptBrowser() {
   const { loading, response } = useTranscriptList(page);
 
   return (
-    <div>
-      {/*
-      <div className="flex flex-row gap-2">
-        <input className="text-sm p-2 w-80 ring-1 ring-slate-900/10 shadow-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 caret-blue-500" placeholder="Search" />
-      </div>
-      */}
-
+    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 h-full max-h-full">
       <div className="flex flex-row gap-2 items-center">
         <Title className="mb-5 mt-5 flex-1">Past transcripts</Title>
         <Pagination
@@ -48,8 +42,8 @@ export default function TranscriptBrowser() {
           &nbsp;to get started.
         </div>
       )}
-      <div /** center and max 900px wide */ className="mx-auto max-w-[900px]">
-        <div className="grid grid-cols-1 gap-2 lg:gap-4 h-full">
+      <div /** center and max 900px wide */ className="overflow-y-scroll">
+        <div className="grid grid-cols-1 gap-2 lg:gap-4 h-full mx-auto max-w-[900px]">
           {response?.items.map((item: GetTranscript) => (
             <div
               key={item.id}
@@ -59,7 +53,7 @@ export default function TranscriptBrowser() {
                 <div className="flex flex-row gap-2 items-start">
                   <Link
                     href={`/transcripts/${item.id}`}
-                    className="text-1xl font-semibold flex-1 pl-0 hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                    className="text-1xl flex-1 pl-0 hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
                   >
                     {item.title || item.name}
                   </Link>

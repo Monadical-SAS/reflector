@@ -7,11 +7,11 @@ import useApi from "../../lib/useApi";
 type ErrorTranscript = {
   error: Error;
   loading: false;
-  response: any;
+  response: null;
 };
 
 type LoadingTranscript = {
-  response: any;
+  response: null;
   loading: true;
   error: false;
 };
