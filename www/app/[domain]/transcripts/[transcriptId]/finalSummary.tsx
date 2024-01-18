@@ -1,25 +1,38 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import React from "react";
 import Markdown from "react-markdown";
-import "../../styles/markdown.css";
-import { featureEnabled } from "../domainContext";
-import { UpdateTranscript } from "../../api";
-import useApi from "../../lib/useApi";
+import "../../../styles/markdown.css";
+import { UpdateTranscript } from "../../../api";
+import useApi from "../../../lib/useApi";
+import useTranscript from "../useTranscript";
+import useTopics from "../useTopics";
+import { Box, Flex, IconButton, Modal, ModalContent } from "@chakra-ui/react";
+import { FaShare } from "react-icons/fa";
+import ShareTranscript from "../shareTranscript";
 
 type FinalSummaryProps = {
-  summary: string;
-  fullTranscript: string;
   transcriptId: string;
-  openZulipModal: () => void;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
+  const transcript = useTranscript(props.transcriptId);
+  const topics = useTopics(props.transcriptId);
+
   const finalSummaryRef = useRef<HTMLParagraphElement>(null);
-  const [isCopiedSummary, setIsCopiedSummary] = useState(false);
-  const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
+
   const [isEditMode, setIsEditMode] = useState(false);
-  const [preEditSummary, setPreEditSummary] = useState(props.summary);
-  const [editedSummary, setEditedSummary] = useState(props.summary);
+  const [preEditSummary, setPreEditSummary] = useState("");
+  const [editedSummary, setEditedSummary] = useState("");
+
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  useEffect(() => {
+    setEditedSummary(transcript.response?.long_summary || "");
+  }, [transcript.response?.long_summary]);
+
+  if (!topics.topics || !transcript.response) {
+    return null;
+  }
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
     try {
@@ -35,28 +48,6 @@ export default function FinalSummary(props: FinalSummaryProps) {
     } catch (err) {
       console.error("Failed to update long summary:", err);
     }
-  };
-
-  const onCopySummaryClick = () => {
-    let text_to_copy = finalSummaryRef.current?.innerText;
-
-    text_to_copy &&
-      navigator.clipboard.writeText(text_to_copy).then(() => {
-        setIsCopiedSummary(true);
-        // Reset the copied state after 2 seconds
-        setTimeout(() => setIsCopiedSummary(false), 2000);
-      });
-  };
-
-  const onCopyTranscriptClick = () => {
-    let text_to_copy = props.fullTranscript;
-
-    text_to_copy &&
-      navigator.clipboard.writeText(text_to_copy).then(() => {
-        setIsCopiedTranscript(true);
-        // Reset the copied state after 2 seconds
-        setTimeout(() => setIsCopiedTranscript(false), 2000);
-      });
   };
 
   const onEditClick = () => {
@@ -119,17 +110,6 @@ export default function FinalSummary(props: FinalSummaryProps) {
 
           {!isEditMode && (
             <>
-              {featureEnabled("sendToZulip") && (
-                <button
-                  className={
-                    "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
-                  }
-                  onClick={() => props.openZulipModal()}
-                >
-                  <span className="text-xs">➡️ Zulip</span>
-                </button>
-              )}
-
               <button
                 onClick={onEditClick}
                 className={
@@ -138,30 +118,26 @@ export default function FinalSummary(props: FinalSummaryProps) {
               >
                 <span className="text-xs">✏️ Summary</span>
               </button>
-              <button
-                onClick={onCopyTranscriptClick}
-                className={
-                  (isCopiedTranscript ? "bg-blue-500" : "bg-blue-400") +
-                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
-                }
-                style={{ minHeight: "30px" }}
-              >
-                <span className="text-xs">
-                  {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
-                </span>
-              </button>
-              <button
-                onClick={onCopySummaryClick}
-                className={
-                  (isCopiedSummary ? "bg-blue-500" : "bg-blue-400") +
-                  " hover:bg-blue-500 focus-visible:bg-blue-500 text-white rounded p-2 sm:text-base"
-                }
-                style={{ minHeight: "30px" }}
-              >
-                <span className="text-xs">
-                  {isCopiedSummary ? "Copied!" : "Copy Summary"}
-                </span>
-              </button>
+              <IconButton
+                icon={<FaShare />}
+                onClick={() => setShowShareModal(true)}
+                aria-label="Share"
+              />
+              {showShareModal && (
+                <Modal
+                  isOpen={showShareModal}
+                  onClose={() => setShowShareModal(false)}
+                  size="xl"
+                >
+                  <ModalContent>
+                    <ShareTranscript
+                      finalSummaryRef={finalSummaryRef}
+                      transcriptResponse={transcript.response}
+                      topicsResponse={topics.topics}
+                    />
+                  </ModalContent>
+                </Modal>
+              )}
             </>
           )}
         </div>
@@ -177,9 +153,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
           />
         </div>
       ) : (
-        <p ref={finalSummaryRef} className="markdown">
+        <div ref={finalSummaryRef} className="markdown">
           <Markdown>{editedSummary}</Markdown>
-        </p>
+        </div>
       )}
     </div>
   );

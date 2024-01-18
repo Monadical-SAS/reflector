@@ -8,7 +8,7 @@ import { TopicList } from "../topicList";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
 import "../../../styles/button.css";
-import FinalSummary from "../finalSummary";
+import FinalSummary from "./finalSummary";
 import ShareLink from "../shareLink";
 import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
@@ -17,7 +17,16 @@ import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
 import { featureEnabled } from "../../domainContext";
-import { toShareMode } from "../../../lib/shareMode";
+import {
+  Box,
+  Button,
+  Flex,
+  Grid,
+  GridItem,
+  IconButton,
+  Text,
+} from "@chakra-ui/react";
+import { FaPen } from "react-icons/fa";
 
 type TranscriptDetails = {
   params: {
@@ -34,7 +43,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const waveform = useWaveform(transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(transcriptId);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const statusToRedirect = ["idle", "recording", "processing"];
@@ -43,17 +51,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
-      router.push(newUrl, undefined);
+      router.replace(newUrl);
       // history.replaceState({}, "", newUrl);
     }
   }, [transcript.response?.status]);
-
-  const fullTranscript =
-    topics.topics
-      ?.map((topic) => topic.transcript)
-      .join("\n\n")
-      .replace(/ +/g, " ")
-      .trim() || "";
 
   if (transcript.error || topics?.error) {
     return (
@@ -69,22 +70,48 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   }
 
   return (
-    <div className="grid grid-rows-layout-topbar h-full max-h-full gap-2 lg:gap-4">
-      {featureEnabled("sendToZulip") && (
-        <ShareModal
-          transcript={transcript.response}
-          topics={topics ? topics.topics : null}
-          show={showModal}
-          setShow={(v) => setShowModal(v)}
-        />
-      )}
-      <div className="flex flex-col">
-        {transcript?.response?.title && (
-          <TranscriptTitle
-            title={transcript.response.title}
-            transcriptId={transcript.response.id}
+    <>
+      <Grid templateColumns="1fr" templateRows="minmax(0, 1fr) auto">
+        <Grid
+          templateColumns="repeat(2, 1fr)"
+          templateRows="auto minmax(0, 1fr)"
+          gap={4}
+          padding={4}
+          background="gray.100"
+          borderRadius={2}
+        >
+          <GridItem display="flex" flexDir="row" colSpan={2}>
+            <TranscriptTitle
+              title={transcript.response.title || "Unamed Transcript"}
+              transcriptId={transcriptId}
+            />
+            <IconButton icon={<FaPen />} aria-label="Edit Transcript Title" />
+          </GridItem>
+          <TopicList
+            topics={topics.topics || []}
+            useActiveTopic={useActiveTopic}
+            autoscroll={false}
+            transcriptId={transcriptId}
           />
-        )}
+          {transcript.response.long_summary ? (
+            <>
+              <FinalSummary transcriptId={transcript.response.id} />
+            </>
+          ) : (
+            <Flex justify={"center"} alignItems={"center"} h={"100%"}>
+              <div className="flex flex-col h-full justify-center content-center">
+                {transcript.response.status == "processing" ? (
+                  <Text>Loading Transcript</Text>
+                ) : (
+                  <Text>
+                    There was an error generating the final summary, please come
+                    back later
+                  </Text>
+                )}
+              </div>
+            </Flex>
+          )}
+        </Grid>
         {waveform.waveform && mp3.media ? (
           <Player
             topics={topics?.topics || []}
@@ -98,56 +125,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         ) : (
           <WaveformLoading />
         )}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 lg:grid-rows-1 gap-2 lg:gap-4 h-full">
-        <TopicList
-          topics={topics.topics || []}
-          useActiveTopic={useActiveTopic}
-          autoscroll={false}
-          transcriptId={transcriptId}
-        />
-
-        <div className="w-full h-full grid grid-rows-layout-one grid-cols-1 gap-2 lg:gap-4">
-          <section className=" bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4 h-full">
-            {transcript.response.long_summary ? (
-              <FinalSummary
-                fullTranscript={fullTranscript}
-                summary={transcript.response.long_summary}
-                transcriptId={transcript.response.id}
-                openZulipModal={() => setShowModal(true)}
-              />
-            ) : (
-              <div className="flex flex-col h-full justify-center content-center">
-                {transcript.response.status == "processing" ? (
-                  <p>Loading Transcript</p>
-                ) : (
-                  <p>
-                    There was an error generating the final summary, please come
-                    back later
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="flex items-center">
-            <div className="mr-4 hidden md:block h-auto">
-              <QRCode
-                value={`${location.origin}/transcripts/${details.params.transcriptId}`}
-                level="L"
-                size={98}
-              />
-            </div>
-            <div className="flex-grow max-w-full">
-              <ShareLink
-                transcriptId={transcript.response.id}
-                userId={transcript.response.user_id}
-                shareMode={toShareMode(transcript.response.share_mode)}
-              />
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
+      </Grid>
+    </>
   );
 }

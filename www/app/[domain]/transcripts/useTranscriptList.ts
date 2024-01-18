@@ -20,6 +20,7 @@ const useTranscriptList = (page: number): TranscriptList => {
   const [refetchCount, setRefetchCount] = useState(0);
 
   const refetch = () => {
+    setLoading(true);
     setRefetchCount(refetchCount + 1);
   };
 
