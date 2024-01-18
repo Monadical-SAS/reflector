@@ -10,9 +10,10 @@ import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { UpdateTranscript } from "../../api";
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import useApi from "../../lib/useApi";
+
 type ShareLinkProps = {
   transcriptId: string;
-  userId: string | null;
+  transcriptUserId: string | null;
   shareMode: ShareMode;
 };
 
@@ -24,16 +25,16 @@ const ShareLink = (props: ShareLinkProps) => {
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState<ShareMode>(props.shareMode);
   const [shareLoading, setShareLoading] = useState(false);
-  const userinfo = useFiefUserinfo();
   const api = useApi();
+  const userId = useFiefUserinfo()?.sub;
 
   useEffect(() => {
     setCurrentUrl(window.location.href);
   }, []);
 
   useEffect(() => {
-    setIsOwner(!!(requireLogin && userinfo?.sub === props.userId));
-  }, [userinfo, props.userId]);
+    setIsOwner(!!(requireLogin && userId === props.transcriptUserId));
+  }, [userId, props.transcriptUserId]);
 
   const handleCopyClick = () => {
     if (inputRef.current) {

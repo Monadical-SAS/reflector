@@ -1,3 +1,5 @@
+// TODO format duraction in be ?
+
 export const formatTime = (seconds: number): string => {
   let hours = Math.floor(seconds / 3600);
   let minutes = Math.floor((seconds % 3600) / 60);
