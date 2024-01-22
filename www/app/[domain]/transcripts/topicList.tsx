@@ -1,9 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChevronRight,
-  faChevronDown,
-} from "@fortawesome/free-solid-svg-icons";
 import { formatTime } from "../../lib/time";
 import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
@@ -17,10 +12,8 @@ import {
   AccordionPanel,
   Box,
   Flex,
-  Icon,
   Text,
 } from "@chakra-ui/react";
-import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 type TopicListProps = {
   topics: Topic[];
@@ -155,21 +148,26 @@ export function TopicList({
                           pb={2}
                           lineHeight={"1.3"}
                         >
-                          <span className="font-mono text-slate-500">
+                          <Text
+                            as="span"
+                            color={"gray.500"}
+                            fontFamily={"monospace"}
+                            fontSize={"sm"}
+                          >
                             [{formatTime(segment.start)}]
-                          </span>
-                          <span
-                            className="font-bold text-slate-500"
-                            style={{
-                              color: generateHighContrastColor(
-                                `Speaker ${segment.speaker}`,
-                                [96, 165, 250],
-                              ),
-                            }}
+                          </Text>
+                          <Text
+                            as="span"
+                            fontWeight={"bold"}
+                            fontSize={"sm"}
+                            color={generateHighContrastColor(
+                              `Speaker ${segment.speaker}`,
+                              [96, 165, 250],
+                            )}
                           >
                             {" "}
                             {getSpeakerName(segment.speaker)}:
-                          </span>{" "}
+                          </Text>{" "}
                           <span>{segment.text}</span>
                         </Text>
                       ))}
