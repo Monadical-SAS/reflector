@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { UpdateTranscript } from "../../api";
 import useApi from "../../lib/useApi";
+import { Heading, IconButton, Input } from "@chakra-ui/react";
+import { FaPen } from "react-icons/fa";
 
 type TranscriptTitle = {
   title: string;
@@ -19,7 +21,6 @@ const TranscriptTitle = (props: TranscriptTitle) => {
       const requestBody: UpdateTranscript = {
         title: newTitle,
       };
-      const api = useApi();
       const updatedTranscript = await api?.v1TranscriptUpdate(
         transcriptId,
         requestBody,
@@ -46,6 +47,12 @@ const TranscriptTitle = (props: TranscriptTitle) => {
     }
   };
 
+  const handleBlur = () => {
+    if (displayedTitle !== preEditTitle) {
+      updateTitle(displayedTitle, props.transcriptId);
+    }
+    setIsEditing(false);
+  };
   const handleChange = (e) => {
     setDisplayedTitle(e.target.value);
   };
@@ -63,21 +70,36 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   return (
     <>
       {isEditing ? (
-        <input
+        <Input
           type="text"
           value={displayedTitle}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="text-2xl lg:text-4xl font-extrabold text-center mb-4 w-full border-none bg-transparent overflow-hidden h-[fit-content]"
+          onBlur={handleBlur}
+          size={"lg"}
+          fontSize={"xl"}
+          fontWeight={"bold"}
+          // className="text-2xl lg:text-4xl font-extrabold text-center mb-4 w-full border-none bg-transparent overflow-hidden h-[fit-content]"
         />
       ) : (
-        <h2
-          className="text-2xl lg:text-4xl font-extrabold text-center mb-4 cursor-pointer"
-          onClick={handleTitleClick}
-        >
-          {displayedTitle}
-        </h2>
+        <>
+          <Heading
+            // className="text-2xl lg:text-4xl font-extrabold text-center mb-4 cursor-pointer"
+            onClick={handleTitleClick}
+            cursor={"pointer"}
+            size={"lg"}
+            noOfLines={1}
+          >
+            {displayedTitle}
+          </Heading>
+          <IconButton
+            icon={<FaPen />}
+            aria-label="Edit Transcript Title"
+            onClick={handleTitleClick}
+            fontSize={"15px"}
+          />
+        </>
       )}
     </>
   );

@@ -1,7 +1,34 @@
 // 1. Import `extendTheme`
 import { extendTheme } from "@chakra-ui/react";
 
-// 2. Call `extendTheme` and pass your custom values
+import { accordionAnatomy } from "@chakra-ui/anatomy";
+import { createMultiStyleConfigHelpers, defineStyle } from "@chakra-ui/react";
+
+const { definePartsStyle, defineMultiStyleConfig } =
+  createMultiStyleConfigHelpers(accordionAnatomy.keys);
+
+const custom = definePartsStyle({
+  container: {
+    border: "0",
+    borderRadius: "8px",
+    backgroundColor: "white",
+    mb: 2,
+    mr: 2,
+  },
+  panel: {
+    pl: 8,
+    pb: 0,
+  },
+  button: {
+    justifyContent: "flex-start",
+    pl: 2,
+  },
+});
+
+const accordionTheme = defineMultiStyleConfig({
+  variants: { custom },
+});
+
 const theme = extendTheme({
   colors: {
     blue: {
@@ -28,6 +55,9 @@ const theme = extendTheme({
     },
     light: "#FFFFFF",
     dark: "#0C0D0E",
+  },
+  components: {
+    Accordion: accordionTheme,
   },
 });
 
