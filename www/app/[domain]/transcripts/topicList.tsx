@@ -9,6 +9,18 @@ import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
 import { generateHighContrastColor } from "../../lib/utils";
 import useParticipants from "./useParticipants";
+import {
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
+  Box,
+  Flex,
+  Icon,
+  Text,
+} from "@chakra-ui/react";
+import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 type TopicListProps = {
   topics: Topic[];
@@ -75,11 +87,16 @@ export function TopicList({
   };
 
   return (
-    <section className="relative w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-1 sm:p-2 md:px-4 flex flex-col justify-center align-center">
+    <Flex
+      position={"relative"}
+      w={"100%"}
+      h={"100%"}
+      dir="column"
+      justify={"center"}
+      align={"center"}
+    >
       {topics.length > 0 ? (
         <>
-          <h2 className="ml-2 md:text-lg font-bold mb-2">Topics</h2>
-
           {autoscroll && (
             <ScrollToBottom
               visible={!autoscrollEnabled}
@@ -87,80 +104,95 @@ export function TopicList({
             />
           )}
 
-          <div
+          <Accordion
             id="topics-div"
-            className="overflow-y-auto h-full"
+            overflowY={"auto"}
+            h={"100%"}
             onScroll={handleScroll}
+            defaultIndex={[
+              topics.findIndex((topic) => topic.id == activeTopic?.id),
+            ]}
+            variant="custom"
+            allowToggle
           >
             {topics.map((topic, index) => (
-              <button
+              <AccordionItem
                 key={index}
-                className="rounded-none border-solid border-0 border-bluegrey border-b last:border-none last:rounded-b-lg p-2 hover:bg-blue-400/20 focus-visible:bg-blue-400/20 text-left block w-full"
-                onClick={() =>
-                  setActiveTopic(activeTopic?.id == topic.id ? null : topic)
-                }
+                background={{
+                  base: "light",
+                  _hover: "gray.100",
+                  _focus: "gray.100",
+                }}
+                padding={2}
+                onClick={() => {
+                  setActiveTopic(activeTopic?.id == topic.id ? null : topic);
+                }}
               >
-                <div className="w-full flex justify-between items-center rounded-lg md:rounded-xl xs:text-base sm:text-lg md:text-xl font-bold leading-tight">
-                  <p>
-                    <span className="font-light font-mono text-slate-500 text-base md:text-lg">
-                      [{formatTime(topic.timestamp)}]&nbsp;
-                    </span>
-                    <span>{topic.title}</span>
-                  </p>
-                  <FontAwesomeIcon
-                    className="transform transition-transform duration-200 ml-2"
-                    icon={
-                      activeTopic?.id == topic.id
-                        ? faChevronDown
-                        : faChevronRight
-                    }
-                  />
-                </div>
-                {activeTopic?.id == topic.id && (
-                  <div className="p-2">
-                    {topic.segments ? (
-                      <>
-                        {topic.segments.map((segment, index: number) => (
-                          <p
-                            key={index}
-                            className="text-left text-slate-500 text-sm md:text-base"
+                <Flex dir="row" letterSpacing={".2"}>
+                  <AccordionButton>
+                    <AccordionIcon />
+                    <Box as="span" textAlign="left" ml="1">
+                      {topic.title}{" "}
+                      <Text
+                        as="span"
+                        color="gray.500"
+                        fontSize="sm"
+                        fontWeight="bold"
+                      >
+                        &nbsp;[{formatTime(topic.timestamp)}]&nbsp;-&nbsp;[
+                        {formatTime(topic.timestamp + (topic.duration || 0))}]
+                      </Text>
+                    </Box>
+                  </AccordionButton>
+                </Flex>
+                <AccordionPanel>
+                  {topic.segments ? (
+                    <>
+                      {topic.segments.map((segment, index: number) => (
+                        <Text
+                          key={index}
+                          className="text-left text-slate-500 text-sm md:text-base"
+                          pb={2}
+                          lineHeight={"1.3"}
+                        >
+                          <span className="font-mono text-slate-500">
+                            [{formatTime(segment.start)}]
+                          </span>
+                          <span
+                            className="font-bold text-slate-500"
+                            style={{
+                              color: generateHighContrastColor(
+                                `Speaker ${segment.speaker}`,
+                                [96, 165, 250],
+                              ),
+                            }}
                           >
-                            <span className="font-mono text-slate-500">
-                              [{formatTime(segment.start)}]
-                            </span>
-                            <span
-                              className="font-bold text-slate-500"
-                              style={{
-                                color: generateHighContrastColor(
-                                  `Speaker ${segment.speaker}`,
-                                  [96, 165, 250],
-                                ),
-                              }}
-                            >
-                              {" "}
-                              {getSpeakerName(segment.speaker)}:
-                            </span>{" "}
-                            <span>{segment.text}</span>
-                          </p>
-                        ))}
-                      </>
-                    ) : (
-                      <>{topic.transcript}</>
-                    )}
-                  </div>
-                )}
-              </button>
+                            {" "}
+                            {getSpeakerName(segment.speaker)}:
+                          </span>{" "}
+                          <span>{segment.text}</span>
+                        </Text>
+                      ))}
+                    </>
+                  ) : (
+                    <>{topic.transcript}</>
+                  )}
+                </AccordionPanel>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </>
       ) : (
-        <div className="text-center text-gray-500">
-          Discussion topics will appear here after you start recording.
-          <br />
-          It may take up to 5 minutes of conversation for the first topic to
-          appear.
-        </div>
+        <Box textAlign={"center"} textColor="gray">
+          <Text>
+            Discussion topics will appear here after you start recording.
+          </Text>
+          <Text>
+            It may take up to 5 minutes of conversation for the first topic to
+            appear.
+          </Text>
+        </Box>
       )}
-    </section>
+    </Flex>
   );
 }

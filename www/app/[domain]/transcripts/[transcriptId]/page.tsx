@@ -71,21 +71,30 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
-      <Grid templateColumns="1fr" templateRows="minmax(0, 1fr) auto">
+      <Grid
+        templateColumns="1fr"
+        templateRows="minmax(0, 1fr) auto"
+        gap={4}
+        mb={4}
+      >
         <Grid
           templateColumns="repeat(2, 1fr)"
           templateRows="auto minmax(0, 1fr)"
-          gap={4}
+          gap={2}
           padding={4}
           background="gray.100"
-          borderRadius={2}
+          borderRadius={8}
         >
-          <GridItem display="flex" flexDir="row" colSpan={2}>
+          <GridItem
+            display="flex"
+            flexDir="row"
+            alignItems={"center"}
+            colSpan={2}
+          >
             <TranscriptTitle
               title={transcript.response.title || "Unamed Transcript"}
               transcriptId={transcriptId}
             />
-            <IconButton icon={<FaPen />} aria-label="Edit Transcript Title" />
           </GridItem>
           <TopicList
             topics={topics.topics || []}
