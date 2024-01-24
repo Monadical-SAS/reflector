@@ -9,24 +9,11 @@ import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
 import "../../../styles/button.css";
 import FinalSummary from "./finalSummary";
-import ShareLink from "../shareLink";
-import QRCode from "react-qr-code";
 import TranscriptTitle from "../transcriptTitle";
-import ShareModal from "./shareModal";
 import Player from "../player";
 import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
-import { featureEnabled } from "../../domainContext";
-import {
-  Box,
-  Button,
-  Flex,
-  Grid,
-  GridItem,
-  IconButton,
-  Text,
-} from "@chakra-ui/react";
-import { FaPen } from "react-icons/fa";
+import { Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
 
 type TranscriptDetails = {
   params: {
@@ -82,7 +69,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           templateRows="auto minmax(0, 1fr)"
           gap={2}
           padding={4}
-          background="gray.100"
+          paddingBottom={0}
+          background="gray.bg"
+          border={"2px solid"}
+          borderColor={"gray.bg"}
           borderRadius={8}
         >
           <GridItem
@@ -102,9 +92,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             autoscroll={false}
             transcriptId={transcriptId}
           />
-          {transcript.response.long_summary ? (
+          {transcript.response && topics.topics ? (
             <>
-              <FinalSummary transcriptId={transcript.response.id} />
+              <FinalSummary
+                transcriptResponse={transcript.response}
+                topicsResponse={topics.topics}
+              />
             </>
           ) : (
             <Flex justify={"center"} alignItems={"center"} h={"100%"}>
@@ -121,9 +114,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             </Flex>
           )}
         </Grid>
-        {waveform.waveform && mp3.media ? (
+        {waveform.waveform && mp3.media && topics.topics ? (
           <Player
-            topics={topics?.topics || []}
+            topics={topics?.topics}
             useActiveTopic={useActiveTopic}
             waveform={waveform.waveform}
             media={mp3.media}
@@ -132,7 +125,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         ) : waveform.error ? (
           <div>"error loading this recording"</div>
         ) : (
-          <WaveformLoading />
+          <Skeleton h={14} />
         )}
       </Grid>
     </>
