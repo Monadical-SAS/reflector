@@ -35,15 +35,23 @@ export function TopicList({
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
   const participants = useParticipants(transcriptId);
 
-  useEffect(() => {
-    if (autoscroll && autoscrollEnabled) scrollToBottom();
-  }, [topics.length]);
+  const scrollToTopic = () => {
+    const topicDiv = document.getElementById(
+      `accordion-button-topic-${activeTopic?.id}`,
+    );
 
-  const scrollToBottom = () => {
-    const topicsDiv = document.getElementById("topics-div");
-
-    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
+    setTimeout(() => {
+      topicDiv?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    }, 200);
   };
+
+  useEffect(() => {
+    if (activeTopic) scrollToTopic();
+  }, [activeTopic]);
 
   // scroll top is not rounded, heights are, so exact match won't work.
   // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
@@ -69,6 +77,16 @@ export function TopicList({
       topicsDiv && toggleScroll(topicsDiv);
     }
   }, [activeTopic, autoscroll]);
+
+  useEffect(() => {
+    if (autoscroll && autoscrollEnabled) scrollToBottom();
+  }, [topics.length]);
+
+  const scrollToBottom = () => {
+    const topicsDiv = document.getElementById("topics-div");
+
+    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
+  };
 
   const getSpeakerName = (speakerNumber: number) => {
     if (!participants.response) return;
@@ -102,9 +120,7 @@ export function TopicList({
             overflowY={"auto"}
             h={"100%"}
             onScroll={handleScroll}
-            defaultIndex={[
-              topics.findIndex((topic) => topic.id == activeTopic?.id),
-            ]}
+            index={topics.findIndex((topic) => topic.id == activeTopic?.id)}
             variant="custom"
             allowToggle
           >
@@ -117,12 +133,16 @@ export function TopicList({
                   _focus: "gray.100",
                 }}
                 padding={2}
-                onClick={() => {
-                  setActiveTopic(activeTopic?.id == topic.id ? null : topic);
-                }}
+                id={`topic-${topic.id}`}
               >
                 <Flex dir="row" letterSpacing={".2"}>
-                  <AccordionButton>
+                  <AccordionButton
+                    onClick={() => {
+                      setActiveTopic(
+                        activeTopic?.id == topic.id ? null : topic,
+                      );
+                    }}
+                  >
                     <AccordionIcon />
                     <Box as="span" textAlign="left" ml="1">
                       {topic.title}{" "}
