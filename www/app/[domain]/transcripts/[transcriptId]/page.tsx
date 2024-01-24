@@ -11,7 +11,6 @@ import "../../../styles/button.css";
 import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
-import WaveformLoading from "../waveformLoading";
 import { useRouter } from "next/navigation";
 import { Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
 

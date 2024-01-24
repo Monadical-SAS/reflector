@@ -74,7 +74,6 @@ export default function Player(props: PlayerProps) {
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setWaveRegions(_wavesurfer.registerPlugin(RegionsPlugin.create()));
-      // renderMarkers();
 
       _wavesurfer.toggleInteraction(true);
 
@@ -95,9 +94,13 @@ export default function Player(props: PlayerProps) {
   }, [props.media, wavesurfer]);
 
   useEffect(() => {
+    if (!waveRegions) return;
+
     topicsRef.current = props.topics;
     if (firstRender) {
       setFirstRender(false);
+      // wait for the waveform to render, if you don't markers will be stacked on top of each other
+      // I tried to listen for the waveform to be ready but it didn't work
       setTimeout(() => {
         renderMarkers();
       }, 300);
