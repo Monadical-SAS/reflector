@@ -1,9 +1,9 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { GetTranscript } from "../../api";
 import Pagination from "./pagination";
-import Link from "next/link";
+import NextLink from "next/link";
 import { FaGear } from "react-icons/fa6";
 import { FaCheck, FaTrash, FaStar, FaMicrophone } from "react-icons/fa";
 import { MdError } from "react-icons/md";
@@ -11,12 +11,14 @@ import useTranscriptList from "../transcripts/useTranscriptList";
 import { formatTime } from "../../lib/time";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
+import { FaEllipsisVertical } from "react-icons/fa6";
 import {
   Flex,
   Spinner,
   Heading,
   Button,
   Card,
+  Link,
   CardBody,
   CardFooter,
   Stack,
@@ -33,8 +35,22 @@ import {
   PopoverBody,
   PopoverFooter,
   IconButton,
+  Spacer,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  keyframes,
+  Tooltip,
 } from "@chakra-ui/react";
 import { PlusSquareIcon } from "@chakra-ui/icons";
+import { ExpandableText } from "../../lib/expandableText";
 // import { useFiefUserinfo } from "@fief/fief/nextjs/react";
 
 export default function TranscriptBrowser() {
@@ -43,10 +59,18 @@ export default function TranscriptBrowser() {
   const [deletionLoading, setDeletionLoading] = useState(false);
   const api = useApi();
   const { setError } = useError();
+  const cancelRef = React.useRef(null);
+  const [transcriptToDeleteId, setTranscriptToDeleteId] =
+    React.useState<string>();
+  const [deletedItemIds, setDeletedItemIds] = React.useState<string[]>();
 
   // Todo: fief add name field to userinfo
   // const user = useFiefUserinfo();
   // console.log(user);
+
+  useEffect(() => {
+    setDeletedItemIds([]);
+  }, [page, response]);
 
   if (loading && !response)
     return (
@@ -67,6 +91,7 @@ export default function TranscriptBrowser() {
         </Text>
       </Flex>
     );
+  const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
   const handleDeleteTranscript = (transcriptToDeleteId) => (e) => {
     e.stopPropagation();
@@ -77,6 +102,11 @@ export default function TranscriptBrowser() {
         .then(() => {
           setDeletionLoading(false);
           refetch();
+          onCloseDeletion();
+          setDeletedItemIds((deletedItemIds) => [
+            deletedItemIds,
+            ...transcriptToDeleteId,
+          ]);
         })
         .catch((err) => {
           setDeletionLoading(false);
@@ -94,23 +124,27 @@ export default function TranscriptBrowser() {
       overflowY="scroll"
       maxH="100%"
     >
-      <Flex flexDir="row" justify="space-between" align="center">
+      <Flex
+        flexDir="row"
+        justify="flex-end"
+        align="center"
+        flexWrap={"wrap-reverse"}
+      >
         {/* <Heading>{user?.fields?.name}'s Meetings</Heading> */}
         <Heading>Your Meetings</Heading>
-        <Flex flexDir="row" align="center">
-          {loading || (deletionLoading && <Spinner></Spinner>)}
+        {loading || (deletionLoading && <Spinner></Spinner>)}
 
-          <Pagination
-            page={page}
-            setPage={setPage}
-            total={response?.total || 0}
-            size={response?.size || 0}
-          />
+        <Spacer />
+        <Pagination
+          page={page}
+          setPage={setPage}
+          total={response?.total || 0}
+          size={response?.size || 0}
+        />
 
-          <Button colorScheme="blue" rightIcon={<PlusSquareIcon />}>
-            New Meeting
-          </Button>
-        </Flex>
+        <Button colorScheme="blue" rightIcon={<PlusSquareIcon />}>
+          New Meeting
+        </Button>
       </Flex>
 
       <Grid
@@ -127,73 +161,127 @@ export default function TranscriptBrowser() {
         overflowY={"scroll"}
         mb="4"
       >
-        {response?.items.map((item: GetTranscript) => (
-          <Card key={item.id} border="gray.light" variant="outline">
-            <CardBody as={Link} href={`/transcripts/${item.id}`}>
-              <Heading size="md">
-                {item.title || item.name || "Unamed Transcript"}
+        {response?.items
+          .filter((i) => !deletedItemIds?.includes(i.id))
+          .map((item: GetTranscript) => (
+            <Card key={item.id} border="gray.light" variant="outline">
+              <CardBody>
+                <Flex align={"center"} ml="-6px">
+                  {item.status == "ended" && (
+                    <Tooltip label="Processing done">
+                      <span>
+                        <Icon color="green" as={FaCheck} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "error" && (
+                    <Tooltip label="Processing error">
+                      <span>
+                        <Icon color="red.primary" as={MdError} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "idle" && (
+                    <Tooltip label="New meeting, no recording">
+                      <span>
+                        <Icon color="yellow.500" as={FaStar} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "processing" && (
+                    <Tooltip label="Processing in progress">
+                      <span>
+                        <Icon
+                          color="grey.primary"
+                          as={FaGear}
+                          mr="2"
+                          transition={"all 2s ease"}
+                          transform={"rotate(0deg)"}
+                          _hover={{ transform: "rotate(360deg)" }}
+                        />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "recording" && (
+                    <Tooltip label="Recording in progress">
+                      <span>
+                        <Icon color="blue.primary" as={FaMicrophone} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  <Heading size="md">
+                    <Link
+                      as={NextLink}
+                      href={`/transcripts/${item.id}`}
+                      noOfLines={2}
+                    >
+                      {item.title || item.name || "Unamed Transcript"}
+                    </Link>
+                  </Heading>
 
-                {item.status == "ended" && (
-                  <Icon color="green" as={FaCheck} ml="2" />
-                )}
-                {item.status == "error" && (
-                  <Icon color="red.primary" as={MdError} ml="2" />
-                )}
-                {item.status == "idle" && (
-                  <Icon color="yellow.500" as={FaStar} ml="2" />
-                )}
-                {item.status == "processing" && (
-                  <Icon color="grey.primary" as={FaGear} ml="2" />
-                )}
-                {item.status == "recording" && (
-                  <Icon color="blue.primary" as={FaMicrophone} ml="2" />
-                )}
-              </Heading>
-              <Stack mt="6" spacing="3">
-                <Text fontSize="small">
-                  {new Date(item.created_at).toLocaleString("en-US")}
-                  {"\u00A0"}-{"\u00A0"}
-                  {formatTime(Math.floor(item.duration / 1000))}
-                </Text>
-                <Text>{item.short_summary}</Text>
-              </Stack>
-            </CardBody>
-
-            {item.status !== "ended" && (
-              <>
-                <Divider />
-                <CardFooter>
-                  <Popover>
-                    <PopoverTrigger>
-                      <IconButton
-                        colorScheme="red"
+                  <Spacer />
+                  <Menu closeOnSelect={false}>
+                    <MenuButton
+                      as={IconButton}
+                      icon={<FaEllipsisVertical />}
+                      aria-label="actions"
+                    />
+                    <MenuList>
+                      <MenuItem
                         disabled={deletionLoading}
-                        icon={<FaTrash />}
-                        aria-label="Delete"
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent>
-                      <PopoverArrow />
-                      <PopoverCloseButton />
-                      <PopoverHeader>
-                        Are you sure you want to delete {item.title} ?
-                      </PopoverHeader>
-                      <PopoverBody>This action is not reversible.</PopoverBody>
-                      <PopoverFooter>
-                        <Button
-                          colorScheme="red"
-                          onClick={handleDeleteTranscript(item.id)}
-                        >
-                          Confirm
-                        </Button>
-                      </PopoverFooter>
-                    </PopoverContent>
-                  </Popover>
-                </CardFooter>
-              </>
-            )}
-          </Card>
-        ))}
+                        onClick={() => setTranscriptToDeleteId(item.id)}
+                        icon={<FaTrash color={"red.500"} />}
+                      >
+                        Delete
+                      </MenuItem>
+                      <AlertDialog
+                        isOpen={transcriptToDeleteId === item.id}
+                        leastDestructiveRef={cancelRef}
+                        onClose={onCloseDeletion}
+                      >
+                        <AlertDialogOverlay>
+                          <AlertDialogContent>
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                              Delete{" "}
+                              {item.title || item.name || "Unamed Transcript"}
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                              Are you sure? You can't undo this action
+                              afterwards.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                              <Button ref={cancelRef} onClick={onCloseDeletion}>
+                                Cancel
+                              </Button>
+                              <Button
+                                colorScheme="red"
+                                onClick={handleDeleteTranscript(item.id)}
+                                ml={3}
+                              >
+                                Delete
+                              </Button>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialogOverlay>
+                      </AlertDialog>
+                    </MenuList>
+                  </Menu>
+                </Flex>
+                <Stack mt="6" spacing="3">
+                  <Text fontSize="small">
+                    {new Date(item.created_at).toLocaleString("en-US")}
+                    {"\u00A0"}-{"\u00A0"}
+                    {formatTime(Math.floor(item.duration / 1000))}
+                  </Text>
+                  <ExpandableText noOfLines={5}>
+                    {item.short_summary}
+                  </ExpandableText>
+                </Stack>
+              </CardBody>
+            </Card>
+          ))}
       </Grid>
     </Flex>
   );
