@@ -64,8 +64,11 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         mb={4}
       >
         <Grid
-          templateColumns="repeat(2, 1fr)"
-          templateRows="auto minmax(0, 1fr)"
+          templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
+          templateRows={{
+            base: "auto minmax(0, 1fr) minmax(0, 1fr)",
+            md: "auto minmax(0, 1fr)",
+          }}
           gap={2}
           padding={4}
           paddingBottom={0}
@@ -78,7 +81,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             display="flex"
             flexDir="row"
             alignItems={"center"}
-            colSpan={2}
+            colSpan={{ base: 1, md: 2 }}
           >
             <TranscriptTitle
               title={transcript.response.title || "Unamed Transcript"}

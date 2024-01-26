@@ -105,6 +105,7 @@ export function TopicList({
       dir="column"
       justify={"center"}
       align={"center"}
+      flexShrink={0}
     >
       {topics.length > 0 ? (
         <>
