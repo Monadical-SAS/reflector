@@ -37,10 +37,11 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.6"
 faster-whisper = "^0.10.0"
 transformers = "^4.36.2"
+black = "24.1.1"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.12.1"
+black = "^24.1.1"
 stamina = "^23.1.0"
 pyinstrument = "^4.6.1"
 
