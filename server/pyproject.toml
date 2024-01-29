@@ -40,7 +40,7 @@ transformers = "^4.36.2"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
+black = "^23.12.1"
 stamina = "^23.1.0"
 pyinstrument = "^4.6.1"
 
