@@ -3,6 +3,7 @@ Reassign speakers in a transcript
 =================================
 
 """
+
 from typing import Annotated, Optional
 
 import reflector.auth as auth

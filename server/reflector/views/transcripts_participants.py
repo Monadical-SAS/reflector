@@ -3,6 +3,7 @@ Transcript participants API endpoints
 =====================================
 
 """
+
 from typing import Annotated, Optional
 
 import reflector.auth as auth
