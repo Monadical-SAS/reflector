@@ -3,6 +3,7 @@ Transcripts websocket API
 =========================
 
 """
+
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from reflector.db.transcripts import transcripts_controller
 from reflector.ws_manager import get_ws_manager

@@ -1,19 +1,19 @@
 """
 Utility file for all text processing related functionalities
 """
+
 import datetime
 from typing import List
 
 import nltk
 import torch
+from log_utils import LOGGER
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from run_utils import CONFIG
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from transformers import BartForConditionalGeneration, BartTokenizer
-
-from log_utils import LOGGER
-from run_utils import CONFIG
 
 nltk.download("punkt", quiet=True)
 
