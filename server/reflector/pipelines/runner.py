@@ -66,17 +66,17 @@ class PipelineRunner(BaseModel):
         coro = self.run()
         asyncio.run(coro)
 
-    async def push(self, data):
+    def push(self, data):
         """
         Push data to the pipeline
         """
-        await self._add_cmd("PUSH", data)
+        self._add_cmd("PUSH", data)
 
-    async def flush(self):
+    def flush(self):
         """
         Flush the pipeline
         """
-        await self._add_cmd("FLUSH", None)
+        self._add_cmd("FLUSH", None)
 
     async def on_status(self, status):
         """
@@ -90,7 +90,7 @@ class PipelineRunner(BaseModel):
         """
         pass
 
-    async def _add_cmd(self, cmd: str, data, max_retries=3, retry_time_limit=3):
+    def _add_cmd(self, cmd: str, data, max_retries: int = 3, retry_time_limit: int = 3):
         """
         Enqueue a command to be executed in the runner.
         Currently supported commands: PUSH, FLUSH
@@ -105,7 +105,7 @@ class PipelineRunner(BaseModel):
                     f"Encountered {e}, while trying to add [{cmd, data}]. "
                     f"Retrying in {retry_time_limit} seconds"
                 )
-                await asyncio.sleep(retry_time_limit)
+                asyncio.timeout(retry_time_limit)
         else:
             print(f"Failed to add [{cmd, data}] after {max_retries} attempts.")
 
