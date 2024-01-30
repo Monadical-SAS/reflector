@@ -40,7 +40,7 @@ class AudioStreamTrack(MediaStreamTrack):
         ctx = self.ctx
         frame = await self.track.recv()
         try:
-            ctx.pipeline_runner.push(frame)
+            await ctx.pipeline_runner.push(frame)
         except Exception as e:
             ctx.logger.error("Pipeline error", error=e)
         return frame
@@ -76,7 +76,7 @@ async def rtc_offer_base(
         #    - when we receive the close event, we do nothing.
         # 2. or the client close the connection
         #    and there is nothing to do because it is already closed
-        ctx.pipeline_runner.flush()
+        await ctx.pipeline_runner.flush()
         if close:
             ctx.logger.debug("Closing peer connection")
             await pc.close()

@@ -66,17 +66,17 @@ class PipelineRunner(BaseModel):
         coro = self.run()
         asyncio.run(coro)
 
-    def push(self, data):
+    async def push(self, data):
         """
         Push data to the pipeline
         """
-        self._add_cmd("PUSH", data)
+        await self._add_cmd("PUSH", data)
 
-    def flush(self):
+    async def flush(self):
         """
         Flush the pipeline
         """
-        self._add_cmd("FLUSH", None)
+        await self._add_cmd("FLUSH", None)
 
     async def on_status(self, status):
         """
@@ -90,7 +90,9 @@ class PipelineRunner(BaseModel):
         """
         pass
 
-    def _add_cmd(self, cmd: str, data, max_retries: int = 3, retry_time_limit: int = 3):
+    async def _add_cmd(
+        self, cmd: str, data, max_retries: int = 3, retry_time_limit: int = 3
+    ):
         """
         Enqueue a command to be executed in the runner.
         Currently supported commands: PUSH, FLUSH
@@ -99,13 +101,13 @@ class PipelineRunner(BaseModel):
             try:
                 self._q_cmd.put_nowait([cmd, data])
                 break  # Break if put succeeds
-            except asyncio.queues.QueueFull as e:
+            except asyncio.queues.QueueFull:
                 # Handle only the QueueFull exception, retry after a small delay
                 self._logger.debug(
-                    f"Encountered {e}, while trying to add [{cmd, data}]. "
+                    f"Encountered a full queue, while trying to add [{cmd, data}]. "
                     f"Retrying in {retry_time_limit} seconds"
                 )
-                asyncio.timeout(retry_time_limit)
+                await asyncio.sleep(retry_time_limit)
         else:
             print(f"Failed to add [{cmd, data}] after {max_retries} attempts.")
 
