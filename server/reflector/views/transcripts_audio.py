@@ -3,6 +3,7 @@ Transcripts audio related endpoints
 ===================================
 
 """
+
 from typing import Annotated, Optional
 
 import httpx
