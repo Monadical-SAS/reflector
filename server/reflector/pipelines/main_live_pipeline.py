@@ -384,8 +384,8 @@ class PipelineMainDiarization(PipelineMainBase):
         # to let the start just do one job.
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info("Diarization pipeline created")
-        self.push(audio_diarization_input)
-        self.flush()
+        await self.push(audio_diarization_input)
+        await self.flush()
 
         return pipeline
 
@@ -414,9 +414,9 @@ class PipelineMainFromTopics(PipelineMainBase):
         # push topics
         topics = self.get_transcript_topics(transcript)
         for topic in topics:
-            self.push(topic)
+            await self.push(topic)
 
-        self.flush()
+        await self.flush()
 
         return pipeline
 
@@ -653,10 +653,10 @@ async def pipeline_upload(transcript: Transcript, logger: Logger):
         try:
             logger.info("Start pushing audio into the pipeline")
             for frame in container.decode(audio=0):
-                pipeline.push(frame)
+                await pipeline.push(frame)
         finally:
             logger.info("Flushing the pipeline")
-            pipeline.flush()
+            await pipeline.flush()
 
         logger.info("Waiting for the pipeline to end")
         await pipeline.join()
