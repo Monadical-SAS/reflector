@@ -1,9 +1,10 @@
 import React from "react";
 import useApi from "../../lib/useApi";
-import { Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post } from "../../api";
+import { Button } from "@chakra-ui/react";
 
 type FileUploadButton = {
   transcriptId: string;
+  disabled?: boolean;
 };
 
 export default function FileUploadButton(props: FileUploadButton) {
@@ -32,12 +33,14 @@ export default function FileUploadButton(props: FileUploadButton) {
 
   return (
     <>
-      <button
-        className="bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg"
+      <Button
         onClick={triggerFileUpload}
+        colorScheme="blue"
+        mr={2}
+        disabled={props.disabled}
       >
         Upload File
-      </button>
+      </Button>
 
       <input
         type="file"

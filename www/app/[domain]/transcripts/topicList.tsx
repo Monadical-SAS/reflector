@@ -14,6 +14,7 @@ import {
   Flex,
   Text,
 } from "@chakra-ui/react";
+import { featureEnabled } from "../domainContext";
 
 type TopicListProps = {
   topics: Topic[];
@@ -23,6 +24,8 @@ type TopicListProps = {
   ];
   autoscroll: boolean;
   transcriptId: string;
+  status: string;
+  currentTranscriptText: any;
 };
 
 export function TopicList({
@@ -30,6 +33,8 @@ export function TopicList({
   useActiveTopic,
   autoscroll,
   transcriptId,
+  status,
+  currentTranscriptText,
 }: TopicListProps) {
   const [activeTopic, setActiveTopic] = useActiveTopic;
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
@@ -72,7 +77,7 @@ export function TopicList({
 
   useEffect(() => {
     if (autoscroll) {
-      const topicsDiv = document.getElementById("topics-div");
+      const topicsDiv = document.getElementById("scroll-div");
 
       topicsDiv && toggleScroll(topicsDiv);
     }
@@ -80,10 +85,10 @@ export function TopicList({
 
   useEffect(() => {
     if (autoscroll && autoscrollEnabled) scrollToBottom();
-  }, [topics.length]);
+  }, [topics.length, currentTranscriptText]);
 
   const scrollToBottom = () => {
-    const topicsDiv = document.getElementById("topics-div");
+    const topicsDiv = document.getElementById("scroll-div");
 
     if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
@@ -97,30 +102,41 @@ export function TopicList({
     );
   };
 
+  const requireLogin = featureEnabled("requireLogin");
+
+  useEffect(() => {
+    setActiveTopic(topics[topics.length - 1]);
+  }, [topics]);
+
+  useEffect(() => {
+    if (activeTopic && currentTranscriptText) setActiveTopic(null);
+  }, [activeTopic, currentTranscriptText]);
+
   return (
     <Flex
       position={"relative"}
       w={"100%"}
       h={"100%"}
-      dir="column"
+      flexDirection={"column"}
       justify={"center"}
       align={"center"}
       flexShrink={0}
     >
-      {topics.length > 0 ? (
-        <>
-          {autoscroll && (
-            <ScrollToBottom
-              visible={!autoscrollEnabled}
-              handleScrollBottom={scrollToBottom}
-            />
-          )}
+      {autoscroll && (
+        <ScrollToBottom
+          visible={!autoscrollEnabled}
+          handleScrollBottom={scrollToBottom}
+        />
+      )}
 
+      <Box
+        id="scroll-div"
+        overflowY={"auto"}
+        h={"100%"}
+        onScroll={handleScroll}
+      >
+        {topics.length > 0 && (
           <Accordion
-            id="topics-div"
-            overflowY={"auto"}
-            h={"100%"}
-            onScroll={handleScroll}
             index={topics.findIndex((topic) => topic.id == activeTopic?.id)}
             variant="custom"
             allowToggle
@@ -200,18 +216,47 @@ export function TopicList({
               </AccordionItem>
             ))}
           </Accordion>
-        </>
-      ) : (
-        <Box textAlign={"center"} textColor="gray">
-          <Text>
-            Discussion topics will appear here after you start recording.
-          </Text>
-          <Text>
-            It may take up to 5 minutes of conversation for the first topic to
-            appear.
-          </Text>
-        </Box>
-      )}
+        )}
+
+        {status == "recording" && (
+          <Box textAlign={"center"}>
+            <Text>{currentTranscriptText}</Text>
+          </Box>
+        )}
+        {(status == "recording" || status == "idle") &&
+          currentTranscriptText.length == 0 &&
+          topics.length == 0 && (
+            <Box textAlign={"center"} textColor="gray">
+              <Text>
+                Discussion transcript will appear here after you start
+                recording.
+              </Text>
+              <Text>
+                It may take up to 5 minutes of conversation to first appear.
+              </Text>
+            </Box>
+          )}
+        {status == "processing" && (
+          <Box textAlign={"center"} textColor="gray">
+            <Text>We are processing the recording, please wait.</Text>
+            {!requireLogin && (
+              <span>
+                Please do not navigate away from the page during this time.
+              </span>
+            )}
+          </Box>
+        )}
+        {status == "ended" && topics.length == 0 && (
+          <Box textAlign={"center"} textColor="gray">
+            <Text>Recording has ended without topics being found.</Text>
+          </Box>
+        )}
+        {status == "error" && (
+          <Box textAlign={"center"} textColor="gray">
+            <Text>There was an error processing your recording</Text>
+          </Box>
+        )}
+      </Box>
     </Flex>
   );
 }

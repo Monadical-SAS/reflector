@@ -6,8 +6,9 @@ import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
 import useApi from "../../lib/useApi";
 
 export type UseWebSockets = {
-  transcriptText: string;
+  transcriptTextLive: string;
   translateText: string;
+  accumulatedText: string;
   title: string;
   topics: Topic[];
   finalSummary: FinalSummary;
@@ -17,7 +18,7 @@ export type UseWebSockets = {
 };
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
-  const [transcriptText, setTranscriptText] = useState<string>("");
+  const [transcriptTextLive, setTranscriptTextLive] = useState<string>("");
   const [translateText, setTranslateText] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [textQueue, setTextQueue] = useState<string[]>([]);
@@ -29,11 +30,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
-  const [status, setStatus] = useState<Status>({ value: "initial" });
+  const [status, setStatus] = useState<Status>({ value: "" });
   const { setError } = useError();
 
   const { websocket_url } = useContext(DomainContext);
   const api = useApi();
+
+  const [accumulatedText, setAccumulatedText] = useState<string>("");
 
   useEffect(() => {
     if (isProcessing || textQueue.length === 0) {
@@ -42,13 +45,12 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     setIsProcessing(true);
     const text = textQueue[0];
-    setTranscriptText(text);
+    setTranscriptTextLive(text);
     setTranslateText(translationQueue[0]);
 
     const WPM_READING = 200 + textQueue.length * 10; // words per minute to read
     const wordCount = text.split(/\s+/).length;
     const delay = (wordCount / WPM_READING) * 60 * 1000;
-    console.log(`displaying "${text}" for ${delay}ms`);
     setTimeout(() => {
       setIsProcessing(false);
       setTextQueue((prevQueue) => prevQueue.slice(1));
@@ -92,7 +94,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           },
         ];
 
-        setTranscriptText("Lorem Ipsum");
+        setTranscriptTextLive("Lorem Ipsum");
         setTopics([
           {
             id: "1",
@@ -190,9 +192,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         setFinalSummary({ summary: "This is the final summary" });
       }
       if (e.key === "z" && process.env.NEXT_PUBLIC_ENV === "development") {
-        setTranscriptText(
+        setTranscriptTextLive(
           "This text is in English, and it is a pretty long sentence to test the limits",
         );
+        setAccumulatedText(
+          "This text is in English, and it is a pretty long sentence to test the limits. This text is in English, and it is a pretty long sentence to test the limits",
+        );
+        setStatus({ value: "recording" });
         setTopics([
           {
             id: "1",
@@ -333,6 +339,8 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             console.debug("TRANSCRIPT event:", newText);
             setTextQueue((prevQueue) => [...prevQueue, newText]);
             setTranslationQueue((prevQueue) => [...prevQueue, newTranslation]);
+
+            setAccumulatedText((prevText) => prevText + " " + newText);
             break;
 
           case "TOPIC":
@@ -345,6 +353,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 prevTopics[index] = topic;
                 return prevTopics;
               }
+              setAccumulatedText((prevText) =>
+                prevText.slice(topic.transcript.length),
+              );
+
               return [...prevTopics, topic];
             });
             console.debug("TOPIC event:", message.data);
@@ -419,18 +431,18 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           break;
         case 1005: // Closure by client FF
           break;
+        case 1001: // Navigate away
+          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
-            "Disconnected",
+            "Disconnected from the server. Please refresh the page.",
           );
           console.log(
             "Socket is closed. Reconnect will be attempted in 1 second.",
             event.reason,
           );
-          setTimeout(function () {
-            ws = new WebSocket(url);
-          }, 1000);
+        // todo handle reconnect with socket.io
       }
     };
 
@@ -440,8 +452,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   }, [transcriptId, !api]);
 
   return {
-    transcriptText,
+    transcriptTextLive,
     translateText,
+    accumulatedText,
     topics,
     finalSummary,
     title,
