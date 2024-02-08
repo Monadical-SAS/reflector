@@ -3,39 +3,50 @@ import React, { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../../lib/custom-plugins/record";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
-
 import { formatTime } from "../../lib/time";
-import AudioInputsDropdown from "./audioInputsDropdown";
-import { Option } from "react-dropdown";
 import { waveSurferStyles } from "../../styles/recorder";
 import { useError } from "../../(errors)/errorContext";
 import FileUploadButton from "./fileUploadButton";
+import useWebRTC from "./useWebRTC";
+import useAudioDevice from "./useAudioDevice";
+import {
+  Box,
+  Flex,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItemOption,
+  MenuList,
+  MenuOptionGroup,
+} from "@chakra-ui/react";
+import StopRecordIcon from "../../styles/icons/stopRecord";
+import PlayIcon from "../../styles/icons/play";
+import { LuScreenShare } from "react-icons/lu";
+import { FaMicrophone } from "react-icons/fa";
 
 type RecorderProps = {
-  setStream: React.Dispatch<React.SetStateAction<MediaStream | null>>;
-  onStop: () => void;
-  onRecord?: () => void;
-  getAudioStream: (deviceId) => Promise<MediaStream | null>;
-  audioDevices: Option[];
   transcriptId: string;
+  status: string;
 };
 
 export default function Recorder(props: RecorderProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
-  const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   const [record, setRecord] = useState<RecordPlugin | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [hasRecorded, setHasRecorded] = useState<boolean>(false);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [timeInterval, setTimeInterval] = useState<number | null>(null);
+
   const [duration, setDuration] = useState<number>(0);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [recordStarted, setRecordStarted] = useState(false);
-  const [showDevices, setShowDevices] = useState(false);
   const { setError } = useError();
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  // Time tracking, iirc it was drifting without this. to be tested again.
+  const [startTime, setStartTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [timeInterval, setTimeInterval] = useState<number | null>(null);
+
+  const webRTC = useWebRTC(stream, props.transcriptId);
+
+  const { audioDevices, getAudioStream } = useAudioDevice();
 
   // Function used to setup keyboard shortcuts for the streamdeck
   const setupProjectorKeys = (): (() => void) => {
@@ -106,22 +117,13 @@ export default function Recorder(props: RecorderProps) {
         waveSurferStyles.playerStyle.backgroundColor;
       wsWrapper.style.borderRadius = waveSurferStyles.playerStyle.borderRadius;
 
-      _wavesurfer.on("play", () => {
-        setIsPlaying(true);
-      });
-      _wavesurfer.on("pause", () => {
-        setIsPlaying(false);
-      });
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
 
-      setWavesurfer(_wavesurfer);
-
       return () => {
         _wavesurfer.destroy();
         setIsRecording(false);
-        setIsPlaying(false);
         setCurrentTime(0);
       };
     }
@@ -130,7 +132,7 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     if (isRecording) {
       const interval = window.setInterval(() => {
-        setCurrentTime((prev) => prev + 1);
+        setCurrentTime(Date.now() - startTime);
       }, 1000);
       setTimeInterval(interval);
       return () => clearInterval(interval);
@@ -147,20 +149,20 @@ export default function Recorder(props: RecorderProps) {
     if (!record) return console.log("no record");
 
     if (record.isRecording()) {
-      if (props.onStop) props.onStop();
+      setStream(null);
+      webRTC?.send(JSON.stringify({ cmd: "STOP" }));
       record.stopRecording();
       if (screenMediaStream) {
         screenMediaStream.getTracks().forEach((t) => t.stop());
       }
       setIsRecording(false);
-      setHasRecorded(true);
       setScreenMediaStream(null);
       setDestinationStream(null);
     } else {
-      if (props.onRecord) props.onRecord();
-      const stream = await getCurrentStream();
+      const stream = await getMicrophoneStream();
+      setStartTime(Date.now());
 
-      if (props.setStream) props.setStream(stream);
+      setStream(stream);
       if (stream) {
         await record.startRecording(stream);
         setIsRecording(true);
@@ -198,7 +200,7 @@ export default function Recorder(props: RecorderProps) {
     if (destinationStream !== null) return console.log("already recording");
 
     // connect mic audio (microphone)
-    const micStream = await getCurrentStream();
+    const micStream = await getMicrophoneStream();
     if (!micStream) {
       console.log("no microphone audio");
       return;
@@ -227,7 +229,7 @@ export default function Recorder(props: RecorderProps) {
   useEffect(() => {
     if (!record) return;
     if (!destinationStream) return;
-    if (props.setStream) props.setStream(destinationStream);
+    setStream(destinationStream);
     if (destinationStream) {
       record.startRecording(destinationStream);
       setIsRecording(true);
@@ -238,115 +240,87 @@ export default function Recorder(props: RecorderProps) {
     startTabRecording();
   }, [record, screenMediaStream]);
 
-  const handlePlayClick = () => {
-    wavesurfer?.playPause();
-  };
-
   const timeLabel = () => {
     if (isRecording) return formatTime(currentTime);
     if (duration) return `${formatTime(currentTime)}/${formatTime(duration)}`;
     return "";
   };
 
-  const getCurrentStream = async () => {
-    setRecordStarted(true);
-    return deviceId && props.getAudioStream
-      ? await props.getAudioStream(deviceId)
-      : null;
+  const getMicrophoneStream = async () => {
+    return deviceId && getAudioStream ? await getAudioStream(deviceId) : null;
   };
 
   useEffect(() => {
-    if (props.audioDevices && props.audioDevices.length > 0) {
-      setDeviceId(props.audioDevices[0].value);
+    if (audioDevices && audioDevices.length > 0) {
+      setDeviceId(audioDevices[0].value);
     }
-  }, [props.audioDevices]);
+  }, [audioDevices]);
 
   return (
-    <div className="flex items-center w-full relative">
-      <div className="flex-grow items-end relative">
-        <div
-          ref={waveformRef}
-          className="flex-grow rounded-lg md:rounded-xl h-20"
-        ></div>
-        <div className="absolute right-2 bottom-0">
-          {isRecording && (
-            <div className="inline-block bg-red-500 rounded-full w-2 h-2 my-auto mr-1 animate-ping"></div>
-          )}
+    <Flex className="flex items-center w-full relative">
+      <IconButton
+        aria-label={isRecording ? "Stop" : "Record"}
+        icon={isRecording ? <StopRecordIcon /> : <PlayIcon />}
+        variant={"ghost"}
+        colorScheme={"blue"}
+        mr={2}
+        onClick={handleRecClick}
+      />
+      <FileUploadButton
+        transcriptId={props.transcriptId}
+        disabled={isRecording}
+      ></FileUploadButton>
+      {!isRecording && (window as any).chrome && (
+        <IconButton
+          aria-label={"Record Tab"}
+          icon={<LuScreenShare />}
+          variant={"ghost"}
+          colorScheme={"blue"}
+          disabled={isRecording}
+          mr={2}
+          onClick={handleRecordTabClick}
+        />
+      )}
+      {audioDevices && audioDevices?.length > 0 && deviceId && !isRecording && (
+        <Menu>
+          <MenuButton
+            as={IconButton}
+            aria-label={"Switch microphone"}
+            icon={<FaMicrophone />}
+            variant={"ghost"}
+            disabled={isRecording}
+            colorScheme={"blue"}
+            mr={2}
+          />
+          <MenuList>
+            <MenuOptionGroup defaultValue={audioDevices[0].value} type="radio">
+              {audioDevices.map((device) => (
+                <MenuItemOption
+                  key={device.value}
+                  value={device.value}
+                  onClick={() => setDeviceId(device.value)}
+                >
+                  {device.label}
+                </MenuItemOption>
+              ))}
+            </MenuOptionGroup>
+          </MenuList>
+        </Menu>
+      )}
+      <Box position="relative" flex={1}>
+        <Box ref={waveformRef} height={14}></Box>
+        <Box
+          zIndex={50}
+          backgroundColor="rgba(255, 255, 255, 0.5)"
+          fontSize={"sm"}
+          shadow={"0px 0px 4px 0px white"}
+          position={"absolute"}
+          right={0}
+          bottom={0}
+        >
           {timeLabel()}
-        </div>
-      </div>
-
-      {hasRecorded && (
-        <>
-          <button
-            className={`${
-              isPlaying
-                ? "bg-orange-400 hover:bg-orange-500 focus-visible:bg-orange-500"
-                : "bg-green-400 hover:bg-green-500 focus-visible:bg-green-500"
-            } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
-            id="play-btn"
-            onClick={handlePlayClick}
-          >
-            {isPlaying ? "Pause" : "Play"}
-          </button>
-        </>
-      )}
-      {!hasRecorded && (
-        <>
-          <button
-            className={`${
-              isRecording
-                ? "bg-red-400 hover:bg-red-500 focus-visible:bg-red-500"
-                : "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500"
-            } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
-            onClick={handleRecClick}
-            disabled={isPlaying}
-          >
-            {isRecording ? "Stop" : "Record"}
-          </button>
-
-          <FileUploadButton
-            transcriptId={props.transcriptId}
-          ></FileUploadButton>
-
-          {!isRecording && (
-            <button
-              className={`${
-                isRecording
-                  ? "bg-red-400 hover:bg-red-500 focus-visible:bg-red-500"
-                  : "bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500"
-              } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
-              onClick={handleRecordTabClick}
-            >
-              Record
-              <br />a tab
-            </button>
-          )}
-          {props.audioDevices && props.audioDevices?.length > 0 && deviceId && (
-            <>
-              <button
-                className="text-center text-blue-400 hover:text-blue-700 ml-2 md:ml:4 p-2 rounded-lg focus-visible:outline outline-blue-400"
-                onClick={() => setShowDevices((prev) => !prev)}
-              >
-                <FontAwesomeIcon icon={faMicrophone} className="h-5 w-auto" />
-              </button>
-              <div
-                className={`absolute z-20 bottom-[-1rem] right-0 bg-white rounded ${
-                  showDevices ? "visible" : "invisible"
-                }`}
-              >
-                <AudioInputsDropdown
-                  setDeviceId={setDeviceId}
-                  audioDevices={props.audioDevices}
-                  disabled={recordStarted}
-                  hide={() => setShowDevices(false)}
-                  deviceId={deviceId}
-                />
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
+        </Box>
+      </Box>
+    </Flex>
   );
 }
