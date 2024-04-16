@@ -70,6 +70,7 @@ async def test_transcript_rtc_and_websocket(
     dummy_storage,
     fake_mp3_upload,
     ensure_casing,
+    nltk,
     appserver,
     sentence_tokenize,
 ):
@@ -227,6 +228,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     dummy_storage,
     fake_mp3_upload,
     ensure_casing,
+    nltk,
     appserver,
     sentence_tokenize,
 ):
