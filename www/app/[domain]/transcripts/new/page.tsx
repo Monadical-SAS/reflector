@@ -51,7 +51,7 @@ const TranscriptCreate = () => {
     useAudioDevice();
 
   return (
-    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 max-h-full overflow-y-scroll">
+    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 max-h-full height:100vh">
       <div className="lg:grid lg:grid-cols-2 lg:grid-rows-1 lg:gap-4 lg:h-full h-auto flex flex-col">
         <section className="flex flex-col w-full lg:h-full items-center justify-evenly p-4 md:px-6 md:py-8">
           <div className="flex flex-col max-w-xl items-center justify-center">
