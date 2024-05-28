@@ -1,88 +1,288 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { GetTranscript } from "../../api";
-import { Title } from "../../lib/textComponents";
 import Pagination from "./pagination";
-import Link from "next/link";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear } from "@fortawesome/free-solid-svg-icons";
+import NextLink from "next/link";
+import { FaGear } from "react-icons/fa6";
+import { FaCheck, FaTrash, FaStar, FaMicrophone } from "react-icons/fa";
+import { MdError } from "react-icons/md";
 import useTranscriptList from "../transcripts/useTranscriptList";
+import { formatTime } from "../../lib/time";
+import useApi from "../../lib/useApi";
+import { useError } from "../../(errors)/errorContext";
+import { FaEllipsisVertical } from "react-icons/fa6";
+import {
+  Flex,
+  Spinner,
+  Heading,
+  Button,
+  Card,
+  Link,
+  CardBody,
+  CardFooter,
+  Stack,
+  Text,
+  Icon,
+  Grid,
+  Divider,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody,
+  PopoverFooter,
+  IconButton,
+  Spacer,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  keyframes,
+  Tooltip,
+} from "@chakra-ui/react";
+import { PlusSquareIcon } from "@chakra-ui/icons";
+import { ExpandableText } from "../../lib/expandableText";
+// import { useFiefUserinfo } from "@fief/fief/nextjs/react";
 
 export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
-  const { loading, response } = useTranscriptList(page);
+  const { loading, response, refetch } = useTranscriptList(page);
+  const [deletionLoading, setDeletionLoading] = useState(false);
+  const api = useApi();
+  const { setError } = useError();
+  const cancelRef = React.useRef(null);
+  const [transcriptToDeleteId, setTranscriptToDeleteId] =
+    React.useState<string>();
+  const [deletedItemIds, setDeletedItemIds] = React.useState<string[]>();
+
+  // Todo: fief add name field to userinfo
+  // const user = useFiefUserinfo();
+  // console.log(user);
+
+  useEffect(() => {
+    setDeletedItemIds([]);
+  }, [page, response]);
+
+  if (loading && !response)
+    return (
+      <Flex flexDir="column" align="center" justify="center" h="100%">
+        <Spinner size="xl" />
+      </Flex>
+    );
+
+  if (!loading && !response)
+    return (
+      <Flex flexDir="column" align="center" justify="center" h="100%">
+        <Text>
+          No transcripts found, but you can&nbsp;
+          <Link href="/transcripts/new" className="underline">
+            record a meeting
+          </Link>
+          &nbsp;to get started.
+        </Text>
+      </Flex>
+    );
+  const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
+
+  const handleDeleteTranscript = (transcriptToDeleteId) => (e) => {
+    e.stopPropagation();
+    if (api && !deletionLoading) {
+      setDeletionLoading(true);
+      api
+        .v1TranscriptDelete(transcriptToDeleteId)
+        .then(() => {
+          setDeletionLoading(false);
+          refetch();
+          onCloseDeletion();
+          setDeletedItemIds((deletedItemIds) => [
+            deletedItemIds,
+            ...transcriptToDeleteId,
+          ]);
+        })
+        .catch((err) => {
+          setDeletionLoading(false);
+          setError(err, "There was an error deleting the transcript");
+        });
+    }
+  };
 
   return (
-    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 h-full max-h-full">
-      <div className="flex flex-row gap-2 items-center">
-        <Title className="mb-5 mt-5 flex-1">Past transcripts</Title>
+    <Flex
+      maxW="container.xl"
+      flexDir="column"
+      margin="auto"
+      gap={2}
+      overflowY="scroll"
+      maxH="100%"
+    >
+      <Flex
+        flexDir="row"
+        justify="flex-end"
+        align="center"
+        flexWrap={"wrap-reverse"}
+      >
+        {/* <Heading>{user?.fields?.name}'s Meetings</Heading> */}
+        <Heading>Your Meetings</Heading>
+        {loading || (deletionLoading && <Spinner></Spinner>)}
+
+        <Spacer />
         <Pagination
           page={page}
           setPage={setPage}
           total={response?.total || 0}
           size={response?.size || 0}
         />
-      </div>
 
-      {loading && (
-        <div className="full-screen flex flex-col items-center justify-center">
-          <FontAwesomeIcon
-            icon={faGear}
-            className="animate-spin-slow h-14 w-14 md:h-20 md:w-20"
-          />
-        </div>
-      )}
-      {!loading && !response && (
-        <div className="text-gray-500">
-          No transcripts found, but you can&nbsp;
-          <Link href="/transcripts/new" className="underline">
-            record a meeting
-          </Link>
-          &nbsp;to get started.
-        </div>
-      )}
-      <div /** center and max 900px wide */ className="overflow-y-scroll">
-        <div className="grid grid-cols-1 gap-2 lg:gap-4 h-full mx-auto max-w-[900px]">
-          {response?.items.map((item: GetTranscript) => (
-            <div
-              key={item.id}
-              className="flex flex-col bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4"
-            >
-              <div className="flex flex-col">
-                <div className="flex flex-row gap-2 items-start">
-                  <Link
-                    href={`/transcripts/${item.id}`}
-                    className="text-1xl flex-1 pl-0 hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-                  >
-                    {item.title || item.name}
-                  </Link>
+        <Button colorScheme="blue" rightIcon={<PlusSquareIcon />}>
+          New Meeting
+        </Button>
+      </Flex>
 
-                  {item.locked ? (
-                    <div className="inline-block bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                      Locked
-                    </div>
-                  ) : (
-                    <></>
+      <Grid
+        templateColumns={{
+          base: "repeat(1, 1fr)",
+          md: "repeat(2, 1fr)",
+          lg: "repeat(3, 1fr)",
+        }}
+        gap={{
+          base: 2,
+          lg: 4,
+        }}
+        maxH="100%"
+        overflowY={"scroll"}
+        mb="4"
+      >
+        {response?.items
+          .filter((i) => !deletedItemIds?.includes(i.id))
+          .map((item: GetTranscript) => (
+            <Card key={item.id} border="gray.light" variant="outline">
+              <CardBody>
+                <Flex align={"center"} ml="-6px">
+                  {item.status == "ended" && (
+                    <Tooltip label="Processing done">
+                      <span>
+                        <Icon color="green" as={FaCheck} mr="2" />
+                      </span>
+                    </Tooltip>
                   )}
-
-                  {item.source_language ? (
-                    <div className="inline-block bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                      {item.source_language}
-                    </div>
-                  ) : (
-                    <></>
+                  {item.status == "error" && (
+                    <Tooltip label="Processing error">
+                      <span>
+                        <Icon color="red.primary" as={MdError} mr="2" />
+                      </span>
+                    </Tooltip>
                   )}
-                </div>
-                <div className="text-xs text-gray-700">
-                  {new Date(item.created_at).toLocaleDateString("en-US")}
-                </div>
-                <div className="text-sm">{item.short_summary}</div>
-              </div>
-            </div>
+                  {item.status == "idle" && (
+                    <Tooltip label="New meeting, no recording">
+                      <span>
+                        <Icon color="yellow.500" as={FaStar} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "processing" && (
+                    <Tooltip label="Processing in progress">
+                      <span>
+                        <Icon
+                          color="grey.primary"
+                          as={FaGear}
+                          mr="2"
+                          transition={"all 2s ease"}
+                          transform={"rotate(0deg)"}
+                          _hover={{ transform: "rotate(360deg)" }}
+                        />
+                      </span>
+                    </Tooltip>
+                  )}
+                  {item.status == "recording" && (
+                    <Tooltip label="Recording in progress">
+                      <span>
+                        <Icon color="blue.primary" as={FaMicrophone} mr="2" />
+                      </span>
+                    </Tooltip>
+                  )}
+                  <Heading size="md">
+                    <Link
+                      as={NextLink}
+                      href={`/transcripts/${item.id}`}
+                      noOfLines={2}
+                    >
+                      {item.title || item.name || "Unamed Transcript"}
+                    </Link>
+                  </Heading>
+
+                  <Spacer />
+                  <Menu closeOnSelect={false}>
+                    <MenuButton
+                      as={IconButton}
+                      icon={<FaEllipsisVertical />}
+                      aria-label="actions"
+                    />
+                    <MenuList>
+                      <MenuItem
+                        disabled={deletionLoading}
+                        onClick={() => setTranscriptToDeleteId(item.id)}
+                        icon={<FaTrash color={"red.500"} />}
+                      >
+                        Delete
+                      </MenuItem>
+                      <AlertDialog
+                        isOpen={transcriptToDeleteId === item.id}
+                        leastDestructiveRef={cancelRef}
+                        onClose={onCloseDeletion}
+                      >
+                        <AlertDialogOverlay>
+                          <AlertDialogContent>
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                              Delete{" "}
+                              {item.title || item.name || "Unamed Transcript"}
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                              Are you sure? You can't undo this action
+                              afterwards.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                              <Button ref={cancelRef} onClick={onCloseDeletion}>
+                                Cancel
+                              </Button>
+                              <Button
+                                colorScheme="red"
+                                onClick={handleDeleteTranscript(item.id)}
+                                ml={3}
+                              >
+                                Delete
+                              </Button>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialogOverlay>
+                      </AlertDialog>
+                    </MenuList>
+                  </Menu>
+                </Flex>
+                <Stack mt="6" spacing="3">
+                  <Text fontSize="small">
+                    {new Date(item.created_at).toLocaleString("en-US")}
+                    {"\u00A0"}-{"\u00A0"}
+                    {formatTime(Math.floor(item.duration / 1000))}
+                  </Text>
+                  <ExpandableText noOfLines={5}>
+                    {item.short_summary}
+                  </ExpandableText>
+                </Stack>
+              </CardBody>
+            </Card>
           ))}
-        </div>
-      </div>
-    </div>
+      </Grid>
+    </Flex>
   );
 }

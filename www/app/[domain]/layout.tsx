@@ -6,7 +6,6 @@ import UserInfo from "../(auth)/userInfo";
 import { ErrorProvider } from "../(errors)/errorContext";
 import ErrorMessage from "../(errors)/errorMessage";
 import Image from "next/image";
-import Link from "next/link";
 import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
@@ -15,6 +14,8 @@ import { ErrorBoundary } from "@sentry/nextjs";
 import { cookies } from "next/dist/client/components/headers";
 import { SESSION_COOKIE_NAME } from "../lib/fief";
 import { Providers } from "../providers";
+import NextLink from "next/link";
+import { Container, Flex, Link } from "@chakra-ui/react";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -91,13 +92,25 @@ export default async function RootLayout({ children, params }: LayoutProps) {
               <ErrorProvider>
                 <ErrorMessage />
                 <Providers>
-                  <div
-                    id="container"
-                    className="items-center h-[100svh] w-[100svw] p-2 md:p-4 grid grid-rows-layout-topbar gap-2 md:gap-4"
+                  <Container
+                    minW="100vw"
+                    maxH="100vh"
+                    minH="100vh"
+                    maxW="container.xl"
+                    display="grid"
+                    gridTemplateRows="auto minmax(0,1fr)"
                   >
-                    <header className="flex justify-between items-center w-full">
+                    <Flex
+                      as="header"
+                      justify="space-between"
+                      alignItems="center"
+                      w="100%"
+                      py="2"
+                      px="0"
+                    >
                       {/* Logo on the left */}
                       <Link
+                        as={NextLink}
                         href="/"
                         className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
                       >
@@ -120,6 +133,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                       <div>
                         {/* Text link on the right */}
                         <Link
+                          as={NextLink}
                           href="/transcripts/new"
                           className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
                         >
@@ -130,6 +144,7 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                             &nbsp;·&nbsp;
                             <Link
                               href="/browse"
+                              as={NextLink}
                               className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
                               prefetch={false}
                             >
@@ -158,10 +173,10 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                           <></>
                         )}
                       </div>
-                    </header>
+                    </Flex>
 
                     {children}
-                  </div>
+                  </Container>
                 </Providers>
               </ErrorProvider>
             </ErrorBoundary>
