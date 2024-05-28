@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from "react";
 
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../../lib/custom-plugins/record";
-import CustomRegionsPlugin from "../../lib/custom-plugins/regions";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMicrophone } from "@fortawesome/free-solid-svg-icons";
@@ -33,9 +32,6 @@ export default function Recorder(props: RecorderProps) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [timeInterval, setTimeInterval] = useState<number | null>(null);
   const [duration, setDuration] = useState<number>(0);
-  const [waveRegions, setWaveRegions] = useState<CustomRegionsPlugin | null>(
-    null,
-  );
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [recordStarted, setRecordStarted] = useState(false);
   const [showDevices, setShowDevices] = useState(false);
@@ -119,7 +115,6 @@ export default function Recorder(props: RecorderProps) {
       _wavesurfer.on("timeupdate", setCurrentTime);
 
       setRecord(_wavesurfer.registerPlugin(RecordPlugin.create()));
-      setWaveRegions(_wavesurfer.registerPlugin(CustomRegionsPlugin.create()));
 
       setWavesurfer(_wavesurfer);
 
