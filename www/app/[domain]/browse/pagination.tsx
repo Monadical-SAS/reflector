@@ -1,3 +1,6 @@
+import { Button, Flex, IconButton } from "@chakra-ui/react";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+
 type PaginationProps = {
   page: number;
   setPage: (page: number) => void;
@@ -36,40 +39,41 @@ export default function Pagination(props: PaginationProps) {
       setPage(newPage);
     }
   };
-
   return (
-    <div className="flex justify-center space-x-4 my-4">
-      <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
-          canGoPrevious ? "text-gray-500" : "text-gray-300"
-        }`}
+    <Flex justify="center" align="center" gap="2" mx="2">
+      <IconButton
+        isRound={true}
+        variant="text"
+        color={!canGoPrevious ? "gray" : "dark"}
+        mb="1"
+        icon={<FaChevronLeft />}
         onClick={() => handlePageChange(page - 1)}
         disabled={!canGoPrevious}
-      >
-        <i className="fa fa-chevron-left">&lt;</i>
-      </button>
+        aria-label="Previous page"
+      />
 
       {pageNumbers.map((pageNumber) => (
-        <button
+        <Button
           key={pageNumber}
-          className={`w-10 h-10 rounded-full p-2 border ${
-            page === pageNumber ? "border-gray-600" : "border-gray-300"
-          } rounded`}
+          variant="text"
+          color={page === pageNumber ? "gray" : "dark"}
           onClick={() => handlePageChange(pageNumber)}
+          disabled={page === pageNumber}
         >
           {pageNumber}
-        </button>
+        </Button>
       ))}
 
-      <button
-        className={`w-10 h-10 rounded-full p-2 border border-gray-300 disabled:bg-white ${
-          canGoNext ? "text-gray-500" : "text-gray-300"
-        }`}
+      <IconButton
+        isRound={true}
+        variant="text"
+        color={!canGoNext ? "gray" : "dark"}
+        icon={<FaChevronRight />}
+        mb="1"
         onClick={() => handlePageChange(page + 1)}
         disabled={!canGoNext}
-      >
-        <i className="fa fa-chevron-right">&gt;</i>
-      </button>
-    </div>
+        aria-label="Next page"
+      />
+    </Flex>
   );
 }
