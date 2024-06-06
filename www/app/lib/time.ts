@@ -1,3 +1,7 @@
+export const formatTimeMs = (milliseconds: number): string => {
+  return formatTime(Math.floor(milliseconds / 1000));
+};
+
 export const formatTime = (seconds: number): string => {
   let hours = Math.floor(seconds / 3600);
   let minutes = Math.floor((seconds % 3600) / 60);
