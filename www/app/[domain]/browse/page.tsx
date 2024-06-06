@@ -8,7 +8,7 @@ import { FaGear } from "react-icons/fa6";
 import { FaCheck, FaTrash, FaStar, FaMicrophone } from "react-icons/fa";
 import { MdError } from "react-icons/md";
 import useTranscriptList from "../transcripts/useTranscriptList";
-import { formatTime } from "../../lib/time";
+import { formatTimeMs } from "../../lib/time";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { FaEllipsisVertical } from "react-icons/fa6";
@@ -273,7 +273,7 @@ export default function TranscriptBrowser() {
                   <Text fontSize="small">
                     {new Date(item.created_at).toLocaleString("en-US")}
                     {"\u00A0"}-{"\u00A0"}
-                    {formatTime(Math.floor(item.duration / 1000))}
+                    {formatTimeMs(item.duration)}
                   </Text>
                   <ExpandableText noOfLines={5}>
                     {item.short_summary}
