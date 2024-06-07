@@ -50,7 +50,6 @@ export default function Player(props: PlayerProps) {
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
         peaks: [props.waveform.data],
-
         height: "auto",
         duration: Math.floor(props.mediaDuration / 1000),
         media: props.media,
@@ -161,7 +160,7 @@ export default function Player(props: PlayerProps) {
   const timeLabel = () => {
     if (props.mediaDuration && Math.floor(props.mediaDuration / 1000) > 0)
       return `${formatTime(currentTime)}/${formatTime(
-        Math.floor(props.mediaDuration / 1000),
+        Math.floor(props.mediaDuration / 1000)
       )}`;
     return "";
   };

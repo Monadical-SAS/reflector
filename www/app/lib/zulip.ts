@@ -1,11 +1,11 @@
 import { GetTranscript, GetTranscriptTopic } from "../api";
-import { formatTime } from "./time";
+import { formatTime, formatTimeMs } from "./time";
 import { extractDomain } from "./utils";
 
 export async function sendZulipMessage(
   stream: string,
   topic: string,
-  message: string,
+  message: string
 ) {
   console.log("Sendiing zulip message", stream, topic);
   try {
@@ -28,14 +28,14 @@ export const ZULIP_MSG_MAX_LENGTH = 10000;
 export function getZulipMessage(
   transcript: GetTranscript,
   topics: GetTranscriptTopic[] | null,
-  includeTopics: boolean,
+  includeTopics: boolean
 ) {
   const date = new Date(transcript.created_at);
 
   // Get the timezone offset in minutes and convert it to hours and minutes
   const timezoneOffset = -date.getTimezoneOffset();
   const offsetHours = String(
-    Math.floor(Math.abs(timezoneOffset) / 60),
+    Math.floor(Math.abs(timezoneOffset) / 60)
   ).padStart(2, "0");
   const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, "0");
   const offsetSign = timezoneOffset >= 0 ? "+" : "-";
@@ -58,7 +58,7 @@ export function getZulipMessage(
 
 **Date**: <time:${dateTimeString}>
 **Link**: [${extractDomain(link)}](${link})
-**Duration**: ${formatTime(transcript.duration)}
+**Duration**: ${formatTimeMs(transcript.duration)}
 
 `;
   let topicText = "";
