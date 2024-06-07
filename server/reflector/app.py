@@ -45,7 +45,7 @@ if settings.SENTRY_DSN:
         logger.error("Sentry is not installed, avoided")
     else:
         logger.info("Sentry enabled")
-    sentry_sdk.init(dsn=settings.SENTRY_DSN, traces_sample_rate=1.0)
+    sentry_sdk.init(dsn=settings.SENTRY_DSN, traces_sample_rate=0.01)
 else:
     logger.info("Sentry disabled")
 
