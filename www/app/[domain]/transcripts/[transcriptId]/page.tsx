@@ -93,6 +93,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             useActiveTopic={useActiveTopic}
             autoscroll={false}
             transcriptId={transcriptId}
+            status={transcript.response?.status}
+            currentTranscriptText=""
           />
           {transcript.response && topics.topics ? (
             <>
