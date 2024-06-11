@@ -37,7 +37,7 @@ export default function FileUploadButton(props: FileUploadButton) {
         onClick={triggerFileUpload}
         colorScheme="blue"
         mr={2}
-        disabled={props.disabled}
+        isDisabled={props.disabled}
       >
         Upload File
       </Button>
