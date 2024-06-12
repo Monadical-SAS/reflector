@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 
-import { formatTime } from "../../lib/time";
+import { formatTime, formatTimeMs } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../../api";
 import { waveSurferStyles } from "../../styles/recorder";
@@ -159,9 +159,7 @@ export default function Player(props: PlayerProps) {
 
   const timeLabel = () => {
     if (props.mediaDuration && Math.floor(props.mediaDuration / 1000) > 0)
-      return `${formatTime(currentTime)}/${formatTime(
-        Math.floor(props.mediaDuration / 1000)
-      )}`;
+      return `${formatTime(currentTime)}/${formatTimeMs(props.mediaDuration)}`;
     return "";
   };
 

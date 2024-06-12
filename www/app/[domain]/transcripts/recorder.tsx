@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "../../lib/custom-plugins/record";
 
-import { formatTime } from "../../lib/time";
+import { formatTime, formatTimeMs } from "../../lib/time";
 import { waveSurferStyles } from "../../styles/recorder";
 import { useError } from "../../(errors)/errorContext";
 import FileUploadButton from "./fileUploadButton";
@@ -241,8 +241,8 @@ export default function Recorder(props: RecorderProps) {
   }, [record, screenMediaStream]);
 
   const timeLabel = () => {
-    if (isRecording) return formatTime(currentTime);
-    if (duration) return `${formatTime(currentTime)}/${formatTime(duration)}`;
+    if (isRecording) return formatTimeMs(currentTime);
+    if (duration) return `${formatTimeMs(currentTime)}/${formatTime(duration)}`;
     return "";
   };
 
