@@ -59,10 +59,24 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     <>
       <Grid
         templateColumns="1fr"
-        templateRows="minmax(0, 1fr) auto"
+        templateRows="auto minmax(0, 1fr)"
         gap={4}
+        mt={4}
         mb={4}
       >
+        {waveform.waveform && mp3.media && topics.topics ? (
+          <Player
+            topics={topics?.topics}
+            useActiveTopic={useActiveTopic}
+            waveform={waveform.waveform}
+            media={mp3.media}
+            mediaDuration={transcript.response.duration}
+          />
+        ) : waveform.error ? (
+          <div>"error loading this recording"</div>
+        ) : (
+          <Skeleton h={14} />
+        )}
         <Grid
           templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
           templateRows={{
@@ -118,19 +132,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             </Flex>
           )}
         </Grid>
-        {waveform.waveform && mp3.media && topics.topics ? (
-          <Player
-            topics={topics?.topics}
-            useActiveTopic={useActiveTopic}
-            waveform={waveform.waveform}
-            media={mp3.media}
-            mediaDuration={transcript.response.duration}
-          />
-        ) : waveform.error ? (
-          <div>"error loading this recording"</div>
-        ) : (
-          <Skeleton h={14} />
-        )}
       </Grid>
     </>
   );

@@ -31,7 +31,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const router = useRouter();
 
   const [status, setStatus] = useState(
-    webSockets.status.value || transcript.response?.status || "idle",
+    webSockets.status.value || transcript.response?.status || "idle"
   );
 
   useEffect(() => {
@@ -61,25 +61,11 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   return (
     <Grid
       templateColumns="1fr"
-      templateRows="minmax(0, 1fr) auto"
+      templateRows="auto minmax(0, 1fr) "
       gap={4}
+      mt={4}
       mb={4}
     >
-      <Box
-        padding={4}
-        background="gray.bg"
-        borderColor={"gray.bg"}
-        borderRadius={8}
-      >
-        <TopicList
-          topics={webSockets.topics}
-          useActiveTopic={useActiveTopic}
-          autoscroll={true}
-          transcriptId={details.params.transcriptId}
-          status={status}
-          currentTranscriptText={webSockets.accumulatedText}
-        />
-      </Box>
       {status == "processing" && // todo send an event when the mp3 is ready
       webSockets.waveform &&
       webSockets.duration &&
@@ -97,6 +83,21 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         // todo: only start recording animation when you get "recorded" status
         <Recorder transcriptId={details.params.transcriptId} status={status} />
       )}
+      <Box
+        padding={4}
+        background="gray.bg"
+        borderColor={"gray.bg"}
+        borderRadius={8}
+      >
+        <TopicList
+          topics={webSockets.topics}
+          useActiveTopic={useActiveTopic}
+          autoscroll={true}
+          transcriptId={details.params.transcriptId}
+          status={status}
+          currentTranscriptText={webSockets.accumulatedText}
+        />
+      </Box>
     </Grid>
   );
 };
