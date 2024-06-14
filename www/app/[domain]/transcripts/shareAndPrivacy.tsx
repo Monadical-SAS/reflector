@@ -5,7 +5,7 @@ import { ShareMode, toShareMode } from "../../lib/shareMode";
 import { GetTranscript, GetTranscriptTopic, UpdateTranscript } from "../../api";
 import {
   Box,
-  Heading,
+  Flex,
   IconButton,
   Modal,
   ModalBody,
@@ -41,8 +41,8 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState<ShareOption>(
     shareOptions.find(
-      (option) => option.value === props.transcriptResponse.share_mode,
-    ) || shareOptions[0],
+      (option) => option.value === props.transcriptResponse.share_mode
+    ) || shareOptions[0]
   );
   const [shareLoading, setShareLoading] = useState(false);
   const requireLogin = featureEnabled("requireLogin");
@@ -59,12 +59,12 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
 
     const updatedTranscript = await api.v1TranscriptUpdate(
       props.transcriptResponse.id,
-      requestBody,
+      requestBody
     );
     setShareMode(
       shareOptions.find(
-        (option) => option.value === updatedTranscript.share_mode,
-      ) || shareOptions[0],
+        (option) => option.value === updatedTranscript.share_mode
+      ) || shareOptions[0]
     );
     setShareLoading(false);
   };
@@ -125,20 +125,21 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
             <Text size="sm" mb="2" fontWeight={"bold"}>
               Share options
             </Text>
-            {!requireLogin ||
-              (shareMode.value !== "private" && (
+            <Flex gap={2} mb={2}>
+              {requireLogin && (
                 <ShareZulip
                   transcriptResponse={props.transcriptResponse}
                   topicsResponse={props.topicsResponse}
+                  disabled={toShareMode(shareMode.value) === "private"}
                 />
-              ))}
+              )}
+              <ShareCopy
+                finalSummaryRef={props.finalSummaryRef}
+                transcriptResponse={props.transcriptResponse}
+                topicsResponse={props.topicsResponse}
+              />
+            </Flex>
 
-            <ShareCopy
-              finalSummaryRef={props.finalSummaryRef}
-              transcriptResponse={props.transcriptResponse}
-              topicsResponse={props.topicsResponse}
-              mb={2}
-            />
             <ShareLink transcriptId={props.transcriptResponse.id} />
           </ModalBody>
         </ModalContent>
