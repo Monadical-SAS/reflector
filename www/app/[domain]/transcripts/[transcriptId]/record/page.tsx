@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Recorder from "../../recorder";
 import { TopicList } from "../../topicList";
 import useTranscript from "../../useTranscript";
@@ -11,7 +11,8 @@ import { useRouter } from "next/navigation";
 import Player from "../../player";
 import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
-import { Box, Grid } from "@chakra-ui/react";
+import { Box, Text, Grid } from "@chakra-ui/react";
+import LiveTrancription from "../../liveTranscription";
 
 type TranscriptDetails = {
   params: {
@@ -21,7 +22,7 @@ type TranscriptDetails = {
 
 const TranscriptRecord = (details: TranscriptDetails) => {
   const transcript = useTranscript(details.params.transcriptId);
-
+  const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
 
   const webSockets = useWebSockets(details.params.transcriptId);
@@ -33,6 +34,11 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const [status, setStatus] = useState(
     webSockets.status.value || transcript.response?.status || "idle"
   );
+
+  useEffect(() => {
+    if (!transcriptStarted && webSockets.transcriptTextLive.length !== 0)
+      setTranscriptStarted(true);
+  }, [webSockets.transcriptTextLive]);
 
   useEffect(() => {
     //TODO HANDLE ERROR STATUS BETTER
@@ -83,9 +89,17 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         // todo: only start recording animation when you get "recorded" status
         <Recorder transcriptId={details.params.transcriptId} status={status} />
       )}
-      <Box
+      <Grid
+        templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
+        templateRows={{
+          base: "minmax(0, 1fr) minmax(0, 1fr)",
+          md: "minmax(0, 1fr)",
+        }}
+        gap={2}
         padding={4}
+        paddingBottom={0}
         background="gray.bg"
+        border={"2px solid"}
         borderColor={"gray.bg"}
         borderRadius={8}
       >
@@ -97,7 +111,24 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           status={status}
           currentTranscriptText={webSockets.accumulatedText}
         />
-      </Box>
+        <Box>
+          {!transcriptStarted ? (
+            <Box textAlign={"center"} textColor="gray">
+              <Text>
+                The conversation transcript will appear here shortly after you
+                start recording.
+              </Text>
+            </Box>
+          ) : (
+            status === "recording" && (
+              <LiveTrancription
+                text={webSockets.transcriptTextLive}
+                translateText={webSockets.translateText}
+              />
+            )
+          )}
+        </Box>
+      </Grid>
     </Grid>
   );
 };
