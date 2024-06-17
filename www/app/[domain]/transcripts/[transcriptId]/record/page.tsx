@@ -72,18 +72,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
       mt={4}
       mb={4}
     >
-      {status == "processing" && // todo send an event when the mp3 is ready
-      webSockets.waveform &&
-      webSockets.duration &&
-      mp3?.media ? (
-        <Player
-          topics={webSockets.topics || []}
-          useActiveTopic={useActiveTopic}
-          waveform={webSockets.waveform}
-          media={mp3.media}
-          mediaDuration={webSockets.duration}
-        />
-      ) : status == "processing" ? (
+      {status == "processing" ? (
         <WaveformLoading />
       ) : (
         // todo: only start recording animation when you get "recorded" status
