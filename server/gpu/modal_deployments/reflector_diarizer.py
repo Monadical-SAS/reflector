@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.0"
 MODEL_DIR = "/root/diarization_models"
-HUGGINGFACE_TOKEN = modal.Secret.from_name("my-huggingface-secret")
 stub = Stub(name="reflector-diarizer")
 
 
@@ -34,7 +33,7 @@ def download_pyannote_audio():
     Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.0",
         cache_dir=MODEL_DIR,
-        use_auth_token=HUGGINGFACE_TOKEN
+        use_auth_token=os.environ["HF_TOKEN"]
     )
 
 
@@ -55,7 +54,7 @@ diarizer_image = (
         "hf-transfer"
     )
     .run_function(migrate_cache_llm)
-    .run_function(download_pyannote_audio)
+    .run_function(download_pyannote_audio, secrets=[modal.Secret.from_name("my-huggingface-secret")])
     .env(
         {
             "LD_LIBRARY_PATH": (
@@ -73,6 +72,7 @@ diarizer_image = (
     container_idle_timeout=60,
     allow_concurrent_inputs=1,
     image=diarizer_image,
+    secrets=[modal.Secret.from_name("my-huggingface-secret")],
 )
 class Diarizer:
     def __enter__(self):
