@@ -100,6 +100,7 @@ export default function TranscriptBrowser() {
       api
         .v1TranscriptDelete(transcriptToDeleteId)
         .then(() => {
+          refetch();
           setDeletionLoading(false);
           refetch();
           onCloseDeletion();
