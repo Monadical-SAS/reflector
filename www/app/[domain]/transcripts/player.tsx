@@ -3,10 +3,13 @@ import React, { useRef, useEffect, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 
-import { formatTime } from "../../lib/time";
+import { formatTime, formatTimeMs } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../../api";
 import { waveSurferStyles } from "../../styles/recorder";
+import { Box, Flex, IconButton } from "@chakra-ui/react";
+import PlayIcon from "../../styles/icons/play";
+import PauseIcon from "../../styles/icons/pause";
 
 type PlayerProps = {
   topics: Topic[];
@@ -27,25 +30,31 @@ export default function Player(props: PlayerProps) {
   const [waveRegions, setWaveRegions] = useState<RegionsPlugin | null>(null);
   const [activeTopic, setActiveTopic] = props.useActiveTopic;
   const topicsRef = useRef(props.topics);
+  const [firstRender, setFirstRender] = useState<boolean>(true);
+
+  const keyHandler = (e) => {
+    if (e.key == " ") {
+      wavesurfer?.playPause();
+    }
+  };
+  useEffect(() => {
+    document.addEventListener("keyup", keyHandler);
+    return () => {
+      document.removeEventListener("keyup", keyHandler);
+    };
+  });
+
   // Waveform setup
   useEffect(() => {
     if (waveformRef.current) {
-      // XXX duration is required to prevent recomputing peaks from audio
-      // However, the current waveform returns only the peaks, and no duration
-      // And the backend does not save duration properly.
-      // So at the moment, we deduct the duration from the topics.
-      // This is not ideal, but it works for now.
       const _wavesurfer = WaveSurfer.create({
         container: waveformRef.current,
-        peaks: props.waveform.data,
-        hideScrollbar: true,
-        autoCenter: true,
-        barWidth: 2,
+        peaks: [props.waveform.data],
         height: "auto",
         duration: Math.floor(props.mediaDuration / 1000),
         media: props.media,
 
-        ...waveSurferStyles.player,
+        ...waveSurferStyles.playerSettings,
       });
 
       // styling
@@ -84,8 +93,19 @@ export default function Player(props: PlayerProps) {
   }, [props.media, wavesurfer]);
 
   useEffect(() => {
+    if (!waveRegions) return;
+
     topicsRef.current = props.topics;
-    renderMarkers();
+    if (firstRender) {
+      setFirstRender(false);
+      // wait for the waveform to render, if you don't markers will be stacked on top of each other
+      // I tried to listen for the waveform to be ready but it didn't work
+      setTimeout(() => {
+        renderMarkers();
+      }, 300);
+    } else {
+      renderMarkers();
+    }
   }, [props.topics, waveRegions]);
 
   const renderMarkers = () => {
@@ -96,22 +116,28 @@ export default function Player(props: PlayerProps) {
     for (let topic of topicsRef.current) {
       const content = document.createElement("div");
       content.setAttribute("style", waveSurferStyles.marker);
-      content.onmouseover = () => {
+      content.onmouseover = (e) => {
         content.style.backgroundColor =
           waveSurferStyles.markerHover.backgroundColor;
-        content.style.zIndex = "999";
         content.style.width = "300px";
+        if (content.parentElement) {
+          content.parentElement.style.zIndex = "999";
+        }
       };
       content.onmouseout = () => {
         content.setAttribute("style", waveSurferStyles.marker);
+        if (content.parentElement) {
+          content.parentElement.style.zIndex = "0";
+        }
       };
       content.textContent = topic.title;
 
       const region = waveRegions.addRegion({
         start: topic.timestamp,
         content,
-        color: "f00",
         drag: false,
+        resize: false,
+        top: 0,
       });
       region.on("click", (e) => {
         e.stopPropagation();
@@ -132,32 +158,37 @@ export default function Player(props: PlayerProps) {
   };
 
   const timeLabel = () => {
-    if (props.mediaDuration)
-      return `${formatTime(currentTime)}/${formatTime(props.mediaDuration)}`;
+    if (props.mediaDuration && Math.floor(props.mediaDuration / 1000) > 0)
+      return `${formatTime(currentTime)}/${formatTimeMs(props.mediaDuration)}`;
     return "";
   };
 
   return (
-    <div className="flex items-center w-full relative">
-      <div className="flex-grow items-end relative">
-        <div
-          ref={waveformRef}
-          className="flex-grow rounded-lg md:rounded-xl h-20"
-        ></div>
-        <div className="absolute right-2 bottom-0">{timeLabel()}</div>
-      </div>
-
-      <button
-        className={`${
-          isPlaying
-            ? "bg-orange-400 hover:bg-orange-500 focus-visible:bg-orange-500"
-            : "bg-green-400 hover:bg-green-500 focus-visible:bg-green-500"
-        } text-white ml-2 md:ml:4 md:h-[78px] md:min-w-[100px] text-lg`}
+    <Flex className="flex items-center w-full relative">
+      <IconButton
+        aria-label={isPlaying ? "Pause" : "Play"}
+        icon={isPlaying ? <PauseIcon /> : <PlayIcon />}
+        variant={"ghost"}
+        colorScheme={"blue"}
+        mr={2}
         id="play-btn"
         onClick={handlePlayClick}
-      >
-        {isPlaying ? "Pause" : "Play"}
-      </button>
-    </div>
+      />
+
+      <Box position="relative" flex={1}>
+        <Box ref={waveformRef} height={14}></Box>
+        <Box
+          zIndex={50}
+          backgroundColor="rgba(255, 255, 255, 0.5)"
+          fontSize={"sm"}
+          shadow={"0px 0px 4px 0px white"}
+          position={"absolute"}
+          right={0}
+          bottom={0}
+        >
+          {timeLabel()}
+        </Box>
+      </Box>
+    </Flex>
   );
 }

@@ -1,20 +1,26 @@
+import { theme } from "@chakra-ui/react";
+
 export const waveSurferStyles = {
   playerSettings: {
-    waveColor: "#777",
-    progressColor: "#222",
-    cursorColor: "OrangeRed",
+    waveColor: theme.colors.blue[500],
+    progressColor: theme.colors.blue[700],
+    cursorColor: theme.colors.red[500],
+    hideScrollbar: true,
+    autoScroll: false,
+    autoCenter: false,
+    barWidth: 3,
+    barGap: 2,
+    cursorWidth: 2,
   },
   playerStyle: {
     cursor: "pointer",
-    backgroundColor: "RGB(240 240 240)",
-    borderRadius: "15px",
   },
   marker: `
     border-left: solid 1px orange;
     padding: 0 2px 0 5px;
     font-size: 0.7rem;
     border-radius: 0 3px 3px 0;
-
+    top: 0;
     width: 100px;
     max-width: fit-content;
     cursor: pointer;
@@ -25,5 +31,5 @@ export const waveSurferStyles = {
     transition: width 100ms linear;
     z-index: 0;
   `,
-  markerHover: { backgroundColor: "orange" },
+  markerHover: { backgroundColor: theme.colors.gray[200] },
 };

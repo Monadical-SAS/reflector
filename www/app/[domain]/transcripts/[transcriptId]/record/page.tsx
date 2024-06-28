@@ -1,22 +1,18 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Recorder from "../../recorder";
 import { TopicList } from "../../topicList";
-import useWebRTC from "../../useWebRTC";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
-import useAudioDevice from "../../useAudioDevice";
 import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
-import LiveTrancription from "../../liveTranscription";
-import DisconnectedIndicator from "../../disconnectedIndicator";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGear } from "@fortawesome/free-solid-svg-icons";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import Player from "../../player";
 import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
+import { Box, Text, Grid } from "@chakra-ui/react";
+import LiveTrancription from "../../liveTranscription";
 
 type TranscriptDetails = {
   params: {
@@ -25,59 +21,41 @@ type TranscriptDetails = {
 };
 
 const TranscriptRecord = (details: TranscriptDetails) => {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [disconnected, setDisconnected] = useState<boolean>(false);
+  const transcript = useTranscript(details.params.transcriptId);
+  const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
 
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_ENV === "development") {
-      document.onkeyup = (e) => {
-        if (e.key === "d") {
-          setDisconnected((prev) => !prev);
-        }
-      };
-    }
-  }, []);
-
-  const transcript = useTranscript(details.params.transcriptId);
-  const webRTC = useWebRTC(stream, details.params.transcriptId);
   const webSockets = useWebSockets(details.params.transcriptId);
 
-  const { audioDevices, getAudioStream } = useAudioDevice();
-
-  const [recordedTime, setRecordedTime] = useState(0);
-  const [startTime, setStartTime] = useState(0);
-  const [transcriptStarted, setTranscriptStarted] = useState(false);
   let mp3 = useMp3(details.params.transcriptId, true);
 
   const router = useRouter();
 
+  const [status, setStatus] = useState(
+    webSockets.status.value || transcript.response?.status || "idle"
+  );
+
   useEffect(() => {
-    if (!transcriptStarted && webSockets.transcriptText.length !== 0)
+    if (!transcriptStarted && webSockets.transcriptTextLive.length !== 0)
       setTranscriptStarted(true);
-  }, [webSockets.transcriptText]);
+  }, [webSockets.transcriptTextLive]);
 
   useEffect(() => {
-    const statusToRedirect = ["ended", "error"];
+    //TODO HANDLE ERROR STATUS BETTER
+    const newStatus =
+      webSockets.status.value || transcript.response?.status || "idle";
+    setStatus(newStatus);
+    if (newStatus && (newStatus == "ended" || newStatus == "error")) {
+      console.log(newStatus, "redirecting");
 
-    //TODO if has no topic and is error, get back to new
-    if (
-      transcript.response?.status &&
-      (statusToRedirect.includes(transcript.response?.status) ||
-        statusToRedirect.includes(webSockets.status.value))
-    ) {
       const newUrl = "/transcripts/" + details.params.transcriptId;
-      // Shallow redirection does not work on NextJS 13
-      // https://github.com/vercel/next.js/discussions/48110
-      // https://github.com/vercel/next.js/discussions/49540
       router.replace(newUrl);
-      // history.replaceState({}, "", newUrl);
-    } // history.replaceState({}, "", newUrl);
+    }
   }, [webSockets.status.value, transcript.response?.status]);
 
   useEffect(() => {
-    if (transcript.response?.status === "ended") mp3.getNow();
-  }, [transcript.response]);
+    if (webSockets.waveform && webSockets.waveform) mp3.getNow();
+  }, [webSockets.waveform, webSockets.duration]);
 
   useEffect(() => {
     lockWakeState();
@@ -87,87 +65,60 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   }, []);
 
   return (
-    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 max-h-full h-full">
-      {webSockets.waveform && webSockets.duration && mp3?.media ? (
-        <Player
-          topics={webSockets.topics || []}
-          useActiveTopic={useActiveTopic}
-          waveform={webSockets.waveform}
-          media={mp3.media}
-          mediaDuration={webSockets.duration}
-        />
-      ) : recordedTime ? (
+    <Grid
+      templateColumns="1fr"
+      templateRows="auto minmax(0, 1fr) "
+      gap={4}
+      mt={4}
+      mb={4}
+    >
+      {status == "processing" ? (
         <WaveformLoading />
       ) : (
-        <Recorder
-          setStream={setStream}
-          onStop={() => {
-            setStream(null);
-            setRecordedTime(Date.now() - startTime);
-            webRTC?.send(JSON.stringify({ cmd: "STOP" }));
-          }}
-          onRecord={() => {
-            setStartTime(Date.now());
-          }}
-          getAudioStream={getAudioStream}
-          audioDevices={audioDevices}
-          transcriptId={details.params.transcriptId}
-        />
+        // todo: only start recording animation when you get "recorded" status
+        <Recorder transcriptId={details.params.transcriptId} status={status} />
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 grid-rows-mobile-inner lg:grid-rows-1 gap-2 lg:gap-4 h-full">
+      <Grid
+        templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
+        templateRows={{
+          base: "minmax(0, 1fr) minmax(0, 1fr)",
+          md: "minmax(0, 1fr)",
+        }}
+        gap={2}
+        padding={4}
+        paddingBottom={0}
+        background="gray.bg"
+        border={"2px solid"}
+        borderColor={"gray.bg"}
+        borderRadius={8}
+      >
         <TopicList
           topics={webSockets.topics}
           useActiveTopic={useActiveTopic}
           autoscroll={true}
           transcriptId={details.params.transcriptId}
+          status={status}
+          currentTranscriptText={webSockets.accumulatedText}
         />
-
-        <section
-          className={`w-full h-full bg-blue-400/20 rounded-lg md:rounded-xl p-2 md:px-4`}
-        >
-          {!recordedTime ? (
-            <>
-              {transcriptStarted && (
-                <h2 className="md:text-lg font-bold">Transcription</h2>
-              )}
-              <div className="flex flex-col justify-center align center text-center h-full">
-                <div className="py-2 h-auto">
-                  {!transcriptStarted ? (
-                    <div className="text-center text-gray-500">
-                      The conversation transcript will appear here shortly after
-                      you start recording.
-                    </div>
-                  ) : (
-                    <LiveTrancription
-                      text={webSockets.transcriptText}
-                      translateText={webSockets.translateText}
-                    />
-                  )}
-                </div>
-              </div>
-            </>
+        <Box>
+          {!transcriptStarted ? (
+            <Box textAlign={"center"} textColor="gray">
+              <Text>
+                The conversation transcript will appear here shortly after you
+                start recording.
+              </Text>
+            </Box>
           ) : (
-            <div className="flex flex-col justify-center align center text-center h-full text-gray-500">
-              <div className="p-2 md:p-4">
-                <FontAwesomeIcon
-                  icon={faGear}
-                  className="animate-spin-slow h-14 w-14 md:h-20 md:w-20"
-                />
-              </div>
-              <p>
-                We are generating the final summary for you. This may take a
-                couple of minutes. Please do not navigate away from the page
-                during this time.
-              </p>
-              {/* NTH If login required remove last sentence */}
-            </div>
+            status === "recording" && (
+              <LiveTrancription
+                text={webSockets.transcriptTextLive}
+                translateText={webSockets.translateText}
+              />
+            )
           )}
-        </section>
-      </div>
-
-      {disconnected && <DisconnectedIndicator />}
-    </div>
+        </Box>
+      </Grid>
+    </Grid>
   );
 };
 
