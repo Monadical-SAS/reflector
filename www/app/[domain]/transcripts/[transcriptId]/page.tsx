@@ -23,16 +23,20 @@ type TranscriptDetails = {
 export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptId = details.params.transcriptId;
   const router = useRouter();
+  const statusToRedirect = ["idle", "recording", "processing"];
 
   const transcript = useTranscript(transcriptId);
+  const transcriptStatus = transcript.response?.status;
+  const waiting =
+    !transcriptStatus || statusToRedirect.includes(transcriptStatus);
+
   const topics = useTopics(transcriptId);
-  const waveform = useWaveform(transcriptId);
+  const waveform = useWaveform(transcriptId, waiting);
   const useActiveTopic = useState<Topic | null>(null);
-  const mp3 = useMp3(transcriptId);
+  const mp3 = useMp3(transcriptId, waiting);
 
   useEffect(() => {
-    const statusToRedirect = ["idle", "recording", "processing"];
-    if (statusToRedirect.includes(transcript.response?.status || "")) {
+    if (waiting) {
       const newUrl = "/transcripts/" + details.params.transcriptId + "/record";
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
@@ -40,7 +44,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
       router.replace(newUrl);
       // history.replaceState({}, "", newUrl);
     }
-  }, [transcript.response?.status]);
+  }, [waiting]);
 
   if (transcript.error || topics?.error) {
     return (
