@@ -5,7 +5,6 @@ import type {
   AxiosResponse,
   AxiosInstance,
 } from "axios";
-import FormData from "form-data";
 
 import { ApiError } from "./ApiError";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
@@ -23,18 +22,7 @@ export const isStringWithValue = (value: unknown): value is string => {
 };
 
 export const isBlob = (value: any): value is Blob => {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    typeof value.type === "string" &&
-    typeof value.stream === "function" &&
-    typeof value.arrayBuffer === "function" &&
-    typeof value.constructor === "function" &&
-    typeof value.constructor.name === "string" &&
-    /^(Blob|File)$/.test(value.constructor.name) &&
-    // @ts-ignore
-    /^(Blob|File)$/.test(value[Symbol.toStringTag])
-  );
+  return value instanceof Blob;
 };
 
 export const isFormData = (value: unknown): value is FormData => {
@@ -66,7 +54,9 @@ export const getQueryString = (params: Record<string, unknown>): string => {
       return;
     }
 
-    if (Array.isArray(value)) {
+    if (value instanceof Date) {
+      append(key, value.toISOString());
+    } else if (Array.isArray(value)) {
       value.forEach((v) => encodePair(key, v));
     } else if (typeof value === "object") {
       Object.entries(value).forEach(([k, v]) => encodePair(`${key}[${k}]`, v));
@@ -102,7 +92,7 @@ export const getFormData = (
   if (options.formData) {
     const formData = new FormData();
 
-    const process = (key: string, value: any) => {
+    const process = (key: string, value: unknown) => {
       if (isString(value) || isBlob(value)) {
         formData.append(key, value);
       } else {
@@ -111,7 +101,7 @@ export const getFormData = (
     };
 
     Object.entries(options.formData)
-      .filter(([_, value]) => value !== undefined && value !== null)
+      .filter(([, value]) => value !== undefined && value !== null)
       .forEach(([key, value]) => {
         if (Array.isArray(value)) {
           value.forEach((v) => process(key, v));
@@ -125,10 +115,10 @@ export const getFormData = (
   return undefined;
 };
 
-type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
+type Resolver<T> = (options: ApiRequestOptions<T>) => Promise<T>;
 
 export const resolve = async <T>(
-  options: ApiRequestOptions,
+  options: ApiRequestOptions<T>,
   resolver?: T | Resolver<T>,
 ): Promise<T | undefined> => {
   if (typeof resolver === "function") {
@@ -137,29 +127,27 @@ export const resolve = async <T>(
   return resolver;
 };
 
-export const getHeaders = async (
+export const getHeaders = async <T>(
   config: OpenAPIConfig,
-  options: ApiRequestOptions,
-  formData?: FormData,
+  options: ApiRequestOptions<T>,
 ): Promise<Record<string, string>> => {
   const [token, username, password, additionalHeaders] = await Promise.all([
+    // @ts-ignore
     resolve(options, config.TOKEN),
+    // @ts-ignore
     resolve(options, config.USERNAME),
+    // @ts-ignore
     resolve(options, config.PASSWORD),
+    // @ts-ignore
     resolve(options, config.HEADERS),
   ]);
-
-  const formHeaders =
-    (typeof formData?.getHeaders === "function" && formData?.getHeaders()) ||
-    {};
 
   const headers = Object.entries({
     Accept: "application/json",
     ...additionalHeaders,
     ...options.headers,
-    ...formHeaders,
   })
-    .filter(([_, value]) => value !== undefined && value !== null)
+    .filter(([, value]) => value !== undefined && value !== null)
     .reduce(
       (headers, [key, value]) => ({
         ...headers,
@@ -187,6 +175,10 @@ export const getHeaders = async (
     } else if (!isFormData(options.body)) {
       headers["Content-Type"] = "application/json";
     }
+  } else if (options.formData !== undefined) {
+    if (options.mediaType) {
+      headers["Content-Type"] = options.mediaType;
+    }
   }
 
   return headers;
@@ -201,7 +193,7 @@ export const getRequestBody = (options: ApiRequestOptions): unknown => {
 
 export const sendRequest = async <T>(
   config: OpenAPIConfig,
-  options: ApiRequestOptions,
+  options: ApiRequestOptions<T>,
   url: string,
   body: unknown,
   formData: FormData | undefined,
@@ -211,16 +203,20 @@ export const sendRequest = async <T>(
 ): Promise<AxiosResponse<T>> => {
   const controller = new AbortController();
 
-  const requestConfig: AxiosRequestConfig = {
-    url,
-    headers,
+  let requestConfig: AxiosRequestConfig = {
     data: body ?? formData,
+    headers,
     method: options.method,
-    withCredentials: config.WITH_CREDENTIALS,
     signal: controller.signal,
+    url,
+    withCredentials: config.WITH_CREDENTIALS,
   };
 
   onCancel(() => controller.abort());
+
+  for (const fn of config.interceptors.request._fns) {
+    requestConfig = await fn(requestConfig);
+  }
 
   try {
     return await axiosClient.request(requestConfig);
@@ -260,11 +256,44 @@ export const catchErrorCodes = (
   const errors: Record<number, string> = {
     400: "Bad Request",
     401: "Unauthorized",
+    402: "Payment Required",
     403: "Forbidden",
     404: "Not Found",
+    405: "Method Not Allowed",
+    406: "Not Acceptable",
+    407: "Proxy Authentication Required",
+    408: "Request Timeout",
+    409: "Conflict",
+    410: "Gone",
+    411: "Length Required",
+    412: "Precondition Failed",
+    413: "Payload Too Large",
+    414: "URI Too Long",
+    415: "Unsupported Media Type",
+    416: "Range Not Satisfiable",
+    417: "Expectation Failed",
+    418: "Im a teapot",
+    421: "Misdirected Request",
+    422: "Unprocessable Content",
+    423: "Locked",
+    424: "Failed Dependency",
+    425: "Too Early",
+    426: "Upgrade Required",
+    428: "Precondition Required",
+    429: "Too Many Requests",
+    431: "Request Header Fields Too Large",
+    451: "Unavailable For Legal Reasons",
     500: "Internal Server Error",
+    501: "Not Implemented",
     502: "Bad Gateway",
     503: "Service Unavailable",
+    504: "Gateway Timeout",
+    505: "HTTP Version Not Supported",
+    506: "Variant Also Negotiates",
+    507: "Insufficient Storage",
+    508: "Loop Detected",
+    510: "Not Extended",
+    511: "Network Authentication Required",
     ...options.errors,
   };
 
@@ -302,7 +331,7 @@ export const catchErrorCodes = (
  */
 export const request = <T>(
   config: OpenAPIConfig,
-  options: ApiRequestOptions,
+  options: ApiRequestOptions<T>,
   axiosClient: AxiosInstance = axios,
 ): CancelablePromise<T> => {
   return new CancelablePromise(async (resolve, reject, onCancel) => {
@@ -310,10 +339,10 @@ export const request = <T>(
       const url = getUrl(config, options);
       const formData = getFormData(options);
       const body = getRequestBody(options);
-      const headers = await getHeaders(config, options, formData);
+      const headers = await getHeaders(config, options);
 
       if (!onCancel.isCancelled) {
-        const response = await sendRequest<T>(
+        let response = await sendRequest<T>(
           config,
           options,
           url,
@@ -323,18 +352,28 @@ export const request = <T>(
           onCancel,
           axiosClient,
         );
+
+        for (const fn of config.interceptors.response._fns) {
+          response = await fn(response);
+        }
+
         const responseBody = getResponseBody(response);
         const responseHeader = getResponseHeader(
           response,
           options.responseHeader,
         );
 
+        let transformedBody = responseBody;
+        if (options.responseTransformer && isSuccess(response.status)) {
+          transformedBody = await options.responseTransformer(responseBody);
+        }
+
         const result: ApiResult = {
           url,
           ok: isSuccess(response.status),
           status: response.status,
           statusText: response.statusText,
-          body: responseHeader ?? responseBody,
+          body: responseHeader ?? transformedBody,
         };
 
         catchErrorCodes(options, result);
