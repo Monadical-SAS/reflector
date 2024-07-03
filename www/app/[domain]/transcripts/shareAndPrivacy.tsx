@@ -57,10 +57,10 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
       share_mode: toShareMode(selectedShareMode.value),
     };
 
-    const updatedTranscript = await api.v1TranscriptUpdate(
-      props.transcriptResponse.id,
+    const updatedTranscript = await api.v1TranscriptUpdate({
+      transcriptId: props.transcriptResponse.id,
       requestBody,
-    );
+    });
     setShareMode(
       shareOptions.find(
         (option) => option.value === updatedTranscript.share_mode,

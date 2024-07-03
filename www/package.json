@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "openapi": "openapi --input http://127.0.0.1:1250/openapi.json --name OpenApi --output app/api && yarn format"
+    "openapi": "openapi-ts --input http://127.0.0.1:1250/openapi.json --name OpenApi --output app/api && yarn format"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.1.1",
@@ -56,7 +56,7 @@
   "license": "All Rights Reserved",
   "devDependencies": {
     "@types/react": "18.2.20",
-    "openapi-typescript-codegen": "^0.29.0",
+    "@hey-api/openapi-ts": "^0.27.24",
     "prettier": "^3.0.0"
   }
 }

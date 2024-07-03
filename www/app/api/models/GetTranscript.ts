@@ -1,8 +1,5 @@
-/* generated using openapi-typescript-codegen -- do not edit */
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
 import type { TranscriptParticipant } from "./TranscriptParticipant";
+
 export type GetTranscript = {
   id: string;
   user_id: string | null;

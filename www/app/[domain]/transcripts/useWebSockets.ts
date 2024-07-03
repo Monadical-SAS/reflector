@@ -316,7 +316,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId || !api) return;
 
-    api?.v1TranscriptGetWebsocketEvents(transcriptId).then((result) => {});
+    api?.v1TranscriptGetWebsocketEvents({ transcriptId }).then((result) => {});
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);

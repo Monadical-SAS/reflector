@@ -21,7 +21,7 @@ const useWaveform = (id: string): AudioWaveFormResponse => {
     if (!id || !api) return;
     setLoading(true);
     api
-      .v1TranscriptGetAudioWaveform(id)
+      .v1TranscriptGetAudioWaveform({ transcriptId: id })
       .then((result) => {
         setWaveform(result);
         setLoading(false);

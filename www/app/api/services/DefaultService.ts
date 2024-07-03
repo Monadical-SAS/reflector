@@ -1,7 +1,3 @@
-/* generated using openapi-typescript-codegen -- do not edit */
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
 import type { AudioWaveform } from "../models/AudioWaveform";
 import type { Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post } from "../models/Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post";
 import type { CreateParticipant } from "../models/CreateParticipant";
@@ -22,52 +18,138 @@ import type { UpdateTranscript } from "../models/UpdateTranscript";
 import type { UserInfo } from "../models/UserInfo";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { BaseHttpRequest } from "../core/BaseHttpRequest";
+
+export type TDataV1TranscriptsList = {
+  /**
+   * Page number
+   */
+  page?: number;
+  /**
+   * Page size
+   */
+  size?: number;
+};
+export type TDataV1TranscriptsCreate = {
+  requestBody: CreateTranscript;
+};
+export type TDataV1TranscriptGet = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptUpdate = {
+  requestBody: UpdateTranscript;
+  transcriptId: string;
+};
+export type TDataV1TranscriptDelete = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetTopics = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetTopicsWithWords = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetTopicsWithWordsPerSpeaker = {
+  topicId: string;
+  transcriptId: string;
+};
+export type TDataV1TranscriptHeadAudioMp3 = {
+  token?: string | null;
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetAudioMp3 = {
+  token?: string | null;
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetAudioWaveform = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetParticipants = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptAddParticipant = {
+  requestBody: CreateParticipant;
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetParticipant = {
+  participantId: string;
+  transcriptId: string;
+};
+export type TDataV1TranscriptUpdateParticipant = {
+  participantId: string;
+  requestBody: UpdateParticipant;
+  transcriptId: string;
+};
+export type TDataV1TranscriptDeleteParticipant = {
+  participantId: string;
+  transcriptId: string;
+};
+export type TDataV1TranscriptAssignSpeaker = {
+  requestBody: SpeakerAssignment;
+  transcriptId: string;
+};
+export type TDataV1TranscriptMergeSpeaker = {
+  requestBody: SpeakerMerge;
+  transcriptId: string;
+};
+export type TDataV1TranscriptRecordUpload = {
+  formData: Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post;
+  transcriptId: string;
+};
+export type TDataV1TranscriptGetWebsocketEvents = {
+  transcriptId: string;
+};
+export type TDataV1TranscriptRecordWebrtc = {
+  requestBody: RtcOffer;
+  transcriptId: string;
+};
+
 export class DefaultService {
   constructor(public readonly httpRequest: BaseHttpRequest) {}
+
   /**
    * Metrics
    * Endpoint that serves Prometheus metrics.
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
-  public metrics(): CancelablePromise<any> {
+  public metrics(): CancelablePromise<unknown> {
     return this.httpRequest.request({
       method: "GET",
       url: "/metrics",
     });
   }
+
   /**
    * Transcripts List
-   * @param page Page number
-   * @param size Page size
    * @returns Page_GetTranscript_ Successful Response
    * @throws ApiError
    */
   public v1TranscriptsList(
-    page: number = 1,
-    size: number = 50,
+    data: TDataV1TranscriptsList = {},
   ): CancelablePromise<Page_GetTranscript_> {
+    const { page = 1, size = 50 } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts",
       query: {
-        page: page,
-        size: size,
+        page,
+        size,
       },
       errors: {
         422: `Validation Error`,
       },
     });
   }
+
   /**
    * Transcripts Create
-   * @param requestBody
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
   public v1TranscriptsCreate(
-    requestBody: CreateTranscript,
+    data: TDataV1TranscriptsCreate,
   ): CancelablePromise<GetTranscript> {
+    const { requestBody } = data;
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts",
@@ -78,15 +160,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get
-   * @param transcriptId
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
   public v1TranscriptGet(
-    transcriptId: string,
+    data: TDataV1TranscriptGet,
   ): CancelablePromise<GetTranscript> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}",
@@ -98,17 +181,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Update
-   * @param transcriptId
-   * @param requestBody
    * @returns GetTranscript Successful Response
    * @throws ApiError
    */
   public v1TranscriptUpdate(
-    transcriptId: string,
-    requestBody: UpdateTranscript,
+    data: TDataV1TranscriptUpdate,
   ): CancelablePromise<GetTranscript> {
+    const { requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}",
@@ -122,15 +204,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Delete
-   * @param transcriptId
    * @returns DeletionStatus Successful Response
    * @throws ApiError
    */
   public v1TranscriptDelete(
-    transcriptId: string,
+    data: TDataV1TranscriptDelete,
   ): CancelablePromise<DeletionStatus> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "DELETE",
       url: "/v1/transcripts/{transcript_id}",
@@ -142,15 +225,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Topics
-   * @param transcriptId
    * @returns GetTranscriptTopic Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetTopics(
-    transcriptId: string,
+    data: TDataV1TranscriptGetTopics,
   ): CancelablePromise<Array<GetTranscriptTopic>> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics",
@@ -162,15 +246,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Topics With Words
-   * @param transcriptId
    * @returns GetTranscriptTopicWithWords Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetTopicsWithWords(
-    transcriptId: string,
+    data: TDataV1TranscriptGetTopicsWithWords,
   ): CancelablePromise<Array<GetTranscriptTopicWithWords>> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics/with-words",
@@ -182,17 +267,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Topics With Words Per Speaker
-   * @param transcriptId
-   * @param topicId
    * @returns GetTranscriptTopicWithWordsPerSpeaker Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetTopicsWithWordsPerSpeaker(
-    transcriptId: string,
-    topicId: string,
+    data: TDataV1TranscriptGetTopicsWithWordsPerSpeaker,
   ): CancelablePromise<GetTranscriptTopicWithWordsPerSpeaker> {
+    const { topicId, transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker",
@@ -205,17 +289,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Audio Mp3
-   * @param transcriptId
-   * @param token
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1TranscriptHeadAudioMp3(
-    transcriptId: string,
-    token?: string | null,
-  ): CancelablePromise<any> {
+    data: TDataV1TranscriptHeadAudioMp3,
+  ): CancelablePromise<unknown> {
+    const { token, transcriptId } = data;
     return this.httpRequest.request({
       method: "HEAD",
       url: "/v1/transcripts/{transcript_id}/audio/mp3",
@@ -223,24 +306,23 @@ export class DefaultService {
         transcript_id: transcriptId,
       },
       query: {
-        token: token,
+        token,
       },
       errors: {
         422: `Validation Error`,
       },
     });
   }
+
   /**
    * Transcript Get Audio Mp3
-   * @param transcriptId
-   * @param token
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetAudioMp3(
-    transcriptId: string,
-    token?: string | null,
-  ): CancelablePromise<any> {
+    data: TDataV1TranscriptGetAudioMp3,
+  ): CancelablePromise<unknown> {
+    const { token, transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/audio/mp3",
@@ -248,22 +330,23 @@ export class DefaultService {
         transcript_id: transcriptId,
       },
       query: {
-        token: token,
+        token,
       },
       errors: {
         422: `Validation Error`,
       },
     });
   }
+
   /**
    * Transcript Get Audio Waveform
-   * @param transcriptId
    * @returns AudioWaveform Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetAudioWaveform(
-    transcriptId: string,
+    data: TDataV1TranscriptGetAudioWaveform,
   ): CancelablePromise<AudioWaveform> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/audio/waveform",
@@ -275,15 +358,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Participants
-   * @param transcriptId
    * @returns Participant Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetParticipants(
-    transcriptId: string,
+    data: TDataV1TranscriptGetParticipants,
   ): CancelablePromise<Array<Participant>> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/participants",
@@ -295,17 +379,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Add Participant
-   * @param transcriptId
-   * @param requestBody
    * @returns Participant Successful Response
    * @throws ApiError
    */
   public v1TranscriptAddParticipant(
-    transcriptId: string,
-    requestBody: CreateParticipant,
+    data: TDataV1TranscriptAddParticipant,
   ): CancelablePromise<Participant> {
+    const { requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/participants",
@@ -319,17 +402,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Participant
-   * @param transcriptId
-   * @param participantId
    * @returns Participant Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetParticipant(
-    transcriptId: string,
-    participantId: string,
+    data: TDataV1TranscriptGetParticipant,
   ): CancelablePromise<Participant> {
+    const { participantId, transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
@@ -342,19 +424,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Update Participant
-   * @param transcriptId
-   * @param participantId
-   * @param requestBody
    * @returns Participant Successful Response
    * @throws ApiError
    */
   public v1TranscriptUpdateParticipant(
-    transcriptId: string,
-    participantId: string,
-    requestBody: UpdateParticipant,
+    data: TDataV1TranscriptUpdateParticipant,
   ): CancelablePromise<Participant> {
+    const { participantId, requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
@@ -369,17 +448,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Delete Participant
-   * @param transcriptId
-   * @param participantId
    * @returns DeletionStatus Successful Response
    * @throws ApiError
    */
   public v1TranscriptDeleteParticipant(
-    transcriptId: string,
-    participantId: string,
+    data: TDataV1TranscriptDeleteParticipant,
   ): CancelablePromise<DeletionStatus> {
+    const { participantId, transcriptId } = data;
     return this.httpRequest.request({
       method: "DELETE",
       url: "/v1/transcripts/{transcript_id}/participants/{participant_id}",
@@ -392,17 +470,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Assign Speaker
-   * @param transcriptId
-   * @param requestBody
    * @returns SpeakerAssignmentStatus Successful Response
    * @throws ApiError
    */
   public v1TranscriptAssignSpeaker(
-    transcriptId: string,
-    requestBody: SpeakerAssignment,
+    data: TDataV1TranscriptAssignSpeaker,
   ): CancelablePromise<SpeakerAssignmentStatus> {
+    const { requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/speaker/assign",
@@ -416,17 +493,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Merge Speaker
-   * @param transcriptId
-   * @param requestBody
    * @returns SpeakerAssignmentStatus Successful Response
    * @throws ApiError
    */
   public v1TranscriptMergeSpeaker(
-    transcriptId: string,
-    requestBody: SpeakerMerge,
+    data: TDataV1TranscriptMergeSpeaker,
   ): CancelablePromise<SpeakerAssignmentStatus> {
+    const { requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "PATCH",
       url: "/v1/transcripts/{transcript_id}/speaker/merge",
@@ -440,17 +516,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Record Upload
-   * @param transcriptId
-   * @param formData
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1TranscriptRecordUpload(
-    transcriptId: string,
-    formData: Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post,
-  ): CancelablePromise<any> {
+    data: TDataV1TranscriptRecordUpload,
+  ): CancelablePromise<unknown> {
+    const { formData, transcriptId } = data;
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/record/upload",
@@ -464,15 +539,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Get Websocket Events
-   * @param transcriptId
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1TranscriptGetWebsocketEvents(
-    transcriptId: string,
-  ): CancelablePromise<any> {
+    data: TDataV1TranscriptGetWebsocketEvents,
+  ): CancelablePromise<unknown> {
+    const { transcriptId } = data;
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts/{transcript_id}/events",
@@ -484,17 +560,16 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * Transcript Record Webrtc
-   * @param transcriptId
-   * @param requestBody
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1TranscriptRecordWebrtc(
-    transcriptId: string,
-    requestBody: RtcOffer,
-  ): CancelablePromise<any> {
+    data: TDataV1TranscriptRecordWebrtc,
+  ): CancelablePromise<unknown> {
+    const { requestBody, transcriptId } = data;
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts/{transcript_id}/record/webrtc",
@@ -508,9 +583,10 @@ export class DefaultService {
       },
     });
   }
+
   /**
    * User Me
-   * @returns any Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public v1UserMe(): CancelablePromise<UserInfo | null> {
