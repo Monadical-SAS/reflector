@@ -1,7 +1,3 @@
-/* generated using openapi-typescript-codegen -- do not edit */
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
 export { OpenApi } from "./OpenApi";
 
 export { ApiError } from "./core/ApiError";
@@ -34,5 +30,30 @@ export type { UpdateTranscript } from "./models/UpdateTranscript";
 export type { UserInfo } from "./models/UserInfo";
 export type { ValidationError } from "./models/ValidationError";
 export type { Word } from "./models/Word";
+
+export { $AudioWaveform } from "./schemas/$AudioWaveform";
+export { $Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post } from "./schemas/$Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post";
+export { $CreateParticipant } from "./schemas/$CreateParticipant";
+export { $CreateTranscript } from "./schemas/$CreateTranscript";
+export { $DeletionStatus } from "./schemas/$DeletionStatus";
+export { $GetTranscript } from "./schemas/$GetTranscript";
+export { $GetTranscriptSegmentTopic } from "./schemas/$GetTranscriptSegmentTopic";
+export { $GetTranscriptTopic } from "./schemas/$GetTranscriptTopic";
+export { $GetTranscriptTopicWithWords } from "./schemas/$GetTranscriptTopicWithWords";
+export { $GetTranscriptTopicWithWordsPerSpeaker } from "./schemas/$GetTranscriptTopicWithWordsPerSpeaker";
+export { $HTTPValidationError } from "./schemas/$HTTPValidationError";
+export { $Page_GetTranscript_ } from "./schemas/$Page_GetTranscript_";
+export { $Participant } from "./schemas/$Participant";
+export { $RtcOffer } from "./schemas/$RtcOffer";
+export { $SpeakerAssignment } from "./schemas/$SpeakerAssignment";
+export { $SpeakerAssignmentStatus } from "./schemas/$SpeakerAssignmentStatus";
+export { $SpeakerMerge } from "./schemas/$SpeakerMerge";
+export { $SpeakerWords } from "./schemas/$SpeakerWords";
+export { $TranscriptParticipant } from "./schemas/$TranscriptParticipant";
+export { $UpdateParticipant } from "./schemas/$UpdateParticipant";
+export { $UpdateTranscript } from "./schemas/$UpdateTranscript";
+export { $UserInfo } from "./schemas/$UserInfo";
+export { $ValidationError } from "./schemas/$ValidationError";
+export { $Word } from "./schemas/$Word";
 
 export { DefaultService } from "./services/DefaultService";

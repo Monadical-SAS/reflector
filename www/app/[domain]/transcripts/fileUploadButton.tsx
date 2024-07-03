@@ -27,7 +27,10 @@ export default function FileUploadButton(props: FileUploadButton) {
         // Add other properties if required by the type definition
       };
 
-      api?.v1TranscriptRecordUpload(props.transcriptId, uploadData);
+      api?.v1TranscriptRecordUpload({
+        transcriptId: props.transcriptId,
+        formData: uploadData,
+      });
     }
   };
 

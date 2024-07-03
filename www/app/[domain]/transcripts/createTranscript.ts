@@ -24,7 +24,7 @@ const useCreateTranscript = (): UseCreateTranscript => {
     setLoading(true);
 
     api
-      .v1TranscriptsCreate(transcriptCreationDetails)
+      .v1TranscriptsCreate({ requestBody: transcriptCreationDetails })
       .then((transcript) => {
         setTranscript(transcript);
         setLoading(false);

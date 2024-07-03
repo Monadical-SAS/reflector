@@ -1,9 +1,6 @@
-/* generated using openapi-typescript-codegen -- do not edit */
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
 import type { GetTranscriptSegmentTopic } from "./GetTranscriptSegmentTopic";
 import type { Word } from "./Word";
+
 export type GetTranscriptTopicWithWords = {
   id: string;
   title: string;

@@ -49,7 +49,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
 
     setLoading(true);
     api
-      .v1TranscriptGetParticipants(transcriptId)
+      .v1TranscriptGetParticipants({ transcriptId })
       .then((result) => {
         setResponse(result);
         setLoading(false);

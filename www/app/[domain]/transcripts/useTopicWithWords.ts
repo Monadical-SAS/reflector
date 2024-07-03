@@ -56,7 +56,7 @@ const useTopicWithWords = (
     setLoading(true);
 
     api
-      .v1TranscriptGetTopicsWithWordsPerSpeaker(transcriptId, topicId)
+      .v1TranscriptGetTopicsWithWordsPerSpeaker({ transcriptId, topicId })
       .then((result) => {
         setResponse(result);
         setLoading(false);

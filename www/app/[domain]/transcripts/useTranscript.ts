@@ -37,7 +37,7 @@ const useTranscript = (
     setLoading(true);
 
     api
-      .v1TranscriptGet(id)
+      .v1TranscriptGet({ transcriptId: id })
       .then((result) => {
         setResponse(result);
         setLoading(false);
