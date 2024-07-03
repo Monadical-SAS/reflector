@@ -1,4 +1,4 @@
-/* generated using openapi-typescript-codegen -- do no edit */
+/* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -147,10 +147,12 @@ export const getHeaders = async (
   config: OpenAPIConfig,
   options: ApiRequestOptions,
 ): Promise<Headers> => {
-  const token = await resolve(options, config.TOKEN);
-  const username = await resolve(options, config.USERNAME);
-  const password = await resolve(options, config.PASSWORD);
-  const additionalHeaders = await resolve(options, config.HEADERS);
+  const [token, username, password, additionalHeaders] = await Promise.all([
+    resolve(options, config.TOKEN),
+    resolve(options, config.USERNAME),
+    resolve(options, config.PASSWORD),
+    resolve(options, config.HEADERS),
+  ]);
 
   const headers = Object.entries({
     Accept: "application/json",
@@ -175,7 +177,7 @@ export const getHeaders = async (
     headers["Authorization"] = `Basic ${credentials}`;
   }
 
-  if (options.body) {
+  if (options.body !== undefined) {
     if (options.mediaType) {
       headers["Content-Type"] = options.mediaType;
     } else if (isBlob(options.body)) {

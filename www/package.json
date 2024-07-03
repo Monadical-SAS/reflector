@@ -55,9 +55,8 @@
   "author": "Andreas <andreas@monadical.com>",
   "license": "All Rights Reserved",
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.7.0",
     "@types/react": "18.2.20",
-    "openapi-typescript-codegen": "^0.25.0",
+    "openapi-typescript-codegen": "^0.29.0",
     "prettier": "^3.0.0"
   }
 }

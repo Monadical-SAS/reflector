@@ -1,4 +1,4 @@
-/* generated using openapi-typescript-codegen -- do no edit */
+/* generated using openapi-typescript-codegen -- do not edit */
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
@@ -20,13 +20,10 @@ import type { SpeakerMerge } from "../models/SpeakerMerge";
 import type { UpdateParticipant } from "../models/UpdateParticipant";
 import type { UpdateTranscript } from "../models/UpdateTranscript";
 import type { UserInfo } from "../models/UserInfo";
-
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { BaseHttpRequest } from "../core/BaseHttpRequest";
-
 export class DefaultService {
   constructor(public readonly httpRequest: BaseHttpRequest) {}
-
   /**
    * Metrics
    * Endpoint that serves Prometheus metrics.
@@ -39,7 +36,6 @@ export class DefaultService {
       url: "/metrics",
     });
   }
-
   /**
    * Transcripts List
    * @param page Page number
@@ -63,7 +59,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcripts Create
    * @param requestBody
@@ -83,7 +78,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get
    * @param transcriptId
@@ -104,7 +98,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Update
    * @param transcriptId
@@ -129,7 +122,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Delete
    * @param transcriptId
@@ -150,7 +142,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Topics
    * @param transcriptId
@@ -171,7 +162,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Topics With Words
    * @param transcriptId
@@ -192,7 +182,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Topics With Words Per Speaker
    * @param transcriptId
@@ -216,7 +205,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Audio Mp3
    * @param transcriptId
@@ -242,7 +230,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Audio Mp3
    * @param transcriptId
@@ -268,7 +255,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Audio Waveform
    * @param transcriptId
@@ -289,7 +275,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Participants
    * @param transcriptId
@@ -310,7 +295,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Add Participant
    * @param transcriptId
@@ -335,7 +319,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Participant
    * @param transcriptId
@@ -359,7 +342,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Update Participant
    * @param transcriptId
@@ -387,7 +369,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Delete Participant
    * @param transcriptId
@@ -411,7 +392,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Assign Speaker
    * @param transcriptId
@@ -436,7 +416,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Merge Speaker
    * @param transcriptId
@@ -461,7 +440,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Record Upload
    * @param transcriptId
@@ -486,7 +464,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Get Websocket Events
    * @param transcriptId
@@ -507,7 +484,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * Transcript Record Webrtc
    * @param transcriptId
@@ -532,7 +508,6 @@ export class DefaultService {
       },
     });
   }
-
   /**
    * User Me
    * @returns any Successful Response
