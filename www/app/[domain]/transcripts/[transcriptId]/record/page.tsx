@@ -32,7 +32,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const router = useRouter();
 
   const [status, setStatus] = useState(
-    webSockets.status.value || transcript.response?.status || "idle"
+    webSockets.status.value || transcript.response?.status || "idle",
   );
 
   useEffect(() => {

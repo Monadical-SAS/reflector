@@ -41,8 +41,8 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState<ShareOption>(
     shareOptions.find(
-      (option) => option.value === props.transcriptResponse.share_mode
-    ) || shareOptions[0]
+      (option) => option.value === props.transcriptResponse.share_mode,
+    ) || shareOptions[0],
   );
   const [shareLoading, setShareLoading] = useState(false);
   const requireLogin = featureEnabled("requireLogin");
@@ -59,12 +59,12 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
 
     const updatedTranscript = await api.v1TranscriptUpdate(
       props.transcriptResponse.id,
-      requestBody
+      requestBody,
     );
     setShareMode(
       shareOptions.find(
-        (option) => option.value === updatedTranscript.share_mode
-      ) || shareOptions[0]
+        (option) => option.value === updatedTranscript.share_mode,
+      ) || shareOptions[0],
     );
     setShareLoading(false);
   };
