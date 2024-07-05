@@ -266,10 +266,6 @@ export default function Recorder(props: RecorderProps) {
         mr={2}
         onClick={handleRecClick}
       />
-      <FileUploadButton
-        transcriptId={props.transcriptId}
-        disabled={isRecording}
-      ></FileUploadButton>
       {!isRecording && (window as any).chrome && (
         <IconButton
           aria-label={"Record Tab"}

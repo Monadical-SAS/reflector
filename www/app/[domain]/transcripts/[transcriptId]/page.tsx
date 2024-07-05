@@ -27,8 +27,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   const transcript = useTranscript(transcriptId);
   const transcriptStatus = transcript.response?.status;
-  const waiting =
-    !transcriptStatus || statusToRedirect.includes(transcriptStatus);
+  const waiting = statusToRedirect.includes(transcriptStatus || "");
 
   const topics = useTopics(transcriptId);
   const waveform = useWaveform(transcriptId, waiting);
