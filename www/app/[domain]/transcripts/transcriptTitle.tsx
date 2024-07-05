@@ -21,10 +21,10 @@ const TranscriptTitle = (props: TranscriptTitle) => {
       const requestBody: UpdateTranscript = {
         title: newTitle,
       };
-      const updatedTranscript = await api?.v1TranscriptUpdate(
+      const updatedTranscript = await api?.v1TranscriptUpdate({
         transcriptId,
         requestBody,
-      );
+      });
       console.log("Updated transcript:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update transcript:", err);

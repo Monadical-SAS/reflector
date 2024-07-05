@@ -10,7 +10,7 @@ type AudioWaveFormResponse = {
   error: Error | null;
 };
 
-const useWaveform = (id: string): AudioWaveFormResponse => {
+const useWaveform = (id: string, waiting: boolean): AudioWaveFormResponse => {
   const [waveform, setWaveform] = useState<AudioWaveform | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
@@ -18,10 +18,10 @@ const useWaveform = (id: string): AudioWaveFormResponse => {
   const api = useApi();
 
   useEffect(() => {
-    if (!id || !api) return;
+    if (!id || !api || waiting) return;
     setLoading(true);
     api
-      .v1TranscriptGetAudioWaveform(id)
+      .v1TranscriptGetAudioWaveform({ transcriptId: id })
       .then((result) => {
         setWaveform(result);
         setLoading(false);
@@ -36,7 +36,7 @@ const useWaveform = (id: string): AudioWaveFormResponse => {
           setError(err);
         }
       });
-  }, [id, api]);
+  }, [id, api, waiting]);
 
   return { waveform, loading, error };
 };

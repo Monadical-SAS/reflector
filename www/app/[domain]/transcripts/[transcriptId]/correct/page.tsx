@@ -37,7 +37,7 @@ export default function TranscriptCorrect({
   const markAsDone = () => {
     if (transcript.response && !transcript.response.reviewed) {
       api
-        ?.v1TranscriptUpdate(transcriptId, { reviewed: true })
+        ?.v1TranscriptUpdate({ transcriptId, requestBody: { reviewed: true } })
         .then(() => {
           router.push(`/transcripts/${transcriptId}`);
         })

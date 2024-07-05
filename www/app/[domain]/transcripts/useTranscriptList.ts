@@ -28,7 +28,7 @@ const useTranscriptList = (page: number): TranscriptList => {
     if (!api) return;
     setLoading(true);
     api
-      .v1TranscriptsList(page)
+      .v1TranscriptsList({ page })
       .then((response) => {
         setResponse(response);
         setLoading(false);
