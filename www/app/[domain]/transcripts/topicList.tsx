@@ -42,7 +42,7 @@ export function TopicList({
 
   const scrollToTopic = () => {
     const topicDiv = document.getElementById(
-      `accordion-button-topic-${activeTopic?.id}`
+      `accordion-button-topic-${activeTopic?.id}`,
     );
 
     setTimeout(() => {
@@ -63,7 +63,7 @@ export function TopicList({
   const toggleScroll = (element) => {
     const bottom =
       Math.abs(
-        element.scrollHeight - element.clientHeight - element.scrollTop
+        element.scrollHeight - element.clientHeight - element.scrollTop,
       ) < 2 || element.scrollHeight == element.clientHeight;
     if (!bottom && autoscrollEnabled) {
       setAutoscrollEnabled(false);
@@ -97,7 +97,7 @@ export function TopicList({
     if (!participants.response) return;
     return (
       participants.response.find(
-        (participant) => participant.speaker == speakerNumber
+        (participant) => participant.speaker == speakerNumber,
       )?.name || `Speaker ${speakerNumber}`
     );
   };
@@ -157,7 +157,7 @@ export function TopicList({
                   <AccordionButton
                     onClick={() => {
                       setActiveTopic(
-                        activeTopic?.id == topic.id ? null : topic
+                        activeTopic?.id == topic.id ? null : topic,
                       );
                     }}
                   >
@@ -200,7 +200,7 @@ export function TopicList({
                             fontSize={"sm"}
                             color={generateHighContrastColor(
                               `Speaker ${segment.speaker}`,
-                              [96, 165, 250]
+                              [96, 165, 250],
                             )}
                           >
                             {" "}

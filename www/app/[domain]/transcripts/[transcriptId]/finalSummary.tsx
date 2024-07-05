@@ -49,10 +49,10 @@ export default function FinalSummary(props: FinalSummaryProps) {
       const requestBody: UpdateTranscript = {
         long_summary: newSummary,
       };
-      const updatedTranscript = await api?.v1TranscriptUpdate(
+      const updatedTranscript = await api?.v1TranscriptUpdate({
         transcriptId,
         requestBody,
-      );
+      });
       console.log("Updated long summary:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update long summary:", err);

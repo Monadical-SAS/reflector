@@ -1,12 +1,9 @@
-/* generated using openapi-typescript-codegen -- do no edit */
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
 import type { BaseHttpRequest } from "./core/BaseHttpRequest";
 import type { OpenAPIConfig } from "./core/OpenAPI";
-import { FetchHttpRequest } from "./core/FetchHttpRequest";
+import { Interceptors } from "./core/OpenAPI";
+import { AxiosHttpRequest } from "./core/AxiosHttpRequest";
 
-import { DefaultService } from "./services/DefaultService";
+import { DefaultService } from "./services.gen";
 
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 
@@ -17,7 +14,7 @@ export class OpenApi {
 
   constructor(
     config?: Partial<OpenAPIConfig>,
-    HttpRequest: HttpRequestConstructor = FetchHttpRequest,
+    HttpRequest: HttpRequestConstructor = AxiosHttpRequest,
   ) {
     this.request = new HttpRequest({
       BASE: config?.BASE ?? "",
@@ -29,6 +26,10 @@ export class OpenApi {
       PASSWORD: config?.PASSWORD,
       HEADERS: config?.HEADERS,
       ENCODE_PATH: config?.ENCODE_PATH,
+      interceptors: {
+        request: config?.interceptors?.request ?? new Interceptors(),
+        response: config?.interceptors?.response ?? new Interceptors(),
+      },
     });
 
     this.default = new DefaultService(this.request);

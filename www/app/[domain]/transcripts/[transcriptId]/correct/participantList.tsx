@@ -123,10 +123,13 @@ const ParticipantList = ({
 
       setLoading(true);
       try {
-        await api?.v1TranscriptAssignSpeaker(transcriptId, {
-          participant: participant.id,
-          timestamp_from: selectedText.start,
-          timestamp_to: selectedText.end,
+        await api?.v1TranscriptAssignSpeaker({
+          transcriptId,
+          requestBody: {
+            participant: participant.id,
+            timestamp_from: selectedText.start,
+            timestamp_to: selectedText.end,
+          },
         });
         onSuccess();
       } catch (error) {
@@ -142,9 +145,12 @@ const ParticipantList = ({
       setLoading(true);
       if (participantTo.speaker) {
         try {
-          await api?.v1TranscriptMergeSpeaker(transcriptId, {
-            speaker_from: speakerFrom,
-            speaker_to: participantTo.speaker,
+          await api?.v1TranscriptMergeSpeaker({
+            transcriptId,
+            requestBody: {
+              speaker_from: speakerFrom,
+              speaker_to: participantTo.speaker,
+            },
           });
           onSuccess();
         } catch (error) {
@@ -153,11 +159,11 @@ const ParticipantList = ({
         }
       } else {
         try {
-          await api?.v1TranscriptUpdateParticipant(
+          await api?.v1TranscriptUpdateParticipant({
             transcriptId,
-            participantTo.id,
-            { speaker: speakerFrom },
-          );
+            participantId: participantTo.id,
+            requestBody: { speaker: speakerFrom },
+          });
           onSuccess();
         } catch (error) {
           setError(error, "There was an error merging (update)");
@@ -183,8 +189,12 @@ const ParticipantList = ({
       if (participant && participant.name !== participantInput) {
         setLoading(true);
         api
-          ?.v1TranscriptUpdateParticipant(transcriptId, participant.id, {
-            name: participantInput,
+          ?.v1TranscriptUpdateParticipant({
+            transcriptId,
+            participantId: participant.id,
+            requestBody: {
+              name: participantInput,
+            },
           })
           .then(() => {
             participants.refetch();
@@ -202,9 +212,12 @@ const ParticipantList = ({
     ) {
       setLoading(true);
       api
-        ?.v1TranscriptAddParticipant(transcriptId, {
-          name: participantInput,
-          speaker: selectedText,
+        ?.v1TranscriptAddParticipant({
+          transcriptId,
+          requestBody: {
+            name: participantInput,
+            speaker: selectedText,
+          },
         })
         .then(() => {
           participants.refetch();
@@ -222,12 +235,12 @@ const ParticipantList = ({
     ) {
       setLoading(true);
       try {
-        const participant = await api?.v1TranscriptAddParticipant(
+        const participant = await api?.v1TranscriptAddParticipant({
           transcriptId,
-          {
+          requestBody: {
             name: participantInput,
           },
-        );
+        });
         setLoading(false);
         assignTo(participant)().catch(() => {
           // error and loading are handled by assignTo catch
@@ -240,8 +253,11 @@ const ParticipantList = ({
     } else if (action == "Create") {
       setLoading(true);
       api
-        ?.v1TranscriptAddParticipant(transcriptId, {
-          name: participantInput,
+        ?.v1TranscriptAddParticipant({
+          transcriptId,
+          requestBody: {
+            name: participantInput,
+          },
         })
         .then(() => {
           participants.refetch();
@@ -261,7 +277,7 @@ const ParticipantList = ({
     if (loading || participants.loading || topicWithWords.loading) return;
     setLoading(true);
     api
-      ?.v1TranscriptDeleteParticipant(transcriptId, participantId)
+      ?.v1TranscriptDeleteParticipant({ transcriptId, participantId })
       .then(() => {
         participants.refetch();
         setLoading(false);

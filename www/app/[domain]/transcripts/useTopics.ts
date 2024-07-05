@@ -23,7 +23,7 @@ const useTopics = (id: string): TranscriptTopics => {
 
     setLoading(true);
     api
-      .v1TranscriptGetTopics(id)
+      .v1TranscriptGetTopics({ transcriptId: id })
       .then((result) => {
         setTopics(result);
         setLoading(false);

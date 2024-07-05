@@ -41,7 +41,7 @@ const useWebRTC = (
         };
 
         api
-          .v1TranscriptRecordWebrtc(transcriptId, rtcOffer)
+          .v1TranscriptRecordWebrtc({ transcriptId, requestBody: rtcOffer })
           .then((answer) => {
             try {
               p.signal(answer);
