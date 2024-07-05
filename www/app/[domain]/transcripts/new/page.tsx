@@ -12,7 +12,7 @@ import SelectSearch from "react-select-search";
 import { supportedLatinLanguages } from "../../../supportedLanguages";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import { featureEnabled } from "../../domainContext";
-
+import { Button, Text } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
   const isAuthenticated = useFiefIsAuthenticated();
@@ -30,21 +30,29 @@ const TranscriptCreate = () => {
 
   const createTranscript = useCreateTranscript();
 
-  const [loadingSend, setLoadingSend] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  const [loadingUpload, setLoadingUpload] = useState(false);
 
   const send = () => {
-    if (loadingSend || createTranscript.loading || permissionDenied) return;
-    setLoadingSend(true);
+    if (loadingRecord || createTranscript.loading || permissionDenied) return;
+    setLoadingRecord(true);
+    createTranscript.create({ name, target_language: targetLanguage });
+  };
+
+  const uploadFile = () => {
+    if (loadingUpload || createTranscript.loading || permissionDenied) return;
+    setLoadingUpload(true);
     createTranscript.create({ name, target_language: targetLanguage });
   };
 
   useEffect(() => {
+    const action = loadingRecord ? "record" : "upload";
     createTranscript.transcript &&
-      router.push(`/transcripts/${createTranscript.transcript.id}/record`);
+      router.push(`/transcripts/${createTranscript.transcript.id}/${action}`);
   }, [createTranscript.transcript]);
 
   useEffect(() => {
-    if (createTranscript.error) setLoadingSend(false);
+    if (createTranscript.error) setLoadingRecord(false);
   }, [createTranscript.error]);
 
   const { loading, permissionOk, permissionDenied, requestPermission } =
@@ -55,10 +63,7 @@ const TranscriptCreate = () => {
       <div className="lg:grid lg:grid-cols-2 lg:grid-rows-1 lg:gap-4 lg:h-full h-auto flex flex-col">
         <section className="flex flex-col w-full lg:h-full items-center justify-evenly p-4 md:px-6 md:py-8">
           <div className="flex flex-col max-w-xl items-center justify-center">
-            <h1 className="text-2xl font-bold mb-2">
-              Welcome to reflector.media
-            </h1>
-            <button>Test upload</button>
+            <h1 className="text-2xl font-bold mb-2">Welcome to Reflector</h1>
             <p>
               Reflector is a transcription and summarization pipeline that
               transforms audio into knowledge.
@@ -101,7 +106,6 @@ const TranscriptCreate = () => {
                   />
                 </div>
               </label>
-
               <label className="mb-3">
                 <p>Do you want to enable live translation?</p>
                 <SelectSearch
@@ -112,7 +116,6 @@ const TranscriptCreate = () => {
                   placeholder="Choose your language"
                 />
               </label>
-
               {loading ? (
                 <p className="">Checking permissions...</p>
               ) : permissionOk ? (
@@ -131,13 +134,23 @@ const TranscriptCreate = () => {
                   Request Microphone Permission
                 </button>
               )}
-              <button
-                className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
+              <Button
+                colorScheme="blue"
                 onClick={send}
-                disabled={!permissionOk || loadingSend}
+                isDisabled={!permissionOk || loadingRecord || loadingUpload}
               >
-                {loadingSend ? "Loading..." : "Confirm"}
-              </button>
+                {loadingRecord ? "Loading..." : "Record Meeting"}
+              </Button>
+              <Text align="center" m="2">
+                OR
+              </Text>
+              <Button
+                colorScheme="blue"
+                onClick={uploadFile}
+                isDisabled={!permissionOk || loadingRecord || loadingUpload}
+              >
+                {loadingUpload ? "Loading..." : "Upload File"}
+              </Button>
             </div>
           )}
         </section>
