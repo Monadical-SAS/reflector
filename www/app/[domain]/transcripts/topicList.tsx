@@ -108,10 +108,6 @@ export function TopicList({
     setActiveTopic(topics[topics.length - 1]);
   }, [topics]);
 
-  useEffect(() => {
-    if (activeTopic && currentTranscriptText) setActiveTopic(null);
-  }, [activeTopic, currentTranscriptText]);
-
   return (
     <Flex
       position={"relative"}
@@ -229,7 +225,7 @@ export function TopicList({
           topics.length == 0 && (
             <Box textAlign={"center"} textColor="gray">
               <Text>
-                Discussion transcript will appear here after you start
+                Full discussion transcript will appear here after you start
                 recording.
               </Text>
               <Text>

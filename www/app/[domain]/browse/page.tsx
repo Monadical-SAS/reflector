@@ -216,7 +216,7 @@ export default function TranscriptBrowser() {
                       href={`/transcripts/${item.id}`}
                       noOfLines={2}
                     >
-                      {item.title || item.name || "Unamed Transcript"}
+                      {item.title || item.name || "Unnamed Transcript"}
                     </Link>
                   </Heading>
 
@@ -244,7 +244,7 @@ export default function TranscriptBrowser() {
                           <AlertDialogContent>
                             <AlertDialogHeader fontSize="lg" fontWeight="bold">
                               Delete{" "}
-                              {item.title || item.name || "Unamed Transcript"}
+                              {item.title || item.name || "Unnamed Transcript"}
                             </AlertDialogHeader>
 
                             <AlertDialogBody>
