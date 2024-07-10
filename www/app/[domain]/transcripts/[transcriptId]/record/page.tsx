@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import Player from "../../player";
 import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
-import { Box, Text, Grid } from "@chakra-ui/react";
+import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
 import LiveTrancription from "../../liveTranscription";
 
 type TranscriptDetails = {
@@ -78,46 +78,51 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         // todo: only start recording animation when you get "recorded" status
         <Recorder transcriptId={details.params.transcriptId} status={status} />
       )}
-      <Grid
-        templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
-        templateRows={{
-          base: "minmax(0, 1fr) minmax(0, 1fr)",
-          md: "minmax(0, 1fr)",
-        }}
-        gap={2}
-        padding={4}
-        paddingBottom={0}
+      <VStack
+        align={"left"}
+        w="full"
+        h="full"
+        mb={4}
         background="gray.bg"
         border={"2px solid"}
         borderColor={"gray.bg"}
         borderRadius={8}
+        p="4"
       >
-        <TopicList
-          topics={webSockets.topics}
-          useActiveTopic={useActiveTopic}
-          autoscroll={true}
-          transcriptId={details.params.transcriptId}
-          status={status}
-          currentTranscriptText={webSockets.accumulatedText}
-        />
-        <Box>
-          {!transcriptStarted ? (
-            <Box textAlign={"center"} textColor="gray">
-              <Text>
-                The conversation transcript will appear here shortly after you
-                start recording.
-              </Text>
-            </Box>
-          ) : (
-            status === "recording" && (
-              <LiveTrancription
-                text={webSockets.transcriptTextLive}
-                translateText={webSockets.translateText}
-              />
-            )
-          )}
-        </Box>
-      </Grid>
+        <Heading size={"lg"}>
+          {status === "processing" ? "Processing meeting" : "Record meeting"}
+        </Heading>
+
+        <Flex direction={{ base: "column-reverse", md: "row" }}>
+          <Box w={{ md: "50%" }}>
+            <TopicList
+              topics={webSockets.topics}
+              useActiveTopic={useActiveTopic}
+              autoscroll={true}
+              transcriptId={details.params.transcriptId}
+              status={status}
+              currentTranscriptText={webSockets.accumulatedText}
+            />
+          </Box>
+          <Box w={{ md: "50%" }} h={{ base: "20%", md: "full" }}>
+            {!transcriptStarted ? (
+              <Box textAlign={"center"} textColor="gray">
+                <Text>
+                  Live transcript will appear here shortly after you'll start
+                  recording.
+                </Text>
+              </Box>
+            ) : (
+              status === "recording" && (
+                <LiveTrancription
+                  text={webSockets.transcriptTextLive}
+                  translateText={webSockets.translateText}
+                />
+              )
+            )}
+          </Box>
+        </Flex>
+      </VStack>
     </Grid>
   );
 };

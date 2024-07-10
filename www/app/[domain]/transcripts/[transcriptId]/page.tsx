@@ -101,7 +101,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             colSpan={{ base: 1, md: 2 }}
           >
             <TranscriptTitle
-              title={transcript.response.title || "Unamed Transcript"}
+              title={transcript.response.title || "Unnamed Transcript"}
               transcriptId={transcriptId}
             />
           </GridItem>
