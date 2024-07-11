@@ -95,6 +95,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         ];
 
         setTranscriptTextLive("Lorem Ipsum");
+        setStatus({ value: "recording" });
         setTopics([
           {
             id: "1",
@@ -198,7 +199,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
         setAccumulatedText(
           "This text is in English, and it is a pretty long sentence to test the limits. This text is in English, and it is a pretty long sentence to test the limits",
         );
-        setStatus({ value: "recording" });
+        setStatus({ value: "processing" });
         setTopics([
           {
             id: "1",
