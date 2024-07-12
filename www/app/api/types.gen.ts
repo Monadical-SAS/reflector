@@ -6,7 +6,7 @@ export type AudioWaveform = {
 
 export type Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post =
   {
-    file: Blob | File;
+    chunk: Blob | File;
   };
 
 export type CreateParticipant = {
@@ -296,7 +296,9 @@ export type V1TranscriptMergeSpeakerData = {
 export type V1TranscriptMergeSpeakerResponse = SpeakerAssignmentStatus;
 
 export type V1TranscriptRecordUploadData = {
+  chunkNumber: number;
   formData: Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post;
+  totalChunks: number;
   transcriptId: string;
 };
 

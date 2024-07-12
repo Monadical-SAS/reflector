@@ -497,6 +497,8 @@ export class DefaultService {
    * Transcript Record Upload
    * @param data The data for the request.
    * @param data.transcriptId
+   * @param data.chunkNumber
+   * @param data.totalChunks
    * @param data.formData
    * @returns unknown Successful Response
    * @throws ApiError
@@ -509,6 +511,10 @@ export class DefaultService {
       url: "/v1/transcripts/{transcript_id}/record/upload",
       path: {
         transcript_id: data.transcriptId,
+      },
+      query: {
+        chunk_number: data.chunkNumber,
+        total_chunks: data.totalChunks,
       },
       formData: data.formData,
       mediaType: "multipart/form-data",
