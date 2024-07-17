@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { GetTranscript } from "../../api";
 import Pagination from "./pagination";
 import NextLink from "next/link";
-import { FaGear } from "react-icons/fa6";
+import { FaArrowRotateRight, FaGear } from "react-icons/fa6";
 import { FaCheck, FaTrash, FaStar, FaMicrophone } from "react-icons/fa";
 import { MdError } from "react-icons/md";
 import useTranscriptList from "../transcripts/useTranscriptList";
@@ -20,20 +20,10 @@ import {
   Card,
   Link,
   CardBody,
-  CardFooter,
   Stack,
   Text,
   Icon,
   Grid,
-  Divider,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverCloseButton,
-  PopoverHeader,
-  PopoverBody,
-  PopoverFooter,
   IconButton,
   Spacer,
   Menu,
@@ -46,7 +36,6 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
-  keyframes,
   Tooltip,
 } from "@chakra-ui/react";
 import { PlusSquareIcon } from "@chakra-ui/icons";
@@ -93,12 +82,12 @@ export default function TranscriptBrowser() {
     );
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
-  const handleDeleteTranscript = (transcriptToDeleteId) => (e) => {
+  const handleDeleteTranscript = (transcriptId) => (e) => {
     e.stopPropagation();
     if (api && !deletionLoading) {
       setDeletionLoading(true);
       api
-        .v1TranscriptDelete(transcriptToDeleteId)
+        .v1TranscriptDelete({ transcriptId })
         .then(() => {
           refetch();
           setDeletionLoading(false);
@@ -106,7 +95,7 @@ export default function TranscriptBrowser() {
           onCloseDeletion();
           setDeletedItemIds((deletedItemIds) => [
             deletedItemIds,
-            ...transcriptToDeleteId,
+            ...transcriptId,
           ]);
         })
         .catch((err) => {
@@ -116,6 +105,24 @@ export default function TranscriptBrowser() {
     }
   };
 
+  const handleProcessTranscript = (transcriptId) => (e) => {
+    if (api) {
+      api
+        .v1TranscriptProcess({ transcriptId })
+        .then((result) => {
+          const status = (result as any).status;
+          if (status === "already running") {
+            setError(
+              new Error("Processing is already running, please wait"),
+              "Processing is already running, please wait",
+            );
+          }
+        })
+        .catch((err) => {
+          setError(err, "There was an error processing the transcript");
+        });
+    }
+  };
   return (
     <Flex
       maxW="container.xl"
@@ -221,7 +228,7 @@ export default function TranscriptBrowser() {
                   </Heading>
 
                   <Spacer />
-                  <Menu closeOnSelect={false}>
+                  <Menu closeOnSelect={true}>
                     <MenuButton
                       as={IconButton}
                       icon={<FaEllipsisVertical />}
@@ -234,6 +241,12 @@ export default function TranscriptBrowser() {
                         icon={<FaTrash color={"red.500"} />}
                       >
                         Delete
+                      </MenuItem>
+                      <MenuItem
+                        onClick={handleProcessTranscript(item.id)}
+                        icon={<FaArrowRotateRight />}
+                      >
+                        Process
                       </MenuItem>
                       <AlertDialog
                         isOpen={transcriptToDeleteId === item.id}
