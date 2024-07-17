@@ -315,6 +315,12 @@ export type V1TranscriptRecordWebrtcData = {
 
 export type V1TranscriptRecordWebrtcResponse = unknown;
 
+export type V1TranscriptProcessData = {
+  transcriptId: string;
+};
+
+export type V1TranscriptProcessResponse = unknown;
+
 export type V1UserMeResponse = UserInfo | null;
 
 export type $OpenApiTs = {
@@ -617,6 +623,21 @@ export type $OpenApiTs = {
   "/v1/transcripts/{transcript_id}/record/webrtc": {
     post: {
       req: V1TranscriptRecordWebrtcData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/transcripts/{transcript_id}/process": {
+    post: {
+      req: V1TranscriptProcessData;
       res: {
         /**
          * Successful Response

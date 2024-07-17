@@ -46,6 +46,8 @@ import type {
   V1TranscriptGetWebsocketEventsResponse,
   V1TranscriptRecordWebrtcData,
   V1TranscriptRecordWebrtcResponse,
+  V1TranscriptProcessData,
+  V1TranscriptProcessResponse,
   V1UserMeResponse,
 } from "./types.gen";
 
@@ -559,6 +561,28 @@ export class DefaultService {
       },
       body: data.requestBody,
       mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Transcript Process
+   * @param data The data for the request.
+   * @param data.transcriptId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1TranscriptProcess(
+    data: V1TranscriptProcessData,
+  ): CancelablePromise<V1TranscriptProcessResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/transcripts/{transcript_id}/process",
+      path: {
+        transcript_id: data.transcriptId,
+      },
       errors: {
         422: "Validation Error",
       },
