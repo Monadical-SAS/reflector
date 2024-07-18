@@ -8,18 +8,21 @@ type ErrorTranscript = {
   error: Error;
   loading: false;
   response: null;
+  reload: () => void;
 };
 
 type LoadingTranscript = {
   response: null;
   loading: true;
   error: false;
+  reload: () => void;
 };
 
 type SuccessTranscript = {
   response: GetTranscript;
   loading: false;
   error: null;
+  reload: () => void;
 };
 
 const useTranscript = (
@@ -28,13 +31,17 @@ const useTranscript = (
   const [response, setResponse] = useState<GetTranscript | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
+  const [reload, setReload] = useState(0);
   const { setError } = useError();
   const api = useApi();
+  const reloadHandler = () => setReload((prev) => prev + 1);
 
   useEffect(() => {
     if (!id || !api) return;
 
-    setLoading(true);
+    if (!response) {
+      setLoading(true);
+    }
 
     api
       .v1TranscriptGet({ transcriptId: id })
@@ -52,9 +59,9 @@ const useTranscript = (
         }
         setErrorState(error);
       });
-  }, [id, !api]);
+  }, [id, !api, reload]);
 
-  return { response, loading, error } as
+  return { response, loading, error, reload: reloadHandler } as
     | ErrorTranscript
     | LoadingTranscript
     | SuccessTranscript;
