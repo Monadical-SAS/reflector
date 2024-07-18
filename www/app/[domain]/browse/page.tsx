@@ -236,13 +236,14 @@ export default function TranscriptBrowser() {
                     />
                     <MenuList>
                       <MenuItem
-                        disabled={deletionLoading}
+                        isDisabled={deletionLoading}
                         onClick={() => setTranscriptToDeleteId(item.id)}
                         icon={<FaTrash color={"red.500"} />}
                       >
                         Delete
                       </MenuItem>
                       <MenuItem
+                        isDisabled={item.status === "idle"}
                         onClick={handleProcessTranscript(item.id)}
                         icon={<FaArrowRotateRight />}
                       >
