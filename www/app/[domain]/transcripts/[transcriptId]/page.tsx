@@ -103,6 +103,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <TranscriptTitle
               title={transcript.response.title || "Unnamed Transcript"}
               transcriptId={transcriptId}
+              onUpdate={(newTitle) => {
+                transcript.reload();
+              }}
             />
           </GridItem>
           <TopicList
@@ -118,6 +121,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               <FinalSummary
                 transcriptResponse={transcript.response}
                 topicsResponse={topics.topics}
+                onUpdate={(newSummary) => {
+                  transcript.reload();
+                }}
               />
             </>
           ) : (
