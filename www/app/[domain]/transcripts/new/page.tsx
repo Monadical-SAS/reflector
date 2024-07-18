@@ -148,7 +148,7 @@ const TranscriptCreate = () => {
               <Button
                 colorScheme="blue"
                 onClick={uploadFile}
-                isDisabled={!permissionOk || loadingRecord || loadingUpload}
+                isDisabled={loadingRecord || loadingUpload}
               >
                 {loadingUpload ? "Loading..." : "Upload File"}
               </Button>
