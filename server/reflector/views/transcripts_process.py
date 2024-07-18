@@ -27,6 +27,11 @@ async def transcript_process(
     if transcript.locked:
         raise HTTPException(status_code=400, detail="Transcript is locked")
 
+    if transcript.status == "idle":
+        raise HTTPException(
+            status_code=400, detail="Recording is not ready for processing"
+        )
+
     if task_is_scheduled_or_active(
         "reflector.pipelines.main_live_pipeline.task_pipeline_process",
         transcript_id=transcript_id,
