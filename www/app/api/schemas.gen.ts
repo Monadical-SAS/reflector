@@ -18,14 +18,14 @@ export const $AudioWaveform = {
 export const $Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post =
   {
     properties: {
-      file: {
+      chunk: {
         type: "string",
         format: "binary",
-        title: "File",
+        title: "Chunk",
       },
     },
     type: "object",
-    required: ["file"],
+    required: ["chunk"],
     title:
       "Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post",
   } as const;
