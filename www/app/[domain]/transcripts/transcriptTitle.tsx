@@ -7,6 +7,7 @@ import { FaPen } from "react-icons/fa";
 type TranscriptTitle = {
   title: string;
   transcriptId: string;
+  onUpdate?: (newTitle: string) => void;
 };
 
 const TranscriptTitle = (props: TranscriptTitle) => {
@@ -25,6 +26,9 @@ const TranscriptTitle = (props: TranscriptTitle) => {
         transcriptId,
         requestBody,
       });
+      if (props.onUpdate) {
+        props.onUpdate(newTitle);
+      }
       console.log("Updated transcript:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update transcript:", err);
