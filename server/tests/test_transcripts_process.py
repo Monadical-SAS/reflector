@@ -28,9 +28,9 @@ async def test_transcript_process(
 
     # upload mp3
     response = await ac.post(
-        f"/transcripts/{tid}/record/upload",
+        f"/transcripts/{tid}/record/upload?chunk_number=0&total_chunks=1",
         files={
-            "file": (
+            "chunk": (
                 "test_short.wav",
                 open("tests/records/test_short.wav", "rb"),
                 "audio/mpeg",
