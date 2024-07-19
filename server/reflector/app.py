@@ -17,6 +17,7 @@ from reflector.views.transcripts_audio import router as transcripts_audio_router
 from reflector.views.transcripts_participants import (
     router as transcripts_participants_router,
 )
+from reflector.views.transcripts_process import router as transcripts_process_router
 from reflector.views.transcripts_speaker import router as transcripts_speaker_router
 from reflector.views.transcripts_upload import router as transcripts_upload_router
 from reflector.views.transcripts_webrtc import router as transcripts_webrtc_router
@@ -74,6 +75,7 @@ app.include_router(transcripts_speaker_router, prefix="/v1")
 app.include_router(transcripts_upload_router, prefix="/v1")
 app.include_router(transcripts_websocket_router, prefix="/v1")
 app.include_router(transcripts_webrtc_router, prefix="/v1")
+app.include_router(transcripts_process_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
 add_pagination(app)
 

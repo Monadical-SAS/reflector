@@ -637,13 +637,21 @@ def pipeline_post(*, transcript_id: str):
 
 
 @get_transcript
-async def pipeline_upload(transcript: Transcript, logger: Logger):
+async def pipeline_process(transcript: Transcript, logger: Logger):
     import av
 
     try:
         # open audio
-        upload_filename = next(transcript.data_path.glob("upload.*"))
-        container = av.open(upload_filename.as_posix())
+        audio_filename = next(transcript.data_path.glob("upload.*"), None)
+        if audio_filename and transcript.status != "uploaded":
+            raise Exception("File upload is not completed")
+
+        if not audio_filename:
+            audio_filename = next(transcript.data_path.glob("audio.*"), None)
+            if not audio_filename:
+                raise Exception("There is no file to process")
+
+        container = av.open(audio_filename.as_posix())
 
         # create pipeline
         pipeline = PipelineMainLive(transcript_id=transcript.id)
@@ -676,5 +684,5 @@ async def pipeline_upload(transcript: Transcript, logger: Logger):
 
 @shared_task
 @asynctask
-async def task_pipeline_upload(*, transcript_id: str):
-    return await pipeline_upload(transcript_id=transcript_id)
+async def task_pipeline_process(*, transcript_id: str):
+    return await pipeline_process(transcript_id=transcript_id)
