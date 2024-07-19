@@ -93,8 +93,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           {status === "processing" ? "Processing meeting" : "Record meeting"}
         </Heading>
 
-        <Flex direction={{ base: "column-reverse", md: "row" }}>
-          <Box w={{ md: "50%" }}>
+        <Flex direction={{ base: "column-reverse", md: "row" }} h={"full"}>
+          <Box w={{ md: "50%" }} h={{ base: "80%", md: "full" }}>
             <TopicList
               topics={webSockets.topics}
               useActiveTopic={useActiveTopic}

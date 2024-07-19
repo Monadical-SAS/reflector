@@ -23,6 +23,7 @@ import ShareAndPrivacy from "../shareAndPrivacy";
 type FinalSummaryProps = {
   transcriptResponse: GetTranscript;
   topicsResponse: GetTranscriptTopic[];
+  onUpdate?: (newSummary) => void;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
@@ -53,6 +54,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
         transcriptId,
         requestBody,
       });
+      if (props.onUpdate) {
+        props.onUpdate(newSummary);
+      }
       console.log("Updated long summary:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update long summary:", err);

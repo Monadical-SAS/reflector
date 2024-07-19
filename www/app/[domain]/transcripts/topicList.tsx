@@ -112,7 +112,7 @@ export function TopicList({
     <Flex
       position={"relative"}
       w={"100%"}
-      h={"100%"}
+      h={"95%"}
       flexDirection={"column"}
       justify={"center"}
       align={"center"}
