@@ -18,24 +18,46 @@ export default function FileUploadButton(props: FileUploadButton) {
     const file = event.target.files?.[0];
 
     if (file) {
-      console.log("Calling api.v1TranscriptRecordUpload()...");
-
-      // Create an object of the expected type
-      const uploadData = {
-        file: file,
-        // Add other properties if required by the type definition
-      };
+      const maxChunkSize = 50 * 1024 * 1024; // 50 MB
+      const totalChunks = Math.ceil(file.size / maxChunkSize);
+      let chunkNumber = 0;
+      let start = 0;
+      let uploadedSize = 0;
 
       api?.httpRequest.config.interceptors.request.use((request) => {
         request.onUploadProgress = (progressEvent) => {
-          setProgress((progressEvent.progress || 0) * 100);
+          const currentProgress = Math.floor(
+            ((uploadedSize + progressEvent.loaded) / file.size) * 100,
+          );
+          setProgress(currentProgress);
         };
         return request;
       });
-      api?.v1TranscriptRecordUpload({
-        transcriptId: props.transcriptId,
-        formData: uploadData,
-      });
+
+      const uploadNextChunk = async () => {
+        if (chunkNumber == totalChunks) return;
+
+        const chunkSize = Math.min(maxChunkSize, file.size - start);
+        const end = start + chunkSize;
+        const chunk = file.slice(start, end);
+
+        await api?.v1TranscriptRecordUpload({
+          transcriptId: props.transcriptId,
+          formData: {
+            chunk,
+          },
+          chunkNumber,
+          totalChunks,
+        });
+
+        uploadedSize += chunkSize;
+        chunkNumber++;
+        start = end;
+
+        uploadNextChunk();
+      };
+
+      uploadNextChunk();
     }
   };
 

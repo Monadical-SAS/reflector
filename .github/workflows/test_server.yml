@@ -3,10 +3,10 @@ name: Unittests
 on:
   pull_request:
     paths:
-      - 'server/**'
+      - "server/**"
   push:
     paths:
-      - 'server/**'
+      - "server/**"
 
 jobs:
   pytest:
@@ -17,65 +17,65 @@ jobs:
         ports:
           - 6379:6379
     steps:
-    - uses: actions/checkout@v3
-    - name: Install poetry
-      run: pipx install poetry
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'poetry'
-        cache-dependency-path: 'server/poetry.lock'
-    - name: Install requirements
-      run: |
-        cd server
-        poetry install
-    - name: Tests
-      run: |
-        cd server
-        poetry run python -m pytest -v tests
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "poetry"
+          cache-dependency-path: "server/poetry.lock"
+      - name: Install requirements
+        run: |
+          cd server
+          poetry install
+      - name: Tests
+        run: |
+          cd server
+          poetry run python -m pytest -v tests
 
   formatting:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-    - name: Validate formatting
-      run: |
-        pip install black
-        cd server
-        black --check reflector tests
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Validate formatting
+        run: |
+          pip install black
+          cd server
+          black --check reflector tests
 
   linting:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python 3.x
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-    - name: Validate formatting
-      run: |
-        pip install ruff
-        cd server
-        ruff reflector tests
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Validate formatting
+        run: |
+          pip install ruff
+          cd server
+          ruff check reflector tests
 
   docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - name: Build and push
-      id: docker_build
-      uses: docker/build-push-action@v4
-      with:
-        context: server
-        platforms: linux/amd64,linux/arm64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v4
+        with:
+          context: server
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
