@@ -131,5 +131,7 @@ class Settings(BaseSettings):
     # Healthcheck
     HEALTHCHECK_URL: str | None = None
 
+    AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
+
 
 settings = Settings()
