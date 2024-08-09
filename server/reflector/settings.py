@@ -133,5 +133,9 @@ class Settings(BaseSettings):
 
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
 
+    WHEREBY_API_URL: str = "https://api.whereby.dev/v1/meetings"
+
+    WHEREBY_API_KEY: str | None = None
+
 
 settings = Settings()

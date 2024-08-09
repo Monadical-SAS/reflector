@@ -7,6 +7,7 @@ import boto3
 import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from reflector.db.meetings import meetings_controller
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
@@ -60,12 +61,11 @@ def process_messages():
 async def process_recording(bucket_name: str, object_key: str):
     logger.info("Processing recording: %s/%s", bucket_name, object_key)
 
-    transcript = await transcripts_controller.add(
-        "",
-        source_language="en",
-        target_language="en",
-        user_id=None,
-    )
+    # extract a guid from the object key
+    room_name = f"/{object_key[:36]}"
+    meeting = await meetings_controller.get_by_room_name(room_name)
+    transcript = await transcripts_controller.get_by_meeting_id(meeting.id)
+
     _, extension = os.path.splitext(object_key)
     upload_filename = transcript.data_path / f"upload{extension}"
     upload_filename.parent.mkdir(parents=True, exist_ok=True)

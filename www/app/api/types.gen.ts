@@ -24,6 +24,16 @@ export type DeletionStatus = {
   status: string;
 };
 
+export type GetMeeting = {
+  id: string;
+  room_name: string;
+  room_url: string;
+  host_room_url: string;
+  viewer_room_url: string;
+  start_date: string;
+  end_date: string;
+};
+
 export type GetTranscript = {
   id: string;
   user_id: string | null;
@@ -40,6 +50,7 @@ export type GetTranscript = {
   target_language: string | null;
   participants: Array<TranscriptParticipant> | null;
   reviewed: boolean;
+  meeting_id: string | null;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -167,6 +178,12 @@ export type Word = {
 
 export type MetricsResponse = unknown;
 
+export type V1MeetingGetData = {
+  meetingId: string;
+};
+
+export type V1MeetingGetResponse = GetMeeting;
+
 export type V1TranscriptsListData = {
   /**
    * Page number
@@ -185,6 +202,12 @@ export type V1TranscriptsCreateData = {
 };
 
 export type V1TranscriptsCreateResponse = GetTranscript;
+
+export type V1TranscriptsCreateMeetingData = {
+  requestBody: CreateTranscript;
+};
+
+export type V1TranscriptsCreateMeetingResponse = GetTranscript;
 
 export type V1TranscriptGetData = {
   transcriptId: string;
@@ -336,6 +359,21 @@ export type $OpenApiTs = {
       };
     };
   };
+  "/v1/meetings/{meeting_id}": {
+    get: {
+      req: V1MeetingGetData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: GetMeeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
   "/v1/transcripts": {
     get: {
       req: V1TranscriptsListData;
@@ -352,6 +390,21 @@ export type $OpenApiTs = {
     };
     post: {
       req: V1TranscriptsCreateData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: GetTranscript;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/transcripts/meeting": {
+    post: {
+      req: V1TranscriptsCreateMeetingData;
       res: {
         /**
          * Successful Response

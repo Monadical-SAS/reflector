@@ -24,6 +24,7 @@
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@sentry/nextjs": "^7.77.0",
     "@vercel/edge-config": "^0.4.1",
+    "@whereby.com/browser-sdk": "^3.3.4",
     "autoprefixer": "10.4.14",
     "axios": "^1.6.2",
     "chakra-react-select": "^4.7.6",
@@ -55,8 +56,8 @@
   "author": "Andreas <andreas@monadical.com>",
   "license": "All Rights Reserved",
   "devDependencies": {
-    "@types/react": "18.2.20",
     "@hey-api/openapi-ts": "^0.48.0",
+    "@types/react": "18.2.20",
     "prettier": "^3.0.0"
   }
 }
