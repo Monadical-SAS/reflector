@@ -4,10 +4,14 @@ import type { CancelablePromise } from "./core/CancelablePromise";
 import type { BaseHttpRequest } from "./core/BaseHttpRequest";
 import type {
   MetricsResponse,
+  V1MeetingGetData,
+  V1MeetingGetResponse,
   V1TranscriptsListData,
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
   V1TranscriptsCreateResponse,
+  V1TranscriptsCreateMeetingData,
+  V1TranscriptsCreateMeetingResponse,
   V1TranscriptGetData,
   V1TranscriptGetResponse,
   V1TranscriptUpdateData,
@@ -68,6 +72,28 @@ export class DefaultService {
   }
 
   /**
+   * Meeting Get
+   * @param data The data for the request.
+   * @param data.meetingId
+   * @returns GetMeeting Successful Response
+   * @throws ApiError
+   */
+  public v1MeetingGet(
+    data: V1MeetingGetData,
+  ): CancelablePromise<V1MeetingGetResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/meetings/{meeting_id}",
+      path: {
+        meeting_id: data.meetingId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
    * Transcripts List
    * @param data The data for the request.
    * @param data.page Page number
@@ -104,6 +130,27 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Transcripts Create Meeting
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns GetTranscript Successful Response
+   * @throws ApiError
+   */
+  public v1TranscriptsCreateMeeting(
+    data: V1TranscriptsCreateMeetingData,
+  ): CancelablePromise<V1TranscriptsCreateMeetingResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/transcripts/meeting",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {

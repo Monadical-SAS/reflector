@@ -7,6 +7,7 @@ database = databases.Database(settings.DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
 # import models
+import reflector.db.meetings  # noqa
 import reflector.db.transcripts  # noqa
 
 engine = sqlalchemy.create_engine(
