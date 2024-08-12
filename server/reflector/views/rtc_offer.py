@@ -71,7 +71,7 @@ async def rtc_offer_base(
 
     async def flush_pipeline_and_quit(close=True):
         # may be called twice
-        # 1. either the client ask to sotp the meeting
+        # 1. either the client asked to stop the meeting
         #    - we flush and close
         #    - when we receive the close event, we do nothing.
         # 2. or the client close the connection
