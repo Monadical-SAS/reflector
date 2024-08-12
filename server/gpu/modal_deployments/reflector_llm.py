@@ -9,7 +9,7 @@ import threading
 from typing import Optional
 
 import modal
-from modal import Image, Secret, Stub, asgi_app, method
+from modal import Image, Secret, App, asgi_app, method, enter, exit
 
 # LLM
 LLM_MODEL: str = "lmsys/vicuna-13b-v1.5"
@@ -19,7 +19,7 @@ LLM_MAX_NEW_TOKENS: int = 300
 
 IMAGE_MODEL_DIR = "/root/llm_models"
 
-stub = Stub(name="reflector-llm")
+app = App(name="reflector-llm")
 
 
 def download_llm():
@@ -64,7 +64,7 @@ llm_image = (
 )
 
 
-@stub.cls(
+@app.cls(
     gpu="A100",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
@@ -72,7 +72,8 @@ llm_image = (
     image=llm_image,
 )
 class LLM:
-    def __enter__(self):
+    @enter()
+    def enter(self):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
@@ -113,7 +114,8 @@ class LLM:
 
         self.lock = threading.Lock()
 
-    def __exit__(self, *args):
+    @exit()
+    def exit():
         print("Exit llm")
 
     @method()
@@ -161,7 +163,7 @@ class LLM:
 # -------------------------------------------------------------------
 
 
-@stub.function(
+@app.function(
     container_idle_timeout=60 * 10,
     timeout=60 * 5,
     allow_concurrent_inputs=45,
