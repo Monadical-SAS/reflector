@@ -6,12 +6,12 @@ Reflector GPU backend - diarizer
 import os
 
 import modal.gpu
-from modal import Image, Secret, Stub, asgi_app, method
+from modal import Image, Secret, App, asgi_app, method, enter
 from pydantic import BaseModel
 
-PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.0"
+PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.1"
 MODEL_DIR = "/root/diarization_models"
-stub = Stub(name="reflector-diarizer")
+app = App(name="reflector-diarizer")
 
 
 def migrate_cache_llm():
@@ -33,7 +33,6 @@ def download_pyannote_audio():
     Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.0",
         cache_dir=MODEL_DIR,
-        use_auth_token=os.environ["HF_TOKEN"]
     )
 
 
@@ -54,7 +53,7 @@ diarizer_image = (
         "hf-transfer"
     )
     .run_function(migrate_cache_llm)
-    .run_function(download_pyannote_audio, secrets=[modal.Secret.from_name("my-huggingface-secret")])
+    .run_function(download_pyannote_audio)
     .env(
         {
             "LD_LIBRARY_PATH": (
@@ -66,16 +65,16 @@ diarizer_image = (
 )
 
 
-@stub.cls(
+@app.cls(
     gpu=modal.gpu.A100(memory=40),
     timeout=60 * 30,
     container_idle_timeout=60,
     allow_concurrent_inputs=1,
     image=diarizer_image,
-    secrets=[modal.Secret.from_name("my-huggingface-secret")],
 )
 class Diarizer:
-    def __enter__(self):
+    @enter()
+    def enter(self):
         import torch
         from pyannote.audio import Pipeline
 
@@ -124,7 +123,7 @@ class Diarizer:
 # -------------------------------------------------------------------
 
 
-@stub.function(
+@app.function(
     timeout=60 * 10,
     container_idle_timeout=60 * 3,
     allow_concurrent_inputs=40,

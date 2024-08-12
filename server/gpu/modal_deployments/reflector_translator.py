@@ -6,7 +6,7 @@ Reflector GPU backend - transcriber
 import os
 import threading
 
-from modal import Image, Secret, Stub, asgi_app, method
+from modal import Image, Secret, App, asgi_app, method, enter
 from pydantic import BaseModel
 
 # Seamless M4T
@@ -20,7 +20,7 @@ HF_SEAMLESS_M4T_VOCODEREPO: str = "facebook/seamless-m4t-vocoder"
 SEAMLESS_GITEPO: str = "https://github.com/facebookresearch/seamless_communication.git"
 SEAMLESS_MODEL_DIR: str = "m4t"
 
-stub = Stub(name="reflector-translator")
+app = App(name="reflector-translator")
 
 
 def install_seamless_communication():
@@ -134,7 +134,7 @@ transcriber_image = (
 )
 
 
-@stub.cls(
+@app.cls(
     gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
@@ -142,7 +142,8 @@ transcriber_image = (
     image=transcriber_image,
 )
 class Translator:
-    def __enter__(self):
+    @enter()
+    def enter(self):
         import torch
         from seamless_communication.inference.translator import Translator
 
@@ -379,7 +380,7 @@ class Translator:
 # -------------------------------------------------------------------
 
 
-@stub.function(
+@app.function(
     container_idle_timeout=60,
     timeout=60,
     allow_concurrent_inputs=40,
