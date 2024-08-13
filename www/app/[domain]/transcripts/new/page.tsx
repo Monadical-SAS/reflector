@@ -162,16 +162,23 @@ const TranscriptCreate = () => {
               >
                 {loadingUpload ? "Loading..." : "Upload File"}
               </Button>
-              <Text align="center" m="2">
-                OR
-              </Text>
-              <Button
-                colorScheme="blue"
-                onClick={startMeeting}
-                isDisabled={loadingRecord || loadingUpload || loadingMeeting}
-              >
-                {loadingUpload ? "Loading..." : "Start Whereby Meeting"}
-              </Button>
+
+              {requireLogin && (
+                <>
+                  <Text align="center" m="2">
+                    OR
+                  </Text>
+                  <Button
+                    colorScheme="blue"
+                    onClick={startMeeting}
+                    isDisabled={
+                      loadingRecord || loadingUpload || loadingMeeting
+                    }
+                  >
+                    {loadingUpload ? "Loading..." : "Start Whereby Meeting"}
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </section>
