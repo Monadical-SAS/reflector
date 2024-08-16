@@ -2,20 +2,19 @@
 
 import "@whereby.com/browser-sdk/embed";
 import { useCallback, useEffect, useRef } from "react";
-import useTranscript from "../../useTranscript";
-import useMeeting from "../../useMeeting";
+import useRoomMeeting from "../../rooms/useRoomMeeting";
 
-export type TranscriptDetails = {
+export type RoomDetails = {
   params: {
-    transcriptId: string;
+    roomName: string;
   };
 };
 
-export default function TranscriptMeeting(details: TranscriptDetails) {
+export default function Room(details: RoomDetails) {
   const wherebyRef = useRef<HTMLElement>(null);
+  const roomName = details.params.roomName;
+  const meeting = useRoomMeeting(roomName);
 
-  const transcript = useTranscript(details.params.transcriptId);
-  const meeting = useMeeting(transcript?.response?.meeting_id);
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
     : meeting?.response?.room_url;

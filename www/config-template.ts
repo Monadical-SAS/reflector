@@ -4,6 +4,7 @@ export const localConfig = {
     privacy: true,
     browse: true,
     sendToZulip: true,
+    rooms: true,
   },
   api_url: "http://127.0.0.1:1250",
   websocket_url: "ws://127.0.0.1:1250",
