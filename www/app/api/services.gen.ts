@@ -6,6 +6,16 @@ import type {
   MetricsResponse,
   V1MeetingGetData,
   V1MeetingGetResponse,
+  V1MeetingCreateData,
+  V1MeetingCreateResponse,
+  V1RoomsListData,
+  V1RoomsListResponse,
+  V1RoomsCreateData,
+  V1RoomsCreateResponse,
+  V1RoomsDeleteData,
+  V1RoomsDeleteResponse,
+  V1RoomsCreateMeetingData,
+  V1RoomsCreateMeetingResponse,
   V1TranscriptsListData,
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
@@ -86,6 +96,117 @@ export class DefaultService {
       url: "/v1/meetings/{meeting_id}",
       path: {
         meeting_id: data.meetingId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Meeting Create
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns GetMeeting Successful Response
+   * @throws ApiError
+   */
+  public v1MeetingCreate(
+    data: V1MeetingCreateData,
+  ): CancelablePromise<V1MeetingCreateResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/meetings/",
+      query: {
+        room_id: data.roomId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms List
+   * @param data The data for the request.
+   * @param data.page Page number
+   * @param data.size Page size
+   * @returns Page_Room_ Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsList(
+    data: V1RoomsListData = {},
+  ): CancelablePromise<V1RoomsListResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms",
+      query: {
+        page: data.page,
+        size: data.size,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Create
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns Room Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsCreate(
+    data: V1RoomsCreateData,
+  ): CancelablePromise<V1RoomsCreateResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Delete
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns DeletionStatus Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsDelete(
+    data: V1RoomsDeleteData,
+  ): CancelablePromise<V1RoomsDeleteResponse> {
+    return this.httpRequest.request({
+      method: "DELETE",
+      url: "/v1/rooms/{room_id}",
+      path: {
+        room_id: data.roomId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Create Meeting
+   * @param data The data for the request.
+   * @param data.roomName
+   * @returns GetMeeting Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsCreateMeeting(
+    data: V1RoomsCreateMeetingData,
+  ): CancelablePromise<V1RoomsCreateMeetingResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_name}/meeting",
+      path: {
+        room_name: data.roomName,
       },
       errors: {
         422: "Validation Error",

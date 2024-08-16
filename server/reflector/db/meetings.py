@@ -16,6 +16,7 @@ meetings = sqlalchemy.Table(
     sqlalchemy.Column("start_date", sqlalchemy.DateTime),
     sqlalchemy.Column("end_date", sqlalchemy.DateTime),
     sqlalchemy.Column("user_id", sqlalchemy.String),
+    sqlalchemy.Column("room_id", sqlalchemy.String),
 )
 
 
@@ -28,10 +29,11 @@ class Meeting(BaseModel):
     start_date: datetime
     end_date: datetime
     user_id: str
+    room_id: str | None = None
 
 
 class MeetingController:
-    async def add(
+    async def create(
         self,
         id: str,
         room_name: str,
@@ -41,9 +43,10 @@ class MeetingController:
         start_date: datetime,
         end_date: datetime,
         user_id: str,
+        room_id: str = None,
     ):
         """
-        Add a new meeting
+        Create a new meeting
         """
         meeting = Meeting(
             id=id,
@@ -54,6 +57,7 @@ class MeetingController:
             start_date=start_date,
             end_date=end_date,
             user_id=user_id,
+            room_id=room_id,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await database.execute(query)
@@ -67,6 +71,20 @@ class MeetingController:
         Get a meeting by room name.
         """
         query = meetings.select().where(meetings.c.room_name == room_name)
+        result = await database.fetch_one(query)
+        if not result:
+            return None
+
+        return Meeting(**result)
+
+    async def get_latest(self, room_id: str) -> Meeting:
+        """
+        Get latest meeting for a room.
+        """
+        start_date = getattr(meetings.c, "start_date").desc()
+        query = (
+            meetings.select().where(meetings.c.room_id == room_id).order_by(start_date)
+        )
         result = await database.fetch_one(query)
         if not result:
             return None

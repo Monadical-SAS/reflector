@@ -14,6 +14,10 @@ export type CreateParticipant = {
   name: string;
 };
 
+export type CreateRoom = {
+  name: string;
+};
+
 export type CreateTranscript = {
   name: string;
   source_language?: string;
@@ -103,10 +107,25 @@ export type Page_GetTranscript_ = {
   pages?: number | null;
 };
 
+export type Page_Room_ = {
+  items: Array<Room>;
+  total: number;
+  page: number | null;
+  size: number | null;
+  pages?: number | null;
+};
+
 export type Participant = {
   id: string;
   speaker: number | null;
   name: string;
+};
+
+export type Room = {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
 };
 
 export type RtcOffer = {
@@ -183,6 +202,43 @@ export type V1MeetingGetData = {
 };
 
 export type V1MeetingGetResponse = GetMeeting;
+
+export type V1MeetingCreateData = {
+  roomId: string;
+};
+
+export type V1MeetingCreateResponse = GetMeeting;
+
+export type V1RoomsListData = {
+  /**
+   * Page number
+   */
+  page?: number;
+  /**
+   * Page size
+   */
+  size?: number;
+};
+
+export type V1RoomsListResponse = Page_Room_;
+
+export type V1RoomsCreateData = {
+  requestBody: CreateRoom;
+};
+
+export type V1RoomsCreateResponse = Room;
+
+export type V1RoomsDeleteData = {
+  roomId: string;
+};
+
+export type V1RoomsDeleteResponse = DeletionStatus;
+
+export type V1RoomsCreateMeetingData = {
+  roomName: string;
+};
+
+export type V1RoomsCreateMeetingResponse = GetMeeting;
 
 export type V1TranscriptsListData = {
   /**
@@ -362,6 +418,79 @@ export type $OpenApiTs = {
   "/v1/meetings/{meeting_id}": {
     get: {
       req: V1MeetingGetData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: GetMeeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/meetings/": {
+    post: {
+      req: V1MeetingCreateData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: GetMeeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms": {
+    get: {
+      req: V1RoomsListData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Page_Room_;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+    post: {
+      req: V1RoomsCreateData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Room;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_id}": {
+    delete: {
+      req: V1RoomsDeleteData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: DeletionStatus;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meeting": {
+    post: {
+      req: V1RoomsCreateMeetingData;
       res: {
         /**
          * Successful Response

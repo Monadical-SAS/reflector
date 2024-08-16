@@ -53,6 +53,18 @@ export const $CreateParticipant = {
   title: "CreateParticipant",
 } as const;
 
+export const $CreateRoom = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["name"],
+  title: "CreateRoom",
+} as const;
+
 export const $CreateTranscript = {
   properties: {
     name: {
@@ -529,6 +541,62 @@ export const $Page_GetTranscript_ = {
   title: "Page[GetTranscript]",
 } as const;
 
+export const $Page_Room_ = {
+  properties: {
+    items: {
+      items: {
+        $ref: "#/components/schemas/Room",
+      },
+      type: "array",
+      title: "Items",
+    },
+    total: {
+      type: "integer",
+      minimum: 0,
+      title: "Total",
+    },
+    page: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 1,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Page",
+    },
+    size: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 1,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Size",
+    },
+    pages: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Pages",
+    },
+  },
+  type: "object",
+  required: ["items", "total", "page", "size"],
+  title: "Page[Room]",
+} as const;
+
 export const $Participant = {
   properties: {
     id: {
@@ -554,6 +622,31 @@ export const $Participant = {
   type: "object",
   required: ["id", "speaker", "name"],
   title: "Participant",
+} as const;
+
+export const $Room = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    user_id: {
+      type: "string",
+      title: "User Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "user_id", "created_at"],
+  title: "Room",
 } as const;
 
 export const $RtcOffer = {

@@ -121,7 +121,7 @@ async def transcripts_create_meeting(
     end_date = start_date + timedelta(minutes=1)
     meeting = await create_meeting("", start_date=start_date, end_date=end_date)
 
-    meeting = await meetings_controller.add(
+    meeting = await meetings_controller.create(
         id=meeting["meetingId"],
         room_name=meeting["roomName"],
         room_url=meeting["roomUrl"],
@@ -133,7 +133,7 @@ async def transcripts_create_meeting(
     )
 
     return await transcripts_controller.add(
-        info.name,
+        "",
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
