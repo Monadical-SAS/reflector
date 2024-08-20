@@ -76,7 +76,7 @@ type LayoutProps = {
 
 export default async function RootLayout({ children, params }: LayoutProps) {
   const config = await getConfig(params.domain);
-  const { requireLogin, privacy, browse } = config.features;
+  const { requireLogin, privacy, browse, rooms } = config.features;
   const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 
   return (
@@ -149,6 +149,21 @@ export default async function RootLayout({ children, params }: LayoutProps) {
                               prefetch={false}
                             >
                               Browse
+                            </Link>
+                          </>
+                        ) : (
+                          <></>
+                        )}
+                        {rooms ? (
+                          <>
+                            &nbsp;·&nbsp;
+                            <Link
+                              href="/rooms"
+                              as={NextLink}
+                              className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                              prefetch={false}
+                            >
+                              Rooms
                             </Link>
                           </>
                         ) : (

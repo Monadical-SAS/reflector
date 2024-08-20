@@ -14,8 +14,9 @@ export async function middleware(request: NextRequest) {
   ) {
     // Feature-flag protedted paths
     if (
-      !config.features.browse &&
-      request.nextUrl.pathname.startsWith("/browse")
+      (!config.features.browse &&
+        request.nextUrl.pathname.startsWith("/browse")) ||
+      (!config.features.rooms && request.nextUrl.pathname.startsWith("/rooms"))
     ) {
       return NextResponse.redirect(request.nextUrl.origin);
     }
@@ -27,7 +28,8 @@ export async function middleware(request: NextRequest) {
       if (
         request.nextUrl.pathname == "/" ||
         request.nextUrl.pathname.startsWith("/transcripts") ||
-        request.nextUrl.pathname.startsWith("/browse")
+        request.nextUrl.pathname.startsWith("/browse") ||
+        request.nextUrl.pathname.startsWith("/rooms")
       ) {
         if (!fiefResponse.headers.get("x-middleware-rewrite")) {
           fiefResponse.headers.set(

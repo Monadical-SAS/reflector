@@ -50,6 +50,10 @@ transcripts = sqlalchemy.Table(
         nullable=False,
         server_default="private",
     ),
+    sqlalchemy.Column(
+        "meeting_id",
+        sqlalchemy.String,
+    ),
 )
 
 
@@ -145,6 +149,7 @@ class Transcript(BaseModel):
     share_mode: Literal["private", "semi-private", "public"] = "private"
     audio_location: str = "local"
     reviewed: bool = False
+    meeting_id: str | None = None
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -329,6 +334,18 @@ class TranscriptController:
             return None
         return Transcript(**result)
 
+    async def get_by_meeting_id(self, meeting_id: str, **kwargs) -> Transcript | None:
+        """
+        Get a transcript by meeting_id
+        """
+        query = transcripts.select().where(transcripts.c.meeting_id == meeting_id)
+        if "user_id" in kwargs:
+            query = query.where(transcripts.c.user_id == kwargs["user_id"])
+        result = await database.fetch_one(query)
+        if not result:
+            return None
+        return Transcript(**result)
+
     async def get_by_id_for_http(
         self,
         transcript_id: str,
@@ -376,6 +393,8 @@ class TranscriptController:
         source_language: str = "en",
         target_language: str = "en",
         user_id: str | None = None,
+        meeting_id: str | None = None,
+        share_mode: str = "private",
     ):
         """
         Add a new transcript
@@ -385,6 +404,8 @@ class TranscriptController:
             source_language=source_language,
             target_language=target_language,
             user_id=user_id,
+            meeting_id=meeting_id,
+            share_mode=share_mode,
         )
         query = transcripts.insert().values(**transcript.model_dump())
         await database.execute(query)
