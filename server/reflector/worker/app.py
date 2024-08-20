@@ -16,11 +16,17 @@ else:
         [
             "reflector.pipelines.main_live_pipeline",
             "reflector.worker.healthcheck",
+            "reflector.worker.process",
         ]
     )
 
     # crontab
-    app.conf.beat_schedule = {}
+    app.conf.beat_schedule = {
+        "process_messages": {
+            "task": "reflector.worker.process.process_messages",
+            "schedule": 60.0,
+        }
+    }
 
     if settings.HEALTHCHECK_URL:
         app.conf.beat_schedule["healthcheck_ping"] = {

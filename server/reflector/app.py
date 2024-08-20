@@ -11,6 +11,8 @@ from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
 from reflector.settings import settings
+from reflector.views.meetings import router as meetings_router
+from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router
 from reflector.views.transcripts import router as transcripts_router
 from reflector.views.transcripts_audio import router as transcripts_audio_router
@@ -68,6 +70,8 @@ metrics_init(app, instrumentator)
 
 # register views
 app.include_router(rtc_offer_router)
+app.include_router(meetings_router, prefix="/v1")
+app.include_router(rooms_router, prefix="/v1")
 app.include_router(transcripts_router, prefix="/v1")
 app.include_router(transcripts_audio_router, prefix="/v1")
 app.include_router(transcripts_participants_router, prefix="/v1")

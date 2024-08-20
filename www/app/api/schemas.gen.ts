@@ -53,6 +53,18 @@ export const $CreateParticipant = {
   title: "CreateParticipant",
 } as const;
 
+export const $CreateRoom = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["name"],
+  title: "CreateRoom",
+} as const;
+
 export const $CreateTranscript = {
   properties: {
     name: {
@@ -85,6 +97,52 @@ export const $DeletionStatus = {
   type: "object",
   required: ["status"],
   title: "DeletionStatus",
+} as const;
+
+export const $GetMeeting = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    room_name: {
+      type: "string",
+      title: "Room Name",
+    },
+    room_url: {
+      type: "string",
+      title: "Room Url",
+    },
+    host_room_url: {
+      type: "string",
+      title: "Host Room Url",
+    },
+    viewer_room_url: {
+      type: "string",
+      title: "Viewer Room Url",
+    },
+    start_date: {
+      type: "string",
+      format: "date-time",
+      title: "Start Date",
+    },
+    end_date: {
+      type: "string",
+      format: "date-time",
+      title: "End Date",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "room_name",
+    "room_url",
+    "host_room_url",
+    "viewer_room_url",
+    "start_date",
+    "end_date",
+  ],
+  title: "GetMeeting",
 } as const;
 
 export const $GetTranscript = {
@@ -203,6 +261,17 @@ export const $GetTranscript = {
       type: "boolean",
       title: "Reviewed",
     },
+    meeting_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Meeting Id",
+    },
   },
   type: "object",
   required: [
@@ -220,6 +289,7 @@ export const $GetTranscript = {
     "target_language",
     "participants",
     "reviewed",
+    "meeting_id",
   ],
   title: "GetTranscript",
 } as const;
@@ -471,6 +541,62 @@ export const $Page_GetTranscript_ = {
   title: "Page[GetTranscript]",
 } as const;
 
+export const $Page_Room_ = {
+  properties: {
+    items: {
+      items: {
+        $ref: "#/components/schemas/Room",
+      },
+      type: "array",
+      title: "Items",
+    },
+    total: {
+      type: "integer",
+      minimum: 0,
+      title: "Total",
+    },
+    page: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 1,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Page",
+    },
+    size: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 1,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Size",
+    },
+    pages: {
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Pages",
+    },
+  },
+  type: "object",
+  required: ["items", "total", "page", "size"],
+  title: "Page[Room]",
+} as const;
+
 export const $Participant = {
   properties: {
     id: {
@@ -496,6 +622,31 @@ export const $Participant = {
   type: "object",
   required: ["id", "speaker", "name"],
   title: "Participant",
+} as const;
+
+export const $Room = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    user_id: {
+      type: "string",
+      title: "User Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+  },
+  type: "object",
+  required: ["id", "name", "user_id", "created_at"],
+  title: "Room",
 } as const;
 
 export const $RtcOffer = {

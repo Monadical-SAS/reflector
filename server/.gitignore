@@ -113,7 +113,7 @@ ipython_config.py
 __pypackages__/
 
 # Celery stuff
-celerybeat-schedule
+celerybeat-schedule.db
 celerybeat.pid
 
 # SageMath parsed files
