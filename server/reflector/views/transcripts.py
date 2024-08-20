@@ -118,7 +118,7 @@ async def transcripts_create_meeting(
 ):
     user_id = user["sub"] if user else None
     start_date = datetime.now(timezone.utc)
-    end_date = start_date + timedelta(minutes=1)
+    end_date = start_date + timedelta(hours=1)
     meeting = await create_meeting("", start_date=start_date, end_date=end_date)
 
     meeting = await meetings_controller.create(

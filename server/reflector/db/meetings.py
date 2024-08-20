@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -28,7 +28,7 @@ class Meeting(BaseModel):
     viewer_room_url: str
     start_date: datetime
     end_date: datetime
-    user_id: str
+    user_id: str | None = None
     room_id: str | None = None
 
 
@@ -81,9 +81,12 @@ class MeetingController:
         """
         Get latest meeting for a room.
         """
-        start_date = getattr(meetings.c, "start_date").desc()
+        end_date = getattr(meetings.c, "end_date")
         query = (
-            meetings.select().where(meetings.c.room_id == room_id).order_by(start_date)
+            meetings.select()
+            .where(meetings.c.room_id == room_id)
+            .where(meetings.c.end_date > datetime.now(timezone.utc))
+            .order_by(end_date.desc())
         )
         result = await database.fetch_one(query)
         if not result:
