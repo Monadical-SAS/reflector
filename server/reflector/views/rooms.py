@@ -6,7 +6,7 @@ import reflector.auth as auth
 from fastapi import APIRouter, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller

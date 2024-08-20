@@ -2,7 +2,7 @@ from datetime import datetime
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.db.transcripts import generate_uuid4
 from sqlalchemy.sql import false
