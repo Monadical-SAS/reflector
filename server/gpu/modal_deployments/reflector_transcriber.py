@@ -7,7 +7,7 @@ import os
 import tempfile
 import threading
 
-from modal import Image, Secret, Stub, asgi_app, method
+from modal import Image, Secret, App, asgi_app, method, enter
 from pydantic import BaseModel
 
 # Whisper
@@ -18,7 +18,7 @@ WHISPER_NUM_WORKERS: int = 1
 
 WHISPER_MODEL_DIR = "/root/transcription_models"
 
-stub = Stub(name="reflector-transcriber")
+app = App(name="reflector-transcriber")
 
 
 def download_whisper():
@@ -75,7 +75,7 @@ transcriber_image = (
 )
 
 
-@stub.cls(
+@app.cls(
     gpu="A10G",
     timeout=60 * 5,
     container_idle_timeout=60 * 5,
@@ -83,7 +83,8 @@ transcriber_image = (
     image=transcriber_image,
 )
 class Transcriber:
-    def __enter__(self):
+    @enter()
+    def enter(self):
         import faster_whisper
         import torch
 
@@ -149,7 +150,7 @@ class Transcriber:
 # -------------------------------------------------------------------
 
 
-@stub.function(
+@app.function(
     container_idle_timeout=60,
     timeout=60,
     allow_concurrent_inputs=40,
