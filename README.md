@@ -6,7 +6,7 @@ The project architecture consists of three primary components:
 
 - **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 - **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
+- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations. Most reliable option is Modal deployment
 
 It also uses https://github.com/fief-dev for authentication, and Vercel for deployment and configuration of the front-end.
 
@@ -40,14 +40,22 @@ It also uses https://github.com/fief-dev for authentication, and Vercel for depl
 
 All new contributions should be made in a separate branch. Before any code is merged into `main`, it requires a code review.
 
-### How to Install Blackhole (Mac Only)
+### Usage instructions
 
 To record both your voice and the meeting you're taking part in, you need :
 
 - For an in-person meeting, make sure your microphone is in range of all participants.
-- If using several miscrophones, make sure to merge the audio feeds into one with an external tool.
+- If using several microphones, make sure to merge the audio feeds into one with an external tool.
 - For an online meeting, if you do not use headphones, your microphone should be able to pick up both your voice and the audio feed of the meeting.
 - If you want to use headphones, you need to merge the audio feeds with an external tool.
+
+Permissions:
+
+You may have to add permission for browser's microphone access to record audio in
+`System Preferences -> Privacy & Security -> Microphone`
+`System Preferences -> Privacy & Security -> Accessibility`. You will be prompted to provide these when you try to connect.
+
+### How to Install Blackhole (Mac Only)
 
 This is an external tool for merging the audio feeds as explained in the previous section of this document.
 Note: We currently do not have instructions for Windows users.
@@ -57,12 +65,6 @@ Note: We currently do not have instructions for Windows users.
 - Setup [Multi-Output device](https://github.com/ExistentialAudio/BlackHole/wiki/Multi-Output-Device)
 - Then goto `System Preferences -> Sound` and choose the devices created from the Output and Input tabs.
 - The input from your local microphone, the browser run meeting should be aggregated into one virtual stream to listen to and the output should be fed back to your specified output devices if everything is configured properly.
-
-Permissions:
-
-You may have to add permission for browser's microphone access to record audio in
-`System Preferences -> Privacy & Security -> Microphone`
-`System Preferences -> Privacy & Security -> Accessibility`. You will be prompted to provide these when you try to connect.
 
 ## Front-End
 
@@ -207,5 +209,13 @@ poetry run python -m reflector.tools.process path/to/audio.wav
 ```
 
 ## AI Models
+
+### Modal
+To deploy llm changes to modal, you need.
+- a modal account
+- set up the required secret in your modal account (REFLECTOR_GPU_APIKEY)
+- install the modal cli
+- connect your modal cli to your account if not done previously
+- `modal run path/to/required/llm`
 
 _(Documentation for this section is pending.)_
