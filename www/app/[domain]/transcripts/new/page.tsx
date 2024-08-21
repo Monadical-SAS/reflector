@@ -9,7 +9,7 @@ import Privacy from "../../../(aboutAndPrivacy)/privacy";
 import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
-import { supportedLatinLanguages } from "../../../supportedLanguages";
+import { supportedLanguages } from "../../../supportedLanguages";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
 import { featureEnabled } from "../../domainContext";
 import { Button, Text } from "@chakra-ui/react";
@@ -120,7 +120,7 @@ const TranscriptCreate = () => {
                 <p>Do you want to enable live translation?</p>
                 <SelectSearch
                   search
-                  options={supportedLatinLanguages}
+                  options={supportedLanguages}
                   value={targetLanguage}
                   onChange={onLanguageChange}
                   placeholder="Choose your language"
