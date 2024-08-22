@@ -11,7 +11,6 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
-from reflector.views.meetings import GetMeeting
 from reflector.whereby import create_meeting
 
 router = APIRouter()
@@ -22,6 +21,16 @@ class Room(BaseModel):
     name: str
     user_id: str
     created_at: datetime
+
+
+class Meeting(BaseModel):
+    id: str
+    room_name: str
+    room_url: str
+    host_room_url: str
+    viewer_room_url: str
+    start_date: datetime
+    end_date: datetime
 
 
 class CreateRoom(BaseModel):
@@ -76,7 +85,7 @@ async def rooms_delete(
     return DeletionStatus(status="ok")
 
 
-@router.post("/rooms/{room_name}/meeting", response_model=GetMeeting)
+@router.post("/rooms/{room_name}/meeting", response_model=Meeting)
 async def rooms_create_meeting(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],

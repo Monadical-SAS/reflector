@@ -28,16 +28,6 @@ export type DeletionStatus = {
   status: string;
 };
 
-export type GetMeeting = {
-  id: string;
-  room_name: string;
-  room_url: string;
-  host_room_url: string;
-  viewer_room_url: string;
-  start_date: string;
-  end_date: string;
-};
-
 export type GetTranscript = {
   id: string;
   user_id: string | null;
@@ -97,6 +87,16 @@ export type GetTranscriptTopicWithWordsPerSpeaker = {
 
 export type HTTPValidationError = {
   detail?: Array<ValidationError>;
+};
+
+export type Meeting = {
+  id: string;
+  room_name: string;
+  room_url: string;
+  host_room_url: string;
+  viewer_room_url: string;
+  start_date: string;
+  end_date: string;
 };
 
 export type Page_GetTranscript_ = {
@@ -197,18 +197,6 @@ export type Word = {
 
 export type MetricsResponse = unknown;
 
-export type V1MeetingGetData = {
-  meetingId: string;
-};
-
-export type V1MeetingGetResponse = GetMeeting;
-
-export type V1MeetingCreateData = {
-  roomId: string;
-};
-
-export type V1MeetingCreateResponse = GetMeeting;
-
 export type V1RoomsListData = {
   /**
    * Page number
@@ -238,7 +226,7 @@ export type V1RoomsCreateMeetingData = {
   roomName: string;
 };
 
-export type V1RoomsCreateMeetingResponse = GetMeeting;
+export type V1RoomsCreateMeetingResponse = Meeting;
 
 export type V1TranscriptsListData = {
   /**
@@ -258,12 +246,6 @@ export type V1TranscriptsCreateData = {
 };
 
 export type V1TranscriptsCreateResponse = GetTranscript;
-
-export type V1TranscriptsCreateMeetingData = {
-  requestBody: CreateTranscript;
-};
-
-export type V1TranscriptsCreateMeetingResponse = GetTranscript;
 
 export type V1TranscriptGetData = {
   transcriptId: string;
@@ -415,36 +397,6 @@ export type $OpenApiTs = {
       };
     };
   };
-  "/v1/meetings/{meeting_id}": {
-    get: {
-      req: V1MeetingGetData;
-      res: {
-        /**
-         * Successful Response
-         */
-        200: GetMeeting;
-        /**
-         * Validation Error
-         */
-        422: HTTPValidationError;
-      };
-    };
-  };
-  "/v1/meetings/": {
-    post: {
-      req: V1MeetingCreateData;
-      res: {
-        /**
-         * Successful Response
-         */
-        200: GetMeeting;
-        /**
-         * Validation Error
-         */
-        422: HTTPValidationError;
-      };
-    };
-  };
   "/v1/rooms": {
     get: {
       req: V1RoomsListData;
@@ -495,7 +447,7 @@ export type $OpenApiTs = {
         /**
          * Successful Response
          */
-        200: GetMeeting;
+        200: Meeting;
         /**
          * Validation Error
          */
@@ -519,21 +471,6 @@ export type $OpenApiTs = {
     };
     post: {
       req: V1TranscriptsCreateData;
-      res: {
-        /**
-         * Successful Response
-         */
-        200: GetTranscript;
-        /**
-         * Validation Error
-         */
-        422: HTTPValidationError;
-      };
-    };
-  };
-  "/v1/transcripts/meeting": {
-    post: {
-      req: V1TranscriptsCreateMeetingData;
       res: {
         /**
          * Successful Response

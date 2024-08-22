@@ -9,7 +9,6 @@ type UseCreateTranscript = {
   loading: boolean;
   error: Error | null;
   create: (transcriptCreationDetails: CreateTranscript) => void;
-  createMeeting: (transcriptCreationDetails: CreateTranscript) => void;
 };
 
 const useCreateTranscript = (): UseCreateTranscript => {
@@ -40,28 +39,7 @@ const useCreateTranscript = (): UseCreateTranscript => {
       });
   };
 
-  const createMeeting = (transcriptCreationDetails: CreateTranscript) => {
-    if (loading || !api) return;
-
-    setLoading(true);
-
-    api
-      .v1TranscriptsCreateMeeting({ requestBody: transcriptCreationDetails })
-      .then((transcript) => {
-        setTranscript(transcript);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err,
-          "There was an issue creating a transcript, please try again.",
-        );
-        setErrorState(err);
-        setLoading(false);
-      });
-  };
-
-  return { transcript, loading, error, create, createMeeting };
+  return { transcript, loading, error, create };
 };
 
 export default useCreateTranscript;
