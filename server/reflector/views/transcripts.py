@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Annotated, Literal, Optional
 
 import reflector.auth as auth
@@ -15,7 +15,6 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
-from reflector.whereby import create_meeting
 
 router = APIRouter()
 
