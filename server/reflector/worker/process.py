@@ -64,16 +64,14 @@ async def process_recording(bucket_name: str, object_key: str):
     # extract a guid from the object key
     room_name = f"/{object_key[:36]}"
     meeting = await meetings_controller.get_by_room_name(room_name)
-    transcript = await transcripts_controller.get_by_meeting_id(meeting.id)
-    if transcript is None:
-        transcript = await transcripts_controller.add(
-            "",
-            source_language="en",
-            target_language="en",
-            user_id=meeting.user_id,
-            meeting_id=meeting.id,
-            share_mode="public",
-        )
+    transcript = await transcripts_controller.add(
+        "",
+        source_language="en",
+        target_language="en",
+        user_id=meeting.user_id,
+        meeting_id=meeting.id,
+        share_mode="public",
+    )
 
     _, extension = os.path.splitext(object_key)
     upload_filename = transcript.data_path / f"upload{extension}"

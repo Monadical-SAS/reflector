@@ -4,10 +4,6 @@ import type { CancelablePromise } from "./core/CancelablePromise";
 import type { BaseHttpRequest } from "./core/BaseHttpRequest";
 import type {
   MetricsResponse,
-  V1MeetingGetData,
-  V1MeetingGetResponse,
-  V1MeetingCreateData,
-  V1MeetingCreateResponse,
   V1RoomsListData,
   V1RoomsListResponse,
   V1RoomsCreateData,
@@ -20,8 +16,6 @@ import type {
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
   V1TranscriptsCreateResponse,
-  V1TranscriptsCreateMeetingData,
-  V1TranscriptsCreateMeetingResponse,
   V1TranscriptGetData,
   V1TranscriptGetResponse,
   V1TranscriptUpdateData,
@@ -78,50 +72,6 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "GET",
       url: "/metrics",
-    });
-  }
-
-  /**
-   * Meeting Get
-   * @param data The data for the request.
-   * @param data.meetingId
-   * @returns GetMeeting Successful Response
-   * @throws ApiError
-   */
-  public v1MeetingGet(
-    data: V1MeetingGetData,
-  ): CancelablePromise<V1MeetingGetResponse> {
-    return this.httpRequest.request({
-      method: "GET",
-      url: "/v1/meetings/{meeting_id}",
-      path: {
-        meeting_id: data.meetingId,
-      },
-      errors: {
-        422: "Validation Error",
-      },
-    });
-  }
-
-  /**
-   * Meeting Create
-   * @param data The data for the request.
-   * @param data.roomId
-   * @returns GetMeeting Successful Response
-   * @throws ApiError
-   */
-  public v1MeetingCreate(
-    data: V1MeetingCreateData,
-  ): CancelablePromise<V1MeetingCreateResponse> {
-    return this.httpRequest.request({
-      method: "POST",
-      url: "/v1/meetings/",
-      query: {
-        room_id: data.roomId,
-      },
-      errors: {
-        422: "Validation Error",
-      },
     });
   }
 
@@ -196,7 +146,7 @@ export class DefaultService {
    * Rooms Create Meeting
    * @param data The data for the request.
    * @param data.roomName
-   * @returns GetMeeting Successful Response
+   * @returns Meeting Successful Response
    * @throws ApiError
    */
   public v1RoomsCreateMeeting(
@@ -251,27 +201,6 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/transcripts",
-      body: data.requestBody,
-      mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    });
-  }
-
-  /**
-   * Transcripts Create Meeting
-   * @param data The data for the request.
-   * @param data.requestBody
-   * @returns GetTranscript Successful Response
-   * @throws ApiError
-   */
-  public v1TranscriptsCreateMeeting(
-    data: V1TranscriptsCreateMeetingData,
-  ): CancelablePromise<V1TranscriptsCreateMeetingResponse> {
-    return this.httpRequest.request({
-      method: "POST",
-      url: "/v1/transcripts/meeting",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {
