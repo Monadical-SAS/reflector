@@ -44,7 +44,8 @@ export async function middleware(request: NextRequest) {
     if (
       request.nextUrl.pathname == "/" ||
       request.nextUrl.pathname.startsWith("/transcripts") ||
-      request.nextUrl.pathname.startsWith("/browse")
+      request.nextUrl.pathname.startsWith("/browse") ||
+      request.nextUrl.pathname.startsWith("/rooms")
     ) {
       return NextResponse.rewrite(
         request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
