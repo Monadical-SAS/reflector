@@ -19,6 +19,17 @@ async def create_meeting(
         "roomMode": "normal",
         "startDate": start_date.isoformat(),
         "endDate": end_date.isoformat(),
+        "recording": {
+            "type": "cloud",
+            "destination": {
+                "provider": "s3",
+                "bucket": settings.AWS_WHEREBY_S3_BUCKET,
+                "accessKeyId": settings.AWS_WHEREBY_ACCESS_KEY_ID,
+                "accessKeySecret": settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
+                "fileFormat": "mp4",
+            },
+            "startTrigger": "automatic-2nd-participant",
+        },
     }
 
     async with httpx.AsyncClient() as client:

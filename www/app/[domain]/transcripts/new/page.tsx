@@ -32,7 +32,6 @@ const TranscriptCreate = () => {
 
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [loadingUpload, setLoadingUpload] = useState(false);
-  const [loadingMeeting, setLoadingMeeting] = useState(false);
 
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
@@ -46,16 +45,9 @@ const TranscriptCreate = () => {
     createTranscript.create({ name, target_language: targetLanguage });
   };
 
-  const startMeeting = () => {
-    if (loadingMeeting || createTranscript.loading || permissionDenied) return;
-    setLoadingMeeting(true);
-    createTranscript.createMeeting({ name, target_language: targetLanguage });
-  };
-
   useEffect(() => {
     let action = "record";
     if (loadingUpload) action = "upload";
-    if (loadingMeeting) action = "meeting";
 
     createTranscript.transcript &&
       router.push(`/transcripts/${createTranscript.transcript.id}/${action}`);
@@ -162,23 +154,6 @@ const TranscriptCreate = () => {
               >
                 {loadingUpload ? "Loading..." : "Upload File"}
               </Button>
-
-              {requireLogin && (
-                <>
-                  <Text align="center" m="2">
-                    OR
-                  </Text>
-                  <Button
-                    colorScheme="blue"
-                    onClick={startMeeting}
-                    isDisabled={
-                      loadingRecord || loadingUpload || loadingMeeting
-                    }
-                  >
-                    {loadingUpload ? "Loading..." : "Start Whereby Meeting"}
-                  </Button>
-                </>
-              )}
             </div>
           )}
         </section>

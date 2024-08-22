@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Annotated, Literal, Optional
 
 import reflector.auth as auth
@@ -7,7 +7,6 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field
-from reflector.db.meetings import meetings_controller
 from reflector.db.transcripts import (
     TranscriptParticipant,
     TranscriptTopic,
@@ -16,7 +15,6 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
-from reflector.whereby import create_meeting
 
 router = APIRouter()
 
@@ -108,37 +106,6 @@ async def transcripts_create(
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
-    )
-
-
-@router.post("/transcripts/meeting", response_model=GetTranscript)
-async def transcripts_create_meeting(
-    info: CreateTranscript,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-):
-    user_id = user["sub"] if user else None
-    start_date = datetime.now(timezone.utc)
-    end_date = start_date + timedelta(hours=1)
-    meeting = await create_meeting("", start_date=start_date, end_date=end_date)
-
-    meeting = await meetings_controller.create(
-        id=meeting["meetingId"],
-        room_name=meeting["roomName"],
-        room_url=meeting["roomUrl"],
-        host_room_url=meeting["hostRoomUrl"],
-        viewer_room_url=meeting["viewerRoomUrl"],
-        start_date=datetime.fromisoformat(meeting["startDate"]),
-        end_date=datetime.fromisoformat(meeting["endDate"]),
-        user_id=user_id,
-    )
-
-    return await transcripts_controller.add(
-        "",
-        source_language=info.source_language,
-        target_language=info.target_language,
-        user_id=user_id,
-        meeting_id=meeting.id,
-        share_mode="public",
     )
 
 
