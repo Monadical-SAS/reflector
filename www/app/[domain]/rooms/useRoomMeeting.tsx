@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
-import { GetMeeting } from "../../api";
+import { Meeting } from "../../api";
 import { shouldShowError } from "../../lib/errorUtils";
 import useApi from "../../lib/useApi";
 
@@ -19,7 +19,7 @@ type LoadingMeeting = {
 };
 
 type SuccessMeeting = {
-  response: GetMeeting;
+  response: Meeting;
   loading: false;
   error: null;
   reload: () => void;
@@ -28,7 +28,7 @@ type SuccessMeeting = {
 const useRoomMeeting = (
   roomName: string | null | undefined,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
-  const [response, setResponse] = useState<GetMeeting | null>(null);
+  const [response, setResponse] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const [reload, setReload] = useState(0);
