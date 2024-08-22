@@ -137,5 +137,9 @@ class Settings(BaseSettings):
 
     WHEREBY_API_KEY: str | None = None
 
+    AWS_WHEREBY_S3_BUCKET: str | None = None
+    AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
+    AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
+
 
 settings = Settings()

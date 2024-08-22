@@ -99,52 +99,6 @@ export const $DeletionStatus = {
   title: "DeletionStatus",
 } as const;
 
-export const $GetMeeting = {
-  properties: {
-    id: {
-      type: "string",
-      title: "Id",
-    },
-    room_name: {
-      type: "string",
-      title: "Room Name",
-    },
-    room_url: {
-      type: "string",
-      title: "Room Url",
-    },
-    host_room_url: {
-      type: "string",
-      title: "Host Room Url",
-    },
-    viewer_room_url: {
-      type: "string",
-      title: "Viewer Room Url",
-    },
-    start_date: {
-      type: "string",
-      format: "date-time",
-      title: "Start Date",
-    },
-    end_date: {
-      type: "string",
-      format: "date-time",
-      title: "End Date",
-    },
-  },
-  type: "object",
-  required: [
-    "id",
-    "room_name",
-    "room_url",
-    "host_room_url",
-    "viewer_room_url",
-    "start_date",
-    "end_date",
-  ],
-  title: "GetMeeting",
-} as const;
-
 export const $GetTranscript = {
   properties: {
     id: {
@@ -483,6 +437,52 @@ export const $HTTPValidationError = {
   },
   type: "object",
   title: "HTTPValidationError",
+} as const;
+
+export const $Meeting = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    room_name: {
+      type: "string",
+      title: "Room Name",
+    },
+    room_url: {
+      type: "string",
+      title: "Room Url",
+    },
+    host_room_url: {
+      type: "string",
+      title: "Host Room Url",
+    },
+    viewer_room_url: {
+      type: "string",
+      title: "Viewer Room Url",
+    },
+    start_date: {
+      type: "string",
+      format: "date-time",
+      title: "Start Date",
+    },
+    end_date: {
+      type: "string",
+      format: "date-time",
+      title: "End Date",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "room_name",
+    "room_url",
+    "host_room_url",
+    "viewer_room_url",
+    "start_date",
+    "end_date",
+  ],
+  title: "Meeting",
 } as const;
 
 export const $Page_GetTranscript_ = {
