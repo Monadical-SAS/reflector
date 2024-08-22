@@ -70,6 +70,10 @@ export const getFiefAuthMiddleware = async (url) => {
       matcher: "/browse",
       parameters: {},
     },
+    {
+      matcher: "/rooms",
+      parameters: {},
+    },
   ];
   return (await getFiefAuth(url))?.middleware(protectedPaths);
 };
