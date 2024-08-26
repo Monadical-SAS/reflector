@@ -5,3 +5,4 @@ server/exportdanswer
 .vercel
 .env*.local
 dump.rdb
+server/celerybeat-schedule
