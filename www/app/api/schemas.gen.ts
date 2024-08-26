@@ -59,9 +59,21 @@ export const $CreateRoom = {
       type: "string",
       title: "Name",
     },
+    zulip_auto_post: {
+      type: "boolean",
+      title: "Zulip Auto Post",
+    },
+    zulip_stream: {
+      type: "string",
+      title: "Zulip Stream",
+    },
+    zulip_topic: {
+      type: "string",
+      title: "Zulip Topic",
+    },
   },
   type: "object",
-  required: ["name"],
+  required: ["name", "zulip_auto_post", "zulip_stream", "zulip_topic"],
   title: "CreateRoom",
 } as const;
 
@@ -643,9 +655,29 @@ export const $Room = {
       format: "date-time",
       title: "Created At",
     },
+    zulip_auto_post: {
+      type: "boolean",
+      title: "Zulip Auto Post",
+    },
+    zulip_stream: {
+      type: "string",
+      title: "Zulip Stream",
+    },
+    zulip_topic: {
+      type: "string",
+      title: "Zulip Topic",
+    },
   },
   type: "object",
-  required: ["id", "name", "user_id", "created_at"],
+  required: [
+    "id",
+    "name",
+    "user_id",
+    "created_at",
+    "zulip_auto_post",
+    "zulip_stream",
+    "zulip_topic",
+  ],
   title: "Room",
 } as const;
 
@@ -805,6 +837,30 @@ export const $UpdateParticipant = {
   },
   type: "object",
   title: "UpdateParticipant",
+} as const;
+
+export const $UpdateRoom = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    zulip_auto_post: {
+      type: "boolean",
+      title: "Zulip Auto Post",
+    },
+    zulip_stream: {
+      type: "string",
+      title: "Zulip Stream",
+    },
+    zulip_topic: {
+      type: "string",
+      title: "Zulip Topic",
+    },
+  },
+  type: "object",
+  required: ["name", "zulip_auto_post", "zulip_stream", "zulip_topic"],
+  title: "UpdateRoom",
 } as const;
 
 export const $UpdateTranscript = {

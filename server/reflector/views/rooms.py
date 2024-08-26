@@ -21,6 +21,9 @@ class Room(BaseModel):
     name: str
     user_id: str
     created_at: datetime
+    zulip_auto_post: bool
+    zulip_stream: str
+    zulip_topic: str
 
 
 class Meeting(BaseModel):
@@ -35,6 +38,16 @@ class Meeting(BaseModel):
 
 class CreateRoom(BaseModel):
     name: str
+    zulip_auto_post: bool
+    zulip_stream: str
+    zulip_topic: str
+
+
+class UpdateRoom(BaseModel):
+    name: str
+    zulip_auto_post: bool
+    zulip_stream: str
+    zulip_topic: str
 
 
 class DeletionStatus(BaseModel):
@@ -69,7 +82,25 @@ async def rooms_create(
     return await rooms_controller.add(
         name=room.name,
         user_id=user_id,
+        zulip_auto_post=room.zulip_auto_post,
+        zulip_stream=room.zulip_stream,
+        zulip_topic=room.zulip_topic,
     )
+
+
+@router.patch("/rooms/{room_id}", response_model=Room)
+async def rooms_update(
+    room_id: str,
+    info: UpdateRoom,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    values = info.dict(exclude_unset=True)
+    await rooms_controller.update(room, values)
+    return room
 
 
 @router.delete("/rooms/{room_id}", response_model=DeletionStatus)

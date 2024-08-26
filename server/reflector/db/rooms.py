@@ -68,6 +68,9 @@ class RoomController:
         self,
         name: str,
         user_id: str,
+        zulip_auto_post: bool,
+        zulip_stream: str,
+        zulip_topic: str,
     ):
         """
         Add a new room
@@ -75,10 +78,23 @@ class RoomController:
         room = Room(
             name=name,
             user_id=user_id,
+            zulip_auto_post=zulip_auto_post,
+            zulip_stream=zulip_stream,
+            zulip_topic=zulip_topic,
         )
         query = rooms.insert().values(**room.model_dump())
         await database.execute(query)
         return room
+
+    async def update(self, room: Room, values: dict, mutate=True):
+        """
+        Update a room fields with key/values in values
+        """
+        query = rooms.update().where(rooms.c.id == room.id).values(**values)
+        await database.execute(query)
+        if mutate:
+            for key, value in values.items():
+                setattr(room, key, value)
 
     async def get_by_id(self, room_id: str, **kwargs) -> Room | None:
         """
