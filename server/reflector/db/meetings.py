@@ -94,6 +94,16 @@ class MeetingController:
 
         return Meeting(**result)
 
+    async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
+        """
+        Get a meeting by id
+        """
+        query = meetings.select().where(meetings.c.id == meeting_id)
+        result = await database.fetch_one(query)
+        if not result:
+            return None
+        return Meeting(**result)
+
     async def get_by_id_for_http(self, meeting_id: str, user_id: str | None) -> Meeting:
         """
         Get a meeting by ID for HTTP request.
