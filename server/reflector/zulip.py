@@ -31,10 +31,7 @@ def send_message_to_zulip(stream: str, topic: str, message: str):
 
 
 def get_zulip_message(transcript: Transcript):
-    domain = (
-        "http://localhost:3000"  # Replace this with your deployment base URL if needed
-    )
-    transcript_url = f"{domain}/transcripts/{transcript.id}"
+    transcript_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
 
     header_text = f"# Reflector – {transcript.title or 'Unnamed recording'}\n\n"
     header_text += f"**Date**: <time:{transcript.created_at.isoformat()}>\n"
