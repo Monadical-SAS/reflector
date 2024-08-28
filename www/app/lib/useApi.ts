@@ -8,7 +8,7 @@ export default function useApi(): DefaultService | null {
   const api_url = useContext(DomainContext).api_url;
   const requireLogin = featureEnabled("requireLogin");
   const [api, setApi] = useState<OpenApi | null>(null);
-  const { data: session } = useSession({ required: !!requireLogin });
+  const { data: session } = useSession();
   const customSession = session as CustomSession;
   const accessToken = customSession?.accessToken;
 
