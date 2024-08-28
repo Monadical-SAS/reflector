@@ -41,3 +41,6 @@ next-env.d.ts
 .sentryclirc
 
 config.ts
+
+# openapi logs
+openapi-ts-error-*.log

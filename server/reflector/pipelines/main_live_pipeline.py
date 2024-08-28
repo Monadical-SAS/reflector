@@ -17,6 +17,8 @@ from contextlib import asynccontextmanager
 
 from celery import chord, group, shared_task
 from pydantic import BaseModel
+from reflector.db.meetings import meetings_controller
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     Transcript,
     TranscriptDuration,
@@ -53,6 +55,7 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.ws_manager import WebsocketManager, get_ws_manager
+from reflector.zulip import get_zulip_message, send_message_to_zulip
 from structlog import BoundLogger as Logger
 
 
@@ -564,6 +567,31 @@ async def pipeline_summaries(transcript: Transcript, logger: Logger):
     logger.info("Summaries done")
 
 
+@get_transcript
+async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
+    logger.info("Starting post to zulip")
+
+    if not transcript.meeting_id:
+        logger.info("Transcript has no meeting")
+        return
+
+    meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+    if not meeting:
+        logger.info("No meeting found for this transcript")
+        return
+
+    room = await rooms_controller.get_by_id(meeting.room_id)
+    if not room:
+        logger.error(f"Missing room for a meeting {meeting.id}")
+        return
+
+    if room.zulip_auto_post:
+        message = get_zulip_message(transcript=transcript)
+        send_message_to_zulip(room.zulip_stream, room.zulip_topic, message)
+
+    logger.info("Posted to zulip")
+
+
 # ===================================================================
 # Celery tasks that can be called from the API
 # ===================================================================
@@ -611,6 +639,12 @@ async def task_pipeline_final_summaries(*, transcript_id: str):
     await pipeline_summaries(transcript_id=transcript_id)
 
 
+@shared_task
+@asynctask
+async def task_pipeline_post_to_zulip(*, transcript_id: str):
+    await pipeline_post_to_zulip(transcript_id=transcript_id)
+
+
 def pipeline_post(*, transcript_id: str):
     """
     Run the post pipeline
@@ -632,7 +666,8 @@ def pipeline_post(*, transcript_id: str):
     chain = chord(
         group(chain_mp3_and_diarize, chain_title_preview),
         chain_final_summaries,
-    )
+    ) | task_pipeline_post_to_zulip.si(transcript_id=transcript_id)
+
     chain.delay()
 
 

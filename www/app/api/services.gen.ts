@@ -8,6 +8,8 @@ import type {
   V1RoomsListResponse,
   V1RoomsCreateData,
   V1RoomsCreateResponse,
+  V1RoomsUpdateData,
+  V1RoomsUpdateResponse,
   V1RoomsDeleteData,
   V1RoomsDeleteResponse,
   V1RoomsCreateMeetingData,
@@ -112,6 +114,31 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/rooms",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Update
+   * @param data The data for the request.
+   * @param data.roomId
+   * @param data.requestBody
+   * @returns Room Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsUpdate(
+    data: V1RoomsUpdateData,
+  ): CancelablePromise<V1RoomsUpdateResponse> {
+    return this.httpRequest.request({
+      method: "PATCH",
+      url: "/v1/rooms/{room_id}",
+      path: {
+        room_id: data.roomId,
+      },
       body: data.requestBody,
       mediaType: "application/json",
       errors: {

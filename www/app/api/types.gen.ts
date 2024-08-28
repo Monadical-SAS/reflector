@@ -16,6 +16,9 @@ export type CreateParticipant = {
 
 export type CreateRoom = {
   name: string;
+  zulip_auto_post: boolean;
+  zulip_stream: string;
+  zulip_topic: string;
 };
 
 export type CreateTranscript = {
@@ -126,6 +129,9 @@ export type Room = {
   name: string;
   user_id: string;
   created_at: string;
+  zulip_auto_post: boolean;
+  zulip_stream: string;
+  zulip_topic: string;
 };
 
 export type RtcOffer = {
@@ -163,6 +169,13 @@ export type TranscriptParticipant = {
 export type UpdateParticipant = {
   speaker?: number | null;
   name?: string | null;
+};
+
+export type UpdateRoom = {
+  name: string;
+  zulip_auto_post: boolean;
+  zulip_stream: string;
+  zulip_topic: string;
 };
 
 export type UpdateTranscript = {
@@ -215,6 +228,13 @@ export type V1RoomsCreateData = {
 };
 
 export type V1RoomsCreateResponse = Room;
+
+export type V1RoomsUpdateData = {
+  requestBody: UpdateRoom;
+  roomId: string;
+};
+
+export type V1RoomsUpdateResponse = Room;
 
 export type V1RoomsDeleteData = {
   roomId: string;
@@ -426,6 +446,19 @@ export type $OpenApiTs = {
     };
   };
   "/v1/rooms/{room_id}": {
+    patch: {
+      req: V1RoomsUpdateData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Room;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
     delete: {
       req: V1RoomsDeleteData;
       res: {
