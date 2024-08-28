@@ -141,5 +141,9 @@ class Settings(BaseSettings):
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
 
+    ZULIP_REALM: str | None = None
+    ZULIP_API_KEY: str | None = None
+    ZULIP_BOT_EMAIL: str | None = None
+
 
 settings = Settings()
