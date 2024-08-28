@@ -145,5 +145,7 @@ class Settings(BaseSettings):
     ZULIP_API_KEY: str | None = None
     ZULIP_BOT_EMAIL: str | None = None
 
+    UI_BASE_URL: str = "http://localhost:3000"
+
 
 settings = Settings()
