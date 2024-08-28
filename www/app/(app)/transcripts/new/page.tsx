@@ -10,12 +10,12 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
+import { useSession } from "next-auth/react";
 import { featureEnabled } from "../../../domainContext";
 import { Button, Text } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
-  const isAuthenticated = useFiefIsAuthenticated();
+  const isAuthenticated = useSession().status === "authenticated";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");

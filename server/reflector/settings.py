@@ -97,6 +97,11 @@ class Settings(BaseSettings):
     AUTH_FIEF_CLIENT_ID: str | None = None
     AUTH_FIEF_CLIENT_SECRET: str | None = None
 
+    # User authentication using JWT
+    AUTH_JWT_ALGORITHM: str = "RS256"
+    AUTH_JWT_PUBLIC_KEY: str | None = "authentik.monadical.com_public.pem"
+    AUTH_JWT_AUDIENCE: str | None = None
+
     # API public mode
     # if set, all anonymous record will be public
     PUBLIC_MODE: bool = False

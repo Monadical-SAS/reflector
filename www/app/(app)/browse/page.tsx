@@ -40,7 +40,6 @@ import {
 } from "@chakra-ui/react";
 import { PlusSquareIcon } from "@chakra-ui/icons";
 import { ExpandableText } from "../../lib/expandableText";
-// import { useFiefUserinfo } from "@fief/fief/nextjs/react";
 
 export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
@@ -52,10 +51,6 @@ export default function TranscriptBrowser() {
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
     React.useState<string>();
   const [deletedItemIds, setDeletedItemIds] = React.useState<string[]>();
-
-  // Todo: fief add name field to userinfo
-  // const user = useFiefUserinfo();
-  // console.log(user);
 
   useEffect(() => {
     setDeletedItemIds([]);

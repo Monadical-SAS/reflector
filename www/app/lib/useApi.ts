@@ -1,30 +1,35 @@
-import { useFiefAccessTokenInfo } from "@fief/fief/nextjs/react";
+import { useSession, signOut } from "next-auth/react";
 import { useContext, useEffect, useState } from "react";
 import { DomainContext, featureEnabled } from "../domainContext";
-import { CookieContext } from "../(auth)/fiefWrapper";
 import { OpenApi, DefaultService } from "../api";
 
 export default function useApi(): DefaultService | null {
-  const accessTokenInfo = useFiefAccessTokenInfo();
   const api_url = useContext(DomainContext).api_url;
   const requireLogin = featureEnabled("requireLogin");
   const [api, setApi] = useState<OpenApi | null>(null);
-  const { hasAuthCookie } = useContext(CookieContext);
+  const { data: session } = useSession({ required: !!requireLogin });
+  const accessTokenInfo = session?.accessToken;
 
   if (!api_url) throw new Error("no API URL");
 
   useEffect(() => {
-    if (hasAuthCookie && requireLogin && !accessTokenInfo) {
+    if (session?.error === "RefreshAccessTokenError") {
+      signOut();
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (requireLogin && !accessTokenInfo) {
       return;
     }
 
     const openApi = new OpenApi({
       BASE: api_url,
-      TOKEN: accessTokenInfo ? accessTokenInfo?.access_token : undefined,
+      TOKEN: accessTokenInfo,
     });
 
     setApi(openApi);
-  }, [!accessTokenInfo, hasAuthCookie]);
+  }, [!accessTokenInfo]);
 
   return api?.default ?? null;
 }

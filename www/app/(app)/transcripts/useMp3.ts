@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { DomainContext } from "../../domainContext";
 import getApi from "../../lib/useApi";
-import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
 
 export type Mp3Response = {
   media: HTMLMediaElement | null;
@@ -15,7 +14,8 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
   const [loading, setLoading] = useState<boolean>(false);
   const api = getApi();
   const { api_url } = useContext(DomainContext);
-  const accessTokenInfo = useFiefAccessTokenInfo();
+  const accessTokenInfo = api?.httpRequest?.config?.TOKEN;
+
   const [serviceWorker, setServiceWorker] =
     useState<ServiceWorkerRegistration | null>(null);
 
@@ -37,7 +37,7 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
     // Send the token to the service worker
     navigator.serviceWorker.controller.postMessage({
       type: "SET_AUTH_TOKEN",
-      token: accessTokenInfo?.access_token,
+      token: accessTokenInfo,
     });
   }, [navigator.serviceWorker, !serviceWorker, accessTokenInfo]);
 
