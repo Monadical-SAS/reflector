@@ -22,7 +22,7 @@ const TranscriptCreate = () => {
   const nameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
   };
-  const [targetLanguage, setTargetLanguage] = useState<string>();
+  const [targetLanguage, setTargetLanguage] = useState<string>("NOTRANSLATION");
 
   const onLanguageChange = (newval) => {
     (!newval || typeof newval === "string") && setTargetLanguage(newval);
@@ -33,16 +33,21 @@ const TranscriptCreate = () => {
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [loadingUpload, setLoadingUpload] = useState(false);
 
+  const getTargetLanguage = () => {
+    if (targetLanguage === "NOTRANSLATION") return;
+    return targetLanguage;
+  };
+
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
-    createTranscript.create({ name, target_language: targetLanguage });
+    createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   const uploadFile = () => {
     if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
-    createTranscript.create({ name, target_language: targetLanguage });
+    createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   useEffect(() => {

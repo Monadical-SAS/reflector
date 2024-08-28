@@ -489,6 +489,6 @@ const supportedLanguages: LanguageOption[] = [
   },
 ];
 
-supportedLanguages.push({ value: undefined, name: "No Translation" });
+supportedLanguages.push({ value: "NOTRANSLATION", name: "No Translation" });
 
 export { supportedLanguages };
