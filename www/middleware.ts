@@ -3,8 +3,7 @@ import { getConfig } from "./app/lib/edgeConfig";
 import { NextResponse } from "next/server";
 
 const LOGIN_REQUIRED_PAGES = [
-  "/",
-  "/transcripts(.*)",
+  "/transcripts/[!new]",
   "/browse(.*)",
   "/rooms(.*)",
 ];
@@ -28,16 +27,27 @@ export const config = {
 };
 
 export default withAuth(
-  function middleware(request) {
+  async function middleware(request) {
     const domain = request.nextUrl.hostname;
+    const config = await getConfig(domain);
+    const pathname = request.nextUrl.pathname;
+
+    // feature-flags protected paths
     if (
-      request.nextUrl.pathname == "/" ||
-      request.nextUrl.pathname.startsWith("/transcripts") ||
-      request.nextUrl.pathname.startsWith("/browse") ||
-      request.nextUrl.pathname.startsWith("/rooms")
+      (!config.features.browse && pathname.startsWith("/browse")) ||
+      (!config.features.rooms && pathname.startsWith("/rooms"))
+    ) {
+      return NextResponse.redirect(request.nextUrl.origin);
+    }
+
+    if (
+      pathname == "/" ||
+      pathname.startsWith("/transcripts") ||
+      pathname.startsWith("/browse") ||
+      pathname.startsWith("/rooms")
     ) {
       return NextResponse.rewrite(
-        request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
+        request.nextUrl.origin + "/" + domain + pathname,
       );
     }
   },
