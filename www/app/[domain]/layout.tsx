@@ -11,7 +11,6 @@ import Privacy from "../(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "../lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
-import { cookies } from "next/dist/client/components/headers";
 import { Providers } from "../providers";
 import NextLink from "next/link";
 import { Container, Flex, Link } from "@chakra-ui/react";

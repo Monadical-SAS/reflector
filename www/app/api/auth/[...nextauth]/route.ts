@@ -5,24 +5,9 @@ import NextAuth from "next-auth";
 import { AuthOptions, Session } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
 import { JWT } from "next-auth/jwt";
+import { JWTWithAccessToken, CustomSession } from "../../../lib/types";
 
-// extend Token schema with additional fields
-interface JWTWithAccessToken extends JWT {
-  accessToken: string;
-  accessTokenExpires: number;
-  refreshToken: string;
-  error?: string;
-}
-
-interface CustomSession extends Session {
-  accessToken: string;
-  error?: string;
-  user: {
-    id?: string;
-    name?: string | null;
-    email?: string | null;
-  };
-}
+const PRETIMEOUT = 60; // seconds before token expires to refresh it
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -49,10 +34,12 @@ export const authOptions: AuthOptions = {
       if (account && user) {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
+        const expiresAt = (account.expires_at as number) - PRETIMEOUT;
+
         return {
           ...extendedToken,
           accessToken: account.access_token,
-          accessTokenExpires: (account.expires_at as number) * 1000,
+          accessTokenExpires: expiresAt * 1000,
           refreshToken: account.refresh_token,
         };
       }
@@ -62,13 +49,13 @@ export const authOptions: AuthOptions = {
       }
 
       // access token has expired, try to update it
-      return refreshAccessToken(token);
+      return await refreshAccessToken(token);
     },
     async session({ session, token }) {
-      // console.log("SESSION CALLBACK", session, token);
       const extendedToken = token as JWTWithAccessToken;
       const customSession = session as CustomSession;
       customSession.accessToken = extendedToken.accessToken;
+      customSession.accessTokenExpires = extendedToken.accessTokenExpires;
       customSession.error = extendedToken.error;
       customSession.user = {
         id: extendedToken.sub,
@@ -106,7 +93,8 @@ async function refreshAccessToken(token: JWT) {
     return {
       ...token,
       accessToken: refreshedTokens.access_token,
-      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      accessTokenExpires:
+        Date.now() + (refreshedTokens.expires_in - PRETIMEOUT) * 1000,
       refreshToken: refreshedTokens.refresh_token,
     };
   } catch (error) {

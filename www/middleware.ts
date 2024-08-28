@@ -1,7 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { getConfig } from "./app/lib/edgeConfig";
 import { NextResponse } from "next/server";
-//export { default } from "next-auth/middleware";
 
 const LOGIN_REQUIRED_PAGES = [
   "/",
@@ -17,7 +16,14 @@ const PROTECTED_PAGES = new RegExp(
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
-    ...LOGIN_REQUIRED_PAGES,
+
+    // must be a copy of LOGIN_REQUIRED_PAGES
+    // cannot use anything dynamic (...LOGIN_REQUIRED_PAGES, or .concat(LOGIN_REQUIRED_PAGES))
+    // as per https://nextjs.org/docs/messages/invalid-page-config
+    "/",
+    "/transcripts(.*)",
+    "/browse(.*)",
+    "/rooms(.*)",
   ],
 };
 
@@ -40,13 +46,6 @@ export default withAuth(
       async authorized({ req, token }) {
         const domain = req.nextUrl.hostname;
         const config = await getConfig(domain);
-
-        console.log(
-          "authorized",
-          req.nextUrl.pathname,
-          config.features.requireLogin,
-          !!PROTECTED_PAGES.test(req.nextUrl.pathname),
-        );
 
         if (
           config.features.requireLogin &&
