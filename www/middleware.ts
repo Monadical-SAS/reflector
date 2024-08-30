@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     request.nextUrl.pathname.match(
-      "/((?!api|_next/static|_next/image|favicon.ico).*)",
+      "^/((?!api|_next/static|_next/image|favicon.ico).*)",
     )
   ) {
     // Feature-flag protedted paths
@@ -24,19 +24,11 @@ export async function middleware(request: NextRequest) {
     if (config.features.requireLogin) {
       const fiefMiddleware = await getFiefAuthMiddleware(request.nextUrl);
       const fiefResponse = await fiefMiddleware(request);
-
-      if (
-        request.nextUrl.pathname == "/" ||
-        request.nextUrl.pathname.startsWith("/transcripts") ||
-        request.nextUrl.pathname.startsWith("/browse") ||
-        request.nextUrl.pathname.startsWith("/rooms")
-      ) {
-        if (!fiefResponse.headers.get("x-middleware-rewrite")) {
-          fiefResponse.headers.set(
-            "x-middleware-rewrite",
-            request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
-          );
-        }
+      if (!fiefResponse.headers.get("x-middleware-rewrite")) {
+        fiefResponse.headers.set(
+          "x-middleware-rewrite",
+          request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
+        );
       }
       return fiefResponse;
     }
