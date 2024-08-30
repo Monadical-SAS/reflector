@@ -49,6 +49,8 @@ interface SelectOption extends OptionBase {
   value: string;
 }
 
+const RESERVED_PATHS = ["browse", "rooms", "transcripts"];
+
 export default function RoomsList() {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [room, setRoom] = useState({
@@ -63,6 +65,7 @@ export default function RoomsList() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useRoomList(page);
   const [streams, setStreams] = useState<Stream[]>([]);
+  const [error, setError] = useState("");
 
   const { zulip_streams } = useContext(DomainContext);
 
@@ -99,7 +102,11 @@ export default function RoomsList() {
 
   const handleSaveRoom = async () => {
     try {
-      console.log(room);
+      if (RESERVED_PATHS.includes(room.name)) {
+        setError("This room name is reserved. Please choose another name.");
+        return;
+      }
+
       if (isEditing) {
         await api?.v1RoomsUpdate({
           roomId: editRoomId,
@@ -128,8 +135,11 @@ export default function RoomsList() {
       });
       setIsEditing(false);
       setEditRoomId("");
+      setError("");
       refetch();
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
     onClose();
   };
 
@@ -151,7 +161,9 @@ export default function RoomsList() {
         roomId,
       });
       refetch();
-    } catch (err) {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleRoomChange = (e) => {
@@ -161,6 +173,7 @@ export default function RoomsList() {
         .replace(/[^a-zA-Z0-9\s-]/g, "")
         .replace(/\s+/g, "-")
         .toLowerCase();
+      setError("");
     }
     setRoom({
       ...room,
@@ -197,6 +210,7 @@ export default function RoomsList() {
                 zulipStream: "",
                 zulipTopic: "",
               });
+              setError("");
               onOpen();
             }}
           >
@@ -219,6 +233,7 @@ export default function RoomsList() {
                   <FormHelperText>
                     No spaces or special characters allowed
                   </FormHelperText>
+                  {error && <Text color="red.500">{error}</Text>}
                 </FormControl>
 
                 <FormControl mt={8}>
@@ -291,9 +306,7 @@ export default function RoomsList() {
                 <CardBody>
                   <Flex align={"center"}>
                     <Heading size="md">
-                      <Link href={`/rooms/${roomData.name}`}>
-                        {roomData.name}
-                      </Link>
+                      <Link href={`/${roomData.name}`}>{roomData.name}</Link>
                     </Heading>
                     <Spacer />
                     <Menu closeOnSelect={true}>
