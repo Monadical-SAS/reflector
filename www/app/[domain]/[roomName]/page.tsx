@@ -1,8 +1,8 @@
 "use client";
 
 import "@whereby.com/browser-sdk/embed";
-import { useCallback, useEffect, useRef } from "react";
-import useRoomMeeting from "../../rooms/useRoomMeeting";
+import { useRef } from "react";
+import useRoomMeeting from "./useRoomMeeting";
 
 export type RoomDetails = {
   params: {
