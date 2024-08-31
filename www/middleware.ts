@@ -24,24 +24,7 @@ export async function middleware(request: NextRequest) {
     if (config.features.requireLogin) {
       const fiefMiddleware = await getFiefAuthMiddleware(request.nextUrl);
       const fiefResponse = await fiefMiddleware(request);
-      if (!fiefResponse.headers.get("x-middleware-rewrite")) {
-        fiefResponse.headers.set(
-          "x-middleware-rewrite",
-          request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
-        );
-      }
       return fiefResponse;
-    }
-
-    if (
-      request.nextUrl.pathname == "/" ||
-      request.nextUrl.pathname.startsWith("/transcripts") ||
-      request.nextUrl.pathname.startsWith("/browse") ||
-      request.nextUrl.pathname.startsWith("/rooms")
-    ) {
-      return NextResponse.rewrite(
-        request.nextUrl.origin + "/" + domain + request.nextUrl.pathname,
-      );
     }
   }
 

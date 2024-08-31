@@ -1,6 +1,6 @@
 import { useFiefAccessTokenInfo } from "@fief/fief/nextjs/react";
 import { useContext, useEffect, useState } from "react";
-import { DomainContext, featureEnabled } from "../[domain]/domainContext";
+import { DomainContext, featureEnabled } from "../domainContext";
 import { CookieContext } from "../(auth)/fiefWrapper";
 import { OpenApi, DefaultService } from "../api";
 
