@@ -25,7 +25,7 @@ export default function Room(details: RoomDetails) {
         <whereby-embed
           ref={wherebyRef}
           room={roomUrl}
-          style={{ width: "100%", height: "98%" }}
+          style={{ width: "100vw", height: "100vh" }}
         />
       )}
     </>
