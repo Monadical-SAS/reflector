@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { DomainConfig } from "../lib/edgeConfig";
+import { DomainConfig } from "./lib/edgeConfig";
 
 type DomainContextType = Omit<DomainConfig, "auth_callback_url">;
 

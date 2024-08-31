@@ -1,19 +1,19 @@
-import "../styles/globals.scss";
+import "./styles/globals.scss";
 import { Poppins } from "next/font/google";
 import { Metadata, Viewport } from "next";
-import FiefWrapper from "../(auth)/fiefWrapper";
-import UserInfo from "../(auth)/userInfo";
-import { ErrorProvider } from "../(errors)/errorContext";
-import ErrorMessage from "../(errors)/errorMessage";
+import FiefWrapper from "./(auth)/fiefWrapper";
+import UserInfo from "./(auth)/userInfo";
+import { ErrorProvider } from "./(errors)/errorContext";
+import ErrorMessage from "./(errors)/errorMessage";
 import Image from "next/image";
-import About from "../(aboutAndPrivacy)/about";
-import Privacy from "../(aboutAndPrivacy)/privacy";
+import About from "./(aboutAndPrivacy)/about";
+import Privacy from "./(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
-import { getConfig } from "../lib/edgeConfig";
+import { getConfig } from "./lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { cookies } from "next/dist/client/components/headers";
-import { SESSION_COOKIE_NAME } from "../lib/fief";
-import { Providers } from "../providers";
+import { SESSION_COOKIE_NAME } from "./lib/fief";
+import { Providers } from "./providers";
 import NextLink from "next/link";
 import { Container, Flex, Link } from "@chakra-ui/react";
 
@@ -67,15 +67,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
-type LayoutProps = {
-  params: {
-    domain: string;
-  };
-  children: any;
-};
-
-export default async function RootLayout({ children, params }: LayoutProps) {
-  const config = await getConfig(params.domain);
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
+  const config = await getConfig(hostname);
   const { requireLogin, privacy, browse, rooms } = config.features;
   const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 

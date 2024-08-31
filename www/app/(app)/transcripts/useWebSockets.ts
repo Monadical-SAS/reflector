@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
-import { DomainContext } from "../domainContext";
+import { DomainContext } from "../../domainContext";
 import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
 import useApi from "../../lib/useApi";
 
