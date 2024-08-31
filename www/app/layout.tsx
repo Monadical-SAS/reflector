@@ -2,20 +2,14 @@ import "./styles/globals.scss";
 import { Poppins } from "next/font/google";
 import { Metadata, Viewport } from "next";
 import FiefWrapper from "./(auth)/fiefWrapper";
-import UserInfo from "./(auth)/userInfo";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
-import Image from "next/image";
-import About from "./(aboutAndPrivacy)/about";
-import Privacy from "./(aboutAndPrivacy)/privacy";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "./lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { cookies } from "next/dist/client/components/headers";
 import { SESSION_COOKIE_NAME } from "./lib/fief";
 import { Providers } from "./providers";
-import NextLink from "next/link";
-import { Container, Flex, Link } from "@chakra-ui/react";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
 
@@ -74,7 +68,6 @@ export default async function RootLayout({
 }) {
   const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
   const config = await getConfig(hostname);
-  const { requireLogin, privacy, browse, rooms } = config.features;
   const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 
   return (
@@ -89,108 +82,7 @@ export default async function RootLayout({
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
               <ErrorProvider>
                 <ErrorMessage />
-                <Providers>
-                  <Container
-                    minW="100vw"
-                    maxH="100vh"
-                    minH="100vh"
-                    maxW="container.xl"
-                    display="grid"
-                    gridTemplateRows="auto minmax(0,1fr)"
-                  >
-                    <Flex
-                      as="header"
-                      justify="space-between"
-                      alignItems="center"
-                      w="100%"
-                      py="2"
-                      px="0"
-                    >
-                      {/* Logo on the left */}
-                      <Link
-                        as={NextLink}
-                        href="/"
-                        className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
-                      >
-                        <Image
-                          src="/reach.png"
-                          width={16}
-                          height={16}
-                          className="h-10 w-auto"
-                          alt="Reflector"
-                        />
-                        <div className="hidden flex-col ml-2 md:block">
-                          <h1 className="text-[38px] font-bold tracking-wide leading-tight">
-                            Reflector
-                          </h1>
-                          <p className="text-gray-500 text-xs tracking-tighter">
-                            Capture the signal, not the noise
-                          </p>
-                        </div>
-                      </Link>
-                      <div>
-                        {/* Text link on the right */}
-                        <Link
-                          as={NextLink}
-                          href="/transcripts/new"
-                          className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-                        >
-                          Create
-                        </Link>
-                        {browse ? (
-                          <>
-                            &nbsp;·&nbsp;
-                            <Link
-                              href="/browse"
-                              as={NextLink}
-                              className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-                              prefetch={false}
-                            >
-                              Browse
-                            </Link>
-                          </>
-                        ) : (
-                          <></>
-                        )}
-                        {rooms ? (
-                          <>
-                            &nbsp;·&nbsp;
-                            <Link
-                              href="/rooms"
-                              as={NextLink}
-                              className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-                              prefetch={false}
-                            >
-                              Rooms
-                            </Link>
-                          </>
-                        ) : (
-                          <></>
-                        )}
-                        &nbsp;·&nbsp;
-                        <About buttonText="About" />
-                        {privacy ? (
-                          <>
-                            &nbsp;·&nbsp;
-                            <Privacy buttonText="Privacy" />
-                          </>
-                        ) : (
-                          <></>
-                        )}
-                        {requireLogin ? (
-                          <>
-                            &nbsp;·&nbsp;
-                            <UserInfo />
-                          </>
-                        ) : (
-                          <></>
-                        )}
-                      </div>
-                    </Flex>
-
-                    {children}
-                  </Container>
-                </Providers>
+                <Providers>{children}</Providers>
               </ErrorProvider>
             </ErrorBoundary>
           </DomainContextProvider>
