@@ -28,8 +28,7 @@ export const config = {
 
 export default withAuth(
   async function middleware(request) {
-    const domain = request.nextUrl.hostname;
-    const config = await getConfig(domain);
+    const config = await getConfig();
     const pathname = request.nextUrl.pathname;
 
     // feature-flags protected paths
@@ -39,23 +38,11 @@ export default withAuth(
     ) {
       return NextResponse.redirect(request.nextUrl.origin);
     }
-
-    if (
-      pathname == "/" ||
-      pathname.startsWith("/transcripts") ||
-      pathname.startsWith("/browse") ||
-      pathname.startsWith("/rooms")
-    ) {
-      return NextResponse.rewrite(
-        request.nextUrl.origin + "/" + domain + pathname,
-      );
-    }
   },
   {
     callbacks: {
       async authorized({ req, token }) {
-        const domain = req.nextUrl.hostname;
-        const config = await getConfig(domain);
+        const config = await getConfig();
 
         if (
           config.features.requireLogin &&

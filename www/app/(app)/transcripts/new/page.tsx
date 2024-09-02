@@ -13,9 +13,13 @@ import { supportedLanguages } from "../../../supportedLanguages";
 import { useSession } from "next-auth/react";
 import { featureEnabled } from "../../../domainContext";
 import { Button, Text } from "@chakra-ui/react";
+import { signIn } from "next-auth/react";
+import { Spinner } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
-  const isAuthenticated = useSession().status === "authenticated";
+  const { status } = useSession();
+  const sessionReady = status !== "loading";
+  const isAuthenticated = status === "authenticated";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
@@ -92,7 +96,9 @@ const TranscriptCreate = () => {
           </div>
         </section>
         <section className="flex flex-col justify-center items-center w-full h-full">
-          {requireLogin && !isAuthenticated ? (
+          {!sessionReady ? (
+            <Spinner />
+          ) : requireLogin && !isAuthenticated ? (
             <button
               className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
               onClick={() => signIn("authentik")}

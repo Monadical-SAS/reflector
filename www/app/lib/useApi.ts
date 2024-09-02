@@ -6,9 +6,8 @@ import { CustomSession } from "./types";
 
 export default function useApi(): DefaultService | null {
   const api_url = useContext(DomainContext).api_url;
-  const requireLogin = featureEnabled("requireLogin");
   const [api, setApi] = useState<OpenApi | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const customSession = session as CustomSession;
   const accessToken = customSession?.accessToken;
 
@@ -21,7 +20,11 @@ export default function useApi(): DefaultService | null {
   }, [session]);
 
   useEffect(() => {
-    if (requireLogin && !accessToken) {
+    if (status === "loading") {
+      return;
+    }
+
+    if (status === "authenticated" && !accessToken) {
       return;
     }
 
@@ -31,7 +34,7 @@ export default function useApi(): DefaultService | null {
     });
 
     setApi(openApi);
-  }, [accessToken]);
+  }, [accessToken, status]);
 
   return api?.default ?? null;
 }
