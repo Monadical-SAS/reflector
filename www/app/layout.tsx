@@ -1,14 +1,12 @@
 import "./styles/globals.scss";
 import { Poppins } from "next/font/google";
 import { Metadata, Viewport } from "next";
-import FiefWrapper from "./(auth)/fiefWrapper";
+import AuthWrapper from "./(auth)/authWrapper";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import { DomainContextProvider } from "./domainContext";
 import { getConfig } from "./lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
-import { cookies } from "next/dist/client/components/headers";
-import { SESSION_COOKIE_NAME } from "./lib/fief";
 import { Providers } from "./providers";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "600"] });
@@ -67,7 +65,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const config = await getConfig();
-  const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 
   return (
     <html lang="en">
@@ -76,7 +73,7 @@ export default async function RootLayout({
           poppins.className + "h-[100svh] w-[100svw] overflow-hidden relative"
         }
       >
-        <FiefWrapper hasAuthCookie={hasAuthCookie}>
+        <AuthWrapper>
           <DomainContextProvider config={config}>
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
               <ErrorProvider>
@@ -85,7 +82,7 @@ export default async function RootLayout({
               </ErrorProvider>
             </ErrorBoundary>
           </DomainContextProvider>
-        </FiefWrapper>
+        </AuthWrapper>
       </body>
     </html>
   );
