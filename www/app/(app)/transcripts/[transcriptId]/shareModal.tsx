@@ -3,7 +3,7 @@ import SelectSearch from "react-select-search";
 import { getZulipMessage, sendZulipMessage } from "../../../lib/zulip";
 import { GetTranscript, GetTranscriptTopic } from "../../../api";
 import "react-select-search/style.css";
-import { DomainContext } from "../../domainContext";
+import { DomainContext } from "../../../domainContext";
 
 type ShareModal = {
   show: boolean;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useError } from "../../(errors)/errorContext";
-import { Meeting } from "../../api";
-import { shouldShowError } from "../../lib/errorUtils";
-import useApi from "../../lib/useApi";
+import { useError } from "../(errors)/errorContext";
+import { Meeting } from "../api";
+import { shouldShowError } from "../lib/errorUtils";
+import useApi from "../lib/useApi";
 
 type ErrorMeeting = {
   error: Error;
