@@ -4,8 +4,7 @@ import { getFiefAuthMiddleware } from "./app/lib/fief";
 import { getConfig } from "./app/lib/edgeConfig";
 
 export async function middleware(request: NextRequest) {
-  const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
-  const config = await getConfig(hostname);
+  const config = await getConfig();
 
   if (
     request.nextUrl.pathname.match(
