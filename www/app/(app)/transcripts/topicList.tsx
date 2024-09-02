@@ -14,7 +14,7 @@ import {
   Flex,
   Text,
 } from "@chakra-ui/react";
-import { featureEnabled } from "../domainContext";
+import { featureEnabled } from "../../domainContext";
 
 type TopicListProps = {
   topics: Topic[];

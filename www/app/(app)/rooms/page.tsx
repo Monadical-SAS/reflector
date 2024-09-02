@@ -35,7 +35,7 @@ import { Container } from "@chakra-ui/react";
 import { FaEllipsisVertical, FaTrash, FaPencil } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { DomainContext } from "../domainContext";
+import { DomainContext } from "../../domainContext";
 import { Select, Options, OptionBase } from "chakra-react-select";
 
 interface Stream {

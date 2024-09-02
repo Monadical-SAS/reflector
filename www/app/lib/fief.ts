@@ -44,7 +44,7 @@ export const getFiefAuth = async (url: URL) => {
   if (FIEF_AUTHS[url.hostname]) {
     return FIEF_AUTHS[url.hostname];
   } else {
-    const config = url && (await getConfig(url.hostname));
+    const config = url && (await getConfig());
     if (config) {
       FIEF_AUTHS[url.hostname] = new FiefAuth({
         client: fiefClient,

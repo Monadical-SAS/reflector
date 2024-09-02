@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { featureEnabled } from "../domainContext";
+import { featureEnabled } from "../../domainContext";
 import ShareModal from "./[transcriptId]/shareModal";
 import { GetTranscript, GetTranscriptTopic } from "../../api";
 import { BoxProps, Button } from "@chakra-ui/react";

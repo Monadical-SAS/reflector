@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { DomainContext } from "../domainContext";
+import { DomainContext } from "../../domainContext";
 import getApi from "../../lib/useApi";
 import { useFiefAccessTokenInfo } from "@fief/fief/build/esm/nextjs/react";
 

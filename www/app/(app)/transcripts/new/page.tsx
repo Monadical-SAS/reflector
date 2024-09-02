@@ -11,7 +11,7 @@ import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
 import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
-import { featureEnabled } from "../../domainContext";
+import { featureEnabled } from "../../../domainContext";
 import { Button, Text } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
