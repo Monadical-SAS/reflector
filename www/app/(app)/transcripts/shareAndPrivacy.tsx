@@ -70,7 +70,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   };
 
   const { data: session } = useSession();
-  const userId = session?.user?.sub;
+  const userId = session?.user?.id;
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));
