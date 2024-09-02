@@ -11,8 +11,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
-  const config = await getConfig(hostname);
+  const config = await getConfig();
   const { requireLogin, privacy, browse, rooms } = config.features;
   return (
     <Container

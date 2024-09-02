@@ -66,8 +66,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const hostname = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
-  const config = await getConfig(hostname);
+  const config = await getConfig();
   const hasAuthCookie = !!cookies().get(SESSION_COOKIE_NAME);
 
   return (
