@@ -1,7 +1,7 @@
 import "./styles/globals.scss";
 import { Poppins } from "next/font/google";
 import { Metadata, Viewport } from "next";
-import AuthWrapper from "./(auth)/authWrapper";
+import SessionProvider from "./lib/SessionProvider";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import { DomainContextProvider } from "./domainContext";
@@ -73,7 +73,7 @@ export default async function RootLayout({
           poppins.className + "h-[100svh] w-[100svw] overflow-hidden relative"
         }
       >
-        <AuthWrapper>
+        <SessionProvider>
           <DomainContextProvider config={config}>
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
               <ErrorProvider>
@@ -82,7 +82,7 @@ export default async function RootLayout({
               </ErrorProvider>
             </ErrorBoundary>
           </DomainContextProvider>
-        </AuthWrapper>
+        </SessionProvider>
       </body>
     </html>
   );
