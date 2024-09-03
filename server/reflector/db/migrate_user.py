@@ -31,20 +31,26 @@ async def migrate_user(email, user_id):
     if not user_ids:
         return
 
-    for user_id in user_ids:
+    # do not migrate back
+    if user_id in user_ids:
+        return
+
+    for old_user_id in user_ids:
         query = (
             transcripts.update()
-            .where(transcripts.c.user_id == user_id)
+            .where(transcripts.c.user_id == old_user_id)
             .values(user_id=user_id)
         )
         await database.execute(query)
 
-        query = rooms.update().where(rooms.c.user_id == user_id).values(user_id=user_id)
+        query = (
+            rooms.update().where(rooms.c.user_id == old_user_id).values(user_id=user_id)
+        )
         await database.execute(query)
 
         query = (
             meetings.update()
-            .where(meetings.c.user_id == user_id)
+            .where(meetings.c.user_id == old_user_id)
             .values(user_id=user_id)
         )
         await database.execute(query)
