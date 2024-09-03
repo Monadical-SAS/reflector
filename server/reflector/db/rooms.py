@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -19,6 +20,21 @@ rooms = sqlalchemy.Table(
     ),
     sqlalchemy.Column("zulip_stream", sqlalchemy.String),
     sqlalchemy.Column("zulip_topic", sqlalchemy.String),
+    sqlalchemy.Column(
+        "is_locked", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
+    sqlalchemy.Column(
+        "room_mode", sqlalchemy.String, nullable=False, server_default="normal"
+    ),
+    sqlalchemy.Column(
+        "recording_type", sqlalchemy.String, nullable=False, server_default="cloud"
+    ),
+    sqlalchemy.Column(
+        "recording_trigger",
+        sqlalchemy.String,
+        nullable=False,
+        server_default="automatic-2nd-participant",
+    ),
 )
 
 
@@ -30,6 +46,12 @@ class Room(BaseModel):
     zulip_auto_post: bool = False
     zulip_stream: str = ""
     zulip_topic: str = ""
+    is_locked: bool = False
+    room_mode: Literal["normal", "group"] = "normal"
+    recording_type: Literal["none", "local", "cloud"] = "cloud"
+    recording_trigger: Literal[
+        "none", "prompt", "automatic", "automatic-2nd-participant"
+    ] = "automatic-2nd-participant"
 
 
 class RoomController:

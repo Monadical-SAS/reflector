@@ -71,9 +71,34 @@ export const $CreateRoom = {
       type: "string",
       title: "Zulip Topic",
     },
+    is_locked: {
+      type: "boolean",
+      title: "Is Locked",
+    },
+    room_mode: {
+      type: "string",
+      title: "Room Mode",
+    },
+    recording_type: {
+      type: "string",
+      title: "Recording Type",
+    },
+    recording_trigger: {
+      type: "string",
+      title: "Recording Trigger",
+    },
   },
   type: "object",
-  required: ["name", "zulip_auto_post", "zulip_stream", "zulip_topic"],
+  required: [
+    "name",
+    "zulip_auto_post",
+    "zulip_stream",
+    "zulip_topic",
+    "is_locked",
+    "room_mode",
+    "recording_type",
+    "recording_trigger",
+  ],
   title: "CreateRoom",
 } as const;
 
@@ -667,6 +692,22 @@ export const $Room = {
       type: "string",
       title: "Zulip Topic",
     },
+    is_locked: {
+      type: "boolean",
+      title: "Is Locked",
+    },
+    room_mode: {
+      type: "string",
+      title: "Room Mode",
+    },
+    recording_type: {
+      type: "string",
+      title: "Recording Type",
+    },
+    recording_trigger: {
+      type: "string",
+      title: "Recording Trigger",
+    },
   },
   type: "object",
   required: [
@@ -677,6 +718,10 @@ export const $Room = {
     "zulip_auto_post",
     "zulip_stream",
     "zulip_topic",
+    "is_locked",
+    "room_mode",
+    "recording_type",
+    "recording_trigger",
   ],
   title: "Room",
 } as const;
@@ -857,9 +902,34 @@ export const $UpdateRoom = {
       type: "string",
       title: "Zulip Topic",
     },
+    is_locked: {
+      type: "boolean",
+      title: "Is Locked",
+    },
+    room_mode: {
+      type: "string",
+      title: "Room Mode",
+    },
+    recording_type: {
+      type: "string",
+      title: "Recording Type",
+    },
+    recording_trigger: {
+      type: "string",
+      title: "Recording Trigger",
+    },
   },
   type: "object",
-  required: ["name", "zulip_auto_post", "zulip_stream", "zulip_topic"],
+  required: [
+    "name",
+    "zulip_auto_post",
+    "zulip_stream",
+    "zulip_topic",
+    "is_locked",
+    "room_mode",
+    "recording_type",
+    "recording_trigger",
+  ],
   title: "UpdateRoom",
 } as const;
 
