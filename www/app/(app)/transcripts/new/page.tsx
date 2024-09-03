@@ -10,19 +10,23 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import { useFiefIsAuthenticated } from "@fief/fief/nextjs/react";
+import { useSession } from "next-auth/react";
 import { featureEnabled } from "../../../domainContext";
 import { Button, Text } from "@chakra-ui/react";
+import { signIn } from "next-auth/react";
+import { Spinner } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
-  const isAuthenticated = useFiefIsAuthenticated();
+  const { status } = useSession();
+  const sessionReady = status !== "loading";
+  const isAuthenticated = status === "authenticated";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
   const nameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setName(event.target.value);
   };
-  const [targetLanguage, setTargetLanguage] = useState<string>();
+  const [targetLanguage, setTargetLanguage] = useState<string>("NOTRANSLATION");
 
   const onLanguageChange = (newval) => {
     (!newval || typeof newval === "string") && setTargetLanguage(newval);
@@ -33,16 +37,21 @@ const TranscriptCreate = () => {
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [loadingUpload, setLoadingUpload] = useState(false);
 
+  const getTargetLanguage = () => {
+    if (targetLanguage === "NOTRANSLATION") return;
+    return targetLanguage;
+  };
+
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
-    createTranscript.create({ name, target_language: targetLanguage });
+    createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   const uploadFile = () => {
     if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
-    createTranscript.create({ name, target_language: targetLanguage });
+    createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   useEffect(() => {
@@ -87,10 +96,12 @@ const TranscriptCreate = () => {
           </div>
         </section>
         <section className="flex flex-col justify-center items-center w-full h-full">
-          {requireLogin && !isAuthenticated ? (
+          {!sessionReady ? (
+            <Spinner />
+          ) : requireLogin && !isAuthenticated ? (
             <button
               className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
-              onClick={() => router.push("/login")}
+              onClick={() => signIn("authentik")}
             >
               Log in
             </button>
