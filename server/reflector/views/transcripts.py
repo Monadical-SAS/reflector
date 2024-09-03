@@ -88,7 +88,8 @@ async def transcripts_list(
     user_id = user["sub"] if user else None
 
     # for fief to jwt migration, migrate user if needed
-    await migrate_user(email=user.email, user_id=user.sub)
+    if user:
+        await migrate_user(email=user.get("email"), user_id=user["sub"])
 
     return await paginate(
         database,
