@@ -25,6 +25,7 @@ class JWTException(Exception):
 
 class UserInfo(BaseModel):
     sub: str
+    email: str
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -81,7 +82,8 @@ def current_user_optional(
     try:
         payload = jwtauth.verify_token(token)
         sub = payload["sub"]
-        return UserInfo(sub=sub)
+        email = payload["email"]
+        return UserInfo(sub=sub, email=email)
     except JWTError as e:
         logger.error(f"JWT error: {e}")
         raise HTTPException(status_code=401, detail="Invalid authentication")
