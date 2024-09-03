@@ -32,7 +32,7 @@ import {
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
 import { Container } from "@chakra-ui/react";
-import { FaEllipsisVertical, FaTrash, FaPencil } from "react-icons/fa6";
+import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { DomainContext } from "../../domainContext";
@@ -51,14 +51,31 @@ interface SelectOption extends OptionBase {
 
 const RESERVED_PATHS = ["browse", "rooms", "transcripts"];
 
+const roomModeOptions: Options<SelectOption> = [
+  { label: "2-4 people", value: "normal" },
+  { label: "2-200 people", value: "group" },
+];
+
+const recordingTriggerOptions: Options<SelectOption> = [
+  { label: "None", value: "none" },
+  { label: "Prompt", value: "prompt" },
+  { label: "Automatic", value: "automatic-2nd-participant" },
+];
+
+const roomInitialState = {
+  name: "",
+  zulipAutoPost: false,
+  zulipStream: "",
+  zulipTopic: "",
+  isLocked: false,
+  roomMode: "normal",
+  recordingType: "cloud",
+  recordingTrigger: "none",
+};
+
 export default function RoomsList() {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [room, setRoom] = useState({
-    name: "",
-    zulipAutoPost: false,
-    zulipStream: "",
-    zulipTopic: "",
-  });
+  const [room, setRoom] = useState(roomInitialState);
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState("");
   const api = useApi();
@@ -66,6 +83,7 @@ export default function RoomsList() {
   const { loading, response, refetch } = useRoomList(page);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [error, setError] = useState("");
+  const [linkCopied, setLinkCopied] = useState("");
 
   const { zulip_streams } = useContext(DomainContext);
 
@@ -100,6 +118,16 @@ export default function RoomsList() {
       .find((stream) => stream.name === room.zulipStream)
       ?.topics.map((topic) => ({ label: topic, value: topic })) || [];
 
+  const handleCopyUrl = (roomName: string) => {
+    const roomUrl = `${window.location.origin}/${roomName}`;
+    navigator.clipboard.writeText(roomUrl);
+    setLinkCopied(roomName);
+
+    setTimeout(() => {
+      setLinkCopied("");
+    }, 2000);
+  };
+
   const handleSaveRoom = async () => {
     try {
       if (RESERVED_PATHS.includes(room.name)) {
@@ -107,32 +135,29 @@ export default function RoomsList() {
         return;
       }
 
+      const roomData = {
+        name: room.name,
+        zulip_auto_post: room.zulipAutoPost,
+        zulip_stream: room.zulipStream,
+        zulip_topic: room.zulipTopic,
+        is_locked: room.isLocked,
+        room_mode: room.roomMode,
+        recording_type: room.recordingType,
+        recording_trigger: room.recordingTrigger,
+      };
+
       if (isEditing) {
         await api?.v1RoomsUpdate({
           roomId: editRoomId,
-          requestBody: {
-            name: room.name,
-            zulip_auto_post: room.zulipAutoPost,
-            zulip_stream: room.zulipStream,
-            zulip_topic: room.zulipTopic,
-          },
+          requestBody: roomData,
         });
       } else {
         await api?.v1RoomsCreate({
-          requestBody: {
-            name: room.name,
-            zulip_auto_post: room.zulipAutoPost,
-            zulip_stream: room.zulipStream,
-            zulip_topic: room.zulipTopic,
-          },
+          requestBody: roomData,
         });
       }
-      setRoom({
-        name: "",
-        zulipAutoPost: false,
-        zulipStream: "",
-        zulipTopic: "",
-      });
+
+      setRoom(roomInitialState);
       setIsEditing(false);
       setEditRoomId("");
       setError("");
@@ -149,6 +174,10 @@ export default function RoomsList() {
       zulipAutoPost: roomData.zulip_auto_post,
       zulipStream: roomData.zulip_stream,
       zulipTopic: roomData.zulip_topic,
+      isLocked: roomData.is_locked,
+      roomMode: roomData.room_mode,
+      recordingType: roomData.recording_type,
+      recordingTrigger: roomData.recording_trigger,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -204,12 +233,7 @@ export default function RoomsList() {
             colorScheme="blue"
             onClick={() => {
               setIsEditing(false);
-              setRoom({
-                name: "",
-                zulipAutoPost: false,
-                zulipStream: "",
-                zulipTopic: "",
-              });
+              setRoom(roomInitialState);
               setError("");
               onOpen();
             }}
@@ -236,6 +260,53 @@ export default function RoomsList() {
                   {error && <Text color="red.500">{error}</Text>}
                 </FormControl>
 
+                <FormControl mt={4}>
+                  <Checkbox
+                    name="isLocked"
+                    isChecked={room.isLocked}
+                    onChange={handleRoomChange}
+                  >
+                    Locked room
+                  </Checkbox>
+                </FormControl>
+                <FormControl mt={4}>
+                  <FormLabel>Room size</FormLabel>
+                  <Select
+                    name="roomMode"
+                    options={roomModeOptions}
+                    value={{
+                      label: roomModeOptions.find(
+                        (rm) => rm.value === room.roomMode,
+                      )?.label,
+                      value: room.roomMode,
+                    }}
+                    onChange={(newValue) =>
+                      setRoom({
+                        ...room,
+                        roomMode: newValue!.value,
+                      })
+                    }
+                  />
+                </FormControl>
+                <FormControl mt={4}>
+                  <FormLabel>Recording start trigger</FormLabel>
+                  <Select
+                    name="recordingTrigger"
+                    options={recordingTriggerOptions}
+                    value={{
+                      label: recordingTriggerOptions.find(
+                        (rt) => rt.value === room.recordingTrigger,
+                      )?.label,
+                      value: room.recordingTrigger,
+                    }}
+                    onChange={(newValue) =>
+                      setRoom({
+                        ...room,
+                        recordingTrigger: newValue!.value,
+                      })
+                    }
+                  />
+                </FormControl>
                 <FormControl mt={8}>
                   <Checkbox
                     name="zulipAutoPost"
@@ -309,6 +380,19 @@ export default function RoomsList() {
                       <Link href={`/${roomData.name}`}>{roomData.name}</Link>
                     </Heading>
                     <Spacer />
+                    {linkCopied === roomData.name ? (
+                      <Text mr={2} color="green.500">
+                        Link copied!
+                      </Text>
+                    ) : (
+                      <IconButton
+                        aria-label="Copy URL"
+                        icon={<FaLink />}
+                        onClick={() => handleCopyUrl(roomData.name)}
+                        mr={2}
+                      />
+                    )}
+
                     <Menu closeOnSelect={true}>
                       <MenuButton
                         as={IconButton}
