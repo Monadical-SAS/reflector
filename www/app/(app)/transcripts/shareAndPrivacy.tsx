@@ -15,8 +15,9 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { FaShare } from "react-icons/fa";
-import { useFiefUserinfo } from "@fief/fief/build/esm/nextjs/react";
 import useApi from "../../lib/useApi";
+import { useSession } from "next-auth/react";
+import { CustomSession } from "../../lib/types";
 import { Select } from "chakra-react-select";
 import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
@@ -69,7 +70,9 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
     setShareLoading(false);
   };
 
-  const userId = useFiefUserinfo()?.sub;
+  const { data: session } = useSession();
+  const customSession = session as CustomSession;
+  const userId = customSession?.user?.id;
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));

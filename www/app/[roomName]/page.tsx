@@ -4,7 +4,7 @@ import "@whereby.com/browser-sdk/embed";
 import { useCallback, useEffect, useRef } from "react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
-import { useFiefIsAuthenticated } from "@fief/fief/build/esm/nextjs/react";
+import { useSession } from "next-auth/react";
 
 export type RoomDetails = {
   params: {
@@ -17,7 +17,9 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const isAuthenticated = useFiefIsAuthenticated();
+  const { status } = useSession();
+  const sessionReady = status !== "loading";
+  const isAuthenticated = status === "authenticated";
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
@@ -28,7 +30,7 @@ export default function Room(details: RoomDetails) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !roomUrl) return;
+    if (!sessionReady || !isAuthenticated || !roomUrl) return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 

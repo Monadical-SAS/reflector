@@ -150,8 +150,14 @@ async def authenticated_client():
     from reflector.app import app
     from reflector.auth import current_user, current_user_optional
 
-    app.dependency_overrides[current_user] = lambda: {"sub": "randomuserid"}
-    app.dependency_overrides[current_user_optional] = lambda: {"sub": "randomuserid"}
+    app.dependency_overrides[current_user] = lambda: {
+        "sub": "randomuserid",
+        "email": "test@mail.com",
+    }
+    app.dependency_overrides[current_user_optional] = lambda: {
+        "sub": "randomuserid",
+        "email": "test@mail.com",
+    }
     yield
     del app.dependency_overrides[current_user]
     del app.dependency_overrides[current_user_optional]
