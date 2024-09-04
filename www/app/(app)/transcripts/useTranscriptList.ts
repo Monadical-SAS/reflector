@@ -10,7 +10,6 @@ type TranscriptList = {
   refetch: () => void;
 };
 
-//always protected
 const useTranscriptList = (page: number): TranscriptList => {
   const [response, setResponse] = useState<Page_GetTranscript_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

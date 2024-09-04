@@ -128,13 +128,13 @@ export default function TranscriptBrowser() {
       gap={2}
       overflowY="auto"
       minH="100%"
-      mt={8}
     >
       <Flex
         flexDir="row"
         justify="flex-end"
         align="center"
         flexWrap={"wrap-reverse"}
+        mt={4}
       >
         {session?.user?.name ? (
           <Heading size="md">{session?.user?.name}'s Meetings</Heading>

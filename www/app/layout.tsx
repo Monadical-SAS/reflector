@@ -65,7 +65,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={"h-[100svh] w-[100svw] overflow-hidden relative"}>
+      <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
         <SessionProvider>
           <DomainContextProvider config={config}>
             <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
