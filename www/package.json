@@ -11,17 +11,17 @@
     "openapi": "openapi-ts"
   },
   "dependencies": {
-    "@chakra-ui/icons": "2.1.1",
+    "@chakra-ui/form-control": "2.2.0",
     "@chakra-ui/icon": "3.2.0",
-    "@chakra-ui/system": "2.6.2",
-    "@chakra-ui/menu": "^2.2.1",
-    "@chakra-ui/next-js": "^2.2.0",
+    "@chakra-ui/icons": "2.1.1",
     "@chakra-ui/layout": "^2.3.1",
     "@chakra-ui/media-query": "^3.3.0",
-    "@chakra-ui/spinner": "^2.1.0",
-    "@chakra-ui/form-control": "2.2.0",
+    "@chakra-ui/menu": "^2.2.1",
+    "@chakra-ui/next-js": "^2.2.0",
     "@chakra-ui/react": "^2.8.2",
     "@chakra-ui/react-types": "^2.0.6",
+    "@chakra-ui/spinner": "^2.1.0",
+    "@chakra-ui/system": "2.6.2",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
@@ -29,6 +29,7 @@
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@sentry/nextjs": "^7.77.0",
     "@vercel/edge-config": "^0.4.1",
+    "@vercel/kv": "^2.0.0",
     "@whereby.com/browser-sdk": "^3.3.4",
     "autoprefixer": "10.4.20",
     "axios": "^1.6.2",
@@ -37,6 +38,7 @@
     "eslint-config-next": "^14.2.7",
     "fontawesome": "^5.6.3",
     "framer-motion": "^10.16.16",
+    "ioredis": "^5.4.1",
     "jest-worker": "^29.6.2",
     "next": "^14.2.7",
     "next-auth": "^4.24.7",
@@ -49,6 +51,7 @@
     "react-markdown": "^9.0.0",
     "react-qr-code": "^2.0.12",
     "react-select-search": "^4.1.7",
+    "redlock": "^5.0.0-beta.2",
     "sass": "^1.63.6",
     "simple-peer": "^9.11.1",
     "superagent": "^8.0.9",
@@ -64,6 +67,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.48.0",
     "@types/react": "18.2.20",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "vercel": "^37.3.0"
   }
 }

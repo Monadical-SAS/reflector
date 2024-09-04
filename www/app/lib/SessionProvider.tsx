@@ -4,7 +4,7 @@ import { SessionAutoRefresh } from "./SessionAutoRefresh";
 
 export default function SessionProvider({ children }) {
   return (
-    <SessionProviderNextAuth refetchInterval={60} refetchOnWindowFocus={true}>
+    <SessionProviderNextAuth>
       <SessionAutoRefresh>{children}</SessionAutoRefresh>
     </SessionProviderNextAuth>
   );
