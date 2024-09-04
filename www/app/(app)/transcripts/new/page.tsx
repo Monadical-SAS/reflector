@@ -12,9 +12,36 @@ import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
 import { useSession } from "next-auth/react";
 import { featureEnabled } from "../../../domainContext";
-import { Button, Text } from "@chakra-ui/react";
 import { signIn } from "next-auth/react";
-import { Spinner } from "@chakra-ui/react";
+import {
+  Flex,
+  Box,
+  Spinner,
+  Heading,
+  Button,
+  Card,
+  Center,
+  Link,
+  CardBody,
+  Stack,
+  Text,
+  Icon,
+  Grid,
+  IconButton,
+  Spacer,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  Tooltip,
+  Input,
+} from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
   const { status } = useSession();
@@ -70,106 +97,132 @@ const TranscriptCreate = () => {
     useAudioDevice();
 
   return (
-    <div className="grid grid-rows-layout-topbar gap-2 lg:gap-4 max-h-full overflow-y-scroll">
-      <div className="lg:grid lg:grid-cols-2 lg:grid-rows-1 lg:gap-4 lg:h-full h-auto flex flex-col">
-        <section className="flex flex-col w-full lg:h-full items-center justify-evenly p-4 md:px-6 md:py-8">
-          <div className="flex flex-col max-w-xl items-center justify-center">
-            <h1 className="text-2xl font-bold mb-2">Welcome to Reflector</h1>
-            <p>
-              Reflector is a transcription and summarization pipeline that
-              transforms audio into knowledge.
-              <span className="hidden md:block">
-                The output is meeting minutes and topic summaries enabling
-                topic-specific analyses stored in your systems of record. This
-                is accomplished on your infrastructure – without 3rd parties –
-                keeping your data private, secure, and organized.
-              </span>
-            </p>
-            <About buttonText="Learn more" />
-            <p className="mt-6">
-              In order to use Reflector, we kindly request permission to access
-              your microphone during meetings and events.
-            </p>
-            {featureEnabled("privacy") && (
-              <Privacy buttonText="Privacy policy" />
-            )}
-          </div>
-        </section>
-        <section className="flex flex-col justify-center items-center w-full h-full">
-          {!sessionReady ? (
-            <Spinner />
-          ) : requireLogin && !isAuthenticated ? (
-            <button
-              className="mt-4 bg-blue-400 hover:bg-blue-500 focus-visible:bg-blue-500 text-white font-bold py-2 px-4 rounded"
-              onClick={() => signIn("authentik")}
-            >
-              Log in
-            </button>
-          ) : (
-            <div className="rounded-xl md:bg-blue-200 md:w-96 p-4 lg:p-6 flex flex-col mb-4 md:mb-10">
-              <h2 className="text-2xl font-bold mt-2 mb-2">Try Reflector</h2>
-              <label className="mb-3">
-                <p>Recording name</p>
-                <div className="select-search-container">
-                  <input
-                    className="select-search-input"
-                    type="text"
-                    onChange={nameChange}
-                    placeholder="Optional"
+    <Flex
+      maxW="container.xl"
+      flexDir="column"
+      margin="auto"
+      gap={2}
+      overflowY="auto"
+      maxH="100%"
+    >
+      <Flex
+        flexDir={{ base: "column", md: "row" }}
+        justify="space-between"
+        align="center"
+        gap={4}
+      >
+        <Flex
+          flexDir="column"
+          h="full"
+          justify="evenly"
+          flexBasis="1"
+          flexGrow={1}
+        >
+          <Heading size="lg" textAlign={{ base: "center", md: "left" }}>
+            Welcome to Reflector
+          </Heading>
+          <Text mt={6}>
+            Reflector is a transcription and summarization pipeline that
+            transforms audio into knowledge.
+            <Text className="hidden md:block">
+              The output is meeting minutes and topic summaries enabling
+              topic-specific analyses stored in your systems of record. This is
+              accomplished on your infrastructure – without 3rd parties –
+              keeping your data private, secure, and organized.
+            </Text>
+          </Text>
+          <About buttonText="Learn more" />
+          <Text mt={6}>
+            In order to use Reflector, we kindly request permission to access
+            your microphone during meetings and events.
+          </Text>
+          {featureEnabled("privacy") && <Privacy buttonText="Privacy policy" />}
+        </Flex>
+        <Flex flexDir="column" h="full" flexBasis="1" flexGrow={1}>
+          <Center>
+            {!sessionReady ? (
+              <Spinner />
+            ) : requireLogin && !isAuthenticated ? (
+              <Button onClick={() => signIn("authentik")} colorScheme="blue">
+                Log in
+              </Button>
+            ) : (
+              <Flex
+                rounded="xl"
+                bg="blue.primary"
+                color="white"
+                maxW="96"
+                p={8}
+                flexDir="column"
+                my={4}
+              >
+                <Heading size="md" mb={4}>
+                  Try Reflector
+                </Heading>
+                <Box mb={4}>
+                  <Text>Recording name</Text>
+                  <div className="select-search-container">
+                    <input
+                      className="select-search-input"
+                      type="text"
+                      onChange={nameChange}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </Box>
+                <Box mb={4}>
+                  <Text>Do you want to enable live translation?</Text>
+                  <SelectSearch
+                    search
+                    options={supportedLanguages}
+                    value={targetLanguage}
+                    onChange={onLanguageChange}
+                    placeholder="Choose your language"
                   />
-                </div>
-              </label>
-              <label className="mb-3">
-                <p>Do you want to enable live translation?</p>
-                <SelectSearch
-                  search
-                  options={supportedLanguages}
-                  value={targetLanguage}
-                  onChange={onLanguageChange}
-                  placeholder="Choose your language"
-                />
-              </label>
-              {loading ? (
-                <p className="">Checking permissions...</p>
-              ) : permissionOk ? (
-                <p className=""> Microphone permission granted </p>
-              ) : permissionDenied ? (
-                <p className="">
-                  Permission to use your microphone was denied, please change
-                  the permission setting in your browser and refresh this page.
-                </p>
-              ) : (
+                </Box>
+                {loading ? (
+                  <Text className="">Checking permissions...</Text>
+                ) : permissionOk ? (
+                  <Spacer />
+                ) : permissionDenied ? (
+                  <Text className="">
+                    Permission to use your microphone was denied, please change
+                    the permission setting in your browser and refresh this
+                    page.
+                  </Text>
+                ) : (
+                  <Button
+                    colorScheme="whiteAlpha"
+                    onClick={requestPermission}
+                    disabled={permissionDenied}
+                  >
+                    Request Microphone Permission
+                  </Button>
+                )}
                 <Button
-                  colorScheme="blue"
-                  onClick={requestPermission}
-                  disabled={permissionDenied}
+                  colorScheme="whiteAlpha"
+                  onClick={send}
+                  isDisabled={!permissionOk || loadingRecord || loadingUpload}
+                  mt={2}
                 >
-                  Request Microphone Permission
+                  {loadingRecord ? "Loading..." : "Record Meeting"}
                 </Button>
-              )}
-              <Button
-                colorScheme="blue"
-                onClick={send}
-                isDisabled={!permissionOk || loadingRecord || loadingUpload}
-                mt={2}
-              >
-                {loadingRecord ? "Loading..." : "Record Meeting"}
-              </Button>
-              <Text align="center" m="2">
-                OR
-              </Text>
-              <Button
-                colorScheme="blue"
-                onClick={uploadFile}
-                isDisabled={loadingRecord || loadingUpload}
-              >
-                {loadingUpload ? "Loading..." : "Upload File"}
-              </Button>
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
+                <Text align="center" m="2">
+                  OR
+                </Text>
+                <Button
+                  colorScheme="whiteAlpha"
+                  onClick={uploadFile}
+                  isDisabled={loadingRecord || loadingUpload}
+                >
+                  {loadingUpload ? "Loading..." : "Upload File"}
+                </Button>
+              </Flex>
+            )}
+          </Center>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 };
 

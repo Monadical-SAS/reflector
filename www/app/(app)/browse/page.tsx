@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 import { GetTranscript } from "../../api";
 import Pagination from "./pagination";
@@ -44,6 +45,7 @@ import { ExpandableText } from "../../lib/expandableText";
 export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useTranscriptList(page);
+  const { data: session } = useSession();
   const [deletionLoading, setDeletionLoading] = useState(false);
   const api = useApi();
   const { setError } = useError();
@@ -124,8 +126,9 @@ export default function TranscriptBrowser() {
       flexDir="column"
       margin="auto"
       gap={2}
-      overflowY="scroll"
-      maxH="100%"
+      overflowY="auto"
+      minH="100%"
+      mt={8}
     >
       <Flex
         flexDir="row"
@@ -133,8 +136,12 @@ export default function TranscriptBrowser() {
         align="center"
         flexWrap={"wrap-reverse"}
       >
-        {/* <Heading>{user?.fields?.name}'s Meetings</Heading> */}
-        <Heading>Your Meetings</Heading>
+        {session?.user?.name ? (
+          <Heading size="md">{session?.user?.name}'s Meetings</Heading>
+        ) : (
+          <Heading size="md">Your meetings</Heading>
+        )}
+
         {loading || (deletionLoading && <Spinner></Spinner>)}
 
         <Spacer />
@@ -149,7 +156,6 @@ export default function TranscriptBrowser() {
           New Meeting
         </Button>
       </Flex>
-
       <Grid
         templateColumns={{
           base: "repeat(1, 1fr)",
@@ -161,7 +167,7 @@ export default function TranscriptBrowser() {
           lg: 4,
         }}
         maxH="100%"
-        overflowY={"scroll"}
+        overflowY="auto"
         mb="4"
       >
         {response?.items
@@ -169,49 +175,7 @@ export default function TranscriptBrowser() {
           .map((item: GetTranscript) => (
             <Card key={item.id} border="gray.light" variant="outline">
               <CardBody>
-                <Flex align={"center"} ml="-6px">
-                  {item.status == "ended" && (
-                    <Tooltip label="Processing done">
-                      <span>
-                        <Icon color="green" as={FaCheck} mr="2" />
-                      </span>
-                    </Tooltip>
-                  )}
-                  {item.status == "error" && (
-                    <Tooltip label="Processing error">
-                      <span>
-                        <Icon color="red.primary" as={MdError} mr="2" />
-                      </span>
-                    </Tooltip>
-                  )}
-                  {item.status == "idle" && (
-                    <Tooltip label="New meeting, no recording">
-                      <span>
-                        <Icon color="yellow.500" as={FaStar} mr="2" />
-                      </span>
-                    </Tooltip>
-                  )}
-                  {item.status == "processing" && (
-                    <Tooltip label="Processing in progress">
-                      <span>
-                        <Icon
-                          color="grey.primary"
-                          as={FaGear}
-                          mr="2"
-                          transition={"all 2s ease"}
-                          transform={"rotate(0deg)"}
-                          _hover={{ transform: "rotate(360deg)" }}
-                        />
-                      </span>
-                    </Tooltip>
-                  )}
-                  {item.status == "recording" && (
-                    <Tooltip label="Recording in progress">
-                      <span>
-                        <Icon color="blue.primary" as={FaMicrophone} mr="2" />
-                      </span>
-                    </Tooltip>
-                  )}
+                <Flex align={"center"} gap={2}>
                   <Heading size="md">
                     <Link
                       as={NextLink}
@@ -279,12 +243,61 @@ export default function TranscriptBrowser() {
                     </MenuList>
                   </Menu>
                 </Flex>
-                <Stack mt="6" spacing="3">
-                  <Text fontSize="small">
-                    {new Date(item.created_at).toLocaleString("en-US")}
-                    {"\u00A0"}-{"\u00A0"}
-                    {formatTimeMs(item.duration)}
-                  </Text>
+                <Stack mt="4" spacing="2">
+                  <Flex align={"center"} gap={2}>
+                    {item.status == "ended" && (
+                      <Tooltip label="Processing done">
+                        <span>
+                          <Icon color="green" as={FaCheck} />
+                        </span>
+                      </Tooltip>
+                    )}
+                    {item.status == "error" && (
+                      <Tooltip label="Processing error">
+                        <span>
+                          <Icon color="red.primary" as={MdError} />
+                        </span>
+                      </Tooltip>
+                    )}
+                    {item.status == "idle" && (
+                      <Tooltip label="New meeting, no recording">
+                        <span>
+                          <Icon color="yellow.500" as={FaStar} />
+                        </span>
+                      </Tooltip>
+                    )}
+                    {item.status == "processing" && (
+                      <Tooltip label="Processing in progress">
+                        <span>
+                          <Icon
+                            color="grey.primary"
+                            as={FaGear}
+                            transition={"all 2s ease"}
+                            transform={"rotate(0deg)"}
+                            _hover={{ transform: "rotate(360deg)" }}
+                          />
+                        </span>
+                      </Tooltip>
+                    )}
+                    {item.status == "recording" && (
+                      <Tooltip label="Recording in progress">
+                        <span>
+                          <Icon color="blue.primary" as={FaMicrophone} />
+                        </span>
+                      </Tooltip>
+                    )}
+                    <Text fontSize="small">
+                      {new Date(item.created_at).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                      })}
+                      {"\u00A0"}-{"\u00A0"}
+                      {formatTimeMs(item.duration)}
+                    </Text>
+                  </Flex>
                   <ExpandableText noOfLines={5}>
                     {item.short_summary}
                   </ExpandableText>
