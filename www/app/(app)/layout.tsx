@@ -54,7 +54,7 @@ export default async function AppLayout({
           <Link
             as={NextLink}
             href="/transcripts/new"
-            className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+            className="font-light px-2"
           >
             Create
           </Link>
@@ -64,7 +64,7 @@ export default async function AppLayout({
               <Link
                 href="/browse"
                 as={NextLink}
-                className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                className="font-light px-2"
                 prefetch={false}
               >
                 Browse
@@ -79,21 +79,11 @@ export default async function AppLayout({
               <Link
                 href="/rooms"
                 as={NextLink}
-                className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
+                className="font-light px-2"
                 prefetch={false}
               >
                 Rooms
               </Link>
-            </>
-          ) : (
-            <></>
-          )}
-          &nbsp;·&nbsp;
-          <About buttonText="About" />
-          {privacy ? (
-            <>
-              &nbsp;·&nbsp;
-              <Privacy buttonText="Privacy" />
             </>
           ) : (
             <></>

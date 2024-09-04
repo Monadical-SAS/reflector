@@ -102,14 +102,15 @@ const TranscriptCreate = () => {
       flexDir="column"
       margin="auto"
       gap={2}
-      overflowY="auto"
       maxH="100%"
+      px={{ base: 5, md: 10 }}
+      py={5}
     >
       <Flex
         flexDir={{ base: "column", md: "row" }}
         justify="space-between"
         align="center"
-        gap={4}
+        gap={8}
       >
         <Flex
           flexDir="column"
