@@ -24,6 +24,10 @@ class Room(BaseModel):
     zulip_auto_post: bool
     zulip_stream: str
     zulip_topic: str
+    is_locked: bool
+    room_mode: str
+    recording_type: str
+    recording_trigger: str
 
 
 class Meeting(BaseModel):
@@ -41,6 +45,10 @@ class CreateRoom(BaseModel):
     zulip_auto_post: bool
     zulip_stream: str
     zulip_topic: str
+    is_locked: bool
+    room_mode: str
+    recording_type: str
+    recording_trigger: str
 
 
 class UpdateRoom(BaseModel):
@@ -48,6 +56,10 @@ class UpdateRoom(BaseModel):
     zulip_auto_post: bool
     zulip_stream: str
     zulip_topic: str
+    is_locked: bool
+    room_mode: str
+    recording_type: str
+    recording_trigger: str
 
 
 class DeletionStatus(BaseModel):
@@ -85,6 +97,10 @@ async def rooms_create(
         zulip_auto_post=room.zulip_auto_post,
         zulip_stream=room.zulip_stream,
         zulip_topic=room.zulip_topic,
+        is_locked=room.is_locked,
+        room_mode=room.room_mode,
+        recording_type=room.recording_type,
+        recording_trigger=room.recording_trigger,
     )
 
 
@@ -126,11 +142,13 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_latest(room_id=room.id)
+    meeting = await meetings_controller.get_latest(room=room)
     if meeting is None:
         start_date = datetime.now(timezone.utc)
         end_date = start_date + timedelta(hours=1)
-        meeting = await create_meeting("", start_date=start_date, end_date=end_date)
+        meeting = await create_meeting(
+            "", start_date=start_date, end_date=end_date, room=room
+        )
 
         meeting = await meetings_controller.create(
             id=meeting["meetingId"],
@@ -141,7 +159,10 @@ async def rooms_create_meeting(
             start_date=datetime.fromisoformat(meeting["startDate"]),
             end_date=datetime.fromisoformat(meeting["endDate"]),
             user_id=user_id,
-            room_id=room.id,
+            room=room,
         )
+
+    if user_id is None:
+        meeting.host_room_url = ""
 
     return meeting

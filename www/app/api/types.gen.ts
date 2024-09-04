@@ -19,6 +19,10 @@ export type CreateRoom = {
   zulip_auto_post: boolean;
   zulip_stream: string;
   zulip_topic: string;
+  is_locked: boolean;
+  room_mode: string;
+  recording_type: string;
+  recording_trigger: string;
 };
 
 export type CreateTranscript = {
@@ -132,6 +136,10 @@ export type Room = {
   zulip_auto_post: boolean;
   zulip_stream: string;
   zulip_topic: string;
+  is_locked: boolean;
+  room_mode: string;
+  recording_type: string;
+  recording_trigger: string;
 };
 
 export type RtcOffer = {
@@ -176,6 +184,10 @@ export type UpdateRoom = {
   zulip_auto_post: boolean;
   zulip_stream: string;
   zulip_topic: string;
+  is_locked: boolean;
+  room_mode: string;
+  recording_type: string;
+  recording_trigger: string;
 };
 
 export type UpdateTranscript = {
