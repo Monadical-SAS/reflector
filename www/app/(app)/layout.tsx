@@ -29,25 +29,22 @@ export default async function AppLayout({
         w="100%"
         py="2"
         px="0"
+        mt="1"
       >
         {/* Logo on the left */}
-        <Link
-          as={NextLink}
-          href="/"
-          className="flex outline-blue-300 md:outline-none focus-visible:underline  underline-offset-2 decoration-[.5px] decoration-gray-500"
-        >
+        <Link as={NextLink} href="/" className="flex">
           <Image
-            src="/reach.png"
-            width={16}
-            height={16}
-            className="h-10 w-auto"
+            src="/reach.svg"
+            width={32}
+            height={40}
+            className="h-11 w-auto"
             alt="Reflector"
           />
-          <div className="hidden flex-col ml-2 md:block">
-            <h1 className="text-[38px] font-bold tracking-wide leading-tight">
+          <div className="hidden flex-col ml-3 md:block">
+            <h1 className="text-[28px] font-semibold leading-tight">
               Reflector
             </h1>
-            <p className="text-gray-500 text-xs tracking-tighter">
+            <p className="text-gray-500 text-xs tracking-tight -mt-1">
               Capture the signal, not the noise
             </p>
           </div>
