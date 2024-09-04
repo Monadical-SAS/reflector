@@ -70,7 +70,7 @@ const roomInitialState = {
   isLocked: false,
   roomMode: "normal",
   recordingType: "cloud",
-  recordingTrigger: "none",
+  recordingTrigger: "automatic-2nd-participant",
 };
 
 export default function RoomsList() {
