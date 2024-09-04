@@ -93,6 +93,10 @@ class RoomController:
         zulip_auto_post: bool,
         zulip_stream: str,
         zulip_topic: str,
+        is_locked: bool,
+        room_mode: str,
+        recording_type: str,
+        recording_trigger: str,
     ):
         """
         Add a new room
@@ -103,6 +107,10 @@ class RoomController:
             zulip_auto_post=zulip_auto_post,
             zulip_stream=zulip_stream,
             zulip_topic=zulip_topic,
+            is_locked=is_locked,
+            room_mode=room_mode,
+            recording_type=recording_type,
+            recording_trigger=recording_trigger,
         )
         query = rooms.insert().values(**room.model_dump())
         await database.execute(query)

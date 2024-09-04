@@ -97,6 +97,10 @@ async def rooms_create(
         zulip_auto_post=room.zulip_auto_post,
         zulip_stream=room.zulip_stream,
         zulip_topic=room.zulip_topic,
+        is_locked=room.is_locked,
+        room_mode=room.room_mode,
+        recording_type=room.recording_type,
+        recording_trigger=room.recording_trigger,
     )
 
 
