@@ -151,10 +151,6 @@ export default function TranscriptBrowser() {
           total={response?.total || 0}
           size={response?.size || 0}
         />
-
-        <Button colorScheme="blue" rightIcon={<PlusSquareIcon />}>
-          New Meeting
-        </Button>
       </Flex>
       <Grid
         templateColumns={{
