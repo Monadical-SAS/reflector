@@ -3,38 +3,35 @@ import { useContext, useEffect, useState } from "react";
 import { DomainContext, featureEnabled } from "../domainContext";
 import { OpenApi, DefaultService } from "../api";
 import { CustomSession } from "./types";
+import useSessionStatus from "./useSessionStatus";
+import useSessionAccessToken from "./useSessionAccessToken";
 
 export default function useApi(): DefaultService | null {
   const api_url = useContext(DomainContext).api_url;
   const [api, setApi] = useState<OpenApi | null>(null);
-  const { data: session, status } = useSession();
-  const customSession = session as CustomSession;
-  const accessToken = customSession?.accessToken;
+  const { isLoading, isAuthenticated } = useSessionStatus();
+  const { accessToken, error } = useSessionAccessToken();
 
   if (!api_url) throw new Error("no API URL");
 
   useEffect(() => {
-    if (customSession?.error === "RefreshAccessTokenError") {
+    if (error === "RefreshAccessTokenError") {
       signOut();
     }
-  }, [session]);
+  }, [error]);
 
   useEffect(() => {
-    if (status === "loading") {
-      return;
-    }
-
-    if (status === "authenticated" && !accessToken) {
+    if (isLoading || (isAuthenticated && !accessToken)) {
       return;
     }
 
     const openApi = new OpenApi({
       BASE: api_url,
-      TOKEN: accessToken,
+      TOKEN: accessToken || undefined,
     });
 
     setApi(openApi);
-  }, [accessToken, status]);
+  }, [isLoading, isAuthenticated, accessToken]);
 
   return api?.default ?? null;
 }
