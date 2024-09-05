@@ -45,7 +45,7 @@ import { ExpandableText } from "../../lib/expandableText";
 export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useTranscriptList(page);
-  const { name: userName } = useSessionUser();
+  const userName = useSessionUser().name;
   const [deletionLoading, setDeletionLoading] = useState(false);
   const api = useApi();
   const { setError } = useError();
