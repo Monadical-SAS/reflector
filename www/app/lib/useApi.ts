@@ -9,7 +9,7 @@ import useSessionAccessToken from "./useSessionAccessToken";
 export default function useApi(): DefaultService | null {
   const api_url = useContext(DomainContext).api_url;
   const [api, setApi] = useState<OpenApi | null>(null);
-  const { isReady, isAuthenticated } = useSessionStatus();
+  const { isLoading, isAuthenticated } = useSessionStatus();
   const { accessToken, error } = useSessionAccessToken();
 
   if (!api_url) throw new Error("no API URL");
@@ -21,7 +21,7 @@ export default function useApi(): DefaultService | null {
   }, [error]);
 
   useEffect(() => {
-    if (!isReady || (isAuthenticated && !accessToken)) {
+    if (isLoading || (isAuthenticated && !accessToken)) {
       return;
     }
 
@@ -31,7 +31,7 @@ export default function useApi(): DefaultService | null {
     });
 
     setApi(openApi);
-  }, [isReady, isAuthenticated, accessToken]);
+  }, [isLoading, isAuthenticated, accessToken]);
 
   return api?.default ?? null;
 }

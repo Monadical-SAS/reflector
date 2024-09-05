@@ -18,7 +18,7 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const { isReady, isAuthenticated } = useSessionStatus();
+  const { isLoading, isAuthenticated } = useSessionStatus();
 
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
 
@@ -35,16 +35,16 @@ export default function Room(details: RoomDetails) {
   };
 
   useEffect(() => {
-    if (!isReady || !isAuthenticated || !roomUrl) return;
+    if (isLoading || !isAuthenticated || !roomUrl) return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
-  }, [handleLeave, roomUrl, isReady, isAuthenticated]);
+  }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
-  if (!isReady && !isAuthenticated && !consentGiven) {
+  if (isLoading && !isAuthenticated && !consentGiven) {
     return (
       <Box
         display="flex"

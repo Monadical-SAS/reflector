@@ -9,16 +9,14 @@ export default function useSessionStatus() {
   const [status, setStatus] = useState("loading");
 
   useEffect(() => {
-    if (naStatus !== "loading") {
-      if (naStatus !== status) {
-        setStatus(naStatus);
-      }
+    if (naStatus !== "loading" && naStatus !== status) {
+      setStatus(naStatus);
     }
   }, [naStatus]);
 
   return {
     status,
-    isReady: status !== "loading",
+    isLoading: status === "loading",
     isAuthenticated: status === "authenticated",
   };
 }

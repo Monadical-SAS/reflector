@@ -44,7 +44,7 @@ import {
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
-  const { isReady, isAuthenticated } = useSessionStatus();
+  const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
@@ -139,7 +139,7 @@ const TranscriptCreate = () => {
         </Flex>
         <Flex flexDir="column" h="full" flexBasis="1" flexGrow={1}>
           <Center>
-            {!isReady ? (
+            {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
               <Button onClick={() => signIn("authentik")} colorScheme="blue">

@@ -4,9 +4,9 @@ import useSessionStatus from "../lib/useSessionStatus";
 import { Spinner, Link } from "@chakra-ui/react";
 
 export default function UserInfo() {
-  const { isReady, isAuthenticated } = useSessionStatus();
+  const { isLoading, isAuthenticated } = useSessionStatus();
 
-  return !isReady ? (
+  return isLoading ? (
     <Spinner size="xs" thickness="1px" className="mx-3" />
   ) : !isAuthenticated ? (
     <Link
