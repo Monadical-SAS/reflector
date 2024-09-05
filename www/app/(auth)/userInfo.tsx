@@ -1,13 +1,12 @@
 "use client";
-import { useSession, signOut, signIn } from "next-auth/react";
+import { signOut, signIn } from "next-auth/react";
+import useSessionStatus from "../lib/useSessionStatus";
 import { Spinner, Link } from "@chakra-ui/react";
 
 export default function UserInfo() {
-  const { status } = useSession();
-  const sessionReady = status !== "loading";
-  const isAuthenticated = status === "authenticated";
+  const { isReady, isAuthenticated } = useSessionStatus();
 
-  return !sessionReady ? (
+  return !isReady ? (
     <Spinner size="xs" thickness="1px" className="mx-3" />
   ) : !isAuthenticated ? (
     <Link

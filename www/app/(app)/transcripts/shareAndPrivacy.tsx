@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { FaShare } from "react-icons/fa";
 import useApi from "../../lib/useApi";
-import { useSession } from "next-auth/react";
+import useSessionUser from "../../lib/useSessionUser";
 import { CustomSession } from "../../lib/types";
 import { Select } from "chakra-react-select";
 import ShareLink from "./shareLink";
@@ -70,9 +70,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
     setShareLoading(false);
   };
 
-  const { data: session } = useSession();
-  const customSession = session as CustomSession;
-  const userId = customSession?.user?.id;
+  const { id: userId } = useSessionUser();
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));

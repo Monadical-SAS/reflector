@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 
 import { GetTranscript } from "../../api";
 import Pagination from "./pagination";
@@ -13,6 +12,7 @@ import { formatTimeMs } from "../../lib/time";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { FaEllipsisVertical } from "react-icons/fa6";
+import useSessionUser from "../../lib/useSessionUser";
 import {
   Flex,
   Spinner,
@@ -45,7 +45,7 @@ import { ExpandableText } from "../../lib/expandableText";
 export default function TranscriptBrowser() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useTranscriptList(page);
-  const { data: session } = useSession();
+  const { name: userName } = useSessionUser();
   const [deletionLoading, setDeletionLoading] = useState(false);
   const api = useApi();
   const { setError } = useError();
@@ -136,8 +136,8 @@ export default function TranscriptBrowser() {
         flexWrap={"wrap-reverse"}
         mt={4}
       >
-        {session?.user?.name ? (
-          <Heading size="md">{session?.user?.name}'s Meetings</Heading>
+        {userName ? (
+          <Heading size="md">{userName}'s Meetings</Heading>
         ) : (
           <Heading size="md">Your meetings</Heading>
         )}
