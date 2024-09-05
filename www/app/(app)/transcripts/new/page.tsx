@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import { useSession } from "next-auth/react";
+import useSessionStatus from "../../../lib/useSessionStatus";
 import { featureEnabled } from "../../../domainContext";
 import { signIn } from "next-auth/react";
 import {
@@ -44,9 +44,7 @@ import {
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
   const router = useRouter();
-  const { status } = useSession();
-  const sessionReady = status !== "loading";
-  const isAuthenticated = status === "authenticated";
+  const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
@@ -141,7 +139,7 @@ const TranscriptCreate = () => {
         </Flex>
         <Flex flexDir="column" h="full" flexBasis="1" flexGrow={1}>
           <Center>
-            {!sessionReady ? (
+            {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
               <Button onClick={() => signIn("authentik")} colorScheme="blue">

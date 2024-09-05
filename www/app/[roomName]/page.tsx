@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Text, VStack, HStack } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import useSessionStatus from "../lib/useSessionStatus";
 
 export type RoomDetails = {
   params: {
@@ -18,9 +18,7 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const { status } = useSession();
-  const sessionReady = status !== "loading";
-  const isAuthenticated = status === "authenticated";
+  const { isLoading, isAuthenticated } = useSessionStatus();
 
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
 
@@ -37,16 +35,16 @@ export default function Room(details: RoomDetails) {
   };
 
   useEffect(() => {
-    if (!sessionReady || !isAuthenticated || !roomUrl) return;
+    if (isLoading || !isAuthenticated || !roomUrl) return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
-  }, [handleLeave, roomUrl, sessionReady, isAuthenticated]);
+  }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
-  if (!isAuthenticated && !consentGiven) {
+  if (isLoading && !isAuthenticated && !consentGiven) {
     return (
       <Box
         display="flex"
