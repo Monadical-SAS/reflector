@@ -6,6 +6,10 @@ from reflector.db.transcripts import Transcript
 from reflector.settings import settings
 
 
+class InvalidMessageError(Exception):
+    pass
+
+
 def send_message_to_zulip(stream: str, topic: str, content: str):
     try:
         response = requests.post(
@@ -32,14 +36,18 @@ def update_zulip_message(message_id: int, stream: str, topic: str, content: str)
         response = requests.patch(
             f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
             data={
-                "type": "stream",
-                "to": stream,
                 "topic": topic,
                 "content": content,
             },
             auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
+
+        if (
+            response.status_code == 400
+            and response.json()["msg"] == "Invalid message(s)"
+        ):
+            raise InvalidMessageError(f"There is no message with id: {message_id}")
 
         response.raise_for_status()
 
