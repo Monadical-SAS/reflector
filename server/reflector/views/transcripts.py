@@ -16,6 +16,12 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
+from reflector.zulip import (
+    InvalidMessageError,
+    get_zulip_message,
+    send_message_to_zulip,
+    update_zulip_message,
+)
 
 router = APIRouter()
 
@@ -323,3 +329,35 @@ async def transcript_get_topics_with_words_per_speaker(
 
     # convert to GetTranscriptTopicWithWordsPerSpeaker
     return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(topic)
+
+
+@router.post("/transcripts/{transcript_id}/zulip")
+async def transcript_post_to_zulip(
+    transcript_id: str,
+    stream: str,
+    topic: str,
+    include_topics: bool,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    transcript = await transcripts_controller.get_by_id_for_http(
+        transcript_id, user_id=user_id
+    )
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found")
+
+    content = get_zulip_message(transcript, include_topics)
+
+    message_updated = False
+    if transcript.zulip_message_id:
+        try:
+            update_zulip_message(transcript.zulip_message_id, stream, topic, content)
+            message_updated = True
+        except InvalidMessageError:
+            pass
+
+    if not message_updated:
+        response = send_message_to_zulip(stream, topic, content)
+        await transcripts_controller.update(
+            transcript, {"zulip_message_id": response["id"]}
+        )

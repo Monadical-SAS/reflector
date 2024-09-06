@@ -30,6 +30,8 @@ import type {
   V1TranscriptGetTopicsWithWordsResponse,
   V1TranscriptGetTopicsWithWordsPerSpeakerData,
   V1TranscriptGetTopicsWithWordsPerSpeakerResponse,
+  V1TranscriptPostToZulipData,
+  V1TranscriptPostToZulipResponse,
   V1TranscriptHeadAudioMp3Data,
   V1TranscriptHeadAudioMp3Response,
   V1TranscriptGetAudioMp3Data,
@@ -366,6 +368,36 @@ export class DefaultService {
       path: {
         transcript_id: data.transcriptId,
         topic_id: data.topicId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Transcript Post To Zulip
+   * @param data The data for the request.
+   * @param data.transcriptId
+   * @param data.stream
+   * @param data.topic
+   * @param data.includeTopics
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1TranscriptPostToZulip(
+    data: V1TranscriptPostToZulipData,
+  ): CancelablePromise<V1TranscriptPostToZulipResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/transcripts/{transcript_id}/zulip",
+      path: {
+        transcript_id: data.transcriptId,
+      },
+      query: {
+        stream: data.stream,
+        topic: data.topic,
+        include_topics: data.includeTopics,
       },
       errors: {
         422: "Validation Error",

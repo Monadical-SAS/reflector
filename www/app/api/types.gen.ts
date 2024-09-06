@@ -319,6 +319,15 @@ export type V1TranscriptGetTopicsWithWordsPerSpeakerData = {
 export type V1TranscriptGetTopicsWithWordsPerSpeakerResponse =
   GetTranscriptTopicWithWordsPerSpeaker;
 
+export type V1TranscriptPostToZulipData = {
+  includeTopics: boolean;
+  stream: string;
+  topic: string;
+  transcriptId: string;
+};
+
+export type V1TranscriptPostToZulipResponse = unknown;
+
 export type V1TranscriptHeadAudioMp3Data = {
   token?: string | null;
   transcriptId: string;
@@ -607,6 +616,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: GetTranscriptTopicWithWordsPerSpeaker;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/transcripts/{transcript_id}/zulip": {
+    post: {
+      req: V1TranscriptPostToZulipData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
         /**
          * Validation Error
          */
