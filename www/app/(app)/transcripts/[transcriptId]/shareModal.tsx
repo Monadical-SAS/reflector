@@ -1,9 +1,9 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useCallback } from "react";
 import SelectSearch from "react-select-search";
-import { getZulipMessage, sendZulipMessage } from "../../../lib/zulip";
 import { GetTranscript, GetTranscriptTopic } from "../../../api";
 import "react-select-search/style.css";
 import { DomainContext } from "../../../domainContext";
+import useApi from "../../../lib/useApi";
 
 type ShareModal = {
   show: boolean;
@@ -30,6 +30,7 @@ const ShareModal = (props: ShareModal) => {
   const [isLoading, setIsLoading] = useState(true);
   const [streams, setStreams] = useState<Stream[]>([]);
   const { zulip_streams } = useContext(DomainContext);
+  const api = useApi();
 
   useEffect(() => {
     fetch(zulip_streams + "/streams.json")
@@ -52,12 +53,22 @@ const ShareModal = (props: ShareModal) => {
       });
   }, []);
 
-  const handleSendToZulip = () => {
+  const handleSendToZulip = async () => {
     if (!props.transcript) return;
 
-    const msg = getZulipMessage(props.transcript, props.topics, includeTopics);
-
-    if (stream && topic) sendZulipMessage(stream, topic, msg);
+    if (stream && topic) {
+      if (!api) return;
+      try {
+        await api.v1TranscriptPostToZulip({
+          transcriptId: props.transcript.id,
+          stream,
+          topic,
+          includeTopics,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
   };
 
   if (props.show && isLoading) {
