@@ -6,10 +6,7 @@ from reflector.db.transcripts import Transcript
 from reflector.settings import settings
 
 
-def send_message_to_zulip(stream: str, topic: str, message: str):
-    if not stream or not topic or not message:
-        raise ValueError("Missing required parameters")
-
+def send_message_to_zulip(stream: str, topic: str, content: str):
     try:
         response = requests.post(
             f"https://{settings.ZULIP_REALM}/api/v1/messages",
@@ -17,7 +14,7 @@ def send_message_to_zulip(stream: str, topic: str, message: str):
                 "type": "stream",
                 "to": stream,
                 "topic": topic,
-                "content": message,
+                "content": content,
             },
             auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
             headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -30,7 +27,29 @@ def send_message_to_zulip(stream: str, topic: str, message: str):
         raise Exception(f"Failed to send message to Zulip: {error}")
 
 
-def get_zulip_message(transcript: Transcript):
+def update_zulip_message(message_id: int, stream: str, topic: str, content: str):
+    try:
+        response = requests.patch(
+            f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
+            data={
+                "type": "stream",
+                "to": stream,
+                "topic": topic,
+                "content": content,
+            },
+            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+    except requests.RequestException as error:
+        print(content)
+        raise Exception(f"Failed to update Zulip message: {error}")
+
+
+def get_zulip_message(transcript: Transcript, include_topics: bool):
     transcript_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
 
     header_text = f"# Reflector – {transcript.title or 'Unnamed recording'}\n\n"
@@ -40,7 +59,7 @@ def get_zulip_message(transcript: Transcript):
 
     topic_text = ""
 
-    if transcript.topics:
+    if include_topics and transcript.topics:
         topic_text = "```spoiler Topics\n"
         for topic in transcript.topics:
             topic_text += f"1. [{format_time(topic.timestamp)}] {topic.title}\n"
@@ -48,7 +67,7 @@ def get_zulip_message(transcript: Transcript):
 
     summary = "```spoiler Summary\n"
     summary += transcript.long_summary
-    summary += "```\n\n"
+    summary += "\n```\n\n"
 
     message = header_text + summary + topic_text + "-----\n"
     return message
