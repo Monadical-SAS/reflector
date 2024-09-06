@@ -61,6 +61,9 @@ import type {
   V1TranscriptProcessData,
   V1TranscriptProcessResponse,
   V1UserMeResponse,
+  V1ZulipGetStreamsResponse,
+  V1ZulipGetTopicsData,
+  V1ZulipGetTopicsResponse,
 } from "./types.gen";
 
 export class DefaultService {
@@ -760,6 +763,42 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/me",
+    });
+  }
+
+  /**
+   * Zulip Get Streams
+   * Get all Zulip streams.
+   * @returns Stream Successful Response
+   * @throws ApiError
+   */
+  public v1ZulipGetStreams(): CancelablePromise<V1ZulipGetStreamsResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/zulip/streams",
+    });
+  }
+
+  /**
+   * Zulip Get Topics
+   * Get all topics for a specific Zulip stream.
+   * @param data The data for the request.
+   * @param data.streamId
+   * @returns Topic Successful Response
+   * @throws ApiError
+   */
+  public v1ZulipGetTopics(
+    data: V1ZulipGetTopicsData,
+  ): CancelablePromise<V1ZulipGetTopicsResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/zulip/streams/{stream_id}/topics",
+      path: {
+        stream_id: data.streamId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
     });
   }
 }

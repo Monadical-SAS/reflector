@@ -10,6 +10,34 @@ class InvalidMessageError(Exception):
     pass
 
 
+def get_zulip_topics(stream_id: int) -> list[dict]:
+    try:
+        response = requests.get(
+            f"https://{settings.ZULIP_REALM}/api/v1/users/me/{stream_id}/topics",
+            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+        )
+
+        response.raise_for_status()
+
+        return response.json().get("topics", [])
+    except requests.RequestException as error:
+        raise Exception(f"Failed to get topics: {error}")
+
+
+def get_zulip_streams() -> list[dict]:
+    try:
+        response = requests.get(
+            f"https://{settings.ZULIP_REALM}/api/v1/streams",
+            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+        )
+
+        response.raise_for_status()
+
+        return response.json().get("streams", [])
+    except requests.RequestException as error:
+        raise Exception(f"Failed to get streams: {error}")
+
+
 def send_message_to_zulip(stream: str, topic: str, content: str):
     try:
         response = requests.post(
