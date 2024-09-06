@@ -587,7 +587,10 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
 
     if room.zulip_auto_post:
         message = get_zulip_message(transcript=transcript)
-        send_message_to_zulip(room.zulip_stream, room.zulip_topic, message)
+        response = send_message_to_zulip(room.zulip_stream, room.zulip_topic, message)
+        await transcripts_controller.update(
+            transcript, {"zulip_message_id": response["id"]}
+        )
 
     logger.info("Posted to zulip")
 

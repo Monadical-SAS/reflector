@@ -54,6 +54,7 @@ transcripts = sqlalchemy.Table(
         "meeting_id",
         sqlalchemy.String,
     ),
+    sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer, nullable=True),
 )
 
 
@@ -150,6 +151,7 @@ class Transcript(BaseModel):
     audio_location: str = "local"
     reviewed: bool = False
     meeting_id: str | None = None
+    zulip_message_id: int | None = None
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
