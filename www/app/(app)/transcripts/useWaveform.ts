@@ -36,7 +36,7 @@ const useWaveform = (id: string, waiting: boolean): AudioWaveFormResponse => {
           setError(err);
         }
       });
-  }, [id, api, waiting]);
+  }, [id, !api, waiting]);
 
   return { waveform, loading, error };
 };
