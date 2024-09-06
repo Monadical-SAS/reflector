@@ -1,11 +1,11 @@
-import React, { useContext, useState, useEffect, useCallback } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import SelectSearch from "react-select-search";
 import { GetTranscript, GetTranscriptTopic } from "../../../api";
 import "react-select-search/style.css";
 import { DomainContext } from "../../../domainContext";
 import useApi from "../../../lib/useApi";
 
-type ShareModal = {
+type ShareModalProps = {
   show: boolean;
   setShow: (show: boolean) => void;
   transcript: GetTranscript | null;
@@ -13,9 +13,12 @@ type ShareModal = {
 };
 
 interface Stream {
-  id: number;
+  stream_id: number;
   name: string;
-  topics: string[];
+}
+
+interface Topic {
+  name: string;
 }
 
 interface SelectSearchOption {
@@ -23,41 +26,54 @@ interface SelectSearchOption {
   value: string;
 }
 
-const ShareModal = (props: ShareModal) => {
+const ShareModal = (props: ShareModalProps) => {
   const [stream, setStream] = useState<string | undefined>(undefined);
   const [topic, setTopic] = useState<string | undefined>(undefined);
   const [includeTopics, setIncludeTopics] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [streams, setStreams] = useState<Stream[]>([]);
-  const { zulip_streams } = useContext(DomainContext);
+  const [topics, setTopics] = useState<Topic[]>([]);
   const api = useApi();
 
   useEffect(() => {
-    fetch(zulip_streams + "/streams.json")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        data = data.sort((a: Stream, b: Stream) =>
-          a.name.localeCompare(b.name),
-        );
-        setStreams(data);
+    const fetchZulipStreams = async () => {
+      if (!api) return;
+
+      try {
+        const response = await api.v1ZulipGetStreams();
+        setStreams(response);
         setIsLoading(false);
-        // data now contains the JavaScript object decoded from JSON
-      })
-      .catch((error) => {
-        console.error("There was a problem with your fetch operation:", error);
-      });
-  }, []);
+      } catch (error) {
+        console.error("Error fetching Zulip streams:", error);
+      }
+    };
+
+    fetchZulipStreams();
+  }, [!api]);
+
+  useEffect(() => {
+    const fetchZulipTopics = async () => {
+      if (!api || !stream) return;
+      try {
+        const selectedStream = streams.find((s) => s.name === stream);
+        if (selectedStream) {
+          const response = await api.v1ZulipGetTopics({
+            streamId: selectedStream.stream_id,
+          });
+          setTopics(response);
+        }
+      } catch (error) {
+        console.error("Error fetching Zulip topics:", error);
+      }
+    };
+
+    fetchZulipTopics();
+  }, [stream, streams, api]);
 
   const handleSendToZulip = async () => {
-    if (!props.transcript) return;
+    if (!api || !props.transcript) return;
 
     if (stream && topic) {
-      if (!api) return;
       try {
         await api.v1TranscriptPostToZulip({
           transcriptId: props.transcript.id,
@@ -75,13 +91,15 @@ const ShareModal = (props: ShareModal) => {
     return <div>Loading...</div>;
   }
 
-  let streamOptions: SelectSearchOption[] = [];
-  if (streams) {
-    streams.forEach((stream) => {
-      const value = stream.name;
-      streamOptions.push({ name: value, value: value });
-    });
-  }
+  const streamOptions: SelectSearchOption[] = streams.map((stream) => ({
+    name: stream.name,
+    value: stream.name,
+  }));
+
+  const topicOptions: SelectSearchOption[] = topics.map((topic) => ({
+    name: topic.name,
+    value: topic.name,
+  }));
 
   return (
     <div className="absolute">
@@ -111,7 +129,7 @@ const ShareModal = (props: ShareModal) => {
                   options={streamOptions}
                   value={stream}
                   onChange={(val) => {
-                    setTopic(undefined);
+                    setTopic(undefined); // Reset topic when stream changes
                     setStream(val.toString());
                   }}
                   placeholder="Pick a stream"
@@ -119,25 +137,16 @@ const ShareModal = (props: ShareModal) => {
               </div>
 
               {stream && (
-                <>
-                  <div className="flex items-center mt-4">
-                    <span className="mr-2 invisible">#</span>
-                    <SelectSearch
-                      search={true}
-                      options={
-                        streams
-                          .find((s) => s.name == stream)
-                          ?.topics.sort((a: string, b: string) =>
-                            a.localeCompare(b),
-                          )
-                          .map((t) => ({ name: t, value: t })) || []
-                      }
-                      value={topic}
-                      onChange={(val) => setTopic(val.toString())}
-                      placeholder="Pick a topic"
-                    />
-                  </div>
-                </>
+                <div className="flex items-center mt-4">
+                  <span className="mr-2 invisible">#</span>
+                  <SelectSearch
+                    search={true}
+                    options={topicOptions}
+                    value={topic}
+                    onChange={(val) => setTopic(val.toString())}
+                    placeholder="Pick a topic"
+                  />
+                </div>
               )}
 
               <button

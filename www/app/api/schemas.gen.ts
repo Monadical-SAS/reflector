@@ -828,6 +828,34 @@ export const $SpeakerWords = {
   title: "SpeakerWords",
 } as const;
 
+export const $Stream = {
+  properties: {
+    stream_id: {
+      type: "integer",
+      title: "Stream Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["stream_id", "name"],
+  title: "Stream",
+} as const;
+
+export const $Topic = {
+  properties: {
+    name: {
+      type: "string",
+      title: "Name",
+    },
+  },
+  type: "object",
+  required: ["name"],
+  title: "Topic",
+} as const;
+
 export const $TranscriptParticipant = {
   properties: {
     id: {
