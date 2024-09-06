@@ -17,6 +17,7 @@ from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
 from reflector.zulip import (
+    InvalidMessageError,
     get_zulip_message,
     send_message_to_zulip,
     update_zulip_message,
@@ -346,9 +347,16 @@ async def transcript_post_to_zulip(
         raise HTTPException(status_code=404, detail="Transcript not found")
 
     content = get_zulip_message(transcript, include_topics)
+
+    message_updated = False
     if transcript.zulip_message_id:
-        update_zulip_message(transcript.zulip_message_id, stream, topic, content)
-    else:
+        try:
+            update_zulip_message(transcript.zulip_message_id, stream, topic, content)
+            message_updated = True
+        except InvalidMessageError:
+            pass
+
+    if not message_updated:
         response = send_message_to_zulip(stream, topic, content)
         await transcripts_controller.update(
             transcript, {"zulip_message_id": response["id"]}
