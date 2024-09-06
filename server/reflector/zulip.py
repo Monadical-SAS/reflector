@@ -45,7 +45,6 @@ def update_zulip_message(message_id: int, stream: str, topic: str, content: str)
 
         return response.json()
     except requests.RequestException as error:
-        print(content)
         raise Exception(f"Failed to update Zulip message: {error}")
 
 
