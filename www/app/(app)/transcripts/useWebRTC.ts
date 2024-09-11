@@ -13,7 +13,7 @@ const useWebRTC = (
   const api = useApi();
 
   useEffect(() => {
-    if (!stream || !transcriptId) {
+    if (!stream || !transcriptId || !api) {
       return;
     }
 
@@ -63,7 +63,7 @@ const useWebRTC = (
     return () => {
       p.destroy();
     };
-  }, [stream, transcriptId]);
+  }, [stream, transcriptId, !api]);
 
   return peer;
 };
