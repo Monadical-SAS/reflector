@@ -38,7 +38,7 @@ const useTopics = (id: string): TranscriptTopics => {
           setError(err);
         }
       });
-  }, [id, api]);
+  }, [id, !api]);
 
   return { topics, loading, error };
 };

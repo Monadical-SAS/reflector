@@ -52,7 +52,7 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
     audioElement.preload = "auto";
     setMedia(audioElement);
     setLoading(false);
-  }, [id, api, later]);
+  }, [id, !api, later]);
 
   const getNow = () => {
     setLater(false);
