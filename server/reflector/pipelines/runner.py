@@ -39,7 +39,7 @@ class PipelineRunner(BaseModel):
             runner_cls=self.__class__.__name__,
         )
 
-    def create(self) -> Pipeline:
+    async def create(self) -> Pipeline:
         """
         Create the pipeline if not specified earlier.
         Should be implemented in a subclass

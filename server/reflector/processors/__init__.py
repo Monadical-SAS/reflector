@@ -11,12 +11,7 @@ from .base import (  # noqa: F401
     Processor,
     ThreadedProcessor,
 )
-from .transcript_final_long_summary import (  # noqa: F401
-    TranscriptFinalLongSummaryProcessor,
-)
-from .transcript_final_short_summary import (  # noqa: F401
-    TranscriptFinalShortSummaryProcessor,
-)
+from .transcript_final_summary import TranscriptFinalSummaryProcessor  # noqa: F401
 from .transcript_final_title import TranscriptFinalTitleProcessor  # noqa: F401
 from .transcript_liner import TranscriptLinerProcessor  # noqa: F401
 from .transcript_topic_detector import TranscriptTopicDetectorProcessor  # noqa: F401

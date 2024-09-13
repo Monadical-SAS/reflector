@@ -25,16 +25,16 @@ def dummy_processors():
     ) as mock_topic, patch(
         "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
     ) as mock_title, patch(
-        "reflector.processors.transcript_final_long_summary.TranscriptFinalLongSummaryProcessor.get_long_summary"
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
     ) as mock_long_summary, patch(
-        "reflector.processors.transcript_final_short_summary.TranscriptFinalShortSummaryProcessor.get_short_summary"
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
     ) as mock_short_summary, patch(
         "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
     ) as mock_translate:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
         mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"
-        mock_short_summary.return_value = {"short_summary": "LLM SHORT SUMMARY"}
+        mock_short_summary.return_value = "LLM SHORT SUMMARY"
         mock_translate.return_value = "Bonjour le monde"
         yield (
             mock_translate,
@@ -139,15 +139,6 @@ def nltk():
 def ensure_casing():
     with patch("reflector.llm.base.LLM.ensure_casing") as mock_casing:
         mock_casing.return_value = "LLM TITLE"
-        yield
-
-
-@pytest.fixture
-def sentence_tokenize():
-    with patch(
-        "reflector.processors.TranscriptFinalLongSummaryProcessor.sentence_tokenize"
-    ) as mock_sent_tokenize:
-        mock_sent_tokenize.return_value = ["LLM LONG SUMMARY"]
         yield
 
 

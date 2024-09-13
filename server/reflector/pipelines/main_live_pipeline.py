@@ -38,10 +38,8 @@ from reflector.processors import (
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    BroadcastProcessor,
     Pipeline,
-    TranscriptFinalLongSummaryProcessor,
-    TranscriptFinalShortSummaryProcessor,
+    TranscriptFinalSummaryProcessor,
     TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
@@ -424,21 +422,14 @@ class PipelineMainFromTopics(PipelineMainBase):
         return pipeline
 
 
-class PipelineMainTitleAndShortSummary(PipelineMainFromTopics):
+class PipelineMainTitle(PipelineMainFromTopics):
     """
     Generate title from the topics
     """
 
     def get_processors(self) -> list:
         return [
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
-                    TranscriptFinalShortSummaryProcessor.as_threaded(
-                        callback=self.on_short_summary
-                    ),
-                ]
-            )
+            TranscriptFinalTitleProcessor.as_threaded(callback=self.on_title),
         ]
 
 
@@ -449,15 +440,10 @@ class PipelineMainFinalSummaries(PipelineMainFromTopics):
 
     def get_processors(self) -> list:
         return [
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalLongSummaryProcessor.as_threaded(
-                        callback=self.on_long_summary
-                    ),
-                    TranscriptFinalShortSummaryProcessor.as_threaded(
-                        callback=self.on_short_summary
-                    ),
-                ]
+            TranscriptFinalSummaryProcessor.as_threaded(
+                transcript=self._transcript,
+                callback=self.on_long_summary,
+                on_short_summary=self.on_short_summary,
             ),
         ]
 
@@ -552,11 +538,11 @@ async def pipeline_diarization(transcript: Transcript, logger: Logger):
 
 
 @get_transcript
-async def pipeline_title_and_short_summary(transcript: Transcript, logger: Logger):
-    logger.info("Starting title and short summary")
-    runner = PipelineMainTitleAndShortSummary(transcript_id=transcript.id)
+async def pipeline_title(transcript: Transcript, logger: Logger):
+    logger.info("Starting title")
+    runner = PipelineMainTitle(transcript_id=transcript.id)
     await runner.run()
-    logger.info("Title and short summary done")
+    logger.info("Title done")
 
 
 @get_transcript
@@ -632,8 +618,8 @@ async def task_pipeline_diarization(*, transcript_id: str):
 
 @shared_task
 @asynctask
-async def task_pipeline_title_and_short_summary(*, transcript_id: str):
-    await pipeline_title_and_short_summary(transcript_id=transcript_id)
+async def task_pipeline_title(*, transcript_id: str):
+    await pipeline_title(transcript_id=transcript_id)
 
 
 @shared_task
@@ -659,9 +645,7 @@ def pipeline_post(*, transcript_id: str):
         | task_pipeline_remove_upload.si(transcript_id=transcript_id)
         | task_pipeline_diarization.si(transcript_id=transcript_id)
     )
-    chain_title_preview = task_pipeline_title_and_short_summary.si(
-        transcript_id=transcript_id
-    )
+    chain_title_preview = task_pipeline_title.si(transcript_id=transcript_id)
     chain_final_summaries = task_pipeline_final_summaries.si(
         transcript_id=transcript_id
     )

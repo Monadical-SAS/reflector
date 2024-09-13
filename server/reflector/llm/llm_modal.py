@@ -23,7 +23,11 @@ class ModalLLM(LLM):
         """
         # TODO: Query the specific GPU platform
         # Replace this with a HTTP call
-        return ["lmsys/vicuna-13b-v1.5", "HuggingFaceH4/zephyr-7b-alpha"]
+        return [
+            "lmsys/vicuna-13b-v1.5",
+            "HuggingFaceH4/zephyr-7b-alpha",
+            "NousResearch/Hermes-3-Llama-3.1-8B",
+        ]
 
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
@@ -52,6 +56,31 @@ class ModalLLM(LLM):
             response.raise_for_status()
             text = response.json()["text"]
             return text
+
+    async def _completion(self, messages: list, **kwargs) -> dict:
+        kwargs.setdefault("temperature", 0.3)
+        kwargs.setdefault("max_tokens", 2048)
+        kwargs.setdefault("stream", False)
+        kwargs.setdefault("repetition_penalty", 1)
+        kwargs.setdefault("top_p", 1)
+        kwargs.setdefault("top_k", -1)
+        kwargs.setdefault("min_p", 0.05)
+        data = {"messages": messages, "model": self.model_name, **kwargs}
+
+        if self.model_name == "NousResearch/Hermes-3-Llama-3.1-8B":
+            self.llm_url = settings.HERMES_3_8B_LLM_URL + "/v1/chat/completions"
+
+        async with httpx.AsyncClient() as client:
+            response = await retry(client.post)(
+                self.llm_url,
+                headers=self.headers,
+                json=data,
+                timeout=self.timeout,
+                retry_timeout=60 * 5,
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+            return response.json()
 
     def _set_model_name(self, model_name: str) -> bool:
         """

@@ -9,7 +9,6 @@ async def test_basic_process(
     dummy_llm,
     dummy_processors,
     ensure_casing,
-    sentence_tokenize,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
@@ -38,6 +37,5 @@ async def test_basic_process(
     assert marks["TranscriptLinerProcessor"] == 4
     assert marks["TranscriptTranslatorProcessor"] == 4
     assert marks["TranscriptTopicDetectorProcessor"] == 1
-    assert marks["TranscriptFinalLongSummaryProcessor"] == 1
-    assert marks["TranscriptFinalShortSummaryProcessor"] == 1
+    assert marks["TranscriptFinalSummaryProcessor"] == 1
     assert marks["TranscriptFinalTitleProcessor"] == 1
