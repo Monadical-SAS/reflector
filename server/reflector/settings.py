@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 1024
     LLM_TEMPERATURE: float = 0.7
     ZEPHYR_LLM_URL: str | None = None
+    HERMES_3_8B_LLM_URL: str | None = None
 
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
