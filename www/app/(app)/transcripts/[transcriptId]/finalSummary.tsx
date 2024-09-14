@@ -97,12 +97,19 @@ export default function FinalSummary(props: FinalSummaryProps) {
       h={"100%"}
       overflowY={isEditMode ? "hidden" : "auto"}
       pb={4}
+      position="relative"
     >
-      <Flex dir="row" justify="start" align="center" wrap={"wrap-reverse"}>
-        <Heading size={{ base: "md" }}>Summary</Heading>
-
+      <Flex
+        dir="row"
+        justify="start"
+        align="center"
+        wrap={"wrap-reverse"}
+        position={isEditMode ? "inherit" : "absolute"}
+        right="0"
+      >
         {isEditMode && (
           <>
+            <Heading size={{ base: "md" }}>Summary</Heading>
             <Spacer />
             <Button
               onClick={onDiscardClick}
@@ -116,15 +123,14 @@ export default function FinalSummary(props: FinalSummaryProps) {
             </Button>
           </>
         )}
-
         {!isEditMode && (
           <>
+            <Spacer />
             <IconButton
               icon={<FaPen />}
               aria-label="Edit Summary"
               onClick={onEditClick}
             />
-            <Spacer />
             <ShareAndPrivacy
               finalSummaryRef={finalSummaryRef}
               transcriptResponse={props.transcriptResponse}

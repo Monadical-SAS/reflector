@@ -156,6 +156,27 @@ class LLM:
 
         return result
 
+    async def completion(
+        self, messages: list, logger: reflector_logger, **kwargs
+    ) -> dict:
+        """
+        Use /v1/chat/completion Open-AI compatible endpoint from the URL
+        It's up to the user to validate anything or transform the result
+        """
+        logger.info("LLM completions", messages=messages)
+
+        try:
+            with self.m_generate.time():
+                result = await retry(self._completion)(messages=messages, **kwargs)
+            self.m_generate_success.inc()
+        except Exception:
+            logger.exception("Failed to call llm after retrying")
+            self.m_generate_failure.inc()
+            raise
+
+        logger.debug("LLM completion result", result=repr(result))
+        return result
+
     def ensure_casing(self, title: str) -> str:
         """
         LLM takes care of word casing, but in rare cases this
@@ -232,6 +253,11 @@ class LLM:
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ) -> str:
+        raise NotImplementedError
+
+    async def _completion(
+        self, messages: list, logger: reflector_logger, **kwargs
+    ) -> dict:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:

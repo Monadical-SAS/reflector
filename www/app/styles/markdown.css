@@ -9,6 +9,24 @@
   margin-bottom: 0.5em;
 }
 
+.markdown h1 {
+  font-size: 1.2em;
+  font-weight: bold;
+  /* text-decoration: underline;
+  text-underline-offset: 0.2em; */
+}
+
+.markdown {
+}
+
+.markdown h1:first-child {
+  margin-top: 0.5em;
+}
+
+.markdown p {
+  white-space: pre-wrap;
+}
+
 /* Paragraphs */
 .markdown p {
   margin: 1em 0;
