@@ -168,6 +168,15 @@ export type SpeakerWords = {
   words: Array<Word>;
 };
 
+export type Stream = {
+  stream_id: number;
+  name: string;
+};
+
+export type Topic = {
+  name: string;
+};
+
 export type TranscriptParticipant = {
   id?: string;
   speaker: number | null;
@@ -426,6 +435,14 @@ export type V1TranscriptProcessData = {
 export type V1TranscriptProcessResponse = unknown;
 
 export type V1UserMeResponse = UserInfo | null;
+
+export type V1ZulipGetStreamsResponse = Array<Stream>;
+
+export type V1ZulipGetTopicsData = {
+  streamId: number;
+};
+
+export type V1ZulipGetTopicsResponse = Array<Topic>;
 
 export type $OpenApiTs = {
   "/metrics": {
@@ -847,6 +864,31 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: UserInfo | null;
+      };
+    };
+  };
+  "/v1/zulip/streams": {
+    get: {
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Array<Stream>;
+      };
+    };
+  };
+  "/v1/zulip/streams/{stream_id}/topics": {
+    get: {
+      req: V1ZulipGetTopicsData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Array<Topic>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
       };
     };
   };

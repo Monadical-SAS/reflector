@@ -30,18 +30,16 @@ import {
   IconButton,
   Checkbox,
 } from "@chakra-ui/react";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Container } from "@chakra-ui/react";
 import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { DomainContext } from "../../domainContext";
 import { Select, Options, OptionBase } from "chakra-react-select";
 
 interface Stream {
-  id: number;
+  stream_id: number;
   name: string;
-  topics: string[];
 }
 
 interface SelectOption extends OptionBase {
@@ -82,41 +80,63 @@ export default function RoomsList() {
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useRoomList(page);
   const [streams, setStreams] = useState<Stream[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+
   const [error, setError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
+  interface Stream {
+    stream_id: number;
+    name: string;
+  }
 
-  const { zulip_streams } = useContext(DomainContext);
+  interface Topic {
+    name: string;
+  }
 
   useEffect(() => {
     const fetchZulipStreams = async () => {
+      if (!api) return;
+
       try {
-        const response = await fetch(zulip_streams + "/streams.json");
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        let data = await response.json();
-        data = data.sort((a: Stream, b: Stream) =>
-          a.name.localeCompare(b.name),
-        );
-        setStreams(data);
-      } catch (err) {
-        console.error("Error fetching streams:", err);
+        const response = await api.v1ZulipGetStreams();
+        setStreams(response);
+      } catch (error) {
+        console.error("Error fetching Zulip streams:", error);
       }
     };
 
     if (room.zulipAutoPost) {
       fetchZulipStreams();
     }
-  }, [room.zulipAutoPost]);
+  }, [room.zulipAutoPost, !api]);
+
+  useEffect(() => {
+    const fetchZulipTopics = async () => {
+      if (!api || !room.zulipStream) return;
+      try {
+        const selectedStream = streams.find((s) => s.name === room.zulipStream);
+        if (selectedStream) {
+          const response = await api.v1ZulipGetTopics({
+            streamId: selectedStream.stream_id,
+          });
+          setTopics(response);
+        }
+      } catch (error) {
+        console.error("Error fetching Zulip topics:", error);
+      }
+    };
+
+    fetchZulipTopics();
+  }, [room.zulipStream, streams, api]);
 
   const streamOptions: Options<SelectOption> = streams.map((stream) => {
     return { label: stream.name, value: stream.name };
   });
 
-  const topicOptions =
-    streams
-      .find((stream) => stream.name === room.zulipStream)
-      ?.topics.map((topic) => ({ label: topic, value: topic })) || [];
+  const topicOptions: Options<SelectOption> = topics.map((topic) => ({
+    label: topic.name,
+    value: topic.name,
+  }));
 
   const handleCopyUrl = (roomName: string) => {
     const roomUrl = `${window.location.origin}/${roomName}`;

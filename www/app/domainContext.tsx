@@ -13,7 +13,6 @@ export const DomainContext = createContext<DomainContextType>({
   },
   api_url: "",
   websocket_url: "",
-  zulip_streams: "",
 });
 
 export const DomainContextProvider = ({
