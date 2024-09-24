@@ -13,7 +13,6 @@ type EdgeConfig = {
     auth_callback_url: string;
     websocket_url: string;
     api_url: string;
-    zulip_streams: string;
   };
 };
 
