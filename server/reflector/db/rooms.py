@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlite3 import IntegrityError
 from typing import Literal
 
 import sqlalchemy
@@ -12,7 +13,7 @@ rooms = sqlalchemy.Table(
     "room",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("name", sqlalchemy.String, nullable=False, unique=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
     sqlalchemy.Column(
@@ -113,7 +114,10 @@ class RoomController:
             recording_trigger=recording_trigger,
         )
         query = rooms.insert().values(**room.model_dump())
-        await database.execute(query)
+        try:
+            await database.execute(query)
+        except IntegrityError:
+            raise HTTPException(status_code=400, detail="Room name is not unique")
         return room
 
     async def update(self, room: Room, values: dict, mutate=True):
@@ -121,7 +125,11 @@ class RoomController:
         Update a room fields with key/values in values
         """
         query = rooms.update().where(rooms.c.id == room.id).values(**values)
-        await database.execute(query)
+        try:
+            await database.execute(query)
+        except IntegrityError:
+            raise HTTPException(status_code=400, detail="Room name is not unique")
+
         if mutate:
             for key, value in values.items():
                 setattr(room, key, value)
