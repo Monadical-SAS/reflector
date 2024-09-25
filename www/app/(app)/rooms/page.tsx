@@ -36,11 +36,7 @@ import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { Select, Options, OptionBase } from "chakra-react-select";
-
-interface Stream {
-  stream_id: number;
-  name: string;
-}
+import { ApiError } from "../../api";
 
 interface SelectOption extends OptionBase {
   label: string;
@@ -81,8 +77,7 @@ export default function RoomsList() {
   const { loading, response, refetch } = useRoomList(page);
   const [streams, setStreams] = useState<Stream[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
-
-  const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
   interface Stream {
     stream_id: number;
@@ -151,7 +146,7 @@ export default function RoomsList() {
   const handleSaveRoom = async () => {
     try {
       if (RESERVED_PATHS.includes(room.name)) {
-        setError("This room name is reserved. Please choose another name.");
+        setNameError("This room name is reserved. Please choose another name.");
         return;
       }
 
@@ -180,12 +175,24 @@ export default function RoomsList() {
       setRoom(roomInitialState);
       setIsEditing(false);
       setEditRoomId("");
-      setError("");
+      setNameError("");
       refetch();
+      onClose();
     } catch (err) {
-      console.error(err);
+      if (err instanceof ApiError) {
+        const apiError = err as ApiError;
+        if (
+          apiError.status === 400 &&
+          (apiError.body as any).detail == "Room name is not unique"
+        ) {
+          setNameError(
+            "This room name is already taken. Please choose a different name.",
+          );
+        } else {
+          setNameError("An error occurred. Please try again.");
+        }
+      }
     }
-    onClose();
   };
 
   const handleEditRoom = (roomId, roomData) => {
@@ -201,6 +208,7 @@ export default function RoomsList() {
     });
     setEditRoomId(roomId);
     setIsEditing(true);
+    setNameError("");
     onOpen();
   };
 
@@ -222,7 +230,7 @@ export default function RoomsList() {
         .replace(/[^a-zA-Z0-9\s-]/g, "")
         .replace(/\s+/g, "-")
         .toLowerCase();
-      setError("");
+      setNameError("");
     }
     setRoom({
       ...room,
@@ -254,7 +262,7 @@ export default function RoomsList() {
             onClick={() => {
               setIsEditing(false);
               setRoom(roomInitialState);
-              setError("");
+              setNameError("");
               onOpen();
             }}
           >
@@ -277,7 +285,7 @@ export default function RoomsList() {
                   <FormHelperText>
                     No spaces or special characters allowed
                   </FormHelperText>
-                  {error && <Text color="red.500">{error}</Text>}
+                  {nameError && <Text color="red.500">{nameError}</Text>}
                 </FormControl>
 
                 <FormControl mt={4}>
