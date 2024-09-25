@@ -179,18 +179,16 @@ export default function RoomsList() {
       refetch();
       onClose();
     } catch (err) {
-      if (err instanceof ApiError) {
-        const apiError = err as ApiError;
-        if (
-          apiError.status === 400 &&
-          (apiError.body as any).detail == "Room name is not unique"
-        ) {
-          setNameError(
-            "This room name is already taken. Please choose a different name.",
-          );
-        } else {
-          setNameError("An error occurred. Please try again.");
-        }
+      if (
+        err instanceof ApiError &&
+        err.status === 400 &&
+        (err.body as any).detail == "Room name is not unique"
+      ) {
+        setNameError(
+          "This room name is already taken. Please choose a different name.",
+        );
+      } else {
+        setNameError("An error occurred. Please try again.");
       }
     }
   };
