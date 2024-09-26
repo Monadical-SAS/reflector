@@ -73,9 +73,13 @@ async def rooms_list(
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    user_id = user["sub"] if user else None
+
     return await paginate(
         database,
-        await rooms_controller.get_all(order_by="-created_at", return_query=True),
+        await rooms_controller.get_all(
+            user_id=user_id, order_by="-created_at", return_query=True
+        ),
     )
 
 
