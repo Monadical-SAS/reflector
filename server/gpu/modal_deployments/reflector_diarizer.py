@@ -6,7 +6,7 @@ Reflector GPU backend - diarizer
 import os
 
 import modal.gpu
-from modal import Image, Secret, App, asgi_app, method, enter
+from modal import App, Image, Secret, asgi_app, enter, method
 from pydantic import BaseModel
 
 PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.1"
@@ -64,9 +64,8 @@ diarizer_image = (
     )
 )
 
-
 @app.cls(
-    gpu=modal.gpu.A100(memory=40),
+    gpu=modal.gpu.A100(size="40GB"),
     timeout=60 * 30,
     container_idle_timeout=60,
     allow_concurrent_inputs=1,
