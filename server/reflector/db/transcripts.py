@@ -291,6 +291,8 @@ class TranscriptController:
         order_by: str | None = None,
         filter_empty: bool | None = False,
         filter_recording: bool | None = False,
+        room_id: str | None = None,
+        search_term: str | None = None,
         return_query: bool = False,
     ) -> list[Transcript]:
         """
@@ -303,8 +305,36 @@ class TranscriptController:
         - `order_by`: field to order by, e.g. "-created_at"
         - `filter_empty`: filter out empty transcripts
         - `filter_recording`: filter out transcripts that are currently recording
+        - `room_id`: filter transcripts by room ID
+        - `search_term`: filter transcripts by search term
         """
-        query = transcripts.select().where(transcripts.c.user_id == user_id)
+        from reflector.db.meetings import meetings
+        from reflector.db.rooms import rooms
+
+        query = (
+            transcripts.select()
+            .join(meetings, transcripts.c.meeting_id == meetings.c.id, isouter=True)
+            .join(rooms, meetings.c.room_id == rooms.c.id, isouter=True)
+        )
+
+        if user_id:
+            query = query.where(transcripts.c.user_id == user_id)
+
+        if room_id:
+            query = query.where(rooms.c.id == room_id)
+
+        if search_term:
+            query = query.where(
+                transcripts.c.title.ilike(f"%{search_term}%")
+            )  # Assuming there's a 'title' column
+
+        query = query.with_only_columns(
+            [
+                transcripts,
+                rooms.c.id.label("room_id"),
+                rooms.c.name.label("room_name"),
+            ]
+        )
 
         if order_by is not None:
             field = getattr(transcripts.c, order_by[1:])
