@@ -52,6 +52,8 @@ export type GetTranscript = {
   participants: Array<TranscriptParticipant> | null;
   reviewed: boolean;
   meeting_id: string | null;
+  room_id: string | null;
+  room_name: string | null;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -274,6 +276,8 @@ export type V1TranscriptsListData = {
    * Page number
    */
   page?: number;
+  roomId: string | null;
+  searchTerm: string | null;
   /**
    * Page size
    */

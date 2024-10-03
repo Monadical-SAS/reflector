@@ -263,6 +263,28 @@ export const $GetTranscript = {
       ],
       title: "Meeting Id",
     },
+    room_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Id",
+    },
+    room_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Name",
+    },
   },
   type: "object",
   required: [
@@ -281,6 +303,8 @@ export const $GetTranscript = {
     "participants",
     "reviewed",
     "meeting_id",
+    "room_id",
+    "room_name",
   ],
   title: "GetTranscript",
 } as const;

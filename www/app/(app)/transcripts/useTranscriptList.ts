@@ -10,7 +10,11 @@ type TranscriptList = {
   refetch: () => void;
 };
 
-const useTranscriptList = (page: number): TranscriptList => {
+const useTranscriptList = (
+  page: number,
+  roomId: string | null,
+  searchTerm: string | null,
+): TranscriptList => {
   const [response, setResponse] = useState<Page_GetTranscript_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
@@ -27,7 +31,7 @@ const useTranscriptList = (page: number): TranscriptList => {
     if (!api) return;
     setLoading(true);
     api
-      .v1TranscriptsList({ page })
+      .v1TranscriptsList({ page, roomId, searchTerm })
       .then((response) => {
         setResponse(response);
         setLoading(false);
@@ -38,7 +42,7 @@ const useTranscriptList = (page: number): TranscriptList => {
         setError(err);
         setErrorState(err);
       });
-  }, [!api, page, refetchCount]);
+  }, [!api, page, refetchCount, roomId, searchTerm]);
 
   return { response, loading, error, refetch };
 };
