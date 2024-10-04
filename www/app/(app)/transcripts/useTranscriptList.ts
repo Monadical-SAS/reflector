@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
-import { Page_GetTranscript_ } from "../../api";
+import { Page_GetTranscript_, SourceKind } from "../../api";
 
 type TranscriptList = {
   response: Page_GetTranscript_ | null;
@@ -10,7 +10,12 @@ type TranscriptList = {
   refetch: () => void;
 };
 
-const useTranscriptList = (page: number): TranscriptList => {
+const useTranscriptList = (
+  page: number,
+  sourceKind: SourceKind | null,
+  roomId: string | null,
+  searchTerm: string | null,
+): TranscriptList => {
   const [response, setResponse] = useState<Page_GetTranscript_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
@@ -27,7 +32,12 @@ const useTranscriptList = (page: number): TranscriptList => {
     if (!api) return;
     setLoading(true);
     api
-      .v1TranscriptsList({ page })
+      .v1TranscriptsList({
+        page,
+        sourceKind,
+        roomId,
+        searchTerm,
+      })
       .then((response) => {
         setResponse(response);
         setLoading(false);
@@ -38,7 +48,7 @@ const useTranscriptList = (page: number): TranscriptList => {
         setError(err);
         setErrorState(err);
       });
-  }, [!api, page, refetchCount]);
+  }, [!api, page, refetchCount, roomId, searchTerm]);
 
   return { response, loading, error, refetch };
 };

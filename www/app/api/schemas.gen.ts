@@ -263,6 +263,31 @@ export const $GetTranscript = {
       ],
       title: "Meeting Id",
     },
+    room_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Id",
+    },
+    room_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Name",
+    },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
   },
   type: "object",
   required: [
@@ -281,6 +306,9 @@ export const $GetTranscript = {
     "participants",
     "reviewed",
     "meeting_id",
+    "room_id",
+    "room_name",
+    "source_kind",
   ],
   title: "GetTranscript",
 } as const;
@@ -708,6 +736,10 @@ export const $Room = {
       type: "string",
       title: "Recording Trigger",
     },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
   },
   type: "object",
   required: [
@@ -722,6 +754,7 @@ export const $Room = {
     "room_mode",
     "recording_type",
     "recording_trigger",
+    "is_shared",
   ],
   title: "Room",
 } as const;
@@ -740,6 +773,12 @@ export const $RtcOffer = {
   type: "object",
   required: ["sdp", "type"],
   title: "RtcOffer",
+} as const;
+
+export const $SourceKind = {
+  type: "string",
+  enum: ["room", "live", "file"],
+  title: "SourceKind",
 } as const;
 
 export const $SpeakerAssignment = {
