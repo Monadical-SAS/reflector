@@ -60,9 +60,9 @@ class GetTranscript(BaseModel):
     participants: list[TranscriptParticipant] | None
     reviewed: bool
     meeting_id: str | None
-    room_id: str | None
-    room_name: str | None
     source_kind: SourceKind
+    room_id: str | None = None
+    room_name: str | None = None
 
 
 class CreateTranscript(BaseModel):
@@ -88,10 +88,10 @@ class DeletionStatus(BaseModel):
 
 @router.get("/transcripts", response_model=Page[GetTranscript])
 async def transcripts_list(
-    room_id: str | None,
-    search_term: str | None,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
     source_kind: SourceKind | None = None,
+    room_id: str | None = None,
+    search_term: str | None = None,
 ):
     from reflector.db import database
 
