@@ -285,6 +285,9 @@ export const $GetTranscript = {
       ],
       title: "Room Name",
     },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
   },
   type: "object",
   required: [
@@ -305,6 +308,7 @@ export const $GetTranscript = {
     "meeting_id",
     "room_id",
     "room_name",
+    "source_kind",
   ],
   title: "GetTranscript",
 } as const;
@@ -764,6 +768,12 @@ export const $RtcOffer = {
   type: "object",
   required: ["sdp", "type"],
   title: "RtcOffer",
+} as const;
+
+export const $SourceKind = {
+  type: "string",
+  enum: ["room", "live", "file"],
+  title: "SourceKind",
 } as const;
 
 export const $SpeakerAssignment = {

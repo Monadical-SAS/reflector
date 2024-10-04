@@ -1,3 +1,4 @@
+import enum
 import json
 import os
 import shutil
@@ -14,7 +15,15 @@ from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import Storage
+from sqlalchemy import Enum
 from sqlalchemy.sql import false
+
+
+class SourceKind(enum.StrEnum):
+    ROOM = enum.auto()
+    LIVE = enum.auto()
+    FILE = enum.auto()
+
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -55,6 +64,11 @@ transcripts = sqlalchemy.Table(
         sqlalchemy.String,
     ),
     sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer, nullable=True),
+    sqlalchemy.Column(
+        "source_kind",
+        Enum(SourceKind, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+    ),
 )
 
 
@@ -152,6 +166,7 @@ class Transcript(BaseModel):
     reviewed: bool = False
     meeting_id: str | None = None
     zulip_message_id: int | None = None
+    source_kind: SourceKind
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -291,6 +306,7 @@ class TranscriptController:
         order_by: str | None = None,
         filter_empty: bool | None = False,
         filter_recording: bool | None = False,
+        source_kind: SourceKind | None = None,
         room_id: str | None = None,
         search_term: str | None = None,
         return_query: bool = False,
@@ -319,6 +335,9 @@ class TranscriptController:
 
         if user_id:
             query = query.where(transcripts.c.user_id == user_id)
+
+        if source_kind:
+            query = query.where(transcripts.c.source_kind == source_kind)
 
         if room_id:
             query = query.where(rooms.c.id == room_id)
@@ -422,6 +441,7 @@ class TranscriptController:
     async def add(
         self,
         name: str,
+        source_kind: SourceKind,
         source_language: str = "en",
         target_language: str = "en",
         user_id: str | None = None,
@@ -433,6 +453,7 @@ class TranscriptController:
         """
         transcript = Transcript(
             name=name,
+            source_kind=source_kind,
             source_language=source_language,
             target_language=target_language,
             user_id=user_id,

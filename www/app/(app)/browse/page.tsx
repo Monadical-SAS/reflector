@@ -49,8 +49,11 @@ import Pagination from "./pagination";
 import { formatTimeMs } from "../../lib/time";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
+import { SourceKind } from "../../api";
 
 export default function TranscriptBrowser() {
+  const [selectedSourceKind, setSelectedSourceKind] =
+    useState<SourceKind | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [page, setPage] = useState(1);
@@ -58,6 +61,7 @@ export default function TranscriptBrowser() {
   const [searchInputValue, setSearchInputValue] = useState("");
   const { loading, response, refetch } = useTranscriptList(
     page,
+    selectedSourceKind,
     selectedRoomId,
     searchTerm,
   );
@@ -86,7 +90,11 @@ export default function TranscriptBrowser() {
       .catch((err) => setError(err, "There was an error fetching the rooms"));
   }, [api]);
 
-  const handleFilterTranscripts = (roomId: string) => {
+  const handleFilterTranscripts = (
+    sourceKind: SourceKind | null,
+    roomId: string,
+  ) => {
+    setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
     setPage(1);
   };
@@ -187,10 +195,10 @@ export default function TranscriptBrowser() {
             <Link
               as={NextLink}
               href="#"
-              onClick={() => handleFilterTranscripts("")}
-              color={selectedRoomId === "" ? "blue.500" : "gray.600"}
+              onClick={() => handleFilterTranscripts(null, "")}
+              color={selectedSourceKind === null ? "blue.500" : "gray.600"}
               _hover={{ color: "blue.300" }}
-              fontWeight={selectedRoomId === "" ? "bold" : "normal"}
+              fontWeight={selectedSourceKind === null ? "bold" : "normal"}
             >
               All Transcripts
             </Link>
@@ -208,10 +216,20 @@ export default function TranscriptBrowser() {
                     key={room.id}
                     as={NextLink}
                     href="#"
-                    onClick={() => handleFilterTranscripts(room.id)}
-                    color={selectedRoomId === room.id ? "blue.500" : "gray.600"}
+                    onClick={() => handleFilterTranscripts("room", room.id)}
+                    color={
+                      selectedSourceKind === "room" &&
+                      selectedRoomId === room.id
+                        ? "blue.500"
+                        : "gray.600"
+                    }
                     _hover={{ color: "blue.300" }}
-                    fontWeight={selectedRoomId === room.id ? "bold" : "normal"}
+                    fontWeight={
+                      selectedSourceKind === "room" &&
+                      selectedRoomId === room.id
+                        ? "bold"
+                        : "normal"
+                    }
                     ml={4}
                   >
                     {room.name}
@@ -219,6 +237,28 @@ export default function TranscriptBrowser() {
                 ))}
               </>
             )}
+
+            <Divider />
+            <Link
+              as={NextLink}
+              href="#"
+              onClick={() => handleFilterTranscripts("live", "")}
+              color={selectedSourceKind === "live" ? "blue.500" : "gray.600"}
+              _hover={{ color: "blue.300" }}
+              fontWeight={selectedSourceKind === "live" ? "bold" : "normal"}
+            >
+              Live Transcripts
+            </Link>
+            <Link
+              as={NextLink}
+              href="#"
+              onClick={() => handleFilterTranscripts("file", "")}
+              color={selectedSourceKind === "file" ? "blue.500" : "gray.600"}
+              _hover={{ color: "blue.300" }}
+              fontWeight={selectedSourceKind === "file" ? "bold" : "normal"}
+            >
+              Uploaded Files
+            </Link>
           </Stack>
         </Box>
 
@@ -241,7 +281,7 @@ export default function TranscriptBrowser() {
                   <Th pl={12} width="400px">
                     Transcription Title
                   </Th>
-                  <Th width="150px">Room</Th>
+                  <Th width="150px">Source</Th>
                   <Th width="200px">Date</Th>
                   <Th width="100px">Duration</Th>
                   <Th width="50px"></Th>
@@ -296,7 +336,11 @@ export default function TranscriptBrowser() {
                         </Link>
                       </Flex>
                     </Td>
-                    <Td>{item.room_name}</Td>
+                    <Td>
+                      {item.source_kind === "room"
+                        ? item.room_name
+                        : item.source_kind}
+                    </Td>
                     <Td>
                       {new Date(item.created_at).toLocaleString("en-US", {
                         year: "numeric",
@@ -376,7 +420,12 @@ export default function TranscriptBrowser() {
                       <Text fontWeight="bold">
                         {item.title || "Unnamed Transcript"}
                       </Text>
-                      <Text>Room: {item.room_name}</Text>
+                      <Text>
+                        Source:{" "}
+                        {item.source_kind === "room"
+                          ? item.room_name
+                          : item.source_kind}
+                      </Text>
                       <Text>
                         Date: {new Date(item.created_at).toLocaleString()}
                       </Text>

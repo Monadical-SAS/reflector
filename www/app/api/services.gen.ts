@@ -201,6 +201,7 @@ export class DefaultService {
    * @param data The data for the request.
    * @param data.roomId
    * @param data.searchTerm
+   * @param data.sourceKind
    * @param data.page Page number
    * @param data.size Page size
    * @returns Page_GetTranscript_ Successful Response
@@ -215,6 +216,7 @@ export class DefaultService {
       query: {
         room_id: data.roomId,
         search_term: data.searchTerm,
+        source_kind: data.sourceKind,
         page: data.page,
         size: data.size,
       },
