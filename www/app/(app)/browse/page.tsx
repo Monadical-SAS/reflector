@@ -307,6 +307,12 @@ export default function TranscriptBrowser() {
               Search
             </Button>
           </Flex>
+          <Pagination
+            page={page}
+            setPage={setPage}
+            total={response?.total || 0}
+            size={response?.size || 0}
+          />
           <Box display={{ base: "none", md: "block" }}>
             <Table colorScheme="gray">
               <Thead>
@@ -485,12 +491,6 @@ export default function TranscriptBrowser() {
               ))}
             </Stack>
           </Box>
-          <Pagination
-            page={page}
-            setPage={setPage}
-            total={response?.total || 0}
-            size={response?.items.length || 0}
-          />
         </Flex>
       </Flex>
 
