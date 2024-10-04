@@ -100,6 +100,7 @@ export default function TranscriptBrowser() {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
     setPage(1);
+    refetch();
   };
 
   const handleSearch = () => {
