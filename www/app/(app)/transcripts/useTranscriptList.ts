@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
-import { Page_GetTranscript_ } from "../../api";
+import { Page_GetTranscript_, SourceKind } from "../../api";
 
 type TranscriptList = {
   response: Page_GetTranscript_ | null;
@@ -12,6 +12,7 @@ type TranscriptList = {
 
 const useTranscriptList = (
   page: number,
+  sourceKind: SourceKind | null,
   roomId: string | null,
   searchTerm: string | null,
 ): TranscriptList => {
@@ -31,7 +32,12 @@ const useTranscriptList = (
     if (!api) return;
     setLoading(true);
     api
-      .v1TranscriptsList({ page, roomId, searchTerm })
+      .v1TranscriptsList({
+        page,
+        sourceKind,
+        roomId,
+        searchTerm,
+      })
       .then((response) => {
         setResponse(response);
         setLoading(false);
