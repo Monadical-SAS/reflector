@@ -343,9 +343,7 @@ class TranscriptController:
             query = query.where(rooms.c.id == room_id)
 
         if search_term:
-            query = query.where(
-                transcripts.c.title.ilike(f"%{search_term}%")
-            )  # Assuming there's a 'title' column
+            query = query.where(transcripts.c.title.ilike(f"%{search_term}%"))
 
         query = query.with_only_columns(
             [
