@@ -143,6 +143,7 @@ export type Room = {
   room_mode: string;
   recording_type: string;
   recording_trigger: string;
+  is_shared: boolean;
 };
 
 export type RtcOffer = {

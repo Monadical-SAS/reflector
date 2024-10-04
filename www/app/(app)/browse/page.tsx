@@ -74,6 +74,9 @@ export default function TranscriptBrowser() {
     React.useState<string>();
   const [deletedItemIds, setDeletedItemIds] = React.useState<string[]>();
 
+  const myRooms = rooms.filter((room) => !room.is_shared);
+  const sharedRooms = rooms.filter((room) => room.is_shared);
+
   useEffect(() => {
     setDeletedItemIds([]);
   }, [page, response]);
@@ -102,6 +105,7 @@ export default function TranscriptBrowser() {
   const handleSearch = () => {
     setPage(1);
     setSearchTerm(searchInputValue);
+    setSelectedSourceKind(null);
     setSelectedRoomId("");
     refetch();
   };
@@ -205,13 +209,42 @@ export default function TranscriptBrowser() {
 
             <Divider />
 
-            {rooms.length > 0 && (
+            {myRooms.length > 0 && (
               <>
-                <Heading size="sm" mb={2}>
-                  My Rooms
-                </Heading>
+                <Heading size="sm">My Rooms</Heading>
 
-                {rooms.map((room) => (
+                {myRooms.map((room) => (
+                  <Link
+                    key={room.id}
+                    as={NextLink}
+                    href="#"
+                    onClick={() => handleFilterTranscripts("room", room.id)}
+                    color={
+                      selectedSourceKind === "room" &&
+                      selectedRoomId === room.id
+                        ? "blue.500"
+                        : "gray.600"
+                    }
+                    _hover={{ color: "blue.300" }}
+                    fontWeight={
+                      selectedSourceKind === "room" &&
+                      selectedRoomId === room.id
+                        ? "bold"
+                        : "normal"
+                    }
+                    ml={4}
+                  >
+                    {room.name}
+                  </Link>
+                ))}
+              </>
+            )}
+
+            {sharedRooms.length > 0 && (
+              <>
+                <Heading size="sm">Shared Rooms</Heading>
+
+                {sharedRooms.map((room) => (
                   <Link
                     key={room.id}
                     as={NextLink}
