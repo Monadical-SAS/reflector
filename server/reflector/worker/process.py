@@ -66,7 +66,7 @@ async def process_recording(bucket_name: str, object_key: str):
     meeting = await meetings_controller.get_by_room_name(room_name)
     transcript = await transcripts_controller.add(
         "",
-        source_kind=SourceKind.ROOM
+        source_kind=SourceKind.ROOM,
         source_language="en",
         target_language="en",
         user_id=meeting.user_id,
