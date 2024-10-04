@@ -736,6 +736,10 @@ export const $Room = {
       type: "string",
       title: "Recording Trigger",
     },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
   },
   type: "object",
   required: [
@@ -750,6 +754,7 @@ export const $Room = {
     "room_mode",
     "recording_type",
     "recording_trigger",
+    "is_shared",
   ],
   title: "Room",
 } as const;

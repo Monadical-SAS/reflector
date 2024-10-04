@@ -65,6 +65,7 @@ const roomInitialState = {
   roomMode: "normal",
   recordingType: "cloud",
   recordingTrigger: "automatic-2nd-participant",
+  isShared: false,
 };
 
 export default function RoomsList() {
@@ -159,6 +160,7 @@ export default function RoomsList() {
         room_mode: room.roomMode,
         recording_type: room.recordingType,
         recording_trigger: room.recordingTrigger,
+        is_shared: room.isShared,
       };
 
       if (isEditing) {
@@ -203,6 +205,7 @@ export default function RoomsList() {
       roomMode: roomData.room_mode,
       recordingType: roomData.recording_type,
       recordingTrigger: roomData.recording_trigger,
+      isShared: roomData.is_shared,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -235,6 +238,11 @@ export default function RoomsList() {
       [name]: type === "checkbox" ? checked : value,
     });
   };
+
+  const myRooms =
+    response?.items.filter((roomData) => !roomData.is_shared) || [];
+  const sharedRooms =
+    response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)
     return (
@@ -375,6 +383,15 @@ export default function RoomsList() {
                     isDisabled={!room.zulipAutoPost}
                   />
                 </FormControl>
+                <FormControl mt={4}>
+                  <Checkbox
+                    name="isShared"
+                    isChecked={room.isShared}
+                    onChange={handleRoomChange}
+                  >
+                    Shared room
+                  </Checkbox>
+                </FormControl>
               </ModalBody>
 
               <ModalFooter>
@@ -396,9 +413,10 @@ export default function RoomsList() {
           </Modal>
         </Flex>
 
-        <VStack>
-          {response?.items && response.items.length > 0 ? (
-            response.items.map((roomData) => (
+        <VStack align="start" mb={6} pt={4} gap={4}>
+          <Heading size="md">My Rooms</Heading>
+          {myRooms.length > 0 ? (
+            myRooms.map((roomData) => (
               <Card w={"full"} key={roomData.id}>
                 <CardBody>
                   <Flex align={"center"}>
@@ -445,9 +463,61 @@ export default function RoomsList() {
               </Card>
             ))
           ) : (
-            <Flex flexDir="column" align="center" justify="center" h="100%">
-              <Text>No rooms found</Text>
-            </Flex>
+            <Text>No rooms found</Text>
+          )}
+        </VStack>
+
+        <VStack align="start">
+          <Heading size="md">Shared Rooms</Heading>
+          {sharedRooms.length > 0 ? (
+            sharedRooms.map((roomData) => (
+              <Card w={"full"} key={roomData.id}>
+                <CardBody>
+                  <Flex align={"center"}>
+                    <Heading size="md">
+                      <Link href={`/${roomData.name}`}>{roomData.name}</Link>
+                    </Heading>
+                    <Spacer />
+                    {linkCopied === roomData.name ? (
+                      <Text mr={2} color="green.500">
+                        Link copied!
+                      </Text>
+                    ) : (
+                      <IconButton
+                        aria-label="Copy URL"
+                        icon={<FaLink />}
+                        onClick={() => handleCopyUrl(roomData.name)}
+                        mr={2}
+                      />
+                    )}
+
+                    <Menu closeOnSelect={true}>
+                      <MenuButton
+                        as={IconButton}
+                        icon={<FaEllipsisVertical />}
+                        aria-label="actions"
+                      />
+                      <MenuList>
+                        <MenuItem
+                          onClick={() => handleEditRoom(roomData.id, roomData)}
+                          icon={<FaPencil />}
+                        >
+                          Edit
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => handleDeleteRoom(roomData.id)}
+                          icon={<FaTrash color={"red.500"} />}
+                        >
+                          Delete
+                        </MenuItem>
+                      </MenuList>
+                    </Menu>
+                  </Flex>
+                </CardBody>
+              </Card>
+            ))
+          ) : (
+            <Text>No shared rooms found</Text>
           )}
         </VStack>
       </Container>
