@@ -36,6 +36,9 @@ rooms = sqlalchemy.Table(
         nullable=False,
         server_default="automatic-2nd-participant",
     ),
+    sqlalchemy.Column(
+        "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
 )
 
 
@@ -53,6 +56,7 @@ class Room(BaseModel):
     recording_trigger: Literal[
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
+    is_shared: bool = False
 
 
 class RoomController:
@@ -98,6 +102,7 @@ class RoomController:
         room_mode: str,
         recording_type: str,
         recording_trigger: str,
+        is_shared: bool,
     ):
         """
         Add a new room
@@ -112,6 +117,7 @@ class RoomController:
             room_mode=room_mode,
             recording_type=recording_type,
             recording_trigger=recording_trigger,
+            is_shared=is_shared,
         )
         query = rooms.insert().values(**room.model_dump())
         try:

@@ -52,6 +52,9 @@ export type GetTranscript = {
   participants: Array<TranscriptParticipant> | null;
   reviewed: boolean;
   meeting_id: string | null;
+  room_id: string | null;
+  room_name: string | null;
+  source_kind: SourceKind;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -140,12 +143,15 @@ export type Room = {
   room_mode: string;
   recording_type: string;
   recording_trigger: string;
+  is_shared: boolean;
 };
 
 export type RtcOffer = {
   sdp: string;
   type: string;
 };
+
+export type SourceKind = "room" | "live" | "file";
 
 export type SpeakerAssignment = {
   speaker?: number | null;
@@ -274,10 +280,13 @@ export type V1TranscriptsListData = {
    * Page number
    */
   page?: number;
+  roomId: string | null;
+  searchTerm: string | null;
   /**
    * Page size
    */
   size?: number;
+  sourceKind?: SourceKind | null;
 };
 
 export type V1TranscriptsListResponse = Page_GetTranscript_;

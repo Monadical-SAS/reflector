@@ -9,6 +9,7 @@ from jose import jwt
 from pydantic import BaseModel, Field
 from reflector.db.migrate_user import migrate_user
 from reflector.db.transcripts import (
+    SourceKind,
     TranscriptParticipant,
     TranscriptTopic,
     transcripts_controller,
@@ -59,6 +60,9 @@ class GetTranscript(BaseModel):
     participants: list[TranscriptParticipant] | None
     reviewed: bool
     meeting_id: str | None
+    source_kind: SourceKind
+    room_id: str | None = None
+    room_name: str | None = None
 
 
 class CreateTranscript(BaseModel):
@@ -85,6 +89,9 @@ class DeletionStatus(BaseModel):
 @router.get("/transcripts", response_model=Page[GetTranscript])
 async def transcripts_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    source_kind: SourceKind | None = None,
+    room_id: str | None = None,
+    search_term: str | None = None,
 ):
     from reflector.db import database
 
@@ -101,6 +108,9 @@ async def transcripts_list(
         database,
         await transcripts_controller.get_all(
             user_id=user_id,
+            source_kind=SourceKind(source_kind) if source_kind else None,
+            room_id=room_id,
+            search_term=search_term,
             order_by="-created_at",
             return_query=True,
         ),
@@ -115,6 +125,7 @@ async def transcripts_create(
     user_id = user["sub"] if user else None
     return await transcripts_controller.add(
         info.name,
+        source_kind=SourceKind.LIVE,
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
