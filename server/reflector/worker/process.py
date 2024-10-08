@@ -8,6 +8,7 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from reflector.db.meetings import meetings_controller
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
@@ -64,12 +65,14 @@ async def process_recording(bucket_name: str, object_key: str):
     # extract a guid from the object key
     room_name = f"/{object_key[:36]}"
     meeting = await meetings_controller.get_by_room_name(room_name)
+    room = await rooms_controller.get_by_id(meeting.room_id)
+
     transcript = await transcripts_controller.add(
         "",
         source_kind=SourceKind.ROOM,
         source_language="en",
         target_language="en",
-        user_id=meeting.user_id,
+        user_id=room.user_id,
         meeting_id=meeting.id,
         share_mode="public",
     )
