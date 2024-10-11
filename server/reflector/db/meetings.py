@@ -15,7 +15,6 @@ meetings = sqlalchemy.Table(
     sqlalchemy.Column("room_name", sqlalchemy.String),
     sqlalchemy.Column("room_url", sqlalchemy.String),
     sqlalchemy.Column("host_room_url", sqlalchemy.String),
-    sqlalchemy.Column("viewer_room_url", sqlalchemy.String),
     sqlalchemy.Column("start_date", sqlalchemy.DateTime),
     sqlalchemy.Column("end_date", sqlalchemy.DateTime),
     sqlalchemy.Column("user_id", sqlalchemy.String),
@@ -43,7 +42,6 @@ class Meeting(BaseModel):
     room_name: str
     room_url: str
     host_room_url: str
-    viewer_room_url: str
     start_date: datetime
     end_date: datetime
     user_id: str | None = None
@@ -63,7 +61,6 @@ class MeetingController:
         room_name: str,
         room_url: str,
         host_room_url: str,
-        viewer_room_url: str,
         start_date: datetime,
         end_date: datetime,
         user_id: str,
@@ -77,7 +74,6 @@ class MeetingController:
             room_name=room_name,
             room_url=room_url,
             host_room_url=host_room_url,
-            viewer_room_url=viewer_room_url,
             start_date=start_date,
             end_date=end_date,
             user_id=user_id,
