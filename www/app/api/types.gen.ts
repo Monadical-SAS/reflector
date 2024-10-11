@@ -23,6 +23,7 @@ export type CreateRoom = {
   room_mode: string;
   recording_type: string;
   recording_trigger: string;
+  is_shared: boolean;
 };
 
 export type CreateTranscript = {
@@ -52,9 +53,9 @@ export type GetTranscript = {
   participants: Array<TranscriptParticipant> | null;
   reviewed: boolean;
   meeting_id: string | null;
-  room_id: string | null;
-  room_name: string | null;
   source_kind: SourceKind;
+  room_id?: string | null;
+  room_name?: string | null;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -104,7 +105,6 @@ export type Meeting = {
   room_name: string;
   room_url: string;
   host_room_url: string;
-  viewer_room_url: string;
   start_date: string;
   end_date: string;
 };
@@ -203,6 +203,7 @@ export type UpdateRoom = {
   room_mode: string;
   recording_type: string;
   recording_trigger: string;
+  is_shared: boolean;
 };
 
 export type UpdateTranscript = {
@@ -280,8 +281,8 @@ export type V1TranscriptsListData = {
    * Page number
    */
   page?: number;
-  roomId: string | null;
-  searchTerm: string | null;
+  roomId?: string | null;
+  searchTerm?: string | null;
   /**
    * Page size
    */
