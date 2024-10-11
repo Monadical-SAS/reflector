@@ -199,24 +199,24 @@ export class DefaultService {
   /**
    * Transcripts List
    * @param data The data for the request.
+   * @param data.sourceKind
    * @param data.roomId
    * @param data.searchTerm
-   * @param data.sourceKind
    * @param data.page Page number
    * @param data.size Page size
    * @returns Page_GetTranscript_ Successful Response
    * @throws ApiError
    */
   public v1TranscriptsList(
-    data: V1TranscriptsListData,
+    data: V1TranscriptsListData = {},
   ): CancelablePromise<V1TranscriptsListResponse> {
     return this.httpRequest.request({
       method: "GET",
       url: "/v1/transcripts",
       query: {
+        source_kind: data.sourceKind,
         room_id: data.roomId,
         search_term: data.searchTerm,
-        source_kind: data.sourceKind,
         page: data.page,
         size: data.size,
       },

@@ -13,7 +13,6 @@ async def create_meeting(
         "Authorization": f"Bearer {settings.WHEREBY_API_KEY}",
     }
     data = {
-        "templateType": "viewerMode",
         "isLocked": room.is_locked,
         "roomNamePrefix": room_name_prefix,
         "roomNamePattern": "uuid",
@@ -31,6 +30,7 @@ async def create_meeting(
             },
             "startTrigger": room.recording_trigger,
         },
+        "fields": ["hostRoomUrl"],
     }
 
     async with httpx.AsyncClient() as client:
