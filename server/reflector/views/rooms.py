@@ -36,7 +36,6 @@ class Meeting(BaseModel):
     room_name: str
     room_url: str
     host_room_url: str
-    viewer_room_url: str
     start_date: datetime
     end_date: datetime
 
@@ -158,7 +157,6 @@ async def rooms_create_meeting(
             room_name=meeting["roomName"],
             room_url=meeting["roomUrl"],
             host_room_url=meeting["hostRoomUrl"],
-            viewer_room_url=meeting["viewerRoomUrl"],
             start_date=datetime.fromisoformat(meeting["startDate"]),
             end_date=datetime.fromisoformat(meeting["endDate"]),
             user_id=user_id,

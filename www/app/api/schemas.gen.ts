@@ -87,6 +87,10 @@ export const $CreateRoom = {
       type: "string",
       title: "Recording Trigger",
     },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
   },
   type: "object",
   required: [
@@ -98,6 +102,7 @@ export const $CreateRoom = {
     "room_mode",
     "recording_type",
     "recording_trigger",
+    "is_shared",
   ],
   title: "CreateRoom",
 } as const;
@@ -263,6 +268,9 @@ export const $GetTranscript = {
       ],
       title: "Meeting Id",
     },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
     room_id: {
       anyOf: [
         {
@@ -285,9 +293,6 @@ export const $GetTranscript = {
       ],
       title: "Room Name",
     },
-    source_kind: {
-      $ref: "#/components/schemas/SourceKind",
-    },
   },
   type: "object",
   required: [
@@ -306,8 +311,6 @@ export const $GetTranscript = {
     "participants",
     "reviewed",
     "meeting_id",
-    "room_id",
-    "room_name",
     "source_kind",
   ],
   title: "GetTranscript",
@@ -522,10 +525,6 @@ export const $Meeting = {
       type: "string",
       title: "Host Room Url",
     },
-    viewer_room_url: {
-      type: "string",
-      title: "Viewer Room Url",
-    },
     start_date: {
       type: "string",
       format: "date-time",
@@ -543,7 +542,6 @@ export const $Meeting = {
     "room_name",
     "room_url",
     "host_room_url",
-    "viewer_room_url",
     "start_date",
     "end_date",
   ],
@@ -985,6 +983,10 @@ export const $UpdateRoom = {
       type: "string",
       title: "Recording Trigger",
     },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
   },
   type: "object",
   required: [
@@ -996,6 +998,7 @@ export const $UpdateRoom = {
     "room_mode",
     "recording_type",
     "recording_trigger",
+    "is_shared",
   ],
   title: "UpdateRoom",
 } as const;
