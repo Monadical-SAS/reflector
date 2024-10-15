@@ -44,7 +44,7 @@ export default function Room(details: RoomDetails) {
     };
   }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
-  if (isLoading && !isAuthenticated && !consentGiven) {
+  if (!isAuthenticated && !consentGiven) {
     return (
       <Box
         display="flex"
