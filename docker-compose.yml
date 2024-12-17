@@ -7,22 +7,30 @@ services:
       - 1250:1250
     volumes:
       - model-cache:/root/.cache
-    environment: ENTRYPOINT=server
+    environment:
+      ENTRYPOINT: server
   worker:
     build:
       context: server
     volumes:
       - model-cache:/root/.cache
-    environment: ENTRYPOINT=worker
+    environment:
+      ENTRYPOINT: worker
   redis:
     image: redis:7.2
     ports:
       - 6379:6379
   web:
-    build:
-      context: www
+    image: node:18
     ports:
-      - 3000:3000
+      - "3000:3000"
+    command: sh -c "yarn install && yarn dev"
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./www:/app/
+    env_file:
+      - ./www/.env.local
 
 volumes:
   model-cache:
