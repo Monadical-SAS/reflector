@@ -2,7 +2,7 @@
 
 import "@whereby.com/browser-sdk/embed";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button, Text, VStack, HStack } from "@chakra-ui/react";
+import { Box, Button, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
@@ -43,6 +43,27 @@ export default function Room(details: RoomDetails) {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
   }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
+
+  if (isLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="100vh"
+        bg="gray.50"
+        p={4}
+      >
+        <Spinner
+          thickness="4px"
+          speed="0.65s"
+          emptyColor="gray.200"
+          color="blue.500"
+          size="xl"
+        />
+      </Box>
+    );
+  }
 
   if (!isAuthenticated && !consentGiven) {
     return (
