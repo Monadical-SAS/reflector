@@ -153,5 +153,7 @@ class Settings(BaseSettings):
 
     UI_BASE_URL: str = "http://localhost:3000"
 
+    WHEREBY_WEBHOOK_SECRET: str | None = None
+
 
 settings = Settings()
