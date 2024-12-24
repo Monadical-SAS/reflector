@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Literal
 
 import sqlalchemy
@@ -34,6 +34,12 @@ meetings = sqlalchemy.Table(
         nullable=False,
         server_default="automatic-2nd-participant",
     ),
+    sqlalchemy.Column(
+        "num_clients",
+        sqlalchemy.Integer,
+        nullable=False,
+        server_default=sqlalchemy.text("0"),
+    ),
 )
 
 
@@ -52,6 +58,7 @@ class Meeting(BaseModel):
     recording_trigger: Literal[
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
+    num_clients: int = 0
 
 
 class MeetingController:
@@ -101,7 +108,7 @@ class MeetingController:
 
         return Meeting(**result)
 
-    async def get_latest(self, room: Room) -> Meeting:
+    async def get_latest(self, room: Room, current_time: datetime) -> Meeting:
         """
         Get latest meeting for a room.
         """
@@ -115,7 +122,7 @@ class MeetingController:
                     meetings.c.room_mode == room.room_mode,
                     meetings.c.recording_type == room.recording_type,
                     meetings.c.recording_trigger == room.recording_trigger,
-                    meetings.c.end_date > datetime.now(timezone.utc),
+                    meetings.c.end_date > current_time,
                 )
             )
             .order_by(end_date.desc())
@@ -152,6 +159,10 @@ class MeetingController:
             meeting.host_room_url = ""
 
         return meeting
+
+    async def update_meeting(self, meeting_id: str, **kwargs):
+        query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
+        await database.execute(query)
 
 
 meetings_controller = MeetingController()
