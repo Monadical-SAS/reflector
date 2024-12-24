@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from http.client import HTTPException
 from typing import Annotated, Optional
 
