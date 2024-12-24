@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from http.client import HTTPException
 from typing import Annotated, Optional
 
@@ -144,9 +144,11 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_latest(room=room)
-    if meeting is None:
-        start_date = datetime.now(timezone.utc)
+    current_time = datetime.utcnow()
+    meeting = await meetings_controller.get_latest(room=room, current_time=current_time)
+
+    if meeting is None or meeting.num_clients == 0:
+        start_date = current_time
         end_date = start_date + timedelta(hours=1)
         meeting = await create_meeting(
             "", start_date=start_date, end_date=end_date, room=room
