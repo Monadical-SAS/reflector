@@ -12,7 +12,7 @@ export default function WebinarPage() {
   });
 
   useEffect(() => {
-    const targetDate = new Date('2025-02-05T18:00:00Z'); // 12pm CST
+    const targetDate = new Date('2025-02-05T17:00:00Z'); // 12pm EST
 
     const updateCountdown = () => {
       const now = new Date();
