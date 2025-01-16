@@ -42,11 +42,11 @@ export default function WebinarPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-2 py-8 bg-gray-50">
-      <div className="bg-white rounded-3xl px-10 md:px-36 py-4 shadow-md mx-auto">
+      <div className="bg-white rounded-3xl px-4 md:px-36 py-4 shadow-md mx-auto">
         <img src="/monadical-black-white 1.svg" alt="Monadical Logo" className="mx-auto mb-8" width={40} height={40} />
         <div className="text-center text-sky-600 text-sm font-semibold mb-4">FREE WEBINAR</div>
 
-        <h1 className="text-center text-5xl mb-3 leading-tight">
+        <h1 className="text-center text-4xl md:text-5xl mb-3 leading-tight">
           Building AI-Powered<br />Operational Assistants
         </h1>
 
@@ -58,7 +58,7 @@ export default function WebinarPage() {
           Wednesday, February 5th @ 12pm CST
         </p>
 
-        <div className="flex justify-center gap-8 mb-8">
+        <div className="flex justify-center gap-1 md:gap-8 mb-8">
           {[
             { value: countdown.days, label: 'DAYS' },
             { value: countdown.hours, label: 'HOURS' },
@@ -72,7 +72,7 @@ export default function WebinarPage() {
           ))}
         </div>
 
-        <div className="px-16">
+        <div className="px-6 md:px-16">
             <Link
             href="#"
             className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors mb-8"
@@ -145,7 +145,7 @@ export default function WebinarPage() {
                 className="h-11 w-auto"
                 alt="Reflector"
             />
-            <div className="hidden flex-col ml-3 md:block mt-4">
+            <div className="flex-col ml-3 mt-4">
                 <h1 className="text-[28px] font-semibold leading-tight text-left">
                 Reflector
                 </h1>
