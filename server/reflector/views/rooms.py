@@ -147,12 +147,11 @@ async def rooms_create_meeting(
     current_time = datetime.utcnow()
     meeting = await meetings_controller.get_latest(room=room, current_time=current_time)
 
-    if meeting is None or meeting.num_clients == 0:
-        start_date = current_time
-        end_date = start_date + timedelta(hours=1)
-        meeting = await create_meeting(
-            "", start_date=start_date, end_date=end_date, room=room
-        )
+    if meeting is None:
+        end_date = datetime(
+            current_time.year, current_time.month, current_time.day, 5
+        ) + timedelta(days=1)
+        meeting = await create_meeting("", end_date=end_date, room=room)
 
         meeting = await meetings_controller.create(
             id=meeting["meetingId"],
