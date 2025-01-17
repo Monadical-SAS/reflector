@@ -43,7 +43,9 @@ export default function WebinarPage() {
   return (
     <div className="max-w-4xl mx-auto px-2 py-8 bg-gray-50">
       <div className="bg-white rounded-3xl px-4 md:px-36 py-4 shadow-md mx-auto">
-        <img src="/monadical-black-white 1.svg" alt="Monadical Logo" className="mx-auto mb-8" width={40} height={40} />
+        <Link href="https://www.monadical.com" target="_blank">
+          <img src="/monadical-black-white 1.svg" alt="Monadical Logo" className="mx-auto mb-8" width={40} height={40} />
+        </Link>
         <div className="text-center text-sky-600 text-sm font-semibold mb-4">FREE WEBINAR</div>
 
         <h1 className="text-center text-4xl md:text-5xl mb-3 leading-tight">
@@ -55,7 +57,7 @@ export default function WebinarPage() {
         </p>
 
         <p className="text-center font-semibold mb-4">
-          Wednesday, February 5th @ 12pm CST
+          Wednesday, February 5th @ 12pm EST
         </p>
 
         <div className="flex justify-center gap-1 md:gap-8 mb-8">
@@ -83,12 +85,14 @@ export default function WebinarPage() {
 
             <div className="space-y-4 mb-8 mt-24">
             <p>
-                The hype around AI agents might be a little premature.
-                But operational assistants are very real, available today, and can unlock your team to do their best work.
+              AI is ready to deliver value to your organization, but it's not ready to act autonomously.
+              The highest-value applications of AI today are assistants, which significantly increase the efficiency
+              of workers in operational roles. Software companies are reporting 30% improvements in developer output
+              across the board, and there's no reason AI can't deliver the same kind of value to workers in other roles.
             </p>
             <p>
-                In this session, Monadical cofounder Max McCrea will dive into what operational assistants are
-                and how you can implement them in your organization to deliver real, tangible value.
+              In this session, <Link href="https://www.monadical.com" target="_blank" className="text-sky-600 hover:text-sky-700">Monadical</Link> cofounder Max McCrea will dive into what operational assistants are and
+              how you can implement them in your organization to deliver real, tangible value.
             </p>
             </div>
 
@@ -139,7 +143,7 @@ export default function WebinarPage() {
         </div>
         <div className="text-center text-gray-600 text-sm my-24">
           POWERED BY:<br />
-          <Link href="/" className="flex justify-center items-center mx-auto">
+          <Link href="#" className="flex justify-center items-center mx-auto">
             <Image
                 src="/reach.svg"
                 width={32}
