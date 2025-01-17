@@ -12,51 +12,46 @@ API will be a POST request to TRANSCRIPT_URL:
 
 """
 
-import httpx
+from openai import AsyncOpenAI
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word
 from reflector.settings import settings
-from reflector.utils.retry import retry
 
 
 class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
     def __init__(self, modal_api_key: str):
         super().__init__()
-        self.transcript_url = settings.TRANSCRIPT_URL + "/transcribe"
+        self.transcript_url = settings.TRANSCRIPT_URL + "/v1"
         self.timeout = settings.TRANSCRIPT_TIMEOUT
+        self.api_key = settings.TRANSCRIPT_MODAL_API_KEY
         self.headers = {"Authorization": f"Bearer {modal_api_key}"}
 
     async def _transcript(self, data: AudioFile):
-        async with httpx.AsyncClient() as client:
+        async with AsyncOpenAI(
+            base_url=self.transcript_url,
+            api_key=self.api_key,
+            timeout=self.timeout,
+        ) as client:
             self.logger.debug(f"Try to transcribe audio {data.name}")
-            files = {
-                "file": (data.name, data.fd),
-            }
-            source_language = self.get_pref("audio:source_language", "en")
-            json_payload = {"source_language": source_language}
-            response = await retry(client.post)(
-                self.transcript_url,
-                files=files,
-                timeout=self.timeout,
-                headers=self.headers,
-                params=json_payload,
-                follow_redirects=True,
-            )
 
-            self.logger.debug(
-                f"Transcript response: {response.status_code} {response.content}"
+            audio_file = open(data.path, "rb")
+            transcription = await client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-1",
+                response_format="verbose_json",
+                language=self.get_pref("audio:source_language", "en"),
+                timestamp_granularities=["word"],
             )
-            response.raise_for_status()
-            result = response.json()
+            self.logger.debug(f"Transcription: {transcription}")
             transcript = Transcript(
                 words=[
                     Word(
-                        text=word["text"],
-                        start=word["start"],
-                        end=word["end"],
+                        text=word.word,
+                        start=word.start,
+                        end=word.end,
                     )
-                    for word in result["words"]
+                    for word in transcription.words
                 ],
             )
             transcript.add_offset(data.timestamp)
