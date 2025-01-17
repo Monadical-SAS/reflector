@@ -5,9 +5,7 @@ from reflector.db.rooms import Room
 from reflector.settings import settings
 
 
-async def create_meeting(
-    room_name_prefix: str, start_date: datetime, end_date: datetime, room: Room
-):
+async def create_meeting(room_name_prefix: str, end_date: datetime, room: Room):
     headers = {
         "Content-Type": "application/json; charset=utf-8",
         "Authorization": f"Bearer {settings.WHEREBY_API_KEY}",
@@ -17,7 +15,6 @@ async def create_meeting(
         "roomNamePrefix": room_name_prefix,
         "roomNamePattern": "uuid",
         "roomMode": room.room_mode,
-        "startDate": start_date.isoformat(),
         "endDate": end_date.isoformat(),
         "recording": {
             "type": room.recording_type,
