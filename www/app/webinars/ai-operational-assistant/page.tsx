@@ -74,7 +74,8 @@ export default function WebinarPage() {
 
         <div className="px-6 md:px-16">
             <Link
-            href="#"
+            href="https://www.linkedin.com/events/7286034395642179584/"
+            target="_blank"
             className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors mb-8"
             >
             RSVP HERE
@@ -129,7 +130,8 @@ export default function WebinarPage() {
             </p>
 
             <Link
-            href="#"
+            href="https://www.linkedin.com/events/7286034395642179584/"
+            target="_blank"
             className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors mb-8"
             >
             RSVP HERE
