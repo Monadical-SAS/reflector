@@ -55,7 +55,7 @@ export default function WebinarPage() {
         </p>
 
         <p className="text-center font-semibold mb-4">
-          Wednesday, February 5th @ 12pm CST
+          Wednesday, February 5th @ 12pm EST
         </p>
 
         <div className="flex justify-center gap-1 md:gap-8 mb-8">
@@ -83,12 +83,14 @@ export default function WebinarPage() {
 
             <div className="space-y-4 mb-8 mt-24">
             <p>
-                The hype around AI agents might be a little premature.
-                But operational assistants are very real, available today, and can unlock your team to do their best work.
+              AI is ready to deliver value to your organization, but it's not ready to act autonomously.
+              The highest-value applications of AI today are assistants, which significantly increase the efficiency
+              of workers in operational roles. Software companies are reporting 30% improvements in developer output
+              across the board, and there's no reason AI can't deliver the same kind of value to workers in other roles.
             </p>
             <p>
-                In this session, Monadical cofounder Max McCrea will dive into what operational assistants are
-                and how you can implement them in your organization to deliver real, tangible value.
+              In this session, Monadical cofounder Max McCrea will dive into what operational assistants are and
+              how you can implement them in your organization to deliver real, tangible value.
             </p>
             </div>
 
