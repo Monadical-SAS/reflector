@@ -91,7 +91,7 @@ export default function WebinarPage() {
               across the board, and there's no reason AI can't deliver the same kind of value to workers in other roles.
             </p>
             <p>
-              In this session, <Link href="https://www.monadical.com" target="_blank">Monadical</Link> cofounder Max McCrea will dive into what operational assistants are and
+              In this session, <Link href="https://www.monadical.com" target="_blank" className="text-sky-600 hover:text-sky-700">Monadical</Link> cofounder Max McCrea will dive into what operational assistants are and
               how you can implement them in your organization to deliver real, tangible value.
             </p>
             </div>
