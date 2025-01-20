@@ -1,89 +1,64 @@
-"""
-Reflector GPU backend - transcriber
-===================================
-"""
-
 import os
 import tempfile
 import threading
 
-from modal import Image, Secret, App, asgi_app, method, enter
+import modal
 from pydantic import BaseModel
 
-# Whisper
-WHISPER_MODEL: str = "large-v2"
-WHISPER_COMPUTE_TYPE: str = "float16"
-WHISPER_NUM_WORKERS: int = 1
+MODELS_DIR = "/models"
+
+MODEL_NAME = "large-v2"
+MODEL_COMPUTE_TYPE: str = "float16"
+MODEL_NUM_WORKERS: int = 1
+
+MINUTES = 60  # seconds
+
+volume = modal.Volume.from_name("models", create_if_missing=True)
+
+app = modal.App("reflector-transcriber")
 
 
-WHISPER_MODEL_DIR = "/root/transcription_models"
+def download_model():
+    from faster_whisper import download_model
 
-app = App(name="reflector-transcriber")
+    volume.reload()
 
+    download_model(MODEL_NAME, cache_dir=MODELS_DIR)
 
-def download_whisper():
-    from faster_whisper.utils import download_model
-
-    print("Downloading Whisper model")
-    download_model(WHISPER_MODEL, cache_dir=WHISPER_MODEL_DIR)
-    print("Whisper model downloaded")
+    volume.commit()
 
 
-def migrate_cache_llm():
-    """
-    XXX The cache for model files in Transformers v4.22.0 has been updated.
-    Migrating your old cache. This is a one-time only operation. You can
-    interrupt this and resume the migration later on by calling
-    `transformers.utils.move_cache()`.
-    """
-    from transformers.utils.hub import move_cache
-
-    print("Moving LLM cache")
-    move_cache(cache_dir=WHISPER_MODEL_DIR, new_cache_dir=WHISPER_MODEL_DIR)
-    print("LLM cache moved")
-
-
-transcriber_image = (
-    Image.debian_slim(python_version="3.10.8")
-    .apt_install("git")
-    .apt_install("wget")
-    .apt_install("libsndfile-dev")
+image = (
+    modal.Image.debian_slim(python_version="3.12")
     .pip_install(
-        "faster-whisper",
-        "requests",
-        "torch",
-        "transformers==4.34.0",
-        "sentencepiece",
-        "protobuf",
-        "huggingface_hub==0.16.4",
-        "gitpython",
-        "torchaudio",
-        "fairseq2",
-        "pyyaml",
-        "hf-transfer~=0.1"
+        "huggingface_hub==0.27.1",
+        "hf-transfer==0.1.9",
+        "torch==2.5.1",
+        "faster-whisper==1.1.1",
     )
-    .run_function(download_whisper)
-    .run_function(migrate_cache_llm)
     .env(
         {
+            "HF_HUB_ENABLE_HF_TRANSFER": "1",
             "LD_LIBRARY_PATH": (
-                "/usr/local/lib/python3.10/site-packages/nvidia/cudnn/lib/:"
-                "/opt/conda/lib/python3.10/site-packages/nvidia/cublas/lib/"
-            )
+                "/usr/local/lib/python3.12/site-packages/nvidia/cudnn/lib/:"
+                "/opt/conda/lib/python3.12/site-packages/nvidia/cublas/lib/"
+            ),
         }
     )
+    .run_function(download_model, volumes={MODELS_DIR: volume})
 )
 
 
 @app.cls(
     gpu="A10G",
-    timeout=60 * 5,
-    container_idle_timeout=60 * 5,
+    timeout=5 * MINUTES,
+    container_idle_timeout=5 * MINUTES,
     allow_concurrent_inputs=6,
-    image=transcriber_image,
+    image=image,
+    volumes={MODELS_DIR: volume},
 )
 class Transcriber:
-    @enter()
+    @modal.enter()
     def enter(self):
         import faster_whisper
         import torch
@@ -92,21 +67,20 @@ class Transcriber:
         self.use_gpu = torch.cuda.is_available()
         self.device = "cuda" if self.use_gpu else "cpu"
         self.model = faster_whisper.WhisperModel(
-            WHISPER_MODEL,
+            MODEL_NAME,
             device=self.device,
-            compute_type=WHISPER_COMPUTE_TYPE,
-            num_workers=WHISPER_NUM_WORKERS,
-            download_root=WHISPER_MODEL_DIR,
-            local_files_only=True
+            compute_type=MODEL_COMPUTE_TYPE,
+            num_workers=MODEL_NUM_WORKERS,
+            download_root=MODELS_DIR,
+            local_files_only=True,
         )
 
-    @method()
+    @modal.method()
     def transcribe_segment(
         self,
         audio_data: str,
         audio_suffix: str,
-        source_language: str,
-        timestamp: float = 0
+        language: str,
     ):
         with tempfile.NamedTemporaryFile("wb+", suffix=f".{audio_suffix}") as fp:
             fp.write(audio_data)
@@ -114,40 +88,22 @@ class Transcriber:
             with self.lock:
                 segments, _ = self.model.transcribe(
                     fp.name,
-                    language=source_language,
+                    language=language,
                     beam_size=5,
                     word_timestamps=True,
                     vad_filter=True,
                     vad_parameters={"min_silence_duration_ms": 500},
                 )
 
-            multilingual_transcript = {}
-            transcript_source_lang = ""
-            words = []
-            if segments:
-                segments = list(segments)
+            segments = list(segments)
+            text = "".join(segment.text for segment in segments)
+            words = [
+                {"word": word.word, "start": word.start, "end": word.end}
+                for segment in segments
+                for word in segment.words
+            ]
 
-                for segment in segments:
-                    transcript_source_lang += segment.text
-                    for word in segment.words:
-                        words.append(
-                            {
-                                "text": word.word,
-                                "start": round(timestamp + word.start, 3),
-                                "end": round(timestamp + word.end, 3),
-                            }
-                        )
-
-            multilingual_transcript[source_language] = transcript_source_lang
-
-            return {
-                "text": multilingual_transcript,
-                "words": words
-            }
-
-# -------------------------------------------------------------------
-# Web API
-# -------------------------------------------------------------------
+            return {"text": text, "words": words}
 
 
 @app.function(
@@ -155,21 +111,23 @@ class Transcriber:
     timeout=60,
     allow_concurrent_inputs=40,
     secrets=[
-        Secret.from_name("reflector-gpu"),
+        modal.Secret.from_name("reflector-gpu"),
     ],
+    volumes={MODELS_DIR: volume},
 )
-@asgi_app()
+@modal.asgi_app()
 def web():
     from fastapi import Body, Depends, FastAPI, HTTPException, UploadFile, status
     from fastapi.security import OAuth2PasswordBearer
     from typing_extensions import Annotated
 
-    transcriberstub = Transcriber()
+    transcriber = Transcriber()
 
     app = FastAPI()
 
     oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-    supported_audio_file_types = ["wav", "mp3", "ogg", "flac"]
+
+    supported_file_types = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
 
     def apikey_auth(apikey: str = Depends(oauth2_scheme)):
         if apikey != os.environ["REFLECTOR_GPU_APIKEY"]:
@@ -182,21 +140,20 @@ def web():
     class TranscriptResponse(BaseModel):
         result: dict
 
-    @app.post("/transcribe", dependencies=[Depends(apikey_auth)])
+    @app.post("/v1/audio/transcriptions", dependencies=[Depends(apikey_auth)])
     def transcribe(
         file: UploadFile,
-        source_language: Annotated[str, Body(...)] = "en",
-        timestamp: Annotated[float, Body()] = 0.0
+        model: str = "whisper-1",
+        language: Annotated[str, Body(...)] = "en",
     ) -> TranscriptResponse:
         audio_data = file.file.read()
         audio_suffix = file.filename.split(".")[-1]
-        assert audio_suffix in supported_audio_file_types
+        assert audio_suffix in supported_file_types
 
-        func = transcriberstub.transcribe_segment.spawn(
+        func = transcriber.transcribe_segment.spawn(
             audio_data=audio_data,
             audio_suffix=audio_suffix,
-            source_language=source_language,
-            timestamp=timestamp
+            language=language,
         )
         result = func.get()
         return result
