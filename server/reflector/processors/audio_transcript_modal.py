@@ -25,7 +25,6 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.transcript_url = settings.TRANSCRIPT_URL + "/v1"
         self.timeout = settings.TRANSCRIPT_TIMEOUT
         self.api_key = settings.TRANSCRIPT_MODAL_API_KEY
-        self.headers = {"Authorization": f"Bearer {modal_api_key}"}
 
     async def _transcript(self, data: AudioFile):
         async with AsyncOpenAI(
