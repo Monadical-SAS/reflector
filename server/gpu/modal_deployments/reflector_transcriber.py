@@ -95,14 +95,13 @@ class Transcriber:
                     vad_parameters={"min_silence_duration_ms": 500},
                 )
 
-            text = ""
-            words = []
-            for segment in segments:
-                text += segment.text
-                words.extend(
-                    {"word": word.word, "start": word.start, "end": word.end}
-                    for word in segment.words
-                )
+            segments = list(segments)
+            text = "".join(segment.text for segment in segments)
+            words = [
+                {"word": word.word, "start": word.start, "end": word.end}
+                for segment in segments
+                for word in segment.words
+            ]
 
             return {"text": text, "words": words}
 
