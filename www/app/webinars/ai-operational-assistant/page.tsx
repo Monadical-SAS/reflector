@@ -100,7 +100,7 @@ export default function WebinarPage() {
             <h2 className="font-bold text-xl mb-4">What We'll Cover:</h2>
             <ul className="space-y-4">
                 {[
-                "What an AI operational consultant is (and isn't).",
+                "What an AI operational assistant is (and isn't).",
                 "Example use cases for how they can be implemented across your organization.",
                 "Key security and design considerations to avoid sharing sensitive data with outside platforms.",
                 "Live demos showing both entry-level and advanced implementations.",
