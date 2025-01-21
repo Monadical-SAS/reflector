@@ -666,7 +666,11 @@ class SummaryBuilder:
             result = match.group(1).strip()
 
         # try parsing json
-        return json.loads(result)
+        try:
+            return json.loads(result)
+        except Exception:
+            self.logger.error(f"Unable to parse JSON: {result}")
+            return result.split("\n")
 
     def validate_json_schema(self, schema, result):
         try:

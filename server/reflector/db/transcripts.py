@@ -538,17 +538,28 @@ class TranscriptController:
         Move mp3 file to storage
         """
 
-        # store the audio on external storage
-        await get_storage().put_file(
-            transcript.storage_audio_path,
-            transcript.audio_mp3_filename.read_bytes(),
-        )
+        if transcript.audio_location == "local":
+            # store the audio on external storage if it's not already there
+            await get_storage().put_file(
+                transcript.storage_audio_path,
+                transcript.audio_mp3_filename.read_bytes(),
+            )
 
-        # indicate on the transcript that the audio is now on storage
-        await self.update(transcript, {"audio_location": "storage"})
+            # indicate on the transcript that the audio is now on storage
+            await self.update(transcript, {"audio_location": "storage"})
 
         # unlink the local file
         transcript.audio_mp3_filename.unlink(missing_ok=True)
+
+    async def download_mp3_from_storage(self, transcript: Transcript):
+        """
+        Download audio from storage
+        """
+        transcript.audio_mp3_filename.write_bytes(
+            await get_storage().get_file(
+                transcript.storage_audio_path,
+            )
+        )
 
     async def upsert_participant(
         self,

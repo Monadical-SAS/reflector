@@ -663,6 +663,9 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
     import av
 
     try:
+        if transcript.audio_location == "storage":
+            await transcripts_controller.download_mp3_from_storage(transcript)
+
         # open audio
         audio_filename = next(transcript.data_path.glob("upload.*"), None)
         if audio_filename and transcript.status != "uploaded":
