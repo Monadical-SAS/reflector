@@ -65,5 +65,14 @@ class AwsStorage(Storage):
         async with self.session.client("s3") as client:
             await client.delete_object(Bucket=bucket, Key=s3filename)
 
+    async def _get_file(self, filename: str):
+        bucket = self.aws_bucket_name
+        folder = self.aws_folder
+        logger.info(f"Downloading {filename} from S3 {bucket}/{folder}")
+        s3filename = f"{folder}/{filename}" if folder else filename
+        async with self.session.client("s3") as client:
+            response = await client.get_object(Bucket=bucket, Key=s3filename)
+            return await response["Body"].read()
+
 
 Storage.register("aws", AwsStorage)

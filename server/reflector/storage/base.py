@@ -52,3 +52,9 @@ class Storage:
 
     async def _get_file_url(self, filename: str) -> str:
         raise NotImplementedError
+
+    async def get_file(self, filename: str):
+        return await self._get_file(filename)
+
+    async def _get_file(self, filename: str):
+        raise NotImplementedError
