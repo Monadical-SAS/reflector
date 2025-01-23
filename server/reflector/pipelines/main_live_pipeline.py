@@ -665,6 +665,13 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
     try:
         if transcript.audio_location == "storage":
             await transcripts_controller.download_mp3_from_storage(transcript)
+            transcript.audio_waveform_filename.unlink(missing_ok=True)
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "topics": [],
+                },
+            )
 
         # open audio
         audio_filename = next(transcript.data_path.glob("upload.*"), None)
