@@ -587,7 +587,7 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
                     message,
                 )
                 message_updated = True
-            except Exception as e:
+            except Exception:
                 logger.error(
                     f"Failed to update zulip message with id {transcript.zulip_message_id}"
                 )
