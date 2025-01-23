@@ -577,14 +577,21 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
 
     if room.zulip_auto_post:
         message = get_zulip_message(transcript=transcript, include_topics=True)
+        message_updated = False
         if transcript.zulip_message_id:
-            update_zulip_message(
-                transcript.zulip_message_id,
-                room.zulip_stream,
-                room.zulip_topic,
-                message,
-            )
-        else:
+            try:
+                update_zulip_message(
+                    transcript.zulip_message_id,
+                    room.zulip_stream,
+                    room.zulip_topic,
+                    message,
+                )
+                message_updated = True
+            except Exception as e:
+                logger.error(
+                    f"Failed to update zulip message with id {transcript.zulip_message_id}"
+                )
+        if not message_updated:
             response = send_message_to_zulip(
                 room.zulip_stream, room.zulip_topic, message
             )
