@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   server:
     build:
@@ -6,16 +5,22 @@ services:
     ports:
       - 1250:1250
     volumes:
-      - model-cache:/root/.cache
+      - ./server/data/:/app/data/
+    env_file:
+      - ./server/.env
     environment:
       ENTRYPOINT: server
+
   worker:
     build:
       context: server
     volumes:
-      - model-cache:/root/.cache
+      - ./server/data/:/app/data/
+    env_file:
+      - ./server/.env
     environment:
       ENTRYPOINT: worker
+
   redis:
     image: redis:7.2
     ports:
@@ -31,6 +36,3 @@ services:
       - ./www:/app/
     env_file:
       - ./www/.env.local
-
-volumes:
-  model-cache:
