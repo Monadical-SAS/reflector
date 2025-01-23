@@ -53,7 +53,11 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.ws_manager import WebsocketManager, get_ws_manager
-from reflector.zulip import get_zulip_message, send_message_to_zulip
+from reflector.zulip import (
+    get_zulip_message,
+    send_message_to_zulip,
+    update_zulip_message,
+)
 from structlog import BoundLogger as Logger
 
 
@@ -573,10 +577,20 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
 
     if room.zulip_auto_post:
         message = get_zulip_message(transcript=transcript, include_topics=True)
-        response = send_message_to_zulip(room.zulip_stream, room.zulip_topic, message)
-        await transcripts_controller.update(
-            transcript, {"zulip_message_id": response["id"]}
-        )
+        if transcript.zulip_message_id:
+            update_zulip_message(
+                transcript.zulip_message_id,
+                room.zulip_stream,
+                room.zulip_topic,
+                message,
+            )
+        else:
+            response = send_message_to_zulip(
+                room.zulip_stream, room.zulip_topic, message
+            )
+            await transcripts_controller.update(
+                transcript, {"zulip_message_id": response["id"]}
+            )
 
     logger.info("Posted to zulip")
 
