@@ -1,0 +1,38 @@
+services:
+  server:
+    build:
+      context: server
+    ports:
+      - 1250:1250
+    volumes:
+      - ./server/data/:/app/data/
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: server
+
+  worker:
+    build:
+      context: server
+    volumes:
+      - ./server/data/:/app/data/
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: worker
+
+  redis:
+    image: redis:7.2
+    ports:
+      - 6379:6379
+  web:
+    image: node:18
+    ports:
+      - "3000:3000"
+    command: sh -c "yarn install && yarn dev"
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./www:/app/
+    env_file:
+      - ./www/.env.local
