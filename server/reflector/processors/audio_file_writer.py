@@ -22,6 +22,7 @@ class AudioFileWriterProcessor(Processor):
         self.out_container = None
         self.out_stream = None
         self.last_packet = None
+        self.duration = 0
 
     async def _push(self, data: av.AudioFrame):
         if not self.out_container:
@@ -39,9 +40,11 @@ class AudioFileWriterProcessor(Processor):
                 )
             else:
                 raise ValueError("Only mp3 and wav files are supported")
+
         for packet in self.out_stream.encode(data):
             self.out_container.mux(packet)
             self.last_packet = packet
+            self.duration += packet.duration
         await self.emit(data)
 
     async def _flush(self):
@@ -49,13 +52,11 @@ class AudioFileWriterProcessor(Processor):
             for packet in self.out_stream.encode():
                 self.out_container.mux(packet)
                 self.last_packet = packet
+                self.duration += packet.duration
             try:
                 if self.last_packet is not None:
                     duration = round(
-                        float(
-                            (self.last_packet.pts * self.last_packet.duration)
-                            * self.last_packet.time_base
-                        ),
+                        float(self.duration * self.last_packet.time_base * 1000),
                         2,
                     )
             except Exception:
