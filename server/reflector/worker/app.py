@@ -25,7 +25,11 @@ else:
         "process_messages": {
             "task": "reflector.worker.process.process_messages",
             "schedule": 60.0,
-        }
+        },
+        "process_meetings": {
+            "task": "reflector.worker.process.process_meetings",
+            "schedule": 60.0,
+        },
     }
 
     if settings.HEALTHCHECK_URL:

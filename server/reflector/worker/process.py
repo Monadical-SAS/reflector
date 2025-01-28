@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from urllib.parse import unquote
 
 import av
@@ -12,6 +13,7 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
+from reflector.whereby import get_room_sessions
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -104,3 +106,23 @@ async def process_recording(bucket_name: str, object_key: str):
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     task_pipeline_process.delay(transcript_id=transcript.id)
+
+
+@shared_task
+@asynctask
+async def process_meetings():
+    logger.info("Processing meetings")
+    meetings = await meetings_controller.get_all_active()
+    for meeting in meetings:
+        is_active = False
+        if meeting.end_date > datetime.utcnow():
+            response = await get_room_sessions(meeting.room_name)
+            room_sessions = response.get("results", [])
+            is_active = not room_sessions or any(
+                rs["endedAt"] is None for rs in room_sessions
+            )
+        if not is_active:
+            await meetings_controller.update_meeting(meeting.id, is_active=False)
+            logger.info("Meeting %s is deactivated", meeting.id)
+
+    logger.info("Processed meetings")
