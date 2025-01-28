@@ -21,6 +21,16 @@ services:
     environment:
       ENTRYPOINT: worker
 
+  beat:
+    build:
+      context: server
+    volumes:
+      - ./server/data/:/app/data/
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: beat
+
   redis:
     image: redis:7.2
     ports:
