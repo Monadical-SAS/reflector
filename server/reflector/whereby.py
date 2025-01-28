@@ -4,12 +4,14 @@ import httpx
 from reflector.db.rooms import Room
 from reflector.settings import settings
 
+HEADERS = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Authorization": f"Bearer {settings.WHEREBY_API_KEY}",
+}
+TIMEOUT = 10  # seconds
+
 
 async def create_meeting(room_name_prefix: str, end_date: datetime, room: Room):
-    headers = {
-        "Content-Type": "application/json; charset=utf-8",
-        "Authorization": f"Bearer {settings.WHEREBY_API_KEY}",
-    }
     data = {
         "isLocked": room.is_locked,
         "roomNamePrefix": room_name_prefix,
@@ -32,7 +34,21 @@ async def create_meeting(room_name_prefix: str, end_date: datetime, room: Room):
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            settings.WHEREBY_API_URL, headers=headers, json=data, timeout=10
+            f"{settings.WHEREBY_API_URL}/meetings",
+            headers=HEADERS,
+            json=data,
+            timeout=TIMEOUT,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
+async def get_room_sessions(room_name: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{settings.WHEREBY_API_URL}/insights/room-sessions?roomName={room_name}",
+            headers=HEADERS,
+            timeout=TIMEOUT,
         )
         response.raise_for_status()
         return response.json()
