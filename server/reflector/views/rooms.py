@@ -145,12 +145,10 @@ async def rooms_create_meeting(
         raise HTTPException(status_code=404, detail="Room not found")
 
     current_time = datetime.utcnow()
-    meeting = await meetings_controller.get_latest(room=room, current_time=current_time)
+    meeting = await meetings_controller.get_active(room=room, current_time=current_time)
 
     if meeting is None:
-        end_date = datetime(
-            current_time.year, current_time.month, current_time.day, 5
-        ) + timedelta(days=1)
+        end_date = current_time + timedelta(hours=8)
         meeting = await create_meeting("", end_date=end_date, room=room)
 
         meeting = await meetings_controller.create(
@@ -164,7 +162,7 @@ async def rooms_create_meeting(
             room=room,
         )
 
-    if user_id is None:
+    if user_id != room.user_id:
         meeting.host_room_url = ""
 
     return meeting

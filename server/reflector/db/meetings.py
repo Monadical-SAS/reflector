@@ -1,44 +1,43 @@
 from datetime import datetime
 from typing import Literal
 
-import sqlalchemy
+import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
-from sqlalchemy.sql import false
 
-meetings = sqlalchemy.Table(
+meetings = sa.Table(
     "meeting",
     metadata,
-    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("room_name", sqlalchemy.String),
-    sqlalchemy.Column("room_url", sqlalchemy.String),
-    sqlalchemy.Column("host_room_url", sqlalchemy.String),
-    sqlalchemy.Column("start_date", sqlalchemy.DateTime),
-    sqlalchemy.Column("end_date", sqlalchemy.DateTime),
-    sqlalchemy.Column("user_id", sqlalchemy.String),
-    sqlalchemy.Column("room_id", sqlalchemy.String),
-    sqlalchemy.Column(
-        "is_locked", sqlalchemy.Boolean, nullable=False, server_default=false()
-    ),
-    sqlalchemy.Column(
-        "room_mode", sqlalchemy.String, nullable=False, server_default="normal"
-    ),
-    sqlalchemy.Column(
-        "recording_type", sqlalchemy.String, nullable=False, server_default="cloud"
-    ),
-    sqlalchemy.Column(
+    sa.Column("id", sa.String, primary_key=True),
+    sa.Column("room_name", sa.String),
+    sa.Column("room_url", sa.String),
+    sa.Column("host_room_url", sa.String),
+    sa.Column("start_date", sa.DateTime),
+    sa.Column("end_date", sa.DateTime),
+    sa.Column("user_id", sa.String),
+    sa.Column("room_id", sa.String),
+    sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
+    sa.Column("room_mode", sa.String, nullable=False, server_default="normal"),
+    sa.Column("recording_type", sa.String, nullable=False, server_default="cloud"),
+    sa.Column(
         "recording_trigger",
-        sqlalchemy.String,
+        sa.String,
         nullable=False,
         server_default="automatic-2nd-participant",
     ),
-    sqlalchemy.Column(
+    sa.Column(
         "num_clients",
-        sqlalchemy.Integer,
+        sa.Integer,
         nullable=False,
-        server_default=sqlalchemy.text("0"),
+        server_default=sa.text("0"),
+    ),
+    sa.Column(
+        "is_active",
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.true(),
     ),
 )
 
@@ -94,6 +93,13 @@ class MeetingController:
         await database.execute(query)
         return meeting
 
+    async def get_all_active(self) -> list[Meeting]:
+        """
+        Get active meetings.
+        """
+        query = meetings.select().where(meetings.c.is_active == True)
+        return await database.fetch_all(query)
+
     async def get_by_room_name(
         self,
         room_name: str,
@@ -108,7 +114,7 @@ class MeetingController:
 
         return Meeting(**result)
 
-    async def get_latest(self, room: Room, current_time: datetime) -> Meeting:
+    async def get_active(self, room: Room, current_time: datetime) -> Meeting:
         """
         Get latest meeting for a room.
         """
@@ -116,12 +122,9 @@ class MeetingController:
         query = (
             meetings.select()
             .where(
-                sqlalchemy.and_(
+                sa.and_(
                     meetings.c.room_id == room.id,
-                    meetings.c.is_locked == room.is_locked,
-                    meetings.c.room_mode == room.room_mode,
-                    meetings.c.recording_type == room.recording_type,
-                    meetings.c.recording_trigger == room.recording_trigger,
+                    meetings.c.is_active == True,
                     meetings.c.end_date > current_time,
                 )
             )
