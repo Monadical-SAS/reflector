@@ -97,7 +97,7 @@ class MeetingController:
         """
         Get active meetings.
         """
-        query = meetings.select().where(meetings.c.is_active == True)
+        query = meetings.select().where(meetings.c.is_active)
         return await database.fetch_all(query)
 
     async def get_by_room_name(
@@ -124,7 +124,7 @@ class MeetingController:
             .where(
                 sa.and_(
                     meetings.c.room_id == room.id,
-                    meetings.c.is_active == True,
+                    meetings.c.is_active,
                     meetings.c.end_date > current_time,
                 )
             )
