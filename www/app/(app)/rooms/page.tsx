@@ -56,6 +56,12 @@ const recordingTriggerOptions: Options<SelectOption> = [
   { label: "Automatic", value: "automatic-2nd-participant" },
 ];
 
+const recordingTypeOptions: Options<SelectOption> = [
+  { label: "None", value: "none" },
+  { label: "Local", value: "local" },
+  { label: "Cloud", value: "cloud" },
+];
+
 const roomInitialState = {
   name: "",
   zulipAutoPost: false,
@@ -187,7 +193,7 @@ export default function RoomsList() {
         (err.body as any).detail == "Room name is not unique"
       ) {
         setNameError(
-          "This room name is already taken. Please choose a different name.",
+          "This room name is already taken. Please choose a different name."
         );
       } else {
         setNameError("An error occurred. Please try again.");
@@ -310,7 +316,7 @@ export default function RoomsList() {
                     options={roomModeOptions}
                     value={{
                       label: roomModeOptions.find(
-                        (rm) => rm.value === room.roomMode,
+                        (rm) => rm.value === room.roomMode
                       )?.label,
                       value: room.roomMode,
                     }}
@@ -323,13 +329,36 @@ export default function RoomsList() {
                   />
                 </FormControl>
                 <FormControl mt={4}>
-                  <FormLabel>Recording start trigger</FormLabel>
+                  <FormLabel>Recording type</FormLabel>
+                  <Select
+                    name="recordingType"
+                    options={recordingTypeOptions}
+                    value={{
+                      label: recordingTypeOptions.find(
+                        (rt) => rt.value === room.recordingType
+                      )?.label,
+                      value: room.recordingType,
+                    }}
+                    onChange={(newValue) =>
+                      setRoom({
+                        ...room,
+                        recordingType: newValue!.value,
+                        recordingTrigger:
+                          newValue!.value !== "cloud"
+                            ? "none"
+                            : room.recordingTrigger,
+                      })
+                    }
+                  />
+                </FormControl>
+                <FormControl mt={4}>
+                  <FormLabel>Cloud recording start trigger</FormLabel>
                   <Select
                     name="recordingTrigger"
                     options={recordingTriggerOptions}
                     value={{
                       label: recordingTriggerOptions.find(
-                        (rt) => rt.value === room.recordingTrigger,
+                        (rt) => rt.value === room.recordingTrigger
                       )?.label,
                       value: room.recordingTrigger,
                     }}
@@ -339,6 +368,7 @@ export default function RoomsList() {
                         recordingTrigger: newValue!.value,
                       })
                     }
+                    isDisabled={room.recordingType !== "cloud"}
                   />
                 </FormControl>
                 <FormControl mt={8}>
