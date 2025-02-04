@@ -24,6 +24,7 @@ COPY --from=builder /venv /venv
 RUN mkdir -p /app
 COPY reflector /app/reflector
 COPY migrations /app/migrations
+COPY images /app/images
 COPY alembic.ini runserver.sh /app/
 WORKDIR /app
 CMD ["./runserver.sh"]
