@@ -52,3 +52,17 @@ async def get_room_sessions(room_name: str):
         )
         response.raise_for_status()
         return response.json()
+
+
+async def upload_logo(room_name: str, logo_path: str):
+    async with httpx.AsyncClient() as client:
+        with open(logo_path, "rb") as f:
+            response = await client.put(
+                f"{settings.WHEREBY_API_URL}/rooms{room_name}/theme/logo",
+                headers={
+                    "Authorization": f"Bearer {settings.WHEREBY_API_KEY}",
+                },
+                timeout=TIMEOUT,
+                files={"image": f},
+            )
+            response.raise_for_status()

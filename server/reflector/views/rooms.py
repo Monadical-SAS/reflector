@@ -11,7 +11,7 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
-from reflector.whereby import create_meeting
+from reflector.whereby import create_meeting, upload_logo
 
 router = APIRouter()
 
@@ -150,6 +150,7 @@ async def rooms_create_meeting(
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
         meeting = await create_meeting("", end_date=end_date, room=room)
+        await upload_logo(meeting["roomName"], "./images/logo.png")
 
         meeting = await meetings_controller.create(
             id=meeting["meetingId"],
