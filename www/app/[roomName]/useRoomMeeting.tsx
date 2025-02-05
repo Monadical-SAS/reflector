@@ -26,7 +26,7 @@ type SuccessMeeting = {
 };
 
 const useRoomMeeting = (
-  roomName: string | null | undefined,
+  roomName: string | null | undefined
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -53,7 +53,10 @@ const useRoomMeeting = (
       .catch((error) => {
         const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman) {
-          setError(error, "There was an error loading the meeting");
+          setError(
+            error,
+            "There was an error loading the meeting. Please try again by refreshing the page."
+          );
         } else {
           setError(error);
         }
