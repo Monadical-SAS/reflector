@@ -58,8 +58,8 @@ const WEBINARS: Webinar[] = [
   },
   {
     title: "ai-operational-assistant-dry-run",
-    startsAt: "2025-02-04T16:00:00Z",
-    endsAt: "2025-02-04T17:00:00Z",
+    startsAt: "2025-02-05T00:50:00Z",
+    endsAt: "2025-02-05T00:55:00Z",
   },
 ];
 
