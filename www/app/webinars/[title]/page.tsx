@@ -8,6 +8,27 @@ import dynamic from "next/dynamic";
 const WherebyEmbed = dynamic(() => import("../../lib/WherebyEmbed"), {
   ssr: false,
 });
+import { FormEvent } from "react";
+import { Input, FormControl } from "@chakra-ui/react";
+import { VStack } from "@chakra-ui/react";
+import { Alert, AlertIcon } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
+
+type FormData = {
+  name: string;
+  email: string;
+  company: string;
+  role: string;
+};
+
+const FORM_ID = "1hhtO6x9XacRwSZS-HRBLN9Ca_7iGZVpNX3_EC4I1uzc";
+const FORM_FIELDS = {
+  name: "entry.1500809875",
+  email: "entry.1359095250",
+  company: "entry.1851914159",
+  role: "entry.1022377935",
+};
 
 export type WebinarDetails = {
   params: {
@@ -87,6 +108,39 @@ export default function WebinarPage(details: WebinarDetails) {
     const timer = setInterval(updateCountdown, 1000);
     return () => clearInterval(timer);
   }, [webinar]);
+
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    email: "",
+    company: "",
+    role: "",
+  });
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const submitUrl = `https://docs.google.com/forms/d/${FORM_ID}/formResponse`;
+      const data = Object.entries(FORM_FIELDS)
+        .map(([key, value]) => {
+          return `${value}=${formData[key as keyof FormData]}`;
+        })
+        .join("&");
+      const response = await fetch(submitUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: data,
+      });
+
+      setFormSubmitted(true);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
 
   if (status === WebinarStatus.Live) {
     return <>{roomUrl && <WherebyEmbed roomUrl={roomUrl} />}</>;
@@ -195,13 +249,71 @@ export default function WebinarPage(details: WebinarDetails) {
               <h2 className="font-bold text-xl mb-4">
                 To Watch This Webinar, Fill Out the Brief Form Below:
               </h2>
-              <Link
-                href="https://www.linkedin.com/events/7286034395642179584/"
-                target="_blank"
-                className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors mb-8 uppercase"
-              >
-                Get instant access
-              </Link>
+
+              {formSubmitted ? (
+                <Alert status="success" borderRadius="lg" mb={4}>
+                  <Text>
+                    Thanks for signing up! The webinar recording will be ready
+                    soon, and we'll email you as soon as it's available. Stay
+                    tuned!
+                  </Text>
+                </Alert>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <VStack spacing={4} w="full">
+                    <FormControl isRequired>
+                      <Input
+                        type="text"
+                        placeholder="Your Name"
+                        py={4}
+                        size="md"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                      />
+                    </FormControl>
+                    <FormControl isRequired>
+                      <Input
+                        type="email"
+                        placeholder="Your Email"
+                        py={4}
+                        size="md"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                    </FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Company Name"
+                      py={4}
+                      size="md"
+                      value={formData.company}
+                      onChange={(e) =>
+                        setFormData({ ...formData, company: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Your Role"
+                      py={4}
+                      size="md"
+                      value={formData.role}
+                      onChange={(e) =>
+                        setFormData({ ...formData, role: e.target.value })
+                      }
+                    />
+                    <button
+                      type="submit"
+                      className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors uppercase"
+                    >
+                      Get instant access
+                    </button>
+                  </VStack>
+                </form>
+              )}
             </div>
           </div>
           <div className="text-center text-gray-600 text-sm my-24">
