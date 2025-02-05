@@ -1,13 +1,14 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import "@whereby.com/browser-sdk/embed";
 import { Box, Button, HStack, useToast, Text } from "@chakra-ui/react";
 
 interface WherebyEmbedProps {
   roomUrl: string;
+  onLeave?: () => void;
 }
 
-export default function WherebyEmbed({ roomUrl }: WherebyEmbedProps) {
+export default function WherebyEmbed({ roomUrl, onLeave }: WherebyEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
   const toast = useToast();
@@ -52,6 +53,20 @@ export default function WherebyEmbed({ roomUrl }: WherebyEmbedProps) {
       };
     }
   }, [roomUrl, toast]);
+
+  const handleLeave = () => {
+    if (onLeave) {
+      onLeave();
+    }
+  };
+
+  useEffect(() => {
+    wherebyRef.current?.addEventListener("leave", handleLeave);
+
+    return () => {
+      wherebyRef.current?.removeEventListener("leave", handleLeave);
+    };
+  }, [handleLeave]);
 
   return (
     <whereby-embed

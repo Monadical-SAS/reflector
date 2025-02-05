@@ -11,9 +11,8 @@ const WherebyEmbed = dynamic(() => import("../../lib/WherebyEmbed"), {
 import { FormEvent } from "react";
 import { Input, FormControl } from "@chakra-ui/react";
 import { VStack } from "@chakra-ui/react";
-import { Alert, AlertIcon } from "@chakra-ui/react";
+import { Alert } from "@chakra-ui/react";
 import { Text } from "@chakra-ui/react";
-import { Button } from "@chakra-ui/react";
 
 type FormData = {
   name: string;
@@ -58,8 +57,8 @@ const WEBINARS: Webinar[] = [
   },
   {
     title: "ai-operational-assistant-dry-run",
-    startsAt: "2025-02-05T00:50:00Z",
-    endsAt: "2025-02-05T00:55:00Z",
+    startsAt: "2025-02-05T01:20:00Z",
+    endsAt: "2025-02-05T01:22:00Z",
   },
 ];
 
@@ -142,10 +141,18 @@ export default function WebinarPage(details: WebinarDetails) {
     }
   };
 
-  if (status === WebinarStatus.Live) {
-    return <>{roomUrl && <WherebyEmbed roomUrl={roomUrl} />}</>;
-  }
+  const handleLeave = () => {
+    const now = new Date();
+    if (now > endDate) {
+      window.location.reload();
+    }
+  };
 
+  if (status === WebinarStatus.Live) {
+    return (
+      <>{roomUrl && <WherebyEmbed roomUrl={roomUrl} onLeave={handleLeave} />}</>
+    );
+  }
   if (status === WebinarStatus.Ended) {
     return (
       <div className="max-w-4xl mx-auto px-2 py-8 bg-gray-50">
