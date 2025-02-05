@@ -8,6 +8,27 @@ import dynamic from "next/dynamic";
 const WherebyEmbed = dynamic(() => import("../../lib/WherebyEmbed"), {
   ssr: false,
 });
+import { FormEvent } from "react";
+import { Input, FormControl } from "@chakra-ui/react";
+import { VStack } from "@chakra-ui/react";
+import { Alert, AlertIcon } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
+
+type FormData = {
+  name: string;
+  email: string;
+  company: string;
+  role: string;
+};
+
+const FORM_ID = "1hhtO6x9XacRwSZS-HRBLN9Ca_7iGZVpNX3_EC4I1uzc";
+const FORM_FIELDS = {
+  name: "entry.1500809875",
+  email: "entry.1359095250",
+  company: "entry.1851914159",
+  role: "entry.1022377935",
+};
 
 export type WebinarDetails = {
   params: {
@@ -88,8 +109,237 @@ export default function WebinarPage(details: WebinarDetails) {
     return () => clearInterval(timer);
   }, [webinar]);
 
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    email: "",
+    company: "",
+    role: "",
+  });
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const submitUrl = `https://docs.google.com/forms/d/${FORM_ID}/formResponse`;
+      const data = Object.entries(FORM_FIELDS)
+        .map(([key, value]) => {
+          return `${value}=${formData[key as keyof FormData]}`;
+        })
+        .join("&");
+      const response = await fetch(submitUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: data,
+      });
+
+      setFormSubmitted(true);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
+
   if (status === WebinarStatus.Live) {
     return <>{roomUrl && <WherebyEmbed roomUrl={roomUrl} />}</>;
+  }
+
+  if (status === WebinarStatus.Ended) {
+    return (
+      <div className="max-w-4xl mx-auto px-2 py-8 bg-gray-50">
+        <div className="bg-white rounded-3xl px-4 md:px-36 py-4 shadow-md mx-auto">
+          <Link href="https://www.monadical.com" target="_blank">
+            <img
+              src="/monadical-black-white 1.svg"
+              alt="Monadical Logo"
+              className="mx-auto mb-8"
+              width={40}
+              height={40}
+            />
+          </Link>
+          <div className="text-center text-sky-600 text-sm font-semibold mb-4">
+            FREE RECORDING
+          </div>
+
+          <h1 className="text-center text-4xl md:text-5xl mb-3 leading-tight">
+            Building AI-Powered
+            <br />
+            Operational Assistants
+          </h1>
+
+          <p className="text-center text-gray-600 mb-4">
+            From Simple Automation to Strategic Implementation
+          </p>
+
+          <Image
+            src="/webinar-preview.png"
+            alt="Webinar Preview"
+            width={1280}
+            height={720}
+            className="mx-auto mb-8"
+            style={{
+              borderRadius: "12px",
+              boxShadow: "0px 4px 12px 0px rgba(0, 0, 0, 0.1)",
+            }}
+          />
+
+          <div className="px-6 md:px-16">
+            <button
+              onClick={() =>
+                window.scrollTo({
+                  top: document.body.scrollHeight,
+                  behavior: "smooth",
+                })
+              }
+              className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors mb-8 uppercase"
+            >
+              Get instant access
+            </button>
+
+            <div className="space-y-4 mb-8 mt-24">
+              <p>
+                The hype around Al agents might be a little premature. But
+                operational assistants are very real, available today, and can
+                unlock your team to do their best work.
+              </p>
+              <p>
+                In this session,{" "}
+                <Link
+                  href="https://www.monadical.com"
+                  target="_blank"
+                  className="text-sky-600 hover:text-sky-700"
+                >
+                  Monadical
+                </Link>{" "}
+                cofounder Max McCrea dives into what operational assistants are
+                and how you can implement them in your organization to deliver
+                real, tangible value.
+              </p>
+            </div>
+
+            <div className="mb-8">
+              <h2 className="font-bold text-xl mb-4">What We Cover:</h2>
+              <ul className="space-y-4">
+                {[
+                  "What an AI operational assistant is (and isn't).",
+                  "Example use cases for how they can be implemented across your organization.",
+                  "Key security and design considerations to avoid sharing sensitive data with outside platforms.",
+                  "Live demos showing both entry-level and advanced implementations.",
+                  "How you can start implementing them to immediately unlock value.",
+                ].map((item, index) => (
+                  <li
+                    key={index}
+                    className="pl-6 relative before:content-[''] before:absolute before:left-0 before:top-2 before:w-2 before:h-2 before:bg-sky-600"
+                  >
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="mb-8">
+              You'll walk away with a clear understanding of how to implement Al
+              solutions in your organization, with several demos of actual
+              implementations.
+            </p>
+
+            <div className="mb-8">
+              <h2 className="font-bold text-xl mb-4">
+                To Watch This Webinar, Fill Out the Brief Form Below:
+              </h2>
+
+              {formSubmitted ? (
+                <Alert status="success" borderRadius="lg" mb={4}>
+                  <Text>
+                    Thanks for signing up! The webinar recording will be ready
+                    soon, and we'll email you as soon as it's available. Stay
+                    tuned!
+                  </Text>
+                </Alert>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <VStack spacing={4} w="full">
+                    <FormControl isRequired>
+                      <Input
+                        type="text"
+                        placeholder="Your Name"
+                        py={4}
+                        size="md"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                      />
+                    </FormControl>
+                    <FormControl isRequired>
+                      <Input
+                        type="email"
+                        placeholder="Your Email"
+                        py={4}
+                        size="md"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                      />
+                    </FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Company Name"
+                      py={4}
+                      size="md"
+                      value={formData.company}
+                      onChange={(e) =>
+                        setFormData({ ...formData, company: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Your Role"
+                      py={4}
+                      size="md"
+                      value={formData.role}
+                      onChange={(e) =>
+                        setFormData({ ...formData, role: e.target.value })
+                      }
+                    />
+                    <button
+                      type="submit"
+                      className="block w-full max-w-xs mx-auto py-4 px-6 bg-sky-600 text-white text-center font-semibold rounded-full hover:bg-sky-700 transition-colors uppercase"
+                    >
+                      Get instant access
+                    </button>
+                  </VStack>
+                </form>
+              )}
+            </div>
+          </div>
+          <div className="text-center text-gray-600 text-sm my-24">
+            POWERED BY:
+            <br />
+            <Link href="#" className="flex justify-center items-center mx-auto">
+              <Image
+                src="/reach.svg"
+                width={32}
+                height={40}
+                className="h-11 w-auto"
+                alt="Reflector"
+              />
+              <div className="flex-col ml-3 mt-4">
+                <h1 className="text-[28px] font-semibold leading-tight text-left">
+                  Reflector
+                </h1>
+                <p className="text-gray-500 text-xs tracking-tight -mt-1">
+                  Capture the signal, not the noise
+                </p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
