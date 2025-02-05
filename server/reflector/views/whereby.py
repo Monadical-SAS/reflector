@@ -5,12 +5,14 @@ import time
 from datetime import datetime
 from hashlib import sha256
 
+import structlog
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from reflector.db.meetings import meetings_controller
 from reflector.settings import settings
 
 router = APIRouter()
+logger = structlog.get_logger()
 
 
 class WherebyWebhookEvent(BaseModel):
@@ -62,6 +64,11 @@ async def whereby_webhook(event: WherebyWebhookEvent, request: Request):
     ):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
+    logger.info(
+        "whereby webhook received",
+        meeting_id=event.data["meetingId"],
+        event_type=event.type,
+    )
     meeting = await meetings_controller.get_by_id(event.data["meetingId"])
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")

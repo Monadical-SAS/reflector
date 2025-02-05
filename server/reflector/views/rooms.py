@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from http.client import HTTPException
 from typing import Annotated, Optional
 
 import reflector.auth as auth
-from fastapi import APIRouter, Depends
+import structlog
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
@@ -11,9 +11,11 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
+from reflector.utils.lock import redis_lock
 from reflector.whereby import create_meeting, upload_logo
 
 router = APIRouter()
+logger = structlog.get_logger()
 
 
 class Room(BaseModel):
@@ -65,6 +67,15 @@ class UpdateRoom(BaseModel):
 
 
 class DeletionStatus(BaseModel):
+    status: str
+
+
+class Pong(BaseModel):
+    is_active: bool
+    active_meeting_id: Optional[str]
+
+
+class EndMeetingResult(BaseModel):
     status: str
 
 
@@ -134,6 +145,77 @@ async def rooms_delete(
     return DeletionStatus(status="ok")
 
 
+@router.post("/rooms/{room_name}/meeting/{meeting_id}/ping", response_model=Pong)
+async def rooms_keep_alive(
+    room_name: str,
+    meeting_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    current_time = datetime.utcnow()
+    ulogger = logger.bind(user_id=user_id, room=room, current_time=current_time)
+    ulogger.info("User pinging room")
+    meeting = await meetings_controller.get_active(room=room, current_time=current_time)
+    if not meeting:
+        # No meeting found, so previous is not active and there is no new one
+        ulogger.warning(
+            "No active meeting found for user",
+            active_meeting_id=meeting.id,
+            user_meeting_id=meeting_id,
+        )
+        return Pong(is_active=False, active_meeting_id=None)
+
+    if meeting.id == meeting_id:
+        # Meeting match and still active, let's push the active part
+        await meetings_controller.update_meeting(
+            meeting_id=meeting.id,
+            last_ping_update=current_time,
+        )
+        return Pong(is_active=True, active_meeting_id=meeting_id)
+
+    # Meeting found but meeting id does not match, meaning there is a new meeting
+    ulogger.warning(
+        "User not in active meeting, but another exists",
+        active_meeting_id=meeting.id,
+        meeting_id=meeting_id,
+    )
+    return Pong(is_active=False, active_meeting_id=meeting.id)
+
+
+@router.post(
+    "/rooms/{room_name}/meeting/{meeting_id}/end-meeting",
+    response_model=EndMeetingResult,
+)
+async def rooms_end_meeting(
+    room_name: str,
+    meeting_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    ulogger = logger.bind(user_id=user_id, room=room, meeting_id=meeting_id)
+    ulogger.info("User ending meeting room")
+    meeting = await meetings_controller.get_by_id(meeting_id=meeting_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    # It's not a problem if it was active or not
+    ulogger.info("Deactivating the meeting")
+    await meetings_controller.update_meeting(meeting_id=meeting.id, is_active=False)
+
+    return EndMeetingResult(status="ok")
+
+
 @router.post("/rooms/{room_name}/meeting", response_model=Meeting)
 async def rooms_create_meeting(
     room_name: str,
@@ -144,24 +226,40 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    current_time = datetime.utcnow()
-    meeting = await meetings_controller.get_active(room=room, current_time=current_time)
-
-    if meeting is None:
-        end_date = current_time + timedelta(hours=8)
-        meeting = await create_meeting("", end_date=end_date, room=room)
-        await upload_logo(meeting["roomName"], "./images/logo.png")
-
-        meeting = await meetings_controller.create(
-            id=meeting["meetingId"],
-            room_name=meeting["roomName"],
-            room_url=meeting["roomUrl"],
-            host_room_url=meeting["hostRoomUrl"],
-            start_date=datetime.fromisoformat(meeting["startDate"]),
-            end_date=datetime.fromisoformat(meeting["endDate"]),
-            user_id=user_id,
+    async with redis_lock(f"room:{room.id}"):
+        current_time = datetime.utcnow()
+        ulogger = logger.bind(user_id=user_id, room=room, current_time=current_time)
+        meeting = await meetings_controller.get_active(
             room=room,
+            current_time=current_time,
         )
+        ulogger.info("User joining meeting room", meeting_found=meeting is not None)
+
+        if meeting is None:
+            end_date = current_time + timedelta(hours=8)
+            ulogger.info("1/4 No meeting room found, create one")
+            meeting = await create_meeting("", end_date=end_date, room=room)
+            ulogger.info(
+                "2/4 Whereby meeting created",
+                meeting_id=meeting["meetingId"],
+                room_name=meeting["roomName"],
+            )
+            await upload_logo(meeting["roomName"], "./images/logo.png")
+
+            ulogger.info("3/4 Saving to database")
+            meeting = await meetings_controller.create(
+                id=meeting["meetingId"],
+                room_name=meeting["roomName"],
+                room_url=meeting["roomUrl"],
+                host_room_url=meeting["hostRoomUrl"],
+                start_date=datetime.fromisoformat(meeting["startDate"]),
+                end_date=datetime.fromisoformat(meeting["endDate"]),
+                user_id=user_id,
+                room=room,
+            )
+            ulogger.info("4/4 Done")
+        else:
+            ulogger.info("Joining active meeting", meeting_id=meeting.id)
 
     if user_id != room.user_id:
         meeting.host_room_url = ""

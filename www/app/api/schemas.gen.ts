@@ -141,6 +141,18 @@ export const $DeletionStatus = {
   title: "DeletionStatus",
 } as const;
 
+export const $EndMeetingResult = {
+  properties: {
+    status: {
+      type: "string",
+      title: "Status",
+    },
+  },
+  type: "object",
+  required: ["status"],
+  title: "EndMeetingResult",
+} as const;
+
 export const $GetTranscript = {
   properties: {
     id: {
@@ -687,6 +699,29 @@ export const $Participant = {
   title: "Participant",
 } as const;
 
+export const $Pong = {
+  properties: {
+    is_active: {
+      type: "boolean",
+      title: "Is Active",
+    },
+    active_meeting_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Active Meeting Id",
+    },
+  },
+  type: "object",
+  required: ["is_active", "active_meeting_id"],
+  title: "Pong",
+} as const;
+
 export const $Room = {
   properties: {
     id: {
@@ -1164,6 +1199,35 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $WherebyWebhookEvent = {
+  properties: {
+    apiVersion: {
+      type: "string",
+      title: "Apiversion",
+    },
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      title: "Createdat",
+    },
+    type: {
+      type: "string",
+      title: "Type",
+    },
+    data: {
+      type: "object",
+      title: "Data",
+    },
+  },
+  type: "object",
+  required: ["apiVersion", "id", "createdAt", "type", "data"],
+  title: "WherebyWebhookEvent",
 } as const;
 
 export const $Word = {

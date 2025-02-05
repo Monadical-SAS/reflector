@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useError } from "../(errors)/errorContext";
-import { Meeting } from "../api";
+import { Meeting, Pong } from "../api";
 import { shouldShowError } from "../lib/errorUtils";
 import useApi from "../lib/useApi";
 
@@ -9,6 +9,9 @@ type ErrorMeeting = {
   loading: false;
   response: null;
   reload: () => void;
+  startKeepalive: (onKeepalive?: (pong: Pong) => void) => void;
+  stopKeepalive: () => void;
+  endMeeting: () => Promise<void>;
 };
 
 type LoadingMeeting = {
@@ -16,6 +19,9 @@ type LoadingMeeting = {
   loading: true;
   error: false;
   reload: () => void;
+  startKeepalive: (onKeepalive?: (pong: Pong) => void) => void;
+  stopKeepalive: () => void;
+  endMeeting: () => Promise<void>;
 };
 
 type SuccessMeeting = {
@@ -23,6 +29,9 @@ type SuccessMeeting = {
   loading: false;
   error: null;
   reload: () => void;
+  startKeepalive: (onKeepalive?: (pong: Pong) => void) => void;
+  stopKeepalive: () => void;
+  endMeeting: () => Promise<void>;
 };
 
 const useRoomMeeting = (
@@ -34,7 +43,57 @@ const useRoomMeeting = (
   const [reload, setReload] = useState(0);
   const { setError } = useError();
   const api = useApi();
+  const keepaliveInterval = useRef<number>();
+  const keepaliveCallback = useRef<((pong: Pong) => void) | undefined>();
   const reloadHandler = () => setReload((prev) => prev + 1);
+
+  const keepalive = useCallback(async () => {
+    if (!response || !api || !roomName) return;
+
+    try {
+      const pong = await api.v1RoomsKeepAlive({
+        roomName,
+        meetingId: response.id,
+      });
+      keepaliveCallback.current?.(pong);
+    } catch (error) {
+      console.error("Keepalive failed:", error);
+    }
+  }, [api, response, roomName]);
+
+  const startKeepalive = useCallback(
+    (onKeepalive?: (pong: Pong) => void) => {
+      keepaliveCallback.current = onKeepalive;
+      if (!keepaliveInterval.current) {
+        keepalive();
+        keepaliveInterval.current = window.setInterval(keepalive, 10000);
+      }
+    },
+    [keepalive],
+  );
+
+  const stopKeepalive = useCallback(() => {
+    if (keepaliveInterval.current) {
+      window.clearInterval(keepaliveInterval.current);
+      keepaliveInterval.current = undefined;
+    }
+    keepaliveCallback.current = undefined;
+  }, []);
+
+  const endMeeting = useCallback(async () => {
+    if (!response || !api || !roomName) return;
+
+    try {
+      await api.v1RoomsEndMeeting({
+        roomName,
+        meetingId: response.id,
+      });
+      stopKeepalive();
+    } catch (error) {
+      console.error("End meeting failed:", error);
+      throw error;
+    }
+  }, [api, response, roomName, stopKeepalive]);
 
   useEffect(() => {
     if (!roomName || !api) return;
@@ -62,12 +121,21 @@ const useRoomMeeting = (
         }
         setErrorState(error);
       });
+
+    return () => {
+      stopKeepalive();
+    };
   }, [roomName, !api, reload]);
 
-  return { response, loading, error, reload: reloadHandler } as
-    | ErrorMeeting
-    | LoadingMeeting
-    | SuccessMeeting;
+  return {
+    response,
+    loading,
+    error,
+    reload: reloadHandler,
+    startKeepalive,
+    stopKeepalive,
+    endMeeting,
+  } as ErrorMeeting | LoadingMeeting | SuccessMeeting;
 };
 
 export default useRoomMeeting;

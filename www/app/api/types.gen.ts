@@ -36,6 +36,10 @@ export type DeletionStatus = {
   status: string;
 };
 
+export type EndMeetingResult = {
+  status: string;
+};
+
 export type GetTranscript = {
   id: string;
   user_id: string | null;
@@ -129,6 +133,11 @@ export type Participant = {
   id: string;
   speaker: number | null;
   name: string;
+};
+
+export type Pong = {
+  is_active: boolean;
+  active_meeting_id: string | null;
 };
 
 export type Room = {
@@ -229,6 +238,16 @@ export type ValidationError = {
   type: string;
 };
 
+export type WherebyWebhookEvent = {
+  apiVersion: string;
+  id: string;
+  createdAt: string;
+  type: string;
+  data: {
+    [key: string]: unknown;
+  };
+};
+
 export type Word = {
   text: string;
   start: number;
@@ -269,6 +288,20 @@ export type V1RoomsDeleteData = {
 };
 
 export type V1RoomsDeleteResponse = DeletionStatus;
+
+export type V1RoomsKeepAliveData = {
+  meetingId: string;
+  roomName: string;
+};
+
+export type V1RoomsKeepAliveResponse = Pong;
+
+export type V1RoomsEndMeetingData = {
+  meetingId: string;
+  roomName: string;
+};
+
+export type V1RoomsEndMeetingResponse = EndMeetingResult;
 
 export type V1RoomsCreateMeetingData = {
   roomName: string;
@@ -454,6 +487,12 @@ export type V1ZulipGetTopicsData = {
 
 export type V1ZulipGetTopicsResponse = Array<Topic>;
 
+export type V1WherebyWebhookData = {
+  requestBody: WherebyWebhookEvent;
+};
+
+export type V1WherebyWebhookResponse = unknown;
+
 export type $OpenApiTs = {
   "/metrics": {
     get: {
@@ -514,6 +553,36 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: DeletionStatus;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meeting/{meeting_id}/ping": {
+    post: {
+      req: V1RoomsKeepAliveData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Pong;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meeting/{meeting_id}/end-meeting": {
+    post: {
+      req: V1RoomsEndMeetingData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: EndMeetingResult;
         /**
          * Validation Error
          */
@@ -895,6 +964,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: Array<Topic>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/whereby": {
+    post: {
+      req: V1WherebyWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
         /**
          * Validation Error
          */

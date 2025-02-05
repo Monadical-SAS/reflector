@@ -13,7 +13,7 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
-from reflector.whereby import get_room_sessions
+from reflector.utils.lock import redis_lock
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -110,19 +110,48 @@ async def process_recording(bucket_name: str, object_key: str):
 
 @shared_task
 @asynctask
+async def process_meetings_task():
+    await process_meetings()
+
+
+async def process_meeting(meeting_id: str) -> None:
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        logger.error("Meeting not found", meeting_id=meeting_id)
+        return
+
+    async with redis_lock(f"room:{meeting.room_id}"):
+        now = datetime.utcnow()
+        ulogger = logger.bind(meeting_id=meeting.id, end_date=meeting.end_date, now=now)
+        ulogger.info("Checking meeting")
+
+        is_active = True
+
+        # Check if meeting has expired
+        if meeting.end_date <= now:
+            ulogger.warning("Meeting is over the end date, marking inactive")
+            is_active = False
+
+        # Check last ping
+        if (
+            meeting.last_active_ping
+            and (now - meeting.last_active_ping).total_seconds() > 60
+        ):
+            ulogger.warning("Meeting ping timeout exceeded, marking inactive")
+            is_active = False
+
+        ulogger.info(f"Meeting active check result: {is_active}", is_active=is_active)
+        if not is_active:
+            await meetings_controller.update_meeting(meeting.id, is_active=False)
+            ulogger.info("Meeting is deactivated")
+
+
 async def process_meetings():
     logger.info("Processing meetings")
     meetings = await meetings_controller.get_all_active()
+    logger.info(f"Found {len(meetings)} active")
+
     for meeting in meetings:
-        is_active = False
-        if meeting.end_date > datetime.utcnow():
-            response = await get_room_sessions(meeting.room_name)
-            room_sessions = response.get("results", [])
-            is_active = not room_sessions or any(
-                rs["endedAt"] is None for rs in room_sessions
-            )
-        if not is_active:
-            await meetings_controller.update_meeting(meeting.id, is_active=False)
-            logger.info("Meeting %s is deactivated", meeting.id)
+        await process_meeting(meeting.id)
 
     logger.info("Processed meetings")

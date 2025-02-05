@@ -12,6 +12,10 @@ import type {
   V1RoomsUpdateResponse,
   V1RoomsDeleteData,
   V1RoomsDeleteResponse,
+  V1RoomsKeepAliveData,
+  V1RoomsKeepAliveResponse,
+  V1RoomsEndMeetingData,
+  V1RoomsEndMeetingResponse,
   V1RoomsCreateMeetingData,
   V1RoomsCreateMeetingResponse,
   V1TranscriptsListData,
@@ -64,6 +68,8 @@ import type {
   V1ZulipGetStreamsResponse,
   V1ZulipGetTopicsData,
   V1ZulipGetTopicsResponse,
+  V1WherebyWebhookData,
+  V1WherebyWebhookResponse,
 } from "./types.gen";
 
 export class DefaultService {
@@ -167,6 +173,54 @@ export class DefaultService {
       url: "/v1/rooms/{room_id}",
       path: {
         room_id: data.roomId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Keep Alive
+   * @param data The data for the request.
+   * @param data.roomName
+   * @param data.meetingId
+   * @returns Pong Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsKeepAlive(
+    data: V1RoomsKeepAliveData,
+  ): CancelablePromise<V1RoomsKeepAliveResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_name}/meeting/{meeting_id}/ping",
+      path: {
+        room_name: data.roomName,
+        meeting_id: data.meetingId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms End Meeting
+   * @param data The data for the request.
+   * @param data.roomName
+   * @param data.meetingId
+   * @returns EndMeetingResult Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsEndMeeting(
+    data: V1RoomsEndMeetingData,
+  ): CancelablePromise<V1RoomsEndMeetingResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_name}/meeting/{meeting_id}/end-meeting",
+      path: {
+        room_name: data.roomName,
+        meeting_id: data.meetingId,
       },
       errors: {
         422: "Validation Error",
@@ -802,6 +856,27 @@ export class DefaultService {
       path: {
         stream_id: data.streamId,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Whereby Webhook
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1WherebyWebhook(
+    data: V1WherebyWebhookData,
+  ): CancelablePromise<V1WherebyWebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/whereby",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },

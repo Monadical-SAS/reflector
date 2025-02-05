@@ -123,6 +123,7 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_LOCK_DB: int = 0
     REDIS_CACHE_DB: int = 2
 
     # Secret key

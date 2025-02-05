@@ -39,6 +39,11 @@ meetings = sa.Table(
         nullable=False,
         server_default=sa.true(),
     ),
+    sa.Column(
+        "last_active_ping",
+        sa.DateTime,
+        nullable=True,
+    ),
 )
 
 
@@ -58,6 +63,7 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
+    last_active_ping: datetime | None = None
 
 
 class MeetingController:

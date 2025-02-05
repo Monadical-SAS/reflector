@@ -27,7 +27,7 @@ else:
             "schedule": 60.0,
         },
         "process_meetings": {
-            "task": "reflector.worker.process.process_meetings",
+            "task": "reflector.worker.process.process_meetings_task",
             "schedule": 60.0,
         },
     }

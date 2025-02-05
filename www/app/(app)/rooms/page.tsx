@@ -193,7 +193,7 @@ export default function RoomsList() {
         (err.body as any).detail == "Room name is not unique"
       ) {
         setNameError(
-          "This room name is already taken. Please choose a different name."
+          "This room name is already taken. Please choose a different name.",
         );
       } else {
         setNameError("An error occurred. Please try again.");
@@ -316,7 +316,7 @@ export default function RoomsList() {
                     options={roomModeOptions}
                     value={{
                       label: roomModeOptions.find(
-                        (rm) => rm.value === room.roomMode
+                        (rm) => rm.value === room.roomMode,
                       )?.label,
                       value: room.roomMode,
                     }}
@@ -335,7 +335,7 @@ export default function RoomsList() {
                     options={recordingTypeOptions}
                     value={{
                       label: recordingTypeOptions.find(
-                        (rt) => rt.value === room.recordingType
+                        (rt) => rt.value === room.recordingType,
                       )?.label,
                       value: room.recordingType,
                     }}
@@ -358,7 +358,7 @@ export default function RoomsList() {
                     options={recordingTriggerOptions}
                     value={{
                       label: recordingTriggerOptions.find(
-                        (rt) => rt.value === room.recordingTrigger
+                        (rt) => rt.value === room.recordingTrigger,
                       )?.label,
                       value: room.recordingTrigger,
                     }}

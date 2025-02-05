@@ -44,6 +44,83 @@ export default function Room(details: RoomDetails) {
     };
   }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
+  // useEffect(() => {
+  //   if (!wherebyRef.current || !roomUrl) return;
+
+  //   const handleEvent = (event: any) => {
+  //     console.log(`WEV ${event.type}`, event.detail || event);
+  //   };
+
+  //   const events = [
+  //     "ready",
+  //     "precall_check_skipped",
+  //     "precall_check_completed",
+  //     "knock",
+  //     "participantupdate",
+  //     "join",
+  //     "leave",
+  //     "participant_join",
+  //     "participant_leave",
+  //     "microphone_toggle",
+  //     "camera_toggle",
+  //     "chat_toggle",
+  //     "people_toggle",
+  //     "pip_toggle",
+  //     "deny_device_permission",
+  //     "screenshare_toggle",
+  //     "streaming_status_change",
+  //     "connection_status_change",
+  //     "meeting_end",
+  //   ];
+
+  //   const element = wherebyRef.current;
+
+  //   events.forEach((eventName) => {
+  //     element.addEventListener(eventName, handleEvent);
+  //   });
+
+  //   return () => {
+  //     events.forEach((eventName) => {
+  //       element.removeEventListener(eventName, handleEvent);
+  //     });
+  //   };
+  // }, [roomUrl, router]);
+
+  useEffect(() => {
+    if (!roomUrl) return;
+
+    const handleJoin = () => {
+      meeting.startKeepalive();
+    };
+
+    const handleLeave = () => {
+      meeting.stopKeepalive();
+    };
+
+    wherebyRef.current?.addEventListener("join", handleJoin);
+    wherebyRef.current?.addEventListener("leave", handleLeave);
+
+    return () => {
+      wherebyRef.current?.removeEventListener("join", handleJoin);
+      wherebyRef.current?.removeEventListener("leave", handleLeave);
+      meeting.stopKeepalive();
+    };
+  }, [roomUrl, meeting.startKeepalive, meeting.stopKeepalive]);
+
+  useEffect(() => {
+    if (!roomUrl) return;
+
+    const handleEndMeeting = () => {
+      meeting.endMeeting();
+    };
+
+    wherebyRef.current?.addEventListener("meeting_end", handleEndMeeting);
+
+    return () => {
+      wherebyRef.current?.removeEventListener("meeting_end", handleEndMeeting);
+    };
+  }, [roomUrl, meeting.endMeeting]);
+
   if (isLoading) {
     return (
       <Box
