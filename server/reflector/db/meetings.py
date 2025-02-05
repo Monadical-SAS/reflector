@@ -124,7 +124,6 @@ class MeetingController:
             .where(
                 sa.and_(
                     meetings.c.room_id == room.id,
-                    meetings.c.is_active,
                     meetings.c.end_date > current_time,
                 )
             )
