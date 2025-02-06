@@ -13,7 +13,7 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
-from reflector.utils.lock import redis_lock
+from reflector.utils.lock import room_lock
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -114,13 +114,13 @@ async def process_meetings_task():
     await process_meetings()
 
 
-async def process_meeting(meeting_id: str) -> None:
-    meeting = await meetings_controller.get_by_id(meeting_id)
-    if not meeting:
-        logger.error("Meeting not found", meeting_id=meeting_id)
-        return
+async def process_meeting(meeting_id: str, room_id: str | None) -> None:
+    async with room_lock(f"room:{room_id}"):
+        meeting = await meetings_controller.get_by_id(meeting_id)
+        if not meeting:
+            logger.error("Meeting not found", meeting_id=meeting_id)
+            return
 
-    async with redis_lock(f"room:{meeting.room_id}"):
         now = datetime.utcnow()
         ulogger = logger.bind(meeting_id=meeting.id, end_date=meeting.end_date, now=now)
         ulogger.info("Checking meeting")
@@ -152,6 +152,6 @@ async def process_meetings():
     logger.info(f"Found {len(meetings)} active")
 
     for meeting in meetings:
-        await process_meeting(meeting.id)
+        await process_meeting(meeting.id, meeting.room_id)
 
     logger.info("Processed meetings")

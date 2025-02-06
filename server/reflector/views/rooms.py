@@ -11,7 +11,7 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
-from reflector.utils.lock import redis_lock
+from reflector.utils.lock import room_lock
 from reflector.whereby import create_meeting, upload_logo
 
 router = APIRouter()
@@ -226,7 +226,7 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    async with redis_lock(f"room:{room.id}"):
+    async with room_lock(room.id):
         current_time = datetime.utcnow()
         ulogger = logger.bind(user_id=user_id, room=room, current_time=current_time)
         meeting = await meetings_controller.get_active(
