@@ -164,7 +164,7 @@ async def rooms_keep_alive(
         # No meeting found, so previous is not active and there is no new one
         ulogger.warning(
             "No active meeting found for user",
-            active_meeting_id=meeting.id,
+            active_meeting_id=None,
             user_meeting_id=meeting_id,
         )
         return Pong(is_active=False, active_meeting_id=None)
@@ -173,7 +173,7 @@ async def rooms_keep_alive(
         # Meeting match and still active, let's push the active part
         await meetings_controller.update_meeting(
             meeting_id=meeting.id,
-            last_ping_update=current_time,
+            last_active_ping=current_time,
         )
         return Pong(is_active=True, active_meeting_id=meeting_id)
 
