@@ -1,7 +1,7 @@
 from datetime import timedelta
 from urllib.parse import urlparse
 
-import requests
+import httpx
 from reflector.db.transcripts import Transcript
 from reflector.settings import settings
 
@@ -10,77 +10,81 @@ class InvalidMessageError(Exception):
     pass
 
 
-def get_zulip_topics(stream_id: int) -> list[dict]:
+async def get_zulip_topics(stream_id: int) -> list[dict]:
     try:
-        response = requests.get(
-            f"https://{settings.ZULIP_REALM}/api/v1/users/me/{stream_id}/topics",
-            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://{settings.ZULIP_REALM}/api/v1/users/me/{stream_id}/topics",
+                auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+            )
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        return response.json().get("topics", [])
-    except requests.RequestException as error:
+            return response.json().get("topics", [])
+    except httpx.RequestError as error:
         raise Exception(f"Failed to get topics: {error}")
 
 
-def get_zulip_streams() -> list[dict]:
+async def get_zulip_streams() -> list[dict]:
     try:
-        response = requests.get(
-            f"https://{settings.ZULIP_REALM}/api/v1/streams",
-            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://{settings.ZULIP_REALM}/api/v1/streams",
+                auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+            )
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        return response.json().get("streams", [])
-    except requests.RequestException as error:
+            return response.json().get("streams", [])
+    except httpx.RequestError as error:
         raise Exception(f"Failed to get streams: {error}")
 
 
-def send_message_to_zulip(stream: str, topic: str, content: str):
+async def send_message_to_zulip(stream: str, topic: str, content: str):
     try:
-        response = requests.post(
-            f"https://{settings.ZULIP_REALM}/api/v1/messages",
-            data={
-                "type": "stream",
-                "to": stream,
-                "topic": topic,
-                "content": content,
-            },
-            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://{settings.ZULIP_REALM}/api/v1/messages",
+                data={
+                    "type": "stream",
+                    "to": stream,
+                    "topic": topic,
+                    "content": content,
+                },
+                auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        return response.json()
-    except requests.RequestException as error:
+            return response.json()
+    except httpx.RequestError as error:
         raise Exception(f"Failed to send message to Zulip: {error}")
 
 
-def update_zulip_message(message_id: int, stream: str, topic: str, content: str):
+async def update_zulip_message(message_id: int, stream: str, topic: str, content: str):
     try:
-        response = requests.patch(
-            f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
-            data={
-                "topic": topic,
-                "content": content,
-            },
-            auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
+                data={
+                    "topic": topic,
+                    "content": content,
+                },
+                auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
 
-        if (
-            response.status_code == 400
-            and response.json()["msg"] == "Invalid message(s)"
-        ):
-            raise InvalidMessageError(f"There is no message with id: {message_id}")
+            if (
+                response.status_code == 400
+                and response.json()["msg"] == "Invalid message(s)"
+            ):
+                raise InvalidMessageError(f"There is no message with id: {message_id}")
 
-        response.raise_for_status()
+            response.raise_for_status()
 
-        return response.json()
-    except requests.RequestException as error:
+            return response.json()
+    except httpx.RequestError as error:
         raise Exception(f"Failed to update Zulip message: {error}")
 
 
@@ -101,7 +105,7 @@ def get_zulip_message(transcript: Transcript, include_topics: bool):
         topic_text += "```\n\n"
 
     summary = "```spoiler Summary\n"
-    summary += transcript.long_summary
+    summary += transcript.long_summary or "No summary available"
     summary += "\n```\n\n"
 
     message = header_text + summary + topic_text + "-----\n"

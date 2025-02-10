@@ -580,7 +580,7 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
         message_updated = False
         if transcript.zulip_message_id:
             try:
-                update_zulip_message(
+                await update_zulip_message(
                     transcript.zulip_message_id,
                     room.zulip_stream,
                     room.zulip_topic,
@@ -592,7 +592,7 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
                     f"Failed to update zulip message with id {transcript.zulip_message_id}"
                 )
         if not message_updated:
-            response = send_message_to_zulip(
+            response = await send_message_to_zulip(
                 room.zulip_stream, room.zulip_topic, message
             )
             await transcripts_controller.update(
