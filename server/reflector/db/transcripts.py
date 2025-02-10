@@ -16,7 +16,7 @@ from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import Storage
 from sqlalchemy import Enum
-from sqlalchemy.sql import false
+from sqlalchemy.sql import false, or_
 
 
 class SourceKind(enum.StrEnum):
@@ -334,7 +334,11 @@ class TranscriptController:
         )
 
         if user_id:
-            query = query.where(transcripts.c.user_id == user_id)
+            query = query.where(
+                or_(transcripts.c.user_id == user_id, rooms.c.is_shared)
+            )
+        else:
+            query = query.where(rooms.c.is_shared)
 
         if source_kind:
             query = query.where(transcripts.c.source_kind == source_kind)
