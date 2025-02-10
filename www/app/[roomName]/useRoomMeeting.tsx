@@ -3,6 +3,7 @@ import { useError } from "../(errors)/errorContext";
 import { Meeting } from "../api";
 import { shouldShowError } from "../lib/errorUtils";
 import useApi from "../lib/useApi";
+import { notFound } from "next/navigation";
 
 type ErrorMeeting = {
   error: Error;
@@ -52,7 +53,7 @@ const useRoomMeeting = (
       })
       .catch((error) => {
         const shouldShowHuman = shouldShowError(error);
-        if (shouldShowHuman) {
+        if (shouldShowHuman && error.status !== 404) {
           setError(
             error,
             "There was an error loading the meeting. Please try again by refreshing the page."
