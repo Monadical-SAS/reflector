@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.db.transcripts import generate_uuid4
-from sqlalchemy.sql import false
+from sqlalchemy.sql import false, or_
 
 rooms = sqlalchemy.Table(
     "room",
@@ -77,7 +77,9 @@ class RoomController:
         """
         query = rooms.select()
         if user_id is not None:
-            query = query.where(rooms.c.user_id == user_id)
+            query = query.where(or_(rooms.c.user_id == user_id, rooms.c.is_shared))
+        else:
+            query = query.where(rooms.c.is_shared)
 
         if order_by is not None:
             field = getattr(rooms.c, order_by[1:])

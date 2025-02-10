@@ -443,7 +443,7 @@ export default function RoomsList() {
           </Modal>
         </Flex>
 
-        <VStack align="start" mb={6} pt={4} gap={4}>
+        <VStack align="start" mb={10} pt={4} gap={4}>
           <Heading size="md">My Rooms</Heading>
           {myRooms.length > 0 ? (
             myRooms.map((roomData) => (
@@ -497,7 +497,7 @@ export default function RoomsList() {
           )}
         </VStack>
 
-        <VStack align="start">
+        <VStack align="start" pt={4} gap={4}>
           <Heading size="md">Shared Rooms</Heading>
           {sharedRooms.length > 0 ? (
             sharedRooms.map((roomData) => (
