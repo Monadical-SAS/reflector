@@ -362,13 +362,15 @@ async def transcript_post_to_zulip(
     message_updated = False
     if transcript.zulip_message_id:
         try:
-            update_zulip_message(transcript.zulip_message_id, stream, topic, content)
+            await update_zulip_message(
+                transcript.zulip_message_id, stream, topic, content
+            )
             message_updated = True
         except InvalidMessageError:
             pass
 
     if not message_updated:
-        response = send_message_to_zulip(stream, topic, content)
+        response = await send_message_to_zulip(stream, topic, content)
         await transcripts_controller.update(
             transcript, {"zulip_message_id": response["id"]}
         )
