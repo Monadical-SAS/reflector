@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 
 export type RoomDetails = {
@@ -33,6 +34,17 @@ export default function Room(details: RoomDetails) {
   const handleConsent = (consent: boolean) => {
     setConsentGiven(consent);
   };
+
+  useEffect(() => {
+    if (
+      !isLoading &&
+      meeting?.error &&
+      "status" in meeting.error &&
+      meeting.error.status === 404
+    ) {
+      notFound();
+    }
+  }, [isLoading, meeting?.error]);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !roomUrl) return;

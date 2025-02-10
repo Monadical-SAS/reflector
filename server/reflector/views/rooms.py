@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta
-from http.client import HTTPException
 from typing import Annotated, Optional
 
 import reflector.auth as auth
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
