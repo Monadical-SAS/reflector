@@ -27,7 +27,7 @@ async def zulip_get_streams(
     if not user:
         raise HTTPException(status_code=403, detail="Authentication required")
 
-    streams = get_zulip_streams()
+    streams = await get_zulip_streams()
     return streams
 
 
@@ -42,5 +42,5 @@ async def zulip_get_topics(
     if not user:
         raise HTTPException(status_code=403, detail="Authentication required")
 
-    topics = get_zulip_topics(stream_id)
+    topics = await get_zulip_topics(stream_id)
     return topics
