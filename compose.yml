@@ -5,7 +5,7 @@ services:
     ports:
       - 1250:1250
     volumes:
-      - ./server/data/:/app/data/
+      - ./server/:/app/
     env_file:
       - ./server/.env
     environment:
@@ -15,7 +15,7 @@ services:
     build:
       context: server
     volumes:
-      - ./server/data/:/app/data/
+      - ./server/:/app/
     env_file:
       - ./server/.env
     environment:
@@ -25,7 +25,7 @@ services:
     build:
       context: server
     volumes:
-      - ./server/data/:/app/data/
+      - ./server/:/app/
     env_file:
       - ./server/.env
     environment:
