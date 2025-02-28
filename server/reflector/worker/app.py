@@ -1,6 +1,7 @@
 import celery
 import structlog
 from celery import Celery
+from celery.schedules import crontab
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)
@@ -29,6 +30,10 @@ else:
         "process_meetings": {
             "task": "reflector.worker.process.process_meetings",
             "schedule": 60.0,
+        },
+        "reprocess_failed_recordings": {
+            "task": "reflector.worker.process.reprocess_failed_recordings",
+            "schedule": crontab(hour=5, minute=0),  # Midnight EST
         },
     }
 
