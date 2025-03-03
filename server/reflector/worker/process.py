@@ -192,7 +192,7 @@ async def reprocess_failed_recordings():
                         f"Removed invalid transcript for meeting: {meeting.id}"
                     )
 
-                if transcript is not None and transcript.status == "error":
+                if transcript is None or transcript.status == "error":
                     logger.info(
                         f"Queueing recording for processing: {object_key}, meeting {meeting.id}"
                     )
