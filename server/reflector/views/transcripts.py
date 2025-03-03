@@ -7,7 +7,9 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field
+from reflector.db.meetings import meetings_controller
 from reflector.db.migrate_user import migrate_user
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptParticipant,
@@ -273,9 +275,16 @@ async def transcript_delete(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     user_id = user["sub"] if user else None
-    transcript = await transcripts_controller.get_by_id(transcript_id, user_id=user_id)
+    transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
+
+    if transcript.meeting_id:
+        meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+        room = await rooms_controller.get_by_id(meeting.room_id)
+        if room.is_shared:
+            user_id = None
+
     await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
     return DeletionStatus(status="ok")
 
