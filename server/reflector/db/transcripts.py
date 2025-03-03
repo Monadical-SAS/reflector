@@ -488,13 +488,20 @@ class TranscriptController:
         """
         Remove a transcript by id
         """
-        transcript = await self.get_by_id(transcript_id, user_id=user_id)
+        transcript = await self.get_by_id(transcript_id)
         if not transcript:
             return
         if user_id is not None and transcript.user_id != user_id:
             return
         transcript.unlink()
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
+        await database.execute(query)
+
+    async def remove_by_meeting_id(self, meeting_id: str):
+        """
+        Remove a transcript by meeting_id
+        """
+        query = transcripts.delete().where(transcripts.c.meeting_id == meeting_id)
         await database.execute(query)
 
     @asynccontextmanager
