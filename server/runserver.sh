@@ -3,9 +3,9 @@
 if [ -f "/venv/bin/activate" ]; then
     source /venv/bin/activate
 fi
-alembic upgrade head
 
 if [ "${ENTRYPOINT}" = "server" ]; then
+    alembic upgrade head
     python -m reflector.app
 elif [ "${ENTRYPOINT}" = "worker" ]; then
     celery -A reflector.worker.app worker --loglevel=info
