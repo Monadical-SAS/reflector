@@ -63,6 +63,7 @@ transcripts = sqlalchemy.Table(
         "meeting_id",
         sqlalchemy.String,
     ),
+    sqlalchemy.Column("recording_id", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer, nullable=True),
     sqlalchemy.Column(
         "source_kind",
@@ -165,6 +166,7 @@ class Transcript(BaseModel):
     audio_location: str = "local"
     reviewed: bool = False
     meeting_id: str | None = None
+    recording_id: str | None = None
     zulip_message_id: int | None = None
     source_kind: SourceKind
 
@@ -325,14 +327,17 @@ class TranscriptController:
         - `search_term`: filter transcripts by search term
         """
         from reflector.db.meetings import meetings
+        from reflector.db.recordings import recordings
         from reflector.db.rooms import rooms
 
         query = (
             transcripts.select()
-            .join(meetings, transcripts.c.meeting_id == meetings.c.id, isouter=True)
+            .join(
+                recordings, transcripts.c.recording_id == recordings.c.id, isouter=True
+            )
+            .join(meetings, recordings.c.meeting_id == meetings.c.id, isouter=True)
             .join(rooms, meetings.c.room_id == rooms.c.id, isouter=True)
         )
-
         if user_id:
             query = query.where(
                 or_(transcripts.c.user_id == user_id, rooms.c.is_shared)
@@ -387,11 +392,13 @@ class TranscriptController:
             return None
         return Transcript(**result)
 
-    async def get_by_meeting_id(self, meeting_id: str, **kwargs) -> Transcript | None:
+    async def get_by_recording_id(
+        self, recording_id: str, **kwargs
+    ) -> Transcript | None:
         """
-        Get a transcript by meeting_id
+        Get a transcript by recording_id
         """
-        query = transcripts.select().where(transcripts.c.meeting_id == meeting_id)
+        query = transcripts.select().where(transcripts.c.recording_id == recording_id)
         if "user_id" in kwargs:
             query = query.where(transcripts.c.user_id == kwargs["user_id"])
         result = await database.fetch_one(query)
@@ -447,7 +454,7 @@ class TranscriptController:
         source_language: str = "en",
         target_language: str = "en",
         user_id: str | None = None,
-        meeting_id: str | None = None,
+        recording_id: str | None = None,
         share_mode: str = "private",
     ):
         """
@@ -459,7 +466,7 @@ class TranscriptController:
             source_language=source_language,
             target_language=target_language,
             user_id=user_id,
-            meeting_id=meeting_id,
+            recording_id=recording_id,
             share_mode=share_mode,
         )
         query = transcripts.insert().values(**transcript.model_dump())
@@ -497,11 +504,11 @@ class TranscriptController:
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
         await database.execute(query)
 
-    async def remove_by_meeting_id(self, meeting_id: str):
+    async def remove_by_recording_id(self, recording_id: str):
         """
-        Remove a transcript by meeting_id
+        Remove a transcript by recording_id
         """
-        query = transcripts.delete().where(transcripts.c.meeting_id == meeting_id)
+        query = transcripts.delete().where(transcripts.c.recording_id == recording_id)
         await database.execute(query)
 
     @asynccontextmanager
