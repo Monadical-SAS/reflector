@@ -184,29 +184,13 @@ async def reprocess_failed_recordings():
                 if not (object_key.endswith(".mp4")):
                     continue
 
-                recorded_at = datetime.fromisoformat(object_key[37:57])
                 recording = await recordings_controller.get_by_object_key(
                     bucket_name, object_key
                 )
                 if not recording:
-                    recording = await recordings_controller.create(
-                        Recording(
-                            bucket_name=bucket_name,
-                            object_key=object_key,
-                            recorded_at=recorded_at,
-                            meeting_id=meeting.id,
-                        )
-                    )
-
-                room_name = f"/{object_key[:36]}"
-                meeting = await meetings_controller.get_by_room_name(room_name)
-                if not meeting:
-                    logger.warning(f"No meeting found for recording: {object_key}")
-                    continue
-
-                room = await rooms_controller.get_by_id(meeting.room_id)
-                if not room:
-                    logger.warning(f"No room found for meeting: {meeting.id}")
+                    logger.info(f"Queueing recording for processing: {object_key}")
+                    process_recording.delay(bucket_name, object_key)
+                    reprocessed_count += 1
                     continue
 
                 transcript = None
@@ -221,9 +205,7 @@ async def reprocess_failed_recordings():
                     )
 
                 if transcript is None or transcript.status == "error":
-                    logger.info(
-                        f"Queueing recording for processing: {object_key}, meeting {meeting.id}"
-                    )
+                    logger.info(f"Queueing recording for processing: {object_key}")
                     process_recording.delay(bucket_name, object_key)
                     reprocessed_count += 1
 
