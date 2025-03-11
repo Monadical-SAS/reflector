@@ -8,6 +8,7 @@ metadata = sqlalchemy.MetaData()
 
 # import models
 import reflector.db.meetings  # noqa
+import reflector.db.recordings  # noqa
 import reflector.db.rooms  # noqa
 import reflector.db.transcripts  # noqa
 

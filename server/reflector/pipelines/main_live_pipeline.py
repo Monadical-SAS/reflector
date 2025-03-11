@@ -18,6 +18,7 @@ from contextlib import asynccontextmanager
 from celery import chord, group, shared_task
 from pydantic import BaseModel
 from reflector.db.meetings import meetings_controller
+from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     Transcript,
@@ -561,13 +562,22 @@ async def pipeline_summaries(transcript: Transcript, logger: Logger):
 async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
     logger.info("Starting post to zulip")
 
-    if not transcript.meeting_id:
-        logger.info("Transcript has no meeting")
+    if not transcript.recording_id:
+        logger.info("Transcript has no recording")
         return
 
-    meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+    recording = await recordings_controller.get_by_id(transcript.recording_id)
+    if not recording:
+        logger.info("Recording not found")
+        return
+
+    if not recording.meeting_id:
+        logger.info("Recording has no meeting")
+        return
+
+    meeting = await meetings_controller.get_by_id(recording.meeting_id)
     if not meeting:
-        logger.info("No meeting found for this transcript")
+        logger.info("No meeting found for this recording")
         return
 
     room = await rooms_controller.get_by_id(meeting.room_id)
