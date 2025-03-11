@@ -10,6 +10,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 from reflector.db.meetings import meetings_controller
+from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
@@ -65,12 +66,25 @@ def process_messages():
 async def process_recording(bucket_name: str, object_key: str):
     logger.info("Processing recording: %s/%s", bucket_name, object_key)
 
-    # extract a guid from the object key
+    # extract a guid and a datetime from the object key
     room_name = f"/{object_key[:36]}"
+    recorded_at = datetime.fromisoformat(object_key[37:57])
+
     meeting = await meetings_controller.get_by_room_name(room_name)
     room = await rooms_controller.get_by_id(meeting.room_id)
 
-    transcript = await transcripts_controller.get_by_meeting_id(meeting.id)
+    recording = await recordings_controller.get_by_object_key(bucket_name, object_key)
+    if not recording:
+        recording = await recordings_controller.create(
+            Recording(
+                bucket_name=bucket_name,
+                object_key=object_key,
+                recorded_at=recorded_at,
+                meeting_id=meeting.id,
+            )
+        )
+
+    transcript = await transcripts_controller.get_by_recording_id(recording.id)
     if transcript:
         await transcripts_controller.update(
             transcript,
@@ -85,7 +99,7 @@ async def process_recording(bucket_name: str, object_key: str):
             source_language="en",
             target_language="en",
             user_id=room.user_id,
-            meeting_id=meeting.id,
+            recording_id=recording.id,
             share_mode="public",
         )
 
@@ -155,10 +169,10 @@ async def reprocess_failed_recordings():
     )
 
     reprocessed_count = 0
-
     try:
         paginator = s3.get_paginator("list_objects_v2")
-        pages = paginator.paginate(Bucket=settings.AWS_WHEREBY_S3_BUCKET)
+        bucket_name = settings.AWS_WHEREBY_S3_BUCKET
+        pages = paginator.paginate(Bucket=bucket_name)
 
         for page in pages:
             if "Contents" not in page:
@@ -170,33 +184,29 @@ async def reprocess_failed_recordings():
                 if not (object_key.endswith(".mp4")):
                     continue
 
-                room_name = f"/{object_key[:36]}"
-                meeting = await meetings_controller.get_by_room_name(room_name)
-                if not meeting:
-                    logger.warning(f"No meeting found for recording: {object_key}")
-                    continue
-
-                room = await rooms_controller.get_by_id(meeting.room_id)
-                if not room:
-                    logger.warning(f"No room found for meeting: {meeting.id}")
+                recording = await recordings_controller.get_by_object_key(
+                    bucket_name, object_key
+                )
+                if not recording:
+                    logger.info(f"Queueing recording for processing: {object_key}")
+                    process_recording.delay(bucket_name, object_key)
+                    reprocessed_count += 1
                     continue
 
                 transcript = None
                 try:
-                    transcript = await transcripts_controller.get_by_meeting_id(
-                        meeting.id
+                    transcript = await transcripts_controller.get_by_recording_id(
+                        recording.id
                     )
                 except ValidationError:
-                    await transcripts_controller.remove_by_meeting_id(meeting.id)
+                    await transcripts_controller.remove_by_recording_id(recording.id)
                     logger.warning(
-                        f"Removed invalid transcript for meeting: {meeting.id}"
+                        f"Removed invalid transcript for recording: {recording.id}"
                     )
 
                 if transcript is None or transcript.status == "error":
-                    logger.info(
-                        f"Queueing recording for processing: {object_key}, meeting {meeting.id}"
-                    )
-                    process_recording.delay(settings.AWS_WHEREBY_S3_BUCKET, object_key)
+                    logger.info(f"Queueing recording for processing: {object_key}")
+                    process_recording.delay(bucket_name, object_key)
                     reprocessed_count += 1
 
     except Exception as e:
