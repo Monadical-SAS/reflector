@@ -53,7 +53,7 @@ app = modal.App("reflector-vllm-hermes3")
     image=vllm_image,
     gpu=modal.gpu.A100(count=N_GPU, size="40GB"),
     timeout=60 * 5,
-    container_idle_timeout=60 * 5,
+    scaledown_window=60 * 5,
     allow_concurrent_inputs=100,
     secrets=[
         modal.Secret.from_name("reflector-gpu"),
