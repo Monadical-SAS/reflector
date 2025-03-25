@@ -52,7 +52,7 @@ image = (
 @app.cls(
     gpu="A10G",
     timeout=5 * MINUTES,
-    container_idle_timeout=5 * MINUTES,
+    scaledown_window=5 * MINUTES,
     allow_concurrent_inputs=6,
     image=image,
     volumes={MODELS_DIR: volume},
@@ -107,7 +107,7 @@ class Transcriber:
 
 
 @app.function(
-    container_idle_timeout=60,
+    scaledown_window=60,
     timeout=60,
     allow_concurrent_inputs=40,
     secrets=[
