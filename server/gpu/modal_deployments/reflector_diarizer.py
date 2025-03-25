@@ -72,7 +72,7 @@ diarizer_image = (
 @app.cls(
     gpu=modal.gpu.A100(size="40GB"),
     timeout=60 * 30,
-    container_idle_timeout=60,
+    scaledown_window=60,
     allow_concurrent_inputs=1,
     image=diarizer_image,
 )
@@ -126,7 +126,7 @@ class Diarizer:
 
 @app.function(
     timeout=60 * 10,
-    container_idle_timeout=60 * 3,
+    scaledown_window=60 * 3,
     allow_concurrent_inputs=40,
     secrets=[
         Secret.from_name("reflector-gpu"),
