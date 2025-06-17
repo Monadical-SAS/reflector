@@ -6,7 +6,7 @@ import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from reflector.db import database, metadata
-from reflector.db.transcripts import generate_uuid4
+from reflector.utils import generate_uuid4
 from sqlalchemy.sql import false, or_
 
 rooms = sqlalchemy.Table(

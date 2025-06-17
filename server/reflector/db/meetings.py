@@ -47,20 +47,18 @@ meeting_consent = sa.Table(
     metadata,
     sa.Column("id", sa.String, primary_key=True),
     sa.Column("meeting_id", sa.String, sa.ForeignKey("meeting.id")),
-    sa.Column("user_identifier", sa.String, nullable=True),
+    sa.Column("user_id", sa.String, nullable=True),
     sa.Column("consent_given", sa.Boolean),
     sa.Column("consent_timestamp", sa.DateTime),
-    sa.Column("user_agent", sa.String, nullable=True),
 )
 
 
 class MeetingConsent(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     meeting_id: str
-    user_identifier: str | None = None
+    user_id: str | None = None
     consent_given: bool
     consent_timestamp: datetime
-    user_agent: str | None = None
 
 
 class Meeting(BaseModel):
@@ -195,38 +193,34 @@ class MeetingConsentController:
         results = await database.fetch_all(query)
         return [MeetingConsent(**result) for result in results]
     
-    async def get_by_meeting_and_user(self, meeting_id: str, user_identifier: str) -> MeetingConsent | None:
+    async def get_by_meeting_and_user(self, meeting_id: str, user_id: str) -> MeetingConsent | None:
         """Get existing consent for a specific user and meeting"""
         query = meeting_consent.select().where(
             meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.user_identifier == user_identifier
+            meeting_consent.c.user_id == user_id
         )
         result = await database.fetch_one(query)
         return MeetingConsent(**result) if result else None
-    
-    async def create_or_update(self, consent: MeetingConsent) -> MeetingConsent:
+
+    async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
         """Create new consent or update existing one for authenticated users"""
-        if consent.user_identifier:
+        if consent.user_id:
             # For authenticated users, check if consent already exists
-            existing = await self.get_by_meeting_and_user(consent.meeting_id, consent.user_identifier)
+            # not transactional but we're ok with that; the consents ain't deleted anyways
+            existing = await self.get_by_meeting_and_user(consent.meeting_id, consent.user_id)
             if existing:
-                # Update existing consent
                 query = meeting_consent.update().where(
                     meeting_consent.c.id == existing.id
                 ).values(
                     consent_given=consent.consent_given,
                     consent_timestamp=consent.consent_timestamp,
-                    user_agent=consent.user_agent
                 )
                 await database.execute(query)
                 
-                # Return updated consent object
                 existing.consent_given = consent.consent_given
                 existing.consent_timestamp = consent.consent_timestamp
-                existing.user_agent = consent.user_agent
                 return existing
-        
-        # For anonymous users or first-time authenticated users, create new record
+
         query = meeting_consent.insert().values(**consent.model_dump())
         await database.execute(query)
         return consent

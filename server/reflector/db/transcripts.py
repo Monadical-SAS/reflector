@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
-from uuid import uuid4
+from reflector.utils import generate_uuid4
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.storage import Storage
+from reflector.storage import Storage, get_transcripts_storage
 from sqlalchemy import Enum
 from sqlalchemy.sql import false, or_
 
@@ -72,21 +72,9 @@ transcripts = sqlalchemy.Table(
     ),
 )
 
-
-def generate_uuid4() -> str:
-    return str(uuid4())
-
-
 def generate_transcript_name() -> str:
     now = datetime.utcnow()
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
-
-
-def get_storage() -> Storage:
-    return Storage.get_instance(
-        name=settings.TRANSCRIPT_STORAGE_BACKEND,
-        settings_prefix="TRANSCRIPT_STORAGE_",
-    )
 
 
 class AudioWaveform(BaseModel):
@@ -257,7 +245,7 @@ class Transcript(BaseModel):
         raise Exception(f"Unknown audio location {self.audio_location}")
 
     async def _generate_storage_audio_link(self) -> str:
-        return await get_storage().get_file_url(self.storage_audio_path)
+        return await get_transcripts_storage().get_file_url(self.storage_audio_path)
 
     def _generate_local_audio_link(self) -> str:
         # we need to create an url to be used for diarization
@@ -558,7 +546,7 @@ class TranscriptController:
 
         if transcript.audio_location == "local":
             # store the audio on external storage if it's not already there
-            await get_storage().put_file(
+            await get_transcripts_storage().put_file(
                 transcript.storage_audio_path,
                 transcript.audio_mp3_filename.read_bytes(),
             )
@@ -574,7 +562,7 @@ class TranscriptController:
         Download audio from storage
         """
         transcript.audio_mp3_filename.write_bytes(
-            await get_storage().get_file(
+            await get_transcripts_storage().get_file(
                 transcript.storage_audio_path,
             )
         )
