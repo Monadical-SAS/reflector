@@ -9,10 +9,11 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
-from reflector.db.meetings import meetings_controller
+from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
+from reflector.storage import get_storage
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
@@ -130,6 +131,51 @@ async def process_recording(bucket_name: str, object_key: str):
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     task_pipeline_process.delay(transcript_id=transcript.id)
+    
+    # Check if any participant denied consent after transcript processing is complete
+    should_delete = await meeting_consent_controller.has_any_denial(meeting.id)
+    if should_delete:
+        logger.info(f"Deleting audio files for {object_key} due to consent denial")
+        await delete_audio_files_only(transcript, bucket_name, object_key)
+
+
+async def delete_audio_files_only(transcript, bucket_name: str, object_key: str):
+    """Delete ONLY audio files from all locations, keep transcript data"""
+    
+    try:
+        # 1. Delete original Whereby recording from S3
+        s3_whereby = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
+        )
+        s3_whereby.delete_object(Bucket=bucket_name, Key=object_key)
+        logger.info(f"Deleted original Whereby recording: {bucket_name}/{object_key}")
+        
+        # 2. Delete processed audio from transcript storage S3 bucket
+        if transcript.audio_location == "storage":
+            storage = get_storage()
+            await storage.delete_file(transcript.storage_audio_path)
+            logger.info(f"Deleted processed audio from storage: {transcript.storage_audio_path}")
+        
+        # 3. Delete local audio files (if any remain)
+        if hasattr(transcript, 'audio_mp3_filename') and transcript.audio_mp3_filename:
+            transcript.audio_mp3_filename.unlink(missing_ok=True)
+        if hasattr(transcript, 'audio_wav_filename') and transcript.audio_wav_filename:
+            transcript.audio_wav_filename.unlink(missing_ok=True)
+        
+        upload_path = transcript.data_path / f"upload{os.path.splitext(object_key)[1]}"
+        upload_path.unlink(missing_ok=True)
+        
+        # 4. Update transcript to reflect audio deletion (keep all other data)
+        await transcripts_controller.update(transcript, {
+            'audio_location_deleted': True
+        })
+        
+        logger.info(f"Deleted all audio files for transcript {transcript.id}, kept transcript data")
+        
+    except Exception as e:
+        logger.error(f"Failed to delete audio files for {object_key}: {str(e)}")
 
 
 @shared_task

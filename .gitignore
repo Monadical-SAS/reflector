@@ -9,4 +9,4 @@ dump.rdb
 ngrok.log
 .claude/settings.local.json
 restart-dev.sh
-backend-output.log
+*.log
