@@ -13,8 +13,6 @@ import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
 import LiveTrancription from "../../liveTranscription";
-import AudioConsentDialog from "../../../rooms/audioConsentDialog";
-import useApi from "../../../../lib/useApi";
 
 type TranscriptDetails = {
   params: {
@@ -26,9 +24,6 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   const transcript = useTranscript(details.params.transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
-  const [consentStatus, setConsentStatus] = useState<string>('');
-  const api = useApi();
 
   const webSockets = useWebSockets(details.params.transcriptId);
 
@@ -69,60 +64,14 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     };
   }, []);
 
-  // Show consent dialog when recording starts and meeting_id is available
-  useEffect(() => {
-    if (status === "recording" && transcript.response?.meeting_id && !consentStatus) {
-      setShowConsentDialog(true);
-    }
-  }, [status, transcript.response?.meeting_id, consentStatus]);
-
-  const handleConsentResponse = async (consentGiven: boolean) => {
-    const meetingId = transcript.response?.meeting_id;
-    if (!meetingId || !api) {
-      console.error('No meeting_id available or API not initialized');
-      return;
-    }
-
-    try {
-      // Use a simple user identifier - could be improved with actual user ID
-      const userIdentifier = `user_${Date.now()}`;
-      
-      const response = await fetch(`/v1/meetings/${meetingId}/consent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          consent_given: consentGiven,
-          user_identifier: userIdentifier
-        })
-      });
-
-      if (response.ok) {
-        setConsentStatus(consentGiven ? 'given' : 'denied');
-        console.log('Consent recorded successfully');
-      } else {
-        console.error('Failed to record consent');
-      }
-    } catch (error) {
-      console.error('Error recording consent:', error);
-    }
-  };
-
   return (
-    <>
-      <AudioConsentDialog
-        isOpen={showConsentDialog}
-        onClose={() => setShowConsentDialog(false)}
-        onConsent={handleConsentResponse}
-      />
-      <Grid
-        templateColumns="1fr"
-        templateRows="auto minmax(0, 1fr) "
-        gap={4}
-        mt={4}
-        mb={4}
-      >
+    <Grid
+      templateColumns="1fr"
+      templateRows="auto minmax(0, 1fr) "
+      gap={4}
+      mt={4}
+      mb={4}
+    >
       {status == "processing" ? (
         <WaveformLoading />
       ) : (
@@ -175,7 +124,6 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         </Flex>
       </VStack>
     </Grid>
-    </>
   );
 };
 
