@@ -18,7 +18,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create meeting_consent table
     op.create_table(
         'meeting_consent',
         sa.Column('id', sa.String(), nullable=False),
@@ -32,5 +31,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Drop meeting_consent table
     op.drop_table('meeting_consent')
