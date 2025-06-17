@@ -1,2 +1,4 @@
-- non-auth user consent - store on frontend per session? per meeting? (get meeting from the iframe)
-- consent field userIdentity itself - optional
+- consent popup itself - make much less invasive, somewhere in the corner
+- non-auth user consent AND AUTH user consent - store on frontend per session - per meeting? (get meeting from the iframe)
+- actually delete aws
+- add externalId to the iframe with the logged in user

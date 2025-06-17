@@ -177,6 +177,8 @@ const TranscriptCreate = () => {
                     value={targetLanguage}
                     onChange={onLanguageChange}
                     placeholder="Choose your language"
+                    onBlur={() => {}}
+                    onFocus={() => {}}
                   />
                 </Box>
                 {isClient && !loading ? (

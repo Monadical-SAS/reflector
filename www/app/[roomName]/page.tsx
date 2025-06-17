@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import AudioConsentDialog from "../(app)/rooms/audioConsentDialog";
 import { DomainContext } from "../domainContext";
+import { useRecordingConsent } from "../recordingConsentContext";
 import useSessionAccessToken from "../lib/useSessionAccessToken";
 import useSessionUser from "../lib/useSessionUser";
 
@@ -25,7 +26,8 @@ export default function Room(details: RoomDetails) {
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const [showConsentDialog, setShowConsentDialog] = useState(false);
-  const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const { state: consentState, touch, hasConsent } = useRecordingConsent();
   const { api_url } = useContext(DomainContext);
   const { accessToken } = useSessionAccessToken();
   const { id: userId } = useSessionUser();
@@ -34,6 +36,8 @@ export default function Room(details: RoomDetails) {
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
     : meeting?.response?.room_url;
+
+  const meetingId = meeting?.response?.id;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
@@ -48,9 +52,9 @@ export default function Room(details: RoomDetails) {
     return null;
   }, [isAuthenticated, userId]);
 
-  const handleConsent = useCallback(async (given: boolean) => {
-    setConsentGiven(given);
-    setShowConsentDialog(false); // Close dialog after consent is given
+  const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
+    setConsentLoading(true);
+    setShowConsentDialog(false); // Close dialog immediately
     
     if (meeting?.response?.id && api_url) {
       try {
@@ -73,14 +77,20 @@ export default function Room(details: RoomDetails) {
           body: JSON.stringify(requestBody),
         });
         
-        if (!response.ok) {
+        if (response.ok) {
+          touch(meetingId);
+        } else {
           console.error('Failed to submit consent');
         }
       } catch (error) {
         console.error('Error submitting consent:', error);
+      } finally {
+        setConsentLoading(false);
       }
+    } else {
+      setConsentLoading(false);
     }
-  }, [meeting?.response?.id, api_url, accessToken]);
+  }, [meeting?.response?.id, api_url, accessToken, touch, getUserIdentifier]);
 
 
   useEffect(() => {
@@ -94,12 +104,18 @@ export default function Room(details: RoomDetails) {
     }
   }, [isLoading, meeting?.error]);
 
-  // Show consent dialog when meeting is loaded and consent hasn't been given yet
+  // Show consent dialog when meeting is loaded and consent hasn't been answered yet
   useEffect(() => {
-    if (meeting?.response?.id && consentGiven === null && !showConsentDialog) {
+    if (
+      consentState.ready &&
+      meetingId &&
+      !hasConsent(meetingId) &&
+      !showConsentDialog &&
+      !consentLoading
+    ) {
       setShowConsentDialog(true);
     }
-  }, [meeting?.response?.id, consentGiven, showConsentDialog]);
+  }, [consentState.ready, meetingId, hasConsent, showConsentDialog, consentLoading]);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !roomUrl) return;
@@ -142,11 +158,13 @@ export default function Room(details: RoomDetails) {
           style={{ width: "100vw", height: "100vh" }}
         />
       )}
-      <AudioConsentDialog
-        isOpen={showConsentDialog}
-        onClose={() => {}} // No-op: ESC should not close without consent
-        onConsent={handleConsent}
-      />
+      {meetingId && consentState.ready && !hasConsent(meetingId) && !consentLoading && (
+        <AudioConsentDialog
+          isOpen={showConsentDialog}
+          onClose={() => {}} // No-op: ESC should not close without consent
+          onConsent={b => handleConsent(meetingId, b)}
+        />
+      )}
     </>
   );
 }

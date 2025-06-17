@@ -13,7 +13,7 @@ import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
 import LiveTrancription from "../../liveTranscription";
-import AudioConsentDialog from "../../components/AudioConsentDialog";
+import AudioConsentDialog from "../../../rooms/audioConsentDialog";
 import useApi from "../../../../lib/useApi";
 
 type TranscriptDetails = {
