@@ -43,54 +43,38 @@ export default function Room(details: RoomDetails) {
     router.push("/browse");
   }, [router]);
 
-  const getUserIdentifier = useCallback(() => {
-    if (isAuthenticated && userId) {
-      return userId; // Send actual user ID for authenticated users
-    }
-    
-    // For anonymous users, send no identifier
-    return null;
-  }, [isAuthenticated, userId]);
-
+  // TODO hook
   const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
+
+    setShowConsentDialog(false);
     setConsentLoading(true);
-    setShowConsentDialog(false); // Close dialog immediately
-    
-    if (meeting?.response?.id && api_url) {
-      try {
-        const userIdentifier = getUserIdentifier();
-        const requestBody: any = {
-          consent_given: given
-        };
-        
-        // Only include user_identifier if we have one (authenticated users)
-        if (userIdentifier) {
-          requestBody.user_identifier = userIdentifier;
-        }
-        
-        const response = await fetch(`${api_url}/v1/meetings/${meeting.response.id}/consent`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        if (response.ok) {
-          touch(meetingId);
-        } else {
-          console.error('Failed to submit consent');
-        }
-      } catch (error) {
-        console.error('Error submitting consent:', error);
-      } finally {
-        setConsentLoading(false);
+
+    try {
+      const requestBody = {
+        consent_given: given
+      };
+
+      // TODO generated API
+      const response = await fetch(`${api_url}/v1/meetings/${meetingId}/consent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        touch(meetingId);
+      } else {
+        console.error('Failed to submit consent');
       }
-    } else {
+    } catch (error) {
+      console.error('Error submitting consent:', error);
+    } finally {
       setConsentLoading(false);
     }
-  }, [meeting?.response?.id, api_url, accessToken, touch, getUserIdentifier]);
+  }, [api_url, accessToken, touch]);
 
 
   useEffect(() => {

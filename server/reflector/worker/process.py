@@ -13,7 +13,7 @@ from reflector.db.meetings import meeting_consent_controller, meetings_controlle
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
-from reflector.storage import get_storage
+from reflector.storage import get_transcripts_storage
 from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
@@ -136,10 +136,10 @@ async def process_recording(bucket_name: str, object_key: str):
     should_delete = await meeting_consent_controller.has_any_denial(meeting.id)
     if should_delete:
         logger.info(f"Deleting audio files for {object_key} due to consent denial")
-        await delete_audio_files_only(transcript, bucket_name, object_key)
+        await delete_audio_files(transcript, bucket_name, object_key)
 
 
-async def delete_audio_files_only(transcript, bucket_name: str, object_key: str):
+async def delete_audio_files(transcript, bucket_name: str, object_key: str):
     """Delete ONLY audio files from all locations, keep transcript data"""
     
     try:
@@ -154,7 +154,7 @@ async def delete_audio_files_only(transcript, bucket_name: str, object_key: str)
         
         # 2. Delete processed audio from transcript storage S3 bucket
         if transcript.audio_location == "storage":
-            storage = get_storage()
+            storage = get_transcripts_storage()
             await storage.delete_file(transcript.storage_audio_path)
             logger.info(f"Deleted processed audio from storage: {transcript.storage_audio_path}")
         

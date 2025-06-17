@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Request
+import reflector.auth as auth
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 
 from reflector.db.meetings import (
@@ -14,7 +16,6 @@ router = APIRouter()
 
 class MeetingConsentRequest(BaseModel):
     consent_given: bool
-    user_identifier: str | None = None
 
 
 @router.post("/meetings/{meeting_id}/consent")
@@ -22,21 +23,21 @@ async def meeting_audio_consent(
     meeting_id: str,
     request: MeetingConsentRequest,
     user_request: Request,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     meeting = await meetings_controller.get_by_id(meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
     
-    # Store consent in meeting_consent table (create or update for authenticated users)
+    user_id = user["sub"] if user else None
+    
     consent = MeetingConsent(
         meeting_id=meeting_id,
-        user_identifier=request.user_identifier,
+        user_id=user_id,
         consent_given=request.consent_given,
         consent_timestamp=datetime.utcnow(),
-        user_agent=user_request.headers.get("user-agent")
     )
     
-    # Use create_or_update to handle consent overrides for authenticated users
-    updated_consent = await meeting_consent_controller.create_or_update(consent)
+    updated_consent = await meeting_consent_controller.upsert(consent)
     
     return {"status": "success", "consent_id": updated_consent.id}
