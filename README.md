@@ -72,6 +72,12 @@ Start with `cd www`.
 
 ### Installation
 
+**Note**: This project requires Node.js v20.18.1 to maintain yarn.lock compatibility. If using `n` for Node version management:
+
+```bash
+n 20.18.1
+```
+
 To install the application, run:
 
 ```bash

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import useRoomMeeting from "../../[roomName]/useRoomMeeting";
 import dynamic from "next/dynamic";
-const WherebyEmbed = dynamic(() => import("../../lib/WherebyEmbed"), {
+const WherebyEmbed = dynamic(() => import("../../lib/./WherebyWebinarEmbed"), {
   ssr: false,
 });
 import { FormEvent } from "react";

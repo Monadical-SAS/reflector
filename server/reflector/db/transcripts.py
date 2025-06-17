@@ -542,7 +542,7 @@ class TranscriptController:
         topic: TranscriptTopic,
     ) -> TranscriptEvent:
         """
-        Append an event to a transcript
+        Upsert topics to a transcript
         """
         transcript.upsert_topic(topic)
         await self.update(
