@@ -43,6 +43,12 @@ import {
   Input,
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
+
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    // next SSR
+    setIsClient(true);
+  }, []);
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
@@ -68,13 +74,13 @@ const TranscriptCreate = () => {
   };
 
   const send = () => {
-    if (!isClient || loadingRecord || createTranscript.loading || permissionDenied) return;
+    if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
     createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   const uploadFile = () => {
-    if (!isClient || loadingUpload || createTranscript.loading || permissionDenied) return;
+    if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
     createTranscript.create({ name, target_language: getTargetLanguage() });
   };
@@ -91,7 +97,7 @@ const TranscriptCreate = () => {
     if (createTranscript.error) setLoadingRecord(false);
   }, [createTranscript.error]);
 
-  const { loading, permissionOk, permissionDenied, requestPermission, isClient } =
+  const { loading, permissionOk, permissionDenied, requestPermission } =
     useAudioDevice();
 
   return (
@@ -124,7 +130,7 @@ const TranscriptCreate = () => {
             Reflector is a transcription and summarization pipeline that
             transforms audio into knowledge.
             <span className="hidden md:block">
-              {" "}The output is meeting minutes and topic summaries enabling
+              The output is meeting minutes and topic summaries enabling
               topic-specific analyses stored in your systems of record. This is
               accomplished on your infrastructure – without 3rd parties –
               keeping your data private, secure, and organized.
@@ -205,7 +211,7 @@ const TranscriptCreate = () => {
                 <Button
                   colorScheme="whiteAlpha"
                   onClick={send}
-                  isDisabled={!isClient || !permissionOk || loadingRecord || loadingUpload}
+                  isDisabled={!permissionOk || loadingRecord || loadingUpload}
                   mt={2}
                 >
                   {loadingRecord ? "Loading..." : "Record Meeting"}
