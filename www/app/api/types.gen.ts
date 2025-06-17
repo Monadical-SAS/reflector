@@ -109,6 +109,10 @@ export type Meeting = {
   end_date: string;
 };
 
+export type MeetingConsentRequest = {
+  consent_given: boolean;
+};
+
 export type Page_GetTranscript_ = {
   items: Array<GetTranscript>;
   total: number;
@@ -229,6 +233,16 @@ export type ValidationError = {
   type: string;
 };
 
+export type WherebyWebhookEvent = {
+  apiVersion: string;
+  id: string;
+  createdAt: string;
+  type: string;
+  data: {
+    [key: string]: unknown;
+  };
+};
+
 export type Word = {
   text: string;
   start: number;
@@ -237,6 +251,13 @@ export type Word = {
 };
 
 export type MetricsResponse = unknown;
+
+export type V1MeetingAudioConsentData = {
+  meetingId: string;
+  requestBody: MeetingConsentRequest;
+};
+
+export type V1MeetingAudioConsentResponse = unknown;
 
 export type V1RoomsListData = {
   /**
@@ -454,6 +475,12 @@ export type V1ZulipGetTopicsData = {
 
 export type V1ZulipGetTopicsResponse = Array<Topic>;
 
+export type V1WherebyWebhookData = {
+  requestBody: WherebyWebhookEvent;
+};
+
+export type V1WherebyWebhookResponse = unknown;
+
 export type $OpenApiTs = {
   "/metrics": {
     get: {
@@ -462,6 +489,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: unknown;
+      };
+    };
+  };
+  "/v1/meetings/{meeting_id}/consent": {
+    post: {
+      req: V1MeetingAudioConsentData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
       };
     };
   };
@@ -895,6 +937,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: Array<Topic>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/whereby": {
+    post: {
+      req: V1WherebyWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
         /**
          * Validation Error
          */

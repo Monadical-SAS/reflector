@@ -12,6 +12,7 @@ import { DomainContext } from "../domainContext";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useSessionAccessToken from "../lib/useSessionAccessToken";
 import useSessionUser from "../lib/useSessionUser";
+import useApi from "../lib/useApi";
 
 export type RoomDetails = {
   params: {
@@ -31,6 +32,7 @@ export default function Room(details: RoomDetails) {
   const { api_url } = useContext(DomainContext);
   const { accessToken } = useSessionAccessToken();
   const { id: userId } = useSessionUser();
+  const api = useApi();
 
 
   const roomUrl = meeting?.response?.host_room_url
@@ -43,38 +45,25 @@ export default function Room(details: RoomDetails) {
     router.push("/browse");
   }, [router]);
 
-  // TODO hook
   const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
+    if (!api) return;
 
     setShowConsentDialog(false);
     setConsentLoading(true);
 
     try {
-      const requestBody = {
-        consent_given: given
-      };
-
-      // TODO generated API
-      const response = await fetch(`${api_url}/v1/meetings/${meetingId}/consent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
-        },
-        body: JSON.stringify(requestBody),
+      await api.v1MeetingAudioConsent({
+        meetingId,
+        requestBody: { consent_given: given }
       });
-
-      if (response.ok) {
-        touch(meetingId);
-      } else {
-        console.error('Failed to submit consent');
-      }
+      
+      touch(meetingId);
     } catch (error) {
       console.error('Error submitting consent:', error);
     } finally {
       setConsentLoading(false);
     }
-  }, [api_url, accessToken, touch]);
+  }, [api, touch]);
 
 
   useEffect(() => {

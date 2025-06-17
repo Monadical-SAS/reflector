@@ -548,6 +548,18 @@ export const $Meeting = {
   title: "Meeting",
 } as const;
 
+export const $MeetingConsentRequest = {
+  properties: {
+    consent_given: {
+      type: "boolean",
+      title: "Consent Given",
+    },
+  },
+  type: "object",
+  required: ["consent_given"],
+  title: "MeetingConsentRequest",
+} as const;
+
 export const $Page_GetTranscript_ = {
   properties: {
     items: {
@@ -1164,6 +1176,35 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $WherebyWebhookEvent = {
+  properties: {
+    apiVersion: {
+      type: "string",
+      title: "Apiversion",
+    },
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      title: "Createdat",
+    },
+    type: {
+      type: "string",
+      title: "Type",
+    },
+    data: {
+      type: "object",
+      title: "Data",
+    },
+  },
+  type: "object",
+  required: ["apiVersion", "id", "createdAt", "type", "data"],
+  title: "WherebyWebhookEvent",
 } as const;
 
 export const $Word = {

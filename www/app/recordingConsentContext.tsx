@@ -29,17 +29,20 @@ interface RecordingConsentProviderProps {
   children: React.ReactNode;
 }
 
+const LOCAL_STORAGE_KEY = "recording_consent_meetings";
+
 export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> = ({ children }) => {
   const [state, setState] = useState<ConsentContextState>({ ready: false });
 
   const safeWriteToStorage = (meetingIds: string[]): void => {
     try {
-      localStorage.setItem("recording_consent_meetings", JSON.stringify(meetingIds));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(meetingIds));
     } catch (error) {
       console.error("Failed to save consent data to localStorage:", error);
     }
   };
 
+  // writes to local storage and to the state of context both
   const touch = (meetingId: string): void => {
     
     if (!state.ready) {
@@ -47,13 +50,14 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
       return;
     }
 
-    // Update context state (always works)
-    const newSet = new Set([...state.consentAnsweredForMeetings, meetingId]);
-    
+    // has success regardless local storage write success: we don't handle that
+    // and don't want to crash anything with just consent functionality
+    const newSet = state.consentAnsweredForMeetings.has(meetingId) ?
+      state.consentAnsweredForMeetings :
+      new Set([...state.consentAnsweredForMeetings, meetingId]);
+    // note: preserves the set insertion order
     const array = Array.from(newSet).slice(-5); // Keep latest 5
     safeWriteToStorage(array);
-    
-    // Update state regardless of storage success
     setState({ ready: true, consentAnsweredForMeetings: newSet });
   };
 
@@ -62,10 +66,10 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
     return state.consentAnsweredForMeetings.has(meetingId);
   };
 
-  // Initialize from localStorage on mount (client-side only)
+  // initialize on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("recording_consent_meetings");
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (!stored) {
         setState({ ready: true, consentAnsweredForMeetings: new Set() });
         return;
@@ -77,10 +81,12 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
         setState({ ready: true, consentAnsweredForMeetings: new Set() });
         return;
       }
-      
-      const consentAnsweredForMeetings = new Set(parsed.filter(id => typeof id === 'string'));
+
+      // pre-historic way of parsing!
+      const consentAnsweredForMeetings = new Set(parsed.filter(id => !!id && typeof id === 'string'));
       setState({ ready: true, consentAnsweredForMeetings });
     } catch (error) {
+      // we don't want to fail the page here; the component is not essential.
       console.error("Failed to parse consent data from localStorage:", error);
       setState({ ready: true, consentAnsweredForMeetings: new Set() });
     }
