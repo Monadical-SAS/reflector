@@ -9,10 +9,9 @@ const useAudioDevice = () => {
   const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
   const [audioDevices, setAudioDevices] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
+    // skips on SSR
     checkPermission();
   }, []);
 
@@ -23,12 +22,6 @@ const useAudioDevice = () => {
   }, [permissionOk]);
 
   const checkPermission = (): void => {
-    // Skip on server-side rendering
-    if (typeof window === "undefined" || !navigator) {
-      setLoading(false);
-      return;
-    }
-    
     if (navigator.userAgent.includes("Firefox")) {
       navigator.mediaDevices
         .getUserMedia({ audio: true, video: false })
@@ -131,8 +124,7 @@ const useAudioDevice = () => {
     permissionDenied,
     audioDevices,
     getAudioStream,
-    requestPermission,
-    isClient,
+    requestPermission
   };
 };
 
