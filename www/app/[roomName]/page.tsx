@@ -1,12 +1,16 @@
 "use client";
 
 import "@whereby.com/browser-sdk/embed";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useContext } from "react";
 import { Box, Button, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
+import AudioConsentDialog from "../(app)/rooms/audioConsentDialog";
+import { DomainContext } from "../domainContext";
+import useSessionAccessToken from "../lib/useSessionAccessToken";
+import useSessionUser from "../lib/useSessionUser";
 
 export type RoomDetails = {
   params: {
@@ -20,8 +24,12 @@ export default function Room(details: RoomDetails) {
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
-
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
+  const { api_url } = useContext(DomainContext);
+  const { accessToken } = useSessionAccessToken();
+  const { id: userId } = useSessionUser();
+
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
@@ -31,9 +39,49 @@ export default function Room(details: RoomDetails) {
     router.push("/browse");
   }, [router]);
 
-  const handleConsent = (consent: boolean) => {
-    setConsentGiven(consent);
-  };
+  const getUserIdentifier = useCallback(() => {
+    if (isAuthenticated && userId) {
+      return userId; // Send actual user ID for authenticated users
+    }
+    
+    // For anonymous users, send no identifier
+    return null;
+  }, [isAuthenticated, userId]);
+
+  const handleConsent = useCallback(async (given: boolean) => {
+    setConsentGiven(given);
+    setShowConsentDialog(false); // Close dialog after consent is given
+    
+    if (meeting?.response?.id && api_url) {
+      try {
+        const userIdentifier = getUserIdentifier();
+        const requestBody: any = {
+          consent_given: given
+        };
+        
+        // Only include user_identifier if we have one (authenticated users)
+        if (userIdentifier) {
+          requestBody.user_identifier = userIdentifier;
+        }
+        
+        const response = await fetch(`${api_url}/v1/meetings/${meeting.response.id}/consent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          },
+          body: JSON.stringify(requestBody),
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to submit consent');
+        }
+      } catch (error) {
+        console.error('Error submitting consent:', error);
+      }
+    }
+  }, [meeting?.response?.id, api_url, accessToken]);
+
 
   useEffect(() => {
     if (
@@ -45,6 +93,13 @@ export default function Room(details: RoomDetails) {
       notFound();
     }
   }, [isLoading, meeting?.error]);
+
+  // Show consent dialog when meeting is loaded and consent hasn't been given yet
+  useEffect(() => {
+    if (meeting?.response?.id && consentGiven === null && !showConsentDialog) {
+      setShowConsentDialog(true);
+    }
+  }, [meeting?.response?.id, consentGiven, showConsentDialog]);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !roomUrl) return;
@@ -77,51 +132,6 @@ export default function Room(details: RoomDetails) {
     );
   }
 
-  if (!isAuthenticated && !consentGiven) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        height="100vh"
-        bg="gray.50"
-        p={4}
-      >
-        <VStack
-          spacing={6}
-          p={10}
-          width="400px"
-          bg="white"
-          borderRadius="md"
-          shadow="md"
-          textAlign="center"
-        >
-          {consentGiven === null ? (
-            <>
-              <Text fontSize="lg" fontWeight="bold">
-                This meeting may be recorded. Do you consent to being recorded?
-              </Text>
-              <HStack spacing={4}>
-                <Button variant="outline" onClick={() => handleConsent(false)}>
-                  No, I do not consent
-                </Button>
-                <Button colorScheme="blue" onClick={() => handleConsent(true)}>
-                  Yes, I consent
-                </Button>
-              </HStack>
-            </>
-          ) : (
-            <>
-              <Text fontSize="lg" fontWeight="bold">
-                You cannot join the meeting without consenting to being
-                recorded.
-              </Text>
-            </>
-          )}
-        </VStack>
-      </Box>
-    );
-  }
 
   return (
     <>
@@ -132,6 +142,11 @@ export default function Room(details: RoomDetails) {
           style={{ width: "100vw", height: "100vh" }}
         />
       )}
+      <AudioConsentDialog
+        isOpen={showConsentDialog}
+        onClose={() => {}} // No-op: ESC should not close without consent
+        onConsent={handleConsent}
+      />
     </>
   );
 }

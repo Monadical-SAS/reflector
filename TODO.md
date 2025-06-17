@@ -1,0 +1,2 @@
+- non-auth user consent - store on frontend per session? per meeting? (get meeting from the iframe)
+- consent field userIdentity itself - optional

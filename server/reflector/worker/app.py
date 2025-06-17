@@ -25,11 +25,11 @@ else:
     app.conf.beat_schedule = {
         "process_messages": {
             "task": "reflector.worker.process.process_messages",
-            "schedule": 60.0,
+            "schedule": float(settings.SQS_POLLING_TIMEOUT_SECONDS),
         },
         "process_meetings": {
             "task": "reflector.worker.process.process_meetings",
-            "schedule": 60.0,
+            "schedule": float(settings.SQS_POLLING_TIMEOUT_SECONDS),
         },
         "reprocess_failed_recordings": {
             "task": "reflector.worker.process.reprocess_failed_recordings",

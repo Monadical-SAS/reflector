@@ -106,33 +106,8 @@ useEffect(() => {
   }
 }, [meeting?.id]);
 
-# Backend: Consent storage in meeting record
-# Add to Meeting model:
-participant_consent_responses: dict[str, bool] = Field(default_factory=dict)  # {user_id: true/false}
-```
-
-**Simple Consent Storage:** Track participant responses
-
-```python
-# Update Meeting model to include:
-participant_consent_responses: dict[str, bool] = Field(default_factory=dict)
-
-# Note that it must not be possible to call /consent on already finished meeting.
-# Consent endpoint stores the response:
-@router.post("/meetings/{meeting_id}/consent")
-async def meeting_audio_consent(meeting_id: str, request: MeetingConsentRequest):
-    meeting = await meetings_controller.get_by_id(meeting_id)
-    
-    # Store the consent response (true/false)
-    # Only store if they actually clicked something
-    consent_responses = meeting.participant_consent_responses or {}
-    consent_responses[request.user_identifier] = request.consent_given
-    
-    await meetings_controller.update_meeting(
-        meeting_id, participant_consent_responses=consent_responses
-    )
-    
-    return {"status": "success"}
+# Backend: Consent storage using meeting_consent table
+# Use meeting_consent table for proper normalization
 ```
 
 ### Phase 4: Frontend Changes
@@ -152,7 +127,7 @@ if (!isAuthenticated) {
 }
 ```
 
-**Add Consent Dialog Component:** `www/app/(app)/transcripts/components/AudioConsentDialog.tsx`
+**Add Consent Dialog Component:** `www/app/(app)/rooms/audioConsentDialog.tsx`
 
 Based on `shareModal.tsx` patterns:
 
@@ -259,9 +234,8 @@ async def process_recording(bucket_name: str, object_key: str):
     _, extension = os.path.splitext(object_key)
     upload_filename = transcript.data_path / f"upload{extension}"
     # ... continue with full transcript processing ...
-    # Check if any participant denied consent (check dict values)
-    consent_responses = meeting.participant_consent_responses or {}
-    should_delete = any(consent is False for consent in consent_responses.values())
+    # Check if any participant denied consent using meeting_consent_controller
+    should_delete = await meeting_consent_controller.has_any_denial(meeting.id)
     # AFTER transcript processing is complete, delete audio if consent denied
     if should_delete:
         logger.info(f"Deleting audio files for {object_key} due to consent denial")
