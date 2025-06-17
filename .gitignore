@@ -8,3 +8,5 @@ dump.rdb
 .yarn
 ngrok.log
 .claude/settings.local.json
+restart-dev.sh
+backend-output.log

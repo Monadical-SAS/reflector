@@ -390,3 +390,7 @@ alembic upgrade head
 - **Legal review** of consent language and timing
 
 This plan maintains backward compatibility while implementing the new consent flow without interrupting core recording functionality.
+
+## Extra notes
+
+Room creator must not be asked for consent
