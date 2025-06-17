@@ -68,13 +68,13 @@ const TranscriptCreate = () => {
   };
 
   const send = () => {
-    if (loadingRecord || createTranscript.loading || permissionDenied) return;
+    if (!isClient || loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
     createTranscript.create({ name, target_language: getTargetLanguage() });
   };
 
   const uploadFile = () => {
-    if (loadingUpload || createTranscript.loading || permissionDenied) return;
+    if (!isClient || loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
     createTranscript.create({ name, target_language: getTargetLanguage() });
   };
@@ -91,7 +91,7 @@ const TranscriptCreate = () => {
     if (createTranscript.error) setLoadingRecord(false);
   }, [createTranscript.error]);
 
-  const { loading, permissionOk, permissionDenied, requestPermission } =
+  const { loading, permissionOk, permissionDenied, requestPermission, isClient } =
     useAudioDevice();
 
   return (
@@ -123,12 +123,12 @@ const TranscriptCreate = () => {
           <Text mt={6}>
             Reflector is a transcription and summarization pipeline that
             transforms audio into knowledge.
-            <Text className="hidden md:block">
-              The output is meeting minutes and topic summaries enabling
+            <span className="hidden md:block">
+              {" "}The output is meeting minutes and topic summaries enabling
               topic-specific analyses stored in your systems of record. This is
               accomplished on your infrastructure – without 3rd parties –
               keeping your data private, secure, and organized.
-            </Text>
+            </span>
           </Text>
           <About buttonText="Learn more" />
           <Text mt={6}>
@@ -179,29 +179,31 @@ const TranscriptCreate = () => {
                     placeholder="Choose your language"
                   />
                 </Box>
-                {loading ? (
-                  <Text className="">Checking permissions...</Text>
-                ) : permissionOk ? (
-                  <Spacer />
-                ) : permissionDenied ? (
-                  <Text className="">
-                    Permission to use your microphone was denied, please change
-                    the permission setting in your browser and refresh this
-                    page.
-                  </Text>
+                {isClient && !loading ? (
+                  permissionOk ? (
+                    <Spacer />
+                  ) : permissionDenied ? (
+                    <Text className="">
+                      Permission to use your microphone was denied, please change
+                      the permission setting in your browser and refresh this
+                      page.
+                    </Text>
+                  ) : (
+                    <Button
+                      colorScheme="whiteAlpha"
+                      onClick={requestPermission}
+                      disabled={permissionDenied}
+                    >
+                      Request Microphone Permission
+                    </Button>
+                  )
                 ) : (
-                  <Button
-                    colorScheme="whiteAlpha"
-                    onClick={requestPermission}
-                    disabled={permissionDenied}
-                  >
-                    Request Microphone Permission
-                  </Button>
+                  <Text className="">Checking permissions...</Text>
                 )}
                 <Button
                   colorScheme="whiteAlpha"
                   onClick={send}
-                  isDisabled={!permissionOk || loadingRecord || loadingUpload}
+                  isDisabled={!isClient || !permissionOk || loadingRecord || loadingUpload}
                   mt={2}
                 >
                   {loadingRecord ? "Loading..." : "Record Meeting"}
