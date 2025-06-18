@@ -70,6 +70,7 @@ transcripts = sqlalchemy.Table(
         Enum(SourceKind, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     ),
+    sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
 )
 
 def generate_transcript_name() -> str:
@@ -157,6 +158,7 @@ class Transcript(BaseModel):
     recording_id: str | None = None
     zulip_message_id: int | None = None
     source_kind: SourceKind
+    audio_deleted: bool | None = None
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -544,8 +546,14 @@ class TranscriptController:
         Move mp3 file to storage
         """
 
+        if transcript.audio_deleted:
+            raise FileNotFoundError(f"Invalid state of transcript {transcript.id}: audio_deleted mark is set true")
+
         if transcript.audio_location == "local":
             # store the audio on external storage if it's not already there
+            if not transcript.audio_mp3_filename.exists():
+                raise FileNotFoundError(f"Audio file not found: {transcript.audio_mp3_filename}")
+            
             await get_transcripts_storage().put_file(
                 transcript.storage_audio_path,
                 transcript.audio_mp3_filename.read_bytes(),

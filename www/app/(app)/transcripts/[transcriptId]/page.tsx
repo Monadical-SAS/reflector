@@ -54,9 +54,29 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
+  if (mp3.audioDeleted) {
+    return (
+      <Modal
+        title="Can't find transcription: Transcription file is deleted"
+        text={`The recording is deleted.`}
+      />
+    );
+  }
+
   if (transcript?.loading || topics?.loading) {
     return <Modal title="Loading" text={"Loading transcript..."} />;
   }
+
+  if (mp3.error) {
+    return (
+      <Modal
+        title="Transcription error"
+        text={`There was an error loading the recording. Error: ${mp3.error}`}
+      />
+    );
+  }
+
+
 
   return (
     <>

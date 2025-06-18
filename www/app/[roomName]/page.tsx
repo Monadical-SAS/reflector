@@ -2,12 +2,11 @@
 
 import "@whereby.com/browser-sdk/embed";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
-import { Box, Button, Text, VStack, HStack, Spinner } from "@chakra-ui/react";
+import { Box, Button, Text, VStack, HStack, Spinner, useToast } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
-import AudioConsentDialog from "../(app)/rooms/audioConsentDialog";
 import { DomainContext } from "../domainContext";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useSessionAccessToken from "../lib/useSessionAccessToken";
@@ -26,13 +25,13 @@ export default function Room(details: RoomDetails) {
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
   const { state: consentState, touch, hasConsent } = useRecordingConsent();
   const { api_url } = useContext(DomainContext);
   const { accessToken } = useSessionAccessToken();
   const { id: userId } = useSessionUser();
   const api = useApi();
+  const toast = useToast();
 
 
   const roomUrl = meeting?.response?.host_room_url
@@ -45,10 +44,10 @@ export default function Room(details: RoomDetails) {
     router.push("/browse");
   }, [router]);
 
-  const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
+  const handleConsent = useCallback(async (meetingId: string, given: boolean, onClose?: () => void) => {
     if (!api) return;
 
-    setShowConsentDialog(false);
+    if (onClose) onClose();
     setConsentLoading(true);
 
     try {
@@ -77,18 +76,49 @@ export default function Room(details: RoomDetails) {
     }
   }, [isLoading, meeting?.error]);
 
-  // Show consent dialog when meeting is loaded and consent hasn't been answered yet
+  // Show consent toast when meeting is loaded and consent hasn't been answered yet
   useEffect(() => {
     if (
       consentState.ready &&
       meetingId &&
       !hasConsent(meetingId) &&
-      !showConsentDialog &&
       !consentLoading
     ) {
-      setShowConsentDialog(true);
+      const toastId = toast({
+        position: "top",
+        duration: null,
+        render: ({ onClose }) => (
+          <Box p={4} bg="white" borderRadius="md" boxShadow="md">
+            <VStack spacing={3} align="stretch">
+              <Text>
+                Can we have your permission to store this meeting's audio recording on our servers?
+              </Text>
+              <HStack spacing={4} justify="center">
+                <Button 
+                  colorScheme="green" 
+                  size="sm"
+                  onClick={() => handleConsent(meetingId, true, onClose)}
+                >
+                  Yes, store the audio
+                </Button>
+                <Button 
+                  colorScheme="red" 
+                  size="sm"
+                  onClick={() => handleConsent(meetingId, false, onClose)}
+                >
+                  No, delete after transcription
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+        ),
+      });
+
+      return () => {
+        toast.close(toastId);
+      };
     }
-  }, [consentState.ready, meetingId, hasConsent, showConsentDialog, consentLoading]);
+  }, [consentState.ready, meetingId, hasConsent, consentLoading, toast, handleConsent]);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !roomUrl) return;
@@ -129,13 +159,6 @@ export default function Room(details: RoomDetails) {
           ref={wherebyRef}
           room={roomUrl}
           style={{ width: "100vw", height: "100vh" }}
-        />
-      )}
-      {meetingId && consentState.ready && !hasConsent(meetingId) && !consentLoading && (
-        <AudioConsentDialog
-          isOpen={showConsentDialog}
-          onClose={() => {}} // No-op: ESC should not close without consent
-          onConsent={b => handleConsent(meetingId, b)}
         />
       )}
     </>
