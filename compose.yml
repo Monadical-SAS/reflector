@@ -38,11 +38,11 @@ services:
   web:
     image: node:18
     ports:
-      - "3001:3000"
+      - "3000:3000"
     command: sh -c "yarn install && yarn dev"
     restart: unless-stopped
     working_dir: /app
     volumes:
       - ./www:/app/
     env_file:
-      - ./www/.env.development.local
+      - ./www/.env.local
