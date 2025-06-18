@@ -133,8 +133,6 @@ const ShareModal = (props: ShareModalProps) => {
                     setStream(val.toString());
                   }}
                   placeholder="Pick a stream"
-                  onBlur={() => {}}
-                  onFocus={() => {}}
                 />
               </div>
 
@@ -147,8 +145,6 @@ const ShareModal = (props: ShareModalProps) => {
                     value={topic}
                     onChange={(val) => setTopic(val.toString())}
                     placeholder="Pick a topic"
-                    onBlur={() => {}}
-                    onFocus={() => {}}
                   />
                 </div>
               )}
