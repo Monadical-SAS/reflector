@@ -43,6 +43,10 @@ def range_requests_response(
 ):
     """Returns StreamingResponse using Range Requests of a given file"""
 
+    if not os.path.exists(file_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="File not found")
+
     file_size = os.stat(file_path).st_size
     range_header = request.headers.get("range")
 

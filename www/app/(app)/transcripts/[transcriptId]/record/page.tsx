@@ -27,7 +27,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   const webSockets = useWebSockets(details.params.transcriptId);
 
-  let mp3 = useMp3(details.params.transcriptId, true);
+  const mp3 = useMp3(details.params.transcriptId, true);
 
   const router = useRouter();
 

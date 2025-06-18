@@ -293,6 +293,17 @@ export const $GetTranscript = {
       ],
       title: "Room Name",
     },
+    audio_deleted: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Audio Deleted",
+    },
   },
   type: "object",
   required: [
@@ -1108,6 +1119,17 @@ export const $UpdateTranscript = {
         },
       ],
       title: "Reviewed",
+    },
+    audio_deleted: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Audio Deleted",
     },
   },
   type: "object",

@@ -65,6 +65,7 @@ class GetTranscript(BaseModel):
     source_kind: SourceKind
     room_id: str | None = None
     room_name: str | None = None
+    audio_deleted: bool | None = None
 
 
 class CreateTranscript(BaseModel):
@@ -82,6 +83,7 @@ class UpdateTranscript(BaseModel):
     share_mode: Optional[Literal["public", "semi-private", "private"]] = Field(None)
     participants: Optional[list[TranscriptParticipant]] = Field(None)
     reviewed: Optional[bool] = Field(None)
+    audio_deleted: Optional[bool] = Field(None)
 
 
 class DeletionStatus(BaseModel):

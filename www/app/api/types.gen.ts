@@ -56,6 +56,7 @@ export type GetTranscript = {
   source_kind: SourceKind;
   room_id?: string | null;
   room_name?: string | null;
+  audio_deleted?: boolean | null;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -219,6 +220,7 @@ export type UpdateTranscript = {
   share_mode?: "public" | "semi-private" | "private" | null;
   participants?: Array<TranscriptParticipant> | null;
   reviewed?: boolean | null;
+  audio_deleted?: boolean | null;
 };
 
 export type UserInfo = {
