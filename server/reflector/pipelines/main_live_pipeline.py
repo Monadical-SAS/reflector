@@ -529,7 +529,7 @@ async def pipeline_upload_mp3(transcript: Transcript, logger: Logger):
         return
 
     if transcript.audio_deleted:
-        logger.info("Skipping MP3 upload - audio marked as deleted")
+        logger.info("Skipping mp3 upload - audio marked as deleted")
         return
 
     logger.info("Starting upload mp3")
@@ -593,8 +593,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     logger.info("Consent denied, cleaning up all related audio files")
 
-    # 1. Delete original Whereby recording from S3
-    if recording and recording.s3_bucket and recording.s3_key:
+    if recording and recording.bucket_name and recording.object_key:
 
         s3_whereby = boto3.client(
             "s3",
@@ -602,8 +601,8 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
             aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
         )
         try:
-            s3_whereby.delete_object(Bucket=recording.s3_bucket, Key=recording.s3_key)
-            logger.info(f"Deleted original Whereby recording: {recording.s3_bucket}/{recording.s3_key}")
+            s3_whereby.delete_object(Bucket=recording.bucket_name, Key=recording.object_key)
+            logger.info(f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}")
         except Exception as e:
             logger.error(f"Failed to delete Whereby recording: {e}")
 
