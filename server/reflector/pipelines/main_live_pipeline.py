@@ -60,8 +60,7 @@ from reflector.zulip import (
     update_zulip_message,
 )
 
-from reflector.db.meetings import meetings_controller, meeting_consent_controller
-from reflector.db.recordings import recordings_controller
+from reflector.db.meetings import meeting_consent_controller
 from reflector.storage import get_transcripts_storage
 
 import boto3

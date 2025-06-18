@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Literal
-from uuid import uuid4
 
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
