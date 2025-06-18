@@ -1,3 +1,0 @@
-- consent popup itself - make much less invasive, somewhere in the corner - essential
-- actually delete aws - CHECK
-- add externalId to the iframe with the logged in user - non essential
