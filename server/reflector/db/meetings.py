@@ -144,7 +144,7 @@ class MeetingController:
                 sa.and_(
                     meetings.c.room_id == room.id,
                     meetings.c.end_date > current_time,
-                    meetings.c.is_active == True,
+                    meetings.c.is_active,
                 )
             )
             .order_by(end_date.desc())
@@ -229,7 +229,7 @@ class MeetingConsentController:
         """Check if any participant denied consent for this meeting"""
         query = meeting_consent.select().where(
             meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.consent_given == False
+            meeting_consent.c.consent_given.is_(False)
         )
         result = await database.fetch_one(query)
         return result is not None

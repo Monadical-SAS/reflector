@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.storage import Storage, get_transcripts_storage
+from reflector.storage import get_transcripts_storage
 from sqlalchemy import Enum
 from sqlalchemy.sql import false, or_
 
