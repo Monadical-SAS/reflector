@@ -95,7 +95,6 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
         setTranscriptMetadataLoading(false);
       })
     
-    // Cleanup
     return () => {
       stopped = true;
       audioElement.removeEventListener('canplay', handleCanPlay);

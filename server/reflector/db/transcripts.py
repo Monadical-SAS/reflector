@@ -70,6 +70,9 @@ transcripts = sqlalchemy.Table(
         Enum(SourceKind, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     ),
+    # indicative field: whether associated audio is deleted
+    # the main "audio deleted" is the presence of the audio itself / consents not-given
+    # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
 )
 
