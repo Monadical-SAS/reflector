@@ -44,11 +44,7 @@ import {
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
 
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    // next SSR
-    setIsClient(true);
-  }, []);
+  const isClient = typeof window === 'undefined';
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
@@ -183,8 +179,6 @@ const TranscriptCreate = () => {
                     value={targetLanguage}
                     onChange={onLanguageChange}
                     placeholder="Choose your language"
-                    onBlur={() => {}}
-                    onFocus={() => {}}
                   />
                 </Box>
                 {isClient && !loading ? (
