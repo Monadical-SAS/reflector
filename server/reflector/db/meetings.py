@@ -204,6 +204,8 @@ class MeetingConsentController:
             meeting_consent.c.user_id == user_id,
         )
         result = await database.fetch_one(query)
+        if result is None:
+            return None
         return MeetingConsent(**result) if result else None
 
     async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
