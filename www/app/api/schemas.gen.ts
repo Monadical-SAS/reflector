@@ -546,6 +546,12 @@ export const $Meeting = {
       format: "date-time",
       title: "End Date",
     },
+    recording_type: {
+      type: "string",
+      enum: ["none", "local", "cloud"],
+      title: "Recording Type",
+      default: "cloud",
+    },
   },
   type: "object",
   required: [

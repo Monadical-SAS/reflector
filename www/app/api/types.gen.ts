@@ -108,7 +108,10 @@ export type Meeting = {
   host_room_url: string;
   start_date: string;
   end_date: string;
+  recording_type?: "none" | "local" | "cloud";
 };
+
+export type recording_type = "none" | "local" | "cloud";
 
 export type MeetingConsentRequest = {
   consent_given: boolean;

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 
 import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
@@ -37,6 +37,7 @@ class Meeting(BaseModel):
     host_room_url: str
     start_date: datetime
     end_date: datetime
+    recording_type: Literal["none", "local", "cloud"] = "cloud"
 
 
 class CreateRoom(BaseModel):
