@@ -54,15 +54,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
-  if (mp3.audioDeleted) {
-    return (
-      <Modal
-        title="Can't find transcription: Transcription file is deleted"
-        text={`The recording is deleted.`}
-      />
-    );
-  }
-
   if (transcript?.loading || topics?.loading) {
     return <Modal title="Loading" text={"Loading transcript..."} />;
   }
@@ -87,7 +78,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         mt={4}
         mb={4}
       >
-        {waveform.waveform && mp3.media && topics.topics ? (
+        {waveform.waveform && mp3.media && !mp3.audioDeleted && topics.topics ? (
           <Player
             topics={topics?.topics}
             useActiveTopic={useActiveTopic}
@@ -97,6 +88,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           />
         ) : waveform.error ? (
           <div>"error loading this recording"</div>
+        ) : mp3.audioDeleted ? (
+          <div>Audio was deleted</div>
         ) : (
           <Skeleton h={14} />
         )}

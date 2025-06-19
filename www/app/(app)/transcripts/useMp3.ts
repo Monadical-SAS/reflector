@@ -47,9 +47,11 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     });
   }, [navigator.serviceWorker, !serviceWorker, accessTokenInfo]);
 
+
   useEffect(() => {
     if (!transcriptId || !api || later) return;
 
+    let deleted: boolean | null = null;
 
     setTranscriptMetadataLoading(true);
     
@@ -59,12 +61,20 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     audioElement.preload = "auto";
     
     const handleCanPlay = () => {
+      if (deleted) {
+        console.error('Illegal state: audio supposed to be deleted, but was loaded');
+        return;
+      }
       setAudioLoading(false);
       setAudioLoadingError(null);
     };
     
     const handleError = () => {
       setAudioLoading(false);
+      if (deleted) {
+        // we arrived here earlier, ignore
+        return;
+      }
       setAudioLoadingError("Failed to load audio");
     };
     
@@ -81,8 +91,14 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     api.v1TranscriptGet({ transcriptId })
       .then((transcript) => {
         if (stopped) return;
-        setAudioDeleted(transcript.audio_deleted || false);
+        deleted = transcript.audio_deleted || false;
+        setAudioDeleted(deleted);
         setTranscriptMetadataLoadingError(null);
+        if (deleted) {
+          setMedia(null);
+          setAudioLoadingError(null);
+        }
+        // if deleted, media will or already returned error
       })
       .catch((error) => {
         if (stopped) return;
