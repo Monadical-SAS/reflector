@@ -87,7 +87,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             mediaDuration={transcript.response.duration}
           />
         ) : waveform.error ? (
-          <div>"error loading this recording"</div>
+          <div>error loading this recording</div>
         ) : mp3.audioDeleted ? (
           <div>Audio was deleted</div>
         ) : (
