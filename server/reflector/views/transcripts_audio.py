@@ -87,8 +87,10 @@ async def transcript_get_audio_mp3(
             )
 
     if transcript.audio_deleted:
-        raise HTTPException(status_code=404, detail="Audio unavailable due to privacy settings")
-    
+        raise HTTPException(
+            status_code=404, detail="Audio unavailable due to privacy settings"
+        )
+
     if not transcript.audio_mp3_filename.exists():
         raise HTTPException(status_code=404, detail="Audio file not found")
 

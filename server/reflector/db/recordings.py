@@ -22,6 +22,7 @@ recordings = sa.Table(
     sa.Column("meeting_id", sa.String),
 )
 
+
 class Recording(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     bucket_name: str

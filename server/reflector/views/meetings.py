@@ -28,16 +28,16 @@ async def meeting_audio_consent(
     meeting = await meetings_controller.get_by_id(meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-    
+
     user_id = user["sub"] if user else None
-    
+
     consent = MeetingConsent(
         meeting_id=meeting_id,
         user_id=user_id,
         consent_given=request.consent_given,
         consent_timestamp=datetime.utcnow(),
     )
-    
+
     updated_consent = await meeting_consent_controller.upsert(consent)
-    
+
     return {"status": "success", "consent_id": updated_consent.id}

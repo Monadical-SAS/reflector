@@ -76,6 +76,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
 )
 
+
 def generate_transcript_name() -> str:
     now = datetime.utcnow()
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -550,13 +551,17 @@ class TranscriptController:
         """
 
         if transcript.audio_deleted:
-            raise FileNotFoundError(f"Invalid state of transcript {transcript.id}: audio_deleted mark is set true")
+            raise FileNotFoundError(
+                f"Invalid state of transcript {transcript.id}: audio_deleted mark is set true"
+            )
 
         if transcript.audio_location == "local":
             # store the audio on external storage if it's not already there
             if not transcript.audio_mp3_filename.exists():
-                raise FileNotFoundError(f"Audio file not found: {transcript.audio_mp3_filename}")
-            
+                raise FileNotFoundError(
+                    f"Audio file not found: {transcript.audio_mp3_filename}"
+                )
+
             await get_transcripts_storage().put_file(
                 transcript.storage_audio_path,
                 transcript.audio_mp3_filename.read_bytes(),

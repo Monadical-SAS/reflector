@@ -131,6 +131,7 @@ async def process_recording(bucket_name: str, object_key: str):
 
     task_pipeline_process.delay(transcript_id=transcript.id)
 
+
 @shared_task
 @asynctask
 async def process_meetings():
