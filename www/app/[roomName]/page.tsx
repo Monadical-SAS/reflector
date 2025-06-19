@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useApi from "../lib/useApi";
+import { Meeting } from '../api';
 
 export type RoomDetails = {
   params: {
@@ -96,6 +97,10 @@ function ConsentDialog({ meetingId }: { meetingId: string }) {
   return <></>
 }
 
+const recordingTypeRequiresConsent = (recordingType: NonNullable<Meeting['recording_type']>) => {
+  return recordingType === 'cloud';
+}
+
 export default function Room(details: RoomDetails) {
   const wherebyRef = useRef<HTMLElement>(null);
   const roomName = details.params.roomName;
@@ -108,6 +113,8 @@ export default function Room(details: RoomDetails) {
     : meeting?.response?.room_url;
 
   const meetingId = meeting?.response?.id;
+
+  const recordingType = meeting?.response?.recording_type;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
@@ -165,7 +172,7 @@ export default function Room(details: RoomDetails) {
             room={roomUrl}
             style={{ width: "100vw", height: "100vh" }}
           />
-          <ConsentDialog meetingId={meetingId} />
+          {recordingType && recordingTypeRequiresConsent(recordingType) && <ConsentDialog meetingId={meetingId} />}
         </>
       )}
     </>
