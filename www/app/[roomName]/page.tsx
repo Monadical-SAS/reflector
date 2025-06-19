@@ -1,6 +1,5 @@
 "use client";
 
-import "@whereby.com/browser-sdk/embed";
 import { useCallback, useEffect, useRef, useState, useContext, RefObject } from "react";
 import { Box, Button, Text, VStack, HStack, Spinner, useToast } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
@@ -153,7 +152,21 @@ const recordingTypeRequiresConsent = (recordingType: NonNullable<Meeting['record
   return recordingType === 'cloud';
 }
 
+// next throws even with "use client"
+const useWhereby = () => {
+  const [wherebyLoaded, setWherebyLoaded] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import("@whereby.com/browser-sdk/embed").then(() => {
+        setWherebyLoaded(true);
+      }).catch(console.error.bind(console));
+    }
+  }, []);
+  return wherebyLoaded;
+}
+
 export default function Room(details: RoomDetails) {
+  const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
@@ -186,17 +199,10 @@ export default function Room(details: RoomDetails) {
   useEffect(() => {
     if (isLoading || !isAuthenticated || !roomUrl) return;
 
-    // accessibility: whereby grabs focus after its interface is loaded => we lose "esc" and keyboard control over the consent popup
-    const handleReady = (event: any) => {
-      console.log("whereby-embed ready event:", event);
-    };
-
     wherebyRef.current?.addEventListener("leave", handleLeave);
-    wherebyRef.current?.addEventListener("ready", handleReady);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
-      wherebyRef.current?.removeEventListener("ready", handleReady);
     };
   }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
@@ -224,7 +230,7 @@ export default function Room(details: RoomDetails) {
 
   return (
     <>
-      {roomUrl && meetingId && (
+      {roomUrl && meetingId && wherebyLoaded && (
         <>
           <whereby-embed
             ref={wherebyRef}

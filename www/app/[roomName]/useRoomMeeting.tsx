@@ -49,7 +49,6 @@ const useRoomMeeting = (
       .then((result) => {
         setResponse(result);
         setLoading(false);
-        console.debug("Meeting Loaded:", result);
       })
       .catch((error) => {
         const shouldShowHuman = shouldShowError(error);

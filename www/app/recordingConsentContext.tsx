@@ -36,7 +36,9 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
 
   const safeWriteToStorage = (meetingIds: string[]): void => {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(meetingIds));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(meetingIds));
+      }
     } catch (error) {
       console.error("Failed to save consent data to localStorage:", error);
     }
@@ -69,6 +71,11 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
   // initialize on mount
   useEffect(() => {
     try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        setState({ ready: true, consentAnsweredForMeetings: new Set() });
+        return;
+      }
+
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (!stored) {
         setState({ ready: true, consentAnsweredForMeetings: new Set() });
