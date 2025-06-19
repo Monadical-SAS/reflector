@@ -183,7 +183,7 @@ const TopicPlayer = ({
     setIsPlaying(false);
   };
 
-  const isLoaded = !!(mp3.loading && topicTime);
+  const isLoaded = !mp3.loading && !!topicTime
   const error = mp3.error;
   if (error !== null) {
     return <Text fontSize="sm" pt="1" pl="2">
