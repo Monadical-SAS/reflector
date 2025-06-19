@@ -189,15 +189,19 @@ class MeetingController:
 
 class MeetingConsentController:
     async def get_by_meeting_id(self, meeting_id: str) -> list[MeetingConsent]:
-        query = meeting_consent.select().where(meeting_consent.c.meeting_id == meeting_id)
+        query = meeting_consent.select().where(
+            meeting_consent.c.meeting_id == meeting_id
+        )
         results = await database.fetch_all(query)
         return [MeetingConsent(**result) for result in results]
-    
-    async def get_by_meeting_and_user(self, meeting_id: str, user_id: str) -> MeetingConsent | None:
+
+    async def get_by_meeting_and_user(
+        self, meeting_id: str, user_id: str
+    ) -> MeetingConsent | None:
         """Get existing consent for a specific user and meeting"""
         query = meeting_consent.select().where(
             meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.user_id == user_id
+            meeting_consent.c.user_id == user_id,
         )
         result = await database.fetch_one(query)
         return MeetingConsent(**result) if result else None
@@ -207,16 +211,20 @@ class MeetingConsentController:
         if consent.user_id:
             # For authenticated users, check if consent already exists
             # not transactional but we're ok with that; the consents ain't deleted anyways
-            existing = await self.get_by_meeting_and_user(consent.meeting_id, consent.user_id)
+            existing = await self.get_by_meeting_and_user(
+                consent.meeting_id, consent.user_id
+            )
             if existing:
-                query = meeting_consent.update().where(
-                    meeting_consent.c.id == existing.id
-                ).values(
-                    consent_given=consent.consent_given,
-                    consent_timestamp=consent.consent_timestamp,
+                query = (
+                    meeting_consent.update()
+                    .where(meeting_consent.c.id == existing.id)
+                    .values(
+                        consent_given=consent.consent_given,
+                        consent_timestamp=consent.consent_timestamp,
+                    )
                 )
                 await database.execute(query)
-                
+
                 existing.consent_given = consent.consent_given
                 existing.consent_timestamp = consent.consent_timestamp
                 return existing
@@ -224,12 +232,12 @@ class MeetingConsentController:
         query = meeting_consent.insert().values(**consent.model_dump())
         await database.execute(query)
         return consent
-    
+
     async def has_any_denial(self, meeting_id: str) -> bool:
         """Check if any participant denied consent for this meeting"""
         query = meeting_consent.select().where(
             meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.consent_given.is_(False)
+            meeting_consent.c.consent_given.is_(False),
         )
         result = await database.fetch_one(query)
         return result is not None

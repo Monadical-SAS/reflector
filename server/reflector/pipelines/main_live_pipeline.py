@@ -581,7 +581,9 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
             if recording and recording.meeting_id:
                 meeting = await meetings_controller.get_by_id(recording.meeting_id)
                 if meeting:
-                    consent_denied = await meeting_consent_controller.has_any_denial(meeting.id)
+                    consent_denied = await meeting_consent_controller.has_any_denial(
+                        meeting.id
+                    )
     except Exception as e:
         logger.error(f"Failed to get fetch consent: {e}")
         consent_denied = True
@@ -600,8 +602,12 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
             aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
         )
         try:
-            s3_whereby.delete_object(Bucket=recording.bucket_name, Key=recording.object_key)
-            logger.info(f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}")
+            s3_whereby.delete_object(
+                Bucket=recording.bucket_name, Key=recording.object_key
+            )
+            logger.info(
+                f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}"
+            )
         except Exception as e:
             logger.error(f"Failed to delete Whereby recording: {e}")
 
@@ -613,19 +619,21 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
         storage = get_transcripts_storage()
         try:
             await storage.delete_file(transcript.storage_audio_path)
-            logger.info(f"Deleted processed audio from storage: {transcript.storage_audio_path}")
+            logger.info(
+                f"Deleted processed audio from storage: {transcript.storage_audio_path}"
+            )
         except Exception as e:
             logger.error(f"Failed to delete processed audio: {e}")
 
     # 3. Delete local audio files
     try:
-        if hasattr(transcript, 'audio_mp3_filename') and transcript.audio_mp3_filename:
+        if hasattr(transcript, "audio_mp3_filename") and transcript.audio_mp3_filename:
             transcript.audio_mp3_filename.unlink(missing_ok=True)
-        if hasattr(transcript, 'audio_wav_filename') and transcript.audio_wav_filename:
+        if hasattr(transcript, "audio_wav_filename") and transcript.audio_wav_filename:
             transcript.audio_wav_filename.unlink(missing_ok=True)
     except Exception as e:
         logger.error(f"Failed to delete local audio files: {e}")
-    
+
     logger.info("Consent cleanup done")
 
 
