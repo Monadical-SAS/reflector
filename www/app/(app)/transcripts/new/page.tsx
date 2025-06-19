@@ -44,7 +44,7 @@ import {
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
 
-  const isClient = typeof window === 'undefined';
+  const isClient = typeof window !== 'undefined';
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
