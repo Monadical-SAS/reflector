@@ -197,14 +197,14 @@ export default function Room(details: RoomDetails) {
   }, [isLoading, meeting?.error]);
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !roomUrl) return;
+    if (isLoading || !isAuthenticated || !roomUrl || !wherebyLoaded) return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
-  }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
+  }, [handleLeave, roomUrl, isLoading, isAuthenticated, wherebyLoaded]);
 
   if (isLoading) {
     return (
