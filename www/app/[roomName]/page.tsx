@@ -50,8 +50,11 @@ const useConsentWherebyFocusManagement = (acceptButtonRef: RefObject<HTMLButtonE
 const useConsentDialog = (meetingId: string, wherebyRef: RefObject<HTMLElement>/*accessibility*/) => {
   const { state: consentState, touch, hasConsent } = useRecordingConsent();
   const [consentLoading, setConsentLoading] = useState(false);
+  // toast would open duplicates, even with using "id=" prop
+  const [modalOpen, setModalOpen] = useState(false);
   const api = useApi();
   const toast = useToast();
+  
   const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
     if (!api) return;
 
@@ -71,81 +74,102 @@ const useConsentDialog = (meetingId: string, wherebyRef: RefObject<HTMLElement>/
     }
   }, [api, touch]);
 
-  useEffect(() => {
-    if (
-      consentState.ready &&
-      meetingId &&
-      !hasConsent(meetingId) &&
-      !consentLoading
-    ) {
+  const showConsentModal = useCallback(() => {
+    if (modalOpen) return;
 
-      const toastId = toast({
-        position: "top",
-        duration: null,
-        render: ({ onClose }) => {
-          const AcceptButton = () => {
-            const buttonRef = useRef<HTMLButtonElement>(null);
-            useConsentWherebyFocusManagement(buttonRef, wherebyRef);
-            return (
-              <Button
-                ref={buttonRef}
-                colorScheme="blue"
-                size="sm"
-                onClick={() => {
-                  handleConsent(meetingId, true).then(() => {/*signifies it's ok to now wait here.*/})
-                  onClose()
-                }}
-              >
-                Yes, store the audio
-              </Button>
-            );
-          };
+    setModalOpen(true);
 
+    const TOAST_NEVER_DISMISS_VALUE = null;
+    const toastId = toast({
+      position: "top",
+      duration: TOAST_NEVER_DISMISS_VALUE,
+      render: ({ onClose }) => {
+        const AcceptButton = () => {
+          const buttonRef = useRef<HTMLButtonElement>(null);
+          useConsentWherebyFocusManagement(buttonRef, wherebyRef);
           return (
-            <Box p={6} bg="rgba(255, 255, 255, 0.7)" borderRadius="lg" boxShadow="lg" maxW="md" mx="auto">
-              <VStack spacing={4} align="center">
-                <Text fontSize="md" textAlign="center" fontWeight="medium">
-                  Can we have your permission to store this meeting's audio recording on our servers?
-                </Text>
-                <HStack spacing={4} justify="center">
-                  <AcceptButton />
-                  <Button
-                    colorScheme="gray"
-                    size="sm"
-                    onClick={() => {
-                      handleConsent(meetingId, false).then(() => {/*signifies it's ok to now wait here.*/})
-                      onClose()
-                    }}
-                  >
-                    No, delete after transcription
-                  </Button>
-                </HStack>
-              </VStack>
-            </Box>
+            <Button
+              ref={buttonRef}
+              colorScheme="blue"
+              size="sm"
+              onClick={() => {
+                handleConsent(meetingId, true).then(() => {/*signifies it's ok to now wait here.*/})
+                onClose()
+              }}
+            >
+              Yes, store the audio
+            </Button>
           );
-        },
-      });
+        };
 
-      // Handle escape key to close the toast
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          toast.close(toastId);
-        }
-      };
+        return (
+          <Box p={6} bg="rgba(255, 255, 255, 0.7)" borderRadius="lg" boxShadow="lg" maxW="md" mx="auto">
+            <VStack spacing={4} align="center">
+              <Text fontSize="md" textAlign="center" fontWeight="medium">
+                Can we have your permission to store this meeting's audio recording on our servers?
+              </Text>
+              <HStack spacing={4} justify="center">
+                <AcceptButton />
+                <Button
+                  colorScheme="gray"
+                  size="sm"
+                  onClick={() => {
+                    handleConsent(meetingId, false).then(() => {/*signifies it's ok to now wait here.*/})
+                    onClose()
+                  }}
+                >
+                  No, delete after transcription
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+        );
+      },
+      onCloseComplete: () => {
+        setModalOpen(false);
+      }
+    });
 
-      document.addEventListener('keydown', handleKeyDown);
-
-      return () => {
+    // Handle escape key to close the toast
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
         toast.close(toastId);
-        document.removeEventListener('keydown', handleKeyDown);
-      };
-    }
-  }, [consentState.ready, meetingId, hasConsent, consentLoading, toast, handleConsent]);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    const cleanup = () => {
+      toast.close(toastId);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    return cleanup;
+  }, [meetingId, toast, handleConsent, wherebyRef, modalOpen]);
+
+  return { showConsentModal, consentState, hasConsent, consentLoading };
 }
 
-function ConsentDialog({ meetingId, wherebyRef }: { meetingId: string; wherebyRef: React.RefObject<HTMLElement> }) {
-  useConsentDialog(meetingId, wherebyRef);
-  return <></>
+function ConsentDialogButton({ meetingId, wherebyRef }: { meetingId: string; wherebyRef: React.RefObject<HTMLElement> }) {
+  const { showConsentModal, consentState, hasConsent, consentLoading } = useConsentDialog(meetingId, wherebyRef);
+
+  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
+    return null;
+  }
+
+  return (
+    <Button
+      position="absolute"
+      top="56px"
+      left="8px"
+      zIndex={1000}
+      colorScheme="blue"
+      size="sm"
+      onClick={showConsentModal}
+    >
+      Meeting is recording
+    </Button>
+  );
 }
 
 const recordingTypeRequiresConsent = (recordingType: NonNullable<Meeting['recording_type']>) => {
@@ -237,7 +261,7 @@ export default function Room(details: RoomDetails) {
             room={roomUrl}
             style={{ width: "100vw", height: "100vh" }}
           />
-          {recordingType && recordingTypeRequiresConsent(recordingType) && <ConsentDialog meetingId={meetingId} wherebyRef={wherebyRef} />}
+          {recordingType && recordingTypeRequiresConsent(recordingType) && <ConsentDialogButton meetingId={meetingId} wherebyRef={wherebyRef} />}
         </>
       )}
     </>
