@@ -167,7 +167,7 @@ function ConsentDialogButton({ meetingId, wherebyRef }: { meetingId: string; whe
       size="sm"
       onClick={showConsentModal}
     >
-      Meeting is recording
+      Meeting is being recorded
     </Button>
   );
 }
