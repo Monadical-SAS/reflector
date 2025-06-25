@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Literal
-from uuid import uuid4
 
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
 from reflector.db import database, metadata
+from reflector.utils import generate_uuid4
 
 recordings = sa.Table(
     "recording",
@@ -21,10 +21,6 @@ recordings = sa.Table(
     ),
     sa.Column("meeting_id", sa.String),
 )
-
-
-def generate_uuid4() -> str:
-    return str(uuid4())
 
 
 class Recording(BaseModel):

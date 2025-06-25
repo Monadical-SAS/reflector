@@ -293,6 +293,17 @@ export const $GetTranscript = {
       ],
       title: "Room Name",
     },
+    audio_deleted: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Audio Deleted",
+    },
   },
   type: "object",
   required: [
@@ -535,6 +546,12 @@ export const $Meeting = {
       format: "date-time",
       title: "End Date",
     },
+    recording_type: {
+      type: "string",
+      enum: ["none", "local", "cloud"],
+      title: "Recording Type",
+      default: "cloud",
+    },
   },
   type: "object",
   required: [
@@ -546,6 +563,18 @@ export const $Meeting = {
     "end_date",
   ],
   title: "Meeting",
+} as const;
+
+export const $MeetingConsentRequest = {
+  properties: {
+    consent_given: {
+      type: "boolean",
+      title: "Consent Given",
+    },
+  },
+  type: "object",
+  required: ["consent_given"],
+  title: "MeetingConsentRequest",
 } as const;
 
 export const $Page_GetTranscript_ = {
@@ -1097,6 +1126,17 @@ export const $UpdateTranscript = {
       ],
       title: "Reviewed",
     },
+    audio_deleted: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Audio Deleted",
+    },
   },
   type: "object",
   title: "UpdateTranscript",
@@ -1164,6 +1204,35 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $WherebyWebhookEvent = {
+  properties: {
+    apiVersion: {
+      type: "string",
+      title: "Apiversion",
+    },
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    createdAt: {
+      type: "string",
+      format: "date-time",
+      title: "Createdat",
+    },
+    type: {
+      type: "string",
+      title: "Type",
+    },
+    data: {
+      type: "object",
+      title: "Data",
+    },
+  },
+  type: "object",
+  required: ["apiVersion", "id", "createdAt", "type", "data"],
+  title: "WherebyWebhookEvent",
 } as const;
 
 export const $Word = {

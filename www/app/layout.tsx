@@ -4,6 +4,7 @@ import SessionProvider from "./lib/SessionProvider";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import { DomainContextProvider } from "./domainContext";
+import { RecordingConsentProvider } from "./recordingConsentContext";
 import { getConfig } from "./lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
@@ -68,12 +69,14 @@ export default async function RootLayout({
       <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
         <SessionProvider>
           <DomainContextProvider config={config}>
-            <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-              <ErrorProvider>
-                <ErrorMessage />
-                <Providers>{children}</Providers>
-              </ErrorProvider>
-            </ErrorBoundary>
+            <RecordingConsentProvider>
+              <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+                <ErrorProvider>
+                  <ErrorMessage />
+                  <Providers>{children}</Providers>
+                </ErrorProvider>
+              </ErrorBoundary>
+            </RecordingConsentProvider>
           </DomainContextProvider>
         </SessionProvider>
       </body>

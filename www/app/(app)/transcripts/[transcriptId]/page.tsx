@@ -58,6 +58,17 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     return <Modal title="Loading" text={"Loading transcript..."} />;
   }
 
+  if (mp3.error) {
+    return (
+      <Modal
+        title="Transcription error"
+        text={`There was an error loading the recording. Error: ${mp3.error}`}
+      />
+    );
+  }
+
+
+
   return (
     <>
       <Grid
@@ -67,7 +78,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         mt={4}
         mb={4}
       >
-        {waveform.waveform && mp3.media && topics.topics ? (
+        {waveform.waveform && mp3.media && !mp3.audioDeleted && topics.topics ? (
           <Player
             topics={topics?.topics}
             useActiveTopic={useActiveTopic}
@@ -76,7 +87,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             mediaDuration={transcript.response.duration}
           />
         ) : waveform.error ? (
-          <div>"error loading this recording"</div>
+          <div>error loading this recording</div>
+        ) : mp3.audioDeleted ? (
+          <div>Audio was deleted</div>
         ) : (
           <Skeleton h={14} />
         )}

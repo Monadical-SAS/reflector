@@ -8,9 +8,11 @@ interface WherebyEmbedProps {
   onLeave?: () => void;
 }
 
-export default function WherebyEmbed({ roomUrl, onLeave }: WherebyEmbedProps) {
+// currently used for webinars only
+export default function WherebyWebinarEmbed({ roomUrl, onLeave }: WherebyEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
+  // TODO extract common toast logic / styles to be used by consent toast on normal rooms
   const toast = useToast();
   useEffect(() => {
     if (roomUrl && !localStorage.getItem("recording-notice-dismissed")) {

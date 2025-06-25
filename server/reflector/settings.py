@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     HEALTHCHECK_URL: str | None = None
 
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
+    SQS_POLLING_TIMEOUT_SECONDS: int = 60
 
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
 

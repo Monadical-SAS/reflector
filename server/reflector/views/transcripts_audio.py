@@ -86,8 +86,17 @@ async def transcript_get_audio_mp3(
                 headers=resp.headers,
             )
 
-    if not transcript.audio_mp3_filename.exists():
-        raise HTTPException(status_code=500, detail="Audio not found")
+    if transcript.audio_deleted:
+        raise HTTPException(
+            status_code=404, detail="Audio unavailable due to privacy settings"
+        )
+
+    if (
+        not hasattr(transcript, "audio_mp3_filename")
+        or not transcript.audio_mp3_filename
+        or not transcript.audio_mp3_filename.exists()
+    ):
+        raise HTTPException(status_code=404, detail="Audio file not found")
 
     truncated_id = str(transcript.id).split("-")[0]
     filename = f"recording_{truncated_id}.mp3"

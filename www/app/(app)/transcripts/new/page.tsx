@@ -43,6 +43,8 @@ import {
   Input,
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
+
+  const isClient = typeof window !== 'undefined';
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
@@ -123,12 +125,12 @@ const TranscriptCreate = () => {
           <Text mt={6}>
             Reflector is a transcription and summarization pipeline that
             transforms audio into knowledge.
-            <Text className="hidden md:block">
+            <span className="hidden md:block">
               The output is meeting minutes and topic summaries enabling
               topic-specific analyses stored in your systems of record. This is
               accomplished on your infrastructure – without 3rd parties –
               keeping your data private, secure, and organized.
-            </Text>
+            </span>
           </Text>
           <About buttonText="Learn more" />
           <Text mt={6}>
@@ -179,24 +181,26 @@ const TranscriptCreate = () => {
                     placeholder="Choose your language"
                   />
                 </Box>
-                {loading ? (
-                  <Text className="">Checking permissions...</Text>
-                ) : permissionOk ? (
-                  <Spacer />
-                ) : permissionDenied ? (
-                  <Text className="">
-                    Permission to use your microphone was denied, please change
-                    the permission setting in your browser and refresh this
-                    page.
-                  </Text>
+                {isClient && !loading ? (
+                  permissionOk ? (
+                    <Spacer />
+                  ) : permissionDenied ? (
+                    <Text className="">
+                      Permission to use your microphone was denied, please change
+                      the permission setting in your browser and refresh this
+                      page.
+                    </Text>
+                  ) : (
+                    <Button
+                      colorScheme="whiteAlpha"
+                      onClick={requestPermission}
+                      disabled={permissionDenied}
+                    >
+                      Request Microphone Permission
+                    </Button>
+                  )
                 ) : (
-                  <Button
-                    colorScheme="whiteAlpha"
-                    onClick={requestPermission}
-                    disabled={permissionDenied}
-                  >
-                    Request Microphone Permission
-                  </Button>
+                  <Text className="">Checking permissions...</Text>
                 )}
                 <Button
                   colorScheme="whiteAlpha"

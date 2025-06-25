@@ -5,13 +5,19 @@ import getApi from "../../lib/useApi";
 export type Mp3Response = {
   media: HTMLMediaElement | null;
   loading: boolean;
+  error: string | null;
   getNow: () => void;
+  audioDeleted: boolean | null;
 };
 
-const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
+const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
   const [media, setMedia] = useState<HTMLMediaElement | null>(null);
   const [later, setLater] = useState(waiting);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [audioLoading, setAudioLoading] = useState<boolean>(true);
+  const [audioLoadingError, setAudioLoadingError] = useState<null | string>(null);
+  const [transcriptMetadataLoading, setTranscriptMetadataLoading] = useState<boolean>(true);
+  const [transcriptMetadataLoadingError, setTranscriptMetadataLoadingError] = useState<string | null>(null);
+  const [audioDeleted, setAudioDeleted] = useState<boolean | null>(null);
   const api = getApi();
   const { api_url } = useContext(DomainContext);
   const accessTokenInfo = api?.httpRequest?.config?.TOKEN;
@@ -41,24 +47,85 @@ const useMp3 = (id: string, waiting?: boolean): Mp3Response => {
     });
   }, [navigator.serviceWorker, !serviceWorker, accessTokenInfo]);
 
-  useEffect(() => {
-    if (!id || !api || later) return;
 
-    // createa a audio element and set the source
-    setLoading(true);
+  useEffect(() => {
+    if (!transcriptId || !api || later) return;
+
+    let deleted: boolean | null = null;
+
+    setTranscriptMetadataLoading(true);
+    
     const audioElement = document.createElement("audio");
-    audioElement.src = `${api_url}/v1/transcripts/${id}/audio/mp3`;
+    audioElement.src = `${api_url}/v1/transcripts/${transcriptId}/audio/mp3`;
     audioElement.crossOrigin = "anonymous";
     audioElement.preload = "auto";
+    
+    const handleCanPlay = () => {
+      if (deleted) {
+        console.error('Illegal state: audio supposed to be deleted, but was loaded');
+        return;
+      }
+      setAudioLoading(false);
+      setAudioLoadingError(null);
+    };
+    
+    const handleError = () => {
+      setAudioLoading(false);
+      if (deleted) {
+        // we arrived here earlier, ignore
+        return;
+      }
+      setAudioLoadingError("Failed to load audio");
+    };
+    
+    audioElement.addEventListener('canplay', handleCanPlay);
+    audioElement.addEventListener('error', handleError);
+    
     setMedia(audioElement);
-    setLoading(false);
-  }, [id, !api, later]);
+
+
+    setAudioLoading(true);
+
+    let stopped = false;
+    // Fetch transcript info in parallel
+    api.v1TranscriptGet({ transcriptId })
+      .then((transcript) => {
+        if (stopped) return;
+        deleted = transcript.audio_deleted || false;
+        setAudioDeleted(deleted);
+        setTranscriptMetadataLoadingError(null);
+        if (deleted) {
+          setMedia(null);
+          setAudioLoadingError(null);
+        }
+        // if deleted, media will or already returned error
+      })
+      .catch((error) => {
+        if (stopped) return;
+        console.error("Failed to fetch transcript:", error);
+        setAudioDeleted(null);
+        setTranscriptMetadataLoadingError(error.message);
+      })
+      .finally(() => {
+        if (stopped) return;
+        setTranscriptMetadataLoading(false);
+      })
+    
+    return () => {
+      stopped = true;
+      audioElement.removeEventListener('canplay', handleCanPlay);
+      audioElement.removeEventListener('error', handleError);
+    };
+  }, [transcriptId, !api, later, api_url]);
 
   const getNow = () => {
     setLater(false);
   };
 
-  return { media, loading, getNow };
+  const loading = audioLoading || transcriptMetadataLoading;
+  const error = audioLoadingError || transcriptMetadataLoadingError;
+
+  return { media, loading, error, getNow, audioDeleted };
 };
 
 export default useMp3;

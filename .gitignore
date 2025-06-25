@@ -5,3 +5,8 @@ server/exportdanswer
 .vercel
 .env*.local
 dump.rdb
+.yarn
+ngrok.log
+.claude/settings.local.json
+restart-dev.sh
+*.log
