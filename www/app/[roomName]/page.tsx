@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useContext, RefObject } from "react";
-import { Box, Button, Text, VStack, HStack, Spinner, useToast } from "@chakra-ui/react";
+import { Box, Button, Text, VStack, HStack, Spinner, useToast, Icon } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
@@ -9,6 +9,7 @@ import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useApi from "../lib/useApi";
 import { Meeting } from '../api';
+import { FaBars } from "react-icons/fa6";
 
 export type RoomDetails = {
   params: {
@@ -168,6 +169,7 @@ function ConsentDialogButton({ meetingId, wherebyRef }: { meetingId: string; whe
       onClick={showConsentModal}
     >
       Meeting is being recorded
+      <Icon as={FaBars} ml={2} />
     </Button>
   );
 }
