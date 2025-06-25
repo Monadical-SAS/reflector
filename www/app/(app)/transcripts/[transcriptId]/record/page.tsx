@@ -8,7 +8,6 @@ import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
-import Player from "../../player";
 import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
@@ -27,7 +26,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   const webSockets = useWebSockets(details.params.transcriptId);
 
-  let mp3 = useMp3(details.params.transcriptId, true);
+  const mp3 = useMp3(details.params.transcriptId, true);
 
   const router = useRouter();
 

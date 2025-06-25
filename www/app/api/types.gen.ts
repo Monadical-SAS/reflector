@@ -56,6 +56,7 @@ export type GetTranscript = {
   source_kind: SourceKind;
   room_id?: string | null;
   room_name?: string | null;
+  audio_deleted?: boolean | null;
 };
 
 export type GetTranscriptSegmentTopic = {
@@ -107,6 +108,13 @@ export type Meeting = {
   host_room_url: string;
   start_date: string;
   end_date: string;
+  recording_type?: "none" | "local" | "cloud";
+};
+
+export type recording_type = "none" | "local" | "cloud";
+
+export type MeetingConsentRequest = {
+  consent_given: boolean;
 };
 
 export type Page_GetTranscript_ = {
@@ -215,6 +223,7 @@ export type UpdateTranscript = {
   share_mode?: "public" | "semi-private" | "private" | null;
   participants?: Array<TranscriptParticipant> | null;
   reviewed?: boolean | null;
+  audio_deleted?: boolean | null;
 };
 
 export type UserInfo = {
@@ -229,6 +238,16 @@ export type ValidationError = {
   type: string;
 };
 
+export type WherebyWebhookEvent = {
+  apiVersion: string;
+  id: string;
+  createdAt: string;
+  type: string;
+  data: {
+    [key: string]: unknown;
+  };
+};
+
 export type Word = {
   text: string;
   start: number;
@@ -237,6 +256,13 @@ export type Word = {
 };
 
 export type MetricsResponse = unknown;
+
+export type V1MeetingAudioConsentData = {
+  meetingId: string;
+  requestBody: MeetingConsentRequest;
+};
+
+export type V1MeetingAudioConsentResponse = unknown;
 
 export type V1RoomsListData = {
   /**
@@ -454,6 +480,12 @@ export type V1ZulipGetTopicsData = {
 
 export type V1ZulipGetTopicsResponse = Array<Topic>;
 
+export type V1WherebyWebhookData = {
+  requestBody: WherebyWebhookEvent;
+};
+
+export type V1WherebyWebhookResponse = unknown;
+
 export type $OpenApiTs = {
   "/metrics": {
     get: {
@@ -462,6 +494,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: unknown;
+      };
+    };
+  };
+  "/v1/meetings/{meeting_id}/consent": {
+    post: {
+      req: V1MeetingAudioConsentData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
       };
     };
   };
@@ -895,6 +942,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: Array<Topic>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/whereby": {
+    post: {
+      req: V1WherebyWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
         /**
          * Validation Error
          */

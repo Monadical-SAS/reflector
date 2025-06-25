@@ -3,9 +3,10 @@ from typing import Literal
 
 import sqlalchemy as sa
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
+from reflector.utils import generate_uuid4
 
 meetings = sa.Table(
     "meeting",
@@ -40,6 +41,24 @@ meetings = sa.Table(
         server_default=sa.true(),
     ),
 )
+
+meeting_consent = sa.Table(
+    "meeting_consent",
+    metadata,
+    sa.Column("id", sa.String, primary_key=True),
+    sa.Column("meeting_id", sa.String, sa.ForeignKey("meeting.id")),
+    sa.Column("user_id", sa.String, nullable=True),
+    sa.Column("consent_given", sa.Boolean),
+    sa.Column("consent_timestamp", sa.DateTime),
+)
+
+
+class MeetingConsent(BaseModel):
+    id: str = Field(default_factory=generate_uuid4)
+    meeting_id: str
+    user_id: str | None = None
+    consent_given: bool
+    consent_timestamp: datetime
 
 
 class Meeting(BaseModel):
@@ -116,7 +135,7 @@ class MeetingController:
 
     async def get_active(self, room: Room, current_time: datetime) -> Meeting:
         """
-        Get latest meeting for a room.
+        Get latest active meeting for a room.
         """
         end_date = getattr(meetings.c, "end_date")
         query = (
@@ -125,6 +144,7 @@ class MeetingController:
                 sa.and_(
                     meetings.c.room_id == room.id,
                     meetings.c.end_date > current_time,
+                    meetings.c.is_active,
                 )
             )
             .order_by(end_date.desc())
@@ -167,4 +187,63 @@ class MeetingController:
         await database.execute(query)
 
 
+class MeetingConsentController:
+    async def get_by_meeting_id(self, meeting_id: str) -> list[MeetingConsent]:
+        query = meeting_consent.select().where(
+            meeting_consent.c.meeting_id == meeting_id
+        )
+        results = await database.fetch_all(query)
+        return [MeetingConsent(**result) for result in results]
+
+    async def get_by_meeting_and_user(
+        self, meeting_id: str, user_id: str
+    ) -> MeetingConsent | None:
+        """Get existing consent for a specific user and meeting"""
+        query = meeting_consent.select().where(
+            meeting_consent.c.meeting_id == meeting_id,
+            meeting_consent.c.user_id == user_id,
+        )
+        result = await database.fetch_one(query)
+        if result is None:
+            return None
+        return MeetingConsent(**result) if result else None
+
+    async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
+        """Create new consent or update existing one for authenticated users"""
+        if consent.user_id:
+            # For authenticated users, check if consent already exists
+            # not transactional but we're ok with that; the consents ain't deleted anyways
+            existing = await self.get_by_meeting_and_user(
+                consent.meeting_id, consent.user_id
+            )
+            if existing:
+                query = (
+                    meeting_consent.update()
+                    .where(meeting_consent.c.id == existing.id)
+                    .values(
+                        consent_given=consent.consent_given,
+                        consent_timestamp=consent.consent_timestamp,
+                    )
+                )
+                await database.execute(query)
+
+                existing.consent_given = consent.consent_given
+                existing.consent_timestamp = consent.consent_timestamp
+                return existing
+
+        query = meeting_consent.insert().values(**consent.model_dump())
+        await database.execute(query)
+        return consent
+
+    async def has_any_denial(self, meeting_id: str) -> bool:
+        """Check if any participant denied consent for this meeting"""
+        query = meeting_consent.select().where(
+            meeting_consent.c.meeting_id == meeting_id,
+            meeting_consent.c.consent_given.is_(False),
+        )
+        result = await database.fetch_one(query)
+        return result is not None
+
+
 meetings_controller = MeetingController()
+meeting_consent_controller = MeetingConsentController()

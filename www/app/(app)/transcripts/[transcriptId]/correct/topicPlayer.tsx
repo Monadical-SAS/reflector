@@ -183,7 +183,18 @@ const TopicPlayer = ({
     setIsPlaying(false);
   };
 
-  const isLoaded = !!(mp3.media && topicTime);
+  const isLoaded = !mp3.loading && !!topicTime
+  const error = mp3.error;
+  if (error !== null) {
+    return <Text fontSize="sm" pt="1" pl="2">
+      Loading error: {error}
+    </Text>
+  }
+  if (mp3.audioDeleted) {
+    return <Text fontSize="sm" pt="1" pl="2">
+      This topic file has been deleted.
+    </Text>
+  }
   return (
     <Skeleton
       isLoaded={isLoaded}

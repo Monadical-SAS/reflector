@@ -11,6 +11,7 @@ const useAudioDevice = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // skips on SSR
     checkPermission();
   }, []);
 
@@ -123,7 +124,7 @@ const useAudioDevice = () => {
     permissionDenied,
     audioDevices,
     getAudioStream,
-    requestPermission,
+    requestPermission
   };
 };
 

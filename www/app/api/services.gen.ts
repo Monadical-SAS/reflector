@@ -4,6 +4,8 @@ import type { CancelablePromise } from "./core/CancelablePromise";
 import type { BaseHttpRequest } from "./core/BaseHttpRequest";
 import type {
   MetricsResponse,
+  V1MeetingAudioConsentData,
+  V1MeetingAudioConsentResponse,
   V1RoomsListData,
   V1RoomsListResponse,
   V1RoomsCreateData,
@@ -64,6 +66,8 @@ import type {
   V1ZulipGetStreamsResponse,
   V1ZulipGetTopicsData,
   V1ZulipGetTopicsResponse,
+  V1WherebyWebhookData,
+  V1WherebyWebhookResponse,
 } from "./types.gen";
 
 export class DefaultService {
@@ -79,6 +83,31 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "GET",
       url: "/metrics",
+    });
+  }
+
+  /**
+   * Meeting Audio Consent
+   * @param data The data for the request.
+   * @param data.meetingId
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1MeetingAudioConsent(
+    data: V1MeetingAudioConsentData,
+  ): CancelablePromise<V1MeetingAudioConsentResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/meetings/{meeting_id}/consent",
+      path: {
+        meeting_id: data.meetingId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
     });
   }
 
@@ -802,6 +831,27 @@ export class DefaultService {
       path: {
         stream_id: data.streamId,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Whereby Webhook
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1WherebyWebhook(
+    data: V1WherebyWebhookData,
+  ): CancelablePromise<V1WherebyWebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/whereby",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },
