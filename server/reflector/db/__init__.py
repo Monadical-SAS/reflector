@@ -15,7 +15,6 @@ import reflector.db.transcripts  # noqa
 engine = sqlalchemy.create_engine(
     settings.DATABASE_URL, connect_args={"check_same_thread": False}
 )
-metadata.create_all(engine)
 
 
 @subscribers_startup.append
