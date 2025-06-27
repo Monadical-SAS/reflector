@@ -40,16 +40,16 @@ jobs:
         working-directory: ./server
         run: |
           echo "Testing migrations from clean database..."
-          uv run alembic upgrade head
+          alembic upgrade head
           echo "✅ Fresh migration successful"
 
       - name: Test migration rollback and re-apply
         working-directory: ./server
         run: |
           echo "Testing rollback to base..."
-          uv run alembic downgrade base
+          alembic downgrade base
           echo "✅ Rollback successful"
 
           echo "Testing re-apply of all migrations..."
-          uv run alembic upgrade head
+          alembic upgrade head
           echo "✅ Re-apply successful"
