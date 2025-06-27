@@ -21,7 +21,7 @@ class ModalLLM(LLM):
         """
         List of currently supported models on this GPU platform
         """
-        # TODO: Query the specific GPU platform
+        # TODO: Query the specific GPU platform, and on litellm too
         # Replace this with a HTTP call
         return [
             "lmsys/vicuna-13b-v1.5",

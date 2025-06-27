@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, modal, oobabooga
+    # available backend: openai, modal, oobabooga, litellm
     LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
@@ -81,6 +81,12 @@ class Settings(BaseSettings):
 
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
+
+    # LLM LiteLLM configuration
+    LITELLM_URL: str | None = None
+    LITELLM_PRIVATE_KEY: str | None = None
+    LITELLM_MODEL: str = "gpt-3.5-turbo"
+    LITELLM_TEMPERATURE: float = 0.3
 
     # Diarization
     DIARIZATION_ENABLED: bool = True
