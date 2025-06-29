@@ -29,6 +29,7 @@ class ModalLLM(LLM):
             "NousResearch/Hermes-3-Llama-3.1-8B",
         ]
 
+    # returns text
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
     ):
@@ -57,6 +58,7 @@ class ModalLLM(LLM):
             text = response.json()["text"]
             return text
 
+    # returns full api response
     async def _completion(self, messages: list, **kwargs) -> dict:
         kwargs.setdefault("temperature", 0.3)
         kwargs.setdefault("max_tokens", 2048)

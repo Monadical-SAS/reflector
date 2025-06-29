@@ -25,7 +25,7 @@ class LiteLLMLLM(LLM):
         Runpod-hosted + openrouter/*, openai/*
 
         """
-        # TODO: Query the specific GPU platform, and on OobaboogaLLM too
+        # TODO: Query the specific GPU platform, and on ModalLLM too
         return [
             "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
             "~~Qwen/Qwen3-235B-A22B",
@@ -36,28 +36,25 @@ class LiteLLMLLM(LLM):
             # Add more models as needed
         ]
 
-    async def _generate(
-        self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
-    ):
-        """
-        Convert template-based generation to chat completion format
-        """
-        messages = [
-            {"role": "user", "content": prompt}
-        ]
+    def _apply_gen_cfg(self, gen_cfg: dict | None, kwargs: dict) -> None:
+        """Apply generation configuration parameters to kwargs"""
+        if gen_cfg:
+            if "temperature" in gen_cfg:
+                kwargs["temperature"] = gen_cfg["temperature"]
+            if "max_new_tokens" in gen_cfg:
+                kwargs["max_tokens"] = gen_cfg["max_new_tokens"]
+
+    async def _make_chat_completion(self, messages: list, **kwargs) -> dict:
+        """Common method for making chat completion requests"""
+        kwargs.setdefault("temperature", self.litellm_temperature)
+        kwargs.setdefault("max_tokens", 2048)
+        kwargs.setdefault("stream", False)
         
         json_payload = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": self.litellm_temperature,
-            "max_tokens": 2048,
+            **kwargs
         }
-        
-        if gen_cfg:
-            if "temperature" in gen_cfg:
-                json_payload["temperature"] = gen_cfg["temperature"]
-            if "max_new_tokens" in gen_cfg:
-                json_payload["max_tokens"] = gen_cfg["max_new_tokens"]
 
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
@@ -69,36 +66,32 @@ class LiteLLMLLM(LLM):
                 follow_redirects=True,
             )
             response.raise_for_status()
-            result = response.json()
-            
-            content = result["choices"][0]["message"]["content"]
-            return content
+            return response.json()
 
-    async def _completion(self, messages: list, **kwargs) -> dict:
+    # returns text
+    async def _generate(
+        self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
+    ):
+        """
+        Convert template-based generation to chat completion format
+        """
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+        
+        self._apply_gen_cfg(gen_cfg, kwargs)
+        
+        result = await self._make_chat_completion(messages, **kwargs)
+        return result["choices"][0]["message"]["content"]
+
+    # returns full api response
+    async def _completion(self, messages: list, gen_cfg: dict | None = None, **kwargs) -> dict:
         """
         Direct chat completion using LiteLLM
         """
-        kwargs.setdefault("temperature", self.litellm_temperature)
-        kwargs.setdefault("max_tokens", 2048)
-        kwargs.setdefault("stream", False)
+        self._apply_gen_cfg(gen_cfg, kwargs)
         
-        data = {
-            "model": self.model_name,
-            "messages": messages,
-            **kwargs
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await retry(client.post)(
-                f"{self.litellm_url}/v1/chat/completions",
-                headers=self.headers,
-                json=data,
-                timeout=self.timeout,
-                retry_timeout=60 * 5,
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            return response.json()
+        return await self._make_chat_completion(messages, **kwargs)
 
     def _set_model_name(self, model_name: str) -> bool:
         """
