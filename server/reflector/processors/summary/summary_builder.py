@@ -169,9 +169,9 @@ class SummaryBuilder:
     # give explicit schema as an attempt to make it return proper result
     # note that not all the models react correctly on it, some would derp out and start returning schema itself
     def asking_for_structured_output(self, text: str) -> str:
-        r = str
+        r = text
         if not self.llm_instance.has_structured_output():
-            r = f"Output the result in JSON format following the schema: \n```json-schema\n{text}\n```"
+            r += f"Output the result in JSON format following the schema: \n```json-schema\n{text}\n```"
         return r
 
     # ----------------------------------------------------------------------------
@@ -486,7 +486,7 @@ class SummaryBuilder:
         - Generate a summary for all the main subjects
         - Generate a quick recap
         """
-        self.logger.debug("--- extract main subjects")
+        self.logger.info("--- extract main subjects")
 
         m = Messages(
             model_name=self.model_name,
@@ -609,6 +609,7 @@ class SummaryBuilder:
             "Provide a quick recap of the meeting, that fit into a small to medium paragraph."
         )
         recap = await self.llm(m3)
+        self.logger.info(f"Quick recap: {recap}")
         self.recap = recap
 
     # ----------------------------------------------------------------------------
