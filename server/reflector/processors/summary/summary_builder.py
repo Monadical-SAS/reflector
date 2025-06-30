@@ -111,21 +111,14 @@ class Messages:
     def add(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
 
-    def get_tokenizer(self):
-        if not self.tokenizer:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        return self.tokenizer
-
     def count_tokens(self):
-        tokenizer = self.get_tokenizer()
         total_tokens = 0
         for message in self.messages:
-            total_tokens += len(tokenizer.tokenize(message["content"]))
+            total_tokens += len(self.tokenizer.tokenize(message["content"]))
         return total_tokens
 
     def get_tokens_count(self, message):
-        tokenizer = self.get_tokenizer()
-        return len(tokenizer.tokenize(message))
+        return len(self.tokenizer.tokenize(message))
 
     def print_content(self, role, content):
         if not self.logger:
@@ -147,7 +140,7 @@ class SummaryBuilder:
         self.llm_instance: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
-        self.m = Messages(model_name=self.model_name, logger=self.logger)
+        self.m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
         if filename:
             self.read_transcript_from_file(filename)
 
@@ -183,7 +176,7 @@ class SummaryBuilder:
 
         self.logger.debug("--- identify_participants")
 
-        m = Messages(model_name=self.model_name)
+        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer)
         m.add_system(
             "You are an advanced note-taking assistant."
             "You'll be given a transcript, and identify the participants."
@@ -197,8 +190,7 @@ class SummaryBuilder:
             "You can put participants that are mentioned by name."
             "Do not put company name."
             "Ensure that no duplicate names are included."
-            "Output the result in JSON format following the schema: "
-            f"\n```json-schema\n{JSON_SCHEMA_LIST_STRING}\n```"
+            "Return your answer as a JSON array of strings, for example: [\"John\", \"Mary\"]."
         )
         result = await self.llm(
             m,
@@ -223,7 +215,7 @@ class SummaryBuilder:
 
         self.logger.debug("--- identify transcription type")
 
-        m = Messages(model_name=self.model_name, logger=self.logger)
+        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
         m.add_system(
             "You are an advanced assistant specialize to recognize the type of an audio transcription."
             "It could be a meeting or a podcast."
@@ -232,8 +224,7 @@ class SummaryBuilder:
             f"# Transcript\n\n{self.transcript}\n\n"
             "---\n\n"
             "Please identify the type of transcription (meeting or podcast). "
-            "Output the result in JSON format following the schema:"
-            f"\n```json-schema\n{JSON_SCHEMA_TRANSCRIPTION_TYPE}\n```"
+            "Return your answer as a JSON object with transcription_type field, for example: {\"transcription_type\": \"meeting\"}."
         )
         result = await self.llm(
             m,
@@ -317,7 +308,7 @@ class SummaryBuilder:
         json_schema: dict,
         prompt_definition: str,
     ):
-        m = Messages(model_name=self.model_name, logger=self.logger)
+        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
         m.add_system(
             "You are an advanced note-taking assistant."
             f"You'll be given a transcript, and identify {item_type}."
@@ -345,8 +336,8 @@ class SummaryBuilder:
                     "To recall: "
                     + prompt_definition
                     + "If there are none, just return an empty list. "
-                    "The result must be a list following this format: "
-                    f"\n```json-schema\n{json_schema}\n```"
+                    + ("Return your answer as a JSON array of objects with content and assigned_to fields, for example: [{\"content\": \"Task description\", \"assigned_to\": [\"John\"]}]." if item_type == ItemType.ACTION_ITEM else 
+                       "Return your answer as a JSON array of objects with content field, for example: [{\"content\": \"Decision description\"}].")
                 )
                 result = await self.llm(
                     m2,
@@ -373,8 +364,7 @@ class SummaryBuilder:
                 "---\n\n"
                 f"Identify the open questions unanswered during the meeting."
                 "If there are none, just return an empty list. "
-                "The result must be a list following this format:"
-                f"\n```json-schema\n{json_schema}\n```"
+                "Return your answer as a JSON array of objects with content field, for example: [{\"content\": \"Question description\"}]."
             )
             result = await self.llm(
                 m2,
@@ -392,7 +382,7 @@ class SummaryBuilder:
         """
         Deduplicate items based on the transcript and the list of items gathered for all subjects
         """
-        m = Messages(model_name=self.model_name, logger=self.logger)
+        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
         if item_type == ItemType.ACTION_ITEM:
             json_schema = JSON_SCHEMA_ACTION_ITEMS
         else:
@@ -433,8 +423,7 @@ class SummaryBuilder:
         m.add_user(
             f"Consolidate the list of {title} according to your finding. "
             f"The list must be shorter or equal than the original list. "
-            "Give the result using the following JSON schema:"
-            f"\n```json-schema\n{json_schema}\n```"
+            "Return your answer as a JSON array of strings."
         )
 
         result = await self.llm(
@@ -464,7 +453,7 @@ class SummaryBuilder:
         """
         self.logger.debug("--- extract main subjects")
 
-        m = Messages(model_name=self.model_name, logger=self.logger)
+        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
         m.add_system(
             (
                 "You are an advanced transcription summarization assistant."
@@ -493,7 +482,7 @@ class SummaryBuilder:
                 "Do not include direct quotes or unnecessary details. "
                 "Be concise and focused on the main ideas. "
                 "A subject briefly mentionned should not be included. "
-                f"The result must follow the JSON schema: {JSON_SCHEMA_LIST_STRING}. "
+                "Return your answer as a JSON array of strings, for example: [\"subject 1\", \"subject 2\"]. "
             ),
         )
 
@@ -519,7 +508,7 @@ class SummaryBuilder:
                 "Keep the most importants. "
                 "Remember that the same subject can be written in different ways. "
                 "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. "
-                f"The result must follow the JSON schema: {JSON_SCHEMA_LIST_STRING}. "
+                "Return your answer as a JSON array of strings, for example: [\"subject 1\", \"subject 2\"]. "
             )
             subjects = await self.llm(
                 m2,

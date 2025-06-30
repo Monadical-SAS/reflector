@@ -69,6 +69,18 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         cls.ensure_nltk()
+        
+        if model_name:
+            temp_instance = cls._registry[name]()
+            if hasattr(temp_instance, 'supported_models'):
+                supported = temp_instance.supported_models
+                if model_name not in supported:
+                    reflector_logger.warning(
+                        f"Requested model '{model_name}' not in supported_models for {name} backend. "
+                        f"Supported models: {supported}. Using default model instead."
+                    )
+                    model_name = None
+        
         return cls._registry[name](model_name)
 
     def get_model_name(self) -> str:

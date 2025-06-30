@@ -45,3 +45,5 @@ else:
         logger.info("Healthcheck enabled", url=settings.HEALTHCHECK_URL)
     else:
         logger.warning("Healthcheck disabled, no url configured")
+
+    logger.info("LLM configuration", backend=settings.LLM_BACKEND)
