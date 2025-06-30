@@ -103,12 +103,10 @@ class LiteLLMLLM(LLM):
             return False
             
         self.model_name = model_name
-        
-        tokenizer_name = self._get_tokenizer_name(model_name)
-        
+
         try:
             self.llm_tokenizer = AutoTokenizer.from_pretrained(
-                tokenizer_name, cache_dir=settings.CACHE_DIR
+                model_name, cache_dir=settings.CACHE_DIR
             )
             if self.llm_tokenizer.pad_token is None:
                 self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
@@ -122,17 +120,6 @@ class LiteLLMLLM(LLM):
             
         reflector_logger.info(f"Model set to {model_name=}. Tokenizer loaded.")
         return True
-
-    def _get_tokenizer_name(self, model_name: str) -> str:
-        """Map model name to appropriate tokenizer"""
-        if "gpt" in model_name.lower():
-            return "gpt2"
-        elif "claude" in model_name.lower():
-            return "gpt2"
-        elif "llama" in model_name.lower():
-            return "huggyllama/llama-7b"
-        else:
-            return "gpt2"
 
     def _get_tokenizer(self) -> AutoTokenizer:
         """
