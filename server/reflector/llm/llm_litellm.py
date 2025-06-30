@@ -3,7 +3,6 @@ from reflector.llm.base import LLM
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
-from transformers import AutoTokenizer
 
 
 class LiteLLMLLM(LLM):
@@ -100,28 +99,8 @@ class LiteLLMLLM(LLM):
 
         self.model_name = model_name
 
-        try:
-            self.llm_tokenizer = AutoTokenizer.from_pretrained(
-                model_name, cache_dir=settings.CACHE_DIR
-            )
-            if self.llm_tokenizer.pad_token is None:
-                self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
-
-        except Exception as e:
-            reflector_logger.warning(f"Failed to load tokenizer for {model_name}: {e}")
-            self.llm_tokenizer = AutoTokenizer.from_pretrained(
-                "gpt2", cache_dir=settings.CACHE_DIR
-            )
-            self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
-
         reflector_logger.info(f"Model set to {model_name=}. Tokenizer loaded.")
         return True
-
-    def _get_tokenizer(self) -> AutoTokenizer:
-        """
-        Return the currently used LLM tokenizer
-        """
-        return self.llm_tokenizer
 
     def _get_model_name(self) -> str:
         """
