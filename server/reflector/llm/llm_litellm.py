@@ -5,6 +5,7 @@ from reflector.settings import settings
 from reflector.utils.retry import retry
 from transformers import AutoTokenizer
 
+# TODO maybe we can query
 supported_models = [
     "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
     "~~Qwen/Qwen3-235B-A22B",
@@ -46,7 +47,6 @@ class LiteLLMLLM(LLM):
         """
         Runpod-hosted + openrouter/*, openai/*
         """
-        # TODO: Query the specific GPU platform, and on ModalLLM too
         return supported_models
 
     def _apply_gen_cfg(self, gen_cfg: dict | None, kwargs: dict) -> None:
