@@ -16,6 +16,7 @@ supported_models = [
     # Add more models as needed
 ]
 
+
 class LiteLLMLLM(LLM):
     def __init__(self, model_name: str | None = None):
         super().__init__()
@@ -36,7 +37,6 @@ class LiteLLMLLM(LLM):
                 f"Supported models: {supported_models}. Using default model instead."
             )
             model_name = None
-
 
         default_model = model_name if model_name else settings.LITELLM_MODEL
         assert default_model is not None, "LITELLM_MODEL setting must not be None"
@@ -77,51 +77,55 @@ class LiteLLMLLM(LLM):
         # Ollama Models
         # Databricks Models
         # """
-        return "openai" in self.model_name # TODO more
+        return "openai" in self.model_name  # TODO more
 
     def _convert_gen_schema_to_response_format(self, gen_schema: dict) -> dict:
         """Convert gen_schema to LiteLLM response_format"""
         if not gen_schema:
             return None
-            
+
         schema_copy = gen_schema.copy()
-        
+
         # Required for OpenAI structured outputs
         if "additionalProperties" not in schema_copy:
             schema_copy["additionalProperties"] = False
-        
+
         # Required array must include all property keys
         if "properties" in schema_copy and "required" not in schema_copy:
             schema_copy["required"] = list(schema_copy["properties"].keys())
-            
+
         return {
             "type": "json_schema",
             "json_schema": {
                 "name": "response_schema",
                 "schema": schema_copy,
-                "strict": True
-            }
+                "strict": True,
+            },
         }
 
-    async def _make_chat_completion(self, messages: list, response_format: dict = None, **kwargs) -> dict:
+    async def _make_chat_completion(
+        self, messages: list, response_format: dict = None, **kwargs
+    ) -> dict:
         """Common method for making chat completion requests"""
         kwargs.setdefault("temperature", self.litellm_temperature)
         kwargs.setdefault("max_tokens", 2048)
         kwargs.setdefault("stream", False)
 
         json_payload = {"model": self.model_name, "messages": messages, **kwargs}
-        
+
         if response_format:
             json_payload["response_format"] = response_format
 
         async with httpx.AsyncClient() as client:
-            response = await retry(lambda: client.post(
-                f"{self.litellm_url}/v1/chat/completions",
-                headers=self.headers,
-                json=json_payload,
-                timeout=self.timeout,
-                follow_redirects=True,
-            ))(retry_timeout=60 * 5)
+            response = await retry(
+                lambda: client.post(
+                    f"{self.litellm_url}/v1/chat/completions",
+                    headers=self.headers,
+                    json=json_payload,
+                    timeout=self.timeout,
+                    follow_redirects=True,
+                )
+            )(retry_timeout=60 * 5)
             response.raise_for_status()
             return response.json()
 
@@ -132,13 +136,15 @@ class LiteLLMLLM(LLM):
         """
         Convert template-based generation to chat completion format
         """
-        
+
         messages = [{"role": "user", "content": prompt}]
         self._apply_gen_cfg(gen_cfg, kwargs)
-        
+
         response_format = self._convert_gen_schema_to_response_format(gen_schema)
-        
-        result = await self._make_chat_completion(messages, response_format=response_format, **kwargs)
+
+        result = await self._make_chat_completion(
+            messages, response_format=response_format, **kwargs
+        )
         return result["choices"][0]["message"]["content"]
 
     # returns full api response
@@ -148,11 +154,10 @@ class LiteLLMLLM(LLM):
         """
         Direct chat completion using LiteLLM
         """
-        
+
         self._apply_gen_cfg(gen_cfg, kwargs)
 
         return await self._make_chat_completion(messages, **kwargs)
-
 
     def _set_model_name(self, model_name: str) -> bool:
         """
@@ -164,15 +169,15 @@ class LiteLLMLLM(LLM):
             return False
 
         self.model_name = model_name
-        
+
         # Map LiteLLM model names to compatible Hugging Face tokenizers
         tokenizer_map = {
             "openai/gpt-4o-mini": "gpt2",
-            "openai/gpt-4o": "gpt2", 
+            "openai/gpt-4o": "gpt2",
             "openai/gpt-3.5-turbo": "gpt2",
-            "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S": "gpt2"  # fallback to gpt2
+            "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S": "gpt2",  # fallback to gpt2
         }
-        
+
         tokenizer_name = tokenizer_map.get(self.model_name, "gpt2")  # default to gpt2
         self.llm_tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name, cache_dir=settings.CACHE_DIR

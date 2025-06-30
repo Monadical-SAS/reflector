@@ -69,7 +69,7 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         cls.ensure_nltk()
-        
+
         return cls._registry[name](model_name)
 
     def get_model_name(self) -> str:

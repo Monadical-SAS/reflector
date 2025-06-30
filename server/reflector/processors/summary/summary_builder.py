@@ -15,7 +15,6 @@ from functools import partial
 import jsonschema
 import structlog
 from reflector.llm.base import LLM
-from transformers import AutoTokenizer
 
 JSON_SCHEMA_LIST_STRING = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -140,7 +139,11 @@ class SummaryBuilder:
         self.llm_instance: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
-        self.m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
+        self.m = Messages(
+            model_name=self.model_name,
+            tokenizer=self.llm_instance.tokenizer,
+            logger=self.logger,
+        )
         if filename:
             self.read_transcript_from_file(filename)
 
@@ -189,16 +192,20 @@ class SummaryBuilder:
             "You are an advanced note-taking assistant."
             "You'll be given a transcript, and identify the participants."
         )
-        m.add_user(self.asking_for_structured_output((
-            "# Transcript\n\n{self.transcript}\n\n"
-            "---\n\n"
-            "Please identify the participants in the conversation."
-            "Each participant should only be listed once, even if they are mentionned multiple times in the conversation."
-            "Participants are real people who are part of the conversation and the speakers."
-            "You can put participants that are mentioned by name."
-            "Do not put company name."
-            "Ensure that no duplicate names are included."
-        )))
+        m.add_user(
+            self.asking_for_structured_output(
+                (
+                    "# Transcript\n\n{self.transcript}\n\n"
+                    "---\n\n"
+                    "Please identify the participants in the conversation."
+                    "Each participant should only be listed once, even if they are mentionned multiple times in the conversation."
+                    "Participants are real people who are part of the conversation and the speakers."
+                    "You can put participants that are mentioned by name."
+                    "Do not put company name."
+                    "Ensure that no duplicate names are included."
+                )
+            )
+        )
         result = await self.llm(
             m,
             [
@@ -222,17 +229,24 @@ class SummaryBuilder:
 
         self.logger.debug("--- identify transcription type")
 
-        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
+        m = Messages(
+            model_name=self.model_name,
+            tokenizer=self.llm_instance.tokenizer,
+            logger=self.logger,
+        )
         m.add_system(
             "You are an advanced assistant specialize to recognize the type of an audio transcription."
             "It could be a meeting or a podcast."
         )
-        m.add_user(self.asking_for_structured_output((
-            f"# Transcript\n\n{self.transcript}\n\n"
-            "---\n\n"
-            "Please identify the type of transcription (meeting or podcast). "
+        m.add_user(
+            self.asking_for_structured_output(
+                (
+                    f"# Transcript\n\n{self.transcript}\n\n"
+                    "---\n\n"
+                    "Please identify the type of transcription (meeting or podcast). "
+                )
+            )
         )
-        ))
         result = await self.llm(
             m,
             [
@@ -315,7 +329,11 @@ class SummaryBuilder:
         json_schema: dict,
         prompt_definition: str,
     ):
-        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
+        m = Messages(
+            model_name=self.model_name,
+            tokenizer=self.llm_instance.tokenizer,
+            logger=self.logger,
+        )
         m.add_system(
             "You are an advanced note-taking assistant."
             f"You'll be given a transcript, and identify {item_type}."
@@ -333,16 +351,19 @@ class SummaryBuilder:
                         break
 
                 m2 = m.copy()
-                m2.add_user(self.asking_for_structured_output((
-                        f"# Transcript\n\n{self.transcript}\n\n"
-                        f"# Main subjects\n\n{self.format_list_md(self.subjects)}\n\n"
-                        f"# Summary of {subject}\n\n{summary}\n\n"
-                        "---\n\n"
-                        f'What are the {item_type.value} only related to the main subject "{subject}" ? '
-                        f"Make sure the {item_type.value} do not overlap with other subjects. "
-                        "To recall: "
-                        + prompt_definition
-                )))
+                m2.add_user(
+                    self.asking_for_structured_output(
+                        (
+                            f"# Transcript\n\n{self.transcript}\n\n"
+                            f"# Main subjects\n\n{self.format_list_md(self.subjects)}\n\n"
+                            f"# Summary of {subject}\n\n{summary}\n\n"
+                            "---\n\n"
+                            f'What are the {item_type.value} only related to the main subject "{subject}" ? '
+                            f"Make sure the {item_type.value} do not overlap with other subjects. "
+                            "To recall: " + prompt_definition
+                        )
+                    )
+                )
                 result = await self.llm(
                     m2,
                     [
@@ -363,12 +384,16 @@ class SummaryBuilder:
 
         elif item_type == ItemType.OPEN_QUESTION:
             m2 = m.copy()
-            m2.add_user(self.asking_for_structured_output((
-                f"# Transcript\n\n{self.transcript}\n\n"
-                "---\n\n"
-                f"Identify the open questions unanswered during the meeting."
-                "If there are none, just return an empty list. "
-            )))
+            m2.add_user(
+                self.asking_for_structured_output(
+                    (
+                        f"# Transcript\n\n{self.transcript}\n\n"
+                        "---\n\n"
+                        f"Identify the open questions unanswered during the meeting."
+                        "If there are none, just return an empty list. "
+                    )
+                )
+            )
             result = await self.llm(
                 m2,
                 [
@@ -385,7 +410,11 @@ class SummaryBuilder:
         """
         Deduplicate items based on the transcript and the list of items gathered for all subjects
         """
-        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
+        m = Messages(
+            model_name=self.model_name,
+            tokenizer=self.llm_instance.tokenizer,
+            logger=self.logger,
+        )
         if item_type == ItemType.ACTION_ITEM:
             json_schema = JSON_SCHEMA_ACTION_ITEMS
         else:
@@ -423,10 +452,14 @@ class SummaryBuilder:
 
         await self.llm(m)
 
-        m.add_user(self.asking_for_structured_output((
-            f"Consolidate the list of {title} according to your finding. "
-            f"The list must be shorter or equal than the original list. "
-        )))
+        m.add_user(
+            self.asking_for_structured_output(
+                (
+                    f"Consolidate the list of {title} according to your finding. "
+                    f"The list must be shorter or equal than the original list. "
+                )
+            )
+        )
 
         result = await self.llm(
             m,
@@ -455,7 +488,11 @@ class SummaryBuilder:
         """
         self.logger.debug("--- extract main subjects")
 
-        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer, logger=self.logger)
+        m = Messages(
+            model_name=self.model_name,
+            tokenizer=self.llm_instance.tokenizer,
+            logger=self.logger,
+        )
         m.add_system(
             (
                 "You are an advanced transcription summarization assistant."
@@ -476,16 +513,20 @@ class SummaryBuilder:
                 "Do not mention conclusion if there is no conclusion"
             )
         )
-        m.add_user(self.asking_for_structured_output((
-                f"# Transcript\n\n{self.transcript}\n\n"
-                + (
-                    "\n\n---\n\n"
-                    "What are the main/key subjects discussed in this transcript ? "
-                    "Do not include direct quotes or unnecessary details. "
-                    "Be concise and focused on the main ideas. "
-                    "A subject briefly mentioned should not be included. "
+        m.add_user(
+            self.asking_for_structured_output(
+                (
+                    f"# Transcript\n\n{self.transcript}\n\n"
+                    + (
+                        "\n\n---\n\n"
+                        "What are the main/key subjects discussed in this transcript ? "
+                        "Do not include direct quotes or unnecessary details. "
+                        "Be concise and focused on the main ideas. "
+                        "A subject briefly mentioned should not be included. "
+                    )
                 )
-        )))
+            )
+        )
 
         # Note: Asking the model the key subject sometimes generate a lot of subjects
         # We need to consolidate them to avoid redundancy when it happen.
@@ -503,13 +544,17 @@ class SummaryBuilder:
 
         if len(self.subjects) > 6:
             # the model may bugged and generate a lot of subjects
-            m.add_user(self.asking_for_structured_output((
-                "No that may be too much. "
-                "Consolidate the subjects and remove any redundancy. "
-                "Keep the most important. "
-                "Remember that the same subject can be written in different ways. "
-                "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. "
-            )))
+            m.add_user(
+                self.asking_for_structured_output(
+                    (
+                        "No that may be too much. "
+                        "Consolidate the subjects and remove any redundancy. "
+                        "Keep the most important. "
+                        "Remember that the same subject can be written in different ways. "
+                        "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. "
+                    )
+                )
+            )
             subjects = await self.llm(
                 m2,
                 [
