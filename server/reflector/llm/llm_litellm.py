@@ -58,8 +58,12 @@ class LiteLLMLLM(LLM):
                 kwargs["max_tokens"] = gen_cfg["max_new_tokens"]
 
     def has_structured_output(self):
-        # TODO https://docs.litellm.ai/docs/completion/json_mode
-        # TODO supports_response_schema
+        # if we want to make this check runtime, we need to make it async, and we need to add another entity custom_llm_provider
+        # supports_response_schema(model="gemini-1.5-pro-preview-0215", custom_llm_provider="bedrock")
+        # https://docs.litellm.ai/docs/completion/json_mode
+        # easier to have a hardcoded mapping for now
+        # from docs:
+        # """
         # Works for:
         #
         # OpenAI models
@@ -72,6 +76,7 @@ class LiteLLMLLM(LLM):
         # Groq Models
         # Ollama Models
         # Databricks Models
+        # """
         return "openai" in self.model_name # TODO more
 
     def _convert_gen_schema_to_response_format(self, gen_schema: dict) -> dict:
