@@ -53,36 +53,14 @@ class LiteLLMLLM(LLM):
         json_payload = {"model": self.model_name, "messages": messages, **kwargs}
 
         async with httpx.AsyncClient() as client:
-            # Custom retry function that logs 400 errors
-            async def post_with_logging():
-                response = await client.post(
-                    f"{self.litellm_url}/v1/chat/completions",
-                    headers=self.headers,
-                    json=json_payload,
-                    timeout=self.timeout,
-                    follow_redirects=True,
-                )
-                if response.status_code == 400:
-                    reflector_logger.error(f"LiteLLM 400 Error - Payload: {json_payload}")
-                    reflector_logger.error(f"LiteLLM 400 Error - Response: {response.text}")
-                    
-                    # Save error data for reproduction
-                    import json as json_lib
-                    import time
-                    error_data = {
-                        "timestamp": time.time(),
-                        "payload": json_payload,
-                        "response": response.text,
-                        "method_inputs": getattr(self, '_debug_inputs', {})
-                    }
-                    with open(f"/tmp/litellm_400_error_{int(time.time())}.json", "w") as f:
-                        json_lib.dump(error_data, f, indent=2)
-                response.raise_for_status()
-                return response
-            
-            response = await retry(post_with_logging)(
-                retry_timeout=60 * 5,
-            )
+            response = await retry(lambda: client.post(
+                f"{self.litellm_url}/v1/chat/completions",
+                headers=self.headers,
+                json=json_payload,
+                timeout=self.timeout,
+                follow_redirects=True,
+            ))(retry_timeout=60 * 5)
+            response.raise_for_status()
             return response.json()
 
     # returns text
@@ -92,14 +70,6 @@ class LiteLLMLLM(LLM):
         """
         Convert template-based generation to chat completion format
         """
-        # Capture inputs for error debugging
-        self._debug_inputs = {
-            "method": "_generate",
-            "prompt": prompt,
-            "gen_schema": gen_schema,
-            "gen_cfg": gen_cfg,
-            "kwargs": kwargs
-        }
         
         messages = [{"role": "user", "content": prompt}]
 
@@ -121,13 +91,6 @@ class LiteLLMLLM(LLM):
         """
         Direct chat completion using LiteLLM
         """
-        # Capture inputs for error debugging
-        self._debug_inputs = {
-            "method": "_completion", 
-            "messages": messages,
-            "gen_cfg": gen_cfg,
-            "kwargs": kwargs
-        }
         
         self._apply_gen_cfg(gen_cfg, kwargs)
 
