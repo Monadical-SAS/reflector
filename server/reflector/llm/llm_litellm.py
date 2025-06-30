@@ -29,9 +29,9 @@ class LiteLLMLLM(LLM):
         return [
             "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
             "~~Qwen/Qwen3-235B-A22B",
-            "monadical/private/smart", # (Phi-4 quant)
-            "monadical/private/dumb", # (Phi-4 quant)
-            "monadical/private/reasoning", # (Phi-4 quant)
+            "monadical/private/smart",  # (Phi-4 quant)
+            "monadical/private/dumb",  # (Phi-4 quant)
+            "monadical/private/reasoning",  # (Phi-4 quant)
             "openai/gpt-4o-mini",
             # Add more models as needed
         ]
@@ -49,12 +49,8 @@ class LiteLLMLLM(LLM):
         kwargs.setdefault("temperature", self.litellm_temperature)
         kwargs.setdefault("max_tokens", 2048)
         kwargs.setdefault("stream", False)
-        
-        json_payload = {
-            "model": self.model_name,
-            "messages": messages,
-            **kwargs
-        }
+
+        json_payload = {"model": self.model_name, "messages": messages, **kwargs}
 
         async with httpx.AsyncClient() as client:
             response = await retry(client.post)(
@@ -75,22 +71,22 @@ class LiteLLMLLM(LLM):
         """
         Convert template-based generation to chat completion format
         """
-        messages = [
-            {"role": "user", "content": prompt}
-        ]
-        
+        messages = [{"role": "user", "content": prompt}]
+
         self._apply_gen_cfg(gen_cfg, kwargs)
-        
+
         result = await self._make_chat_completion(messages, **kwargs)
         return result["choices"][0]["message"]["content"]
 
     # returns full api response
-    async def _completion(self, messages: list, gen_cfg: dict | None = None, **kwargs) -> dict:
+    async def _completion(
+        self, messages: list, gen_cfg: dict | None = None, **kwargs
+    ) -> dict:
         """
         Direct chat completion using LiteLLM
         """
         self._apply_gen_cfg(gen_cfg, kwargs)
-        
+
         return await self._make_chat_completion(messages, **kwargs)
 
     def _set_model_name(self, model_name: str) -> bool:
@@ -101,7 +97,7 @@ class LiteLLMLLM(LLM):
         if hasattr(self, "model_name") and model_name == self._get_model_name():
             reflector_logger.info("No change in model. Setting model skipped.")
             return False
-            
+
         self.model_name = model_name
 
         try:
@@ -110,14 +106,14 @@ class LiteLLMLLM(LLM):
             )
             if self.llm_tokenizer.pad_token is None:
                 self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
-                
+
         except Exception as e:
             reflector_logger.warning(f"Failed to load tokenizer for {model_name}: {e}")
             self.llm_tokenizer = AutoTokenizer.from_pretrained(
                 "gpt2", cache_dir=settings.CACHE_DIR
             )
             self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
-            
+
         reflector_logger.info(f"Model set to {model_name=}. Tokenizer loaded.")
         return True
 
@@ -144,7 +140,7 @@ if __name__ == "__main__":
 
     async def main():
         llm = LiteLLMLLM()
-        
+
         # Test basic generation
         prompt = llm.create_prompt(
             instruct="Generate a short title for this content",
@@ -163,8 +159,14 @@ if __name__ == "__main__":
 
         # Test completion
         messages = [
-            {"role": "system", "content": "You are a helpful assistant that creates concise titles."},
-            {"role": "user", "content": "Create a title for a meeting about project planning"}
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that creates concise titles.",
+            },
+            {
+                "role": "user",
+                "content": "Create a title for a meeting about project planning",
+            },
         ]
         result = await llm.completion(messages=messages, logger=logger)
         print("Completion result:", result)
