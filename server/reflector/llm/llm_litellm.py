@@ -44,13 +44,40 @@ class LiteLLMLLM(LLM):
             if "max_new_tokens" in gen_cfg:
                 kwargs["max_tokens"] = gen_cfg["max_new_tokens"]
 
-    async def _make_chat_completion(self, messages: list, **kwargs) -> dict:
+    def _convert_gen_schema_to_response_format(self, gen_schema: dict) -> dict:
+        """Convert gen_schema to LiteLLM response_format"""
+        if not gen_schema:
+            return None
+            
+        schema_copy = gen_schema.copy()
+        
+        # Required for OpenAI structured outputs
+        if "additionalProperties" not in schema_copy:
+            schema_copy["additionalProperties"] = False
+        
+        # Required array must include all property keys
+        if "properties" in schema_copy and "required" not in schema_copy:
+            schema_copy["required"] = list(schema_copy["properties"].keys())
+            
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "response_schema",
+                "schema": schema_copy,
+                "strict": True
+            }
+        }
+
+    async def _make_chat_completion(self, messages: list, response_format: dict = None, **kwargs) -> dict:
         """Common method for making chat completion requests"""
         kwargs.setdefault("temperature", self.litellm_temperature)
         kwargs.setdefault("max_tokens", 2048)
         kwargs.setdefault("stream", False)
 
         json_payload = {"model": self.model_name, "messages": messages, **kwargs}
+        
+        if response_format:
+            json_payload["response_format"] = response_format
 
         async with httpx.AsyncClient() as client:
             response = await retry(lambda: client.post(
@@ -72,17 +99,12 @@ class LiteLLMLLM(LLM):
         """
         
         messages = [{"role": "user", "content": prompt}]
-
         self._apply_gen_cfg(gen_cfg, kwargs)
-
-        result = await self._make_chat_completion(messages, **kwargs)
-        content = result["choices"][0]["message"]["content"]
         
-        # Ensure response matches expected schema if gen_schema is provided
-        if gen_schema and isinstance(gen_schema, dict):
-            content = self._ensure_schema_compliance(content, gen_schema)
-            
-        return content
+        response_format = self._convert_gen_schema_to_response_format(gen_schema)
+        
+        result = await self._make_chat_completion(messages, response_format=response_format, **kwargs)
+        return result["choices"][0]["message"]["content"]
 
     # returns full api response
     async def _completion(
@@ -96,74 +118,6 @@ class LiteLLMLLM(LLM):
 
         return await self._make_chat_completion(messages, **kwargs)
 
-    def _ensure_schema_compliance(self, content: str, gen_schema: dict) -> str:
-        """Ensure the LLM response matches the expected JSON schema"""
-        import json
-        
-        # Remove code block markers first
-        content = content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
-        
-        # Try to parse as JSON
-        try:
-            parsed = json.loads(content)
-            
-            # Check if LLM returned a schema definition instead of data
-            if isinstance(parsed, dict) and "$schema" in parsed:
-                reflector_logger.warning(f"LLM returned schema definition instead of data: {parsed}")
-                
-                # If expecting an array, return empty array
-                if gen_schema.get("type") == "array":
-                    return json.dumps([])
-                # If expecting an object, return minimal object matching schema
-                elif gen_schema.get("type") == "object" and "properties" in gen_schema:
-                    properties = gen_schema["properties"]
-                    result = {}
-                    for prop_name, prop_schema in properties.items():
-                        if prop_schema.get("type") == "string":
-                            result[prop_name] = ""
-                        elif prop_schema.get("type") == "array":
-                            result[prop_name] = []
-                    return json.dumps(result)
-                    
-            # If it's valid JSON and not a schema, return as-is
-            return json.dumps(parsed)
-            
-        except json.JSONDecodeError:
-            pass
-            
-        # If JSON parsing fails, try to wrap in expected schema structure
-        if gen_schema.get("type") == "array":
-            # For array schema, try to extract content as array items
-            if content:
-                # Simple case: wrap single item in array
-                wrapped = [content.strip('"')]
-                return json.dumps(wrapped)
-            else:
-                return json.dumps([])
-                
-        elif gen_schema.get("type") == "object" and "properties" in gen_schema:
-            properties = gen_schema["properties"]
-            
-            # Common case: single string property
-            if len(properties) == 1:
-                prop_name = list(properties.keys())[0]
-                prop_schema = properties[prop_name]
-                
-                if prop_schema.get("type") == "string":
-                    # Wrap the content in the expected JSON structure
-                    wrapped = {prop_name: content.strip('"')}
-                    return json.dumps(wrapped)
-        
-        # As a last resort, return the original content and let the caller handle it
-        reflector_logger.warning(f"Could not ensure schema compliance for: {content}")
-        return content
 
     def _set_model_name(self, model_name: str) -> bool:
         """
