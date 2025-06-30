@@ -5,6 +5,15 @@ from reflector.settings import settings
 from reflector.utils.retry import retry
 from transformers import AutoTokenizer
 
+supported_models = [
+    "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
+    "~~Qwen/Qwen3-235B-A22B",
+    "monadical/private/smart",  # (Phi-4 quant)
+    "monadical/private/dumb",  # (Phi-4 quant)
+    "monadical/private/reasoning",  # (Phi-4 quant)
+    "openai/gpt-4o-mini",
+    # Add more models as needed
+]
 
 class LiteLLMLLM(LLM):
     def __init__(self, model_name: str | None = None):
@@ -17,24 +26,28 @@ class LiteLLMLLM(LLM):
             "Authorization": f"Bearer {self.litellm_key}",
             "Content-Type": "application/json",
         }
-        self._set_model_name(model_name if model_name else settings.LITELLM_MODEL)
+
+        # many calls use hardcoded NousResearch/Hermes-3-Llama-3.1-8B that isn't supported by all the providers
+        # ideal solution is to remove hardcode and also remove this check altogether
+        if model_name and model_name not in supported_models:
+            reflector_logger.warning(
+                f"Requested model '{model_name}' not in supported_models for litellm backend. "
+                f"Supported models: {supported_models}. Using default model instead."
+            )
+            model_name = None
+
+
+        default_model = model_name if model_name else settings.LITELLM_MODEL
+        assert default_model is not None, "LITELLM_MODEL setting must not be None"
+        self._set_model_name(default_model)
 
     @property
     def supported_models(self):
         """
         Runpod-hosted + openrouter/*, openai/*
-
         """
         # TODO: Query the specific GPU platform, and on ModalLLM too
-        return [
-            "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
-            "~~Qwen/Qwen3-235B-A22B",
-            "monadical/private/smart",  # (Phi-4 quant)
-            "monadical/private/dumb",  # (Phi-4 quant)
-            "monadical/private/reasoning",  # (Phi-4 quant)
-            "openai/gpt-4o-mini",
-            # Add more models as needed
-        ]
+        return supported_models
 
     def _apply_gen_cfg(self, gen_cfg: dict | None, kwargs: dict) -> None:
         """Apply generation configuration parameters to kwargs"""
@@ -43,6 +56,23 @@ class LiteLLMLLM(LLM):
                 kwargs["temperature"] = gen_cfg["temperature"]
             if "max_new_tokens" in gen_cfg:
                 kwargs["max_tokens"] = gen_cfg["max_new_tokens"]
+
+    def has_structured_output(self):
+        # TODO https://docs.litellm.ai/docs/completion/json_mode
+        # TODO supports_response_schema
+        # Works for:
+        #
+        # OpenAI models
+        # Azure OpenAI models
+        # xAI models (Grok-2 or later)
+        # Google AI Studio - Gemini models
+        # Vertex AI models (Gemini + Anthropic)
+        # Bedrock Models
+        # Anthropic API Models
+        # Groq Models
+        # Ollama Models
+        # Databricks Models
+        return "openai" in self.model_name # TODO more
 
     def _convert_gen_schema_to_response_format(self, gen_schema: dict) -> dict:
         """Convert gen_schema to LiteLLM response_format"""

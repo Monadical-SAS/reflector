@@ -70,17 +70,6 @@ class LLM:
             importlib.import_module(module_name)
         cls.ensure_nltk()
         
-        if model_name:
-            temp_instance = cls._registry[name]()
-            if hasattr(temp_instance, 'supported_models'):
-                supported = temp_instance.supported_models
-                if model_name not in supported:
-                    reflector_logger.warning(
-                        f"Requested model '{model_name}' not in supported_models for {name} backend. "
-                        f"Supported models: {supported}. Using default model instead."
-                    )
-                    model_name = None
-        
         return cls._registry[name](model_name)
 
     def get_model_name(self) -> str:
@@ -132,6 +121,10 @@ class LLM:
 
     def _get_tokenizer(self):
         pass
+
+    # whether implementation supports structured output on the model side (otherwise it's prompt engineering)
+    def has_structured_output(self):
+        return False
 
     async def generate(
         self,
