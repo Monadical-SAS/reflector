@@ -20,3 +20,7 @@ Polls SQS every 60 seconds via /server/reflector/worker/process.py:24-62:
 # Every 60 seconds, check for new recordings
 sqs = boto3.client("sqs", ...)
 response = sqs.receive_message(QueueUrl=queue_url, ...)
+
+# requeue
+
+docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python /app/requeue_uploaded_file.py TRANSCRIPT_ID"

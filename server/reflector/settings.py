@@ -90,6 +90,12 @@ class Settings(BaseSettings):
     LITELLM_TEMPERATURE: float = 0.3
     LITELLM_TOKENIZER: str = "gpt2"
 
+    # Special summary case
+    SUMMARY_MODEL: str = "NousResearch/Hermes-3-Llama-3.1-8B"
+    SUMMARY_LLM_URL: str
+    SUMMARY_LLM_API_KEY: str
+    SUMMARY_LLM_USE_STRUCTURED_OUTPUT: bool = True
+
     # Diarization
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"

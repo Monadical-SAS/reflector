@@ -5,18 +5,6 @@ from reflector.settings import settings
 from reflector.utils.retry import retry
 from transformers import AutoTokenizer
 
-# TODO maybe we can query
-supported_models = [
-    "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S",
-    "~~Qwen/Qwen3-235B-A22B",
-    "monadical/private/smart",  # (Phi-4 quant)
-    "monadical/private/dumb",  # (Phi-4 quant)
-    "monadical/private/reasoning",  # (Phi-4 quant)
-    "openai/gpt-4o-mini",
-    # Add more models as needed
-]
-
-
 class LiteLLMLLM(LLM):
     def __init__(self, model_name: str | None = None):
         super().__init__()
@@ -31,25 +19,9 @@ class LiteLLMLLM(LLM):
             "Content-Type": "application/json",
         }
 
-        # many calls use hardcoded NousResearch/Hermes-3-Llama-3.1-8B that isn't supported by all the providers
-        # ideal solution is to remove hardcode and also remove this check altogether
-        if model_name and model_name not in supported_models:
-            reflector_logger.warning(
-                f"Requested model '{model_name}' not in supported_models for litellm backend. "
-                f"Supported models: {supported_models}. Using default model instead."
-            )
-            model_name = None
-
         default_model = model_name if model_name else self.litellm_model
         assert default_model is not None, "litellm_model setting must not be None"
         self._set_model_name(default_model, settings.LITELLM_TOKENIZER)
-
-    @property
-    def supported_models(self):
-        """
-        Runpod-hosted + openrouter/*, openai/*
-        """
-        return supported_models
 
     def _apply_gen_cfg(self, gen_cfg: dict | None, kwargs: dict) -> None:
         """Apply generation configuration parameters to kwargs"""

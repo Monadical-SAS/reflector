@@ -15,7 +15,7 @@ import asyncio
 import functools
 from contextlib import asynccontextmanager
 
-from celery import chord, group, shared_task
+from celery import chord, group, shared_task, current_task
 from pydantic import BaseModel
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import recordings_controller
@@ -106,16 +106,28 @@ def get_transcript(func):
     Decorator to fetch the transcript from the database from the first argument
     """
 
+    @functools.wraps(func)
     async def wrapper(**kwargs):
         transcript_id = kwargs.pop("transcript_id")
         transcript = await transcripts_controller.get_by_id(transcript_id=transcript_id)
         if not transcript:
             raise Exception("Transcript {transcript_id} not found")
+        
+        # Enhanced logger with Celery task context
         tlogger = logger.bind(transcript_id=transcript.id)
+        if current_task:
+            tlogger = tlogger.bind(
+                task_id=current_task.request.id,
+                task_name=current_task.name,
+                worker_hostname=current_task.request.hostname,
+                task_retries=current_task.request.retries,
+            )
+        
         try:
-            return await func(transcript=transcript, logger=tlogger, **kwargs)
+            result = await func(transcript=transcript, logger=tlogger, **kwargs)
+            return result
         except Exception as exc:
-            tlogger.error("Pipeline error", exc_info=exc)
+            tlogger.error("Pipeline error", function_name=func.__name__, exc_info=exc)
             raise
 
     return wrapper
