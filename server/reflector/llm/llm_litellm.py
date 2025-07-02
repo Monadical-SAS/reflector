@@ -24,7 +24,6 @@ class LiteLLMLLM(LLM):
         self.litellm_url = settings.LITELLM_URL
         self.litellm_key = settings.LITELLM_PRIVATE_KEY
         self.litellm_temperature = settings.LITELLM_TEMPERATURE
-        self.litellm_tokenizer = settings.LITELLM_TOKENIZER
         self.litellm_model = settings.LITELLM_MODEL
         self.headers = {
             "Authorization": f"Bearer {self.litellm_key}",
@@ -42,7 +41,7 @@ class LiteLLMLLM(LLM):
 
         default_model = model_name if model_name else self.litellm_model
         assert default_model is not None, "litellm_model setting must not be None"
-        self._set_model_name(default_model)
+        self._set_model_name(default_model, settings.LITELLM_TOKENIZER)
 
     @property
     def supported_models(self):
@@ -161,7 +160,7 @@ class LiteLLMLLM(LLM):
 
         return await self._make_chat_completion(messages, **kwargs)
 
-    def _set_model_name(self, model_name: str) -> bool:
+    def _set_model_name(self, model_name: str, tokenizer: str) -> bool:
         """
         Set the model name and load tokenizer
         """
@@ -172,17 +171,8 @@ class LiteLLMLLM(LLM):
 
         self.model_name = model_name
 
-        # Map LiteLLM model names to compatible Hugging Face tokenizers
-        tokenizer_map = {
-            "openai/gpt-4o-mini": "gpt2",
-            "openai/gpt-4o": "gpt2",
-            "openai/gpt-3.5-turbo": "gpt2",
-            "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S": "gpt2",  # fallback to gpt2
-        }
-
-        tokenizer_name = tokenizer_map.get(self.model_name, self.litellm_tokenizer)
         self.llm_tokenizer = AutoTokenizer.from_pretrained(
-            tokenizer_name, cache_dir=settings.CACHE_DIR
+            tokenizer, cache_dir=settings.CACHE_DIR
         )
 
         reflector_logger.info(f"Model set to {model_name=}. Tokenizer loaded.")
