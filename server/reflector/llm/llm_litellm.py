@@ -24,6 +24,8 @@ class LiteLLMLLM(LLM):
         self.litellm_url = settings.LITELLM_URL
         self.litellm_key = settings.LITELLM_PRIVATE_KEY
         self.litellm_temperature = settings.LITELLM_TEMPERATURE
+        self.litellm_tokenizer = settings.LITELLM_TOKENIZER
+        self.litellm_model = settings.LITELLM_MODEL
         self.headers = {
             "Authorization": f"Bearer {self.litellm_key}",
             "Content-Type": "application/json",
@@ -38,8 +40,8 @@ class LiteLLMLLM(LLM):
             )
             model_name = None
 
-        default_model = model_name if model_name else settings.LITELLM_MODEL
-        assert default_model is not None, "LITELLM_MODEL setting must not be None"
+        default_model = model_name if model_name else self.litellm_model
+        assert default_model is not None, "litellm_model setting must not be None"
         self._set_model_name(default_model)
 
     @property
@@ -178,7 +180,7 @@ class LiteLLMLLM(LLM):
             "alsdjfalsdjfs/DeepSeek-R1-0528-IQ1_S": "gpt2",  # fallback to gpt2
         }
 
-        tokenizer_name = tokenizer_map.get(self.model_name, "gpt2")  # default to gpt2
+        tokenizer_name = tokenizer_map.get(self.model_name, self.litellm_tokenizer)
         self.llm_tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_name, cache_dir=settings.CACHE_DIR
         )
