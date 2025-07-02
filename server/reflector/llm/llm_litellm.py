@@ -25,6 +25,7 @@ class LiteLLMLLM(LLM):
         self.litellm_key = settings.LITELLM_PRIVATE_KEY
         self.litellm_temperature = settings.LITELLM_TEMPERATURE
         self.litellm_model = settings.LITELLM_MODEL
+        self.litellm_has_structured_output = settings.LITELLM_HAS_STRUCTURED_OUTPUT
         self.headers = {
             "Authorization": f"Bearer {self.litellm_key}",
             "Content-Type": "application/json",
@@ -62,23 +63,7 @@ class LiteLLMLLM(LLM):
         # if we want to make this check runtime, we need to make it async, and we need to add another entity custom_llm_provider
         # supports_response_schema(model="gemini-1.5-pro-preview-0215", custom_llm_provider="bedrock")
         # https://docs.litellm.ai/docs/completion/json_mode
-        # easier to have a hardcoded mapping for now
-        # from docs:
-        # """
-        # Works for:
-        #
-        # OpenAI models
-        # Azure OpenAI models
-        # xAI models (Grok-2 or later)
-        # Google AI Studio - Gemini models
-        # Vertex AI models (Gemini + Anthropic)
-        # Bedrock Models
-        # Anthropic API Models
-        # Groq Models
-        # Ollama Models
-        # Databricks Models
-        # """
-        return "openai" in self.model_name  # TODO more
+        return self.litellm_has_structured_output
 
     def _convert_gen_schema_to_response_format(self, gen_schema: dict) -> dict:
         """Convert gen_schema to LiteLLM response_format"""

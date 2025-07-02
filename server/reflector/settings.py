@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     LITELLM_URL: str | None = None
     LITELLM_PRIVATE_KEY: str | None = None
     LITELLM_MODEL: str = "gpt-3.5-turbo"
+    LITELLM_HAS_STRUCTURED_OUTPUT: bool = True
     LITELLM_TEMPERATURE: float = 0.3
     LITELLM_TOKENIZER: str = "gpt2"
 
