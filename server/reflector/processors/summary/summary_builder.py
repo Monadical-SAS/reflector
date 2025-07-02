@@ -168,10 +168,17 @@ class SummaryBuilder:
 
     # give explicit schema as an attempt to make it return proper result
     # note that not all the models react correctly on it, some would derp out and start returning schema itself
-    def asking_for_structured_output(self, text: str) -> str:
+    def asking_for_structured_output(self, text: str, schema: dict | str) -> str:
         r = text
         if not self.llm_instance.has_structured_output():
-            r += f"Output the result in JSON format following the schema: \n```json-schema\n{text}\n```"
+            r += (
+                f"Output the result in JSON format strictly following the schema: \n```json-schema\n{schema}\n```."
+                "Make sure you don't add any extra properties and don't wrap the expected result into extra wrappers."
+                "e.g. if asked an array on the route level, output an array; if asked object on the root level, output an object. if asked for primitive, return a primitive."
+                "example1: for {type: 'array', items: {type: 'string'}} output in format [\"a\", \"b\", \"c\"]"
+                "example2: for {type: 'object', properties: {a: {type: 'string'}, b: {type: 'string'}}} output in format {a: \"a\", b: \"b\"}"
+                "example3: for {type: 'string'} output in format \"a\""
+            )
         return r
 
     # ----------------------------------------------------------------------------
@@ -180,7 +187,7 @@ class SummaryBuilder:
 
     async def identify_participants(self):
         """
-        From a transcript, try identify the participants.
+        From a transcript, try to identify the participants.
         This might not give the best result without good diarization, but it's a start.
         They are appended at the end of the transcript, providing more context for the assistant.
         """
@@ -203,7 +210,8 @@ class SummaryBuilder:
                     "You can put participants that are mentioned by name."
                     "Do not put company name."
                     "Ensure that no duplicate names are included."
-                )
+                ),
+                JSON_SCHEMA_LIST_STRING
             )
         )
         result = await self.llm(
@@ -244,7 +252,8 @@ class SummaryBuilder:
                     f"# Transcript\n\n{self.transcript}\n\n"
                     "---\n\n"
                     "Please identify the type of transcription (meeting or podcast). "
-                )
+                ),
+                JSON_SCHEMA_TRANSCRIPTION_TYPE
             )
         )
         result = await self.llm(
@@ -361,7 +370,8 @@ class SummaryBuilder:
                             f'What are the {item_type.value} only related to the main subject "{subject}" ? '
                             f"Make sure the {item_type.value} do not overlap with other subjects. "
                             "To recall: " + prompt_definition
-                        )
+                        ),
+                        json_schema
                     )
                 )
                 result = await self.llm(
@@ -391,7 +401,8 @@ class SummaryBuilder:
                         "---\n\n"
                         f"Identify the open questions unanswered during the meeting."
                         "If there are none, just return an empty list. "
-                    )
+                    ),
+                    json_schema
                 )
             )
             result = await self.llm(
@@ -457,7 +468,8 @@ class SummaryBuilder:
                 (
                     f"Consolidate the list of {title} according to your finding. "
                     f"The list must be shorter or equal than the original list. "
-                )
+                ),
+                json_schema
             )
         )
 
@@ -524,7 +536,8 @@ class SummaryBuilder:
                         "Be concise and focused on the main ideas. "
                         "A subject briefly mentioned should not be included. "
                     )
-                )
+                ),
+                JSON_SCHEMA_LIST_STRING
             )
         )
 
@@ -552,7 +565,8 @@ class SummaryBuilder:
                         "Keep the most important. "
                         "Remember that the same subject can be written in different ways. "
                         "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. "
-                    )
+                    ),
+                    JSON_SCHEMA_LIST_STRING
                 )
             )
             subjects = await self.llm(
