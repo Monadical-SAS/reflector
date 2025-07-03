@@ -121,6 +121,7 @@ def get_transcript(func):
                 task_name=current_task.name,
                 worker_hostname=current_task.request.hostname,
                 task_retries=current_task.request.retries,
+                transcript_id=transcript_id,
             )
         
         try:

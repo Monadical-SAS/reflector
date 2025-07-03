@@ -24,3 +24,11 @@ response = sqs.receive_message(QueueUrl=queue_url, ...)
 # requeue
 
 docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python /app/requeue_uploaded_file.py TRANSCRIPT_ID"
+
+## Pipeline Management
+
+### Continue stuck pipeline from final summaries (identify_participants) step:
+
+```bash
+docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python -c \"from reflector.pipelines.main_live_pipeline import task_pipeline_final_summaries; result = task_pipeline_final_summaries.delay(transcript_id='TRANSCRIPT_ID'); print(f'Task queued: {result.id}')\""
+```
