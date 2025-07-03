@@ -71,35 +71,6 @@ def retry(fn):
                         f"Response headers: {response_headers}\n"
                         f"Response body: {response_text}"
                     )
-                    
-                    # Special handling for 500 errors - log request body and generate curl
-                    if status_code == 500:
-                        try:
-                            request_body = ""
-                            if hasattr(e.request, 'content') and e.request.content:
-                                request_body = e.request.content.decode('utf-8') if isinstance(e.request.content, bytes) else str(e.request.content)
-                            
-                            # Generate curl command for manual retry
-                            curl_headers = ""
-                            if hasattr(e.request, 'headers') and e.request.headers:
-                                for header_name, header_value in e.request.headers.items():
-                                    curl_headers += f" -H '{header_name}: {header_value}'"
-                            
-                            curl_data = ""
-                            if request_body:
-                                # Escape single quotes in request body for curl
-                                escaped_body = request_body.replace("'", "'\"'\"'")
-                                curl_data = f" -d '{escaped_body}'"
-                            
-                            curl_command = f"curl --http1.1 -X {e.request.method}{curl_headers}{curl_data} '{e.request.url}'"
-                            
-                            retry_logger.error(
-                                f"HTTP 500 error details:\n"
-                                f"Request body: {request_body}\n"
-                                f"Manual retry curl command:\n{curl_command}"
-                            )
-                        except Exception as curl_error:
-                            retry_logger.warning(f"Failed to generate curl command: {curl_error}")
                             
                 except Exception as log_error:
                     retry_logger.warning(f"Failed to log detailed error info: {log_error}")

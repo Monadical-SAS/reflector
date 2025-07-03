@@ -15,6 +15,7 @@ from functools import partial
 import jsonschema
 import structlog
 from reflector.llm.base import LLM
+from .transcript_chunker import process_transcript_with_template_aware_chunking
 
 JSON_SCHEMA_LIST_STRING = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -526,59 +527,70 @@ class SummaryBuilder:
             )
         )
 
-        m.add_user(
-            self.asking_for_structured_output(
-                (
-                    f"# Transcript\n\n{self.transcript}\n\n"
-                    + (
-                        "\n\n---\n\n"
-                        "What are the main/key subjects discussed in this transcript ? "
-                        "Do not include direct quotes or unnecessary details. "
-                        "Be concise and focused on the main ideas. "
-                        "A subject briefly mentioned should not be included. "
-                    )
-                ),
+        # Create prompt functions for template-aware chunking
+        def create_subjects_prompt(transcript_text):
+            """Create prompt for subject extraction using function-based approach."""
+            return self.asking_for_structured_output(
+                f"# Transcript\n\n{transcript_text}\n\n"
+                "---\n\n"
+                "What are the main/key subjects discussed in this transcript ? "
+                "Do not include direct quotes or unnecessary details. "
+                "Be concise and focused on the main ideas. "
+                "A subject briefly mentioned should not be included. ",
                 JSON_SCHEMA_LIST_STRING
             )
-        )
 
-        # Note: Asking the model the key subject sometimes generate a lot of subjects
-        # We need to consolidate them to avoid redundancy when it happen.
-        m2 = m.copy()
 
-        subjects = await self.llm(
-            m2,
-            [
-                self.validate_json,
-                partial(self.validate_json_schema, JSON_SCHEMA_LIST_STRING),
-            ],
-        )
-        if subjects:
-            self.subjects = subjects
-
-        if len(self.subjects) > 6:
-            # the model may bugged and generate a lot of subjects
-            m.add_user(
-                self.asking_for_structured_output(
-                    (
-                        "No that may be too much. "
-                        "Consolidate the subjects and remove any redundancy. "
-                        "Keep the most important. "
-                        "Remember that the same subject can be written in different ways. "
-                        "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. "
-                    ),
-                    JSON_SCHEMA_LIST_STRING
-                )
+        def create_dedup_prompt(subjects_md):
+            """Create prompt for deduplication."""
+            return self.asking_for_structured_output(
+                f"The following subjects were extracted from multiple chunks:\n\n{subjects_md}\n\n"
+                "Consolidate the subjects and remove any redundancy. "
+                "Keep the most important. "
+                "Remember that the same subject can be written in different ways. "
+                "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. ",
+                JSON_SCHEMA_LIST_STRING
             )
-            subjects = await self.llm(
-                m2,
+
+        # Template-aware chunking configuration
+        from reflector.settings import settings
+        CHUNK_PAD_TOKENS = 50  # for safety
+        CHUNK_CONTEXT_SIZE_TOKENS = settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS - CHUNK_PAD_TOKENS
+
+        self.subjects = await process_transcript_with_template_aware_chunking(
+            transcript=self.transcript,
+            messages_template=m.copy(),
+            max_context_tokens=CHUNK_CONTEXT_SIZE_TOKENS,
+            llm_completion_func=self.completion,
+            create_prompt_func=create_subjects_prompt,
+            validate_json_func=self.validate_json,
+            create_dedup_prompt_func=create_dedup_prompt,
+            overlap_ratio=0.15,
+            safety_margin_tokens=CHUNK_PAD_TOKENS,
+            logger=self.logger
+        )
+
+        # Note: The template-aware chunking already handles consolidation/deduplication
+        # But we still apply the 6-subject limit check as a safety measure
+        if len(self.subjects) > 6:
+            self.logger.warning(f"Got {len(self.subjects)} subjects, applying additional consolidation")
+            # Use the deduplication prompt function we created above
+            consolidation_prompt = create_dedup_prompt(
+                '\n'.join([f"- {subject}" for subject in self.subjects])
+            )
+            
+            m_consolidate = m.copy()
+            m_consolidate.add_user(consolidation_prompt)
+            
+            consolidated_subjects = await self.llm(
+                m_consolidate,
                 [
                     self.validate_json,
                     partial(self.validate_json_schema, JSON_SCHEMA_LIST_STRING),
                 ],
             )
-            if subjects:
-                self.subjects = subjects
+            if consolidated_subjects:
+                self.subjects = consolidated_subjects
 
         # Write manually the assistants response to remove the redundancy if case somethign happen
         m.add_assistant(self.format_list_md(self.subjects))
@@ -592,8 +604,7 @@ class SummaryBuilder:
         # Summarize per subject
         # ----------------------------------------------------------------------------
 
-        m2 = m.copy()
-        for subject in subjects:
+        for subject in self.subjects:
             m2 = m  # .copy()
             prompt = (
                 f"Summarize the main subject: '{subject}'. "

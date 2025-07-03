@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     SUMMARY_LLM_URL: str
     SUMMARY_LLM_API_KEY: str
     SUMMARY_LLM_USE_STRUCTURED_OUTPUT: bool = True
+    SUMMARY_LLM_CONTEXT_SIZE_TOKENS: int = 16000
 
     # Diarization
     DIARIZATION_ENABLED: bool = True
