@@ -34,6 +34,7 @@ def retry(fn):
             ),
         )
         retry_ignore_exc_types = kwargs.pop("retry_ignore_exc_types", (Exception,))
+        retry_logger = kwargs.pop("logger", logger)
 
         result = None
         last_exception = None
@@ -58,30 +59,60 @@ def retry(fn):
                 if result:
                     return result
             except HTTPStatusError as e:
-                logger.exception(e)
+                retry_logger.exception(e)
                 status_code = e.response.status_code
                 
                 # Log detailed error information including response body
                 try:
                     response_text = e.response.text
                     response_headers = dict(e.response.headers)
-                    logger.error(
+                    retry_logger.error(
                         f"HTTP {status_code} error for {e.request.method} {e.request.url}\n"
                         f"Response headers: {response_headers}\n"
                         f"Response body: {response_text}"
                     )
+                    
+                    # Special handling for 500 errors - log request body and generate curl
+                    if status_code == 500:
+                        try:
+                            request_body = ""
+                            if hasattr(e.request, 'content') and e.request.content:
+                                request_body = e.request.content.decode('utf-8') if isinstance(e.request.content, bytes) else str(e.request.content)
+                            
+                            # Generate curl command for manual retry
+                            curl_headers = ""
+                            if hasattr(e.request, 'headers') and e.request.headers:
+                                for header_name, header_value in e.request.headers.items():
+                                    curl_headers += f" -H '{header_name}: {header_value}'"
+                            
+                            curl_data = ""
+                            if request_body:
+                                # Escape single quotes in request body for curl
+                                escaped_body = request_body.replace("'", "'\"'\"'")
+                                curl_data = f" -d '{escaped_body}'"
+                            
+                            curl_command = f"curl --http1.1 -X {e.request.method}{curl_headers}{curl_data} '{e.request.url}'"
+                            
+                            retry_logger.error(
+                                f"HTTP 500 error details:\n"
+                                f"Request body: {request_body}\n"
+                                f"Manual retry curl command:\n{curl_command}"
+                            )
+                        except Exception as curl_error:
+                            retry_logger.warning(f"Failed to generate curl command: {curl_error}")
+                            
                 except Exception as log_error:
-                    logger.warning(f"Failed to log detailed error info: {log_error}")
-                    logger.debug(f"HTTP status {status_code} - {e}")
+                    retry_logger.warning(f"Failed to log detailed error info: {log_error}")
+                    retry_logger.debug(f"HTTP status {status_code} - {e}")
                 
                 if status_code in retry_httpx_status_stop:
                     message = f"HTTP status {status_code} is in retry_httpx_status_stop"
                     raise RetryHTTPException(message) from e
             except retry_ignore_exc_types as e:
-                logger.exception(e)
+                retry_logger.exception(e)
                 last_exception = e
 
-            logger.debug(
+            retry_logger.debug(
                 f"Retrying {fn_name} - in {retry_backoff_interval:.1f}s "
                 f"({monotonic() - start:.1f}s / {retry_timeout:.1f}s)"
             )

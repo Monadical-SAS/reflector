@@ -83,7 +83,7 @@ class LiteLLMLLM(LLM):
                     timeout=self.timeout,
                     follow_redirects=True,
                 )
-            )(retry_timeout=60 * 5)
+            )(retry_timeout=60 * 5, logger=kwargs.get('logger', reflector_logger))
             response.raise_for_status()
             return response.json()
 

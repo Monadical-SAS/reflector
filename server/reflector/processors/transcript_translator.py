@@ -52,6 +52,7 @@ class TranscriptTranslatorProcessor(Processor):
                 params=json_payload,
                 timeout=self.timeout,
                 follow_redirects=True,
+                logger=self.logger,
             )
             response.raise_for_status()
             result = response.json()["text"]

@@ -490,7 +490,7 @@ class SummaryBuilder:
         """
         This is the main function to build the summary.
 
-        It actually share the context with the different steps (subjects, quick recap)
+        It actually shares the context with the different steps (subjects, quick recap)
         which make it more sense to keep it in one function.
 
         The process is:
@@ -511,7 +511,7 @@ class SummaryBuilder:
                 "Your task is to summarize discussions by focusing only on the main ideas contributed by participants."
                 # Prevent generating another transcription
                 "Exclude direct quotes and unnecessary details."
-                # Do not mention others participants just because they didn't contributed
+                # Do not mention other participants just because they didn't contribute
                 "Only include participant names if they actively contribute to the subject."
                 # Prevent generation of summary with "no others participants contributed" etc
                 "Keep summaries concise and focused on main subjects without adding conclusions such as 'no other participant contributed'. "
@@ -525,6 +525,7 @@ class SummaryBuilder:
                 "Do not mention conclusion if there is no conclusion"
             )
         )
+
         m.add_user(
             self.asking_for_structured_output(
                 (

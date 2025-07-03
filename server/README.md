@@ -32,3 +32,9 @@ docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python /app
 ```bash
 docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python -c \"from reflector.pipelines.main_live_pipeline import task_pipeline_final_summaries; result = task_pipeline_final_summaries.delay(transcript_id='TRANSCRIPT_ID'); print(f'Task queued: {result.id}')\""
 ```
+
+### Run full post-processing pipeline (continues to completion):
+
+```bash
+docker exec reflector-worker-1 bash -c "source /venv/bin/activate && python -c \"from reflector.pipelines.main_live_pipeline import pipeline_post; pipeline_post(transcript_id='TRANSCRIPT_ID')\""
+```

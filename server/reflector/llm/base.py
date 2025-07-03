@@ -145,6 +145,7 @@ class LLM:
                     prompt=prompt,
                     gen_schema=gen_schema,
                     gen_cfg=gen_cfg,
+                    logger=logger,
                     **kwargs,
                 )
             self.m_generate_success.inc()
@@ -172,7 +173,7 @@ class LLM:
 
         try:
             with self.m_generate.time():
-                result = await retry(self._completion)(messages=messages, **kwargs)
+                result = await retry(self._completion)(messages=messages, **{**kwargs, 'logger': logger})
             self.m_generate_success.inc()
         except Exception:
             logger.exception("Failed to call llm after retrying")
@@ -261,7 +262,7 @@ class LLM:
         raise NotImplementedError
 
     async def _completion(
-        self, messages: list, logger: reflector_logger, **kwargs
+        self, messages: list, **kwargs
     ) -> dict:
         raise NotImplementedError
 
