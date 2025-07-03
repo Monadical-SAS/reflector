@@ -49,7 +49,7 @@ class TranscriptFinalTitleProcessor(Processor):
                     gen_cfg=self.params.gen_cfg,
                     logger=self.logger,
                 )
-                accumulated_titles += title_result["summary"]
+                accumulated_titles += title_result["title"]
 
             return await self.get_title(accumulated_titles)
 
