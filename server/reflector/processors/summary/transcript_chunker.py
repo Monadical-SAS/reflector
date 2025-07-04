@@ -1,12 +1,6 @@
-"""
-Template-aware transcript chunking that respects exact token limits.
-
-This implementation ensures that each chunk + its processing template
-stays within the specified context limits.
-"""
 
 import asyncio
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Awaitable
 import structlog
 
 
@@ -25,45 +19,43 @@ def find_natural_split_point(text: str, target_pos: int, min_pos: int) -> int:
     if target_pos <= min_pos:
         return target_pos
     
-    # Look for natural breaks in order of preference
     search_window = min(200, target_pos - min_pos)
     
-    # 1. Paragraph breaks
+    # Paragraph breaks
     for i in range(target_pos, max(min_pos, target_pos - search_window), -1):
         if i < len(text) - 1 and text[i:i+2] == '\n\n':
             return i + 2  # After the paragraph break
     
-    # 2. Speaker changes (assuming format "Speaker: text")
+    # Speaker changes assuming format "Speaker: text"
     for i in range(target_pos, max(min_pos, target_pos - search_window), -1):
         if i > 0 and text[i-1] == '\n' and ':' in text[i:i+50]:
             return i
     
-    # 3. Sentence endings
+    # Sentence endings
     for i in range(target_pos, max(min_pos, target_pos - search_window), -1):
         if i < len(text) and text[i] in '.!?' and i < len(text) - 1 and text[i+1] == ' ':
             return i + 1
     
-    # 4. Line breaks
+    # Line breaks
     for i in range(target_pos, max(min_pos, target_pos - search_window), -1):
         if i < len(text) and text[i] == '\n':
             return i + 1
     
-    # 5. Word boundaries - try hard to avoid splitting words
-    extended_window = min(500, target_pos - min_pos)
-    for i in range(target_pos, max(min_pos, target_pos - extended_window), -1):
+    # Word boundaries
+    for i in range(target_pos, max(min_pos, target_pos - search_window), -1):
         if i < len(text) and text[i] in ' \t':
             return i + 1
     
-    # 6. Fallback to target position
+    # Fallback to target position
     return target_pos
 
 
 async def process_transcript_with_template_aware_chunking(
     transcript: str,
-    messages_template,  # Messages object with system prompt, etc.
+    messages_template,
     max_context_tokens: int,
-    llm_completion_func: Callable,
-    create_prompt_func: Callable[[str], str],  # Function that takes transcript and returns complete prompt
+    llm_completion_func: Callable[..., Awaitable[str]], # str being json - accepts (messages, **kwargs)
+    create_prompt_func: Callable[[str], str],
     validate_json_func: Callable,
     create_dedup_prompt_func: Optional[Callable[[str], str]] = None,  # Function for deduplication prompt
     overlap_ratio: float = 0.15,
@@ -96,9 +88,9 @@ async def process_transcript_with_template_aware_chunking(
     if not transcript or not transcript.strip():
         return []
     
-    # Step 1: Measure template overhead using the exact template structure
+    # Measure template overhead using the exact template structure
     template_copy = messages_template.copy()
-    empty_prompt = create_prompt_func("")  # Empty transcript to measure template overhead
+    empty_prompt = create_prompt_func("")
     template_copy.add_user(empty_prompt)
     template_overhead_tokens = template_copy.count_tokens()
     
@@ -107,45 +99,39 @@ async def process_transcript_with_template_aware_chunking(
     if template_overhead_tokens >= max_context_tokens:
         raise ValueError(f"Template overhead ({template_overhead_tokens}) exceeds context limit ({max_context_tokens})")
     
-    # Step 2: Calculate available space for transcript content
+    # Calculate available space for transcript content
     max_content_tokens = max_context_tokens - template_overhead_tokens - safety_margin_tokens
     
     if max_content_tokens <= 0:
         raise ValueError("No space left for transcript content after template overhead")
     
-    # Step 3: Validate overlap ratio early
     if not (0 <= overlap_ratio < 0.5):
         raise ValueError("overlap_ratio must be between 0 and 0.5")
     
-    # Step 4: Check if chunking is needed
+    # Check if chunking is needed
     tokenizer = messages_template.tokenizer
     total_transcript_tokens = len(tokenizer.tokenize(transcript))
     
     if total_transcript_tokens <= max_content_tokens:
-        logger.info("Transcript fits in single chunk, no chunking needed")
-        # Process as single chunk
-        result = await _process_single_chunk(
+        logger.debug("Transcript fits in single chunk, no chunking needed")
+        return await _process_chunk(
             transcript, messages_template, llm_completion_func,
             create_prompt_func, validate_json_func, logger
         )
-        return result if isinstance(result, list) else []
-    
-    # Step 5: Calculate chunk parameters
-    
+
+
     overlap_tokens = int(max_content_tokens * overlap_ratio)
     core_content_tokens = max_content_tokens - (2 * overlap_tokens)
     
     if core_content_tokens <= 0:
         raise ValueError("Content space too small for specified overlap ratio")
     
-    logger.info(f"Chunking: max_content={max_content_tokens}, core={core_content_tokens}, overlap={overlap_tokens}")
+    logger.debug(f"Chunking: max_content={max_content_tokens}, core={core_content_tokens}, overlap={overlap_tokens}")
     
-    # Step 6: Generate chunks
     chunks = _generate_chunks_with_overlap(
         transcript, tokenizer, core_content_tokens, overlap_tokens, logger
     )
     
-    # Step 7: Validate chunk sizes against actual template
     validated_chunks = []
     for i, chunk in enumerate(chunks):
         # Test actual token count with template
@@ -153,10 +139,11 @@ async def process_transcript_with_template_aware_chunking(
         test_prompt = create_prompt_func(chunk)
         test_messages.add_user(test_prompt)
         actual_tokens = test_messages.count_tokens()
-        
+
+        # character-to-token estimation still could produce this case because density of tokens isn't uniform across text
         if actual_tokens > max_context_tokens:
             logger.warning(f"Chunk {i} too large ({actual_tokens} tokens), shrinking...")
-            # Shrink chunk
+
             chunk = _shrink_chunk_to_fit(
                 chunk, messages_template, create_prompt_func,
                 max_context_tokens, logger
@@ -165,29 +152,32 @@ async def process_transcript_with_template_aware_chunking(
         validated_chunks.append(chunk)
         logger.debug(f"Chunk {i}: {len(chunk)} chars, {actual_tokens} tokens")
     
-    # Step 8: Process chunks in parallel
-    logger.info(f"Processing {len(validated_chunks)} chunks in parallel")
+    logger.debug(f"Processing {len(validated_chunks)} chunks in parallel")
     
     chunk_tasks = []
     for i, chunk in enumerate(validated_chunks):
         task = _process_chunk(
             chunk, messages_template, llm_completion_func,
-            create_prompt_func, validate_json_func, i, logger
+            create_prompt_func, validate_json_func, logger
         )
         chunk_tasks.append(task)
     
     chunk_results = await asyncio.gather(*chunk_tasks, return_exceptions=True)
     
-    # Step 9: Collect successful results
     all_subjects = []
 
     for i, result in enumerate(chunk_results):
-        subjects = result.get('subjects')
-        all_subjects.extend(subjects)
+        if isinstance(result, Exception):
+            logger.error(f"Chunk {i} failed: {result}")
+            continue
+        if isinstance(result, list):
+            all_subjects.extend(result)
+        else:
+            logger.warning(f"Chunk {i} returned unexpected result: {result}")
     
     logger.info(f"Collected {len(all_subjects)} subjects from chunks")
     
-    # Step 10: Deduplicate if we have multiple chunks
+    # Deduplicate
     if len(validated_chunks) > 1 and len(all_subjects) > 3 and create_dedup_prompt_func:
         try:
             deduplicated = await _deduplicate_subjects(
@@ -226,8 +216,9 @@ def _generate_chunks_with_overlap(
     max_chunks = 50  # Safety limit
     
     while current_pos < len(transcript) and chunk_count < max_chunks:
-        # Calculate chunk boundaries
+        # Calculate chunk boundaries. no leading overlap
         chunk_start = max(0, current_pos - overlap_chars)
+        # no ending overlap
         chunk_end = min(len(transcript), current_pos + core_chars + overlap_chars)
         
         # Find natural split point
@@ -287,68 +278,31 @@ def _shrink_chunk_to_fit(
     return current_chunk
 
 
-async def _process_single_chunk(
+async def _process_chunk(
     transcript: str,
     messages_template,
-    llm_completion_func: Callable,
+    llm_completion_func: Callable[..., Awaitable[str]],
     create_prompt_func: Callable,
     validate_json_func: Callable,
     logger: structlog.BoundLogger
 ) -> List[str]:
-    """Process transcript as a single chunk."""
 
     messages = messages_template.copy()
     prompt = create_prompt_func(transcript)
     messages.add_user(prompt)
 
-    result = await llm_completion_func(messages.messages, logger=logger)
-
-    # Extract content from LLM response
-    if isinstance(result, dict) and 'choices' in result:
-        content = result['choices'][0]['message']['content']
-    else:
-        content = result
+    content = await llm_completion_func(messages.messages, logger=logger)
 
     subjects = validate_json_func(content)
-    return subjects if isinstance(subjects, list) else []
-
-
-async def _process_chunk(
-    chunk: str,
-    messages_template,
-    llm_completion_func: Callable,
-    create_prompt_func: Callable,
-    validate_json_func: Callable,
-    chunk_index: int,
-    logger: structlog.BoundLogger
-) -> Dict[str, Any]:
-    """Process a single chunk and return results with metadata."""
-
-    messages = messages_template.copy()
-    prompt = create_prompt_func(chunk)
-    messages.add_user(prompt)
-
-    result = await llm_completion_func(messages.messages, logger=logger)
-
-    # Extract content from LLM response
-    if isinstance(result, dict) and 'choices' in result:
-        content = result['choices'][0]['message']['content']
-    else:
-        content = result
-
-    subjects = validate_json_func(content)
-
-    return {
-        'chunk_index': chunk_index,
-        'subjects': subjects if isinstance(subjects, list) else [],
-        'token_count': messages.count_tokens(),
-    }
+    if not isinstance(subjects, list):
+        raise ValueError(f"Invalid subjects: {subjects}, validate_json_func must return a list of subjects or raise an exception")
+    return subjects
 
 
 async def _deduplicate_subjects(
     all_subjects: List[str],
     messages_template,
-    llm_completion_func: Callable,
+    llm_completion_func: Callable[..., Awaitable[str]],
     create_dedup_prompt_func: Callable,
     validate_json_func: Callable,
     logger: structlog.BoundLogger
@@ -364,13 +318,7 @@ async def _deduplicate_subjects(
     prompt = create_dedup_prompt_func(subjects_md, logger=logger)
     messages.add_user(prompt)
     
-    result = await llm_completion_func(messages.messages)
-    
-    # Extract content from LLM response
-    if isinstance(result, dict) and 'choices' in result:
-        content = result['choices'][0]['message']['content']
-    else:
-        content = result
+    content = await llm_completion_func(messages.messages, logger=logger)
     
     consolidated_subjects = validate_json_func(content)
     

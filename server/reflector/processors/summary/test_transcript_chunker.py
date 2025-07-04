@@ -1,12 +1,12 @@
 """
+@vibe-generated
 Tests for the template-aware transcript chunker.
 """
 
 import asyncio
 import pytest
-from unittest.mock import Mock, AsyncMock
 import structlog
-from typing import List, Dict, Any
+from typing import List
 
 from transcript_chunker import (
     process_transcript_with_template_aware_chunking,
@@ -64,8 +64,8 @@ class TestTemplateAwareChunking:
         tokenizer = MockTokenizer(chars_per_token=4.0)
         messages_template = MockMessages([{"role": "system", "content": "You are an assistant."}], tokenizer)
         
-        async def mock_llm_completion(messages):
-            return {"choices": [{"message": {"content": '["Subject 1", "Subject 2"]'}}]}
+        async def mock_llm_completion(messages, **kwargs):
+            return '["Subject 1", "Subject 2"]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -94,8 +94,8 @@ class TestTemplateAwareChunking:
         tokenizer = MockTokenizer(chars_per_token=4.0)
         messages_template = MockMessages([{"role": "system", "content": "You are an assistant."}], tokenizer)
         
-        async def mock_llm_completion(messages):
-            return {"choices": [{"message": {"content": '["Subject A", "Subject B"]'}}]}
+        async def mock_llm_completion(messages, **kwargs):
+            return '["Subject A", "Subject B"]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -130,8 +130,8 @@ class TestTemplateAwareChunking:
         tokenizer = LargeTokenizer()
         messages_template = MockMessages([{"role": "system", "content": "Very long system prompt" * 100}], tokenizer)
         
-        async def mock_llm_completion(messages):
-            return {"choices": [{"message": {"content": '[]'}}]}
+        async def mock_llm_completion(messages, **kwargs):
+            return '[]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -155,8 +155,8 @@ class TestTemplateAwareChunking:
         tokenizer = MockTokenizer()
         messages_template = MockMessages([{"role": "system", "content": "Assistant"}], tokenizer)
         
-        async def mock_llm_completion(messages):
-            return {"choices": [{"message": {"content": '[]'}}]}
+        async def mock_llm_completion(messages, **kwargs):
+            return '[]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -182,8 +182,8 @@ class TestTemplateAwareChunking:
         tokenizer = MockTokenizer()
         messages_template = MockMessages([{"role": "system", "content": "Assistant"}], tokenizer)
         
-        async def mock_llm_completion(messages):
-            return {"choices": [{"message": {"content": '[]'}}]}
+        async def mock_llm_completion(messages, **kwargs):
+            return '[]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -211,13 +211,13 @@ class TestTemplateAwareChunking:
         messages_template = MockMessages([{"role": "system", "content": "Assistant"}], tokenizer)
         
         call_count = 0
-        async def mock_llm_completion_with_errors(messages):
+        async def mock_llm_completion_with_errors(messages, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 raise Exception("First chunk fails")
             else:
-                return {"choices": [{"message": {"content": '["Subject B"]'}}]}
+                return '["Subject B"]'
         
         def mock_create_prompt(transcript_text):
             return f"Extract subjects from: {transcript_text}"
@@ -332,5 +332,4 @@ class TestNaturalSplitPoint:
 
 
 if __name__ == "__main__":
-    # Run tests
     pytest.main([__file__, "-v"])
