@@ -19,7 +19,7 @@ from whisper_jax import FlaxWhisperPipline
 from reflector.utils.log_utils import LOGGER
 from reflector.utils.run_utils import CONFIG, Mutex
 
-WHISPER_MODEL_SIZE = CONFIG['WHISPER']["WHISPER_REAL_TIME_MODEL_SIZE"]
+WHISPER_MODEL_SIZE = CONFIG["WHISPER"]["WHISPER_REAL_TIME_MODEL_SIZE"]
 pcs = set()
 relay = MediaRelay()
 data_channel = None
@@ -27,9 +27,9 @@ sorted_message_queue = SortedDict()
 CHANNELS = 2
 RATE = 44100
 CHUNK_SIZE = 256
-pipeline = FlaxWhisperPipline("openai/whisper-" + WHISPER_MODEL_SIZE,
-                              dtype=jnp.float16,
-                              batch_size=16)
+pipeline = FlaxWhisperPipline(
+    "openai/whisper-" + WHISPER_MODEL_SIZE, dtype=jnp.float16, batch_size=16
+)
 start_time = datetime.datetime.now()
 executor = ThreadPoolExecutor()
 audio_buffer = AudioFifo()
@@ -75,14 +75,14 @@ def get_transcription():
                 wf.setsampwidth(2)
 
                 for frame in frames:
-                    wf.writeframes(b''.join(frame.to_ndarray()))
+                    wf.writeframes(b"".join(frame.to_ndarray()))
                 wf.close()
 
                 whisper_result = pipeline(out_file.getvalue())
                 item = {
-                        'text': whisper_result["text"],
-                        'start_time': str(frames[0].time),
-                        'time': str(datetime.datetime.now())
+                    "text": whisper_result["text"],
+                    "start_time": str(frames[0].time),
+                    "time": str(datetime.datetime.now()),
                 }
                 sorted_message_queue[frames[0].time] = str(item)
                 start_messaging_thread()
@@ -164,11 +164,10 @@ async def offer(request: requests.Request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
     return web.Response(
-            content_type="application/json",
-            text=json.dumps({
-                    "sdp": pc.localDescription.sdp,
-                    "type": pc.localDescription.type
-            }),
+        content_type="application/json",
+        text=json.dumps(
+            {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+        ),
     )
 
 
@@ -183,6 +182,4 @@ if __name__ == "__main__":
     app.on_shutdown.append(on_shutdown)
     start_transcription_thread(6)
     app.router.add_post("/offer", offer)
-    web.run_app(
-            app, access_log=None, host="127.0.0.1", port=1250
-    )
+    web.run_app(app, access_log=None, host="127.0.0.1", port=1250)

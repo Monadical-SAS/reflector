@@ -3,13 +3,14 @@ import yt_dlp as youtube_dl
 from whisper_jax import FlaxWhisperPipline
 import jax.numpy as jnp
 
+
 # Function to extract chapter information from a YouTube video URL
 def get_youtube_chapters(video_id):
     video_url = "https://www.youtube.com/watch?v=" + video_id
     ydl_opts = {
-        'extract_flat': 'in_playlist',
-        'skip_download': True,
-        'quiet': True,
+        "extract_flat": "in_playlist",
+        "skip_download": True,
+        "quiet": True,
     }
 
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -17,17 +18,13 @@ def get_youtube_chapters(video_id):
 
     chapters = []
 
-    if 'chapters' in video_info:
-        for chapter in video_info['chapters']:
-            start_time = chapter['start_time']
-            end_time = chapter['end_time']
-            title = chapter['title']
+    if "chapters" in video_info:
+        for chapter in video_info["chapters"]:
+            start_time = chapter["start_time"]
+            end_time = chapter["end_time"]
+            title = chapter["title"]
 
-            chapters.append({
-                'start': start_time,
-                'end': end_time,
-                'title': title
-            })
+            chapters.append({"start": start_time, "end": end_time, "title": title})
 
     return chapters
 
@@ -35,13 +32,15 @@ def get_youtube_chapters(video_id):
 # Function to extract video transcription using yt_dlp
 def get_youtube_transcription(video_id):
     ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-            }],
-            'outtmpl': './artefacts/audio',  # Specify output file path and name
+        "format": "bestaudio/best",
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+        "outtmpl": "./artefacts/audio",  # Specify output file path and name
     }
 
     # Download the audio
@@ -49,12 +48,11 @@ def get_youtube_transcription(video_id):
         ydl.download(["https://www.youtube.com/watch?v=" + video_id])
     media_file = "./artefacts/audio.mp3"
 
-    pipeline = FlaxWhisperPipline("openai/whisper-" + "tiny",
-                                  dtype=jnp.float16,
-                                  batch_size=16)
+    pipeline = FlaxWhisperPipline(
+        "openai/whisper-" + "tiny", dtype=jnp.float16, batch_size=16
+    )
     whisper_result = pipeline(media_file, return_timestamps=True)
     return whisper_result["chunks"]
-
 
 
 # Function to scrape YouTube video transcripts and chapter information
@@ -79,12 +77,17 @@ def generate_finetuning_dataset(video_ids):
 
                 prompt = ""
                 for transcript in transcript_text:
-                    if transcript["timestamp"][0] >= start_time and transcript["timestamp"][1] < end_time:
+                    if (
+                        transcript["timestamp"][0] >= start_time
+                        and transcript["timestamp"][1] < end_time
+                    ):
                         prompt += transcript["text"]
 
                 if prompt is not None:
                     completion = chapter_text
-                    prompt_completion_pairs.append({"prompt": prompt, "completion": completion})
+                    prompt_completion_pairs.append(
+                        {"prompt": prompt, "completion": completion}
+                    )
 
     return prompt_completion_pairs
 

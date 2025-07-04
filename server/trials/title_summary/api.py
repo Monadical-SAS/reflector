@@ -6,15 +6,13 @@ LLM_MACHINE_IP = ""
 # This is the URL of text-generation-webui
 URL = f"http://{LLM_MACHINE_IP}:5000/api/v1/generate"
 
-headers = {
-        "Content-Type": "application/json"
-}
+headers = {"Content-Type": "application/json"}
 
 
 def split_text_file(filename, token_count):
-    nlp = spacy.load('en_core_web_md')
+    nlp = spacy.load("en_core_web_md")
 
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         text = file.read()
 
     doc = nlp(text)
@@ -25,8 +23,8 @@ def split_text_file(filename, token_count):
 
     while start_index < total_tokens:
         end_index = start_index + token_count
-        part_tokens = doc[start_index:end_index - 5]
-        part = ' '.join(token.text for token in part_tokens)
+        part_tokens = doc[start_index : end_index - 5]
+        part = " ".join(token.text for token in part_tokens)
         parts.append(part)
         start_index = end_index
 
@@ -44,9 +42,7 @@ for part in parts:
 
               ### Assistant:
               """
-    data = {
-            "prompt": prompt
-    }
+    data = {"prompt": prompt}
     try:
         response = requests.post(URL, headers=headers, json=data)
         print(response.json())

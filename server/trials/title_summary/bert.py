@@ -13,7 +13,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # Load the SentenceTransformer model
-sentence_transformer_model = SentenceTransformer('average_word_embeddings_glove.6B.300d')
+sentence_transformer_model = SentenceTransformer(
+    "average_word_embeddings_glove.6B.300d"
+)
 
 # Define the input text
 text = "Your input text to be summarized goes here."
@@ -35,7 +37,9 @@ input_text_embedding = sentence_transformer_model.encode([text])[0]
 similarity_scores = cosine_similarity([input_text_embedding], sentence_embeddings)
 
 # Sort the sentences by similarity scores in descending order
-sorted_sentences = [sent for _, sent in sorted(zip(similarity_scores[0], sentences), reverse=True)]
+sorted_sentences = [
+    sent for _, sent in sorted(zip(similarity_scores[0], sentences), reverse=True)
+]
 
 # Choose the top sentences as the summary
 num_summary_sentences = 2  # Adjust as needed

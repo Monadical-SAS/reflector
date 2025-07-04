@@ -176,7 +176,7 @@ class SummaryBuilder:
                 f"Output the result in JSON format strictly following the schema: \n```json-schema\n{schema}\n```."
                 "Make sure you don't add any extra properties and don't wrap the expected result into extra wrappers."
                 "e.g. if asked an array on the route level, output an array; if asked object on the root level, output an object. if asked for primitive, return a primitive."
-                "example1: for {type: 'array', items: {type: 'string'}} output in format [\"a\", \"b\", \"c\"]"
+                'example1: for {type: \'array\', items: {type: \'string\'}} output in format ["a", "b", "c"]'
                 "example2: for {type: 'object', properties: {a: {type: 'string'}, b: {type: 'string'}}} output in format {a: \"a\", b: \"b\"}"
                 "example3: for {type: 'string'} output in format \"a\""
             )
@@ -212,7 +212,7 @@ class SummaryBuilder:
                     "Do not put company name."
                     "Ensure that no duplicate names are included."
                 ),
-                JSON_SCHEMA_LIST_STRING
+                JSON_SCHEMA_LIST_STRING,
             )
         )
         result = await self.llm(
@@ -254,7 +254,7 @@ class SummaryBuilder:
                     "---\n\n"
                     "Please identify the type of transcription (meeting or podcast). "
                 ),
-                JSON_SCHEMA_TRANSCRIPTION_TYPE
+                JSON_SCHEMA_TRANSCRIPTION_TYPE,
             )
         )
         result = await self.llm(
@@ -372,7 +372,7 @@ class SummaryBuilder:
                             f"Make sure the {item_type.value} do not overlap with other subjects. "
                             "To recall: " + prompt_definition
                         ),
-                        json_schema
+                        json_schema,
                     )
                 )
                 result = await self.llm(
@@ -403,7 +403,7 @@ class SummaryBuilder:
                         f"Identify the open questions unanswered during the meeting."
                         "If there are none, just return an empty list. "
                     ),
-                    json_schema
+                    json_schema,
                 )
             )
             result = await self.llm(
@@ -470,7 +470,7 @@ class SummaryBuilder:
                     f"Consolidate the list of {title} according to your finding. "
                     f"The list must be shorter or equal than the original list. "
                 ),
-                json_schema
+                json_schema,
             )
         )
 
@@ -537,9 +537,8 @@ class SummaryBuilder:
                 "Do not include direct quotes or unnecessary details. "
                 "Be concise and focused on the main ideas. "
                 "A subject briefly mentioned should not be included. ",
-                JSON_SCHEMA_LIST_STRING
+                JSON_SCHEMA_LIST_STRING,
             )
-
 
         def create_dedup_prompt(subjects_md):
             """Create prompt for deduplication."""
@@ -549,13 +548,16 @@ class SummaryBuilder:
                 "Keep the most important. "
                 "Remember that the same subject can be written in different ways. "
                 "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. ",
-                JSON_SCHEMA_LIST_STRING
+                JSON_SCHEMA_LIST_STRING,
             )
 
         # Template-aware chunking configuration
         from reflector.settings import settings
+
         CHUNK_PAD_TOKENS = 50  # for safety
-        CHUNK_CONTEXT_SIZE_TOKENS = settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS - CHUNK_PAD_TOKENS
+        CHUNK_CONTEXT_SIZE_TOKENS = (
+            settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS - CHUNK_PAD_TOKENS
+        )
 
         self.subjects = await process_transcript_with_template_aware_chunking(
             transcript=self.transcript,
@@ -567,21 +569,23 @@ class SummaryBuilder:
             create_dedup_prompt_func=create_dedup_prompt,
             overlap_ratio=0.15,
             safety_margin_tokens=CHUNK_PAD_TOKENS,
-            logger=self.logger
+            logger=self.logger,
         )
 
         # Note: The template-aware chunking already handles consolidation/deduplication
         # But we still apply the 6-subject limit check as a safety measure
         if len(self.subjects) > 6:
-            self.logger.warning(f"Got {len(self.subjects)} subjects, applying additional consolidation")
+            self.logger.warning(
+                f"Got {len(self.subjects)} subjects, applying additional consolidation"
+            )
             # Use the deduplication prompt function we created above
             consolidation_prompt = create_dedup_prompt(
-                '\n'.join([f"- {subject}" for subject in self.subjects])
+                "\n".join([f"- {subject}" for subject in self.subjects])
             )
-            
+
             m_consolidate = m.copy()
             m_consolidate.add_user(consolidation_prompt)
-            
+
             consolidated_subjects = await self.llm(
                 m_consolidate,
                 [

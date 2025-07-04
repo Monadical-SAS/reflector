@@ -1,7 +1,7 @@
 # Approach 1
 from transformers import GPTNeoForCausalLM, GPT2Tokenizer
 
-model_name = 'EleutherAI/gpt-neo-1.3B'
+model_name = "EleutherAI/gpt-neo-1.3B"
 tokenizer = GPT2Tokenizer.from_pretrained(model_name)
 model = GPTNeoForCausalLM.from_pretrained(model_name)
 
@@ -16,14 +16,12 @@ Thomas serves as a member of the Stanford graduate School of Business Advisory C
 Please welcome to the stage , Thomas Curian and Alexander Wang . This is a super exciting conversation . Thanks for being here , Thomas .
 """
 
-input_ids = tokenizer.encode(conversation, return_tensors='pt')
+input_ids = tokenizer.encode(conversation, return_tensors="pt")
 
-output = model.generate(input_ids,
-                        max_length=30,
-                        num_return_sequences=1)
+output = model.generate(input_ids, max_length=30, num_return_sequences=1)
 
 caption = tokenizer.decode(output[0], skip_special_tokens=True)
-print("Caption:", caption[len(input_ids):])
+print("Caption:", caption[len(input_ids) :])
 
 
 # Approach 2
@@ -41,18 +39,20 @@ You all just came off of your incredible Google Cloud next conference where you 
 """
 
 tokenizer.pad_token = tokenizer.eos_token
-input_ids = tokenizer.encode(text,
-                             max_length=100,
-                             truncation=True,
-                             return_tensors="pt")
+input_ids = tokenizer.encode(text, max_length=100, truncation=True, return_tensors="pt")
 attention_mask = torch.ones(input_ids.shape, dtype=torch.long)
-output = model.generate(input_ids,
-                        max_new_tokens=20,
-                        num_return_sequences=1,
-                        num_beams=2,
-                        attention_mask=attention_mask)
+output = model.generate(
+    input_ids,
+    max_new_tokens=20,
+    num_return_sequences=1,
+    num_beams=2,
+    attention_mask=attention_mask,
+)
 
-chapter_titles = [tokenizer.decode(output[i], skip_special_tokens=True) for i in range(output.shape[0])]
+chapter_titles = [
+    tokenizer.decode(output[i], skip_special_tokens=True)
+    for i in range(output.shape[0])
+]
 for i, title in enumerate(chapter_titles):
     print("Caption: ", title)
 
@@ -89,12 +89,12 @@ if __name__ == "__main__":
     tokenizer = GPT2Tokenizer.from_pretrained(model_name)
 
     sample_chunks = [
-            "You all just came off of your incredible Google Cloud next conference where you released a wide variety of functionality and features and new products across artisan television and also across the entire sort of cloud ecosystem . You want to just first by walking through , first start by walking through all the innovations that you sort of released and what you 're excited about when you come to Google Cloud ? Now our vision is super simple .  If you look at what smartphones did for a consumer , you know they took a computer and internet browser , a communication device , and a camera , and made it so that it 's in everybody 's pocket , so it really brought computation to every person . We feel that , you know , our , what we 're trying to do is take all the technological innovation that Google 's doing , but make it super simple so that everyone can consume it . And so that includes our global data center footprint , all the new types of hardware and large-scale systems we work on , the software that we 're making available for people to do high-scale computation , tools for data processing , tools for cybersecurity , processing , tools for cyber security , tools for machine learning , but make it so simple that everyone can use it . And every step that we do to simplify things for people , we think adoption can grow . And so that 's a lot of what we 've done these last three , four years , and we made a number of announcements that next in machine learning and AI in particular , you know , we look at our work as four elements , how we take our large-scale compute systems that were building for AI and how we make that available to everybody .  Second , what we 're doing with the software stacks and top of it , things like jacks and other things and how we 're making those available to everybody . Third is advances because different people have different levels of expertise . Some people say I need the hardware to build my own large language model or algorithm . Other people say , look , I really need to use a building block . You guys give me .  So , 30s we 've done a lot with AutoML and we announce new capability for image , video , and translation to make it available to everybody .  And then lastly , we 're also building completely packaged solutions for some areas and we announce some new stuff . "
+        "You all just came off of your incredible Google Cloud next conference where you released a wide variety of functionality and features and new products across artisan television and also across the entire sort of cloud ecosystem . You want to just first by walking through , first start by walking through all the innovations that you sort of released and what you 're excited about when you come to Google Cloud ? Now our vision is super simple .  If you look at what smartphones did for a consumer , you know they took a computer and internet browser , a communication device , and a camera , and made it so that it 's in everybody 's pocket , so it really brought computation to every person . We feel that , you know , our , what we 're trying to do is take all the technological innovation that Google 's doing , but make it super simple so that everyone can consume it . And so that includes our global data center footprint , all the new types of hardware and large-scale systems we work on , the software that we 're making available for people to do high-scale computation , tools for data processing , tools for cybersecurity , processing , tools for cyber security , tools for machine learning , but make it so simple that everyone can use it . And every step that we do to simplify things for people , we think adoption can grow . And so that 's a lot of what we 've done these last three , four years , and we made a number of announcements that next in machine learning and AI in particular , you know , we look at our work as four elements , how we take our large-scale compute systems that were building for AI and how we make that available to everybody .  Second , what we 're doing with the software stacks and top of it , things like jacks and other things and how we 're making those available to everybody . Third is advances because different people have different levels of expertise . Some people say I need the hardware to build my own large language model or algorithm . Other people say , look , I really need to use a building block . You guys give me .  So , 30s we 've done a lot with AutoML and we announce new capability for image , video , and translation to make it available to everybody .  And then lastly , we 're also building completely packaged solutions for some areas and we announce some new stuff . "
     ]
 
     conversation = [
-            {"role": "system", "content": "Summarize this text"},
-            {"role": "user", "content": " text : " + sample_chunks[0]},
+        {"role": "system", "content": "Summarize this text"},
+        {"role": "user", "content": " text : " + sample_chunks[0]},
     ]
 
     response = generate_response(conversation)

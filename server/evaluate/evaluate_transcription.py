@@ -13,6 +13,7 @@ class EvaluationResult(BaseModel):
     """
     Result object of the model evaluation
     """
+
     accuracy: float = Field(default=0.0)
     total_test_samples: int = Field(default=0)
 
@@ -25,7 +26,7 @@ class EvaluationTestSample(BaseModel):
     reference_text: str
     predicted_text: str
 
-    def update(self, reference_text:str, predicted_text:str) -> None:
+    def update(self, reference_text: str, predicted_text: str) -> None:
         self.reference_text = reference_text
         self.predicted_text = predicted_text
 
@@ -74,13 +75,16 @@ class TestDatasetLoader(BaseModel):
                 pred_text = file.read()
             with open(ref_file_path, "r", encoding="utf-8") as file:
                 ref_text = file.read()
-            yield EvaluationTestSample(reference_text=ref_text, predicted_text=pred_text)
+            yield EvaluationTestSample(
+                reference_text=ref_text, predicted_text=pred_text
+            )
 
 
 class EvaluationConfig(BaseModel):
     """
     Model for evaluation parameters
     """
+
     insertion_penalty: int = Field(default=1)
     substitution_penalty: int = Field(default=1)
     deletion_penalty: int = Field(default=1)
@@ -106,7 +110,9 @@ class ModelEvaluator:
 
     def __init__(self, **kwargs):
         self.evaluation_config = EvaluationConfig(**kwargs)
-        self.test_dataset_loader = TestDatasetLoader(test_dir=self.evaluation_config.test_directory)
+        self.test_dataset_loader = TestDatasetLoader(
+            test_dir=self.evaluation_config.test_directory
+        )
 
     def __repr__(self):
         return f"ModelEvaluator({self.evaluation_config})"
@@ -189,8 +195,8 @@ class ModelEvaluator:
         if not self.evaluation_result.accuracy or recalculate:
             self._calculate_model_accuracy()
         return EvaluationResult(
-                accuracy=self.evaluation_result.accuracy,
-                total_test_samples=self.test_dataset_loader.total_samples
+            accuracy=self.evaluation_result.accuracy,
+            total_test_samples=self.test_dataset_loader.total_samples,
         )
 
 

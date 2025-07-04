@@ -4,6 +4,7 @@ from reflector.processors.summary.summary_builder import SummaryBuilder
 from reflector.processors.types import FinalLongSummary, FinalShortSummary, TitleSummary
 from reflector.settings import settings
 
+
 class TranscriptFinalSummaryProcessor(Processor):
     """
     Get the final (long and short) summary

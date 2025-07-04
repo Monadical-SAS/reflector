@@ -53,7 +53,7 @@ class ModalLLM(LLM):
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
                 follow_redirects=True,
-                logger=kwargs.get('logger', reflector_logger),
+                logger=kwargs.get("logger", reflector_logger),
             )
             response.raise_for_status()
             text = response.json()["text"]
@@ -81,7 +81,7 @@ class ModalLLM(LLM):
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
                 follow_redirects=True,
-                logger=kwargs.get('logger', reflector_logger),
+                logger=kwargs.get("logger", reflector_logger),
             )
             response.raise_for_status()
             return response.json()

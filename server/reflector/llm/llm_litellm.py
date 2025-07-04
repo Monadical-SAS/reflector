@@ -5,6 +5,7 @@ from reflector.settings import settings
 from reflector.utils.retry import retry
 from transformers import AutoTokenizer
 
+
 class LiteLLMLLM(LLM):
     def __init__(self, model_name: str | None = None):
         super().__init__()
@@ -83,7 +84,7 @@ class LiteLLMLLM(LLM):
                     timeout=self.timeout,
                     follow_redirects=True,
                 )
-            )(retry_timeout=60 * 5, logger=kwargs.get('logger', reflector_logger))
+            )(retry_timeout=60 * 5, logger=kwargs.get("logger", reflector_logger))
             response.raise_for_status()
             return response.json()
 

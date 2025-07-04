@@ -2,7 +2,7 @@ import argparse
 
 import nltk
 
-nltk.download('stopwords')
+nltk.download("stopwords")
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 from heapq import nlargest
@@ -12,12 +12,26 @@ from loguru import logger
 # Function to initialize the argument parser
 def init_argparse():
     parser = argparse.ArgumentParser(
-        usage="%(prog)s <TRANSCRIPT> <SUMMARY>",
-        description="Summarization"
+        usage="%(prog)s <TRANSCRIPT> <SUMMARY>", description="Summarization"
     )
-    parser.add_argument("transcript", type=str, default="transcript.txt", help="Path to the input transcript file")
-    parser.add_argument("summary", type=str, default="summary.txt", help="Path to the output summary file")
-    parser.add_argument("--num_sentences", type=int, default=5, help="Number of sentences to include in the summary")
+    parser.add_argument(
+        "transcript",
+        type=str,
+        default="transcript.txt",
+        help="Path to the input transcript file",
+    )
+    parser.add_argument(
+        "summary",
+        type=str,
+        default="summary.txt",
+        help="Path to the output summary file",
+    )
+    parser.add_argument(
+        "--num_sentences",
+        type=int,
+        default=5,
+        help="Number of sentences to include in the summary",
+    )
     return parser
 
 
@@ -30,7 +44,7 @@ def read_transcript(file_path):
 
 # Function to preprocess the text by removing stop words and special characters
 def preprocess_text(text):
-    stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words("english"))
     words = word_tokenize(text)
     words = [w.lower() for w in words if w.isalpha() and w.lower() not in stop_words]
     return words

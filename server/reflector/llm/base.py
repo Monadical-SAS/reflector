@@ -173,7 +173,9 @@ class LLM:
 
         try:
             with self.m_generate.time():
-                result = await retry(self._completion)(messages=messages, **{**kwargs, 'logger': logger})
+                result = await retry(self._completion)(
+                    messages=messages, **{**kwargs, "logger": logger}
+                )
             self.m_generate_success.inc()
         except Exception:
             logger.exception("Failed to call llm after retrying")
@@ -261,9 +263,7 @@ class LLM:
     ) -> str:
         raise NotImplementedError
 
-    async def _completion(
-        self, messages: list, **kwargs
-    ) -> dict:
+    async def _completion(self, messages: list, **kwargs) -> dict:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:

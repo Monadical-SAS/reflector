@@ -8,7 +8,7 @@ from loguru import logger
 def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         usage="%(prog)s <AGENDA> <TRANSCRIPTION>",
-        description="Compares the transcript of a video or audio file to an agenda using the SpaCy model"
+        description="Compares the transcript of a video or audio file to an agenda using the SpaCy model",
     )
     parser.add_argument("agenda", help="Location of the agenda file")
     parser.add_argument("transcription", help="Location of the transcription file")
@@ -22,7 +22,7 @@ transcription_path = args.transcription
 # Load the spaCy model and add the sentencizer
 spaCy_model = "en_core_web_md"
 nlp = spacy.load(spaCy_model)
-nlp.add_pipe('sentencizer')
+nlp.add_pipe("sentencizer")
 logger.info("Loaded spaCy model " + spaCy_model)
 
 # Load the agenda
@@ -49,7 +49,9 @@ for item in agenda:
             continue
         similarity = sent.similarity(item_doc)
         similarity_threshold = 0.7
-        if similarity > similarity_threshold:  # Set the threshold to determine what is considered a match
+        if (
+            similarity > similarity_threshold
+        ):  # Set the threshold to determine what is considered a match
             covered_items[item] = True
             break
 
@@ -65,4 +67,7 @@ for item in agenda:
     else:
         print("❌ ", item)
 print("📊 Coverage: {:.2f}%".format(percentage_covered))
-logger.info("Finished comparing agenda to transcription with similarity threshold of " + str(similarity_threshold))
+logger.info(
+    "Finished comparing agenda to transcription with similarity threshold of "
+    + str(similarity_threshold)
+)

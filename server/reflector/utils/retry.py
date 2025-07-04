@@ -61,7 +61,7 @@ def retry(fn):
             except HTTPStatusError as e:
                 retry_logger.exception(e)
                 status_code = e.response.status_code
-                
+
                 # Log detailed error information including response body
                 try:
                     response_text = e.response.text
@@ -71,11 +71,13 @@ def retry(fn):
                         f"Response headers: {response_headers}\n"
                         f"Response body: {response_text}"
                     )
-                            
+
                 except Exception as log_error:
-                    retry_logger.warning(f"Failed to log detailed error info: {log_error}")
+                    retry_logger.warning(
+                        f"Failed to log detailed error info: {log_error}"
+                    )
                     retry_logger.debug(f"HTTP status {status_code} - {e}")
-                
+
                 if status_code in retry_httpx_status_stop:
                     message = f"HTTP status {status_code} is in retry_httpx_status_stop"
                     raise RetryHTTPException(message) from e

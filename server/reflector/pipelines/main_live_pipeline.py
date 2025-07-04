@@ -112,7 +112,7 @@ def get_transcript(func):
         transcript = await transcripts_controller.get_by_id(transcript_id=transcript_id)
         if not transcript:
             raise Exception("Transcript {transcript_id} not found")
-        
+
         # Enhanced logger with Celery task context
         tlogger = logger.bind(transcript_id=transcript.id)
         if current_task:
@@ -123,7 +123,7 @@ def get_transcript(func):
                 task_retries=current_task.request.retries,
                 transcript_id=transcript_id,
             )
-        
+
         try:
             result = await func(transcript=transcript, logger=tlogger, **kwargs)
             return result

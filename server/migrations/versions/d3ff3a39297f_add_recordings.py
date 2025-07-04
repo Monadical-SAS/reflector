@@ -15,7 +15,6 @@ import sqlalchemy as sa
 from alembic import op
 from reflector.db.meetings import meetings
 from reflector.db.recordings import Recording, recordings
-from reflector.db.rooms import rooms
 from reflector.db.transcripts import transcripts
 from reflector.settings import settings
 

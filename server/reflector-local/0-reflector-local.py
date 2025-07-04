@@ -25,10 +25,26 @@ if input_file.endswith(".m4a"):
     input_file = f"{input_file}.mp4"
 
 # Run the first script to generate the transcript
-subprocess.run(["python3", "1-transcript-generator.py", input_file, f"{input_file}_transcript.txt"])
+subprocess.run(
+    ["python3", "1-transcript-generator.py", input_file, f"{input_file}_transcript.txt"]
+)
 
 # Run the second script to compare the transcript to the agenda
-subprocess.run(["python3", "2-agenda-transcript-diff.py", agenda_file, f"{input_file}_transcript.txt"])
+subprocess.run(
+    [
+        "python3",
+        "2-agenda-transcript-diff.py",
+        agenda_file,
+        f"{input_file}_transcript.txt",
+    ]
+)
 
 # Run the third script to summarize the transcript
-subprocess.run(["python3", "3-transcript-summarizer.py", f"{input_file}_transcript.txt", f"{input_file}_summary.txt"])
+subprocess.run(
+    [
+        "python3",
+        "3-transcript-summarizer.py",
+        f"{input_file}_transcript.txt",
+        f"{input_file}_summary.txt",
+    ]
+)

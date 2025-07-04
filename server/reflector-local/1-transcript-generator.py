@@ -11,7 +11,7 @@ WHISPER_MODEL_SIZE = "base"
 def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         usage="%(prog)s <LOCATION> <OUTPUT>",
-        description="Creates a transcript of a video or audio file using the OpenAI Whisper model"
+        description="Creates a transcript of a video or audio file using the OpenAI Whisper model",
     )
     parser.add_argument("location", help="Location of the media file")
     parser.add_argument("output", help="Output file path")
@@ -20,6 +20,7 @@ def init_argparse() -> argparse.ArgumentParser:
 
 def main():
     import sys
+
     sys.setrecursionlimit(10000)
 
     parser = init_argparse()
@@ -30,13 +31,14 @@ def main():
 
     # Check if the media file is a valid audio or video file
     if os.path.isfile(media_file) and not media_file.endswith(
-            ('.mp3', '.wav', '.ogg', '.flac', '.mp4', '.avi', '.flv')):
+        (".mp3", ".wav", ".ogg", ".flac", ".mp4", ".avi", ".flv")
+    ):
         logger.error(f"Invalid file format: {media_file}")
         return
 
     # If the media file we just retrieved is an audio file then skip extraction step
     audio_filename = media_file
-    logger.info(f"Found audio-only file, skipping audio extraction")
+    logger.info("Found audio-only file, skipping audio extraction")
 
     audio = moviepy.editor.AudioFileClip(audio_filename)
 
