@@ -36,9 +36,8 @@ def downgrade() -> None:
         "UPDATE transcript SET events = "
         'REPLACE(events, \'"event": "LONG_SUMMARY"\', \'"event": "SUMMARY"\');'
     )
-    op.alter_column(
-        "transcript", "long_summary", nullable=True, new_column_name="summary"
-    )
+    with op.batch_alter_table("transcript", schema=None) as batch_op:
+        batch_op.alter_column("long_summary", nullable=True, new_column_name="summary")
     op.drop_column("transcript", "title")
     op.drop_column("transcript", "short_summary")
     # ### end Alembic commands ###
