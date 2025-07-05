@@ -28,3 +28,22 @@ export const formatTimeDifference = (seconds: number): string => {
 
   return timeString;
 };
+
+export const parseUTCDate = (dateString: string): Date => {
+  if (dateString.endsWith('Z') || dateString.includes('+')) {
+    return new Date(dateString);
+  }
+  return new Date(dateString + 'Z');
+};
+
+export const formatLocalDateTime = (dateString: string, options?: Intl.DateTimeFormatOptions): string => {
+  const date = parseUTCDate(dateString);
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long", 
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  };
+  return date.toLocaleString("en-US", { ...defaultOptions, ...options });
+};

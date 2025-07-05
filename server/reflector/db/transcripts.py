@@ -3,7 +3,7 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 from reflector.utils import generate_uuid4
@@ -78,7 +78,7 @@ transcripts = sqlalchemy.Table(
 
 
 def generate_transcript_name() -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
@@ -146,7 +146,7 @@ class Transcript(BaseModel):
     status: str = "idle"
     locked: bool = False
     duration: float = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
     short_summary: str | None = None
     long_summary: str | None = None

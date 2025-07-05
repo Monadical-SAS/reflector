@@ -46,7 +46,7 @@ import useSessionUser from "../../lib/useSessionUser";
 import NextLink from "next/link";
 import { Room, GetTranscript } from "../../api";
 import Pagination from "./pagination";
-import { formatTimeMs } from "../../lib/time";
+import { formatTimeMs, formatLocalDateTime } from "../../lib/time";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { SourceKind } from "../../api";
@@ -382,13 +382,7 @@ export default function TranscriptBrowser() {
                         : item.source_kind}
                     </Td>
                     <Td>
-                      {new Date(item.created_at).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "numeric",
-                      })}
+                      {formatLocalDateTime(item.created_at)}
                     </Td>
                     <Td>{formatTimeMs(item.duration)}</Td>
                     <Td>
@@ -467,7 +461,7 @@ export default function TranscriptBrowser() {
                           : item.source_kind}
                       </Text>
                       <Text>
-                        Date: {new Date(item.created_at).toLocaleString()}
+                        Date: {formatLocalDateTime(item.created_at)}
                       </Text>
                       <Text>Duration: {formatTimeMs(item.duration)}</Text>
                     </Box>

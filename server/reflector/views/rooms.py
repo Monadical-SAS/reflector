@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Annotated, Optional, Literal
 
 import reflector.auth as auth
@@ -144,7 +144,7 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
     meeting = await meetings_controller.get_active(room=room, current_time=current_time)
 
     if meeting is None:
