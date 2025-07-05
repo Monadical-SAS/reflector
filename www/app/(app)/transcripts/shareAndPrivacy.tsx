@@ -3,6 +3,8 @@ import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import { GetTranscript, GetTranscriptTopic, UpdateTranscript } from "../../api";
+import { useError } from "../../(errors)/errorContext";
+import { shouldShowError } from "../../lib/errorUtils";
 import {
   Box,
   Flex,
@@ -48,26 +50,37 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   const [shareLoading, setShareLoading] = useState(false);
   const requireLogin = featureEnabled("requireLogin");
   const api = useApi();
+  const { setError } = useError();
 
   const updateShareMode = async (selectedShareMode: any) => {
     if (!api)
       throw new Error("ShareLink's API should always be ready at this point");
 
     setShareLoading(true);
-    const requestBody: UpdateTranscript = {
-      share_mode: toShareMode(selectedShareMode.value),
-    };
+    try {
+      const requestBody: UpdateTranscript = {
+        share_mode: toShareMode(selectedShareMode.value),
+      };
 
-    const updatedTranscript = await api.v1TranscriptUpdate({
-      transcriptId: props.transcriptResponse.id,
-      requestBody,
-    });
-    setShareMode(
-      shareOptions.find(
-        (option) => option.value === updatedTranscript.share_mode,
-      ) || shareOptions[0],
-    );
-    setShareLoading(false);
+      const updatedTranscript = await api.v1TranscriptUpdate({
+        transcriptId: props.transcriptResponse.id,
+        requestBody,
+      });
+      setShareMode(
+        shareOptions.find(
+          (option) => option.value === updatedTranscript.share_mode,
+        ) || shareOptions[0],
+      );
+    } catch (error) {
+      const shouldShowHuman = shouldShowError(error);
+      if (shouldShowHuman) {
+        setError(error, "There was an error updating the share mode");
+      } else {
+        setError(error);
+      }
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   const userId = useSessionUser().id;

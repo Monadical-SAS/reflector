@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Participant } from "../../api";
+import { useEffect, useState, useRef } from "react";
+import { Participant, CancelablePromise } from "../../api";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
@@ -35,9 +35,13 @@ const useParticipants = (transcriptId: string): UseParticipants => {
   const { setError } = useError();
   const api = useApi();
   const [count, setCount] = useState(0);
+  const requestRef = useRef<CancelablePromise<Participant[]> | null>(null);
 
   const refetch = () => {
     if (!loading) {
+      if (requestRef.current) {
+        requestRef.current.cancel();
+      }
       setCount(count + 1);
       setLoading(true);
       setErrorState(null);
@@ -47,15 +51,23 @@ const useParticipants = (transcriptId: string): UseParticipants => {
   useEffect(() => {
     if (!transcriptId || !api) return;
 
+    if (requestRef.current) {
+      requestRef.current.cancel();
+    }
+
     setLoading(true);
-    api
-      .v1TranscriptGetParticipants({ transcriptId })
+    requestRef.current = api.v1TranscriptGetParticipants({ transcriptId });
+    
+    requestRef.current
       .then((result) => {
         setResponse(result);
         setLoading(false);
         console.debug("Participants Loaded:", result);
       })
       .catch((error) => {
+        if (error.name === "CancelError") {
+          return;
+        }
         const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman) {
           setError(error, "There was an error loading the participants");
@@ -66,6 +78,12 @@ const useParticipants = (transcriptId: string): UseParticipants => {
         setResponse(null);
         setLoading(false);
       });
+
+    return () => {
+      if (requestRef.current) {
+        requestRef.current.cancel();
+      }
+    };
   }, [transcriptId, !api, count]);
 
   return { response, loading, error, refetch } as UseParticipants;

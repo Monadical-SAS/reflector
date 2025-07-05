@@ -510,7 +510,7 @@ class TranscriptController:
         """
         A context manager for database transaction
         """
-        async with database.transaction(isolation="serializable"):
+        async with database.transaction():
             yield
 
     async def append_event(
