@@ -39,6 +39,7 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
+    sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
 
