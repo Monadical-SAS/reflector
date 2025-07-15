@@ -2,11 +2,11 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type ConsentContextState = 
+type ConsentContextState =
   | { ready: false }
-  | { 
-      ready: true, 
-      consentAnsweredForMeetings: Set<string> 
+  | {
+      ready: true;
+      consentAnsweredForMeetings: Set<string>;
     };
 
 interface RecordingConsentContextValue {
@@ -15,12 +15,16 @@ interface RecordingConsentContextValue {
   hasConsent: (meetingId: string) => boolean;
 }
 
-const RecordingConsentContext = createContext<RecordingConsentContextValue | undefined>(undefined);
+const RecordingConsentContext = createContext<
+  RecordingConsentContextValue | undefined
+>(undefined);
 
 export const useRecordingConsent = () => {
   const context = useContext(RecordingConsentContext);
   if (!context) {
-    throw new Error("useRecordingConsent must be used within RecordingConsentProvider");
+    throw new Error(
+      "useRecordingConsent must be used within RecordingConsentProvider",
+    );
   }
   return context;
 };
@@ -31,12 +35,14 @@ interface RecordingConsentProviderProps {
 
 const LOCAL_STORAGE_KEY = "recording_consent_meetings";
 
-export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> = ({ children }) => {
+export const RecordingConsentProvider: React.FC<
+  RecordingConsentProviderProps
+> = ({ children }) => {
   const [state, setState] = useState<ConsentContextState>({ ready: false });
 
   const safeWriteToStorage = (meetingIds: string[]): void => {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== "undefined" && window.localStorage) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(meetingIds));
       }
     } catch (error) {
@@ -46,7 +52,6 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
 
   // writes to local storage and to the state of context both
   const touch = (meetingId: string): void => {
-    
     if (!state.ready) {
       console.warn("Attempted to touch consent before context is ready");
       return;
@@ -54,9 +59,9 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
 
     // has success regardless local storage write success: we don't handle that
     // and don't want to crash anything with just consent functionality
-    const newSet = state.consentAnsweredForMeetings.has(meetingId) ?
-      state.consentAnsweredForMeetings :
-      new Set([...state.consentAnsweredForMeetings, meetingId]);
+    const newSet = state.consentAnsweredForMeetings.has(meetingId)
+      ? state.consentAnsweredForMeetings
+      : new Set([...state.consentAnsweredForMeetings, meetingId]);
     // note: preserves the set insertion order
     const array = Array.from(newSet).slice(-5); // Keep latest 5
     safeWriteToStorage(array);
@@ -71,7 +76,7 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
   // initialize on mount
   useEffect(() => {
     try {
-      if (typeof window === 'undefined' || !window.localStorage) {
+      if (typeof window === "undefined" || !window.localStorage) {
         setState({ ready: true, consentAnsweredForMeetings: new Set() });
         return;
       }
@@ -81,7 +86,7 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
         setState({ ready: true, consentAnsweredForMeetings: new Set() });
         return;
       }
-      
+
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) {
         console.warn("Invalid consent data format in localStorage, resetting");
@@ -90,7 +95,9 @@ export const RecordingConsentProvider: React.FC<RecordingConsentProviderProps> =
       }
 
       // pre-historic way of parsing!
-      const consentAnsweredForMeetings = new Set(parsed.filter(id => !!id && typeof id === 'string'));
+      const consentAnsweredForMeetings = new Set(
+        parsed.filter((id) => !!id && typeof id === "string"),
+      );
       setState({ ready: true, consentAnsweredForMeetings });
     } catch (error) {
       // we don't want to fail the page here; the component is not essential.
