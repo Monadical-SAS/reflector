@@ -60,43 +60,4 @@ def downgrade() -> None:
     with op.batch_alter_table("meeting", schema=None) as batch_op:
         batch_op.drop_index("idx_meeting_room_id")
 
-    op.create_table(
-        "_alembic_tmp_meeting",
-        sa.Column("id", sa.VARCHAR(), nullable=False),
-        sa.Column("room_name", sa.VARCHAR(), nullable=True),
-        sa.Column("room_url", sa.VARCHAR(), nullable=True),
-        sa.Column("host_room_url", sa.VARCHAR(), nullable=True),
-        sa.Column("start_date", sa.DATETIME(), nullable=True),
-        sa.Column("end_date", sa.DATETIME(), nullable=True),
-        sa.Column("user_id", sa.VARCHAR(), nullable=True),
-        sa.Column("room_id", sa.VARCHAR(), nullable=True),
-        sa.Column(
-            "is_locked", sa.BOOLEAN(), server_default=sa.text("0"), nullable=False
-        ),
-        sa.Column(
-            "room_mode",
-            sa.VARCHAR(),
-            server_default=sa.text("'normal'"),
-            nullable=False,
-        ),
-        sa.Column(
-            "recording_type",
-            sa.VARCHAR(),
-            server_default=sa.text("'cloud'"),
-            nullable=False,
-        ),
-        sa.Column(
-            "recording_trigger",
-            sa.VARCHAR(),
-            server_default=sa.text("'automatic-2nd-participant'"),
-            nullable=False,
-        ),
-        sa.Column(
-            "num_clients", sa.INTEGER(), server_default=sa.text("0"), nullable=False
-        ),
-        sa.Column(
-            "is_active", sa.BOOLEAN(), server_default=sa.text("1"), nullable=False
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
     # ### end Alembic commands ###
