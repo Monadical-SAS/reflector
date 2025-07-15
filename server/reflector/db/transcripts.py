@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
-from reflector.utils import generate_uuid4
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -15,6 +14,7 @@ from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.utils import generate_uuid4
 from sqlalchemy import Enum
 from sqlalchemy.sql import false, or_
 
@@ -74,6 +74,9 @@ transcripts = sqlalchemy.Table(
     # the main "audio deleted" is the presence of the audio itself / consents not-given
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
+    sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
+    sqlalchemy.Index("idx_transcript_user_id", "user_id"),
+    sqlalchemy.Index("idx_transcript_created_at", "created_at"),
 )
 
 
@@ -306,6 +309,7 @@ class TranscriptController:
         room_id: str | None = None,
         search_term: str | None = None,
         return_query: bool = False,
+        exclude_columns: list[str] = ["topics", "events", "participants"],
     ) -> list[Transcript]:
         """
         Get all transcripts
@@ -348,9 +352,14 @@ class TranscriptController:
         if search_term:
             query = query.where(transcripts.c.title.ilike(f"%{search_term}%"))
 
+        # Exclude heavy JSON columns from list queries
+        transcript_columns = [
+            col for col in transcripts.c if col.name not in exclude_columns
+        ]
+
         query = query.with_only_columns(
-            [
-                transcripts,
+            transcript_columns
+            + [
                 rooms.c.id.label("room_id"),
                 rooms.c.name.label("room_name"),
             ]

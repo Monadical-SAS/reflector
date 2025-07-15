@@ -45,7 +45,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
 # ==============================================================
 
 
-class GetTranscript(BaseModel):
+class GetTranscriptMinimal(BaseModel):
     id: str
     user_id: str | None
     name: str
@@ -59,13 +59,16 @@ class GetTranscript(BaseModel):
     share_mode: str = Field("private")
     source_language: str | None
     target_language: str | None
-    participants: list[TranscriptParticipant] | None
     reviewed: bool
     meeting_id: str | None
     source_kind: SourceKind
     room_id: str | None = None
     room_name: str | None = None
     audio_deleted: bool | None = None
+
+
+class GetTranscript(GetTranscriptMinimal):
+    participants: list[TranscriptParticipant] | None
 
 
 class CreateTranscript(BaseModel):
@@ -90,7 +93,7 @@ class DeletionStatus(BaseModel):
     status: str
 
 
-@router.get("/transcripts", response_model=Page[GetTranscript])
+@router.get("/transcripts", response_model=Page[GetTranscriptMinimal])
 async def transcripts_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
     source_kind: SourceKind | None = None,

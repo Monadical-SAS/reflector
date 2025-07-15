@@ -67,8 +67,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
-
-
   return (
     <>
       <Grid
@@ -78,7 +76,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         mt={4}
         mb={4}
       >
-        {waveform.waveform && mp3.media && !mp3.audioDeleted && topics.topics ? (
+        {waveform.waveform &&
+        mp3.media &&
+        !mp3.audioDeleted &&
+        topics.topics ? (
           <Player
             topics={topics?.topics}
             useActiveTopic={useActiveTopic}

@@ -20,6 +20,7 @@ recordings = sa.Table(
         server_default="pending",
     ),
     sa.Column("meeting_id", sa.String),
+    sa.Index("idx_recording_meeting_id", "meeting_id"),
 )
 
 
