@@ -44,7 +44,7 @@ import {
 import useTranscriptList from "../transcripts/useTranscriptList";
 import useSessionUser from "../../lib/useSessionUser";
 import NextLink from "next/link";
-import { Room, GetTranscript } from "../../api";
+import { Room, GetTranscriptMinimal } from "../../api";
 import Pagination from "./pagination";
 import { formatTimeMs } from "../../lib/time";
 import useApi from "../../lib/useApi";
@@ -328,7 +328,7 @@ export default function TranscriptBrowser() {
                 </Tr>
               </Thead>
               <Tbody>
-                {response?.items?.map((item: GetTranscript) => (
+                {response?.items?.map((item: GetTranscriptMinimal) => (
                   <Tr key={item.id}>
                     <Td>
                       <Flex alignItems="start">
@@ -416,7 +416,7 @@ export default function TranscriptBrowser() {
           </Box>
           <Box display={{ base: "block", md: "none" }}>
             <Stack spacing={2}>
-              {response?.items?.map((item: GetTranscript) => (
+              {response?.items?.map((item: GetTranscriptMinimal) => (
                 <Box key={item.id} borderWidth={1} p={4} borderRadius="md">
                   <Flex justify="space-between" alignItems="flex-start" gap="2">
                     <Box>

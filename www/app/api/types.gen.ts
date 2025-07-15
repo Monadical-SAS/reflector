@@ -50,7 +50,29 @@ export type GetTranscript = {
   share_mode?: string;
   source_language: string | null;
   target_language: string | null;
+  reviewed: boolean;
+  meeting_id: string | null;
+  source_kind: SourceKind;
+  room_id?: string | null;
+  room_name?: string | null;
+  audio_deleted?: boolean | null;
   participants: Array<TranscriptParticipant> | null;
+};
+
+export type GetTranscriptMinimal = {
+  id: string;
+  user_id: string | null;
+  name: string;
+  status: string;
+  locked: boolean;
+  duration: number;
+  title: string | null;
+  short_summary: string | null;
+  long_summary: string | null;
+  created_at: string;
+  share_mode?: string;
+  source_language: string | null;
+  target_language: string | null;
   reviewed: boolean;
   meeting_id: string | null;
   source_kind: SourceKind;
@@ -117,8 +139,8 @@ export type MeetingConsentRequest = {
   consent_given: boolean;
 };
 
-export type Page_GetTranscript_ = {
-  items: Array<GetTranscript>;
+export type Page_GetTranscriptMinimal_ = {
+  items: Array<GetTranscriptMinimal>;
   total: number;
   page: number | null;
   size: number | null;
@@ -316,7 +338,7 @@ export type V1TranscriptsListData = {
   sourceKind?: SourceKind | null;
 };
 
-export type V1TranscriptsListResponse = Page_GetTranscript_;
+export type V1TranscriptsListResponse = Page_GetTranscriptMinimal_;
 
 export type V1TranscriptsCreateData = {
   requestBody: CreateTranscript;
@@ -590,7 +612,7 @@ export type $OpenApiTs = {
         /**
          * Successful Response
          */
-        200: Page_GetTranscript_;
+        200: Page_GetTranscriptMinimal_;
         /**
          * Validation Error
          */

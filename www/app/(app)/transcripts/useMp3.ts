@@ -14,9 +14,13 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
   const [media, setMedia] = useState<HTMLMediaElement | null>(null);
   const [later, setLater] = useState(waiting);
   const [audioLoading, setAudioLoading] = useState<boolean>(true);
-  const [audioLoadingError, setAudioLoadingError] = useState<null | string>(null);
-  const [transcriptMetadataLoading, setTranscriptMetadataLoading] = useState<boolean>(true);
-  const [transcriptMetadataLoadingError, setTranscriptMetadataLoadingError] = useState<string | null>(null);
+  const [audioLoadingError, setAudioLoadingError] = useState<null | string>(
+    null,
+  );
+  const [transcriptMetadataLoading, setTranscriptMetadataLoading] =
+    useState<boolean>(true);
+  const [transcriptMetadataLoadingError, setTranscriptMetadataLoadingError] =
+    useState<string | null>(null);
   const [audioDeleted, setAudioDeleted] = useState<boolean | null>(null);
   const api = getApi();
   const { api_url } = useContext(DomainContext);
@@ -47,28 +51,29 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     });
   }, [navigator.serviceWorker, !serviceWorker, accessTokenInfo]);
 
-
   useEffect(() => {
     if (!transcriptId || !api || later) return;
 
     let deleted: boolean | null = null;
 
     setTranscriptMetadataLoading(true);
-    
+
     const audioElement = document.createElement("audio");
     audioElement.src = `${api_url}/v1/transcripts/${transcriptId}/audio/mp3`;
     audioElement.crossOrigin = "anonymous";
     audioElement.preload = "auto";
-    
+
     const handleCanPlay = () => {
       if (deleted) {
-        console.error('Illegal state: audio supposed to be deleted, but was loaded');
+        console.error(
+          "Illegal state: audio supposed to be deleted, but was loaded",
+        );
         return;
       }
       setAudioLoading(false);
       setAudioLoadingError(null);
     };
-    
+
     const handleError = () => {
       setAudioLoading(false);
       if (deleted) {
@@ -77,18 +82,18 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
       }
       setAudioLoadingError("Failed to load audio");
     };
-    
-    audioElement.addEventListener('canplay', handleCanPlay);
-    audioElement.addEventListener('error', handleError);
-    
-    setMedia(audioElement);
 
+    audioElement.addEventListener("canplay", handleCanPlay);
+    audioElement.addEventListener("error", handleError);
+
+    setMedia(audioElement);
 
     setAudioLoading(true);
 
     let stopped = false;
     // Fetch transcript info in parallel
-    api.v1TranscriptGet({ transcriptId })
+    api
+      .v1TranscriptGet({ transcriptId })
       .then((transcript) => {
         if (stopped) return;
         deleted = transcript.audio_deleted || false;
@@ -109,12 +114,12 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
       .finally(() => {
         if (stopped) return;
         setTranscriptMetadataLoading(false);
-      })
-    
+      });
+
     return () => {
       stopped = true;
-      audioElement.removeEventListener('canplay', handleCanPlay);
-      audioElement.removeEventListener('error', handleError);
+      audioElement.removeEventListener("canplay", handleCanPlay);
+      audioElement.removeEventListener("error", handleError);
     };
   }, [transcriptId, !api, later, api_url]);
 

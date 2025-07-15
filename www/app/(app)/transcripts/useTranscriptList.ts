@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
-import { Page_GetTranscript_, SourceKind } from "../../api";
+import { Page_GetTranscriptMinimal_, SourceKind } from "../../api";
 
 type TranscriptList = {
-  response: Page_GetTranscript_ | null;
+  response: Page_GetTranscriptMinimal_ | null;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -16,7 +16,9 @@ const useTranscriptList = (
   roomId: string | null,
   searchTerm: string | null,
 ): TranscriptList => {
-  const [response, setResponse] = useState<Page_GetTranscript_ | null>(null);
+  const [response, setResponse] = useState<Page_GetTranscriptMinimal_ | null>(
+    null,
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
