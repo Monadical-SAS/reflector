@@ -25,7 +25,6 @@ def upgrade() -> None:
         batch_op.create_index("idx_meeting_room_id", ["room_id"], unique=False)
 
     with op.batch_alter_table("recording", schema=None) as batch_op:
-        batch_op.drop_constraint("uq_recording_object_key", type_="unique")
         batch_op.create_index("idx_recording_meeting_id", ["meeting_id"], unique=False)
 
     with op.batch_alter_table("room", schema=None) as batch_op:
@@ -53,9 +52,6 @@ def downgrade() -> None:
 
     with op.batch_alter_table("recording", schema=None) as batch_op:
         batch_op.drop_index("idx_recording_meeting_id")
-        batch_op.create_unique_constraint(
-            "uq_recording_object_key", ["bucket_name", "object_key"]
-        )
 
     with op.batch_alter_table("meeting", schema=None) as batch_op:
         batch_op.drop_index("idx_meeting_room_id")
