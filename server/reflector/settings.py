@@ -82,7 +82,6 @@ class Settings(BaseSettings):
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
-
     # Special summary case
     SUMMARY_MODEL: str = "NousResearch/Hermes-3-Llama-3.1-8B"
     SUMMARY_LLM_URL: str
