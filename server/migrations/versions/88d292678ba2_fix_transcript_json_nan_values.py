@@ -57,8 +57,8 @@ def upgrade() -> None:
             fix_nan(jevents)
             fixed_events = json.dumps(jevents)
             assert "NaN" not in fixed_events
-        except:
-            print(f"Warning: Invalid JSON for transcript {transcript_id}, skipping")
+        except (json.JSONDecodeError, AssertionError) as e:
+            print(f"Warning: Invalid JSON for transcript {transcript_id}, skipping: {e}")
             continue
 
         # Update the record with fixed JSON
