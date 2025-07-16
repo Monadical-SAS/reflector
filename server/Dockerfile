@@ -1,11 +1,11 @@
-FROM python:3.12-slim as base
+FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy \
-    UV_COMPILE_BYTECODE=1
+    UV_LINK_MODE=copy
 
 # builder install base dependencies
 WORKDIR /tmp
+RUN apt-get update && apt-get install -y curl && apt-get clean
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin/:$PATH"
@@ -14,11 +14,12 @@ ENV PATH="/root/.local/bin/:$PATH"
 RUN mkdir -p /app
 WORKDIR /app
 COPY pyproject.toml uv.lock /app/
+RUN touch README.md && env uv sync --compile-bytecode --locked
 
 # bootstrap
-COPY reflector /app/reflector
-COPY migrations /app/migrations
+COPY alembic.ini runserver.sh main.py /app/
 COPY images /app/images
-COPY alembic.ini runserver.sh /app/
+COPY migrations /app/migrations
+COPY reflector /app/reflector
 WORKDIR /app
 CMD ["./runserver.sh"]
