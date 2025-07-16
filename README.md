@@ -1,4 +1,5 @@
 <div align="center">
+
 # Reflector
 
 Reflector Audio Management and Analysis is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
@@ -6,6 +7,27 @@ Reflector Audio Management and Analysis is a cutting-edge web application under 
 [![Tests](https://github.com/monadical-sas/cubbi/actions/workflows/pytests.yml/badge.svg?branch=main&event=push)](https://github.com/monadical-sas/cubbi/actions/workflows/pytests.yml)
 [![License: MIT](https://img.shields.io/badge/license-AGPL--v3-green.svg)](https://opensource.org/licenses/AGPL-v3)
 </div>
+
+## Screenshots
+<table>
+  <tr>
+    <td>
+      <a href="https://github.com/user-attachments/assets/3a976930-56c1-47ef-8c76-55d3864309e3">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/3a976930-56c1-47ef-8c76-55d3864309e3" />
+      </a>
+    </td>
+    <td>
+      <a href="https://github.com/user-attachments/assets/bfe3bde3-08af-4426-a9a1-11ad5cd63b33">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/bfe3bde3-08af-4426-a9a1-11ad5cd63b33" />
+      </a>
+    </td>
+    <td>
+      <a href="https://github.com/user-attachments/assets/7b60c9d0-efe4-474f-a27b-ea13bd0fabdc">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/7b60c9d0-efe4-474f-a27b-ea13bd0fabdc" />
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## Background
 
