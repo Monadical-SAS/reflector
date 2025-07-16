@@ -171,7 +171,7 @@ class SummaryBuilder:
     # note that not all the models react correctly on it, some would derp out and start returning schema itself
     def asking_for_structured_output(self, text: str, schema: dict | str) -> str:
         r = text
-        if not self.llm_instance.has_structured_output():
+        if not hasattr(self.llm_instance, 'has_structured_output') or not self.llm_instance.has_structured_output():
             r += (
                 f"Output the result in JSON format strictly following the schema: \n```json-schema\n{schema}\n```."
                 "Make sure you don't add any extra properties and don't wrap the expected result into extra wrappers."
