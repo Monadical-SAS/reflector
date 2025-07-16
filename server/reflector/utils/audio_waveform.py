@@ -57,10 +57,10 @@ def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]
 
     # number of decimals to use when rounding the peak value
     digits = 2
-    if volumes.max() > 0:
+    if len(volumes) > 0 and volumes.max() > 0:
         volumes = np.round(volumes / volumes.max(), digits)
     else:
-        volumes = np.zeros_like(volumes)
+        volumes = np.zeros_like(volumes) if len(volumes) > 0 else np.array([])
 
     return volumes.tolist()
 
