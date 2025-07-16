@@ -1,4 +1,0 @@
-Summary of: https://www.youtube.com/watch?v=DzRoYc2UGKI
-
-Small Developer is a program that creates an entire project for you based on a prompt. It uses the JATGPT API to generate code and files, and it's easy to use. The program can be installed by cloning the GitHub repository and using modalcom. The program can create projects for various languages, including Python and Ruby. You can also create a prompt.md file to input your prompt instead of pasting it into the terminal. The program is useful for creating detailed specs that can be passed on to junior developers. Overall, Small Developer is a helpful tool for quickly generating code and projects.
-
