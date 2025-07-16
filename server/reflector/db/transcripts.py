@@ -32,16 +32,16 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("name", sqlalchemy.String),
     sqlalchemy.Column("status", sqlalchemy.String),
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
-    sqlalchemy.Column("duration", sqlalchemy.Integer),
+    sqlalchemy.Column("duration", sqlalchemy.Float),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime),
-    sqlalchemy.Column("title", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("short_summary", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("long_summary", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("title", sqlalchemy.String),
+    sqlalchemy.Column("short_summary", sqlalchemy.String),
+    sqlalchemy.Column("long_summary", sqlalchemy.String),
     sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("participants", sqlalchemy.JSON),
-    sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("source_language", sqlalchemy.String),
+    sqlalchemy.Column("target_language", sqlalchemy.String),
     sqlalchemy.Column(
         "reviewed", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
@@ -63,8 +63,8 @@ transcripts = sqlalchemy.Table(
         "meeting_id",
         sqlalchemy.String,
     ),
-    sqlalchemy.Column("recording_id", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer, nullable=True),
+    sqlalchemy.Column("recording_id", sqlalchemy.String),
+    sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer),
     sqlalchemy.Column(
         "source_kind",
         Enum(SourceKind, values_callable=lambda obj: [e.value for e in obj]),
@@ -73,10 +73,11 @@ transcripts = sqlalchemy.Table(
     # indicative field: whether associated audio is deleted
     # the main "audio deleted" is the presence of the audio itself / consents not-given
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
-    sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
+    sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
+    sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
 )
 
 
@@ -336,6 +337,7 @@ class TranscriptController:
             .join(meetings, recordings.c.meeting_id == meetings.c.id, isouter=True)
             .join(rooms, meetings.c.room_id == rooms.c.id, isouter=True)
         )
+
         if user_id:
             query = query.where(
                 or_(transcripts.c.user_id == user_id, rooms.c.is_shared)
@@ -376,6 +378,8 @@ class TranscriptController:
 
         if filter_recording:
             query = query.filter(transcripts.c.status != "recording")
+
+        # print(query.compile(compile_kwargs={"literal_binds": True}))
 
         if return_query:
             return query
