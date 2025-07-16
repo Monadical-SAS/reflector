@@ -38,6 +38,7 @@ dependencies = [
     "black==24.1.1",
     "jsonschema>=4.23.0",
     "openai>=1.59.7",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [dependency-groups]

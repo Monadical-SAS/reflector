@@ -46,3 +46,18 @@ services:
       - ./www:/app/
     env_file:
       - ./www/.env.local
+
+  postgres:
+    image: postgres:17
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+networks:
+  default:
+    attachable: true
