@@ -17,7 +17,7 @@ COPY pyproject.toml uv.lock /app/
 RUN touch README.md && env uv sync --compile-bytecode --locked
 
 # bootstrap
-COPY alembic.ini runserver.sh main.py /app/
+COPY alembic.ini runserver.sh /app/
 COPY images /app/images
 COPY migrations /app/migrations
 COPY reflector /app/reflector
