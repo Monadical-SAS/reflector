@@ -62,7 +62,7 @@ class GetTranscriptMinimal(BaseModel):
     reviewed: bool
     meeting_id: str | None
 
-    @field_serializer("created_at")
+    @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
