@@ -118,7 +118,7 @@ uv run alembic upgrade head
 uv run celery -A reflector.worker.app worker --loglevel=info
 
 # start the app
-uv run fastapi dev main.py
+uv run -m reflector.app --reload
 ```
 
 Then fill `.env` with the omitted values (ask in Zulip).
