@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, modal, oobabooga, litellm
+    # available backend: openai, modal, oobabooga
     LLM_BACKEND: str = "oobabooga"
 
     # LLM common configuration
@@ -82,13 +82,6 @@ class Settings(BaseSettings):
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
-    # LLM LiteLLM configuration
-    LITELLM_URL: str | None = None
-    LITELLM_PRIVATE_KEY: str | None = None
-    LITELLM_MODEL: str = "gpt-3.5-turbo"
-    LITELLM_HAS_STRUCTURED_OUTPUT: bool = True
-    LITELLM_TEMPERATURE: float = 0.3
-    LITELLM_TOKENIZER: str = "gpt2"
 
     # Special summary case
     SUMMARY_MODEL: str = "NousResearch/Hermes-3-Llama-3.1-8B"
