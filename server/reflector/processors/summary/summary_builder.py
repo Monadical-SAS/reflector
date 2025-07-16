@@ -864,7 +864,9 @@ if __name__ == "__main__":
 
     async def main():
         # build the summary
-        llm = LLM.get_instance(model_name="NousResearch/Hermes-3-Llama-3.1-8B")
+        # Use OpenAILLM with SUMMARY_ prefix configuration
+        from reflector.llm.openai_llm import OpenAILLM
+        llm = OpenAILLM(config_prefix="SUMMARY")
         sm = SummaryBuilder(llm=llm, filename=args.transcript)
 
         if args.subjects:
