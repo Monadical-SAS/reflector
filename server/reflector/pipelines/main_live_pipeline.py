@@ -608,7 +608,6 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
     logger.info("Consent denied, cleaning up all related audio files")
 
     if recording and recording.bucket_name and recording.object_key:
-
         s3_whereby = boto3.client(
             "s3",
             aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
@@ -628,7 +627,6 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
     await transcripts_controller.update(transcript, {"audio_deleted": True})
     # 2. Delete processed audio from transcript storage S3 bucket
     if transcript.audio_location == "storage":
-
         storage = get_transcripts_storage()
         try:
             await storage.delete_file(transcript.storage_audio_path)

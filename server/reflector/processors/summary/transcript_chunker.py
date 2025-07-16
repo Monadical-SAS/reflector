@@ -316,7 +316,6 @@ async def _process_chunk(
     validate_json_func: Callable,
     logger: structlog.BoundLogger,
 ) -> List[str]:
-
     messages = messages_template.copy()
     prompt = create_prompt_func(transcript)
     messages.add_user(prompt)

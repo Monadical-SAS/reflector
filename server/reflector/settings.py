@@ -97,7 +97,6 @@ class Settings(BaseSettings):
     SUMMARY_LLM_USE_STRUCTURED_OUTPUT: bool = True
     SUMMARY_LLM_CONTEXT_SIZE_TOKENS: int = 16000
 
-
     # Diarization
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"

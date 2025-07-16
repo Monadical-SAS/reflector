@@ -51,7 +51,7 @@ async def main() -> NoReturn:
 
         logger.info(f"Cancelling {len(tasks)} outstanding tasks")
         await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info(f'{"Flushing metrics"}')
+        logger.info(f"{'Flushing metrics'}")
         loop.stop()
 
     signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)

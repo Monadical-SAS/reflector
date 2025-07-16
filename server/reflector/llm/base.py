@@ -230,7 +230,7 @@ class LLM:
             title = modified_title[0].upper() + modified_title[1:]
         except Exception as e:
             reflector_logger.info(
-                f"Failed to ensure casing on {title=} " f"with exception : {str(e)}"
+                f"Failed to ensure casing on {title=} with exception : {str(e)}"
             )
 
         return title
@@ -253,9 +253,7 @@ class LLM:
             )
             title = re.sub(pattern, "", title, flags=re.IGNORECASE)
         except Exception as e:
-            reflector_logger.info(
-                f"Failed to trim {title=} " f"with exception : {str(e)}"
-            )
+            reflector_logger.info(f"Failed to trim {title=} with exception : {str(e)}")
         return title
 
     async def _generate(

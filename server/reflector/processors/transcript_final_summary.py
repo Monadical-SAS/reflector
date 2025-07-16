@@ -1,9 +1,7 @@
-from reflector.llm import LLM
 from reflector.llm.openai_llm import OpenAILLM
 from reflector.processors.base import Processor
 from reflector.processors.summary.summary_builder import SummaryBuilder
 from reflector.processors.types import FinalLongSummary, FinalShortSummary, TitleSummary
-from reflector.settings import settings
 
 
 class TranscriptFinalSummaryProcessor(Processor):

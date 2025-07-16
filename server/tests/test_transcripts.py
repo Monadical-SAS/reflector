@@ -281,9 +281,10 @@ async def test_transcripts_list_authenticated_migration():
     testx1 = "testmigration1"
     testx2 = "testmigration2"
 
-    async with patch_migrate_user(), AsyncClient(
-        app=app, base_url="http://test/v1"
-    ) as ac:
+    async with (
+        patch_migrate_user(),
+        AsyncClient(app=app, base_url="http://test/v1") as ac,
+    ):
         # first ensure client 2 does not have any transcripts related to this test
         async with authenticated_client2_ctx():
             response = await ac.get("/transcripts")

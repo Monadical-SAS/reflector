@@ -866,6 +866,7 @@ if __name__ == "__main__":
         # build the summary
         # Use OpenAILLM with SUMMARY_ prefix configuration
         from reflector.llm.openai_llm import OpenAILLM
+
         llm = OpenAILLM(config_prefix="SUMMARY")
         sm = SummaryBuilder(llm=llm, filename=args.transcript)
 
