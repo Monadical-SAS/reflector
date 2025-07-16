@@ -3,18 +3,18 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
-from reflector.utils import generate_uuid4
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.utils import generate_uuid4
 from sqlalchemy import Enum
 from sqlalchemy.sql import false, or_
 
@@ -32,16 +32,16 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("name", sqlalchemy.String),
     sqlalchemy.Column("status", sqlalchemy.String),
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
-    sqlalchemy.Column("duration", sqlalchemy.Integer),
+    sqlalchemy.Column("duration", sqlalchemy.Float),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime),
-    sqlalchemy.Column("title", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("short_summary", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("long_summary", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("title", sqlalchemy.String),
+    sqlalchemy.Column("short_summary", sqlalchemy.String),
+    sqlalchemy.Column("long_summary", sqlalchemy.String),
     sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("participants", sqlalchemy.JSON),
-    sqlalchemy.Column("source_language", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("target_language", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("source_language", sqlalchemy.String),
+    sqlalchemy.Column("target_language", sqlalchemy.String),
     sqlalchemy.Column(
         "reviewed", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
@@ -63,8 +63,8 @@ transcripts = sqlalchemy.Table(
         "meeting_id",
         sqlalchemy.String,
     ),
-    sqlalchemy.Column("recording_id", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer, nullable=True),
+    sqlalchemy.Column("recording_id", sqlalchemy.String),
+    sqlalchemy.Column("zulip_message_id", sqlalchemy.Integer),
     sqlalchemy.Column(
         "source_kind",
         Enum(SourceKind, values_callable=lambda obj: [e.value for e in obj]),
@@ -73,12 +73,16 @@ transcripts = sqlalchemy.Table(
     # indicative field: whether associated audio is deleted
     # the main "audio deleted" is the presence of the audio itself / consents not-given
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
-    sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean, nullable=True),
+    sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
+    sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
+    sqlalchemy.Index("idx_transcript_user_id", "user_id"),
+    sqlalchemy.Index("idx_transcript_created_at", "created_at"),
+    sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
 )
 
 
 def generate_transcript_name() -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
@@ -146,7 +150,7 @@ class Transcript(BaseModel):
     status: str = "idle"
     locked: bool = False
     duration: float = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
     short_summary: str | None = None
     long_summary: str | None = None
@@ -163,6 +167,12 @@ class Transcript(BaseModel):
     zulip_message_id: int | None = None
     source_kind: SourceKind
     audio_deleted: bool | None = None
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -306,6 +316,7 @@ class TranscriptController:
         room_id: str | None = None,
         search_term: str | None = None,
         return_query: bool = False,
+        exclude_columns: list[str] = ["topics", "events", "participants"],
     ) -> list[Transcript]:
         """
         Get all transcripts
@@ -332,6 +343,7 @@ class TranscriptController:
             .join(meetings, recordings.c.meeting_id == meetings.c.id, isouter=True)
             .join(rooms, meetings.c.room_id == rooms.c.id, isouter=True)
         )
+
         if user_id:
             query = query.where(
                 or_(transcripts.c.user_id == user_id, rooms.c.is_shared)
@@ -348,9 +360,14 @@ class TranscriptController:
         if search_term:
             query = query.where(transcripts.c.title.ilike(f"%{search_term}%"))
 
+        # Exclude heavy JSON columns from list queries
+        transcript_columns = [
+            col for col in transcripts.c if col.name not in exclude_columns
+        ]
+
         query = query.with_only_columns(
-            [
-                transcripts,
+            transcript_columns
+            + [
                 rooms.c.id.label("room_id"),
                 rooms.c.name.label("room_name"),
             ]
@@ -367,6 +384,8 @@ class TranscriptController:
 
         if filter_recording:
             query = query.filter(transcripts.c.status != "recording")
+
+        # print(query.compile(compile_kwargs={"literal_binds": True}))
 
         if return_query:
             return query

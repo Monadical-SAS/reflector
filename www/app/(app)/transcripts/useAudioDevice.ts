@@ -124,7 +124,7 @@ const useAudioDevice = () => {
     permissionDenied,
     audioDevices,
     getAudioStream,
-    requestPermission
+    requestPermission,
   };
 };
 

@@ -12,9 +12,10 @@ import reflector.db.recordings  # noqa
 import reflector.db.rooms  # noqa
 import reflector.db.transcripts  # noqa
 
-engine = sqlalchemy.create_engine(
-    settings.DATABASE_URL, connect_args={"check_same_thread": False}
-)
+kwargs = {}
+if "sqlite" in settings.DATABASE_URL:
+    kwargs["connect_args"] = {"check_same_thread": False}
+engine = sqlalchemy.create_engine(settings.DATABASE_URL, **kwargs)
 
 
 @subscribers_startup.append

@@ -9,7 +9,10 @@ interface WherebyEmbedProps {
 }
 
 // currently used for webinars only
-export default function WherebyWebinarEmbed({ roomUrl, onLeave }: WherebyEmbedProps) {
+export default function WherebyWebinarEmbed({
+  roomUrl,
+  onLeave,
+}: WherebyEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
   // TODO extract common toast logic / styles to be used by consent toast on normal rooms

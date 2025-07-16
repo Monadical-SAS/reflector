@@ -239,6 +239,57 @@ export const $GetTranscript = {
       ],
       title: "Target Language",
     },
+    reviewed: {
+      type: "boolean",
+      title: "Reviewed",
+    },
+    meeting_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Meeting Id",
+    },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
+    room_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Id",
+    },
+    room_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Name",
+    },
+    audio_deleted: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Audio Deleted",
+    },
     participants: {
       anyOf: [
         {
@@ -252,6 +303,127 @@ export const $GetTranscript = {
         },
       ],
       title: "Participants",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "user_id",
+    "name",
+    "status",
+    "locked",
+    "duration",
+    "title",
+    "short_summary",
+    "long_summary",
+    "created_at",
+    "source_language",
+    "target_language",
+    "reviewed",
+    "meeting_id",
+    "source_kind",
+    "participants",
+  ],
+  title: "GetTranscript",
+} as const;
+
+export const $GetTranscriptMinimal = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    user_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "User Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    status: {
+      type: "string",
+      title: "Status",
+    },
+    locked: {
+      type: "boolean",
+      title: "Locked",
+    },
+    duration: {
+      type: "number",
+      title: "Duration",
+    },
+    title: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Title",
+    },
+    short_summary: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Short Summary",
+    },
+    long_summary: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Long Summary",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    share_mode: {
+      type: "string",
+      title: "Share Mode",
+      default: "private",
+    },
+    source_language: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Source Language",
+    },
+    target_language: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Target Language",
     },
     reviewed: {
       type: "boolean",
@@ -319,12 +491,11 @@ export const $GetTranscript = {
     "created_at",
     "source_language",
     "target_language",
-    "participants",
     "reviewed",
     "meeting_id",
     "source_kind",
   ],
-  title: "GetTranscript",
+  title: "GetTranscriptMinimal",
 } as const;
 
 export const $GetTranscriptSegmentTopic = {
@@ -577,11 +748,11 @@ export const $MeetingConsentRequest = {
   title: "MeetingConsentRequest",
 } as const;
 
-export const $Page_GetTranscript_ = {
+export const $Page_GetTranscriptMinimal_ = {
   properties: {
     items: {
       items: {
-        $ref: "#/components/schemas/GetTranscript",
+        $ref: "#/components/schemas/GetTranscriptMinimal",
       },
       type: "array",
       title: "Items",
@@ -630,7 +801,7 @@ export const $Page_GetTranscript_ = {
   },
   type: "object",
   required: ["items", "total", "page", "size"],
-  title: "Page[GetTranscript]",
+  title: "Page[GetTranscriptMinimal]",
 } as const;
 
 export const $Page_Room_ = {

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 import reflector.auth as auth
@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from reflector.db.meetings import meetings_controller
 from reflector.db.migrate_user import migrate_user
 from reflector.db.rooms import rooms_controller
@@ -45,7 +45,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
 # ==============================================================
 
 
-class GetTranscript(BaseModel):
+class GetTranscriptMinimal(BaseModel):
     id: str
     user_id: str | None
     name: str
@@ -59,13 +59,23 @@ class GetTranscript(BaseModel):
     share_mode: str = Field("private")
     source_language: str | None
     target_language: str | None
-    participants: list[TranscriptParticipant] | None
     reviewed: bool
     meeting_id: str | None
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+
     source_kind: SourceKind
     room_id: str | None = None
     room_name: str | None = None
     audio_deleted: bool | None = None
+
+
+class GetTranscript(GetTranscriptMinimal):
+    participants: list[TranscriptParticipant] | None
 
 
 class CreateTranscript(BaseModel):
@@ -90,7 +100,7 @@ class DeletionStatus(BaseModel):
     status: str
 
 
-@router.get("/transcripts", response_model=Page[GetTranscript])
+@router.get("/transcripts", response_model=Page[GetTranscriptMinimal])
 async def transcripts_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
     source_kind: SourceKind | None = None,

@@ -1,8 +1,0 @@
-AGENDA:  Most important things to look for in a start up
-TAM: Make sure the market is sufficiently large than once they win they can get rewarded
-Product market fit: Being in a good market with a product than can satisfy that market
-Unit economics: Profit for delivering all-in cost must be attractive (% or $ amount)
-LTV CAC: Life-time value (revenue contribution) vs cost to acquire customer must be healthy
-Churn: Fits into LTV, low churn leads to higher LTV and helps keep future CAC down
-Business: Must have sufficient barriers to entry to ward off copy-cats once established
-Founders: Must be religious about their product. Believe they will change the world against all odds.

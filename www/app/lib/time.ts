@@ -28,3 +28,29 @@ export const formatTimeDifference = (seconds: number): string => {
 
   return timeString;
 };
+
+export const formatRelativeTime = (dateString: string): string => {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffMs = now.getTime() - past.getTime();
+
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) return `${diffSeconds}s ago`;
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+};
+
+export const formatLocalDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleString(navigator.language || "en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  });
+};

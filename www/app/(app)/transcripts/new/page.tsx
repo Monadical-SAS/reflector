@@ -43,8 +43,7 @@ import {
   Input,
 } from "@chakra-ui/react";
 const TranscriptCreate = () => {
-
-  const isClient = typeof window !== 'undefined';
+  const isClient = typeof window !== "undefined";
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const requireLogin = featureEnabled("requireLogin");
@@ -186,9 +185,9 @@ const TranscriptCreate = () => {
                     <Spacer />
                   ) : permissionDenied ? (
                     <Text className="">
-                      Permission to use your microphone was denied, please change
-                      the permission setting in your browser and refresh this
-                      page.
+                      Permission to use your microphone was denied, please
+                      change the permission setting in your browser and refresh
+                      this page.
                     </Text>
                   ) : (
                     <Button

@@ -233,7 +233,7 @@ export class DefaultService {
    * @param data.searchTerm
    * @param data.page Page number
    * @param data.size Page size
-   * @returns Page_GetTranscript_ Successful Response
+   * @returns Page_GetTranscriptMinimal_ Successful Response
    * @throws ApiError
    */
   public v1TranscriptsList(
