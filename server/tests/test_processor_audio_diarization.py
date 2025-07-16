@@ -84,7 +84,7 @@ from unittest import mock
     ],
 )
 @pytest.mark.asyncio
-async def test_processors_audio_diarization(event_loop, name, diarization, expected):
+async def test_processors_audio_diarization(name, diarization, expected):
     from reflector.processors.audio_diarization import AudioDiarizationProcessor
     from reflector.processors.types import (
         TitleSummaryWithId,

@@ -3,7 +3,6 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_basic_process(
-    event_loop,
     nltk,
     dummy_transcript,
     dummy_llm,
