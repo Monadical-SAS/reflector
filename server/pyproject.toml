@@ -3,7 +3,7 @@ name = "reflector"
 version = "0.1.0"
 description = ""
 authors = [{ name = "Monadical team", email = "ops@monadical.com" }]
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.13"
 readme = "README.md"
 dependencies = [
     "aiohttp>=3.9.0",
