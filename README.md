@@ -106,25 +106,19 @@ yarn openapi
 
 Start with `cd server`.
 
-**Installation**
-
-```bash
-poetry install
-```
-
 **Run in development mode**
 
 ```bash
 docker compose up -d redis
 
 # on the first run, or if the schemas changed
-poetry run alembic upgrade head
+uv run alembic upgrade head
 
 # start the worker
-poetry run celery -A reflector.worker.app worker --loglevel=info
+uv run celery -A reflector.worker.app worker --loglevel=info
 
 # start the app
-poetry run python -m reflector.app
+uv run fastapi dev main.py
 ```
 
 Then fill `.env` with the omitted values (ask in Zulip).
@@ -134,7 +128,7 @@ Then fill `.env` with the omitted values (ask in Zulip).
 For crontab (only healthcheck for now), start the celery beat (you don't need it on your local dev environment):
 
 ```bash
-poetry run celery -A reflector.worker.app beat
+uv run celery -A reflector.worker.app beat
 ```
 
 ### GPU models
@@ -153,5 +147,5 @@ To deploy llm changes to modal, you need:
 You can manually process an audio file by calling the process tool:
 
 ```bash
-poetry run python -m reflector.tools.process path/to/audio.wav
+uv run python -m reflector.tools.process path/to/audio.wav
 ```

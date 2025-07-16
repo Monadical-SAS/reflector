@@ -1,27 +1,21 @@
-FROM python:3.11-slim as base
+FROM python:3.13-slim as base
 
-ENV PIP_DEFAULT_TIMEOUT=100 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    POETRY_VERSION=1.3.1
+ENV PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1
 
 # builder install base dependencies
-FROM base AS builder
 WORKDIR /tmp
-RUN pip install "poetry==$POETRY_VERSION"
-RUN python -m venv /venv
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
 
 # install application dependencies
-COPY pyproject.toml poetry.lock /tmp
-RUN . /venv/bin/activate && poetry config virtualenvs.create false
-RUN . /venv/bin/activate && poetry install --only main,aws --no-root --no-interaction --no-ansi
+RUN mkdir -p /app
+WORKDIR /app
+COPY pyproject.toml uv.lock /app/
 
 # bootstrap
-FROM base AS final
-COPY --from=builder /venv /venv
-RUN mkdir -p /app
 COPY reflector /app/reflector
 COPY migrations /app/migrations
 COPY images /app/images

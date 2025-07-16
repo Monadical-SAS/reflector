@@ -21,35 +21,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pipx install poetry
-
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.11"
-          cache: "poetry"
-          cache-dependency-path: "server/poetry.lock"
-
-      - name: Install requirements
-        working-directory: ./server
-        run: |
-          poetry install --no-root
+          enable-cache: true
+          working-directory: server
 
       - name: Test migrations from scratch
-        working-directory: ./server
+        working-directory: server
         run: |
           echo "Testing migrations from clean database..."
-          poetry run alembic upgrade head
+          uv run alembic upgrade head
           echo "✅ Fresh migration successful"
 
       - name: Test migration rollback and re-apply
-        working-directory: ./server
+        working-directory: server
         run: |
           echo "Testing rollback to base..."
-          poetry run alembic downgrade base
+          uv run alembic downgrade base
           echo "✅ Rollback successful"
 
           echo "Testing re-apply of all migrations..."
-          poetry run alembic upgrade head
+          uv run alembic upgrade head
           echo "✅ Re-apply successful"
