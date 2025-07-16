@@ -3,13 +3,13 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from reflector.db import database, metadata
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
@@ -82,7 +82,7 @@ transcripts = sqlalchemy.Table(
 
 
 def generate_transcript_name() -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
@@ -150,7 +150,7 @@ class Transcript(BaseModel):
     status: str = "idle"
     locked: bool = False
     duration: float = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
     short_summary: str | None = None
     long_summary: str | None = None
@@ -167,6 +167,12 @@ class Transcript(BaseModel):
     zulip_message_id: int | None = None
     source_kind: SourceKind
     audio_deleted: bool | None = None
+
+    @field_serializer("created_at")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
