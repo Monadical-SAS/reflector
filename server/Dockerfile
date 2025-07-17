@@ -16,10 +16,14 @@ WORKDIR /app
 COPY pyproject.toml uv.lock /app/
 RUN touch README.md && env uv sync --compile-bytecode --locked
 
+# pre-download nltk packages
+RUN uv run python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger')"
+
 # bootstrap
 COPY alembic.ini runserver.sh /app/
 COPY images /app/images
 COPY migrations /app/migrations
 COPY reflector /app/reflector
 WORKDIR /app
+
 CMD ["./runserver.sh"]
