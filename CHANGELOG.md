@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/Monadical-SAS/reflector/compare/0.1.1...v0.2.0) (2025-07-17)
+
+
+### Features
+
+* improve transcript listing with room_id ([#496](https://github.com/Monadical-SAS/reflector/issues/496)) ([d2b5de5](https://github.com/Monadical-SAS/reflector/commit/d2b5de543fc0617fc220caa6a8a290e4040cb10b))
+
+
+### Bug Fixes
+
+* don't attempt to load waveform/mp3 if audio was deleted ([#495](https://github.com/Monadical-SAS/reflector/issues/495)) ([f4578a7](https://github.com/Monadical-SAS/reflector/commit/f4578a743fd0f20312fbd242fa9cccdfaeb20a9e))
+
 ## [0.1.1](https://github.com/Monadical-SAS/reflector/compare/0.1.0...v0.1.1) (2025-07-17)
 
 
