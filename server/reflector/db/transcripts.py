@@ -74,10 +74,12 @@ transcripts = sqlalchemy.Table(
     # the main "audio deleted" is the presence of the audio itself / consents not-given
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
+    sqlalchemy.Column("room_id", sqlalchemy.String),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
     sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
+    sqlalchemy.Index("idx_transcript_room_id", "room_id"),
 )
 
 
@@ -167,6 +169,7 @@ class Transcript(BaseModel):
     zulip_message_id: int | None = None
     source_kind: SourceKind
     audio_deleted: bool | None = None
+    room_id: str | None = None
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -331,17 +334,10 @@ class TranscriptController:
         - `room_id`: filter transcripts by room ID
         - `search_term`: filter transcripts by search term
         """
-        from reflector.db.meetings import meetings
-        from reflector.db.recordings import recordings
         from reflector.db.rooms import rooms
 
-        query = (
-            transcripts.select()
-            .join(
-                recordings, transcripts.c.recording_id == recordings.c.id, isouter=True
-            )
-            .join(meetings, recordings.c.meeting_id == meetings.c.id, isouter=True)
-            .join(rooms, meetings.c.room_id == rooms.c.id, isouter=True)
+        query = transcripts.select().join(
+            rooms, transcripts.c.room_id == rooms.c.id, isouter=True
         )
 
         if user_id:
@@ -355,7 +351,7 @@ class TranscriptController:
             query = query.where(transcripts.c.source_kind == source_kind)
 
         if room_id:
-            query = query.where(rooms.c.id == room_id)
+            query = query.where(transcripts.c.room_id == room_id)
 
         if search_term:
             query = query.where(transcripts.c.title.ilike(f"%{search_term}%"))
@@ -419,6 +415,22 @@ class TranscriptController:
             return None
         return Transcript(**result)
 
+    async def get_by_room_id(self, room_id: str, **kwargs) -> list[Transcript]:
+        """
+        Get transcripts by room_id (direct access without joins)
+        """
+        query = transcripts.select().where(transcripts.c.room_id == room_id)
+        if "user_id" in kwargs:
+            query = query.where(transcripts.c.user_id == kwargs["user_id"])
+        if "order_by" in kwargs:
+            order_by = kwargs["order_by"]
+            field = getattr(transcripts.c, order_by[1:])
+            if order_by.startswith("-"):
+                field = field.desc()
+            query = query.order_by(field)
+        results = await database.fetch_all(query)
+        return [Transcript(**result) for result in results]
+
     async def get_by_id_for_http(
         self,
         transcript_id: str,
@@ -469,6 +481,8 @@ class TranscriptController:
         user_id: str | None = None,
         recording_id: str | None = None,
         share_mode: str = "private",
+        meeting_id: str | None = None,
+        room_id: str | None = None,
     ):
         """
         Add a new transcript
@@ -481,6 +495,8 @@ class TranscriptController:
             user_id=user_id,
             recording_id=recording_id,
             share_mode=share_mode,
+            meeting_id=meeting_id,
+            room_id=room_id,
         )
         query = transcripts.insert().values(**transcript.model_dump())
         await database.execute(query)
