@@ -18,7 +18,7 @@ class TranscriptFinalSummaryProcessor(Processor):
         self.transcript = transcript
         self.chunks: list[TitleSummary] = []
         # Use OpenAILLM with SUMMARY_ prefix configuration
-        self.llm = OpenAILLM(config_prefix="SUMMARY", settings_obj=settings)
+        self.llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
         self.builder = None
 
     async def _push(self, data: TitleSummary):

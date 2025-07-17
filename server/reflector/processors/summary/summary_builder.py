@@ -17,6 +17,10 @@ import structlog
 from reflector.llm.base import LLM
 from .transcript_chunker import process_transcript_with_template_aware_chunking
 
+from reflector.llm.openai_llm import OpenAILLM
+
+from reflector.settings import settings
+
 JSON_SCHEMA_LIST_STRING = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "array",
@@ -864,10 +868,8 @@ if __name__ == "__main__":
 
     async def main():
         # build the summary
-        # Use OpenAILLM with SUMMARY_ prefix configuration
-        from reflector.llm.openai_llm import OpenAILLM
 
-        llm = OpenAILLM(config_prefix="SUMMARY", settings_obj=settings)
+        llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
         sm = SummaryBuilder(llm=llm, filename=args.transcript)
 
         if args.subjects:

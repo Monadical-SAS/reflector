@@ -24,20 +24,20 @@ def apply_gen_config(payload: dict, gen_cfg) -> None:
 
 
 class OpenAILLM:
-    def __init__(self, config_prefix: str, settings_obj):
+    def __init__(self, config_prefix: str, settings):
         self.config_prefix = config_prefix
-        self.settings_obj = settings_obj
-        self.model_name = getattr(settings_obj, f"{config_prefix}_MODEL")
-        self.url = getattr(settings_obj, f"{config_prefix}_LLM_URL")
-        self.api_key = getattr(settings_obj, f"{config_prefix}_LLM_API_KEY")
+        self.settings_obj = settings
+        self.model_name = getattr(settings, f"{config_prefix}_MODEL")
+        self.url = getattr(settings, f"{config_prefix}_LLM_URL")
+        self.api_key = getattr(settings, f"{config_prefix}_LLM_API_KEY")
         
-        timeout = getattr(settings_obj, f"{config_prefix}_LLM_TIMEOUT", 300)
-        self.temperature = getattr(settings_obj, f"{config_prefix}_LLM_TEMPERATURE", 0.7)
-        self.max_tokens = getattr(settings_obj, f"{config_prefix}_LLM_MAX_TOKENS", 1024)
+        timeout = getattr(settings, f"{config_prefix}_LLM_TIMEOUT", 300)
+        self.temperature = getattr(settings, f"{config_prefix}_LLM_TEMPERATURE", 0.7)
+        self.max_tokens = getattr(settings, f"{config_prefix}_LLM_MAX_TOKENS", 1024)
         self.client = httpx.AsyncClient(timeout=timeout)
         
         # Use a tokenizer that approximates OpenAI token counting
-        tokenizer_name = getattr(settings_obj, f"{config_prefix}_TOKENIZER", "gpt2")
+        tokenizer_name = getattr(settings, f"{config_prefix}_TOKENIZER", "gpt2")
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         except:
