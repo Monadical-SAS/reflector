@@ -47,7 +47,7 @@ class LLM:
         if not cls._nltk_downloaded:
             nltk.download("punkt_tab")
             # For POS tagging
-            nltk.download("averaged_perceptron_tagger")
+            nltk.download("averaged_perceptron_tagger_eng")
             cls._nltk_downloaded = True
 
     @classmethod
