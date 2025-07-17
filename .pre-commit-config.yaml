@@ -15,7 +15,7 @@ repos:
     hooks:
       - id: debug-statements
       - id: trailing-whitespace
-        exclude: ^server/trials
+        exclude: ^server/(trials|migrations)
       - id: detect-private-key
 
   - repo: https://github.com/psf/black
@@ -23,6 +23,7 @@ repos:
     hooks:
       - id: black
         files: ^server/(reflector|tests)/
+        exclude: ^server/migrations/
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
@@ -30,6 +31,7 @@ repos:
       - id: isort
         name: isort (python)
         files: ^server/(gpu|evaluate|reflector)/
+        exclude: ^server/migrations/
         args: [ "--profile", "black", "--filter-files" ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -37,3 +39,4 @@ repos:
     hooks:
       - id: ruff
         files: ^server/(reflector|tests)/
+        exclude: ^server/migrations/
