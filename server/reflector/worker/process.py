@@ -101,6 +101,8 @@ async def process_recording(bucket_name: str, object_key: str):
             user_id=room.user_id,
             recording_id=recording.id,
             share_mode="public",
+            meeting_id=meeting.id,
+            room_id=room.id,
         )
 
     _, extension = os.path.splitext(object_key)
