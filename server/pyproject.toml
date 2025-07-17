@@ -1,76 +1,82 @@
-[tool.poetry]
-name = "reflector-server"
+[project]
+name = "reflector"
 version = "0.1.0"
 description = ""
-authors = ["Monadical team <ops@monadical.com>"]
+authors = [{ name = "Monadical team", email = "ops@monadical.com" }]
+requires-python = ">=3.11, <3.13"
 readme = "README.md"
-packages = []
+dependencies = [
+    "aiohttp>=3.9.0",
+    "aiohttp-cors>=0.7.0",
+    "av>=10.0.0",
+    "requests>=2.31.0",
+    "aiortc>=1.5.0",
+    "sortedcontainers>=2.4.0",
+    "loguru>=0.7.0",
+    "pydantic-settings>=2.0.2",
+    "structlog>=23.1.0",
+    "uvicorn[standard]>=0.23.1",
+    "fastapi[standard]>=0.100.1",
+    "sentry-sdk[fastapi]>=1.29.2",
+    "httpx>=0.24.1",
+    "fastapi-pagination>=0.12.6",
+    "databases[aiosqlite, asyncpg]>=0.7.0",
+    "sqlalchemy<1.5",
+    "fief-client[fastapi]>=0.17.0",
+    "alembic>=1.11.3",
+    "nltk>=3.8.1",
+    "prometheus-fastapi-instrumentator>=6.1.0",
+    "sentencepiece>=0.1.99",
+    "protobuf>=4.24.3",
+    "profanityfilter>=2.0.6",
+    "celery>=5.3.4",
+    "redis>=5.0.1",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.6",
+    "faster-whisper>=0.10.0",
+    "transformers>=4.36.2",
+    "black==24.1.1",
+    "jsonschema>=4.23.0",
+    "openai>=1.59.7",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-aiohttp = "^3.9.0"
-aiohttp-cors = "^0.7.0"
-av = "^10.0.0"
-requests = "^2.31.0"
-aiortc = "^1.5.0"
-sortedcontainers = "^2.4.0"
-loguru = "^0.7.0"
-pydantic-settings = "^2.0.2"
-structlog = "^23.1.0"
-uvicorn = {extras = ["standard"], version = "^0.23.1"}
-fastapi = "^0.100.1"
-sentry-sdk = {extras = ["fastapi"], version = "^1.29.2"}
-httpx = "^0.24.1"
-fastapi-pagination = "^0.12.6"
-databases = {extras = ["aiosqlite", "asyncpg"], version = "^0.7.0"}
-sqlalchemy = "<1.5"
-fief-client = {extras = ["fastapi"], version = "^0.17.0"}
-alembic = "^1.11.3"
-nltk = "^3.8.1"
-prometheus-fastapi-instrumentator = "^6.1.0"
-sentencepiece = "^0.1.99"
-protobuf = "^4.24.3"
-profanityfilter = "^2.0.6"
-celery = "^5.3.4"
-redis = "^5.0.1"
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-python-multipart = "^0.0.6"
-faster-whisper = "^0.10.0"
-transformers = "^4.36.2"
-black = "24.1.1"
-jsonschema = "^4.23.0"
-openai = "^1.59.7"
+[dependency-groups]
+dev = [
+    "black>=24.1.1",
+    "stamina>=23.1.0",
+    "pyinstrument>=4.6.1",
+]
+tests = [
+    "pytest-cov>=4.1.0",
+    "pytest-aiohttp>=1.0.4",
+    "pytest-asyncio>=0.21.1",
+    "pytest>=7.4.0",
+    "httpx-ws>=0.4.1",
+    "pytest-httpx>=0.23.1",
+    "pytest-celery>=0.0.0",
+]
+aws = ["aioboto3>=11.2.0"]
+evaluation = [
+    "jiwer>=3.0.2",
+    "levenshtein>=0.21.1",
+    "tqdm>=4.66.0",
+    "pydantic>=2.1.1",
+]
 
-
-[tool.poetry.group.dev.dependencies]
-black = "^24.1.1"
-stamina = "^23.1.0"
-pyinstrument = "^4.6.1"
-
-
-[tool.poetry.group.tests.dependencies]
-pytest-cov = "^4.1.0"
-pytest-aiohttp = "^1.0.4"
-pytest-asyncio = "^0.21.1"
-pytest = "^7.4.0"
-httpx-ws = "^0.4.1"
-pytest-httpx = "^0.23.1"
-pytest-celery = "^0.0.0"
-
-
-[tool.poetry.group.aws.dependencies]
-aioboto3 = "^11.2.0"
-
-
-[tool.poetry.group.evaluation.dependencies]
-jiwer = "^3.0.2"
-levenshtein = "^0.21.1"
-tqdm = "^4.66.0"
-pydantic = "^2.1.1"
+[tool.uv]
+default-groups = [
+    "dev",
+    "tests",
+    "aws",
+    "evaluation",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["reflector"]
 
 [tool.coverage.run]
 source = ["reflector"]
