@@ -10,3 +10,4 @@ ngrok.log
 .claude/settings.local.json
 restart-dev.sh
 *.log
+data/
