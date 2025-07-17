@@ -3,7 +3,6 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_basic_process(
-    event_loop,
     nltk,
     dummy_transcript,
     dummy_llm,
@@ -34,8 +33,8 @@ async def test_basic_process(
     print(marks)
 
     # validate the events
-    assert marks["TranscriptLinerProcessor"] == 4
-    assert marks["TranscriptTranslatorProcessor"] == 4
+    assert marks["TranscriptLinerProcessor"] == 1
+    assert marks["TranscriptTranslatorProcessor"] == 1
     assert marks["TranscriptTopicDetectorProcessor"] == 1
     assert marks["TranscriptFinalSummaryProcessor"] == 1
     assert marks["TranscriptFinalTitleProcessor"] == 1

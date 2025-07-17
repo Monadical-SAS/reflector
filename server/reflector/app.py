@@ -147,6 +147,10 @@ if settings.PROFILING:
 
 
 if __name__ == "__main__":
+    import sys
+
     import uvicorn
 
-    uvicorn.run("reflector.app:app", host="0.0.0.0", port=1250, reload=True)
+    should_reload = "--reload" in sys.argv
+
+    uvicorn.run("reflector.app:app", host="0.0.0.0", port=1250, reload=should_reload)

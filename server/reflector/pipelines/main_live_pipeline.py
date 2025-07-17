@@ -15,9 +15,10 @@ import asyncio
 import functools
 from contextlib import asynccontextmanager
 
+import boto3
 from celery import chord, group, shared_task, current_task
 from pydantic import BaseModel
-from reflector.db.meetings import meetings_controller
+from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
@@ -53,25 +54,29 @@ from reflector.processors.types import (
 )
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
+from reflector.storage import get_transcripts_storage
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
     get_zulip_message,
     send_message_to_zulip,
     update_zulip_message,
 )
-
-from reflector.db.meetings import meeting_consent_controller
-from reflector.storage import get_transcripts_storage
-
-import boto3
-
 from structlog import BoundLogger as Logger
 
 
 def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        coro = f(*args, **kwargs)
+        async def run_with_db():
+            from reflector.db import database
+
+            await database.connect()
+            try:
+                return await f(*args, **kwargs)
+            finally:
+                await database.disconnect()
+
+        coro = run_with_db()
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:

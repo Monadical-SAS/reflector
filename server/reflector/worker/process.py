@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import unquote
 
 import av
@@ -139,7 +139,10 @@ async def process_meetings():
     meetings = await meetings_controller.get_all_active()
     for meeting in meetings:
         is_active = False
-        if meeting.end_date > datetime.utcnow():
+        end_date = meeting.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        if end_date > datetime.now(timezone.utc):
             response = await get_room_sessions(meeting.room_name)
             room_sessions = response.get("results", [])
             is_active = not room_sessions or any(
