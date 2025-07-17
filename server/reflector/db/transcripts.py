@@ -364,7 +364,6 @@ class TranscriptController:
         query = query.with_only_columns(
             transcript_columns
             + [
-                rooms.c.id.label("room_id"),
                 rooms.c.name.label("room_name"),
             ]
         )
