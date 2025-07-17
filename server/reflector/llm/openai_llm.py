@@ -1,6 +1,5 @@
 import httpx
 from transformers import AutoTokenizer
-from reflector.settings import settings
 from reflector.logger import logger
 
 
@@ -40,7 +39,7 @@ class OpenAILLM:
         tokenizer_name = getattr(settings, f"{config_prefix}_TOKENIZER", "gpt2")
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        except:
+        except Exception:
             logger.debug(
                 f"Failed to load tokenizer '{tokenizer_name}', falling back to default 'gpt2' tokenizer"
             )
