@@ -4,8 +4,8 @@
 
 Reflector Audio Management and Analysis is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
 
-[![Tests](https://github.com/monadical-sas/cubbi/actions/workflows/pytests.yml/badge.svg?branch=main&event=push)](https://github.com/monadical-sas/cubbi/actions/workflows/pytests.yml)
-[![License: MIT](https://img.shields.io/badge/license-AGPL--v3-green.svg)](https://opensource.org/licenses/AGPL-v3)
+[![Tests](https://github.com/monadical-sas/reflector/actions/workflows/pytests.yml/badge.svg?branch=main&event=push)](https://github.com/monadical-sas/reflector/actions/workflows/pytests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 </div>
 
 ## Screenshots
@@ -74,7 +74,7 @@ Note: We currently do not have instructions for Windows users.
 
 ### Frontend
 
-Start with `cd backend`.
+Start with `cd www`.
 
 **Installation**
 
