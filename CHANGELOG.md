@@ -1,0 +1,11 @@
+# Changelog
+
+## [0.1.1](https://github.com/Monadical-SAS/reflector/compare/0.1.0...v0.1.1) (2025-07-17)
+
+
+### Bug Fixes
+
+* postgres database not connecting in worker ([#492](https://github.com/Monadical-SAS/reflector/issues/492)) ([123d09f](https://github.com/Monadical-SAS/reflector/commit/123d09fdacef7f5a84541cf01732d4f5b6b9d2d0))
+* process meetings with utc ([#493](https://github.com/Monadical-SAS/reflector/issues/493)) ([f3c85e1](https://github.com/Monadical-SAS/reflector/commit/f3c85e1eb97cd893840125ed056dcb290fccb612))
+* punkt -&gt; punkt_tab + pre-download nltk packages to prevent runtime not working ([#489](https://github.com/Monadical-SAS/reflector/issues/489)) ([c22487b](https://github.com/Monadical-SAS/reflector/commit/c22487b41f311a3fdba2eac04c7637bd396cccee))
+* rename averaged_perceptron_tagger to averaged_perceptron_tagger_eng ([#491](https://github.com/Monadical-SAS/reflector/issues/491)) ([a7b7846](https://github.com/Monadical-SAS/reflector/commit/a7b78462419b3af81c6dbf1ddfccb3d532f660a3))
