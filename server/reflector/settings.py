@@ -82,8 +82,8 @@ class Settings(BaseSettings):
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
-    # Special summary case
-    SUMMARY_MODEL: str = "NousResearch/Hermes-3-Llama-3.1-8B"
+    # per-task cases
+    SUMMARY_MODEL: str = "monadical/private/smart"
     SUMMARY_LLM_URL: str
     SUMMARY_LLM_API_KEY: str
     SUMMARY_LLM_USE_STRUCTURED_OUTPUT: bool = True
