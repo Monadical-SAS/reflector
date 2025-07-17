@@ -54,62 +54,65 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
   useEffect(() => {
     if (!transcriptId || !api || later) return;
 
-    let deleted: boolean | null = null;
+    let stopped = false;
+    let audioElement: HTMLAudioElement | null = null;
+    let handleCanPlay: (() => void) | null = null;
+    let handleError: (() => void) | null = null;
 
     setTranscriptMetadataLoading(true);
-
-    const audioElement = document.createElement("audio");
-    audioElement.src = `${api_url}/v1/transcripts/${transcriptId}/audio/mp3`;
-    audioElement.crossOrigin = "anonymous";
-    audioElement.preload = "auto";
-
-    const handleCanPlay = () => {
-      if (deleted) {
-        console.error(
-          "Illegal state: audio supposed to be deleted, but was loaded",
-        );
-        return;
-      }
-      setAudioLoading(false);
-      setAudioLoadingError(null);
-    };
-
-    const handleError = () => {
-      setAudioLoading(false);
-      if (deleted) {
-        // we arrived here earlier, ignore
-        return;
-      }
-      setAudioLoadingError("Failed to load audio");
-    };
-
-    audioElement.addEventListener("canplay", handleCanPlay);
-    audioElement.addEventListener("error", handleError);
-
-    setMedia(audioElement);
-
     setAudioLoading(true);
 
-    let stopped = false;
-    // Fetch transcript info in parallel
+    // First fetch transcript info to check if audio is deleted
     api
       .v1TranscriptGet({ transcriptId })
       .then((transcript) => {
-        if (stopped) return;
-        deleted = transcript.audio_deleted || false;
+        if (stopped) {
+          return;
+        }
+
+        const deleted = transcript.audio_deleted || false;
         setAudioDeleted(deleted);
         setTranscriptMetadataLoadingError(null);
+
         if (deleted) {
+          // Audio is deleted, don't attempt to load it
           setMedia(null);
           setAudioLoadingError(null);
+          setAudioLoading(false);
+          return;
         }
-        // if deleted, media will or already returned error
+
+        // Audio is not deleted, proceed to load it
+        audioElement = document.createElement("audio");
+        audioElement.src = `${api_url}/v1/transcripts/${transcriptId}/audio/mp3`;
+        audioElement.crossOrigin = "anonymous";
+        audioElement.preload = "auto";
+
+        handleCanPlay = () => {
+          if (stopped) return;
+          setAudioLoading(false);
+          setAudioLoadingError(null);
+        };
+
+        handleError = () => {
+          if (stopped) return;
+          setAudioLoading(false);
+          setAudioLoadingError("Failed to load audio");
+        };
+
+        audioElement.addEventListener("canplay", handleCanPlay);
+        audioElement.addEventListener("error", handleError);
+
+        if (!stopped) {
+          setMedia(audioElement);
+        }
       })
       .catch((error) => {
         if (stopped) return;
         console.error("Failed to fetch transcript:", error);
         setAudioDeleted(null);
         setTranscriptMetadataLoadingError(error.message);
+        setAudioLoading(false);
       })
       .finally(() => {
         if (stopped) return;
@@ -118,10 +121,14 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
 
     return () => {
       stopped = true;
-      audioElement.removeEventListener("canplay", handleCanPlay);
-      audioElement.removeEventListener("error", handleError);
+      if (audioElement) {
+        audioElement.src = "";
+        if (handleCanPlay)
+          audioElement.removeEventListener("canplay", handleCanPlay);
+        if (handleError) audioElement.removeEventListener("error", handleError);
+      }
     };
-  }, [transcriptId, !api, later, api_url]);
+  }, [transcriptId, api, later, api_url]);
 
   const getNow = () => {
     setLater(false);

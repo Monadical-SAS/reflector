@@ -55,8 +55,8 @@ export function TopicList({
   };
 
   useEffect(() => {
-    if (activeTopic) scrollToTopic();
-  }, [activeTopic]);
+    if (activeTopic && autoscroll) scrollToTopic();
+  }, [activeTopic, autoscroll]);
 
   // scroll top is not rounded, heights are, so exact match won't work.
   // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
@@ -105,8 +105,10 @@ export function TopicList({
   const requireLogin = featureEnabled("requireLogin");
 
   useEffect(() => {
-    setActiveTopic(topics[topics.length - 1]);
-  }, [topics]);
+    if (autoscroll) {
+      setActiveTopic(topics[topics.length - 1]);
+    }
+  }, [topics, autoscroll]);
 
   return (
     <Flex

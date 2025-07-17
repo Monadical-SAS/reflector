@@ -12,7 +12,7 @@ import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import { useRouter } from "next/navigation";
-import { Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
+import { Box, Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
 
 type TranscriptDetails = {
   params: {
@@ -29,10 +29,13 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptStatus = transcript.response?.status;
   const waiting = statusToRedirect.includes(transcriptStatus || "");
 
-  const topics = useTopics(transcriptId);
-  const waveform = useWaveform(transcriptId, waiting);
-  const useActiveTopic = useState<Topic | null>(null);
   const mp3 = useMp3(transcriptId, waiting);
+  const topics = useTopics(transcriptId);
+  const waveform = useWaveform(
+    transcriptId,
+    waiting || mp3.loading || mp3.audioDeleted === true,
+  );
+  const useActiveTopic = useState<Topic | null>(null);
 
   useEffect(() => {
     if (waiting) {
@@ -76,23 +79,24 @@ export default function TranscriptDetails(details: TranscriptDetails) {
         mt={4}
         mb={4}
       >
-        {waveform.waveform &&
-        mp3.media &&
-        !mp3.audioDeleted &&
-        topics.topics ? (
-          <Player
-            topics={topics?.topics}
-            useActiveTopic={useActiveTopic}
-            waveform={waveform.waveform}
-            media={mp3.media}
-            mediaDuration={transcript.response.duration}
-          />
-        ) : waveform.error ? (
-          <div>error loading this recording</div>
-        ) : mp3.audioDeleted ? (
-          <div>Audio was deleted</div>
-        ) : (
-          <Skeleton h={14} />
+        {!mp3.audioDeleted && (
+          <>
+            {waveform.waveform && mp3.media && topics.topics ? (
+              <Player
+                topics={topics?.topics}
+                useActiveTopic={useActiveTopic}
+                waveform={waveform.waveform}
+                media={mp3.media}
+                mediaDuration={transcript.response.duration}
+              />
+            ) : !mp3.loading && (waveform.error || mp3.error) ? (
+              <Box p={4} bg="red.100" borderRadius="md">
+                <Text>Error loading this recording</Text>
+              </Box>
+            ) : (
+              <Skeleton h={14} />
+            )}
+          </>
         )}
         <Grid
           templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
@@ -108,19 +112,24 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           borderColor={"gray.bg"}
           borderRadius={8}
         >
-          <GridItem
-            display="flex"
-            flexDir="row"
-            alignItems={"center"}
-            colSpan={{ base: 1, md: 2 }}
-          >
-            <TranscriptTitle
-              title={transcript.response.title || "Unnamed Transcript"}
-              transcriptId={transcriptId}
-              onUpdate={(newTitle) => {
-                transcript.reload();
-              }}
-            />
+          <GridItem colSpan={{ base: 1, md: 2 }}>
+            <Flex direction="column" gap={0}>
+              <Flex alignItems="center" gap={2}>
+                <TranscriptTitle
+                  title={transcript.response.title || "Unnamed Transcript"}
+                  transcriptId={transcriptId}
+                  onUpdate={(newTitle) => {
+                    transcript.reload();
+                  }}
+                />
+              </Flex>
+              {mp3.audioDeleted && (
+                <Text fontSize="xs" color="gray.600" fontStyle="italic">
+                  No audio is available because one or more participants didn't
+                  consent to keep the audio
+                </Text>
+              )}
+            </Flex>
           </GridItem>
           <TopicList
             topics={topics.topics || []}
