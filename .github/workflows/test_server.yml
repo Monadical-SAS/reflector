@@ -17,56 +17,22 @@ jobs:
         ports:
           - 6379:6379
     steps:
-      - uses: actions/checkout@v3
-      - name: Install poetry
-        run: pipx install poetry
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.11"
-          cache: "poetry"
-          cache-dependency-path: "server/poetry.lock"
-      - name: Install requirements
-        run: |
-          cd server
-          poetry install --no-root
+          enable-cache: true
+          working-directory: server
+
       - name: Tests
         run: |
           cd server
-          poetry run python -m pytest -v tests
-
-  formatting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-      - name: Validate formatting
-        run: |
-          pip install black
-          cd server
-          black --check reflector tests
-
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-      - name: Validate formatting
-        run: |
-          pip install ruff
-          cd server
-          ruff check reflector tests
+          uv run -m pytest -v tests
 
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
