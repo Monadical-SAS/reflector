@@ -125,6 +125,7 @@ export function TopicList({
         {topics.length > 0 && (
           <Accordion.Root
             multiple={false}
+            collapsible={true}
             value={activeTopic ? [activeTopic.id] : []}
             onValueChange={(details) => {
               const selectedTopicId = details.value[0];

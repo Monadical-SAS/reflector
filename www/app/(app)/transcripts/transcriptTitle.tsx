@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UpdateTranscript } from "../../api";
 import useApi from "../../lib/useApi";
-import { Heading, IconButton, Input } from "@chakra-ui/react";
+import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
 import { FaPen } from "react-icons/fa";
 
 type TranscriptTitle = {
@@ -87,9 +87,8 @@ const TranscriptTitle = (props: TranscriptTitle) => {
           // className="text-2xl lg:text-4xl font-extrabold text-center mb-4 w-full border-none bg-transparent overflow-hidden h-[fit-content]"
         />
       ) : (
-        <>
+        <Flex width="full" alignItems="center">
           <Heading
-            // className="text-2xl lg:text-4xl font-extrabold text-center mb-4 cursor-pointer"
             onClick={handleTitleClick}
             cursor={"pointer"}
             size={"lg"}
@@ -97,6 +96,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
           >
             {displayedTitle}
           </Heading>
+          <Spacer />
           <IconButton
             aria-label="Edit Transcript Title"
             onClick={handleTitleClick}
@@ -104,7 +104,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
           >
             <FaPen />
           </IconButton>
-        </>
+        </Flex>
       )}
     </>
   );

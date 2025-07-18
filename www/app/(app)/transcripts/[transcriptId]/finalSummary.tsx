@@ -108,20 +108,16 @@ export default function FinalSummary(props: FinalSummaryProps) {
         right="0"
       >
         {isEditMode && (
-          <>
+          <Flex gap={2} align="center" w="full">
             <Heading size={{ base: "md" }}>Summary</Heading>
             <Spacer />
-            <Button
-              onClick={onDiscardClick}
-              colorPalette="gray"
-              variant={"text"}
-            >
+            <Button onClick={onDiscardClick} variant="outline">
               Discard
             </Button>
-            <Button onClick={onSaveClick} colorPalette="blue">
+            <Button onClick={onSaveClick} variant="primary">
               Save
             </Button>
-          </>
+          </Flex>
         )}
         {!isEditMode && (
           <>

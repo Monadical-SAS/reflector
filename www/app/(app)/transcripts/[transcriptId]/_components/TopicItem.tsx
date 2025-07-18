@@ -1,4 +1,4 @@
-import { Box, Text, Accordion } from "@chakra-ui/react";
+import { Box, Text, Accordion, Flex } from "@chakra-ui/react";
 import { formatTime } from "../../../../lib/time";
 import { Topic } from "../../webSocketTypes";
 import { TopicSegment } from "./TopicSegment";
@@ -15,17 +15,22 @@ export function TopicItem({ topic, isActive, getSpeakerName }: TopicItemProps) {
       <Accordion.ItemTrigger
         background={isActive ? "gray.50" : "white"}
         display="flex"
-        alignItems="center"
+        alignItems="start"
         justifyContent="space-between"
       >
-        <Accordion.ItemIndicator />
-        <Box flex="1" lineHeight="1.1">
-          {topic.title}{" "}
-          <Text as="span" color="gray.500" fontSize="sm" fontWeight="bold">
-            &nbsp;[{formatTime(topic.timestamp)}]&nbsp;-&nbsp;[
-            {formatTime(topic.timestamp + (topic.duration || 0))}]
-          </Text>
-        </Box>
+        <Flex
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          height="24px"
+          width="24px"
+        >
+          <Accordion.ItemIndicator />
+        </Flex>
+        <Box flex="1">{topic.title} </Box>
+        <Text as="span" color="gray.500" fontSize="xs">
+          {formatTime(topic.timestamp)}
+        </Text>
       </Accordion.ItemTrigger>
       <Accordion.ItemContent>
         <Accordion.ItemBody p={4}>

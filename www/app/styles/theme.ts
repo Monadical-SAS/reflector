@@ -50,8 +50,6 @@ const linkRecipe = defineRecipe({
 const buttonRecipe = defineRecipe({
   base: {
     fontWeight: "600",
-    bg: "gray.100",
-    color: "gray.800",
     _hover: {
       bg: "gray.200",
     },
@@ -69,6 +67,18 @@ const buttonRecipe = defineRecipe({
       solid: {
         bg: "gray.100",
         color: "gray.800",
+        _hover: {
+          bg: "gray.200",
+        },
+      },
+      primary: {
+        bg: "blue.500",
+        color: "white",
+        _hover: {
+          bg: "blue.400",
+        },
+      },
+      outline: {
         _hover: {
           bg: "gray.200",
         },
