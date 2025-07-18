@@ -98,11 +98,12 @@ const TranscriptTitle = (props: TranscriptTitle) => {
             {displayedTitle}
           </Heading>
           <IconButton
-            icon={<FaPen />}
             aria-label="Edit Transcript Title"
             onClick={handleTitleClick}
             fontSize={"15px"}
-          />
+          >
+            <FaPen />
+          </IconButton>
         </>
       )}
     </>

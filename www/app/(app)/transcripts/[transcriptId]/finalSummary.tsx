@@ -126,11 +126,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
         {!isEditMode && (
           <>
             <Spacer />
-            <IconButton
-              icon={<FaPen />}
-              aria-label="Edit Summary"
-              onClick={onEditClick}
-            />
+            <IconButton aria-label="Edit Summary" onClick={onEditClick}>
+              <FaPen />
+            </IconButton>
             <ShareAndPrivacy
               finalSummaryRef={finalSummaryRef}
               transcriptResponse={props.transcriptResponse}

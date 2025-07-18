@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { formatTime } from "../../lib/time";
-import ScrollToBottom from "./scrollToBottom";
-import { Topic } from "./webSocketTypes";
-import { generateHighContrastColor } from "../../lib/utils";
-import useParticipants from "./useParticipants";
-import { Box, Flex, Text } from "@chakra-ui/react";
-import { featureEnabled } from "../../domainContext";
+import ScrollToBottom from "../../scrollToBottom";
+import { Topic } from "../../webSocketTypes";
+import useParticipants from "../../useParticipants";
+import { Box, Flex, Text, Accordion } from "@chakra-ui/react";
+import { featureEnabled } from "../../../../domainContext";
+import { TopicItem } from "./TopicItem";
 
 type TopicListProps = {
   topics: Topic[];
@@ -32,9 +31,7 @@ export function TopicList({
   const participants = useParticipants(transcriptId);
 
   const scrollToTopic = () => {
-    const topicDiv = document.getElementById(
-      `accordion-button-topic-${activeTopic?.id}`,
-    );
+    const topicDiv = document.getElementById(`topic-${activeTopic?.id}`);
 
     setTimeout(() => {
       topicDiv?.scrollIntoView({
@@ -124,93 +121,28 @@ export function TopicList({
         h={"100%"}
         onScroll={handleScroll}
         width="full"
-        padding={2}
       >
         {topics.length > 0 && (
-          <Box>
-            {topics.map((topic, index) => (
-              <Box
-                key={index}
-                background={activeTopic?.id === topic.id ? "gray.100" : "light"}
-                _hover={{ background: "gray.100" }}
-                id={`topic-${topic.id}`}
-                borderBottomWidth="1px"
-                borderColor="gray.200"
-              >
-                <Flex dir="row" letterSpacing={".2"}>
-                  <Box
-                    as="button"
-                    onClick={() => {
-                      setActiveTopic(
-                        activeTopic?.id == topic.id ? null : topic,
-                      );
-                    }}
-                    width="100%"
-                    textAlign="left"
-                    p={3}
-                    display="flex"
-                    alignItems="center"
-                  >
-                    <Text mr={2}>
-                      {activeTopic?.id === topic.id ? "▼" : "▶"}
-                    </Text>
-                    <Box as="span" textAlign="left" ml="1">
-                      {topic.title}{" "}
-                      <Text
-                        as="span"
-                        color="gray.500"
-                        fontSize="sm"
-                        fontWeight="bold"
-                      >
-                        &nbsp;[{formatTime(topic.timestamp)}]&nbsp;-&nbsp;[
-                        {formatTime(topic.timestamp + (topic.duration || 0))}]
-                      </Text>
-                    </Box>
-                  </Box>
-                </Flex>
-                {activeTopic?.id === topic.id && (
-                  <Box p={4}>
-                    {topic.segments ? (
-                      <>
-                        {topic.segments.map((segment, index: number) => (
-                          <Text
-                            key={index}
-                            className="text-left text-slate-500 text-sm md:text-base"
-                            pb={2}
-                            lineHeight={"1.3"}
-                          >
-                            <Text
-                              as="span"
-                              color={"gray.500"}
-                              fontFamily={"monospace"}
-                              fontSize={"sm"}
-                            >
-                              [{formatTime(segment.start)}]
-                            </Text>
-                            <Text
-                              as="span"
-                              fontWeight={"bold"}
-                              fontSize={"sm"}
-                              color={generateHighContrastColor(
-                                `Speaker ${segment.speaker}`,
-                                [96, 165, 250],
-                              )}
-                            >
-                              {" "}
-                              {getSpeakerName(segment.speaker)}:
-                            </Text>{" "}
-                            <span>{segment.text}</span>
-                          </Text>
-                        ))}
-                      </>
-                    ) : (
-                      <>{topic.transcript}</>
-                    )}
-                  </Box>
-                )}
-              </Box>
+          <Accordion.Root
+            multiple={false}
+            value={activeTopic ? [activeTopic.id] : []}
+            onValueChange={(details) => {
+              const selectedTopicId = details.value[0];
+              const selectedTopic = selectedTopicId
+                ? topics.find((t) => t.id === selectedTopicId)
+                : null;
+              setActiveTopic(selectedTopic);
+            }}
+          >
+            {topics.map((topic) => (
+              <TopicItem
+                key={topic.id}
+                topic={topic}
+                isActive={activeTopic?.id === topic.id}
+                getSpeakerName={getSpeakerName}
+              />
             ))}
-          </Box>
+          </Accordion.Root>
         )}
 
         {status == "recording" && (

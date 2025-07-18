@@ -154,11 +154,9 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
 
   return (
     <>
-      <IconButton
-        icon={<FaShare />}
-        onClick={() => setShowModal(true)}
-        aria-label="Share"
-      />
+      <IconButton onClick={() => setShowModal(true)} aria-label="Share">
+        <FaShare />
+      </IconButton>
       <Modal open={!!showModal} onClose={() => setShowModal(false)} size={"xl"}>
         <ModalOverlay />
         <ModalContent>

@@ -3,46 +3,26 @@ import {
   defaultConfig,
   defineConfig,
   defineRecipe,
+  defineSlotRecipe,
   defaultSystem,
 } from "@chakra-ui/react";
+import { accordionAnatomy } from "@chakra-ui/react/anatomy";
 
-const accordionRecipe = defineRecipe({
-  className: "accordion",
+const accordionSlotRecipe = defineSlotRecipe({
+  slots: accordionAnatomy.keys(),
   base: {
-    container: {
+    item: {
+      bg: "white",
+      borderRadius: "xl",
       border: "0",
-      borderRadius: "8px",
-      backgroundColor: "white",
       mb: "2",
-      mr: "2",
+      width: "full",
     },
-    panel: {
-      pl: "8",
-      pb: "0",
-    },
-    button: {
-      justifyContent: "flex-start",
-      pl: "2",
-    },
-  },
-  variants: {
-    variant: {
-      custom: {
-        container: {
-          border: "0",
-          borderRadius: "8px",
-          backgroundColor: "white",
-          mb: "2",
-          mr: "2",
-        },
-        panel: {
-          pl: "8",
-          pb: "0",
-        },
-        button: {
-          justifyContent: "flex-start",
-          pl: "2",
-        },
+    itemTrigger: {
+      p: "2",
+      cursor: "pointer",
+      _hover: {
+        bg: "gray.200",
       },
     },
   },
@@ -74,6 +54,14 @@ const buttonRecipe = defineRecipe({
     color: "gray.800",
     _hover: {
       bg: "gray.200",
+    },
+    _focus: {
+      outline: "none",
+      boxShadow: "none",
+    },
+    _focusVisible: {
+      outline: "none",
+      boxShadow: "none",
     },
   },
   variants: {
@@ -167,8 +155,10 @@ const config = defineConfig({
         },
       },
     },
+    slotRecipes: {
+      accordion: accordionSlotRecipe,
+    },
     recipes: {
-      accordion: accordionRecipe,
       link: linkRecipe,
       button: buttonRecipe,
     },

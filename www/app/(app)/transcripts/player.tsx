@@ -167,13 +167,14 @@ export default function Player(props: PlayerProps) {
     <Flex className="flex items-center w-full relative">
       <IconButton
         aria-label={isPlaying ? "Pause" : "Play"}
-        icon={isPlaying ? <PauseIcon /> : <PlayIcon />}
         variant={"ghost"}
         colorPalette={"blue"}
         mr={2}
         id="play-btn"
         onClick={handlePlayClick}
-      />
+      >
+        {isPlaying ? <PauseIcon /> : <PlayIcon />}
+      </IconButton>
 
       <Box position="relative" flex={1}>
         <Box ref={waveformRef} height={14}></Box>

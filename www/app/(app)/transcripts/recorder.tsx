@@ -260,34 +260,37 @@ export default function Recorder(props: RecorderProps) {
     <Flex className="flex items-center w-full relative">
       <IconButton
         aria-label={isRecording ? "Stop" : "Record"}
-        icon={isRecording ? <StopRecordIcon /> : <PlayIcon />}
         variant={"ghost"}
         colorPalette={"blue"}
         mr={2}
         onClick={handleRecClick}
-      />
+      >
+        {isRecording ? <StopRecordIcon /> : <PlayIcon />}
+      </IconButton>
       {!isRecording && (window as any).chrome && (
         <IconButton
           aria-label={"Record Tab"}
-          icon={<LuScreenShare />}
           variant={"ghost"}
           colorPalette={"blue"}
           disabled={isRecording}
           mr={2}
           onClick={handleRecordTabClick}
-        />
+        >
+          <LuScreenShare />
+        </IconButton>
       )}
       {audioDevices && audioDevices?.length > 0 && deviceId && !isRecording && (
         <Menu>
           <MenuButton
             as={IconButton}
             aria-label={"Switch microphone"}
-            icon={<FaMicrophone />}
             variant={"ghost"}
             disabled={isRecording}
             colorPalette={"blue"}
             mr={2}
-          />
+          >
+            <FaMicrophone />
+          </MenuButton>
           <MenuList>
             <MenuOptionGroup defaultValue={audioDevices[0].value} type="radio">
               {audioDevices.map((device) => (

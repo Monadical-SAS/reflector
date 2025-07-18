@@ -569,18 +569,18 @@ export default function RoomsList() {
                     ) : (
                       <IconButton
                         aria-label="Copy URL"
-                        icon={<FaLink />}
                         onClick={() => handleCopyUrl(roomData.name)}
                         style={{ marginRight: "8px" }}
-                      />
+                      >
+                        <FaLink />
+                      </IconButton>
                     )}
 
                     <Menu.Root closeOnSelect={true}>
                       <Menu.Trigger asChild>
-                        <IconButton
-                          icon={<FaEllipsisVertical />}
-                          aria-label="actions"
-                        />
+                        <IconButton aria-label="actions">
+                          <FaEllipsisVertical />
+                        </IconButton>
                       </Menu.Trigger>
                       <Menu.Content>
                         <Menu.Item
@@ -622,18 +622,18 @@ export default function RoomsList() {
                     ) : (
                       <IconButton
                         aria-label="Copy URL"
-                        icon={<FaLink />}
                         onClick={() => handleCopyUrl(roomData.name)}
                         style={{ marginRight: "8px" }}
-                      />
+                      >
+                        <FaLink />
+                      </IconButton>
                     )}
 
                     <Menu.Root closeOnSelect={true}>
                       <Menu.Trigger asChild>
-                        <IconButton
-                          icon={<FaEllipsisVertical />}
-                          aria-label="actions"
-                        />
+                        <IconButton aria-label="actions">
+                          <FaEllipsisVertical />
+                        </IconButton>
                       </Menu.Trigger>
                       <Menu.Content>
                         <Menu.Item

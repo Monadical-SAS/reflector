@@ -4,7 +4,7 @@ import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
-import { TopicList } from "../topicList";
+import { TopicList } from "./_components/TopicList";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
 import FinalSummary from "./finalSummary";
@@ -103,7 +103,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             base: "auto minmax(0, 1fr) minmax(0, 1fr)",
             md: "auto minmax(0, 1fr)",
           }}
-          gap={2}
+          gap={4}
+          gridRowGap={2}
           padding={4}
           paddingBottom={0}
           background="gray.bg"

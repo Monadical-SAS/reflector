@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Recorder from "../../recorder";
-import { TopicList } from "../../topicList";
+import { TopicList } from "../_components/TopicList";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
 import { Topic } from "../../webSocketTypes";
