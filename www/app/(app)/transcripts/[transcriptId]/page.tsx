@@ -7,7 +7,6 @@ import useMp3 from "../useMp3";
 import { TopicList } from "../topicList";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState } from "react";
-import "../../../styles/button.css";
 import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";

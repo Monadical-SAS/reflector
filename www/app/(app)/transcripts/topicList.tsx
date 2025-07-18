@@ -4,16 +4,7 @@ import ScrollToBottom from "./scrollToBottom";
 import { Topic } from "./webSocketTypes";
 import { generateHighContrastColor } from "../../lib/utils";
 import useParticipants from "./useParticipants";
-import {
-  Accordion,
-  AccordionButton,
-  AccordionIcon,
-  AccordionItem,
-  AccordionPanel,
-  Box,
-  Flex,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 import { featureEnabled } from "../../domainContext";
 
 type TopicListProps = {
@@ -136,30 +127,33 @@ export function TopicList({
         padding={2}
       >
         {topics.length > 0 && (
-          <Accordion
-            index={topics.findIndex((topic) => topic.id == activeTopic?.id)}
-            variant="custom"
-            allowToggle
-          >
+          <Box>
             {topics.map((topic, index) => (
-              <AccordionItem
+              <Box
                 key={index}
-                background={{
-                  base: "light",
-                  hover: "gray.100",
-                  focus: "gray.100",
-                }}
+                background={activeTopic?.id === topic.id ? "gray.100" : "light"}
+                _hover={{ background: "gray.100" }}
                 id={`topic-${topic.id}`}
+                borderBottomWidth="1px"
+                borderColor="gray.200"
               >
                 <Flex dir="row" letterSpacing={".2"}>
-                  <AccordionButton
+                  <Box
+                    as="button"
                     onClick={() => {
                       setActiveTopic(
                         activeTopic?.id == topic.id ? null : topic,
                       );
                     }}
+                    width="100%"
+                    textAlign="left"
+                    p={3}
+                    display="flex"
+                    alignItems="center"
                   >
-                    <AccordionIcon />
+                    <Text mr={2}>
+                      {activeTopic?.id === topic.id ? "▼" : "▶"}
+                    </Text>
                     <Box as="span" textAlign="left" ml="1">
                       {topic.title}{" "}
                       <Text
@@ -172,49 +166,51 @@ export function TopicList({
                         {formatTime(topic.timestamp + (topic.duration || 0))}]
                       </Text>
                     </Box>
-                  </AccordionButton>
+                  </Box>
                 </Flex>
-                <AccordionPanel>
-                  {topic.segments ? (
-                    <>
-                      {topic.segments.map((segment, index: number) => (
-                        <Text
-                          key={index}
-                          className="text-left text-slate-500 text-sm md:text-base"
-                          pb={2}
-                          lineHeight={"1.3"}
-                        >
+                {activeTopic?.id === topic.id && (
+                  <Box p={4}>
+                    {topic.segments ? (
+                      <>
+                        {topic.segments.map((segment, index: number) => (
                           <Text
-                            as="span"
-                            color={"gray.500"}
-                            fontFamily={"monospace"}
-                            fontSize={"sm"}
+                            key={index}
+                            className="text-left text-slate-500 text-sm md:text-base"
+                            pb={2}
+                            lineHeight={"1.3"}
                           >
-                            [{formatTime(segment.start)}]
+                            <Text
+                              as="span"
+                              color={"gray.500"}
+                              fontFamily={"monospace"}
+                              fontSize={"sm"}
+                            >
+                              [{formatTime(segment.start)}]
+                            </Text>
+                            <Text
+                              as="span"
+                              fontWeight={"bold"}
+                              fontSize={"sm"}
+                              color={generateHighContrastColor(
+                                `Speaker ${segment.speaker}`,
+                                [96, 165, 250],
+                              )}
+                            >
+                              {" "}
+                              {getSpeakerName(segment.speaker)}:
+                            </Text>{" "}
+                            <span>{segment.text}</span>
                           </Text>
-                          <Text
-                            as="span"
-                            fontWeight={"bold"}
-                            fontSize={"sm"}
-                            color={generateHighContrastColor(
-                              `Speaker ${segment.speaker}`,
-                              [96, 165, 250],
-                            )}
-                          >
-                            {" "}
-                            {getSpeakerName(segment.speaker)}:
-                          </Text>{" "}
-                          <span>{segment.text}</span>
-                        </Text>
-                      ))}
-                    </>
-                  ) : (
-                    <>{topic.transcript}</>
-                  )}
-                </AccordionPanel>
-              </AccordionItem>
+                        ))}
+                      </>
+                    ) : (
+                      <>{topic.transcript}</>
+                    )}
+                  </Box>
+                )}
+              </Box>
             ))}
-          </Accordion>
+          </Box>
         )}
 
         {status == "recording" && (

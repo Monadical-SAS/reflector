@@ -267,7 +267,7 @@ export default function WebinarPage(details: WebinarDetails) {
                 </Alert>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <VStack spacing={4} w="full">
+                  <VStack gap={4} w="full">
                     <FormControl isRequired>
                       <Input
                         type="text"

@@ -1,6 +1,5 @@
 import React from "react";
-import { ButtonGroup, IconButton, Pagination } from "@chakra-ui/react";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
+import { Pagination, HStack } from "@chakra-ui/react";
 
 type PaginationProps = {
   page: number;
@@ -21,54 +20,24 @@ export default function PaginationComponent(props: PaginationProps) {
       pageSize={size}
       page={page}
       onPageChange={(details) => setPage(details.page)}
-      siblingCount={2}
+      variant="ghost"
+      size="sm"
     >
-      <ButtonGroup variant="ghost" size="sm">
-        <Pagination.PrevTrigger asChild>
-          <IconButton aria-label="Previous page" icon={<FaChevronLeft />} />
-        </Pagination.PrevTrigger>
-
-        <Pagination.Items>
-          {({ items }) =>
-            items.map((item, index) => {
-              if (item.type === "page") {
-                return (
-                  <Pagination.Item key={index} {...item} asChild>
-                    <IconButton
-                      variant={item.value === page ? "solid" : "ghost"}
-                      colorScheme={item.value === page ? "blue" : "gray"}
-                      aria-label={`Page ${item.value}`}
-                    >
-                      {item.value}
-                    </IconButton>
-                  </Pagination.Item>
-                );
-              }
-
-              if (item.type === "ellipsis") {
-                return (
-                  <Pagination.Ellipsis key={index} index={index} asChild>
-                    <IconButton
-                      variant="ghost"
-                      isDisabled
-                      pointerEvents="none"
-                      aria-label="More pages"
-                    >
-                      ...
-                    </IconButton>
-                  </Pagination.Ellipsis>
-                );
-              }
-
-              return null;
-            })
+      <HStack>
+        <Pagination.PrevTrigger />
+        <Pagination.Context>
+          {({ pages }) =>
+            pages.map((pageItem, index) =>
+              pageItem.type === "page" ? (
+                <Pagination.Item key={index} {...pageItem} />
+              ) : (
+                <Pagination.Ellipsis key={index} index={index} />
+              ),
+            )
           }
-        </Pagination.Items>
-
-        <Pagination.NextTrigger asChild>
-          <IconButton aria-label="Next page" icon={<FaChevronRight />} />
-        </Pagination.NextTrigger>
-      </ButtonGroup>
+        </Pagination.Context>
+        <Pagination.NextTrigger />
+      </HStack>
     </Pagination.Root>
   );
 }

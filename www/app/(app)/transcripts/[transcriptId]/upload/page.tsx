@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
-import "../../../../styles/button.css";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import useMp3 from "../../useMp3";
@@ -73,7 +72,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
       >
         <Heading size={"lg"}>Upload meeting</Heading>
         <Center h={"full"} w="full">
-          <VStack spacing={10}>
+          <VStack gap={10}>
             {status && status == "idle" && (
               <>
                 <Text>
@@ -94,7 +93,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
                   processed.
                 </Text>
                 <Button
-                  colorScheme="blue"
+                  colorPalette="blue"
                   onClick={() => {
                     router.push("/browse");
                   }}

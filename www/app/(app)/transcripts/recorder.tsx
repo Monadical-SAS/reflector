@@ -262,7 +262,7 @@ export default function Recorder(props: RecorderProps) {
         aria-label={isRecording ? "Stop" : "Record"}
         icon={isRecording ? <StopRecordIcon /> : <PlayIcon />}
         variant={"ghost"}
-        colorScheme={"blue"}
+        colorPalette={"blue"}
         mr={2}
         onClick={handleRecClick}
       />
@@ -271,7 +271,7 @@ export default function Recorder(props: RecorderProps) {
           aria-label={"Record Tab"}
           icon={<LuScreenShare />}
           variant={"ghost"}
-          colorScheme={"blue"}
+          colorPalette={"blue"}
           disabled={isRecording}
           mr={2}
           onClick={handleRecordTabClick}
@@ -285,7 +285,7 @@ export default function Recorder(props: RecorderProps) {
             icon={<FaMicrophone />}
             variant={"ghost"}
             disabled={isRecording}
-            colorScheme={"blue"}
+            colorPalette={"blue"}
             mr={2}
           />
           <MenuList>

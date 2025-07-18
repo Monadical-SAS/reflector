@@ -208,7 +208,7 @@ const TopicPlayer = ({
       margin="auto"
       {...chakraProps}
     >
-      <Wrap spacing="4" justify="center" align="center">
+      <Wrap gap="4" justify="center" align="center">
         <WrapItem>
           <SoundWaveCss playing={isPlaying} />
           <Text fontSize="sm" pt="1" pl="2">
@@ -216,7 +216,7 @@ const TopicPlayer = ({
           </Text>
         </WrapItem>
         <WrapItem>
-          <Button onClick={playTopic} colorScheme="blue">
+          <Button onClick={playTopic} colorPalette="blue">
             Play from start
           </Button>
         </WrapItem>
@@ -226,7 +226,7 @@ const TopicPlayer = ({
               onClick={playCurrent}
               ref={playButton}
               id="playButton"
-              colorScheme="blue"
+              colorPalette="blue"
               w="120px"
             >
               <Kbd color="blue.600">Space</Kbd>&nbsp;Play
@@ -236,7 +236,7 @@ const TopicPlayer = ({
               onClick={pause}
               ref={playButton}
               id="playButton"
-              colorScheme="blue"
+              colorPalette="blue"
               w="120px"
             >
               <Kbd color="blue.600">Space</Kbd>&nbsp;Pause
@@ -247,7 +247,7 @@ const TopicPlayer = ({
           <Button
             disabled={!selectedTime}
             onClick={playSelection}
-            colorScheme="blue"
+            colorPalette="blue"
           >
             <Kbd color="blue.600">,</Kbd>&nbsp;Play selection
           </Button>

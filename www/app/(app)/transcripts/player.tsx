@@ -169,7 +169,7 @@ export default function Player(props: PlayerProps) {
         aria-label={isPlaying ? "Pause" : "Play"}
         icon={isPlaying ? <PauseIcon /> : <PlayIcon />}
         variant={"ghost"}
-        colorScheme={"blue"}
+        colorPalette={"blue"}
         mr={2}
         id="play-btn"
         onClick={handlePlayClick}

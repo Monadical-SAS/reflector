@@ -41,7 +41,7 @@ export default function TranscriptCards({
         pointerEvents={loading ? "none" : "auto"}
         transition="opacity 0.2s ease-in-out"
       >
-        <Stack spacing={2}>
+        <Stack gap={2}>
           {transcripts.map((item) => (
             <Box key={item.id} borderWidth={1} p={4} borderRadius="md">
               <Flex justify="space-between" alignItems="flex-start" gap="2">

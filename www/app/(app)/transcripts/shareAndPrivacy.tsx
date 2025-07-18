@@ -3,22 +3,98 @@ import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import { GetTranscript, GetTranscriptTopic, UpdateTranscript } from "../../api";
-import {
-  Box,
-  Flex,
-  IconButton,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
+
+// Temporary Modal components until Chakra v3 Modal is properly imported
+const Modal = ({ isOpen, onClose, children }: any) => {
+  if (!isOpen) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  );
+};
+const ModalOverlay = () => null;
+const ModalContent = ({ children }: any) => (
+  <div
+    style={{
+      backgroundColor: "white",
+      borderRadius: "8px",
+      maxWidth: "600px",
+      width: "90%",
+      maxHeight: "90vh",
+      overflow: "auto",
+    }}
+  >
+    {children}
+  </div>
+);
+const ModalHeader = ({ children }: any) => (
+  <div
+    style={{
+      padding: "20px",
+      borderBottom: "1px solid #E2E8F0",
+      fontSize: "20px",
+      fontWeight: "bold",
+    }}
+  >
+    {children}
+  </div>
+);
+const ModalBody = ({ children }: any) => (
+  <div style={{ padding: "20px" }}>{children}</div>
+);
 import { FaShare } from "react-icons/fa";
 import useApi from "../../lib/useApi";
 import useSessionUser from "../../lib/useSessionUser";
 import { CustomSession } from "../../lib/types";
-import { Select } from "chakra-react-select";
+// import { Select } from "chakra-react-select";
+
+// Temporary Select component
+const Select = ({ options, value, onChange, isDisabled, isLoading }: any) => {
+  return (
+    <select
+      value={value?.value || ""}
+      onChange={(e) => {
+        const selected = options.find(
+          (opt: any) => opt.value === e.target.value,
+        );
+        onChange(selected);
+      }}
+      disabled={isDisabled || isLoading}
+      style={{
+        width: "100%",
+        padding: "8px",
+        borderRadius: "4px",
+        border: "1px solid #E2E8F0",
+        fontSize: "16px",
+        backgroundColor: isDisabled || isLoading ? "#F7FAFC" : "white",
+        cursor: isDisabled || isLoading ? "not-allowed" : "pointer",
+        opacity: isLoading ? 0.6 : 1,
+      }}
+    >
+      {options?.map((opt: any) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+};
 import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";

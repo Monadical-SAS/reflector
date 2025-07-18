@@ -113,12 +113,12 @@ export default function FinalSummary(props: FinalSummaryProps) {
             <Spacer />
             <Button
               onClick={onDiscardClick}
-              colorScheme="gray"
+              colorPalette="gray"
               variant={"text"}
             >
               Discard
             </Button>
-            <Button onClick={onSaveClick} colorScheme="blue">
+            <Button onClick={onSaveClick} colorPalette="blue">
               Save
             </Button>
           </>

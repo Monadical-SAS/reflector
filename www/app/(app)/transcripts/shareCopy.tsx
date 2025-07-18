@@ -48,13 +48,13 @@ export default function ShareCopy({
     <Box {...boxProps}>
       <Button
         onClick={onCopyTranscriptClick}
-        colorScheme="blue"
+        colorPalette="blue"
         size={"sm"}
         mr={2}
       >
         {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
       </Button>
-      <Button onClick={onCopySummaryClick} colorScheme="blue" size={"sm"}>
+      <Button onClick={onCopySummaryClick} colorPalette="blue" size={"sm"}>
         {isCopiedSummary ? "Copied!" : "Copy Summary"}
       </Button>
     </Box>

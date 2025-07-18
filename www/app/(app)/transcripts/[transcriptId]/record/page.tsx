@@ -4,7 +4,6 @@ import Recorder from "../../recorder";
 import { TopicList } from "../../topicList";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
-import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";

@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import useAudioDevice from "../useAudioDevice";
 import "react-select-search/style.css";
-import "../../../styles/button.css";
 import "../../../styles/form.scss";
 import About from "../../../(aboutAndPrivacy)/about";
 import Privacy from "../../../(aboutAndPrivacy)/privacy";
@@ -107,18 +106,18 @@ const TranscriptCreate = () => {
     >
       <Flex
         flexDir={{ base: "column", md: "row" }}
-        justify="space-between"
-        align="center"
+        justifyContent="space-between"
+        alignItems="center"
         gap={8}
       >
         <Flex
           flexDir="column"
           h="full"
-          justify="evenly"
+          justifyContent="evenly"
           flexBasis="1"
           flexGrow={1}
         >
-          <Heading size="lg" textAlign={{ base: "center", md: "left" }}>
+          <Heading size="2xl" textAlign={{ base: "center", md: "left" }}>
             Welcome to Reflector
           </Heading>
           <Text mt={6}>
@@ -143,7 +142,7 @@ const TranscriptCreate = () => {
             {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
-              <Button onClick={() => signIn("authentik")} colorScheme="blue">
+              <Button onClick={() => signIn("authentik")} colorPalette="blue">
                 Log in
               </Button>
             ) : (
@@ -156,7 +155,7 @@ const TranscriptCreate = () => {
                 flexDir="column"
                 my={4}
               >
-                <Heading size="md" mb={4}>
+                <Heading size="xl" mb={4}>
                   Try Reflector
                 </Heading>
                 <Box mb={4}>
@@ -191,7 +190,7 @@ const TranscriptCreate = () => {
                     </Text>
                   ) : (
                     <Button
-                      colorScheme="whiteAlpha"
+                      colorPalette="whiteAlpha"
                       onClick={requestPermission}
                       disabled={permissionDenied}
                     >
@@ -202,20 +201,20 @@ const TranscriptCreate = () => {
                   <Text className="">Checking permissions...</Text>
                 )}
                 <Button
-                  colorScheme="whiteAlpha"
+                  colorPalette="whiteAlpha"
                   onClick={send}
-                  isDisabled={!permissionOk || loadingRecord || loadingUpload}
+                  disabled={!permissionOk || loadingRecord || loadingUpload}
                   mt={2}
                 >
                   {loadingRecord ? "Loading..." : "Record Meeting"}
                 </Button>
-                <Text align="center" m="2">
+                <Text textAlign="center" m="2">
                   OR
                 </Text>
                 <Button
-                  colorScheme="whiteAlpha"
+                  colorPalette="whiteAlpha"
                   onClick={uploadFile}
-                  isDisabled={loadingRecord || loadingUpload}
+                  disabled={loadingRecord || loadingUpload}
                 >
                   {loadingUpload ? "Loading..." : "Upload File"}
                 </Button>

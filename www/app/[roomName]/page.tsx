@@ -141,12 +141,12 @@ const useConsentDialog = (
             maxW="md"
             mx="auto"
           >
-            <VStack spacing={4} align="center">
+            <VStack gap={4} align="center">
               <Text fontSize="md" textAlign="center" fontWeight="medium">
                 Can we have your permission to store this meeting's audio
                 recording on our servers?
               </Text>
-              <HStack spacing={4} justify="center">
+              <HStack gap={4} justify="center">
                 <AcceptButton />
                 <Button
                   colorPalette="gray"

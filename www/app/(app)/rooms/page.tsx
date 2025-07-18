@@ -5,28 +5,25 @@ import {
   Card,
   CardBody,
   Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
+  // FormControl,
+  // FormHelperText,
+  // FormLabel,
   Heading,
   Input,
   Link,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
+  // Modal,
+  // ModalBody,
+  // ModalCloseButton,
+  // ModalContent,
+  // ModalFooter,
+  // ModalHeader,
+  // ModalOverlay,
   Spacer,
   Spinner,
   useDisclosure,
   VStack,
   Text,
   Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
   IconButton,
   Checkbox,
 } from "@chakra-ui/react";
@@ -35,7 +32,55 @@ import { Container } from "@chakra-ui/react";
 import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { Select, Options, OptionBase } from "chakra-react-select";
+// import { Select, Options, OptionBase } from "chakra-react-select";
+// Temporary form component replacements
+const FormControl = ({ children }: any) => (
+  <div style={{ marginBottom: "16px" }}>{children}</div>
+);
+const FormLabel = ({ children }: any) => (
+  <label style={{ display: "block", marginBottom: "8px", fontWeight: "500" }}>
+    {children}
+  </label>
+);
+const FormHelperText = ({ children }: any) => (
+  <p style={{ marginTop: "4px", fontSize: "14px", color: "#718096" }}>
+    {children}
+  </p>
+);
+
+// @ts-ignore
+const Select = ({ options, value, onChange, placeholder, isDisabled }: any) => {
+  return (
+    <select
+      value={value?.value || ""}
+      onChange={(e) => {
+        const selected = options.find(
+          (opt: any) => opt.value === e.target.value,
+        );
+        onChange(selected);
+      }}
+      disabled={isDisabled}
+      style={{
+        width: "100%",
+        padding: "8px",
+        borderRadius: "4px",
+        border: "1px solid #E2E8F0",
+        fontSize: "16px",
+        backgroundColor: isDisabled ? "#F7FAFC" : "white",
+        cursor: isDisabled ? "not-allowed" : "pointer",
+      }}
+    >
+      <option value="">{placeholder}</option>
+      {options?.map((opt: any) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+};
+type Options<T> = T[];
+interface OptionBase {}
 import { ApiError } from "../../api";
 
 interface SelectOption extends OptionBase {
@@ -270,7 +315,7 @@ export default function RoomsList() {
           <Heading>Rooms</Heading>
           <Spacer />
           <Button
-            colorScheme="blue"
+            colorPalette="blue"
             onClick={() => {
               setIsEditing(false);
               setRoom(roomInitialState);
@@ -280,167 +325,225 @@ export default function RoomsList() {
           >
             Add Room
           </Button>
-          <Modal isOpen={isOpen} onClose={onClose}>
-            <ModalOverlay />
-            <ModalContent>
-              <ModalHeader>{isEditing ? "Edit Room" : "Add Room"}</ModalHeader>
-              <ModalCloseButton />
-              <ModalBody>
-                <FormControl>
-                  <FormLabel>Room name</FormLabel>
-                  <Input
-                    name="name"
-                    placeholder="room-name"
-                    value={room.name}
-                    onChange={handleRoomChange}
-                  />
-                  <FormHelperText>
-                    No spaces or special characters allowed
-                  </FormHelperText>
-                  {nameError && <Text color="red.500">{nameError}</Text>}
-                </FormControl>
-
-                <FormControl mt={4}>
-                  <Checkbox
-                    name="isLocked"
-                    isChecked={room.isLocked}
-                    onChange={handleRoomChange}
-                  >
-                    Locked room
-                  </Checkbox>
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Room size</FormLabel>
-                  <Select
-                    name="roomMode"
-                    options={roomModeOptions}
-                    value={{
-                      label: roomModeOptions.find(
-                        (rm) => rm.value === room.roomMode,
-                      )?.label,
-                      value: room.roomMode,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        roomMode: newValue!.value,
-                      })
-                    }
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Recording type</FormLabel>
-                  <Select
-                    name="recordingType"
-                    options={recordingTypeOptions}
-                    value={{
-                      label: recordingTypeOptions.find(
-                        (rt) => rt.value === room.recordingType,
-                      )?.label,
-                      value: room.recordingType,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        recordingType: newValue!.value,
-                        recordingTrigger:
-                          newValue!.value !== "cloud"
-                            ? "none"
-                            : room.recordingTrigger,
-                      })
-                    }
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Cloud recording start trigger</FormLabel>
-                  <Select
-                    name="recordingTrigger"
-                    options={recordingTriggerOptions}
-                    value={{
-                      label: recordingTriggerOptions.find(
-                        (rt) => rt.value === room.recordingTrigger,
-                      )?.label,
-                      value: room.recordingTrigger,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        recordingTrigger: newValue!.value,
-                      })
-                    }
-                    isDisabled={room.recordingType !== "cloud"}
-                  />
-                </FormControl>
-                <FormControl mt={8}>
-                  <Checkbox
-                    name="zulipAutoPost"
-                    isChecked={room.zulipAutoPost}
-                    onChange={handleRoomChange}
-                  >
-                    Automatically post transcription to Zulip
-                  </Checkbox>
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Zulip stream</FormLabel>
-                  <Select
-                    name="zulipStream"
-                    options={streamOptions}
-                    placeholder="Select stream"
-                    value={{ label: room.zulipStream, value: room.zulipStream }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        zulipStream: newValue!.value,
-                        zulipTopic: "",
-                      })
-                    }
-                    isDisabled={!room.zulipAutoPost}
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Zulip topic</FormLabel>
-                  <Select
-                    name="zulipTopic"
-                    options={topicOptions}
-                    placeholder="Select topic"
-                    value={{ label: room.zulipTopic, value: room.zulipTopic }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        zulipTopic: newValue!.value,
-                      })
-                    }
-                    isDisabled={!room.zulipAutoPost}
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <Checkbox
-                    name="isShared"
-                    isChecked={room.isShared}
-                    onChange={handleRoomChange}
-                  >
-                    Shared room
-                  </Checkbox>
-                </FormControl>
-              </ModalBody>
-
-              <ModalFooter>
-                <Button variant="ghost" mr={3} onClick={onClose}>
-                  Cancel
-                </Button>
-
-                <Button
-                  colorScheme="blue"
-                  onClick={handleSaveRoom}
-                  isDisabled={
-                    !room.name || (room.zulipAutoPost && !room.zulipTopic)
-                  }
+          {isOpen && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1000,
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "white",
+                  borderRadius: "8px",
+                  padding: "24px",
+                  maxWidth: "500px",
+                  width: "90%",
+                  maxHeight: "90vh",
+                  overflow: "auto",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                  }}
                 >
-                  {isEditing ? "Save" : "Add"}
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </Modal>
+                  <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>
+                    {isEditing ? "Edit Room" : "Add Room"}
+                  </h2>
+                  <button
+                    onClick={onClose}
+                    style={{
+                      fontSize: "24px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div>
+                  <FormControl>
+                    <FormLabel>Room name</FormLabel>
+                    <Input
+                      name="name"
+                      placeholder="room-name"
+                      value={room.name}
+                      onChange={handleRoomChange}
+                    />
+                    <FormHelperText>
+                      No spaces or special characters allowed
+                    </FormHelperText>
+                    {nameError && <Text color="red.500">{nameError}</Text>}
+                  </FormControl>
+
+                  <FormControl mt={4}>
+                    <Checkbox
+                      name="isLocked"
+                      isChecked={room.isLocked}
+                      onChange={handleRoomChange}
+                    >
+                      Locked room
+                    </Checkbox>
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <FormLabel>Room size</FormLabel>
+                    <Select
+                      name="roomMode"
+                      options={roomModeOptions}
+                      value={{
+                        label: roomModeOptions.find(
+                          (rm) => rm.value === room.roomMode,
+                        )?.label,
+                        value: room.roomMode,
+                      }}
+                      onChange={(newValue) =>
+                        setRoom({
+                          ...room,
+                          roomMode: newValue!.value,
+                        })
+                      }
+                    />
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <FormLabel>Recording type</FormLabel>
+                    <Select
+                      name="recordingType"
+                      options={recordingTypeOptions}
+                      value={{
+                        label: recordingTypeOptions.find(
+                          (rt) => rt.value === room.recordingType,
+                        )?.label,
+                        value: room.recordingType,
+                      }}
+                      onChange={(newValue) =>
+                        setRoom({
+                          ...room,
+                          recordingType: newValue!.value,
+                          recordingTrigger:
+                            newValue!.value !== "cloud"
+                              ? "none"
+                              : room.recordingTrigger,
+                        })
+                      }
+                    />
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <FormLabel>Cloud recording start trigger</FormLabel>
+                    <Select
+                      name="recordingTrigger"
+                      options={recordingTriggerOptions}
+                      value={{
+                        label: recordingTriggerOptions.find(
+                          (rt) => rt.value === room.recordingTrigger,
+                        )?.label,
+                        value: room.recordingTrigger,
+                      }}
+                      onChange={(newValue) =>
+                        setRoom({
+                          ...room,
+                          recordingTrigger: newValue!.value,
+                        })
+                      }
+                      isDisabled={room.recordingType !== "cloud"}
+                    />
+                  </FormControl>
+                  <FormControl mt={8}>
+                    <Checkbox
+                      name="zulipAutoPost"
+                      isChecked={room.zulipAutoPost}
+                      onChange={handleRoomChange}
+                    >
+                      Automatically post transcription to Zulip
+                    </Checkbox>
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <FormLabel>Zulip stream</FormLabel>
+                    <Select
+                      name="zulipStream"
+                      options={streamOptions}
+                      placeholder="Select stream"
+                      value={{
+                        label: room.zulipStream,
+                        value: room.zulipStream,
+                      }}
+                      onChange={(newValue) =>
+                        setRoom({
+                          ...room,
+                          zulipStream: newValue!.value,
+                          zulipTopic: "",
+                        })
+                      }
+                      isDisabled={!room.zulipAutoPost}
+                    />
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <FormLabel>Zulip topic</FormLabel>
+                    <Select
+                      name="zulipTopic"
+                      options={topicOptions}
+                      placeholder="Select topic"
+                      value={{ label: room.zulipTopic, value: room.zulipTopic }}
+                      onChange={(newValue) =>
+                        setRoom({
+                          ...room,
+                          zulipTopic: newValue!.value,
+                        })
+                      }
+                      isDisabled={!room.zulipAutoPost}
+                    />
+                  </FormControl>
+                  <FormControl mt={4}>
+                    <Checkbox
+                      name="isShared"
+                      isChecked={room.isShared}
+                      onChange={handleRoomChange}
+                    >
+                      Shared room
+                    </Checkbox>
+                  </FormControl>
+                </div>
+                <div
+                  style={{
+                    marginTop: "20px",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                  }}
+                >
+                  <Button
+                    variant="ghost"
+                    onClick={onClose}
+                    style={{ marginRight: "12px" }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    colorPalette="blue"
+                    onClick={handleSaveRoom}
+                    isDisabled={
+                      !room.name || (room.zulipAutoPost && !room.zulipTopic)
+                    }
+                  >
+                    {isEditing ? "Save" : "Add"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Flex>
 
         <VStack align="start" mb={10} pt={4} gap={4}>
@@ -455,7 +558,7 @@ export default function RoomsList() {
                     </Heading>
                     <Spacer />
                     {linkCopied === roomData.name ? (
-                      <Text mr={2} color="green.500">
+                      <Text color="green.500" style={{ marginRight: "8px" }}>
                         Link copied!
                       </Text>
                     ) : (
@@ -463,31 +566,30 @@ export default function RoomsList() {
                         aria-label="Copy URL"
                         icon={<FaLink />}
                         onClick={() => handleCopyUrl(roomData.name)}
-                        mr={2}
+                        style={{ marginRight: "8px" }}
                       />
                     )}
 
-                    <Menu closeOnSelect={true}>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FaEllipsisVertical />}
-                        aria-label="actions"
-                      />
-                      <MenuList>
-                        <MenuItem
+                    <Menu.Root closeOnSelect={true}>
+                      <Menu.Trigger asChild>
+                        <IconButton
+                          icon={<FaEllipsisVertical />}
+                          aria-label="actions"
+                        />
+                      </Menu.Trigger>
+                      <Menu.Content>
+                        <Menu.Item
                           onClick={() => handleEditRoom(roomData.id, roomData)}
-                          icon={<FaPencil />}
                         >
-                          Edit
-                        </MenuItem>
-                        <MenuItem
+                          <FaPencil /> Edit
+                        </Menu.Item>
+                        <Menu.Item
                           onClick={() => handleDeleteRoom(roomData.id)}
-                          icon={<FaTrash color={"red.500"} />}
                         >
-                          Delete
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
+                          <FaTrash style={{ color: "#E53E3E" }} /> Delete
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Root>
                   </Flex>
                 </CardBody>
               </Card>
@@ -509,7 +611,7 @@ export default function RoomsList() {
                     </Heading>
                     <Spacer />
                     {linkCopied === roomData.name ? (
-                      <Text mr={2} color="green.500">
+                      <Text color="green.500" style={{ marginRight: "8px" }}>
                         Link copied!
                       </Text>
                     ) : (
@@ -517,31 +619,30 @@ export default function RoomsList() {
                         aria-label="Copy URL"
                         icon={<FaLink />}
                         onClick={() => handleCopyUrl(roomData.name)}
-                        mr={2}
+                        style={{ marginRight: "8px" }}
                       />
                     )}
 
-                    <Menu closeOnSelect={true}>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FaEllipsisVertical />}
-                        aria-label="actions"
-                      />
-                      <MenuList>
-                        <MenuItem
+                    <Menu.Root closeOnSelect={true}>
+                      <Menu.Trigger asChild>
+                        <IconButton
+                          icon={<FaEllipsisVertical />}
+                          aria-label="actions"
+                        />
+                      </Menu.Trigger>
+                      <Menu.Content>
+                        <Menu.Item
                           onClick={() => handleEditRoom(roomData.id, roomData)}
-                          icon={<FaPencil />}
                         >
-                          Edit
-                        </MenuItem>
-                        <MenuItem
+                          <FaPencil /> Edit
+                        </Menu.Item>
+                        <Menu.Item
                           onClick={() => handleDeleteRoom(roomData.id)}
-                          icon={<FaTrash color={"red.500"} />}
                         >
-                          Delete
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
+                          <FaTrash style={{ color: "#E53E3E" }} /> Delete
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Root>
                   </Flex>
                 </CardBody>
               </Card>

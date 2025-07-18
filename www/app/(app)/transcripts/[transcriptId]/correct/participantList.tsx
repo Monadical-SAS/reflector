@@ -351,7 +351,7 @@ const ParticipantList = ({
           />
           <Button
             onClick={doAction}
-            colorScheme="blue"
+            colorPalette="blue"
             disabled={!action || anyLoading}
           >
             {!anyLoading ? (
@@ -410,7 +410,7 @@ const ParticipantList = ({
                     !loading && (
                       <Button
                         onClick={mergeSpeaker(selectedText, participant)}
-                        colorScheme="blue"
+                        colorPalette="blue"
                         ml="2"
                         size="sm"
                       >
@@ -435,7 +435,7 @@ const ParticipantList = ({
                   {selectedTextIsTimeSlice(selectedText) && !loading && (
                     <Button
                       onClick={assignTo(participant)}
-                      colorScheme="blue"
+                      colorPalette="blue"
                       ml="2"
                       size="sm"
                     >
@@ -460,7 +460,7 @@ const ParticipantList = ({
 
                   <Button
                     onClick={deleteParticipant(participant.id)}
-                    colorScheme="blue"
+                    colorPalette="blue"
                     ml="2"
                     size="sm"
                   >
