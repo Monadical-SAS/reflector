@@ -1,16 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Link,
-  Flex,
-  Spinner,
-} from "@chakra-ui/react";
+import { Box, Table, Link, Flex, Spinner } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { GetTranscriptMinimal } from "../../../api";
 import { formatTimeMs, formatLocalDate } from "../../../lib/time";
@@ -39,8 +28,6 @@ export default function TranscriptTable({
           left={0}
           right={0}
           bottom={0}
-          bg="rgba(255, 255, 255, 0.8)"
-          zIndex={10}
           align="center"
           justify="center"
         >
@@ -52,47 +39,47 @@ export default function TranscriptTable({
         pointerEvents={loading ? "none" : "auto"}
         transition="opacity 0.2s ease-in-out"
       >
-        <Table colorScheme="gray">
-          <Thead>
-            <Tr>
-              <Th pl={12} width="400px">
+        <Table.Root colorPalette="gray">
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeader pl={12} width="400px">
                 Transcription Title
-              </Th>
-              <Th width="150px">Source</Th>
-              <Th width="200px">Date</Th>
-              <Th width="100px">Duration</Th>
-              <Th width="50px"></Th>
-            </Tr>
-          </Thead>
-          <Tbody>
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="150px">Source</Table.ColumnHeader>
+              <Table.ColumnHeader width="200px">Date</Table.ColumnHeader>
+              <Table.ColumnHeader width="100px">Duration</Table.ColumnHeader>
+              <Table.ColumnHeader width="50px"></Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {transcripts.map((item) => (
-              <Tr key={item.id}>
-                <Td>
+              <Table.Row key={item.id}>
+                <Table.Cell>
                   <Flex alignItems="start">
                     <TranscriptStatusIcon status={item.status} />
                     <Link as={NextLink} href={`/transcripts/${item.id}`} ml={2}>
                       {item.title || "Unnamed Transcript"}
                     </Link>
                   </Flex>
-                </Td>
-                <Td>
+                </Table.Cell>
+                <Table.Cell>
                   {item.source_kind === "room"
                     ? item.room_name
                     : item.source_kind}
-                </Td>
-                <Td>{formatLocalDate(item.created_at)}</Td>
-                <Td>{formatTimeMs(item.duration)}</Td>
-                <Td>
+                </Table.Cell>
+                <Table.Cell>{formatLocalDate(item.created_at)}</Table.Cell>
+                <Table.Cell>{formatTimeMs(item.duration)}</Table.Cell>
+                <Table.Cell>
                   <TranscriptActionsMenu
                     transcriptId={item.id}
                     onDelete={onDelete}
                     onReprocess={onReprocess}
                   />
-                </Td>
-              </Tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </Tbody>
-        </Table>
+          </Table.Body>
+        </Table.Root>
       </Box>
     </Box>
   );

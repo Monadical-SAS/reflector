@@ -1,83 +1,114 @@
-import { extendTheme } from "@chakra-ui/react";
+import {
+  createSystem,
+  defaultConfig,
+  defineConfig,
+  defineRecipe,
+} from "@chakra-ui/react";
 import { Poppins } from "next/font/google";
-import { accordionAnatomy } from "@chakra-ui/anatomy";
-import { createMultiStyleConfigHelpers, defineStyle } from "@chakra-ui/react";
-
-const { definePartsStyle, defineMultiStyleConfig } =
-  createMultiStyleConfigHelpers(accordionAnatomy.keys);
 
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["200", "400", "600"],
   display: "swap",
 });
-const custom = definePartsStyle({
-  container: {
-    border: "0",
-    borderRadius: "8px",
-    backgroundColor: "white",
-    mb: 2,
-    mr: 2,
+
+// Define the accordion recipe for v3
+const accordionRecipe = defineRecipe({
+  className: "accordion",
+  base: {
+    container: {
+      border: "0",
+      borderRadius: "8px",
+      backgroundColor: "white",
+      mb: "2",
+      mr: "2",
+    },
+    panel: {
+      pl: "8",
+      pb: "0",
+    },
+    button: {
+      justifyContent: "flex-start",
+      pl: "2",
+    },
   },
-  panel: {
-    pl: 8,
-    pb: 0,
-  },
-  button: {
-    justifyContent: "flex-start",
-    pl: 2,
+  variants: {
+    variant: {
+      custom: {
+        container: {
+          border: "0",
+          borderRadius: "8px",
+          backgroundColor: "white",
+          mb: "2",
+          mr: "2",
+        },
+        panel: {
+          pl: "8",
+          pb: "0",
+        },
+        button: {
+          justifyContent: "flex-start",
+          pl: "2",
+        },
+      },
+    },
   },
 });
 
-const accordionTheme = defineMultiStyleConfig({
-  variants: { custom },
-});
-
-const linkTheme = defineStyle({
-  baseStyle: {
+// Define the link recipe for v3
+const linkRecipe = defineRecipe({
+  className: "link",
+  base: {
     _hover: {
       color: "blue.500",
       textDecoration: "none",
     },
   },
 });
+
 export const colors = {
   blue: {
-    primary: "#3158E2",
-    500: "#3158E2",
-    light: "#B1CBFF",
-    200: "#B1CBFF",
-    dark: "#0E1B48",
-    900: "#0E1B48",
+    primary: { value: "#3158E2" },
+    500: { value: "#3158E2" },
+    light: { value: "#B1CBFF" },
+    200: { value: "#B1CBFF" },
+    dark: { value: "#0E1B48" },
+    900: { value: "#0E1B48" },
   },
   red: {
-    primary: "#DF7070",
-    500: "#DF7070",
-    light: "#FBD5D5",
-    200: "#FBD5D5",
+    primary: { value: "#DF7070" },
+    500: { value: "#DF7070" },
+    light: { value: "#FBD5D5" },
+    200: { value: "#FBD5D5" },
   },
   gray: {
-    bg: "#F4F4F4",
-    100: "#F4F4F4",
-    light: "#D5D5D5",
-    200: "#D5D5D5",
-    primary: "#838383",
-    500: "#838383",
+    bg: { value: "#F4F4F4" },
+    100: { value: "#F4F4F4" },
+    light: { value: "#D5D5D5" },
+    200: { value: "#D5D5D5" },
+    primary: { value: "#838383" },
+    500: { value: "#838383" },
   },
-  light: "#FFFFFF",
-  dark: "#0C0D0E",
+  light: { value: "#FFFFFF" },
+  dark: { value: "#0C0D0E" },
 };
 
-const theme = extendTheme({
-  colors,
-  components: {
-    Accordion: accordionTheme,
-    Link: linkTheme,
-  },
-  fonts: {
-    body: poppins.style.fontFamily,
-    heading: poppins.style.fontFamily,
+const config = defineConfig({
+  theme: {
+    tokens: {
+      colors,
+      fonts: {
+        body: { value: poppins.style.fontFamily },
+        heading: { value: poppins.style.fontFamily },
+      },
+    },
+    recipes: {
+      accordion: accordionRecipe,
+      link: linkRecipe,
+    },
   },
 });
 
-export default theme;
+export const system = createSystem(defaultConfig, config);
+
+export default system;

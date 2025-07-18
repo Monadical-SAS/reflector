@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  IconButton,
-  Icon,
-} from "@chakra-ui/react";
+import { IconButton, Icon, Menu } from "@chakra-ui/react";
 import { FaEllipsisVertical } from "react-icons/fa6";
 
 interface TranscriptActionsMenuProps {

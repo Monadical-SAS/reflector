@@ -4,7 +4,7 @@ import { Flex, Spinner, Heading, Text, Link } from "@chakra-ui/react";
 import useTranscriptList from "../transcripts/useTranscriptList";
 import useSessionUser from "../../lib/useSessionUser";
 import { Room } from "../../api";
-import Pagination from "./pagination";
+import Pagination from "./_components/Pagination";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { SourceKind } from "../../api";

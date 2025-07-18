@@ -1,4 +1,4 @@
-import { Container, Flex, Link } from "@chakra-ui/layout";
+import { Container, Flex, Link } from "@chakra-ui/react";
 import { getConfig } from "../lib/edgeConfig";
 import NextLink from "next/link";
 import Image from "next/image";

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Stack, Link, Heading, Divider } from "@chakra-ui/react";
+import { Box, Stack, Link, Heading, Separator } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { Room, SourceKind } from "../../../api";
 
@@ -33,7 +33,7 @@ export default function FilterSidebar({
           All Transcripts
         </Link>
 
-        <Divider />
+        <Separator />
 
         {myRooms.length > 0 && (
           <>
@@ -93,7 +93,7 @@ export default function FilterSidebar({
           </>
         )}
 
-        <Divider />
+        <Separator />
         <Link
           as={NextLink}
           href="#"

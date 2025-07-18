@@ -11,7 +11,7 @@ import {
   SkeletonCircle,
   Flex,
 } from "@chakra-ui/react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type TopicHeader = {
   stateCurrentTopic: [
@@ -109,10 +109,10 @@ export default function TopicHeader({
         >
           {canGoPrevious ? (
             <Kbd>
-              <ChevronLeftIcon />
+              <ChevronLeft size={16} />
             </Kbd>
           ) : (
-            <ChevronLeftIcon />
+            <ChevronLeft size={16} />
           )}
         </Circle>
       </SkeletonCircle>
@@ -151,10 +151,10 @@ export default function TopicHeader({
         >
           {canGoNext ? (
             <Kbd>
-              <ChevronRightIcon />
+              <ChevronRight size={16} />
             </Kbd>
           ) : (
-            <ChevronRightIcon />
+            <ChevronRight size={16} />
           )}
         </Circle>
       </SkeletonCircle>
