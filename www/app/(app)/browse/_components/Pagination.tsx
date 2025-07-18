@@ -1,5 +1,6 @@
 import React from "react";
-import { Pagination, HStack } from "@chakra-ui/react";
+import { Pagination, IconButton, ButtonGroup } from "@chakra-ui/react";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 type PaginationProps = {
   page: number;
@@ -20,24 +21,27 @@ export default function PaginationComponent(props: PaginationProps) {
       pageSize={size}
       page={page}
       onPageChange={(details) => setPage(details.page)}
-      variant="ghost"
-      size="sm"
+      style={{ display: "flex", justifyContent: "center" }}
     >
-      <HStack>
-        <Pagination.PrevTrigger />
-        <Pagination.Context>
-          {({ pages }) =>
-            pages.map((pageItem, index) =>
-              pageItem.type === "page" ? (
-                <Pagination.Item key={index} {...pageItem} />
-              ) : (
-                <Pagination.Ellipsis key={index} index={index} />
-              ),
-            )
-          }
-        </Pagination.Context>
-        <Pagination.NextTrigger />
-      </HStack>
+      <ButtonGroup variant="ghost" size="xs">
+        <Pagination.PrevTrigger asChild>
+          <IconButton>
+            <FaChevronLeft />
+          </IconButton>
+        </Pagination.PrevTrigger>
+        <Pagination.Items
+          render={(page) => (
+            <IconButton variant={{ base: "ghost", _selected: "solid" }}>
+              {page.value}
+            </IconButton>
+          )}
+        />
+        <Pagination.NextTrigger asChild>
+          <IconButton>
+            <FaChevronRight />
+          </IconButton>
+        </Pagination.NextTrigger>
+      </ButtonGroup>
     </Pagination.Root>
   );
 }

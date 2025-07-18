@@ -108,6 +108,18 @@ const buttonRecipe = defineRecipe({
   ],
 });
 
+// Define table recipe with styled column headers
+const tableRecipe = defineRecipe({
+  className: "table",
+  base: {
+    columnHeader: {
+      fontWeight: "600",
+      bg: "gray.50",
+      color: "gray.700",
+    },
+  },
+});
+
 export const colors = {
   blue: {
     primary: { value: "#3158E2" },
@@ -152,6 +164,10 @@ const config = defineConfig({
   theme: {
     tokens: {
       colors,
+      fonts: {
+        heading: { value: "Poppins, sans-serif" },
+        body: { value: "Poppins, sans-serif" },
+      },
     },
     semanticTokens: {
       colors: {
@@ -170,6 +186,7 @@ const config = defineConfig({
       accordion: accordionRecipe,
       link: linkRecipe,
       button: buttonRecipe,
+      table: tableRecipe,
     },
   },
 });

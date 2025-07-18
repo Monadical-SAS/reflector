@@ -39,10 +39,11 @@ export default function TranscriptTable({
         pointerEvents={loading ? "none" : "auto"}
         transition="opacity 0.2s ease-in-out"
       >
-        <Table.Root colorPalette="gray">
+        <Table.Root>
           <Table.Header>
             <Table.Row>
-              <Table.ColumnHeader pl={12} width="400px">
+              <Table.ColumnHeader width="16px"></Table.ColumnHeader>
+              <Table.ColumnHeader width="400px">
                 Transcription Title
               </Table.ColumnHeader>
               <Table.ColumnHeader width="150px">Source</Table.ColumnHeader>
@@ -55,12 +56,12 @@ export default function TranscriptTable({
             {transcripts.map((item) => (
               <Table.Row key={item.id}>
                 <Table.Cell>
-                  <Flex alignItems="start">
-                    <TranscriptStatusIcon status={item.status} />
-                    <Link as={NextLink} href={`/transcripts/${item.id}`} ml={2}>
-                      {item.title || "Unnamed Transcript"}
-                    </Link>
-                  </Flex>
+                  <TranscriptStatusIcon status={item.status} />
+                </Table.Cell>
+                <Table.Cell>
+                  <Link as={NextLink} href={`/transcripts/${item.id}`}>
+                    {item.title || "Unnamed Transcript"}
+                  </Link>
                 </Table.Cell>
                 <Table.Cell>
                   {item.source_kind === "room"

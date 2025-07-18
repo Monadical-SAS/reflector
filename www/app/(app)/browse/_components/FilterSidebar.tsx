@@ -27,7 +27,6 @@ export default function FilterSidebar({
           href="#"
           onClick={() => onFilterChange(null, "")}
           color={selectedSourceKind === null ? "blue.500" : "gray.600"}
-          _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === null ? "bold" : "normal"}
         >
           All Transcripts
@@ -37,7 +36,7 @@ export default function FilterSidebar({
 
         {myRooms.length > 0 && (
           <>
-            <Heading size="sm">My Rooms</Heading>
+            <Heading size="md">My Rooms</Heading>
 
             {myRooms.map((room) => (
               <Link
@@ -50,7 +49,6 @@ export default function FilterSidebar({
                     ? "blue.500"
                     : "gray.600"
                 }
-                _hover={{ color: "blue.300" }}
                 fontWeight={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"
@@ -66,7 +64,7 @@ export default function FilterSidebar({
 
         {sharedRooms.length > 0 && (
           <>
-            <Heading size="sm">Shared Rooms</Heading>
+            <Heading size="md">Shared Rooms</Heading>
 
             {sharedRooms.map((room) => (
               <Link
@@ -79,7 +77,6 @@ export default function FilterSidebar({
                     ? "blue.500"
                     : "gray.600"
                 }
-                _hover={{ color: "blue.300" }}
                 fontWeight={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"

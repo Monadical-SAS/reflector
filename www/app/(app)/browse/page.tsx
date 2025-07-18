@@ -41,10 +41,6 @@ export default function TranscriptBrowser() {
   }, [page, response]);
 
   useEffect(() => {
-    refetch();
-  }, [selectedRoomId, page, searchTerm]);
-
-  useEffect(() => {
     if (!api) return;
     api
       .v1RoomsList({ page: 1 })
@@ -59,7 +55,6 @@ export default function TranscriptBrowser() {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
     setPage(1);
-    refetch();
   };
 
   const handleSearch = (searchTerm: string) => {
@@ -67,7 +62,6 @@ export default function TranscriptBrowser() {
     setSearchTerm(searchTerm);
     setSelectedSourceKind(null);
     setSelectedRoomId("");
-    refetch();
   };
 
   if (loading && !response)
@@ -156,7 +150,7 @@ export default function TranscriptBrowser() {
         alignItems="center"
         mb={4}
       >
-        <Heading size="md">
+        <Heading size="lg">
           {userName ? `${userName}'s Transcriptions` : "Your Transcriptions"}{" "}
           {loading || (deletionLoading && <Spinner size="sm" />)}
         </Heading>
@@ -170,7 +164,7 @@ export default function TranscriptBrowser() {
           onFilterChange={handleFilterTranscripts}
         />
 
-        <Flex flexDir="column" flex="1" p={4} gap={4}>
+        <Flex flexDir="column" flex="1" pt={0} px={4} pb={4} gap={4}>
           <SearchBar onSearch={handleSearch} />
           <Pagination
             page={page}
