@@ -3,7 +3,7 @@ from typing import Annotated, Literal, Optional
 
 import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page
+from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
@@ -128,6 +128,7 @@ async def transcripts_list(
             order_by="-created_at",
             return_query=True,
         ),
+        params=Params(size=10),
     )
 
 
