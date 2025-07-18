@@ -73,11 +73,32 @@ const linkRecipe = defineRecipe({
 const buttonRecipe = defineRecipe({
   base: {
     fontWeight: "600",
+    bg: "gray.100",
+    color: "gray.800",
+    _hover: {
+      bg: "gray.200",
+    },
+  },
+  variants: {
+    variant: {
+      solid: {
+        bg: "gray.100",
+        color: "gray.800",
+        _hover: {
+          bg: "gray.200",
+        },
+      },
+    },
+  },
+  defaultVariants: {
+    variant: "solid",
   },
   compoundVariants: [
     {
       colorPalette: "whiteAlpha",
       css: {
+        bg: "whiteAlpha.500",
+        color: "white",
         _hover: {
           bg: "whiteAlpha.600",
           opacity: 1,
@@ -109,6 +130,7 @@ export const colors = {
     200: { value: "#D5D5D5" },
     primary: { value: "#838383" },
     500: { value: "#838383" },
+    800: { value: "#1A202C" },
   },
   whiteAlpha: {
     50: { value: "rgba(255, 255, 255, 0.04)" },

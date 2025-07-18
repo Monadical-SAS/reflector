@@ -16,16 +16,19 @@ export default function TranscriptActionsMenu({
   return (
     <Menu.Root closeOnSelect={true} lazyMount={true}>
       <Menu.Trigger asChild>
-        <IconButton variant="outline" aria-label="Options">
+        <IconButton variant="ghost" aria-label="Options">
           <FaEllipsisVertical />
         </IconButton>
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content>
-          <Menu.Item onClick={(e) => onDelete(transcriptId)(e)}>
+          <Menu.Item value="delete" onClick={(e) => onDelete(transcriptId)(e)}>
             Delete
           </Menu.Item>
-          <Menu.Item onClick={(e) => onReprocess(transcriptId)(e)}>
+          <Menu.Item
+            value="reprocess"
+            onClick={(e) => onReprocess(transcriptId)(e)}
+          >
             Reprocess
           </Menu.Item>
         </Menu.Content>
