@@ -142,7 +142,7 @@ export default function TranscriptBrowser() {
       flexDir="column"
       w={{ base: "full", md: "container.xl" }}
       mx="auto"
-      p={4}
+      pt={4}
     >
       <Flex
         flexDir="row"
