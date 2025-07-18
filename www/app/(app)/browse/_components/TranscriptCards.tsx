@@ -20,7 +20,7 @@ export default function TranscriptCards({
   loading,
 }: TranscriptCardsProps) {
   return (
-    <Box display={{ base: "block", md: "none" }} position="relative">
+    <Box display={{ base: "block", lg: "none" }} position="relative">
       {loading && (
         <Flex
           position="absolute"
@@ -33,7 +33,7 @@ export default function TranscriptCards({
           align="center"
           justify="center"
         >
-          <Spinner size="xl" color="gray.700" thickness="4px" />
+          <Spinner size="xl" color="gray.700" />
         </Flex>
       )}
       <Box
@@ -43,7 +43,13 @@ export default function TranscriptCards({
       >
         <Stack gap={2}>
           {transcripts.map((item) => (
-            <Box key={item.id} borderWidth={1} p={4} borderRadius="md">
+            <Box
+              key={item.id}
+              borderWidth={1}
+              p={4}
+              borderRadius="md"
+              fontSize="sm"
+            >
               <Flex justify="space-between" alignItems="flex-start" gap="2">
                 <Box>
                   <TranscriptStatusIcon status={item.status} />
@@ -52,7 +58,7 @@ export default function TranscriptCards({
                   <Link
                     as={NextLink}
                     href={`/transcripts/${item.id}`}
-                    fontWeight="bold"
+                    fontWeight="600"
                     display="block"
                   >
                     {item.title || "Unnamed Transcript"}

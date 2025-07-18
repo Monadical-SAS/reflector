@@ -164,7 +164,14 @@ export default function TranscriptBrowser() {
           onFilterChange={handleFilterTranscripts}
         />
 
-        <Flex flexDir="column" flex="1" pt={0} px={4} pb={4} gap={4}>
+        <Flex
+          flexDir="column"
+          flex="1"
+          pt={{ base: 4, md: 0 }}
+          pb={4}
+          gap={4}
+          px={{ base: 0, md: 4 }}
+        >
           <SearchBar onSearch={handleSearch} />
           <Pagination
             page={page}

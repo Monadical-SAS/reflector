@@ -20,7 +20,7 @@ export default function TranscriptTable({
   loading,
 }: TranscriptTableProps) {
   return (
-    <Box display={{ base: "none", md: "block" }} position="relative">
+    <Box display={{ base: "none", lg: "block" }} position="relative">
       {loading && (
         <Flex
           position="absolute"
@@ -42,14 +42,26 @@ export default function TranscriptTable({
         <Table.Root>
           <Table.Header>
             <Table.Row>
-              <Table.ColumnHeader width="16px"></Table.ColumnHeader>
-              <Table.ColumnHeader width="400px">
+              <Table.ColumnHeader
+                width="16px"
+                fontWeight="600"
+              ></Table.ColumnHeader>
+              <Table.ColumnHeader width="400px" fontWeight="600">
                 Transcription Title
               </Table.ColumnHeader>
-              <Table.ColumnHeader width="150px">Source</Table.ColumnHeader>
-              <Table.ColumnHeader width="200px">Date</Table.ColumnHeader>
-              <Table.ColumnHeader width="100px">Duration</Table.ColumnHeader>
-              <Table.ColumnHeader width="50px"></Table.ColumnHeader>
+              <Table.ColumnHeader width="150px" fontWeight="600">
+                Source
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="200px" fontWeight="600">
+                Date
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="100px" fontWeight="600">
+                Duration
+              </Table.ColumnHeader>
+              <Table.ColumnHeader
+                width="50px"
+                fontWeight="600"
+              ></Table.ColumnHeader>
             </Table.Row>
           </Table.Header>
           <Table.Body>

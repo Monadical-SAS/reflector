@@ -19,7 +19,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   };
 
   return (
-    <Flex mb={4} alignItems="center">
+    <Flex alignItems="center">
       <Input
         placeholder="Search transcriptions..."
         value={searchInputValue}

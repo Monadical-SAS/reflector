@@ -6,7 +6,6 @@ import {
   defaultSystem,
 } from "@chakra-ui/react";
 
-// Define the accordion recipe for v3
 const accordionRecipe = defineRecipe({
   className: "accordion",
   base: {
@@ -49,7 +48,6 @@ const accordionRecipe = defineRecipe({
   },
 });
 
-// Define the link recipe for v3
 const linkRecipe = defineRecipe({
   className: "link",
   base: {
@@ -69,7 +67,6 @@ const linkRecipe = defineRecipe({
   },
 });
 
-// Define button recipe with custom font weight
 const buttonRecipe = defineRecipe({
   base: {
     fontWeight: "600",
@@ -106,18 +103,6 @@ const buttonRecipe = defineRecipe({
       },
     },
   ],
-});
-
-// Define table recipe with styled column headers
-const tableRecipe = defineRecipe({
-  className: "table",
-  base: {
-    columnHeader: {
-      fontWeight: "600",
-      bg: "gray.50",
-      color: "gray.700",
-    },
-  },
 });
 
 export const colors = {
@@ -186,7 +171,6 @@ const config = defineConfig({
       accordion: accordionRecipe,
       link: linkRecipe,
       button: buttonRecipe,
-      table: tableRecipe,
     },
   },
 });

@@ -20,7 +20,7 @@ export default function FilterSidebar({
   const sharedRooms = rooms.filter((room) => room.is_shared);
 
   return (
-    <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100">
+    <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100" rounded="md">
       <Stack gap={3}>
         <Link
           as={NextLink}
