@@ -29,8 +29,10 @@ export default function TranscriptActionsMenu({
         aria-label="Options"
       />
       <MenuList>
-        <MenuItem onClick={onDelete(transcriptId)}>Delete</MenuItem>
-        <MenuItem onClick={onReprocess(transcriptId)}>Reprocess</MenuItem>
+        <MenuItem onClick={(e) => onDelete(transcriptId)(e)}>Delete</MenuItem>
+        <MenuItem onClick={(e) => onReprocess(transcriptId)(e)}>
+          Reprocess
+        </MenuItem>
       </MenuList>
     </Menu>
   );
