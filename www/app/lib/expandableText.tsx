@@ -26,7 +26,7 @@ export const ExpandableText = forwardRef<HTMLDivElement, Props>(
 
     return (
       <Box ref={ref} {...rest}>
-        <Box ref={inputRef} noOfLines={expandedCount}>
+        <Box ref={inputRef} lineClamp={expandedCount}>
           {children}
         </Box>
         <Button

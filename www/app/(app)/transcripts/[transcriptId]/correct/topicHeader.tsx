@@ -125,7 +125,7 @@ export default function TopicHeader({
         mx={6}
       >
         <Flex wrap="nowrap" justifyContent="center">
-          <Heading size="lg" textAlign="center" noOfLines={1}>
+          <Heading size="lg" textAlign="center" lineClamp={1}>
             {currentTopic?.title}{" "}
           </Heading>
           <Heading size="lg" ml="3">

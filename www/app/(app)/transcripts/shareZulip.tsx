@@ -19,7 +19,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
       <Button
         colorPalette="blue"
         size={"sm"}
-        isDisabled={props.disabled}
+        disabled={props.disabled}
         onClick={() => setShowModal(true)}
       >
         ➡️ Send to Zulip

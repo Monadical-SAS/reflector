@@ -93,7 +93,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
             onClick={handleTitleClick}
             cursor={"pointer"}
             size={"lg"}
-            noOfLines={1}
+            lineClamp={1}
           >
             {displayedTitle}
           </Heading>

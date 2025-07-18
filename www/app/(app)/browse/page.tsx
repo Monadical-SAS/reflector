@@ -72,14 +72,24 @@ export default function TranscriptBrowser() {
 
   if (loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Spinner size="xl" />
       </Flex>
     );
 
   if (!loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Text>
           No transcripts found, but you can&nbsp;
           <Link href="/transcripts/new" className="underline">
@@ -140,7 +150,12 @@ export default function TranscriptBrowser() {
       mx="auto"
       p={4}
     >
-      <Flex flexDir="row" justify="space-between" align="center" mb={4}>
+      <Flex
+        flexDir="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+      >
         <Heading size="md">
           {userName ? `${userName}'s Transcriptions` : "Your Transcriptions"}{" "}
           {loading || (deletionLoading && <Spinner size="sm" />)}
@@ -179,7 +194,7 @@ export default function TranscriptBrowser() {
       </Flex>
 
       <DeleteTranscriptDialog
-        isOpen={!!transcriptToDeleteId}
+        open={!!transcriptToDeleteId}
         onClose={onCloseDeletion}
         onConfirm={() => handleDeleteTranscript(transcriptToDeleteId)(null)}
         cancelRef={cancelRef}

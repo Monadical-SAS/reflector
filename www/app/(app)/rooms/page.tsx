@@ -49,7 +49,7 @@ const FormHelperText = ({ children }: any) => (
 );
 
 // @ts-ignore
-const Select = ({ options, value, onChange, placeholder, isDisabled }: any) => {
+const Select = ({ options, value, onChange, placeholder, disabled }: any) => {
   return (
     <select
       value={value?.value || ""}
@@ -59,15 +59,15 @@ const Select = ({ options, value, onChange, placeholder, isDisabled }: any) => {
         );
         onChange(selected);
       }}
-      disabled={isDisabled}
+      disabled={disabled}
       style={{
         width: "100%",
         padding: "8px",
         borderRadius: "4px",
         border: "1px solid #E2E8F0",
         fontSize: "16px",
-        backgroundColor: isDisabled ? "#F7FAFC" : "white",
-        cursor: isDisabled ? "not-allowed" : "pointer",
+        backgroundColor: disabled ? "#F7FAFC" : "white",
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
       <option value="">{placeholder}</option>
@@ -297,7 +297,12 @@ export default function RoomsList() {
 
   if (loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Spinner size="xl" />
       </Flex>
     );
@@ -307,8 +312,8 @@ export default function RoomsList() {
       <Container maxW={"container.lg"}>
         <Flex
           flexDir="row"
-          justify="flex-end"
-          align="center"
+          justifyContent="flex-end"
+          alignItems="center"
           flexWrap={"wrap-reverse"}
           mb={2}
         >
@@ -392,7 +397,7 @@ export default function RoomsList() {
                   <FormControl mt={4}>
                     <Checkbox
                       name="isLocked"
-                      isChecked={room.isLocked}
+                      checked={room.isLocked}
                       onChange={handleRoomChange}
                     >
                       Locked room
@@ -457,13 +462,13 @@ export default function RoomsList() {
                           recordingTrigger: newValue!.value,
                         })
                       }
-                      isDisabled={room.recordingType !== "cloud"}
+                      disabled={room.recordingType !== "cloud"}
                     />
                   </FormControl>
                   <FormControl mt={8}>
                     <Checkbox
                       name="zulipAutoPost"
-                      isChecked={room.zulipAutoPost}
+                      checked={room.zulipAutoPost}
                       onChange={handleRoomChange}
                     >
                       Automatically post transcription to Zulip
@@ -486,7 +491,7 @@ export default function RoomsList() {
                           zulipTopic: "",
                         })
                       }
-                      isDisabled={!room.zulipAutoPost}
+                      disabled={!room.zulipAutoPost}
                     />
                   </FormControl>
                   <FormControl mt={4}>
@@ -502,13 +507,13 @@ export default function RoomsList() {
                           zulipTopic: newValue!.value,
                         })
                       }
-                      isDisabled={!room.zulipAutoPost}
+                      disabled={!room.zulipAutoPost}
                     />
                   </FormControl>
                   <FormControl mt={4}>
                     <Checkbox
                       name="isShared"
-                      isChecked={room.isShared}
+                      checked={room.isShared}
                       onChange={handleRoomChange}
                     >
                       Shared room
@@ -534,7 +539,7 @@ export default function RoomsList() {
                   <Button
                     colorPalette="blue"
                     onClick={handleSaveRoom}
-                    isDisabled={
+                    disabled={
                       !room.name || (room.zulipAutoPost && !room.zulipTopic)
                     }
                   >
@@ -546,13 +551,13 @@ export default function RoomsList() {
           )}
         </Flex>
 
-        <VStack align="start" mb={10} pt={4} gap={4}>
+        <VStack alignItems="start" mb={10} pt={4} gap={4}>
           <Heading size="md">My Rooms</Heading>
           {myRooms.length > 0 ? (
             myRooms.map((roomData) => (
               <Card w={"full"} key={roomData.id}>
                 <CardBody>
-                  <Flex align={"center"}>
+                  <Flex alignItems={"center"}>
                     <Heading size="md">
                       <Link href={`/${roomData.name}`}>{roomData.name}</Link>
                     </Heading>
@@ -599,13 +604,13 @@ export default function RoomsList() {
           )}
         </VStack>
 
-        <VStack align="start" pt={4} gap={4}>
+        <VStack alignItems="start" pt={4} gap={4}>
           <Heading size="md">Shared Rooms</Heading>
           {sharedRooms.length > 0 ? (
             sharedRooms.map((roomData) => (
               <Card w={"full"} key={roomData.id}>
                 <CardBody>
-                  <Flex align={"center"}>
+                  <Flex alignItems={"center"}>
                     <Heading size="md">
                       <Link href={`/${roomData.name}`}>{roomData.name}</Link>
                     </Heading>

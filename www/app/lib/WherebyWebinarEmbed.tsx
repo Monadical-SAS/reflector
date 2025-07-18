@@ -24,7 +24,7 @@ export default function WherebyWebinarEmbed({
         duration: null,
         render: ({ onClose }) => (
           <Box p={4} bg="white" borderRadius="md" boxShadow="md">
-            <HStack justify="space-between" align="center">
+            <HStack justifyContent="space-between" alignItems="center">
               <Text>
                 This webinar is being recorded. By continuing, you agree to our{" "}
                 <Button

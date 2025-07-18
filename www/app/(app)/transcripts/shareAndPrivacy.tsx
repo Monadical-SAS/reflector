@@ -65,7 +65,7 @@ import { CustomSession } from "../../lib/types";
 // import { Select } from "chakra-react-select";
 
 // Temporary Select component
-const Select = ({ options, value, onChange, isDisabled, isLoading }: any) => {
+const Select = ({ options, value, onChange, disabled, loading }: any) => {
   return (
     <select
       value={value?.value || ""}
@@ -75,16 +75,16 @@ const Select = ({ options, value, onChange, isDisabled, isLoading }: any) => {
         );
         onChange(selected);
       }}
-      disabled={isDisabled || isLoading}
+      disabled={disabled || loading}
       style={{
         width: "100%",
         padding: "8px",
         borderRadius: "4px",
         border: "1px solid #E2E8F0",
         fontSize: "16px",
-        backgroundColor: isDisabled || isLoading ? "#F7FAFC" : "white",
-        cursor: isDisabled || isLoading ? "not-allowed" : "pointer",
-        opacity: isLoading ? 0.6 : 1,
+        backgroundColor: disabled || loading ? "#F7FAFC" : "white",
+        cursor: disabled || loading ? "not-allowed" : "pointer",
+        opacity: loading ? 0.6 : 1,
       }}
     >
       {options?.map((opt: any) => (
@@ -159,11 +159,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
         onClick={() => setShowModal(true)}
         aria-label="Share"
       />
-      <Modal
-        isOpen={!!showModal}
-        onClose={() => setShowModal(false)}
-        size={"xl"}
-      >
+      <Modal open={!!showModal} onClose={() => setShowModal(false)} size={"xl"}>
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Share</ModalHeader>
@@ -193,7 +189,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                     }
                     value={shareMode}
                     onChange={updateShareMode}
-                    isLoading={shareLoading}
+                    loading={shareLoading}
                   />
                 )}
               </Box>
