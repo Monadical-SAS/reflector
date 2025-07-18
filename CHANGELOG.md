@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/Monadical-SAS/reflector/compare/v0.2.0...v0.2.1) (2025-07-18)
+
+
+### Bug Fixes
+
+* separate browsing page into different components, limit to 10 by default ([#498](https://github.com/Monadical-SAS/reflector/issues/498)) ([c752da6](https://github.com/Monadical-SAS/reflector/commit/c752da6b97c96318aff079a5b2a6eceadfbfcad1))
+
 ## [0.2.0](https://github.com/Monadical-SAS/reflector/compare/0.1.1...v0.2.0) (2025-07-17)
 
 
