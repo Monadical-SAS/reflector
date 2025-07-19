@@ -11,9 +11,7 @@ import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
 import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
 import StopRecordIcon from "../../styles/icons/stopRecord";
-import PlayIcon from "../../styles/icons/play";
-import { LuScreenShare } from "react-icons/lu";
-import { FaMicrophone } from "react-icons/fa";
+import { LuScreenShare, LuMic, LuPlay } from "react-icons/lu";
 
 type RecorderProps = {
   transcriptId: string;
@@ -256,7 +254,7 @@ export default function Recorder(props: RecorderProps) {
         mr={2}
         onClick={handleRecClick}
       >
-        {isRecording ? <StopRecordIcon /> : <PlayIcon />}
+        {isRecording ? <StopRecordIcon /> : <LuPlay />}
       </IconButton>
       {!isRecording && (window as any).chrome && (
         <IconButton
@@ -266,6 +264,7 @@ export default function Recorder(props: RecorderProps) {
           disabled={isRecording}
           mr={2}
           onClick={handleRecordTabClick}
+          size="sm"
         >
           <LuScreenShare />
         </IconButton>
@@ -279,8 +278,9 @@ export default function Recorder(props: RecorderProps) {
               disabled={isRecording}
               colorPalette={"blue"}
               mr={2}
+              size="sm"
             >
-              <FaMicrophone />
+              <LuMic />
             </IconButton>
           </Menu.Trigger>
           <Menu.Content>
