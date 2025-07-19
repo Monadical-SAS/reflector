@@ -8,7 +8,7 @@ import {
   Text,
   Spinner,
 } from "@chakra-ui/react";
-import { FaLink } from "react-icons/fa6";
+import { LuLink } from "react-icons/lu";
 import { Room } from "../../../api";
 import { RoomActionsMenu } from "./RoomActionsMenu";
 
@@ -143,7 +143,7 @@ export function RoomTable({
                         size="sm"
                         variant="ghost"
                       >
-                        <FaLink />
+                        <LuLink />
                       </IconButton>
                     )}
                     <RoomActionsMenu

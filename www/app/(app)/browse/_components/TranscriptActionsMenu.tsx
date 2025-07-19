@@ -1,6 +1,6 @@
 import React from "react";
 import { IconButton, Icon, Menu } from "@chakra-ui/react";
-import { FaEllipsisVertical, FaTrash, FaArrowsRotate } from "react-icons/fa6";
+import { LuMenu, LuTrash, LuRotateCw } from "react-icons/lu";
 
 interface TranscriptActionsMenuProps {
   transcriptId: string;
@@ -17,19 +17,19 @@ export default function TranscriptActionsMenu({
     <Menu.Root closeOnSelect={true} lazyMount={true}>
       <Menu.Trigger asChild>
         <IconButton aria-label="Options" size="sm" variant="ghost">
-          <FaEllipsisVertical />
+          <LuMenu />
         </IconButton>
       </Menu.Trigger>
       <Menu.Positioner>
         <Menu.Content>
-          <Menu.Item value="delete" onClick={(e) => onDelete(transcriptId)(e)}>
-            <FaTrash color="#E53E3E" /> Delete
-          </Menu.Item>
           <Menu.Item
             value="reprocess"
             onClick={(e) => onReprocess(transcriptId)(e)}
           >
-            <FaArrowsRotate /> Reprocess
+            <LuRotateCw /> Reprocess
+          </Menu.Item>
+          <Menu.Item value="delete" onClick={(e) => onDelete(transcriptId)(e)}>
+            <LuTrash /> Delete
           </Menu.Item>
         </Menu.Content>
       </Menu.Positioner>
