@@ -6,10 +6,10 @@ import {
   defineSlotRecipe,
   defaultSystem,
 } from "@chakra-ui/react";
-// Anatomy imports are no longer needed in Chakra UI v3
+import { accordionAnatomy } from "@chakra-ui/react/anatomy";
 
 const accordionSlotRecipe = defineSlotRecipe({
-  slots: ["root", "item", "trigger", "content", "indicator"],
+  slots: accordionAnatomy.keys(),
   base: {
     item: {
       bg: "white",
@@ -18,7 +18,7 @@ const accordionSlotRecipe = defineSlotRecipe({
       mb: "2",
       width: "full",
     },
-    trigger: {
+    itemTrigger: {
       p: "2",
       cursor: "pointer",
       _hover: {
