@@ -1,6 +1,6 @@
 import React from "react";
 import { IconButton, Icon, Menu } from "@chakra-ui/react";
-import { FaEllipsisVertical } from "react-icons/fa6";
+import { FaEllipsisVertical, FaTrash, FaArrowsRotate } from "react-icons/fa6";
 
 interface TranscriptActionsMenuProps {
   transcriptId: string;
@@ -23,13 +23,13 @@ export default function TranscriptActionsMenu({
       <Menu.Positioner>
         <Menu.Content>
           <Menu.Item value="delete" onClick={(e) => onDelete(transcriptId)(e)}>
-            Delete
+            <FaTrash color="#E53E3E" /> Delete
           </Menu.Item>
           <Menu.Item
             value="reprocess"
             onClick={(e) => onReprocess(transcriptId)(e)}
           >
-            Reprocess
+            <FaArrowsRotate /> Reprocess
           </Menu.Item>
         </Menu.Content>
       </Menu.Positioner>
