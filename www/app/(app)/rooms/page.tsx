@@ -2,30 +2,23 @@
 
 import {
   Button,
-  Card,
+  Checkbox,
+  CloseButton,
+  Dialog,
+  Field,
   Flex,
   Heading,
   Input,
-  Link,
-  Spinner,
-  useDisclosure,
-  VStack,
-  Text,
-  Menu,
-  IconButton,
-  Checkbox,
-  Dialog,
-  CloseButton,
   Select,
+  Spinner,
   createListCollection,
-  Field,
-  Spacer,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError } from "../../api";
+import { ApiError, Room } from "../../api";
+import { RoomList } from "./_components/RoomList";
 
 interface SelectOption {
   label: string;
@@ -255,9 +248,9 @@ export default function RoomsList() {
     });
   };
 
-  const myRooms =
+  const myRooms: Room[] =
     response?.items.filter((roomData) => !roomData.is_shared) || [];
-  const sharedRooms =
+  const sharedRooms: Room[] =
     response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)
@@ -277,7 +270,7 @@ export default function RoomsList() {
       flexDir="column"
       w={{ base: "full", md: "container.xl" }}
       mx="auto"
-      pt={4}
+      pt={2}
     >
       <Flex
         flexDir="row"
@@ -579,115 +572,26 @@ export default function RoomsList() {
         </Dialog.Positioner>
       </Dialog.Root>
 
-      <VStack alignItems="start" mb={10} gap={4}>
-        <Heading size="md">My Rooms</Heading>
-        {myRooms.length > 0 ? (
-          myRooms.map((roomData) => (
-            <Card.Root w={"full"} key={roomData.id}>
-              <Card.Body>
-                <Flex alignItems={"center"}>
-                  <Heading size="md">
-                    <Link href={`/${roomData.name}`}>{roomData.name}</Link>
-                  </Heading>
-                  <Spacer />
-                  {linkCopied === roomData.name ? (
-                    <Text color="green.500" mr={2}>
-                      Link copied!
-                    </Text>
-                  ) : (
-                    <IconButton
-                      aria-label="Copy URL"
-                      onClick={() => handleCopyUrl(roomData.name)}
-                      mr={2}
-                    >
-                      <FaLink />
-                    </IconButton>
-                  )}
+      <RoomList
+        title="My Rooms"
+        rooms={myRooms}
+        linkCopied={linkCopied}
+        onCopyUrl={handleCopyUrl}
+        onEdit={handleEditRoom}
+        onDelete={handleDeleteRoom}
+        emptyMessage="No rooms found"
+      />
 
-                  <Menu.Root closeOnSelect={true}>
-                    <Menu.Trigger asChild>
-                      <IconButton aria-label="actions">
-                        <FaEllipsisVertical />
-                      </IconButton>
-                    </Menu.Trigger>
-                    <Menu.Content>
-                      <Menu.Item
-                        value="edit"
-                        onClick={() => handleEditRoom(roomData.id, roomData)}
-                      >
-                        <FaPencil /> Edit
-                      </Menu.Item>
-                      <Menu.Item
-                        value="delete"
-                        onClick={() => handleDeleteRoom(roomData.id)}
-                      >
-                        <FaTrash color="#E53E3E" /> Delete
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Root>
-                </Flex>
-              </Card.Body>
-            </Card.Root>
-          ))
-        ) : (
-          <Text>No rooms found</Text>
-        )}
-      </VStack>
-
-      <VStack alignItems="start" pt={4} gap={4}>
-        <Heading size="md">Shared Rooms</Heading>
-        {sharedRooms.length > 0 ? (
-          sharedRooms.map((roomData) => (
-            <Card.Root w={"full"} key={roomData.id}>
-              <Card.Body>
-                <Flex alignItems={"center"}>
-                  <Heading size="md">
-                    <Link href={`/${roomData.name}`}>{roomData.name}</Link>
-                  </Heading>
-                  <Spacer />
-                  {linkCopied === roomData.name ? (
-                    <Text color="green.500" mr={2}>
-                      Link copied!
-                    </Text>
-                  ) : (
-                    <IconButton
-                      aria-label="Copy URL"
-                      onClick={() => handleCopyUrl(roomData.name)}
-                      mr={2}
-                    >
-                      <FaLink />
-                    </IconButton>
-                  )}
-
-                  <Menu.Root closeOnSelect={true}>
-                    <Menu.Trigger asChild>
-                      <IconButton aria-label="actions">
-                        <FaEllipsisVertical />
-                      </IconButton>
-                    </Menu.Trigger>
-                    <Menu.Content>
-                      <Menu.Item
-                        value="edit"
-                        onClick={() => handleEditRoom(roomData.id, roomData)}
-                      >
-                        <FaPencil /> Edit
-                      </Menu.Item>
-                      <Menu.Item
-                        value="delete"
-                        onClick={() => handleDeleteRoom(roomData.id)}
-                      >
-                        <FaTrash color="#E53E3E" /> Delete
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Root>
-                </Flex>
-              </Card.Body>
-            </Card.Root>
-          ))
-        ) : (
-          <Text>No shared rooms found</Text>
-        )}
-      </VStack>
+      <RoomList
+        title="Shared Rooms"
+        rooms={sharedRooms}
+        linkCopied={linkCopied}
+        onCopyUrl={handleCopyUrl}
+        onEdit={handleEditRoom}
+        onDelete={handleDeleteRoom}
+        emptyMessage="No shared rooms found"
+        pt={4}
+      />
     </Flex>
   );
 }

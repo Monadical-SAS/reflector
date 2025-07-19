@@ -16,7 +16,7 @@ export default function TranscriptActionsMenu({
   return (
     <Menu.Root closeOnSelect={true} lazyMount={true}>
       <Menu.Trigger asChild>
-        <IconButton aria-label="Options">
+        <IconButton aria-label="Options" size="sm" variant="ghost">
           <FaEllipsisVertical />
         </IconButton>
       </Menu.Trigger>
