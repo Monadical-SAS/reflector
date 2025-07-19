@@ -64,7 +64,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
 
     setShareLoading(true);
     const requestBody: UpdateTranscript = {
-      share_mode: selectedValue,
+      share_mode: selectedValue as "public" | "semi-private" | "private",
     };
 
     const updatedTranscript = await api.v1TranscriptUpdate({
@@ -156,7 +156,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                 </Box>
               )}
 
-              <Text size="sm" mb="2" fontWeight={"bold"}>
+              <Text fontSize="sm" mb="2" fontWeight={"bold"}>
                 Share options
               </Text>
               <Flex gap={2} mb={2}>

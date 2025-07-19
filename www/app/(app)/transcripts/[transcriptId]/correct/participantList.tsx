@@ -11,11 +11,10 @@ import {
   Button,
   Flex,
   Text,
-  UnorderedList,
+  List,
   Input,
   Kbd,
   Spinner,
-  ListItem,
   Grid,
 } from "@chakra-ui/react";
 
@@ -371,14 +370,14 @@ const ParticipantList = ({
         </Flex>
 
         {participants.response && (
-          <UnorderedList
+          <List.Root
             mx="0"
             mb={{ base: 2, md: 4 }}
             maxH="100%"
             overflow="scroll"
           >
             {participants.response.map((participant: Participant) => (
-              <ListItem
+              <List.Item
                 onClick={selectParticipant(participant)}
                 cursor="pointer"
                 className={
@@ -467,9 +466,9 @@ const ParticipantList = ({
                     Delete
                   </Button>
                 </Box>
-              </ListItem>
+              </List.Item>
             ))}
-          </UnorderedList>
+          </List.Root>
         )}
       </Grid>
     </Box>

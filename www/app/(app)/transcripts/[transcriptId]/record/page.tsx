@@ -104,7 +104,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           </Box>
           <Box w={{ md: "50%" }} h={{ base: "20%", md: "full" }}>
             {!transcriptStarted ? (
-              <Box textAlign={"center"} textColor="gray">
+              <Box textAlign={"center"} color="gray">
                 <Text>
                   Live transcript will appear here shortly after you'll start
                   recording.

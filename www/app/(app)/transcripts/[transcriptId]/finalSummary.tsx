@@ -114,7 +114,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
             <Button onClick={onDiscardClick} variant="outline">
               Discard
             </Button>
-            <Button onClick={onSaveClick} variant="primary">
+            <Button onClick={onSaveClick} variant="solid">
               Save
             </Button>
           </Flex>

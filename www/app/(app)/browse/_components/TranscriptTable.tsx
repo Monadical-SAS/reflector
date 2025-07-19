@@ -31,7 +31,7 @@ export default function TranscriptTable({
           align="center"
           justify="center"
         >
-          <Spinner size="xl" color="gray.700" thickness="4px" />
+          <Spinner size="xl" color="gray.700" />
         </Flex>
       )}
       <Box

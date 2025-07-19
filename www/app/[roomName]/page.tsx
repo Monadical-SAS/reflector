@@ -299,13 +299,7 @@ export default function Room(details: RoomDetails) {
         bg="gray.50"
         p={4}
       >
-        <Spinner
-          thickness="4px"
-          speed="0.65s"
-          emptyColor="gray.200"
-          color="blue.500"
-          size="xl"
-        />
+        <Spinner color="blue.500" size="xl" />
       </Box>
     );
   }

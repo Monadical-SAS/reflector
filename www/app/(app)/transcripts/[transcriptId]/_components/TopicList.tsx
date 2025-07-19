@@ -132,7 +132,7 @@ export function TopicList({
               const selectedTopic = selectedTopicId
                 ? topics.find((t) => t.id === selectedTopicId)
                 : null;
-              setActiveTopic(selectedTopic);
+              setActiveTopic(selectedTopic || null);
             }}
           >
             {topics.map((topic) => (
@@ -154,7 +154,7 @@ export function TopicList({
         {(status == "recording" || status == "idle") &&
           currentTranscriptText.length == 0 &&
           topics.length == 0 && (
-            <Box textAlign={"center"} textColor="gray">
+            <Box textAlign={"center"} color="gray">
               <Text>
                 Full discussion transcript will appear here after you start
                 recording.
@@ -165,7 +165,7 @@ export function TopicList({
             </Box>
           )}
         {status == "processing" && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>We are processing the recording, please wait.</Text>
             {!requireLogin && (
               <span>
@@ -175,12 +175,12 @@ export function TopicList({
           </Box>
         )}
         {status == "ended" && topics.length == 0 && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>Recording has ended without topics being found.</Text>
           </Box>
         )}
         {status == "error" && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>There was an error processing your recording</Text>
           </Box>
         )}

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import useApi from "../../lib/useApi";
-import { Button, CircularProgress } from "@chakra-ui/react";
+import { Button, Spinner } from "@chakra-ui/react";
 
 type FileUploadButton = {
   transcriptId: string;
@@ -72,7 +72,7 @@ export default function FileUploadButton(props: FileUploadButton) {
         {progress > 0 && progress < 100 ? (
           <>
             Uploading...&nbsp;
-            <CircularProgress size="20px" value={progress} />
+            <Spinner size="sm" />
           </>
         ) : (
           <>Select File</>

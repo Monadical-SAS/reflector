@@ -9,16 +9,7 @@ import { useError } from "../../(errors)/errorContext";
 import FileUploadButton from "./fileUploadButton";
 import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
-import {
-  Box,
-  Flex,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItemOption,
-  MenuList,
-  MenuOptionGroup,
-} from "@chakra-ui/react";
+import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
 import StopRecordIcon from "../../styles/icons/stopRecord";
 import PlayIcon from "../../styles/icons/play";
 import { LuScreenShare } from "react-icons/lu";
@@ -280,31 +271,33 @@ export default function Recorder(props: RecorderProps) {
         </IconButton>
       )}
       {audioDevices && audioDevices?.length > 0 && deviceId && !isRecording && (
-        <Menu>
-          <MenuButton
-            as={IconButton}
-            aria-label={"Switch microphone"}
-            variant={"ghost"}
-            disabled={isRecording}
-            colorPalette={"blue"}
-            mr={2}
-          >
-            <FaMicrophone />
-          </MenuButton>
-          <MenuList>
-            <MenuOptionGroup defaultValue={audioDevices[0].value} type="radio">
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <IconButton
+              aria-label={"Switch microphone"}
+              variant={"ghost"}
+              disabled={isRecording}
+              colorPalette={"blue"}
+              mr={2}
+            >
+              <FaMicrophone />
+            </IconButton>
+          </Menu.Trigger>
+          <Menu.Content>
+            <RadioGroup.Root defaultValue={audioDevices[0].value}>
               {audioDevices.map((device) => (
-                <MenuItemOption
+                <RadioGroup.Item
                   key={device.value}
                   value={device.value}
                   onClick={() => setDeviceId(device.value)}
                 >
-                  {device.label}
-                </MenuItemOption>
+                  <RadioGroup.ItemIndicator />
+                  <RadioGroup.ItemText>{device.label}</RadioGroup.ItemText>
+                </RadioGroup.Item>
               ))}
-            </MenuOptionGroup>
-          </MenuList>
-        </Menu>
+            </RadioGroup.Root>
+          </Menu.Content>
+        </Menu.Root>
       )}
       <Box position="relative" flex={1}>
         <Box ref={waveformRef} height={14}></Box>

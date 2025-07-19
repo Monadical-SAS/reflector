@@ -3,7 +3,6 @@
 import {
   Button,
   Card,
-  CardBody,
   Flex,
   // FormControl,
   // FormHelperText,
@@ -120,7 +119,7 @@ const roomInitialState = {
 };
 
 export default function RoomsList() {
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { open, onOpen, onClose } = useDisclosure();
   const [room, setRoom] = useState(roomInitialState);
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState("");
@@ -330,7 +329,7 @@ export default function RoomsList() {
           >
             Add Room
           </Button>
-          {isOpen && (
+          {open && (
             <div
               style={{
                 position: "fixed",
@@ -395,13 +394,26 @@ export default function RoomsList() {
                   </FormControl>
 
                   <FormControl mt={4}>
-                    <Checkbox
+                    <Checkbox.Root
                       name="isLocked"
                       checked={room.isLocked}
-                      onChange={handleRoomChange}
+                      onCheckedChange={(e) => {
+                        const syntheticEvent = {
+                          target: {
+                            name: "isLocked",
+                            type: "checkbox",
+                            checked: e.checked,
+                          },
+                        };
+                        handleRoomChange(syntheticEvent);
+                      }}
                     >
-                      Locked room
-                    </Checkbox>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>Locked room</Checkbox.Label>
+                    </Checkbox.Root>
                   </FormControl>
                   <FormControl mt={4}>
                     <FormLabel>Room size</FormLabel>
@@ -466,13 +478,28 @@ export default function RoomsList() {
                     />
                   </FormControl>
                   <FormControl mt={8}>
-                    <Checkbox
+                    <Checkbox.Root
                       name="zulipAutoPost"
                       checked={room.zulipAutoPost}
-                      onChange={handleRoomChange}
+                      onCheckedChange={(e) => {
+                        const syntheticEvent = {
+                          target: {
+                            name: "zulipAutoPost",
+                            type: "checkbox",
+                            checked: e.checked,
+                          },
+                        };
+                        handleRoomChange(syntheticEvent);
+                      }}
                     >
-                      Automatically post transcription to Zulip
-                    </Checkbox>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>
+                        Automatically post transcription to Zulip
+                      </Checkbox.Label>
+                    </Checkbox.Root>
                   </FormControl>
                   <FormControl mt={4}>
                     <FormLabel>Zulip stream</FormLabel>
@@ -511,13 +538,26 @@ export default function RoomsList() {
                     />
                   </FormControl>
                   <FormControl mt={4}>
-                    <Checkbox
+                    <Checkbox.Root
                       name="isShared"
                       checked={room.isShared}
-                      onChange={handleRoomChange}
+                      onCheckedChange={(e) => {
+                        const syntheticEvent = {
+                          target: {
+                            name: "isShared",
+                            type: "checkbox",
+                            checked: e.checked,
+                          },
+                        };
+                        handleRoomChange(syntheticEvent);
+                      }}
                     >
-                      Shared room
-                    </Checkbox>
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>Shared room</Checkbox.Label>
+                    </Checkbox.Root>
                   </FormControl>
                 </div>
                 <div
@@ -555,8 +595,8 @@ export default function RoomsList() {
           <Heading size="md">My Rooms</Heading>
           {myRooms.length > 0 ? (
             myRooms.map((roomData) => (
-              <Card w={"full"} key={roomData.id}>
-                <CardBody>
+              <Card.Root w={"full"} key={roomData.id}>
+                <Card.Body>
                   <Flex alignItems={"center"}>
                     <Heading size="md">
                       <Link href={`/${roomData.name}`}>{roomData.name}</Link>
@@ -584,11 +624,13 @@ export default function RoomsList() {
                       </Menu.Trigger>
                       <Menu.Content>
                         <Menu.Item
+                          value="edit"
                           onClick={() => handleEditRoom(roomData.id, roomData)}
                         >
                           <FaPencil /> Edit
                         </Menu.Item>
                         <Menu.Item
+                          value="delete"
                           onClick={() => handleDeleteRoom(roomData.id)}
                         >
                           <FaTrash style={{ color: "#E53E3E" }} /> Delete
@@ -596,8 +638,8 @@ export default function RoomsList() {
                       </Menu.Content>
                     </Menu.Root>
                   </Flex>
-                </CardBody>
-              </Card>
+                </Card.Body>
+              </Card.Root>
             ))
           ) : (
             <Text>No rooms found</Text>
@@ -608,8 +650,8 @@ export default function RoomsList() {
           <Heading size="md">Shared Rooms</Heading>
           {sharedRooms.length > 0 ? (
             sharedRooms.map((roomData) => (
-              <Card w={"full"} key={roomData.id}>
-                <CardBody>
+              <Card.Root w={"full"} key={roomData.id}>
+                <Card.Body>
                   <Flex alignItems={"center"}>
                     <Heading size="md">
                       <Link href={`/${roomData.name}`}>{roomData.name}</Link>
@@ -637,11 +679,13 @@ export default function RoomsList() {
                       </Menu.Trigger>
                       <Menu.Content>
                         <Menu.Item
+                          value="edit"
                           onClick={() => handleEditRoom(roomData.id, roomData)}
                         >
                           <FaPencil /> Edit
                         </Menu.Item>
                         <Menu.Item
+                          value="delete"
                           onClick={() => handleDeleteRoom(roomData.id)}
                         >
                           <FaTrash style={{ color: "#E53E3E" }} /> Delete
@@ -649,8 +693,8 @@ export default function RoomsList() {
                       </Menu.Content>
                     </Menu.Root>
                   </Flex>
-                </CardBody>
-              </Card>
+                </Card.Body>
+              </Card.Root>
             ))
           ) : (
             <Text>No shared rooms found</Text>

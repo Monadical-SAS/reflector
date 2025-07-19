@@ -32,7 +32,7 @@ export const ExpandableText = forwardRef<HTMLDivElement, Props>(
         <Button
           display={isTextClamped ? "block" : "none"}
           size="sm"
-          variant="link"
+          variant="ghost"
           onClick={handleToggle}
           mt={2}
         >

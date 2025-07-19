@@ -91,21 +91,16 @@ export default function TopicHeader({
       justifyContent="space-between"
       {...chakraProps}
     >
-      <SkeletonCircle
-        isLoaded={isLoaded}
-        h={isLoaded ? "auto" : "40px"}
-        w={isLoaded ? "auto" : "40px"}
-        mb="2"
-        fadeDuration={1}
-      >
+      {isLoaded ? (
         <Circle
           as="button"
-          onClick={onPrev}
-          disabled={!canGoPrevious}
+          onClick={canGoPrevious ? onPrev : undefined}
           size="40px"
           border="1px"
           color={canGoPrevious ? "inherit" : "gray"}
           borderColor={canGoNext ? "body-text" : "gray"}
+          cursor={canGoPrevious ? "pointer" : "not-allowed"}
+          opacity={canGoPrevious ? 1 : 0.5}
         >
           {canGoPrevious ? (
             <Kbd>
@@ -115,16 +110,11 @@ export default function TopicHeader({
             <ChevronLeft size={16} />
           )}
         </Circle>
-      </SkeletonCircle>
-      <Skeleton
-        isLoaded={isLoaded}
-        h={isLoaded ? "auto" : "40px"}
-        mb="2"
-        fadeDuration={1}
-        flexGrow={1}
-        mx={6}
-      >
-        <Flex wrap="nowrap" justifyContent="center">
+      ) : (
+        <SkeletonCircle h="40px" w="40px" mb="2" />
+      )}
+      {isLoaded ? (
+        <Flex wrap="nowrap" justifyContent="center" flexGrow={1} mx={6}>
           <Heading size="lg" textAlign="center" lineClamp={1}>
             {currentTopic?.title}{" "}
           </Heading>
@@ -132,22 +122,19 @@ export default function TopicHeader({
             {(number || 0) + 1}/{total}
           </Heading>
         </Flex>
-      </Skeleton>
-      <SkeletonCircle
-        isLoaded={isLoaded}
-        h={isLoaded ? "auto" : "40px"}
-        w={isLoaded ? "auto" : "40px"}
-        mb="2"
-        fadeDuration={1}
-      >
+      ) : (
+        <Skeleton h="40px" mb="2" flexGrow={1} mx={6} />
+      )}
+      {isLoaded ? (
         <Circle
           as="button"
-          onClick={onNext}
-          disabled={!canGoNext}
+          onClick={canGoNext ? onNext : undefined}
           size="40px"
           border="1px"
           color={canGoNext ? "inherit" : "gray"}
           borderColor={canGoNext ? "body-text" : "gray"}
+          cursor={canGoNext ? "pointer" : "not-allowed"}
+          opacity={canGoNext ? 1 : 0.5}
         >
           {canGoNext ? (
             <Kbd>
@@ -157,7 +144,9 @@ export default function TopicHeader({
             <ChevronRight size={16} />
           )}
         </Circle>
-      </SkeletonCircle>
+      ) : (
+        <SkeletonCircle h="40px" w="40px" mb="2" />
+      )}
     </Box>
   );
 }

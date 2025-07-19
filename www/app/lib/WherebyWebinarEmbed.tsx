@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef } from "react";
 import "@whereby.com/browser-sdk/embed";
-import { Box, Button, HStack, useToast, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Text, Link } from "@chakra-ui/react";
+import { toaster } from "../components/ui/toaster";
 
 interface WherebyEmbedProps {
   roomUrl: string;
@@ -16,34 +17,31 @@ export default function WherebyWebinarEmbed({
   const wherebyRef = useRef<HTMLElement>(null);
 
   // TODO extract common toast logic / styles to be used by consent toast on normal rooms
-  const toast = useToast();
   useEffect(() => {
     if (roomUrl && !localStorage.getItem("recording-notice-dismissed")) {
-      const toastId = toast({
-        position: "top",
+      const toastIdPromise = toaster.create({
+        placement: "top",
         duration: null,
-        render: ({ onClose }) => (
+        render: ({ dismiss }) => (
           <Box p={4} bg="white" borderRadius="md" boxShadow="md">
             <HStack justifyContent="space-between" alignItems="center">
               <Text>
                 This webinar is being recorded. By continuing, you agree to our{" "}
-                <Button
-                  as="a"
+                <Link
                   href="https://monadical.com/privacy"
-                  variant="link"
                   color="blue.600"
                   textDecoration="underline"
                   target="_blank"
                 >
                   Privacy Policy
-                </Button>
+                </Link>
               </Text>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => {
                   localStorage.setItem("recording-notice-dismissed", "true");
-                  onClose();
+                  dismiss();
                 }}
               >
                 ✕
@@ -54,10 +52,10 @@ export default function WherebyWebinarEmbed({
       });
 
       return () => {
-        toast.close(toastId);
+        toastIdPromise.then((id) => toaster.dismiss(id));
       };
     }
-  }, [roomUrl, toast]);
+  }, [roomUrl]);
 
   const handleLeave = () => {
     if (onLeave) {

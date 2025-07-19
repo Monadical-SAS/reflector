@@ -195,7 +195,7 @@ export default function TranscriptBrowser() {
       </Flex>
 
       <DeleteTranscriptDialog
-        open={!!transcriptToDeleteId}
+        isOpen={!!transcriptToDeleteId}
         onClose={onCloseDeletion}
         onConfirm={() => handleDeleteTranscript(transcriptToDeleteId)(null)}
         cancelRef={cancelRef}

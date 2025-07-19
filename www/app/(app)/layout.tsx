@@ -61,12 +61,7 @@ export default async function AppLayout({
           {browse ? (
             <>
               &nbsp;·&nbsp;
-              <Link
-                href="/browse"
-                as={NextLink}
-                className="font-light px-2"
-                prefetch={false}
-              >
+              <Link href="/browse" as={NextLink} className="font-light px-2">
                 Browse
               </Link>
             </>
@@ -76,12 +71,7 @@ export default async function AppLayout({
           {rooms ? (
             <>
               &nbsp;·&nbsp;
-              <Link
-                href="/rooms"
-                as={NextLink}
-                className="font-light px-2"
-                prefetch={false}
-              >
+              <Link href="/rooms" as={NextLink} className="font-light px-2">
                 Rooms
               </Link>
             </>
