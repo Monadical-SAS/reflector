@@ -6,14 +6,14 @@ import {
   Heading,
   IconButton,
   Link,
-  Menu,
   Spacer,
   Text,
   VStack,
   HStack,
 } from "@chakra-ui/react";
-import { FaEllipsisVertical, FaLink, FaPencil, FaTrash } from "react-icons/fa6";
+import { FaLink } from "react-icons/fa6";
 import { Room } from "../../../api";
+import { RoomActionsMenu } from "./RoomActionsMenu";
 
 interface RoomCardsProps {
   rooms: Room[];
@@ -85,29 +85,12 @@ export function RoomCards({
                     <FaLink />
                   </IconButton>
                 )}
-                <Menu.Root closeOnSelect={true} lazyMount={true}>
-                  <Menu.Trigger asChild>
-                    <IconButton aria-label="actions" size="sm" variant="ghost">
-                      <FaEllipsisVertical />
-                    </IconButton>
-                  </Menu.Trigger>
-                  <Menu.Positioner>
-                    <Menu.Content>
-                      <Menu.Item
-                        value="edit"
-                        onClick={() => onEdit(room.id, room)}
-                      >
-                        <FaPencil /> Edit
-                      </Menu.Item>
-                      <Menu.Item
-                        value="delete"
-                        onClick={() => onDelete(room.id)}
-                      >
-                        <FaTrash color="#E53E3E" /> Delete
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Menu.Root>
+                <RoomActionsMenu
+                  roomId={room.id}
+                  roomData={room}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
               </Flex>
               <VStack align="start" fontSize="sm" gap={0}>
                 {room.zulip_auto_post && (
