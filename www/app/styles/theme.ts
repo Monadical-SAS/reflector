@@ -51,6 +51,15 @@ const linkRecipe = defineRecipe({
       boxShadow: "none",
     },
   },
+  variants: {
+    variant: {
+      plain: {
+        _hover: {
+          textDecoration: "none",
+        },
+      },
+    },
+  },
 });
 
 const buttonRecipe = defineRecipe({

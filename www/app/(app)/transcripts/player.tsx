@@ -8,8 +8,7 @@ import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../../api";
 import { waveSurferStyles } from "../../styles/recorder";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
-import PlayIcon from "../../styles/icons/play";
-import PauseIcon from "../../styles/icons/pause";
+import { LuPause, LuPlay } from "react-icons/lu";
 
 type PlayerProps = {
   topics: Topic[];
@@ -172,8 +171,9 @@ export default function Player(props: PlayerProps) {
         mr={2}
         id="play-btn"
         onClick={handlePlayClick}
+        size="sm"
       >
-        {isPlaying ? <PauseIcon /> : <PlayIcon />}
+        {isPlaying ? <LuPause /> : <LuPlay />}
       </IconButton>
 
       <Box position="relative" flex={1}>

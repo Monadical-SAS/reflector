@@ -1,6 +1,6 @@
 import React from "react";
 import { Pagination, IconButton, ButtonGroup } from "@chakra-ui/react";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 
 type PaginationProps = {
   page: number;
@@ -26,7 +26,7 @@ export default function PaginationComponent(props: PaginationProps) {
       <ButtonGroup variant="ghost" size="xs">
         <Pagination.PrevTrigger asChild>
           <IconButton>
-            <FaChevronLeft />
+            <LuChevronLeft />
           </IconButton>
         </Pagination.PrevTrigger>
         <Pagination.Items
@@ -38,7 +38,7 @@ export default function PaginationComponent(props: PaginationProps) {
         />
         <Pagination.NextTrigger asChild>
           <IconButton>
-            <FaChevronRight />
+            <LuChevronRight />
           </IconButton>
         </Pagination.NextTrigger>
       </ButtonGroup>

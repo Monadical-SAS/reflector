@@ -14,6 +14,7 @@ import {
   createListCollection,
   Spinner,
 } from "@chakra-ui/react";
+import { TbBrandZulip } from "react-icons/tb";
 import useApi from "../../lib/useApi";
 
 type ShareZulipProps = {
@@ -118,7 +119,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
         disabled={props.disabled}
         onClick={() => setShowModal(true)}
       >
-        ➡️ Send to Zulip
+        <TbBrandZulip /> Send to Zulip
       </Button>
 
       <Dialog.Root

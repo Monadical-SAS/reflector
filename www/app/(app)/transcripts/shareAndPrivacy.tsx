@@ -14,7 +14,7 @@ import {
   Select,
   createListCollection,
 } from "@chakra-ui/react";
-import { FaShare } from "react-icons/fa";
+import { LuShare2 } from "react-icons/lu";
 import useApi from "../../lib/useApi";
 import useSessionUser from "../../lib/useSessionUser";
 import { CustomSession } from "../../lib/types";
@@ -87,8 +87,12 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
 
   return (
     <>
-      <IconButton onClick={() => setShowModal(true)} aria-label="Share">
-        <FaShare />
+      <IconButton
+        onClick={() => setShowModal(true)}
+        aria-label="Share"
+        size="sm"
+      >
+        <LuShare2 />
       </IconButton>
       <Dialog.Root
         open={showModal}
