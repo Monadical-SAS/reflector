@@ -6,10 +6,16 @@ import {
   defineSlotRecipe,
   defaultSystem,
 } from "@chakra-ui/react";
-import { accordionAnatomy } from "@chakra-ui/react/anatomy";
 
 const accordionSlotRecipe = defineSlotRecipe({
-  slots: accordionAnatomy.keys(),
+  slots: [
+    "root",
+    "container",
+    "item",
+    "itemTrigger",
+    "itemContent",
+    "itemIndicator",
+  ],
   base: {
     item: {
       bg: "white",
