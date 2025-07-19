@@ -90,7 +90,11 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
       <IconButton onClick={() => setShowModal(true)} aria-label="Share">
         <FaShare />
       </IconButton>
-      <Dialog.Root open={showModal} onOpenChange={setShowModal} size="lg">
+      <Dialog.Root
+        open={showModal}
+        onOpenChange={(e) => setShowModal(e.open)}
+        size="lg"
+      >
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
