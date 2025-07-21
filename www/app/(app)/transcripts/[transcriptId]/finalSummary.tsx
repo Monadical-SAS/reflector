@@ -16,7 +16,7 @@ import {
   Textarea,
   Spacer,
 } from "@chakra-ui/react";
-import { FaPen } from "react-icons/fa";
+import { LuPen } from "react-icons/lu";
 import { useError } from "../../../(errors)/errorContext";
 import ShareAndPrivacy from "../shareAndPrivacy";
 
@@ -108,29 +108,26 @@ export default function FinalSummary(props: FinalSummaryProps) {
         right="0"
       >
         {isEditMode && (
-          <>
+          <Flex gap={2} align="center" w="full">
             <Heading size={{ base: "md" }}>Summary</Heading>
             <Spacer />
-            <Button
-              onClick={onDiscardClick}
-              colorScheme="gray"
-              variant={"text"}
-            >
-              Discard
+            <Button onClick={onDiscardClick} variant="ghost">
+              Cancel
             </Button>
-            <Button onClick={onSaveClick} colorScheme="blue">
-              Save
-            </Button>
-          </>
+            <Button onClick={onSaveClick}>Save</Button>
+          </Flex>
         )}
         {!isEditMode && (
           <>
             <Spacer />
             <IconButton
-              icon={<FaPen />}
               aria-label="Edit Summary"
               onClick={onEditClick}
-            />
+              size="sm"
+              variant="subtle"
+            >
+              <LuPen />
+            </IconButton>
             <ShareAndPrivacy
               finalSummaryRef={finalSummaryRef}
               transcriptResponse={props.transcriptResponse}

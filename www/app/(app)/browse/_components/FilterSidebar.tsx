@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Stack, Link, Heading, Divider } from "@chakra-ui/react";
+import { Box, Stack, Link, Heading } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { Room, SourceKind } from "../../../api";
 
@@ -20,24 +20,23 @@ export default function FilterSidebar({
   const sharedRooms = rooms.filter((room) => room.is_shared);
 
   return (
-    <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100">
-      <Stack spacing={3}>
+    <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100" rounded="md">
+      <Stack gap={3}>
         <Link
           as={NextLink}
           href="#"
           onClick={() => onFilterChange(null, "")}
           color={selectedSourceKind === null ? "blue.500" : "gray.600"}
-          _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === null ? "bold" : "normal"}
         >
           All Transcripts
         </Link>
 
-        <Divider />
+        <Box borderBottomWidth="1px" my={2} />
 
         {myRooms.length > 0 && (
           <>
-            <Heading size="sm">My Rooms</Heading>
+            <Heading size="md">My Rooms</Heading>
 
             {myRooms.map((room) => (
               <Link
@@ -50,7 +49,6 @@ export default function FilterSidebar({
                     ? "blue.500"
                     : "gray.600"
                 }
-                _hover={{ color: "blue.300" }}
                 fontWeight={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"
@@ -66,7 +64,7 @@ export default function FilterSidebar({
 
         {sharedRooms.length > 0 && (
           <>
-            <Heading size="sm">Shared Rooms</Heading>
+            <Heading size="md">Shared Rooms</Heading>
 
             {sharedRooms.map((room) => (
               <Link
@@ -79,7 +77,6 @@ export default function FilterSidebar({
                     ? "blue.500"
                     : "gray.600"
                 }
-                _hover={{ color: "blue.300" }}
                 fontWeight={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"
@@ -93,7 +90,7 @@ export default function FilterSidebar({
           </>
         )}
 
-        <Divider />
+        <Box borderBottomWidth="1px" my={2} />
         <Link
           as={NextLink}
           href="#"

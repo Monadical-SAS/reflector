@@ -39,6 +39,7 @@ const useTranscriptList = (
         sourceKind,
         roomId,
         searchTerm,
+        size: 10,
       })
       .then((response) => {
         setResponse(response);
@@ -50,7 +51,7 @@ const useTranscriptList = (
         setError(err);
         setErrorState(err);
       });
-  }, [!api, page, refetchCount, roomId, searchTerm]);
+  }, [api, page, refetchCount, roomId, searchTerm, sourceKind]);
 
   return { response, loading, error, refetch };
 };

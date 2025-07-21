@@ -15,9 +15,9 @@ import {
   VStack,
   HStack,
   Spinner,
-  useToast,
   Icon,
 } from "@chakra-ui/react";
+import { toaster } from "../components/ui/toaster";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
@@ -80,7 +80,6 @@ const useConsentDialog = (
   // toast would open duplicates, even with using "id=" prop
   const [modalOpen, setModalOpen] = useState(false);
   const api = useApi();
-  const toast = useToast();
 
   const handleConsent = useCallback(
     async (meetingId: string, given: boolean) => {
@@ -109,24 +108,23 @@ const useConsentDialog = (
 
     setModalOpen(true);
 
-    const TOAST_NEVER_DISMISS_VALUE = null;
-    const toastId = toast({
-      position: "top",
-      duration: TOAST_NEVER_DISMISS_VALUE,
-      render: ({ onClose }) => {
+    const toastId = toaster.create({
+      placement: "top",
+      duration: null,
+      render: ({ dismiss }) => {
         const AcceptButton = () => {
           const buttonRef = useRef<HTMLButtonElement>(null);
           useConsentWherebyFocusManagement(buttonRef, wherebyRef);
           return (
             <Button
               ref={buttonRef}
-              colorScheme="blue"
+              colorPalette="blue"
               size="sm"
               onClick={() => {
                 handleConsent(meetingId, true).then(() => {
                   /*signifies it's ok to now wait here.*/
                 });
-                onClose();
+                dismiss();
               }}
             >
               Yes, store the audio
@@ -143,21 +141,21 @@ const useConsentDialog = (
             maxW="md"
             mx="auto"
           >
-            <VStack spacing={4} align="center">
+            <VStack gap={4} alignItems="center">
               <Text fontSize="md" textAlign="center" fontWeight="medium">
                 Can we have your permission to store this meeting's audio
                 recording on our servers?
               </Text>
-              <HStack spacing={4} justify="center">
+              <HStack gap={4} justifyContent="center">
                 <AcceptButton />
                 <Button
-                  colorScheme="gray"
+                  colorPalette="gray"
                   size="sm"
                   onClick={() => {
                     handleConsent(meetingId, false).then(() => {
                       /*signifies it's ok to now wait here.*/
                     });
-                    onClose();
+                    dismiss();
                   }}
                 >
                   No, delete after transcription
@@ -167,27 +165,34 @@ const useConsentDialog = (
           </Box>
         );
       },
-      onCloseComplete: () => {
-        setModalOpen(false);
-      },
+    });
+
+    // Set modal state when toast is dismissed
+    toastId.then((id) => {
+      const checkToastStatus = setInterval(() => {
+        if (!toaster.isActive(id)) {
+          setModalOpen(false);
+          clearInterval(checkToastStatus);
+        }
+      }, 100);
     });
 
     // Handle escape key to close the toast
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        toast.close(toastId);
+        toastId.then((id) => toaster.dismiss(id));
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
 
     const cleanup = () => {
-      toast.close(toastId);
+      toastId.then((id) => toaster.dismiss(id));
       document.removeEventListener("keydown", handleKeyDown);
     };
 
     return cleanup;
-  }, [meetingId, toast, handleConsent, wherebyRef, modalOpen]);
+  }, [meetingId, handleConsent, wherebyRef, modalOpen]);
 
   return { showConsentModal, consentState, hasConsent, consentLoading };
 };
@@ -212,7 +217,7 @@ function ConsentDialogButton({
       top="56px"
       left="8px"
       zIndex={1000}
-      colorScheme="blue"
+      colorPalette="blue"
       size="sm"
       onClick={showConsentModal}
     >
@@ -294,13 +299,7 @@ export default function Room(details: RoomDetails) {
         bg="gray.50"
         p={4}
       >
-        <Spinner
-          thickness="4px"
-          speed="0.65s"
-          emptyColor="gray.200"
-          color="blue.500"
-          size="xl"
-        />
+        <Spinner color="blue.500" size="xl" />
       </Box>
     );
   }

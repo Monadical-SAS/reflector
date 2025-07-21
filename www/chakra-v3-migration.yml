@@ -1,0 +1,70 @@
+rules:
+  # Fix isDisabled to disabled
+  - id: fix-isDisabled
+    pattern: isDisabled={$VALUE}
+    fix: disabled={$VALUE}
+    language: tsx
+
+  # Fix isLoading to loading
+  - id: fix-isLoading
+    pattern: isLoading={$VALUE}
+    fix: loading={$VALUE}
+    language: tsx
+
+  # Fix isChecked to checked
+  - id: fix-isChecked
+    pattern: isChecked={$VALUE}
+    fix: checked={$VALUE}
+    language: tsx
+
+  # Fix isOpen to open
+  - id: fix-isOpen
+    pattern: isOpen={$VALUE}
+    fix: open={$VALUE}
+    language: tsx
+
+  # Fix noOfLines to lineClamp
+  - id: fix-noOfLines
+    pattern: noOfLines={$VALUE}
+    fix: lineClamp={$VALUE}
+    language: tsx
+
+  # Fix align on Flex components
+  - id: fix-flex-align
+    pattern:
+      context: <Flex $$$ATTRS align="$VALUE" $$$REST>$$$CHILDREN</Flex>
+      selector: attribute[name="align"]
+    fix: alignItems="$VALUE"
+    language: tsx
+
+  # Fix justify on Flex components
+  - id: fix-flex-justify
+    pattern:
+      context: <Flex $$$ATTRS justify="$VALUE" $$$REST>$$$CHILDREN</Flex>
+      selector: attribute[name="justify"]
+    fix: justifyContent="$VALUE"
+    language: tsx
+
+  # Fix align on VStack components
+  - id: fix-vstack-align
+    pattern:
+      context: <VStack $$$ATTRS align="$VALUE" $$$REST>$$$CHILDREN</VStack>
+      selector: attribute[name="align"]
+    fix: alignItems="$VALUE"
+    language: tsx
+
+  # Fix align on HStack components
+  - id: fix-hstack-align
+    pattern:
+      context: <HStack $$$ATTRS align="$VALUE" $$$REST>$$$CHILDREN</HStack>
+      selector: attribute[name="align"]
+    fix: alignItems="$VALUE"
+    language: tsx
+
+  # Fix justify on HStack components
+  - id: fix-hstack-justify
+    pattern:
+      context: <HStack $$$ATTRS justify="$VALUE" $$$REST>$$$CHILDREN</HStack>
+      selector: attribute[name="justify"]
+    fix: justifyContent="$VALUE"
+    language: tsx
