@@ -542,7 +542,17 @@ class SummaryBuilder:
                 "What are the main/key subjects discussed in this transcript ? "
                 "Do not include direct quotes or unnecessary details. "
                 "Be concise and focused on the main ideas. "
-                "A subject briefly mentioned should not be included. ",
+                "A subject briefly mentioned should not be included. "
+                "Do not write a complete narrative sentences for the subject, you must write a concise subject using noun phrases.\n\n"
+                "<examples>"
+                "Bad subjects:\n"
+                "- The team discussed how deadlines created tension\n"
+                "- The group discussed challenges in meeting deadlines under technical constraints and the resulting tension\n"
+                "Good subjects:\n"
+                "- Tension from deadline and technical constraints\n"
+                "- Communication breakdown during project phases\n"
+                "</examples>"
+                "\n\n",
                 JSON_SCHEMA_LIST_STRING,
             )
 
@@ -556,9 +566,6 @@ class SummaryBuilder:
                 "Do not consolidate subjects if they are worth keeping separate due to their importance or sensitivity. ",
                 JSON_SCHEMA_LIST_STRING,
             )
-
-        # Template-aware chunking configuration
-        from reflector.settings import settings
 
         CHUNK_PAD_TOKENS = 50  # for safety
         CHUNK_CONTEXT_SIZE_TOKENS = (
@@ -643,6 +650,7 @@ class SummaryBuilder:
         m3 = m  # .copy()
         m3.add_user(
             "Provide a quick recap of the meeting, that fit into a small to medium paragraph."
+            "As we know it is a meeting, do not start with 'During the meeting' or equivalent."
         )
         recap = await self.llm(m3)
         self.logger.info(f"Quick recap: {recap}")
