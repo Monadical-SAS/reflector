@@ -7,8 +7,6 @@ interface RoomActionsMenuProps {
   roomData: any;
   onEdit: (roomId: string, roomData: any) => void;
   onDelete: (roomId: string) => void;
-  size?: "sm" | "md" | "lg";
-  variant?: string;
 }
 
 export function RoomActionsMenu({
@@ -16,13 +14,11 @@ export function RoomActionsMenu({
   roomData,
   onEdit,
   onDelete,
-  size = "sm",
-  variant = "ghost",
 }: RoomActionsMenuProps) {
   return (
     <Menu.Root closeOnSelect={true} lazyMount={true}>
       <Menu.Trigger asChild>
-        <IconButton aria-label="actions" size={size} variant={variant}>
+        <IconButton aria-label="actions">
           <LuMenu />
         </IconButton>
       </Menu.Trigger>
