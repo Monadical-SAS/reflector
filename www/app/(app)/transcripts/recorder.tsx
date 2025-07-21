@@ -127,7 +127,7 @@ export default function Recorder(props: RecorderProps) {
     } else {
       clearInterval(timeInterval as number);
       setCurrentTime((prev) => {
-        setDuration(prev);
+        setDuration(prev / 1000);
         return 0;
       });
     }

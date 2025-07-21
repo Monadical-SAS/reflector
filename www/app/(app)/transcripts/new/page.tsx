@@ -133,7 +133,7 @@ const TranscriptCreate = () => {
             {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
-              <Button onClick={() => signIn("authentik")} colorPalette="blue">
+              <Button onClick={() => signIn("authentik")} variant="primary">
                 Log in
               </Button>
             ) : (
