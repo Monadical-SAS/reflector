@@ -126,7 +126,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                   {isOwner && api && (
                     <Select.Root
                       key={shareMode.value}
-                      value={shareMode.value}
+                      value={[shareMode.value]}
                       onValueChange={(e) => updateShareMode(e.value[0])}
                       disabled={shareLoading}
                       collection={shareOptions}

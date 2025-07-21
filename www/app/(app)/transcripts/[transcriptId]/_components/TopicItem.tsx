@@ -28,7 +28,7 @@ export function TopicItem({ topic, isActive, getSpeakerName }: TopicItemProps) {
           <Accordion.ItemIndicator />
         </Flex>
         <Box flex="1">{topic.title} </Box>
-        <Text as="span" color="gray.500" fontSize="xs">
+        <Text as="span" color="gray.500" fontSize="xs" pr={1}>
           {formatTime(topic.timestamp)}
         </Text>
       </Accordion.ItemTrigger>

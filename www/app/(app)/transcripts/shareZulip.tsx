@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { featureEnabled } from "../../domainContext";
 import { GetTranscript, GetTranscriptTopic } from "../../api";
 import {
@@ -10,9 +10,11 @@ import {
   Box,
   Flex,
   Checkbox,
-  Select,
-  createListCollection,
+  Combobox,
   Spinner,
+  Portal,
+  useFilter,
+  useListCollection,
 } from "@chakra-ui/react";
 import { TbBrandZulip } from "react-icons/tb";
 import useApi from "../../lib/useApi";
@@ -41,6 +43,25 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const [streams, setStreams] = useState<Stream[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const api = useApi();
+  const { contains } = useFilter({ sensitivity: "base" });
+
+  const {
+    collection: streamItemsCollection,
+    filter: streamItemsFilter,
+    set: streamItemsSet,
+  } = useListCollection({
+    items: [],
+    filter: contains,
+  });
+
+  const {
+    collection: topicItemsCollection,
+    filter: topicItemsFilter,
+    set: topicItemsSet,
+  } = useListCollection({
+    items: [],
+    filter: contains,
+  });
 
   useEffect(() => {
     const fetchZulipStreams = async () => {
@@ -49,6 +70,14 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
       try {
         const response = await api.v1ZulipGetStreams();
         setStreams(response);
+
+        streamItemsSet(
+          response.map((stream) => ({
+            label: stream.name,
+            value: stream.name,
+          })),
+        );
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching Zulip streams:", error);
@@ -68,6 +97,14 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
             streamId: selectedStream.stream_id,
           });
           setTopics(response);
+          topicItemsSet(
+            response.map((topic) => ({
+              label: topic.name,
+              value: topic.name,
+            })),
+          );
+        } else {
+          topicItemsSet([]);
         }
       } catch (error) {
         console.error("Error fetching Zulip topics:", error);
@@ -96,20 +133,6 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   };
 
   if (!featureEnabled("sendToZulip")) return null;
-
-  const streamOptions = createListCollection({
-    items: streams.map((stream) => ({
-      label: stream.name,
-      value: stream.name,
-    })),
-  });
-
-  const topicOptions = createListCollection({
-    items: topics.map((topic) => ({
-      label: topic.name,
-      value: topic.name,
-    })),
-  });
 
   return (
     <>
@@ -158,34 +181,40 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                   <Box mb={4}>
                     <Flex align="center" gap={2}>
                       <Text>#</Text>
-                      <Select.Root
+                      <Combobox.Root
+                        collection={streamItemsCollection}
                         value={stream ? [stream] : []}
                         onValueChange={(e) => {
                           setTopic(undefined);
                           setStream(e.value[0]);
                         }}
-                        collection={streamOptions}
+                        onInputValueChange={(e) =>
+                          streamItemsFilter(e.inputValue)
+                        }
+                        openOnClick={true}
+                        positioning={{
+                          strategy: "fixed",
+                          hideWhenDetached: true,
+                        }}
                       >
-                        <Select.HiddenSelect />
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Pick a stream" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Select.Positioner>
-                          <Select.Content>
-                            {streamOptions.items.map((option) => (
-                              <Select.Item key={option.value} item={option}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
+                        <Combobox.Control>
+                          <Combobox.Input placeholder="Pick a stream" />
+                          <Combobox.IndicatorGroup>
+                            <Combobox.ClearTrigger />
+                            <Combobox.Trigger />
+                          </Combobox.IndicatorGroup>
+                        </Combobox.Control>
+                        <Combobox.Positioner>
+                          <Combobox.Content>
+                            <Combobox.Empty>No streams found</Combobox.Empty>
+                            {streamItemsCollection.items.map((item) => (
+                              <Combobox.Item key={item.value} item={item}>
+                                {item.label}
+                              </Combobox.Item>
                             ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Select.Root>
+                          </Combobox.Content>
+                        </Combobox.Positioner>
+                      </Combobox.Root>
                     </Flex>
                   </Box>
 
@@ -193,31 +222,41 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                     <Box mb={4}>
                       <Flex align="center" gap={2}>
                         <Text visibility="hidden">#</Text>
-                        <Select.Root
+                        <Combobox.Root
+                          collection={topicItemsCollection}
                           value={topic ? [topic] : []}
                           onValueChange={(e) => setTopic(e.value[0])}
-                          collection={topicOptions}
+                          onInputValueChange={(e) =>
+                            topicItemsFilter(e.inputValue)
+                          }
+                          openOnClick
+                          selectionBehavior="replace"
+                          skipAnimationOnMount={true}
+                          closeOnSelect={true}
+                          positioning={{
+                            strategy: "fixed",
+                            hideWhenDetached: true,
+                          }}
                         >
-                          <Select.HiddenSelect />
-                          <Select.Control>
-                            <Select.Trigger>
-                              <Select.ValueText placeholder="Pick a topic" />
-                            </Select.Trigger>
-                            <Select.IndicatorGroup>
-                              <Select.Indicator />
-                            </Select.IndicatorGroup>
-                          </Select.Control>
-                          <Select.Positioner>
-                            <Select.Content>
-                              {topicOptions.items.map((option) => (
-                                <Select.Item key={option.value} item={option}>
-                                  {option.label}
-                                  <Select.ItemIndicator />
-                                </Select.Item>
+                          <Combobox.Control>
+                            <Combobox.Input placeholder="Pick a topic" />
+                            <Combobox.IndicatorGroup>
+                              <Combobox.ClearTrigger />
+                              <Combobox.Trigger />
+                            </Combobox.IndicatorGroup>
+                          </Combobox.Control>
+                          <Combobox.Positioner>
+                            <Combobox.Content>
+                              <Combobox.Empty>No topics found</Combobox.Empty>
+                              {topicItemsCollection.items.map((item) => (
+                                <Combobox.Item key={item.value} item={item}>
+                                  {item.label}
+                                  <Combobox.ItemIndicator />
+                                </Combobox.Item>
                               ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Select.Root>
+                            </Combobox.Content>
+                          </Combobox.Positioner>
+                        </Combobox.Root>
                       </Flex>
                     </Box>
                   )}
