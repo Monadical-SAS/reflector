@@ -1,16 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Link,
-  Flex,
-  Spinner,
-} from "@chakra-ui/react";
+import { Box, Table, Link, Flex, Spinner } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { GetTranscriptMinimal } from "../../../api";
 import { formatTimeMs, formatLocalDate } from "../../../lib/time";
@@ -31,7 +20,7 @@ export default function TranscriptTable({
   loading,
 }: TranscriptTableProps) {
   return (
-    <Box display={{ base: "none", md: "block" }} position="relative">
+    <Box display={{ base: "none", lg: "block" }} position="relative">
       {loading && (
         <Flex
           position="absolute"
@@ -39,12 +28,10 @@ export default function TranscriptTable({
           left={0}
           right={0}
           bottom={0}
-          bg="rgba(255, 255, 255, 0.8)"
-          zIndex={10}
           align="center"
           justify="center"
         >
-          <Spinner size="xl" color="gray.700" thickness="4px" />
+          <Spinner size="xl" color="gray.700" />
         </Flex>
       )}
       <Box
@@ -52,47 +39,60 @@ export default function TranscriptTable({
         pointerEvents={loading ? "none" : "auto"}
         transition="opacity 0.2s ease-in-out"
       >
-        <Table colorScheme="gray">
-          <Thead>
-            <Tr>
-              <Th pl={12} width="400px">
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.ColumnHeader
+                width="16px"
+                fontWeight="600"
+              ></Table.ColumnHeader>
+              <Table.ColumnHeader width="400px" fontWeight="600">
                 Transcription Title
-              </Th>
-              <Th width="150px">Source</Th>
-              <Th width="200px">Date</Th>
-              <Th width="100px">Duration</Th>
-              <Th width="50px"></Th>
-            </Tr>
-          </Thead>
-          <Tbody>
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="150px" fontWeight="600">
+                Source
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="200px" fontWeight="600">
+                Date
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="100px" fontWeight="600">
+                Duration
+              </Table.ColumnHeader>
+              <Table.ColumnHeader
+                width="50px"
+                fontWeight="600"
+              ></Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {transcripts.map((item) => (
-              <Tr key={item.id}>
-                <Td>
-                  <Flex alignItems="start">
-                    <TranscriptStatusIcon status={item.status} />
-                    <Link as={NextLink} href={`/transcripts/${item.id}`} ml={2}>
-                      {item.title || "Unnamed Transcript"}
-                    </Link>
-                  </Flex>
-                </Td>
-                <Td>
+              <Table.Row key={item.id}>
+                <Table.Cell>
+                  <TranscriptStatusIcon status={item.status} />
+                </Table.Cell>
+                <Table.Cell>
+                  <Link as={NextLink} href={`/transcripts/${item.id}`}>
+                    {item.title || "Unnamed Transcript"}
+                  </Link>
+                </Table.Cell>
+                <Table.Cell>
                   {item.source_kind === "room"
                     ? item.room_name
                     : item.source_kind}
-                </Td>
-                <Td>{formatLocalDate(item.created_at)}</Td>
-                <Td>{formatTimeMs(item.duration)}</Td>
-                <Td>
+                </Table.Cell>
+                <Table.Cell>{formatLocalDate(item.created_at)}</Table.Cell>
+                <Table.Cell>{formatTimeMs(item.duration)}</Table.Cell>
+                <Table.Cell>
                   <TranscriptActionsMenu
                     transcriptId={item.id}
                     onDelete={onDelete}
                     onReprocess={onReprocess}
                   />
-                </Td>
-              </Tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </Tbody>
-        </Table>
+          </Table.Body>
+        </Table.Root>
       </Box>
     </Box>
   );

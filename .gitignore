@@ -11,3 +11,5 @@ ngrok.log
 restart-dev.sh
 *.log
 data/
+www/REFACTOR.md
+www/reload-frontend

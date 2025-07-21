@@ -1,5 +1,5 @@
 import React from "react";
-import { Icon, Tooltip } from "@chakra-ui/react";
+import { Icon, Box } from "@chakra-ui/react";
 import {
   FaCheck,
   FaTrash,
@@ -18,43 +18,33 @@ export default function TranscriptStatusIcon({
   switch (status) {
     case "ended":
       return (
-        <Tooltip label="Processing done">
-          <span>
-            <Icon color="green" as={FaCheck} />
-          </span>
-        </Tooltip>
+        <Box as="span" title="Processing done">
+          <Icon color="green" as={FaCheck} />
+        </Box>
       );
     case "error":
       return (
-        <Tooltip label="Processing error">
-          <span>
-            <Icon color="red.500" as={FaTrash} />
-          </span>
-        </Tooltip>
+        <Box as="span" title="Processing error">
+          <Icon color="red.500" as={FaTrash} />
+        </Box>
       );
     case "idle":
       return (
-        <Tooltip label="New meeting, no recording">
-          <span>
-            <Icon color="yellow.500" as={FaStar} />
-          </span>
-        </Tooltip>
+        <Box as="span" title="New meeting, no recording">
+          <Icon color="yellow.500" as={FaStar} />
+        </Box>
       );
     case "processing":
       return (
-        <Tooltip label="Processing in progress">
-          <span>
-            <Icon color="gray.500" as={FaGear} />
-          </span>
-        </Tooltip>
+        <Box as="span" title="Processing in progress">
+          <Icon color="gray.500" as={FaGear} />
+        </Box>
       );
     case "recording":
       return (
-        <Tooltip label="Recording in progress">
-          <span>
-            <Icon color="blue.500" as={FaMicrophone} />
-          </span>
-        </Tooltip>
+        <Box as="span" title="Recording in progress">
+          <Icon color="blue.500" as={FaMicrophone} />
+        </Box>
       );
     default:
       return null;

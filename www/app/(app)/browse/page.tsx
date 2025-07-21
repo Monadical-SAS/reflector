@@ -4,7 +4,7 @@ import { Flex, Spinner, Heading, Text, Link } from "@chakra-ui/react";
 import useTranscriptList from "../transcripts/useTranscriptList";
 import useSessionUser from "../../lib/useSessionUser";
 import { Room } from "../../api";
-import Pagination from "./pagination";
+import Pagination from "./_components/Pagination";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { SourceKind } from "../../api";
@@ -41,10 +41,6 @@ export default function TranscriptBrowser() {
   }, [page, response]);
 
   useEffect(() => {
-    refetch();
-  }, [selectedRoomId, page, searchTerm]);
-
-  useEffect(() => {
     if (!api) return;
     api
       .v1RoomsList({ page: 1 })
@@ -59,7 +55,6 @@ export default function TranscriptBrowser() {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
     setPage(1);
-    refetch();
   };
 
   const handleSearch = (searchTerm: string) => {
@@ -67,19 +62,28 @@ export default function TranscriptBrowser() {
     setSearchTerm(searchTerm);
     setSelectedSourceKind(null);
     setSelectedRoomId("");
-    refetch();
   };
 
   if (loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Spinner size="xl" />
       </Flex>
     );
 
   if (!loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Text>
           No transcripts found, but you can&nbsp;
           <Link href="/transcripts/new" className="underline">
@@ -138,10 +142,15 @@ export default function TranscriptBrowser() {
       flexDir="column"
       w={{ base: "full", md: "container.xl" }}
       mx="auto"
-      p={4}
+      pt={4}
     >
-      <Flex flexDir="row" justify="space-between" align="center" mb={4}>
-        <Heading size="md">
+      <Flex
+        flexDir="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+      >
+        <Heading size="lg">
           {userName ? `${userName}'s Transcriptions` : "Your Transcriptions"}{" "}
           {loading || (deletionLoading && <Spinner size="sm" />)}
         </Heading>
@@ -155,7 +164,14 @@ export default function TranscriptBrowser() {
           onFilterChange={handleFilterTranscripts}
         />
 
-        <Flex flexDir="column" flex="1" p={4} gap={4}>
+        <Flex
+          flexDir="column"
+          flex="1"
+          pt={{ base: 4, md: 0 }}
+          pb={4}
+          gap={4}
+          px={{ base: 0, md: 4 }}
+        >
           <SearchBar onSearch={handleSearch} />
           <Pagination
             page={page}

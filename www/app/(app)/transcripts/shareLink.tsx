@@ -63,7 +63,7 @@ const ShareLink = (props: ShareLinkProps) => {
           onChange={() => {}}
           mx="2"
         />
-        <Button onClick={handleCopyClick} colorScheme="blue">
+        <Button onClick={handleCopyClick}>
           {isCopied ? "Copied!" : "Copy"}
         </Button>
       </Flex>

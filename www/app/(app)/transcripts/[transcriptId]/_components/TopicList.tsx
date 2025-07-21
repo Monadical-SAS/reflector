@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { formatTime } from "../../lib/time";
-import ScrollToBottom from "./scrollToBottom";
-import { Topic } from "./webSocketTypes";
-import { generateHighContrastColor } from "../../lib/utils";
-import useParticipants from "./useParticipants";
-import {
-  Accordion,
-  AccordionButton,
-  AccordionIcon,
-  AccordionItem,
-  AccordionPanel,
-  Box,
-  Flex,
-  Text,
-} from "@chakra-ui/react";
-import { featureEnabled } from "../../domainContext";
+import ScrollToBottom from "../../scrollToBottom";
+import { Topic } from "../../webSocketTypes";
+import useParticipants from "../../useParticipants";
+import { Box, Flex, Text, Accordion } from "@chakra-ui/react";
+import { featureEnabled } from "../../../../domainContext";
+import { TopicItem } from "./TopicItem";
 
 type TopicListProps = {
   topics: Topic[];
@@ -41,9 +31,7 @@ export function TopicList({
   const participants = useParticipants(transcriptId);
 
   const scrollToTopic = () => {
-    const topicDiv = document.getElementById(
-      `accordion-button-topic-${activeTopic?.id}`,
-    );
+    const topicDiv = document.getElementById(`topic-${activeTopic?.id}`);
 
     setTimeout(() => {
       topicDiv?.scrollIntoView({
@@ -133,88 +121,29 @@ export function TopicList({
         h={"100%"}
         onScroll={handleScroll}
         width="full"
-        padding={2}
       >
         {topics.length > 0 && (
-          <Accordion
-            index={topics.findIndex((topic) => topic.id == activeTopic?.id)}
-            variant="custom"
-            allowToggle
+          <Accordion.Root
+            multiple={false}
+            collapsible={true}
+            value={activeTopic ? [activeTopic.id] : []}
+            onValueChange={(details) => {
+              const selectedTopicId = details.value[0];
+              const selectedTopic = selectedTopicId
+                ? topics.find((t) => t.id === selectedTopicId)
+                : null;
+              setActiveTopic(selectedTopic || null);
+            }}
           >
-            {topics.map((topic, index) => (
-              <AccordionItem
-                key={index}
-                background={{
-                  base: "light",
-                  hover: "gray.100",
-                  focus: "gray.100",
-                }}
-                id={`topic-${topic.id}`}
-              >
-                <Flex dir="row" letterSpacing={".2"}>
-                  <AccordionButton
-                    onClick={() => {
-                      setActiveTopic(
-                        activeTopic?.id == topic.id ? null : topic,
-                      );
-                    }}
-                  >
-                    <AccordionIcon />
-                    <Box as="span" textAlign="left" ml="1">
-                      {topic.title}{" "}
-                      <Text
-                        as="span"
-                        color="gray.500"
-                        fontSize="sm"
-                        fontWeight="bold"
-                      >
-                        &nbsp;[{formatTime(topic.timestamp)}]&nbsp;-&nbsp;[
-                        {formatTime(topic.timestamp + (topic.duration || 0))}]
-                      </Text>
-                    </Box>
-                  </AccordionButton>
-                </Flex>
-                <AccordionPanel>
-                  {topic.segments ? (
-                    <>
-                      {topic.segments.map((segment, index: number) => (
-                        <Text
-                          key={index}
-                          className="text-left text-slate-500 text-sm md:text-base"
-                          pb={2}
-                          lineHeight={"1.3"}
-                        >
-                          <Text
-                            as="span"
-                            color={"gray.500"}
-                            fontFamily={"monospace"}
-                            fontSize={"sm"}
-                          >
-                            [{formatTime(segment.start)}]
-                          </Text>
-                          <Text
-                            as="span"
-                            fontWeight={"bold"}
-                            fontSize={"sm"}
-                            color={generateHighContrastColor(
-                              `Speaker ${segment.speaker}`,
-                              [96, 165, 250],
-                            )}
-                          >
-                            {" "}
-                            {getSpeakerName(segment.speaker)}:
-                          </Text>{" "}
-                          <span>{segment.text}</span>
-                        </Text>
-                      ))}
-                    </>
-                  ) : (
-                    <>{topic.transcript}</>
-                  )}
-                </AccordionPanel>
-              </AccordionItem>
+            {topics.map((topic) => (
+              <TopicItem
+                key={topic.id}
+                topic={topic}
+                isActive={activeTopic?.id === topic.id}
+                getSpeakerName={getSpeakerName}
+              />
             ))}
-          </Accordion>
+          </Accordion.Root>
         )}
 
         {status == "recording" && (
@@ -225,7 +154,7 @@ export function TopicList({
         {(status == "recording" || status == "idle") &&
           currentTranscriptText.length == 0 &&
           topics.length == 0 && (
-            <Box textAlign={"center"} textColor="gray">
+            <Box textAlign={"center"} color="gray">
               <Text>
                 Full discussion transcript will appear here after you start
                 recording.
@@ -236,7 +165,7 @@ export function TopicList({
             </Box>
           )}
         {status == "processing" && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>We are processing the recording, please wait.</Text>
             {!requireLogin && (
               <span>
@@ -246,12 +175,12 @@ export function TopicList({
           </Box>
         )}
         {status == "ended" && topics.length == 0 && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>Recording has ended without topics being found.</Text>
           </Box>
         )}
         {status == "error" && (
-          <Box textAlign={"center"} textColor="gray">
+          <Box textAlign={"center"} color="gray">
             <Text>There was an error processing your recording</Text>
           </Box>
         )}

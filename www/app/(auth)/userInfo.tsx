@@ -7,7 +7,7 @@ export default function UserInfo() {
   const { isLoading, isAuthenticated } = useSessionStatus();
 
   return isLoading ? (
-    <Spinner size="xs" thickness="1px" className="mx-3" />
+    <Spinner size="xs" className="mx-3" />
   ) : !isAuthenticated ? (
     <Link
       href="/"

@@ -1,0 +1,5 @@
+id: fix-isDisabled
+language: tsx
+rule:
+  pattern: isDisabled={$VALUE}
+fix: disabled={$VALUE}

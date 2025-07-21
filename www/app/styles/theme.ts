@@ -1,83 +1,182 @@
-import { extendTheme } from "@chakra-ui/react";
-import { Poppins } from "next/font/google";
-import { accordionAnatomy } from "@chakra-ui/anatomy";
-import { createMultiStyleConfigHelpers, defineStyle } from "@chakra-ui/react";
+import {
+  createSystem,
+  defaultConfig,
+  defineConfig,
+  defineRecipe,
+  defineSlotRecipe,
+  defaultSystem,
+} from "@chakra-ui/react";
 
-const { definePartsStyle, defineMultiStyleConfig } =
-  createMultiStyleConfigHelpers(accordionAnatomy.keys);
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["200", "400", "600"],
-  display: "swap",
-});
-const custom = definePartsStyle({
-  container: {
-    border: "0",
-    borderRadius: "8px",
-    backgroundColor: "white",
-    mb: 2,
-    mr: 2,
+const accordionSlotRecipe = defineSlotRecipe({
+  slots: [
+    "root",
+    "container",
+    "item",
+    "itemTrigger",
+    "itemContent",
+    "itemIndicator",
+  ],
+  base: {
+    item: {
+      bg: "white",
+      borderRadius: "xl",
+      border: "0",
+      mb: "2",
+      width: "full",
+    },
+    itemTrigger: {
+      p: "2",
+      cursor: "pointer",
+      _hover: {
+        bg: "gray.200",
+      },
+    },
   },
-  panel: {
-    pl: 8,
-    pb: 0,
-  },
-  button: {
-    justifyContent: "flex-start",
-    pl: 2,
-  },
 });
 
-const accordionTheme = defineMultiStyleConfig({
-  variants: { custom },
-});
-
-const linkTheme = defineStyle({
-  baseStyle: {
+const linkRecipe = defineRecipe({
+  className: "link",
+  base: {
+    textDecoration: "none",
     _hover: {
       color: "blue.500",
       textDecoration: "none",
     },
+    _focus: {
+      outline: "none",
+      boxShadow: "none",
+    },
+    _focusVisible: {
+      outline: "none",
+      boxShadow: "none",
+    },
+  },
+  variants: {
+    variant: {
+      plain: {
+        _hover: {
+          textDecoration: "none",
+        },
+      },
+    },
   },
 });
+
+const buttonRecipe = defineRecipe({
+  base: {
+    fontWeight: "600",
+    _hover: {
+      bg: "gray.200",
+    },
+    _focus: {
+      outline: "none",
+      boxShadow: "none",
+    },
+    _focusVisible: {
+      outline: "none",
+      boxShadow: "none",
+    },
+  },
+  variants: {
+    variant: {
+      solid: {
+        colorPalette: "blue",
+      },
+      outline: {
+        _hover: {
+          bg: "gray.200",
+        },
+      },
+    },
+  },
+  compoundVariants: [
+    {
+      colorPalette: "whiteAlpha",
+      css: {
+        bg: "whiteAlpha.500",
+        color: "white",
+        _hover: {
+          bg: "whiteAlpha.600",
+          opacity: 1,
+        },
+      },
+    },
+  ],
+});
+
 export const colors = {
   blue: {
-    primary: "#3158E2",
-    500: "#3158E2",
-    light: "#B1CBFF",
-    200: "#B1CBFF",
-    dark: "#0E1B48",
-    900: "#0E1B48",
+    primary: { value: "#3158E2" },
+    500: { value: "#3158E2" },
+    light: { value: "#B1CBFF" },
+    200: { value: "#B1CBFF" },
+    dark: { value: "#0E1B48" },
+    900: { value: "#0E1B48" },
   },
   red: {
-    primary: "#DF7070",
-    500: "#DF7070",
-    light: "#FBD5D5",
-    200: "#FBD5D5",
+    primary: { value: "#DF7070" },
+    500: { value: "#DF7070" },
+    light: { value: "#FBD5D5" },
+    200: { value: "#FBD5D5" },
   },
   gray: {
-    bg: "#F4F4F4",
-    100: "#F4F4F4",
-    light: "#D5D5D5",
-    200: "#D5D5D5",
-    primary: "#838383",
-    500: "#838383",
+    solid: { value: "#F4F4F4" },
+    bg: { value: "#F4F4F4" },
+    100: { value: "#F4F4F4" },
+    light: { value: "#D5D5D5" },
+    200: { value: "#D5D5D5" },
+    primary: { value: "#838383" },
+    500: { value: "#838383" },
+    800: { value: "#1A202C" },
   },
-  light: "#FFFFFF",
-  dark: "#0C0D0E",
+  whiteAlpha: {
+    50: { value: "rgba(255, 255, 255, 0.04)" },
+    100: { value: "rgba(255, 255, 255, 0.06)" },
+    200: { value: "rgba(255, 255, 255, 0.08)" },
+    300: { value: "rgba(255, 255, 255, 0.16)" },
+    400: { value: "rgba(255, 255, 255, 0.24)" },
+    500: { value: "rgba(255, 255, 255, 0.36)" },
+    600: { value: "rgba(255, 255, 255, 0.48)" },
+    700: { value: "rgba(255, 255, 255, 0.64)" },
+    800: { value: "rgba(255, 255, 255, 0.80)" },
+    900: { value: "rgba(255, 255, 255, 0.92)" },
+  },
+  light: { value: "#FFFFFF" },
+  dark: { value: "#0C0D0E" },
 };
 
-const theme = extendTheme({
-  colors,
-  components: {
-    Accordion: accordionTheme,
-    Link: linkTheme,
-  },
-  fonts: {
-    body: poppins.style.fontFamily,
-    heading: poppins.style.fontFamily,
+const config = defineConfig({
+  theme: {
+    tokens: {
+      colors,
+      fonts: {
+        heading: { value: "Poppins, sans-serif" },
+        body: { value: "Poppins, sans-serif" },
+      },
+    },
+    semanticTokens: {
+      colors: {
+        whiteAlpha: {
+          solid: { value: "{colors.whiteAlpha.500}" },
+          contrast: { value: "{colors.white}" },
+          fg: { value: "{colors.white}" },
+          muted: { value: "{colors.whiteAlpha.100}" },
+          subtle: { value: "{colors.whiteAlpha.50}" },
+          emphasized: { value: "{colors.whiteAlpha.600}" },
+          focusRing: { value: "{colors.whiteAlpha.500}" },
+        },
+      },
+    },
+    slotRecipes: {
+      accordion: accordionSlotRecipe,
+    },
+    recipes: {
+      link: linkRecipe,
+      button: buttonRecipe,
+    },
   },
 });
 
-export default theme;
+export const system = createSystem(defaultConfig, config);
+
+export default system;
