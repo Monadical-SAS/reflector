@@ -15,11 +15,10 @@ from functools import partial
 import jsonschema
 import structlog
 from reflector.llm.base import LLM
-from .transcript_chunker import process_transcript_with_template_aware_chunking
-
 from reflector.llm.openai_llm import OpenAILLM
-
 from reflector.settings import settings
+
+from .transcript_chunker import process_transcript_with_template_aware_chunking
 
 JSON_SCHEMA_LIST_STRING = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -210,7 +209,7 @@ class SummaryBuilder:
         m.add_user(
             self.asking_for_structured_output(
                 (
-                    "# Transcript\n\n{self.transcript}\n\n"
+                    f"# Transcript\n\n{self.transcript}\n\n"
                     "---\n\n"
                     "Please identify the participants in the conversation."
                     "Each participant should only be listed once, even if they are mentionned multiple times in the conversation."
