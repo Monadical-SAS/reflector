@@ -84,8 +84,8 @@ class Settings(BaseSettings):
 
     # per-task cases
     SUMMARY_MODEL: str = "monadical/private/smart"
-    SUMMARY_LLM_URL: str
-    SUMMARY_LLM_API_KEY: str
+    SUMMARY_LLM_URL: str | None = None
+    SUMMARY_LLM_API_KEY: str | None = None
     SUMMARY_LLM_CONTEXT_SIZE_TOKENS: int = 16000
 
     # Diarization
