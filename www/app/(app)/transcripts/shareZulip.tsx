@@ -136,11 +136,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
 
   return (
     <>
-      <Button
-        variant="primary"
-        disabled={props.disabled}
-        onClick={() => setShowModal(true)}
-      >
+      <Button disabled={props.disabled} onClick={() => setShowModal(true)}>
         <TbBrandZulip /> Send to Zulip
       </Button>
 
@@ -267,11 +263,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
               <Button variant="ghost" onClick={() => setShowModal(false)}>
                 Close
               </Button>
-              <Button
-                variant="primary"
-                disabled={!stream || !topic}
-                onClick={handleSendToZulip}
-              >
+              <Button disabled={!stream || !topic} onClick={handleSendToZulip}>
                 Send to Zulip
               </Button>
             </Dialog.Footer>

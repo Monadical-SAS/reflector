@@ -91,6 +91,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
         onClick={() => setShowModal(true)}
         aria-label="Share"
         size="sm"
+        variant="subtle"
       >
         <LuShare2 />
       </IconButton>

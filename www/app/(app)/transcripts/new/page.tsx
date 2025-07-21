@@ -133,9 +133,7 @@ const TranscriptCreate = () => {
             {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
-              <Button onClick={() => signIn("authentik")} variant="primary">
-                Log in
-              </Button>
+              <Button onClick={() => signIn("authentik")}>Log in</Button>
             ) : (
               <Flex
                 rounded="xl"

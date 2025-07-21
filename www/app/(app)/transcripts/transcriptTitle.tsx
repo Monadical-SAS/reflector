@@ -102,6 +102,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
             aria-label="Edit Transcript Title"
             onClick={handleTitleClick}
             size="sm"
+            variant="subtle"
           >
             <LuPen />
           </IconButton>

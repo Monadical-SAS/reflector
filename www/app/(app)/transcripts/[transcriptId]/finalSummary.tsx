@@ -114,9 +114,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
             <Button onClick={onDiscardClick} variant="ghost">
               Cancel
             </Button>
-            <Button onClick={onSaveClick} variant="primary">
-              Save
-            </Button>
+            <Button onClick={onSaveClick}>Save</Button>
           </Flex>
         )}
         {!isEditMode && (
@@ -126,6 +124,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
               aria-label="Edit Summary"
               onClick={onEditClick}
               size="sm"
+              variant="subtle"
             >
               <LuPen />
             </IconButton>

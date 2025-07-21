@@ -280,7 +280,7 @@ export default function RoomsList() {
       >
         <Heading size="lg">Rooms {loading && <Spinner size="sm" />}</Heading>
         <Button
-          variant="primary"
+          colorPalette="primary"
           onClick={() => {
             setIsEditing(false);
             setRoom(roomInitialState);
@@ -559,7 +559,7 @@ export default function RoomsList() {
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                colorPalette="primary"
                 onClick={handleSaveRoom}
                 disabled={
                   !room.name || (room.zulipAutoPost && !room.zulipTopic)

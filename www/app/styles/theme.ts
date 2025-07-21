@@ -80,18 +80,7 @@ const buttonRecipe = defineRecipe({
   variants: {
     variant: {
       solid: {
-        bg: "gray.100",
-        color: "gray.800",
-        _hover: {
-          bg: "gray.200",
-        },
-      },
-      primary: {
-        bg: "blue.500",
-        color: "white",
-        _hover: {
-          bg: "blue.400",
-        },
+        colorPalette: "blue",
       },
       outline: {
         _hover: {
@@ -99,9 +88,6 @@ const buttonRecipe = defineRecipe({
         },
       },
     },
-  },
-  defaultVariants: {
-    variant: "solid",
   },
   compoundVariants: [
     {
@@ -134,6 +120,7 @@ export const colors = {
     200: { value: "#FBD5D5" },
   },
   gray: {
+    solid: { value: "#F4F4F4" },
     bg: { value: "#F4F4F4" },
     100: { value: "#F4F4F4" },
     light: { value: "#D5D5D5" },

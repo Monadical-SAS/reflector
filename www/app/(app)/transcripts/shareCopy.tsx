@@ -46,10 +46,10 @@ export default function ShareCopy({
 
   return (
     <Box {...boxProps}>
-      <Button onClick={onCopyTranscriptClick} mr={2}>
+      <Button onClick={onCopyTranscriptClick} mr={2} variant="subtle">
         {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
       </Button>
-      <Button onClick={onCopySummaryClick}>
+      <Button onClick={onCopySummaryClick} variant="subtle">
         {isCopiedSummary ? "Copied!" : "Copy Summary"}
       </Button>
     </Box>

@@ -13,7 +13,7 @@ export default function About({ buttonText }: AboutProps) {
 
   return (
     <>
-      <Button mt={2} onClick={() => setModalOpen(true)}>
+      <Button mt={2} onClick={() => setModalOpen(true)} variant="subtle">
         {buttonText}
       </Button>
       {modalOpen && (

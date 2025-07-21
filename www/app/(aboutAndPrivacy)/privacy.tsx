@@ -13,7 +13,7 @@ export default function Privacy({ buttonText }: PrivacyProps) {
 
   return (
     <>
-      <Button mt={2} onClick={() => setModalOpen(true)}>
+      <Button mt={2} onClick={() => setModalOpen(true)} variant="subtle">
         {buttonText}
       </Button>
       {modalOpen && (
