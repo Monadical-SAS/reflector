@@ -114,8 +114,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   return (
     <>
       <Button
-        colorPalette="blue"
-        size={"sm"}
+        variant="primary"
         disabled={props.disabled}
         onClick={() => setShowModal(true)}
       >
@@ -226,15 +225,15 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
               )}
             </Dialog.Body>
             <Dialog.Footer>
+              <Button variant="ghost" onClick={() => setShowModal(false)}>
+                Close
+              </Button>
               <Button
-                colorPalette="blue"
+                variant="primary"
                 disabled={!stream || !topic}
                 onClick={handleSendToZulip}
               >
                 Send to Zulip
-              </Button>
-              <Button variant="ghost" onClick={() => setShowModal(false)}>
-                Close
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

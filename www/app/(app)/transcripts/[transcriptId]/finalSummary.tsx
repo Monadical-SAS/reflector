@@ -111,10 +111,10 @@ export default function FinalSummary(props: FinalSummaryProps) {
           <Flex gap={2} align="center" w="full">
             <Heading size={{ base: "md" }}>Summary</Heading>
             <Spacer />
-            <Button onClick={onDiscardClick} variant="outline">
-              Discard
+            <Button onClick={onDiscardClick} variant="ghost">
+              Cancel
             </Button>
-            <Button onClick={onSaveClick} variant="solid">
+            <Button onClick={onSaveClick} variant="primary">
               Save
             </Button>
           </Flex>
