@@ -63,12 +63,7 @@ export default function FileUploadButton(props: FileUploadButton) {
 
   return (
     <>
-      <Button
-        onClick={triggerFileUpload}
-        variant="primary"
-        mr={2}
-        disabled={progress > 0}
-      >
+      <Button onClick={triggerFileUpload} mr={2} disabled={progress > 0}>
         {progress > 0 && progress < 100 ? (
           <>
             Uploading...&nbsp;

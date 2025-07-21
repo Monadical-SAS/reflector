@@ -89,7 +89,6 @@ const TranscriptUpload = (details: TranscriptUpload) => {
                   processed.
                 </Text>
                 <Button
-                  variant="primary"
                   onClick={() => {
                     router.push("/browse");
                   }}
