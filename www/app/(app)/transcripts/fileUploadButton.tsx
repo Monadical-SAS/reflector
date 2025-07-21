@@ -65,7 +65,7 @@ export default function FileUploadButton(props: FileUploadButton) {
     <>
       <Button
         onClick={triggerFileUpload}
-        colorPalette="blue"
+        variant="primary"
         mr={2}
         disabled={progress > 0}
       >

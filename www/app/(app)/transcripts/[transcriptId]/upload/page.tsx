@@ -61,18 +61,14 @@ const TranscriptUpload = (details: TranscriptUpload) => {
     <>
       <VStack
         align={"left"}
-        w="full"
         h="full"
-        mb={4}
-        background="gray.bg"
-        border={"2px solid"}
-        borderColor={"gray.bg"}
-        borderRadius={8}
-        p="4"
+        pt={4}
+        mx="auto"
+        w={{ base: "full", md: "container.xl" }}
       >
         <Heading size={"lg"}>Upload meeting</Heading>
         <Center h={"full"} w="full">
-          <VStack gap={10}>
+          <VStack gap={10} bg="gray.100" p={10} borderRadius="md" maxW="500px">
             {status && status == "idle" && (
               <>
                 <Text>
@@ -93,7 +89,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
                   processed.
                 </Text>
                 <Button
-                  colorPalette="blue"
+                  variant="primary"
                   onClick={() => {
                     router.push("/browse");
                   }}

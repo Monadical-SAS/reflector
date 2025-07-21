@@ -10,8 +10,7 @@ import FileUploadButton from "./fileUploadButton";
 import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
 import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
-import StopRecordIcon from "../../styles/icons/stopRecord";
-import { LuScreenShare, LuMic, LuPlay } from "react-icons/lu";
+import { LuScreenShare, LuMic, LuPlay, LuStopCircle } from "react-icons/lu";
 
 type RecorderProps = {
   transcriptId: string;
@@ -254,7 +253,7 @@ export default function Recorder(props: RecorderProps) {
         mr={2}
         onClick={handleRecClick}
       >
-        {isRecording ? <StopRecordIcon /> : <LuPlay />}
+        {isRecording ? <LuStopCircle /> : <LuPlay />}
       </IconButton>
       {!isRecording && (window as any).chrome && (
         <IconButton
@@ -283,20 +282,21 @@ export default function Recorder(props: RecorderProps) {
               <LuMic />
             </IconButton>
           </Menu.Trigger>
-          <Menu.Content>
-            <RadioGroup.Root defaultValue={audioDevices[0].value}>
-              {audioDevices.map((device) => (
-                <RadioGroup.Item
-                  key={device.value}
-                  value={device.value}
-                  onClick={() => setDeviceId(device.value)}
-                >
-                  <RadioGroup.ItemIndicator />
-                  <RadioGroup.ItemText>{device.label}</RadioGroup.ItemText>
-                </RadioGroup.Item>
-              ))}
-            </RadioGroup.Root>
-          </Menu.Content>
+          <Menu.Positioner>
+            <Menu.Content>
+              <Menu.RadioItemGroup
+                value={deviceId}
+                onValueChange={(e) => setDeviceId(e.value)}
+              >
+                {audioDevices.map((device) => (
+                  <Menu.RadioItem key={device.value} value={device.value}>
+                    <Menu.ItemIndicator />
+                    {device.label}
+                  </Menu.RadioItem>
+                ))}
+              </Menu.RadioItemGroup>
+            </Menu.Content>
+          </Menu.Positioner>
         </Menu.Root>
       )}
       <Box position="relative" flex={1}>
