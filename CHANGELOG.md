@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/Monadical-SAS/reflector/compare/v0.2.1...v0.3.0) (2025-07-21)
+
+
+### Features
+
+* migrate from chakra 2 to chakra 3 ([#500](https://github.com/Monadical-SAS/reflector/issues/500)) ([a858464](https://github.com/Monadical-SAS/reflector/commit/a858464c7a80e5497acf801d933bf04092f8b526))
+
 ## [0.2.1](https://github.com/Monadical-SAS/reflector/compare/v0.2.0...v0.2.1) (2025-07-18)
 
 
