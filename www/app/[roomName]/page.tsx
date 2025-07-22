@@ -118,7 +118,7 @@ const useConsentDialog = (
           return (
             <Button
               ref={buttonRef}
-              colorPalette="blue"
+              colorPalette="primary"
               size="sm"
               onClick={() => {
                 handleConsent(meetingId, true).then(() => {
@@ -147,9 +147,8 @@ const useConsentDialog = (
                 recording on our servers?
               </Text>
               <HStack gap={4} justifyContent="center">
-                <AcceptButton />
                 <Button
-                  colorPalette="gray"
+                  variant="ghost"
                   size="sm"
                   onClick={() => {
                     handleConsent(meetingId, false).then(() => {
@@ -160,6 +159,7 @@ const useConsentDialog = (
                 >
                   No, delete after transcription
                 </Button>
+                <AcceptButton />
               </HStack>
             </VStack>
           </Box>
