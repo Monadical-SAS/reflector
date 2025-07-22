@@ -18,7 +18,7 @@ export function RoomActionsMenu({
   return (
     <Menu.Root closeOnSelect={true} lazyMount={true}>
       <Menu.Trigger asChild>
-        <IconButton aria-label="actions">
+        <IconButton aria-label="actions" variant="ghost">
           <LuMenu />
         </IconButton>
       </Menu.Trigger>
