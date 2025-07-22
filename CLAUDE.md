@@ -146,7 +146,7 @@ All endpoints prefixed `/v1/`:
 - `REDIS_URL` - Redis broker for Celery
 - `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` - Modal.com GPU processing
 - `WHEREBY_API_KEY` - Video platform integration
-- `REFLECTOR_AUTH_BACKEND` - Authentication method (none, fief, jwt)
+- `REFLECTOR_AUTH_BACKEND` - Authentication method (none, jwt)
 
 **Frontend** (`www/.env`):
 - `NEXTAUTH_URL`, `NEXTAUTH_SECRET` - Authentication configuration
