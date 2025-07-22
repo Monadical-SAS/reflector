@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/Monadical-SAS/reflector/compare/v0.3.1...v0.3.2) (2025-07-22)
+
+
+### Bug Fixes
+
+* match font size for the filter sidebar ([#507](https://github.com/Monadical-SAS/reflector/issues/507)) ([4b8ba5d](https://github.com/Monadical-SAS/reflector/commit/4b8ba5db1733557e27b098ad3d1cdecadf97ae52))
+* whereby consent not displaying ([#505](https://github.com/Monadical-SAS/reflector/issues/505)) ([1120552](https://github.com/Monadical-SAS/reflector/commit/1120552c2c83d084d3a39272ad49b6aeda1af98f))
+
 ## [0.3.1](https://github.com/Monadical-SAS/reflector/compare/v0.3.0...v0.3.1) (2025-07-22)
 
 
