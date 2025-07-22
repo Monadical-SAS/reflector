@@ -20,10 +20,11 @@ export default function FilterSidebar({
   const sharedRooms = rooms.filter((room) => room.is_shared);
 
   return (
-    <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100" rounded="md">
-      <Stack gap={3}>
+    <Box w={{ base: "full", md: "200px" }} p={4} bg="gray.100" rounded="md">
+      <Stack gap={2}>
         <Link
           as={NextLink}
+          fontSize="sm"
           href="#"
           onClick={() => onFilterChange(null, "")}
           color={selectedSourceKind === null ? "blue.500" : "gray.600"}
@@ -36,7 +37,7 @@ export default function FilterSidebar({
 
         {myRooms.length > 0 && (
           <>
-            <Heading size="md">My Rooms</Heading>
+            <Heading size="sm">My Rooms</Heading>
 
             {myRooms.map((room) => (
               <Link
@@ -54,7 +55,7 @@ export default function FilterSidebar({
                     ? "bold"
                     : "normal"
                 }
-                ml={4}
+                fontSize="sm"
               >
                 {room.name}
               </Link>
@@ -64,7 +65,7 @@ export default function FilterSidebar({
 
         {sharedRooms.length > 0 && (
           <>
-            <Heading size="md">Shared Rooms</Heading>
+            <Heading size="sm">Shared Rooms</Heading>
 
             {sharedRooms.map((room) => (
               <Link
@@ -82,7 +83,7 @@ export default function FilterSidebar({
                     ? "bold"
                     : "normal"
                 }
-                ml={4}
+                fontSize="sm"
               >
                 {room.name}
               </Link>
@@ -98,6 +99,7 @@ export default function FilterSidebar({
           color={selectedSourceKind === "live" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === "live" ? "bold" : "normal"}
+          fontSize="sm"
         >
           Live Transcripts
         </Link>
@@ -108,6 +110,7 @@ export default function FilterSidebar({
           color={selectedSourceKind === "file" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === "file" ? "bold" : "normal"}
+          fontSize="sm"
         >
           Uploaded Files
         </Link>
