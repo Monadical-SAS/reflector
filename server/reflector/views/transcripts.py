@@ -8,7 +8,6 @@ from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
 from reflector.db.meetings import meetings_controller
-from reflector.db.migrate_user import migrate_user
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     SourceKind,
@@ -113,10 +112,6 @@ async def transcripts_list(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
-
-    # for fief to jwt migration, migrate user if needed
-    if user:
-        await migrate_user(email=user["email"], user_id=user["sub"])
 
     return await paginate(
         database,
