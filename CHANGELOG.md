@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/Monadical-SAS/reflector/compare/v0.3.0...v0.3.1) (2025-07-22)
+
+
+### Bug Fixes
+
+* remove fief out of the source code ([#502](https://github.com/Monadical-SAS/reflector/issues/502)) ([890dd15](https://github.com/Monadical-SAS/reflector/commit/890dd15ba5a2be10dbb841e9aeb75d377885f4af))
+* remove primary color for room action menu ([#504](https://github.com/Monadical-SAS/reflector/issues/504)) ([2e33f89](https://github.com/Monadical-SAS/reflector/commit/2e33f89c0f9e5fbaafa80e8d2ae9788450ea2f31))
+
 ## [0.3.0](https://github.com/Monadical-SAS/reflector/compare/v0.2.1...v0.3.0) (2025-07-21)
 
 
