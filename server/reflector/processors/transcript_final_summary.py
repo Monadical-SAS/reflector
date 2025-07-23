@@ -1,3 +1,4 @@
+from reflector.llm import LLM
 from reflector.llm.openai_llm import OpenAILLM
 from reflector.settings import settings
 from reflector.processors.base import Processor
@@ -17,15 +18,17 @@ class TranscriptFinalSummaryProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = transcript
         self.chunks: list[TitleSummary] = []
-        # Use OpenAILLM with SUMMARY_ prefix configuration
+        # Use OpenAILLM with SUMMARY_ prefix configuration for summary generation
         self.llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
+        # Get legacy LLM for other operations that need tokenizer, etc.
+        self.legacy_llm = LLM.get_instance()
         self.builder = None
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def get_summary_builder(self, text) -> SummaryBuilder:
-        builder = SummaryBuilder(self.llm, logger=self.logger)
+        builder = SummaryBuilder(self.llm, legacy_llm=self.legacy_llm, logger=self.logger)
         builder.set_transcript(text)
         await builder.identify_participants()
         await builder.generate_summary()

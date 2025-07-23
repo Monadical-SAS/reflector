@@ -131,7 +131,7 @@ class Messages:
 
 
 class SummaryBuilder:
-    def __init__(self, llm, filename: str | None = None, logger=None):
+    def __init__(self, llm, legacy_llm=None, filename: str | None = None, logger=None):
         self.transcript: str | None = None
         self.recap: str | None = None
         self.summaries: list[dict] = []
@@ -141,11 +141,14 @@ class SummaryBuilder:
         self.items_question: list = []
         self.transcription_type: TranscriptionType | None = None
         self.llm_instance: LLM = llm
+        # Use legacy_llm for operations that need tokenizer and other legacy features
+        # If not provided, fall back to using the main llm instance
+        self.legacy_llm: LLM = legacy_llm or llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
         self.m = Messages(
             model_name=self.model_name,
-            tokenizer=self.llm_instance.tokenizer,
+            tokenizer=self.legacy_llm.tokenizer,
             logger=self.logger,
         )
         if filename:
@@ -175,8 +178,8 @@ class SummaryBuilder:
     def asking_for_structured_output(self, text: str, schema: dict | str) -> str:
         r = text
         if (
-            not hasattr(self.llm_instance, "has_structured_output")
-            or not self.llm_instance.has_structured_output()
+            not hasattr(self.legacy_llm, "has_structured_output")
+            or not self.legacy_llm.has_structured_output()
         ):
             r += (
                 f"Output the result in JSON format strictly following the schema: \n```json-schema\n{schema}\n```."
@@ -201,7 +204,7 @@ class SummaryBuilder:
 
         self.logger.debug("--- identify_participants")
 
-        m = Messages(model_name=self.model_name, tokenizer=self.llm_instance.tokenizer)
+        m = Messages(model_name=self.model_name, tokenizer=self.legacy_llm.tokenizer)
         m.add_system(
             "You are an advanced note-taking assistant."
             "You'll be given a transcript, and identify the participants."
@@ -246,7 +249,7 @@ class SummaryBuilder:
 
         m = Messages(
             model_name=self.model_name,
-            tokenizer=self.llm_instance.tokenizer,
+            tokenizer=self.legacy_llm.tokenizer,
             logger=self.logger,
         )
         m.add_system(
@@ -347,7 +350,7 @@ class SummaryBuilder:
     ):
         m = Messages(
             model_name=self.model_name,
-            tokenizer=self.llm_instance.tokenizer,
+            tokenizer=self.legacy_llm.tokenizer,
             logger=self.logger,
         )
         m.add_system(
@@ -430,7 +433,7 @@ class SummaryBuilder:
         """
         m = Messages(
             model_name=self.model_name,
-            tokenizer=self.llm_instance.tokenizer,
+            tokenizer=self.legacy_llm.tokenizer,
             logger=self.logger,
         )
         if item_type == ItemType.ACTION_ITEM:
@@ -509,7 +512,7 @@ class SummaryBuilder:
 
         m = Messages(
             model_name=self.model_name,
-            tokenizer=self.llm_instance.tokenizer,
+            tokenizer=self.legacy_llm.tokenizer,
             logger=self.logger,
         )
         m.add_system(
@@ -814,9 +817,29 @@ class SummaryBuilder:
         Complete the messages using the LLM model.
         The request assume a /v1/chat/completions compatible endpoint.
         `messages` are a list of dict with `role` and `content` keys.
+        
+        Uses legacy LLM for all operations except summary generation.
         """
+        # Determine which LLM to use based on the context
+        # Check if this is a summary generation call by looking at the system message
+        # TODO this is a terrible way to determine code branch but it's here for the purpose of being removed soon
+        # TODO when we implement OpenLLM + chunking for all other methods
+        # including
+        #   - identify_participants()
+        #   - identify_transcription_type()
+        #   - generate_items()
+        #   - deduplicate_items()
+        is_summary_call = False
+        for msg in messages:
+            if msg.get("role") == "system" and "summarization assistant" in msg.get("content", ""):
+                is_summary_call = True
+                break
+        
+        # Use OpenAI LLM only for summary generation, legacy LLM for everything else
 
-        result = await self.llm_instance.completion(messages=messages, **kwargs)
+        llm_to_use = self.llm_instance if is_summary_call else self.legacy_llm
+        
+        result = await llm_to_use.completion(messages=messages, **kwargs)
         return result["choices"][0]["message"]["content"]
 
     def format_list_md(self, data: list):
@@ -879,8 +902,11 @@ if __name__ == "__main__":
     async def main():
         # build the summary
 
+        # Use OpenAI LLM for summary generation
         llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
-        sm = SummaryBuilder(llm=llm, filename=args.transcript)
+        # Get legacy LLM for other operations (participants, items, etc.)
+        legacy_llm = LLM.get_instance()
+        sm = SummaryBuilder(llm=llm, legacy_llm=legacy_llm, filename=args.transcript)
 
         if args.subjects:
             await sm.generate_summary(only_subjects=True)
