@@ -123,6 +123,8 @@ class TopicParams(LLMTaskParams):
                 i) title and ii) summary.
                 For the title field, generate a very detailed and self-explanatory
                  title for the given text. Let the title be as descriptive as possible.
+                Use nominalization - convert sentences into noun phrases (e.g., instead of 
+                "The team discussed deadlines" use "Team deadline discussion").
                 For the summary field, summarize the given text in a maximum of
                 two sentences.
             """
