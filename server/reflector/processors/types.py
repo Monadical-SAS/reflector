@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from profanityfilter import ProfanityFilter
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 from reflector.redis_cache import redis_cache
 
 PUNC_RE = re.compile(r"[.;:?!…]")
@@ -63,7 +63,7 @@ class TranscriptSegment(BaseModel):
 
 class Transcript(BaseModel):
     translation: str | None = None
-    words: list[Word] = None
+    words: list[Word] = Field(default_factory=list)
 
     @property
     def raw_text(self):
