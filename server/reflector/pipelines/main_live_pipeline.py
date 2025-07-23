@@ -116,7 +116,7 @@ def get_transcript(func):
         transcript_id = kwargs.pop("transcript_id")
         transcript = await transcripts_controller.get_by_id(transcript_id=transcript_id)
         if not transcript:
-            raise Exception("Transcript {transcript_id} not found")
+            raise Exception(f"Transcript {transcript_id} not found")
 
         # Enhanced logger with Celery task context
         tlogger = logger.bind(transcript_id=transcript.id)
