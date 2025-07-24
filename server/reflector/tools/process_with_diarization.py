@@ -7,11 +7,10 @@ This tool processes audio files locally without requiring the full server infras
 """
 
 import asyncio
-import sys
 import tempfile
-import uuid
 from pathlib import Path
 from typing import Optional, List
+import uuid
 
 import av
 from reflector.logger import logger
@@ -139,13 +138,11 @@ async def process_audio_file_with_diarization(
         await pipeline.flush()
 
     # Run diarization if enabled and we have topics
-    logger.info(f"[DIARIZATION CHECK] enable_diarization={enable_diarization}, only_transcript={only_transcript}, audio_temp_path={audio_temp_path}")
     if enable_diarization and not only_transcript and audio_temp_path:
         topics = topic_collector.get_topics()
-        logger.info(f"[DIARIZATION CHECK] Collected {len(topics)} topics")
         
         if topics:
-            logger.info(f"[DIARIZATION] Starting diarization phase with {len(topics)} topics")
+            logger.info(f"Starting diarization with {len(topics)} topics")
             
             try:
                 # Import diarization processor
@@ -157,42 +154,7 @@ async def process_audio_file_with_diarization(
                 
                 # Create diarization processor
                 diarization_processor = AudioDiarizationAutoProcessor(name=diarization_backend)
-                logger.info(f"Created diarization processor: {diarization_processor.__class__.__name__}, name={getattr(diarization_processor, 'name', 'unknown')}")
-                
-                # Count callback invocations
-                callback_count = 0
-                
-                # Create a wrapper callback that handles raw data from diarization
-                async def diarization_callback(data):
-                    nonlocal callback_count
-                    callback_count += 1
-                    logger.info(f"[DIARIZATION CALLBACK] #{callback_count} triggered with data type: {type(data).__name__}")
-                    if hasattr(data, 'title'):
-                        logger.info(f"[DIARIZATION CALLBACK] Processing topic: {data.title[:50]}...")
-                    if hasattr(data, 'id'):
-                        logger.info(f"[DIARIZATION CALLBACK] Topic ID: {data.id}")
-                    
-                    # Check if this has speaker info
-                    if hasattr(data, 'transcript') and data.transcript and data.transcript.words:
-                        has_speakers = any(hasattr(w, 'speaker') and w.speaker is not None 
-                                         for w in data.transcript.words[:5])  # Check first 5 words
-                        logger.info(f"[DIARIZATION CALLBACK] Has speaker info: {has_speakers}")
-                    
-                    # Diarization processor emits raw TitleSummaryWithId objects
-                    # Wrap them in PipelineEvent for consistency
-                    processor_name = diarization_processor.__class__.__name__
-                    logger.info(f"[DIARIZATION CALLBACK] Creating PipelineEvent with processor: {processor_name}")
-                    
-                    wrapped_event = PipelineEvent(
-                        processor=processor_name,
-                        uid=str(uuid.uuid4()),
-                        data=data
-                    )
-                    logger.info(f"[DIARIZATION CALLBACK] Passing wrapped event to main callback")
-                    await event_callback(wrapped_event)
-                    logger.info(f"[DIARIZATION CALLBACK] Event callback completed")
-                
-                diarization_processor.on(diarization_callback)
+                diarization_processor.on(event_callback)
                 
                 # For Modal backend, we need to upload the file to S3 first
                 audio_url = audio_temp_path
@@ -214,17 +176,15 @@ async def process_audio_file_with_diarization(
                         audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
                         
                         # Upload to S3
-                        logger.info(f"[DIARIZATION] Uploading audio to S3: {audio_filename}")
                         await storage.put_file(audio_filename, audio_data)
                         
                         # Get the public URL
                         audio_url = await storage.get_file_url(audio_filename)
-                        logger.info(f"[DIARIZATION] Audio uploaded to: {audio_url}")
                         
                         # Store filename for cleanup later
                         s3_audio_filename = audio_filename
                     except Exception as e:
-                        logger.error(f"[DIARIZATION] Failed to upload audio to S3: {e}")
+                        logger.error(f"Failed to upload audio to S3: {e}")
                         raise
                 
                 # Create diarization input
@@ -234,65 +194,38 @@ async def process_audio_file_with_diarization(
                 )
                 
                 # Run diarization
-                logger.info(f"[DIARIZATION] Starting diarization with backend: {diarization_backend}")
-                logger.info(f"[DIARIZATION] Processing {len(topics)} topics for diarization")
-                logger.info(f"[DIARIZATION] Audio file: {audio_temp_path}")
+                await diarization_processor.push(diarization_input)
+                await diarization_processor.flush()
                 
-                try:
-                    await diarization_processor.push(diarization_input)
-                    logger.info(f"[DIARIZATION] Push completed")
-                    await diarization_processor.flush()
-                    logger.info(f"[DIARIZATION] Flush completed")
-                except Exception as e:
-                    logger.error(f"[DIARIZATION] Error during processing: {e}")
-                    raise
-                
-                # Count speakers found
-                speakers_found = set()
-                topics_with_speakers = 0
-                for topic in topics:
-                    topic_has_speaker = False
-                    if topic.transcript and topic.transcript.words:
-                        for word in topic.transcript.words:
-                            if hasattr(word, 'speaker') and word.speaker is not None:
-                                speakers_found.add(word.speaker)
-                                topic_has_speaker = True
-                    if topic_has_speaker:
-                        topics_with_speakers += 1
-                        logger.debug(f"[DIARIZATION] Topic '{topic.title[:30]}...' has speaker info")
-                
-                logger.info(f"[DIARIZATION] Complete. Found {len(speakers_found)} speakers: {sorted(speakers_found)}")
-                logger.info(f"[DIARIZATION] {topics_with_speakers}/{len(topics)} topics have speaker info")
-                logger.info(f"[DIARIZATION] Callback was invoked {callback_count} times")
+                logger.info("Diarization complete")
                 
                 # Clean up S3 file if we uploaded one
                 if s3_audio_filename and diarization_backend == "modal":
                     try:
-                        logger.info(f"[DIARIZATION] Cleaning up S3 file: {s3_audio_filename}")
                         await storage.delete_file(s3_audio_filename)
                     except Exception as e:
-                        logger.warning(f"[DIARIZATION] Failed to clean up S3 file: {e}")
+                        logger.warning(f"Failed to clean up S3 file: {e}")
                 
             except ImportError as e:
                 logger.error(f"Failed to import diarization dependencies: {e}")
                 logger.error("Install with: uv pip install pyannote.audio torch torchaudio")
                 logger.error("And set HF_TOKEN environment variable for pyannote models")
                 # Clean up S3 file on error
-                if s3_audio_filename and diarization_backend == "modal":
+                if s3_audio_filename and diarization_backend == "modal" and storage:
                     try:
                         await storage.delete_file(s3_audio_filename)
                     except:
                         pass
-                sys.exit(1)
+                raise SystemExit(1)
             except Exception as e:
                 logger.error(f"Diarization failed: {e}")
                 # Clean up S3 file on error
-                if s3_audio_filename and diarization_backend == "modal":
+                if s3_audio_filename and diarization_backend == "modal" and storage:
                     try:
                         await storage.delete_file(s3_audio_filename)
                     except:
                         pass
-                sys.exit(1)
+                raise SystemExit(1)
         else:
             logger.warning("Skipping diarization: no topics available")
     
@@ -300,7 +233,6 @@ async def process_audio_file_with_diarization(
     if audio_temp_path:
         try:
             Path(audio_temp_path).unlink()
-            logger.debug(f"Cleaned up temporary audio file: {audio_temp_path}")
         except Exception as e:
             logger.warning(f"Failed to clean up temp file {audio_temp_path}: {e}")
 
@@ -342,37 +274,19 @@ if __name__ == "__main__":
         processor = event.processor
         data = event.data
         
-        # Debug log to trace event flow
-        logger.debug(f"Event: processor={processor}, data_type={type(data).__name__}")
-        
         # Ignore internal processors
         if processor in ("AudioChunkerProcessor", "AudioMergeProcessor", 
                         "AudioFileWriterProcessor", "TopicCollectorProcessor",
                         "BroadcastProcessor"):
-            logger.debug(f"Filtering internal processor: {processor}")
             return
         
         # If diarization is enabled, skip the original topic events from the pipeline
         # The diarization processor will emit the same topics but with speaker info
         if processor == "TranscriptTopicDetectorProcessor" and args.enable_diarization:
-            logger.debug(f"Skipping non-diarized topic event (will be emitted with speakers later)")
             return
         
         # Log all events
         logger.info(f"Event: {processor} - {type(data).__name__}")
-        
-        # Special logging for diarization events
-        diarization_processors = ["AudioDiarizationAutoProcessor", "AudioDiarizationModalProcessor", "AudioDiarizationLocalProcessor"]
-        logger.debug(f"[EVENT_CALLBACK] Checking if {processor} is in diarization processors: {processor in diarization_processors}")
-        
-        if processor in diarization_processors:
-            logger.info(f"[DIARIZATION] EVENT DETECTED! Processor: {processor}")
-            if hasattr(data, 'title'):
-                logger.info(f"[DIARIZATION] Topic: {data.title[:50]}...")
-            if hasattr(data, 'transcript') and data.transcript:
-                has_speakers = any(hasattr(w, 'speaker') and w.speaker is not None 
-                                 for w in (data.transcript.words or []))
-                logger.info(f"[DIARIZATION] Has speaker info: {has_speakers}")
         
         # Write to output
         if output_fd:
