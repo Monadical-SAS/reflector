@@ -1,0 +1,4832 @@
+[
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Um,",
+          "start": 0.006,
+          "end": 0.246,
+          "speaker": 0
+        },
+        {
+          "text": " Jordan,",
+          "start": 1.746,
+          "end": 2.086,
+          "speaker": 0
+        },
+        {
+          "text": " do",
+          "start": 2.3259999999999996,
+          "end": 2.586,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 2.586,
+          "end": 2.706,
+          "speaker": 0
+        },
+        {
+          "text": " feel",
+          "start": 2.706,
+          "end": 2.8659999999999997,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 2.8659999999999997,
+          "end": 3.046,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 3.046,
+          "end": 3.526,
+          "speaker": 0
+        },
+        {
+          "text": " would",
+          "start": 3.526,
+          "end": 3.9059999999999997,
+          "speaker": 0
+        },
+        {
+          "text": " be",
+          "start": 3.9059999999999997,
+          "end": 3.9859999999999998,
+          "speaker": 0
+        },
+        {
+          "text": " able",
+          "start": 3.9859999999999998,
+          "end": 4.106,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 4.106,
+          "end": 4.206,
+          "speaker": 0
+        },
+        {
+          "text": " like,",
+          "start": 4.206,
+          "end": 4.3660000000000005,
+          "speaker": 0
+        },
+        {
+          "text": " understand",
+          "start": 4.426,
+          "end": 4.8660000000000005,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 4.8660000000000005,
+          "end": 5.206,
+          "speaker": 0
+        },
+        {
+          "text": " things",
+          "start": 5.206,
+          "end": 5.426,
+          "speaker": 0
+        },
+        {
+          "text": " are?",
+          "start": 5.426,
+          "end": 5.426,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " is",
+          "start": 5.466875,
+          "end": 5.606875,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 5.606875,
+          "end": 5.866875,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 5.866875,
+          "end": 6.026875,
+          "speaker": 0
+        },
+        {
+          "text": " based",
+          "start": 6.026875,
+          "end": 6.246875,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 6.246875,
+          "end": 6.406874999999999,
+          "speaker": 0
+        },
+        {
+          "text": " this?",
+          "start": 6.406874999999999,
+          "end": 6.646875,
+          "speaker": 0
+        },
+        {
+          "text": " Yeah,",
+          "start": 7.6068750000000005,
+          "end": 7.9868749999999995,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 8.226875,
+          "end": 8.346875,
+          "speaker": 0
+        },
+        {
+          "text": " mean,",
+          "start": 8.346875,
+          "end": 8.486875,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 8.546875,
+          "end": 8.626875,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 8.626875,
+          "end": 8.806875,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 8.806875,
+          "end": 8.986875,
+          "speaker": 0
+        },
+        {
+          "text": " first",
+          "start": 8.986875,
+          "end": 9.186875,
+          "speaker": 0
+        },
+        {
+          "text": " half",
+          "start": 9.186875,
+          "end": 9.506875,
+          "speaker": 0
+        },
+        {
+          "text": " is...",
+          "start": 9.506875,
+          "end": 10.106874999999999,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " while",
+          "start": 10.92775,
+          "end": 11.56775,
+          "speaker": 0
+        },
+        {
+          "text": " articulating",
+          "start": 11.56775,
+          "end": 12.24775,
+          "speaker": 0
+        },
+        {
+          "text": " who",
+          "start": 12.24775,
+          "end": 12.58775,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 12.74775,
+          "end": 13.74775,
+          "speaker": 0
+        },
+        {
+          "text": " user",
+          "start": 13.74775,
+          "end": 13.94775,
+          "speaker": 0
+        },
+        {
+          "text": " is,",
+          "start": 13.94775,
+          "end": 14.14775,
+          "speaker": 0
+        },
+        {
+          "text": " which",
+          "start": 14.18775,
+          "end": 14.32775,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 14.32775,
+          "end": 14.467749999999999,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 14.467749999999999,
+          "end": 14.66775,
+          "speaker": 0
+        },
+        {
+          "text": " searcher.",
+          "start": 14.66775,
+          "end": 15.18775,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " And",
+          "start": 16.388625,
+          "end": 16.488625000000003,
+          "speaker": 0
+        },
+        {
+          "text": " then",
+          "start": 16.488625000000003,
+          "end": 16.748625,
+          "speaker": 0
+        },
+        {
+          "text": " sort",
+          "start": 16.748625,
+          "end": 16.988625000000003,
+          "speaker": 0
+        },
+        {
+          "text": " of,",
+          "start": 16.988625000000003,
+          "end": 17.608625,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 17.608625,
+          "end": 17.708625,
+          "speaker": 0
+        },
+        {
+          "text": " know,",
+          "start": 17.708625,
+          "end": 17.888625,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 18.408625,
+          "end": 18.508625000000002,
+          "speaker": 0
+        },
+        {
+          "text": " searcher",
+          "start": 18.508625000000002,
+          "end": 18.828625000000002,
+          "speaker": 0
+        },
+        {
+          "text": " ecosystem,",
+          "start": 18.828625000000002,
+          "end": 19.248625,
+          "speaker": 0
+        },
+        {
+          "text": " investors,",
+          "start": 19.608625,
+          "end": 19.888625,
+          "speaker": 0
+        },
+        {
+          "text": " backers,",
+          "start": 20.088625,
+          "end": 20.548625,
+          "speaker": 0
+        },
+        {
+          "text": " that's",
+          "start": 20.888625,
+          "end": 21.408625,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 21.408625,
+          "end": 21.528625,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 21.528625,
+          "end": 21.608625,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 21.608625,
+          "end": 21.688625000000002,
+          "speaker": 0
+        },
+        {
+          "text": " highlight.",
+          "start": 21.688625000000002,
+          "end": 21.828625000000002,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " level,",
+          "start": 21.8495,
+          "end": 22.1095,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 22.4895,
+          "end": 22.5495,
+          "speaker": 0
+        },
+        {
+          "text": " then",
+          "start": 22.5495,
+          "end": 22.889499999999998,
+          "speaker": 0
+        },
+        {
+          "text": " specifically,",
+          "start": 22.889499999999998,
+          "end": 24.389499999999998,
+          "speaker": 0
+        },
+        {
+          "text": " he's",
+          "start": 24.9695,
+          "end": 25.2095,
+          "speaker": 0
+        },
+        {
+          "text": " dealing",
+          "start": 25.2095,
+          "end": 25.4495,
+          "speaker": 0
+        },
+        {
+          "text": " with",
+          "start": 25.4495,
+          "end": 25.6695,
+          "speaker": 0
+        },
+        {
+          "text": " aggregating",
+          "start": 25.6695,
+          "end": 26.2895,
+          "speaker": 0
+        },
+        {
+          "text": " all",
+          "start": 26.2895,
+          "end": 26.429499999999997,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 26.429499999999997,
+          "end": 26.5295,
+          "speaker": 0
+        },
+        {
+          "text": " data",
+          "start": 26.5295,
+          "end": 26.7095,
+          "speaker": 0
+        },
+        {
+          "text": " for",
+          "start": 26.7095,
+          "end": 26.8495,
+          "speaker": 0
+        },
+        {
+          "text": " them.",
+          "start": 26.8495,
+          "end": 27.0095,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " That's",
+          "start": 27.310395833333335,
+          "end": 27.810395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 27.810395833333335,
+          "end": 27.910395833333336,
+          "speaker": 0
+        },
+        {
+          "text": " problem",
+          "start": 27.910395833333336,
+          "end": 28.190395833333334,
+          "speaker": 0
+        },
+        {
+          "text": " he's",
+          "start": 28.190395833333334,
+          "end": 28.370395833333333,
+          "speaker": 0
+        },
+        {
+          "text": " solving.",
+          "start": 28.370395833333333,
+          "end": 28.630395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " And",
+          "start": 29.630395833333335,
+          "end": 30.130395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " then",
+          "start": 30.130395833333335,
+          "end": 30.310395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " how",
+          "start": 30.310395833333335,
+          "end": 30.470395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " does",
+          "start": 30.470395833333335,
+          "end": 30.590395833333336,
+          "speaker": 0
+        },
+        {
+          "text": " his",
+          "start": 30.590395833333336,
+          "end": 30.790395833333335,
+          "speaker": 0
+        },
+        {
+          "text": " work",
+          "start": 30.790395833333335,
+          "end": 31.010395833333334,
+          "speaker": 0
+        },
+        {
+          "text": " fit",
+          "start": 31.010395833333334,
+          "end": 31.250395833333336,
+          "speaker": 0
+        },
+        {
+          "text": " in?",
+          "start": 31.250395833333336,
+          "end": 31.550395833333333,
+          "speaker": 0
+        },
+        {
+          "text": " He's,",
+          "start": 32.31039583333333,
+          "end": 32.750395833333336,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " He's",
+          "start": 32.77125,
+          "end": 32.87125,
+          "speaker": 0
+        },
+        {
+          "text": " doing",
+          "start": 32.87125,
+          "end": 33.07125,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 33.07125,
+          "end": 33.35125,
+          "speaker": 0
+        },
+        {
+          "text": " data",
+          "start": 33.35125,
+          "end": 33.95125,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 33.95125,
+          "end": 34.25125,
+          "speaker": 0
+        },
+        {
+          "text": " AI",
+          "start": 34.25125,
+          "end": 34.53125,
+          "speaker": 0
+        },
+        {
+          "text": " layer,",
+          "start": 34.53125,
+          "end": 34.85125,
+          "speaker": 0
+        },
+        {
+          "text": " meaning",
+          "start": 35.17125,
+          "end": 35.39125,
+          "speaker": 0
+        },
+        {
+          "text": " easy",
+          "start": 35.39125,
+          "end": 35.89125,
+          "speaker": 0
+        },
+        {
+          "text": " NLP",
+          "start": 35.89125,
+          "end": 36.35125,
+          "speaker": 0
+        },
+        {
+          "text": " way",
+          "start": 36.35125,
+          "end": 36.55125,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 36.55125,
+          "end": 36.63125,
+          "speaker": 0
+        },
+        {
+          "text": " interact",
+          "start": 36.63125,
+          "end": 36.971250000000005,
+          "speaker": 0
+        },
+        {
+          "text": " with",
+          "start": 36.971250000000005,
+          "end": 37.11125,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 37.11125,
+          "end": 37.25125,
+          "speaker": 0
+        },
+        {
+          "text": " data",
+          "start": 37.25125,
+          "end": 37.55125,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 37.55125,
+          "end": 37.85125,
+          "speaker": 0
+        },
+        {
+          "text": " aggregate",
+          "start": 37.85125,
+          "end": 38.21125,
+          "speaker": 0
+        },
+        {
+          "text": " it.",
+          "start": 38.21125,
+          "end": 38.21125,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " and",
+          "start": 38.232125,
+          "end": 38.75212500000001,
+          "speaker": 0
+        },
+        {
+          "text": " enriching",
+          "start": 38.75212500000001,
+          "end": 39.212125,
+          "speaker": 0
+        },
+        {
+          "text": " it,",
+          "start": 39.212125,
+          "end": 39.352125,
+          "speaker": 0
+        },
+        {
+          "text": " so",
+          "start": 39.432125000000006,
+          "end": 39.532125,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 39.532125,
+          "end": 39.672125,
+          "speaker": 0
+        },
+        {
+          "text": " easy",
+          "start": 39.672125,
+          "end": 39.852125,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 39.852125,
+          "end": 39.972125000000005,
+          "speaker": 0
+        },
+        {
+          "text": " just",
+          "start": 39.972125000000005,
+          "end": 40.132125,
+          "speaker": 0
+        },
+        {
+          "text": " pull",
+          "start": 40.132125,
+          "end": 40.332125000000005,
+          "speaker": 0
+        },
+        {
+          "text": " up.",
+          "start": 40.332125000000005,
+          "end": 40.532125,
+          "speaker": 0
+        },
+        {
+          "text": " And",
+          "start": 41.322125,
+          "end": 41.50212500000001,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 41.50212500000001,
+          "end": 41.622125000000004,
+          "speaker": 0
+        },
+        {
+          "text": " does",
+          "start": 41.622125000000004,
+          "end": 41.722125000000005,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 41.722125000000005,
+          "end": 41.822125,
+          "speaker": 0
+        },
+        {
+          "text": " look",
+          "start": 41.822125,
+          "end": 41.982125,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 41.982125,
+          "end": 42.222125000000005,
+          "speaker": 0
+        },
+        {
+          "text": " when",
+          "start": 42.222125000000005,
+          "end": 42.342125,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 42.342125,
+          "end": 42.542125000000006,
+          "speaker": 0
+        },
+        {
+          "text": " done?",
+          "start": 42.542125000000006,
+          "end": 42.862125000000006,
+          "speaker": 0
+        },
+        {
+          "text": " It's",
+          "start": 43.122125000000004,
+          "end": 43.342125,
+          "speaker": 0
+        },
+        {
+          "text": " basically",
+          "start": 43.342125,
+          "end": 43.662125,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 43.662125,
+          "end": 43.662125,
+          "speaker": 0
+        },
+        {
+          "text": " same.",
+          "start": 43.662125,
+          "end": 43.662125,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " that",
+          "start": 43.693,
+          "end": 43.992999999999995,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 43.992999999999995,
+          "end": 44.413,
+          "speaker": 0
+        },
+        {
+          "text": " just",
+          "start": 44.413,
+          "end": 44.613,
+          "speaker": 0
+        },
+        {
+          "text": " getting",
+          "start": 44.613,
+          "end": 44.913,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 44.913,
+          "end": 45.073,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 45.073,
+          "end": 45.352999999999994,
+          "speaker": 0
+        },
+        {
+          "text": " in",
+          "start": 45.352999999999994,
+          "end": 45.592999999999996,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 45.592999999999996,
+          "end": 45.672999999999995,
+          "speaker": 0
+        },
+        {
+          "text": " way",
+          "start": 45.672999999999995,
+          "end": 45.772999999999996,
+          "speaker": 0
+        },
+        {
+          "text": " where",
+          "start": 45.772999999999996,
+          "end": 45.913,
+          "speaker": 0
+        },
+        {
+          "text": " people",
+          "start": 45.913,
+          "end": 46.153,
+          "speaker": 0
+        },
+        {
+          "text": " can",
+          "start": 46.153,
+          "end": 46.452999999999996,
+          "speaker": 0
+        },
+        {
+          "text": " can",
+          "start": 46.452999999999996,
+          "end": 46.873,
+          "speaker": 0
+        },
+        {
+          "text": " talk",
+          "start": 46.873,
+          "end": 47.113,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 47.113,
+          "end": 47.233,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 47.233,
+          "end": 47.373,
+          "speaker": 0
+        },
+        {
+          "text": " data",
+          "start": 47.373,
+          "end": 47.632999999999996,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 47.632999999999996,
+          "end": 47.833,
+          "speaker": 0
+        },
+        {
+          "text": " pull",
+          "start": 47.833,
+          "end": 48.073,
+          "speaker": 0
+        },
+        {
+          "text": " exactly",
+          "start": 48.073,
+          "end": 48.613,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 48.613,
+          "end": 48.772999999999996,
+          "speaker": 0
+        },
+        {
+          "text": " they",
+          "start": 48.772999999999996,
+          "end": 48.893,
+          "speaker": 0
+        },
+        {
+          "text": " need.",
+          "start": 48.893,
+          "end": 49.053,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " I",
+          "start": 51.573875,
+          "end": 51.973875,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 51.973875,
+          "end": 52.093875,
+          "speaker": 0
+        },
+        {
+          "text": " that's",
+          "start": 52.093875,
+          "end": 52.293875,
+          "speaker": 0
+        },
+        {
+          "text": " right.",
+          "start": 52.293875,
+          "end": 52.493875,
+          "speaker": 0
+        },
+        {
+          "text": " Nikita,",
+          "start": 53.213875,
+          "end": 53.473875,
+          "speaker": 0
+        },
+        {
+          "text": " did",
+          "start": 53.693875,
+          "end": 53.833875,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 53.833875,
+          "end": 53.913875,
+          "speaker": 0
+        },
+        {
+          "text": " get",
+          "start": 53.913875,
+          "end": 54.053875,
+          "speaker": 0
+        },
+        {
+          "text": " it?",
+          "start": 54.053875,
+          "end": 54.173874999999995,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Yep,",
+          "start": 55.87475,
+          "end": 56.454750000000004,
+          "speaker": 0
+        },
+        {
+          "text": " that's",
+          "start": 56.65475,
+          "end": 56.87475,
+          "speaker": 0
+        },
+        {
+          "text": " correct,",
+          "start": 56.87475,
+          "end": 57.17475,
+          "speaker": 0
+        },
+        {
+          "text": " but",
+          "start": 57.23475,
+          "end": 57.87475,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 57.87475,
+          "end": 58.134750000000004,
+          "speaker": 0
+        },
+        {
+          "text": " know",
+          "start": 58.134750000000004,
+          "end": 58.25475,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 58.25475,
+          "end": 58.37475,
+          "speaker": 0
+        },
+        {
+          "text": " project",
+          "start": 58.37475,
+          "end": 58.71475,
+          "speaker": 0
+        },
+        {
+          "text": " so",
+          "start": 58.71475,
+          "end": 58.954750000000004,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 58.954750000000004,
+          "end": 59.13475,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 59.13475,
+          "end": 59.65475,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 59.65475,
+          "end": 59.77475,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 59.77475,
+          "end": 59.89475,
+          "speaker": 0
+        },
+        {
+          "text": " half",
+          "start": 59.89475,
+          "end": 60.03475,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " I",
+          "start": 61.175625000000004,
+          "end": 61.455625000000005,
+          "speaker": 0
+        },
+        {
+          "text": " do",
+          "start": 61.455625000000005,
+          "end": 61.735625,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 61.735625,
+          "end": 61.935625,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 61.935625,
+          "end": 62.055625,
+          "speaker": 0
+        },
+        {
+          "text": " articulated",
+          "start": 62.055625,
+          "end": 62.555625,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 62.555625,
+          "end": 62.795625,
+          "speaker": 0
+        },
+        {
+          "text": " fine,",
+          "start": 62.795625,
+          "end": 62.995625000000004,
+          "speaker": 0
+        },
+        {
+          "text": " but",
+          "start": 63.315625000000004,
+          "end": 63.815625000000004,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 63.815625000000004,
+          "end": 63.935625,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 63.935625,
+          "end": 64.015625,
+          "speaker": 0
+        },
+        {
+          "text": " half",
+          "start": 64.015625,
+          "end": 64.195625,
+          "speaker": 0
+        },
+        {
+          "text": " cheat",
+          "start": 64.195625,
+          "end": 64.47562500000001,
+          "speaker": 0
+        },
+        {
+          "text": " because",
+          "start": 64.47562500000001,
+          "end": 64.61562500000001,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 64.61562500000001,
+          "end": 64.75562500000001,
+          "speaker": 0
+        },
+        {
+          "text": " sort",
+          "start": 64.75562500000001,
+          "end": 64.855625,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 64.855625,
+          "end": 64.995625,
+          "speaker": 0
+        },
+        {
+          "text": " knew",
+          "start": 64.995625,
+          "end": 65.095625,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 65.095625,
+          "end": 65.195625,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 65.195625,
+          "end": 65.33562500000001,
+          "speaker": 0
+        },
+        {
+          "text": " were",
+          "start": 65.33562500000001,
+          "end": 65.415625,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 65.415625,
+          "end": 65.515625,
+          "speaker": 0
+        },
+        {
+          "text": " on.",
+          "start": 65.515625,
+          "end": 65.515625,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Okay,",
+          "start": 66.70647916666667,
+          "end": 67.14647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " so",
+          "start": 67.78647916666667,
+          "end": 67.92647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " as",
+          "start": 67.92647916666667,
+          "end": 68.14647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 68.14647916666667,
+          "end": 68.28647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " think,",
+          "start": 68.28647916666667,
+          "end": 68.54647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 68.72647916666666,
+          "end": 69.34647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 69.34647916666667,
+          "end": 69.48647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " my,",
+          "start": 69.48647916666667,
+          "end": 69.70647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " my",
+          "start": 69.84647916666667,
+          "end": 70.76647916666667,
+          "speaker": 0
+        },
+        {
+          "text": " perspective",
+          "start": 70.76647916666667,
+          "end": 70.96647916666666,
+          "speaker": 0
+        },
+        {
+          "text": " is,",
+          "start": 70.96647916666666,
+          "end": 70.96647916666666,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " perspective",
+          "start": 70.997375,
+          "end": 71.237375,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 71.237375,
+          "end": 71.417375,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 71.417375,
+          "end": 71.597375,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 71.597375,
+          "end": 71.75737500000001,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 71.75737500000001,
+          "end": 72.097375,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 72.357375,
+          "end": 73.717375,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 75.247375,
+          "end": 76.42737500000001,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " I",
+          "start": 76.45825,
+          "end": 76.63825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 76.63825000000001,
+          "end": 76.79825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 76.79825000000001,
+          "end": 76.95825,
+          "speaker": 0
+        },
+        {
+          "text": " doing",
+          "start": 76.95825,
+          "end": 77.11825,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 77.11825,
+          "end": 77.23825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " good",
+          "start": 77.23825000000001,
+          "end": 77.35825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " job",
+          "start": 77.35825000000001,
+          "end": 77.55825,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 77.55825,
+          "end": 77.71825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " framing",
+          "start": 77.71825000000001,
+          "end": 77.99825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 77.99825000000001,
+          "end": 78.19825,
+          "speaker": 0
+        },
+        {
+          "text": " high",
+          "start": 78.19825,
+          "end": 78.35825000000001,
+          "speaker": 0
+        },
+        {
+          "text": "-level",
+          "start": 78.35825000000001,
+          "end": 78.49825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " problem,",
+          "start": 78.49825000000001,
+          "end": 79.01825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " but",
+          "start": 79.67825,
+          "end": 80.23825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 80.23825000000001,
+          "end": 80.37825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " having",
+          "start": 80.37825000000001,
+          "end": 80.55825,
+          "speaker": 0
+        },
+        {
+          "text": " trouble",
+          "start": 80.55825,
+          "end": 80.89825,
+          "speaker": 0
+        },
+        {
+          "text": " understanding",
+          "start": 80.89825,
+          "end": 81.51825000000001,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 81.51825000000001,
+          "end": 81.89825,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 81.89825,
+          "end": 81.89825,
+          "speaker": 0
+        },
+        {
+          "text": " trying",
+          "start": 81.89825,
+          "end": 81.89825,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 81.89825,
+          "end": 81.89825,
+          "speaker": 0
+        },
+        {
+          "text": " say.",
+          "start": 81.89825,
+          "end": 81.89825,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " what",
+          "start": 81.91910416666667,
+          "end": 82.13910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " your",
+          "start": 82.13910416666667,
+          "end": 82.37910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " solution",
+          "start": 82.37910416666666,
+          "end": 82.79910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 82.79910416666667,
+          "end": 83.01910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 83.01910416666666,
+          "end": 83.17910416666668,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 83.17910416666668,
+          "end": 83.45910416666668,
+          "speaker": 0
+        },
+        {
+          "text": " from",
+          "start": 83.45910416666668,
+          "end": 83.87910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 83.87910416666666,
+          "end": 84.13910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " description,",
+          "start": 84.13910416666667,
+          "end": 84.55910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 84.77910416666667,
+          "end": 84.87910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " especially",
+          "start": 84.87910416666666,
+          "end": 85.39910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 85.39910416666667,
+          "end": 85.63910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 85.63910416666667,
+          "end": 85.77910416666667,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 85.77910416666667,
+          "end": 86.01910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 86.01910416666666,
+          "end": 86.23910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " specifically,",
+          "start": 86.23910416666666,
+          "end": 86.73910416666666,
+          "speaker": 0
+        },
+        {
+          "text": " right?",
+          "start": 87.01910416666666,
+          "end": 87.15910416666667,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Maybe",
+          "start": 87.8609375,
+          "end": 88.1809375,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 88.1809375,
+          "end": 88.5009375,
+          "speaker": 0
+        },
+        {
+          "text": " how",
+          "start": 88.5009375,
+          "end": 88.56093750000001,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 88.56093750000001,
+          "end": 88.7009375,
+          "speaker": 0
+        },
+        {
+          "text": " framed",
+          "start": 88.7009375,
+          "end": 89.0009375,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 89.0009375,
+          "end": 89.1809375,
+          "speaker": 0
+        },
+        {
+          "text": " at",
+          "start": 89.1809375,
+          "end": 89.3609375,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 89.3609375,
+          "end": 89.4809375,
+          "speaker": 0
+        },
+        {
+          "text": " start,",
+          "start": 89.4809375,
+          "end": 89.8009375,
+          "speaker": 0
+        },
+        {
+          "text": " because",
+          "start": 89.92093750000001,
+          "end": 90.0209375,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 90.0209375,
+          "end": 90.2009375,
+          "speaker": 0
+        },
+        {
+          "text": " had",
+          "start": 90.2009375,
+          "end": 90.6209375,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 90.6209375,
+          "end": 90.7409375,
+          "speaker": 0
+        },
+        {
+          "text": " same",
+          "start": 90.7409375,
+          "end": 90.9809375,
+          "speaker": 0
+        },
+        {
+          "text": " issue,",
+          "start": 90.9809375,
+          "end": 91.3009375,
+          "speaker": 0
+        },
+        {
+          "text": " or",
+          "start": 91.4609375,
+          "end": 91.5409375,
+          "speaker": 0
+        },
+        {
+          "text": " similar",
+          "start": 91.5409375,
+          "end": 92.0009375,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 92.0009375,
+          "end": 92.1609375,
+          "speaker": 0
+        },
+        {
+          "text": " me,",
+          "start": 92.1609375,
+          "end": 92.2609375,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 92.3409375,
+          "end": 92.3609375,
+          "speaker": 0
+        },
+        {
+          "text": " was",
+          "start": 92.3609375,
+          "end": 92.4609375,
+          "speaker": 0
+        },
+        {
+          "text": " more",
+          "start": 92.4609375,
+          "end": 92.6209375,
+          "speaker": 0
+        },
+        {
+          "text": " victimized.",
+          "start": 92.6209375,
+          "end": 92.8209375,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " picture.",
+          "start": 92.84072916666666,
+          "end": 93.08072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " You",
+          "start": 93.40072916666666,
+          "end": 93.68072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " told",
+          "start": 93.68072916666667,
+          "end": 93.90072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " us",
+          "start": 93.90072916666666,
+          "end": 94.04072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 94.04072916666667,
+          "end": 94.12072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " get",
+          "start": 94.12072916666666,
+          "end": 94.22072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " away",
+          "start": 94.22072916666666,
+          "end": 94.36072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " from",
+          "start": 94.36072916666666,
+          "end": 94.52072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 94.52072916666667,
+          "end": 94.64072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " checklist",
+          "start": 94.64072916666666,
+          "end": 94.94072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " system.",
+          "start": 94.94072916666666,
+          "end": 95.34072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " So",
+          "start": 95.44072916666666,
+          "end": 95.50072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " maybe",
+          "start": 95.50072916666666,
+          "end": 95.68072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " that's",
+          "start": 95.68072916666667,
+          "end": 95.90072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " why",
+          "start": 95.90072916666666,
+          "end": 96.02072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 96.02072916666667,
+          "end": 96.14072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 96.14072916666666,
+          "end": 96.32072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 96.32072916666667,
+          "end": 96.40072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 96.40072916666666,
+          "end": 96.52072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " tried",
+          "start": 96.52072916666667,
+          "end": 96.74072916666667,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 96.74072916666667,
+          "end": 96.86072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " avoid",
+          "start": 96.86072916666666,
+          "end": 97.06072916666666,
+          "speaker": 0
+        },
+        {
+          "text": " it.",
+          "start": 97.06072916666666,
+          "end": 97.18072916666667,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Yeah,",
+          "start": 98.301625,
+          "end": 98.721625,
+          "speaker": 0
+        },
+        {
+          "text": " yeah,",
+          "start": 98.901625,
+          "end": 99.121625,
+          "speaker": 0
+        },
+        {
+          "text": " for",
+          "start": 99.781625,
+          "end": 100.001625,
+          "speaker": 0
+        },
+        {
+          "text": " sure.",
+          "start": 100.001625,
+          "end": 100.241625,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 101.48162500000001,
+          "end": 101.921625,
+          "speaker": 0
+        },
+        {
+          "text": " not,",
+          "start": 101.921625,
+          "end": 102.101625,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 102.221625,
+          "end": 102.34162500000001,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 102.34162500000001,
+          "end": 102.48162500000001,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 102.48162500000001,
+          "end": 102.641625,
+          "speaker": 0
+        },
+        {
+          "text": " blameless",
+          "start": 102.641625,
+          "end": 103.181625,
+          "speaker": 0
+        },
+        {
+          "text": " effort.",
+          "start": 103.181625,
+          "end": 103.741625,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " This",
+          "start": 103.76252083333334,
+          "end": 104.60252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 104.60252083333334,
+          "end": 104.76252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " intended",
+          "start": 104.76252083333334,
+          "end": 105.28252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 105.28252083333334,
+          "end": 105.44252083333335,
+          "speaker": 0
+        },
+        {
+          "text": " be",
+          "start": 105.44252083333335,
+          "end": 105.56252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 105.56252083333334,
+          "end": 105.68252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " blameless",
+          "start": 105.68252083333334,
+          "end": 106.42252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " feedback",
+          "start": 106.42252083333334,
+          "end": 106.74252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " session.",
+          "start": 106.74252083333334,
+          "end": 107.24252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 107.56252083333334,
+          "end": 107.60252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " not",
+          "start": 107.60252083333334,
+          "end": 107.80252083333335,
+          "speaker": 0
+        },
+        {
+          "text": " saying",
+          "start": 107.80252083333335,
+          "end": 108.34252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 108.34252083333334,
+          "end": 108.58252083333335,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 108.58252083333335,
+          "end": 108.88252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " guys",
+          "start": 108.88252083333334,
+          "end": 109.08252083333335,
+          "speaker": 0
+        },
+        {
+          "text": " find",
+          "start": 109.08252083333335,
+          "end": 109.20252083333334,
+          "speaker": 0
+        },
+        {
+          "text": " it.",
+          "start": 109.20252083333334,
+          "end": 109.20252083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " up",
+          "start": 109.22341666666667,
+          "end": 109.54341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " or",
+          "start": 109.54341666666666,
+          "end": 109.74341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " anything.",
+          "start": 109.74341666666666,
+          "end": 110.06341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 111.12341666666667,
+          "end": 111.52341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " trying",
+          "start": 111.52341666666666,
+          "end": 111.78341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 111.78341666666667,
+          "end": 111.96341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " get",
+          "start": 111.96341666666666,
+          "end": 112.10341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " us",
+          "start": 112.10341666666666,
+          "end": 112.26341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " all",
+          "start": 112.26341666666667,
+          "end": 112.50341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 112.50341666666667,
+          "end": 112.58341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 112.58341666666666,
+          "end": 112.68341666666666,
+          "speaker": 0
+        },
+        {
+          "text": " point",
+          "start": 112.68341666666666,
+          "end": 112.92341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " where",
+          "start": 112.92341666666667,
+          "end": 113.12341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 113.12341666666667,
+          "end": 113.28341666666667,
+          "speaker": 0
+        },
+        {
+          "text": " can...",
+          "start": 113.28341666666667,
+          "end": 113.58341666666666,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " better",
+          "start": 114.68427083333333,
+          "end": 115.04427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " communicate",
+          "start": 115.04427083333333,
+          "end": 115.60427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " basically",
+          "start": 115.60427083333333,
+          "end": 116.04427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " our",
+          "start": 116.04427083333333,
+          "end": 116.44427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " goals.",
+          "start": 116.44427083333333,
+          "end": 117.22427083333334,
+          "speaker": 0
+        },
+        {
+          "text": " Yeah,",
+          "start": 118.39427083333332,
+          "end": 118.81427083333332,
+          "speaker": 0
+        },
+        {
+          "text": " just",
+          "start": 119.03427083333332,
+          "end": 119.31427083333332,
+          "speaker": 0
+        },
+        {
+          "text": " so",
+          "start": 119.31427083333332,
+          "end": 119.43427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 119.43427083333333,
+          "end": 119.55427083333333,
+          "speaker": 0
+        },
+        {
+          "text": " understand",
+          "start": 119.55427083333333,
+          "end": 119.89427083333332,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 119.89427083333332,
+          "end": 120.11427083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " goal",
+          "start": 120.14516666666667,
+          "end": 120.48516666666667,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 120.48516666666667,
+          "end": 120.66516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 120.66516666666666,
+          "end": 120.88516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " exercise",
+          "start": 120.88516666666666,
+          "end": 121.34516666666667,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 121.34516666666667,
+          "end": 121.52516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 121.52516666666666,
+          "end": 121.64516666666667,
+          "speaker": 0
+        },
+        {
+          "text": " better",
+          "start": 121.64516666666667,
+          "end": 121.96516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 121.96516666666666,
+          "end": 122.80516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 122.80516666666666,
+          "end": 123.32516666666668,
+          "speaker": 0
+        },
+        {
+          "text": " designed",
+          "start": 123.32516666666668,
+          "end": 123.88516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 123.88516666666666,
+          "end": 124.34516666666667,
+          "speaker": 0
+        },
+        {
+          "text": " essentially",
+          "start": 124.34516666666667,
+          "end": 124.82516666666666,
+          "speaker": 0
+        },
+        {
+          "text": " replace",
+          "start": 124.82516666666666,
+          "end": 125.42516666666667,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " the",
+          "start": 125.62602083333333,
+          "end": 126.10602083333333,
+          "speaker": 0
+        },
+        {
+          "text": " check",
+          "start": 126.10602083333333,
+          "end": 126.56602083333333,
+          "speaker": 0
+        },
+        {
+          "text": " out",
+          "start": 126.56602083333333,
+          "end": 128.04602083333333,
+          "speaker": 0
+        },
+        {
+          "text": " system",
+          "start": 128.04602083333333,
+          "end": 128.38602083333333,
+          "speaker": 0
+        },
+        {
+          "text": " completely,",
+          "start": 128.38602083333333,
+          "end": 129.08602083333332,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 129.34602083333334,
+          "end": 129.44602083333334,
+          "speaker": 0
+        },
+        {
+          "text": " as",
+          "start": 129.44602083333334,
+          "end": 129.60602083333333,
+          "speaker": 0
+        },
+        {
+          "text": " in",
+          "start": 129.60602083333333,
+          "end": 129.84602083333334,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 129.84602083333334,
+          "end": 130.50602083333334,
+          "speaker": 0
+        },
+        {
+          "text": " everything.",
+          "start": 130.50602083333334,
+          "end": 131.04602083333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " single",
+          "start": 131.06691666666666,
+          "end": 131.32691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " day",
+          "start": 131.32691666666665,
+          "end": 131.60691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 131.60691666666665,
+          "end": 132.18691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " answer",
+          "start": 132.18691666666666,
+          "end": 132.52691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " these",
+          "start": 132.52691666666666,
+          "end": 132.76691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " four",
+          "start": 132.76691666666665,
+          "end": 132.94691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " questions",
+          "start": 132.94691666666665,
+          "end": 133.44691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 133.44691666666665,
+          "end": 133.80691666666667,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 133.80691666666667,
+          "end": 134.06691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 134.06691666666666,
+          "end": 134.36691666666667,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 134.36691666666667,
+          "end": 134.46691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " just",
+          "start": 134.46691666666666,
+          "end": 134.74691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " talk",
+          "start": 134.74691666666666,
+          "end": 135.78691666666666,
+          "speaker": 0
+        },
+        {
+          "text": " about",
+          "start": 135.78691666666666,
+          "end": 136.10691666666665,
+          "speaker": 0
+        },
+        {
+          "text": " how",
+          "start": 136.10691666666665,
+          "end": 136.50691666666665,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " like",
+          "start": 136.52777083333334,
+          "end": 138.02777083333334,
+          "speaker": 0
+        },
+        {
+          "text": " our",
+          "start": 138.05777083333334,
+          "end": 138.67777083333334,
+          "speaker": 0
+        },
+        {
+          "text": " today's",
+          "start": 138.67777083333334,
+          "end": 139.73777083333334,
+          "speaker": 0
+        },
+        {
+          "text": " work",
+          "start": 139.73777083333334,
+          "end": 140.13777083333335,
+          "speaker": 0
+        },
+        {
+          "text": " fits",
+          "start": 140.13777083333335,
+          "end": 141.51777083333334,
+          "speaker": 0
+        },
+        {
+          "text": " into",
+          "start": 141.51777083333334,
+          "end": 141.95777083333334,
+          "speaker": 0
+        },
+        {
+          "text": " that.",
+          "start": 141.95777083333334,
+          "end": 141.95777083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " the",
+          "start": 141.98866666666666,
+          "end": 142.22866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " bigger",
+          "start": 142.22866666666667,
+          "end": 142.42866666666666,
+          "speaker": 0
+        },
+        {
+          "text": " picture.",
+          "start": 142.42866666666666,
+          "end": 142.80866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " Is",
+          "start": 143.56866666666667,
+          "end": 143.96866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 143.96866666666665,
+          "end": 144.18866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 144.18866666666665,
+          "end": 144.66866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " goal?",
+          "start": 144.66866666666667,
+          "end": 145.02866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " Or",
+          "start": 145.64866666666666,
+          "end": 145.78866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 145.78866666666667,
+          "end": 146.00866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 146.00866666666667,
+          "end": 146.12866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " just",
+          "start": 146.12866666666665,
+          "end": 146.28866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " something",
+          "start": 146.28866666666667,
+          "end": 146.64866666666666,
+          "speaker": 0
+        },
+        {
+          "text": " more",
+          "start": 146.64866666666666,
+          "end": 146.94866666666667,
+          "speaker": 0
+        },
+        {
+          "text": " high",
+          "start": 146.94866666666667,
+          "end": 147.24866666666665,
+          "speaker": 0
+        },
+        {
+          "text": " level?",
+          "start": 147.24866666666665,
+          "end": 147.42866666666666,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " overview",
+          "start": 147.44952083333334,
+          "end": 148.24952083333335,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 148.24952083333335,
+          "end": 148.88952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 148.88952083333334,
+          "end": 149.08952083333332,
+          "speaker": 0
+        },
+        {
+          "text": " we're",
+          "start": 149.08952083333332,
+          "end": 149.26952083333333,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 149.26952083333333,
+          "end": 149.62952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 149.62952083333334,
+          "end": 149.98952083333333,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 149.98952083333333,
+          "end": 150.28952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 150.28952083333334,
+          "end": 151.66952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 151.66952083333334,
+          "end": 151.84952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " intended",
+          "start": 151.84952083333334,
+          "end": 152.28952083333334,
+          "speaker": 0
+        },
+        {
+          "text": " primarily",
+          "start": 152.28952083333334,
+          "end": 152.88952083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " primarily",
+          "start": 152.91039583333333,
+          "end": 153.27039583333334,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 153.27039583333334,
+          "end": 153.53039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " be",
+          "start": 153.53039583333333,
+          "end": 153.81039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 153.81039583333333,
+          "end": 154.0503958333333,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 154.0503958333333,
+          "end": 154.17039583333332,
+          "speaker": 0
+        },
+        {
+          "text": " an",
+          "start": 154.17039583333332,
+          "end": 154.27039583333334,
+          "speaker": 0
+        },
+        {
+          "text": " exercise",
+          "start": 154.27039583333334,
+          "end": 155.01039583333332,
+          "speaker": 0
+        },
+        {
+          "text": " in",
+          "start": 155.01039583333332,
+          "end": 155.69039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " thinking",
+          "start": 155.69039583333333,
+          "end": 156.49039583333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 156.49039583333334,
+          "end": 156.69039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " little",
+          "start": 156.69039583333333,
+          "end": 156.81039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 156.81039583333333,
+          "end": 156.97039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " more",
+          "start": 156.97039583333333,
+          "end": 157.15039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 157.15039583333333,
+          "end": 157.35039583333332,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 157.35039583333332,
+          "end": 157.45039583333332,
+          "speaker": 0
+        },
+        {
+          "text": " project",
+          "start": 157.45039583333332,
+          "end": 157.75039583333333,
+          "speaker": 0
+        },
+        {
+          "text": " manager.",
+          "start": 157.75039583333333,
+          "end": 158.07039583333332,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " So,",
+          "start": 158.61127083333335,
+          "end": 159.39127083333335,
+          "speaker": 0
+        },
+        {
+          "text": " um,",
+          "start": 159.57127083333333,
+          "end": 160.33127083333335,
+          "speaker": 0
+        },
+        {
+          "text": " the,",
+          "start": 160.61127083333335,
+          "end": 160.99127083333335,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 161.33127083333335,
+          "end": 162.29127083333333,
+          "speaker": 0
+        },
+        {
+          "text": " not",
+          "start": 162.29127083333333,
+          "end": 162.69127083333333,
+          "speaker": 0
+        },
+        {
+          "text": " proposing",
+          "start": 162.69127083333333,
+          "end": 163.57127083333333,
+          "speaker": 0
+        },
+        {
+          "text": " any",
+          "start": 163.57127083333333,
+          "end": 163.81127083333334,
+          "speaker": 0
+        },
+        {
+          "text": " changes.",
+          "start": 163.81127083333334,
+          "end": 163.81127083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " changes",
+          "start": 163.83214583333333,
+          "end": 164.17214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 164.17214583333333,
+          "end": 164.47214583333331,
+          "speaker": 0
+        },
+        {
+          "text": " our",
+          "start": 164.47214583333331,
+          "end": 164.57214583333334,
+          "speaker": 0
+        },
+        {
+          "text": " normal",
+          "start": 164.57214583333334,
+          "end": 164.83214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " processes",
+          "start": 164.83214583333333,
+          "end": 165.29214583333334,
+          "speaker": 0
+        },
+        {
+          "text": " right",
+          "start": 165.29214583333334,
+          "end": 165.53214583333332,
+          "speaker": 0
+        },
+        {
+          "text": " now.",
+          "start": 165.53214583333332,
+          "end": 165.83214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 166.61214583333333,
+          "end": 167.29214583333334,
+          "speaker": 0
+        },
+        {
+          "text": " am",
+          "start": 167.29214583333334,
+          "end": 167.71214583333332,
+          "speaker": 0
+        },
+        {
+          "text": " asking",
+          "start": 167.71214583333332,
+          "end": 168.81214583333332,
+          "speaker": 0
+        },
+        {
+          "text": " everybody",
+          "start": 168.81214583333332,
+          "end": 169.17214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 169.17214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " keep",
+          "start": 169.27214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " an",
+          "start": 169.27214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " eye",
+          "start": 169.27214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 169.27214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        },
+        {
+          "text": " that.",
+          "start": 169.27214583333333,
+          "end": 169.27214583333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " and",
+          "start": 169.29302083333334,
+          "end": 169.35302083333335,
+          "speaker": 0
+        },
+        {
+          "text": " go",
+          "start": 169.35302083333335,
+          "end": 169.45302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " through",
+          "start": 169.45302083333334,
+          "end": 169.65302083333336,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 169.65302083333336,
+          "end": 169.85302083333335,
+          "speaker": 0
+        },
+        {
+          "text": " exercise",
+          "start": 169.85302083333335,
+          "end": 170.47302083333335,
+          "speaker": 0
+        },
+        {
+          "text": " in",
+          "start": 170.47302083333335,
+          "end": 170.73302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " their",
+          "start": 170.73302083333334,
+          "end": 170.87302083333336,
+          "speaker": 0
+        },
+        {
+          "text": " check",
+          "start": 170.87302083333336,
+          "end": 171.05302083333333,
+          "speaker": 0
+        },
+        {
+          "text": "-in",
+          "start": 171.05302083333333,
+          "end": 171.15302083333336,
+          "speaker": 0
+        },
+        {
+          "text": " stream",
+          "start": 171.15302083333336,
+          "end": 171.39302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " for",
+          "start": 171.39302083333334,
+          "end": 171.61302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " today",
+          "start": 171.61302083333334,
+          "end": 172.03302083333335,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 172.03302083333335,
+          "end": 172.57302083333335,
+          "speaker": 0
+        },
+        {
+          "text": " try",
+          "start": 172.57302083333335,
+          "end": 172.77302083333333,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 172.77302083333333,
+          "end": 172.99302083333333,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 172.99302083333333,
+          "end": 173.39302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " take",
+          "start": 173.39302083333334,
+          "end": 174.73302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 174.73302083333334,
+          "end": 174.73302083333334,
+          "speaker": 0
+        },
+        {
+          "text": " nap.",
+          "start": 174.73302083333334,
+          "end": 174.73302083333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " us",
+          "start": 174.75389583333333,
+          "end": 174.89389583333332,
+          "speaker": 0
+        },
+        {
+          "text": " all",
+          "start": 174.89389583333332,
+          "end": 175.13389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 175.13389583333333,
+          "end": 175.25389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " little",
+          "start": 175.25389583333333,
+          "end": 175.39389583333332,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 175.39389583333332,
+          "end": 175.59389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " closer",
+          "start": 175.59389583333333,
+          "end": 175.97389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " towards,",
+          "start": 175.97389583333333,
+          "end": 176.63389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " like,",
+          "start": 176.77389583333334,
+          "end": 177.21389583333334,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 177.29389583333332,
+          "end": 177.47389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 177.47389583333333,
+          "end": 177.57389583333332,
+          "speaker": 0
+        },
+        {
+          "text": " project",
+          "start": 177.57389583333332,
+          "end": 177.91389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " manager",
+          "start": 177.91389583333333,
+          "end": 178.41389583333333,
+          "speaker": 0
+        },
+        {
+          "text": " mindset.",
+          "start": 178.41389583333333,
+          "end": 179.13389583333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " A",
+          "start": 181.15477083333334,
+          "end": 181.49477083333335,
+          "speaker": 0
+        },
+        {
+          "text": " product",
+          "start": 181.49477083333335,
+          "end": 181.87477083333334,
+          "speaker": 0
+        },
+        {
+          "text": " manager,",
+          "start": 181.87477083333334,
+          "end": 182.29477083333336,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 182.29477083333336,
+          "end": 182.43477083333335,
+          "speaker": 0
+        },
+        {
+          "text": " think,",
+          "start": 182.43477083333335,
+          "end": 182.57477083333336,
+          "speaker": 0
+        },
+        {
+          "text": " would",
+          "start": 182.67477083333335,
+          "end": 182.69477083333334,
+          "speaker": 0
+        },
+        {
+          "text": " be",
+          "start": 182.69477083333334,
+          "end": 182.85477083333333,
+          "speaker": 0
+        },
+        {
+          "text": " actually",
+          "start": 182.85477083333333,
+          "end": 183.19477083333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 183.19477083333334,
+          "end": 183.55477083333335,
+          "speaker": 0
+        },
+        {
+          "text": " better",
+          "start": 183.55477083333335,
+          "end": 184.61477083333335,
+          "speaker": 0
+        },
+        {
+          "text": " description",
+          "start": 184.61477083333335,
+          "end": 185.23477083333336,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 185.23477083333336,
+          "end": 185.43477083333335,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 185.43477083333335,
+          "end": 185.53477083333334,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 185.53477083333334,
+          "end": 185.63477083333333,
+          "speaker": 0
+        },
+        {
+          "text": " on.",
+          "start": 185.63477083333333,
+          "end": 185.63477083333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " I'm",
+          "start": 185.67564583333333,
+          "end": 185.67564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " hoping",
+          "start": 185.67564583333333,
+          "end": 185.87564583333332,
+          "speaker": 0
+        },
+        {
+          "text": " everybody",
+          "start": 185.87564583333332,
+          "end": 186.21564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " becomes",
+          "start": 186.21564583333333,
+          "end": 186.51564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 186.51564583333334,
+          "end": 186.63564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " little",
+          "start": 186.63564583333334,
+          "end": 186.71564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 186.71564583333333,
+          "end": 186.83564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " more",
+          "start": 186.83564583333333,
+          "end": 187.01564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " of.",
+          "start": 187.01564583333334,
+          "end": 187.23564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " So",
+          "start": 188.15564583333332,
+          "end": 188.51564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " thinking",
+          "start": 188.51564583333334,
+          "end": 188.83564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 188.83564583333333,
+          "end": 188.99564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " little",
+          "start": 188.99564583333333,
+          "end": 189.09564583333332,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 189.09564583333332,
+          "end": 189.25564583333335,
+          "speaker": 0
+        },
+        {
+          "text": " more",
+          "start": 189.25564583333335,
+          "end": 189.67564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " about,",
+          "start": 189.67564583333333,
+          "end": 190.11564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " but",
+          "start": 190.61564583333333,
+          "end": 190.77564583333333,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 190.77564583333333,
+          "end": 190.91564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 190.91564583333334,
+          "end": 191.07564583333334,
+          "speaker": 0
+        },
+        {
+          "text": " past.",
+          "start": 191.07564583333334,
+          "end": 191.11564583333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " product",
+          "start": 191.13652083333332,
+          "end": 191.3965208333333,
+          "speaker": 0
+        },
+        {
+          "text": " design",
+          "start": 191.3965208333333,
+          "end": 191.93652083333333,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 191.93652083333333,
+          "end": 192.31652083333333,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 192.31652083333333,
+          "end": 192.45652083333331,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 192.45652083333331,
+          "end": 192.57652083333332,
+          "speaker": 0
+        },
+        {
+          "text": " doing.",
+          "start": 192.57652083333332,
+          "end": 192.93652083333333,
+          "speaker": 0
+        },
+        {
+          "text": " That",
+          "start": 194.8365208333333,
+          "end": 195.19652083333332,
+          "speaker": 0
+        },
+        {
+          "text": " makes",
+          "start": 195.19652083333332,
+          "end": 195.3965208333333,
+          "speaker": 0
+        },
+        {
+          "text": " sense.",
+          "start": 195.3965208333333,
+          "end": 195.6765208333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " So",
+          "start": 196.59739583333334,
+          "end": 196.73739583333332,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 196.73739583333332,
+          "end": 196.91739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " think,",
+          "start": 196.91739583333333,
+          "end": 197.13739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 197.19739583333333,
+          "end": 197.39739583333335,
+          "speaker": 0
+        },
+        {
+          "text": " think,",
+          "start": 197.39739583333335,
+          "end": 197.69739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " yeah,",
+          "start": 197.77739583333334,
+          "end": 198.03739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 198.25739583333333,
+          "end": 198.33739583333335,
+          "speaker": 0
+        },
+        {
+          "text": " think,",
+          "start": 198.33739583333335,
+          "end": 198.45739583333335,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 198.53739583333333,
+          "end": 198.63739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 198.63739583333333,
+          "end": 198.81739583333334,
+          "speaker": 0
+        },
+        {
+          "text": " my",
+          "start": 198.81739583333334,
+          "end": 199.29739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " takeaway",
+          "start": 199.29739583333333,
+          "end": 199.59739583333334,
+          "speaker": 0
+        },
+        {
+          "text": " when",
+          "start": 199.59739583333334,
+          "end": 199.81739583333334,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 199.81739583333334,
+          "end": 199.93739583333334,
+          "speaker": 0
+        },
+        {
+          "text": " read",
+          "start": 199.93739583333334,
+          "end": 200.07739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 200.07739583333333,
+          "end": 200.33739583333335,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 200.33739583333335,
+          "end": 200.79739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 200.79739583333333,
+          "end": 201.17739583333335,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 201.17739583333335,
+          "end": 201.53739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " building",
+          "start": 201.53739583333333,
+          "end": 201.81739583333334,
+          "speaker": 0
+        },
+        {
+          "text": " an",
+          "start": 201.81739583333334,
+          "end": 202.03739583333333,
+          "speaker": 0
+        },
+        {
+          "text": " AI.",
+          "start": 202.03739583333333,
+          "end": 202.03739583333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " AI",
+          "start": 202.05827083333332,
+          "end": 202.2582708333333,
+          "speaker": 0
+        },
+        {
+          "text": " data",
+          "start": 202.2582708333333,
+          "end": 202.5382708333333,
+          "speaker": 0
+        },
+        {
+          "text": " layer",
+          "start": 202.5382708333333,
+          "end": 202.95827083333333,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 202.95827083333333,
+          "end": 203.29827083333333,
+          "speaker": 0
+        },
+        {
+          "text": " involves",
+          "start": 203.29827083333333,
+          "end": 204.01827083333333,
+          "speaker": 0
+        },
+        {
+          "text": " aggregating",
+          "start": 204.01827083333333,
+          "end": 204.51827083333333,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 204.51827083333333,
+          "end": 204.71827083333332,
+          "speaker": 0
+        },
+        {
+          "text": " enriching",
+          "start": 204.71827083333332,
+          "end": 205.29827083333333,
+          "speaker": 0
+        },
+        {
+          "text": " data.",
+          "start": 205.29827083333333,
+          "end": 205.65827083333332,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " with",
+          "start": 207.51914583333334,
+          "end": 207.79914583333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 207.79914583333334,
+          "end": 207.95914583333334,
+          "speaker": 0
+        },
+        {
+          "text": " natural",
+          "start": 207.95914583333334,
+          "end": 208.23914583333334,
+          "speaker": 0
+        },
+        {
+          "text": " language",
+          "start": 208.23914583333334,
+          "end": 208.67914583333334,
+          "speaker": 0
+        },
+        {
+          "text": " search",
+          "start": 208.67914583333334,
+          "end": 209.11914583333333,
+          "speaker": 0
+        },
+        {
+          "text": " chat",
+          "start": 209.11914583333333,
+          "end": 209.41914583333335,
+          "speaker": 0
+        },
+        {
+          "text": " bot,",
+          "start": 209.41914583333335,
+          "end": 209.75914583333335,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 210.29914583333334,
+          "end": 210.49914583333333,
+          "speaker": 0
+        },
+        {
+          "text": " these",
+          "start": 210.49914583333333,
+          "end": 211.13914583333334,
+          "speaker": 0
+        },
+        {
+          "text": " are.",
+          "start": 211.13914583333334,
+          "end": 211.55914583333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " little",
+          "start": 212.98002083333333,
+          "end": 213.64002083333332,
+          "speaker": 0
+        },
+        {
+          "text": " bit",
+          "start": 213.64002083333332,
+          "end": 214.16002083333333,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 214.16002083333333,
+          "end": 214.48002083333333,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 214.48002083333333,
+          "end": 214.92002083333333,
+          "speaker": 0
+        },
+        {
+          "text": " general",
+          "start": 214.92002083333333,
+          "end": 216.00002083333334,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 216.00002083333334,
+          "end": 216.28002083333334,
+          "speaker": 0
+        },
+        {
+          "text": " me",
+          "start": 216.28002083333334,
+          "end": 216.40002083333331,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 216.40002083333331,
+          "end": 216.58002083333332,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 216.58002083333332,
+          "end": 216.70002083333333,
+          "speaker": 0
+        },
+        {
+          "text": " don't",
+          "start": 216.70002083333333,
+          "end": 216.94002083333334,
+          "speaker": 0
+        },
+        {
+          "text": " understand",
+          "start": 216.94002083333334,
+          "end": 217.54002083333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Like,",
+          "start": 219.35089583333334,
+          "end": 219.79089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 219.85089583333334,
+          "end": 220.07089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " don't",
+          "start": 220.07089583333334,
+          "end": 220.33089583333333,
+          "speaker": 0
+        },
+        {
+          "text": " have",
+          "start": 220.33089583333333,
+          "end": 220.47089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 220.47089583333334,
+          "end": 220.57089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " picture",
+          "start": 220.57089583333334,
+          "end": 220.83089583333333,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 220.83089583333333,
+          "end": 221.05089583333336,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 221.05089583333336,
+          "end": 221.73089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 222.18089583333335,
+          "end": 222.86089583333333,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 222.86089583333333,
+          "end": 223.04089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 223.04089583333334,
+          "end": 223.16089583333334,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 223.16089583333334,
+          "end": 223.34089583333335,
+          "speaker": 0
+        },
+        {
+          "text": " building.",
+          "start": 223.34089583333335,
+          "end": 223.60089583333334,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " or",
+          "start": 223.90175,
+          "end": 224.06175,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 224.06175,
+          "end": 224.26175,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 224.26175,
+          "end": 224.48175,
+          "speaker": 0
+        },
+        {
+          "text": " the",
+          "start": 224.48175,
+          "end": 224.62175,
+          "speaker": 0
+        },
+        {
+          "text": " UX",
+          "start": 224.62175,
+          "end": 224.86175,
+          "speaker": 0
+        },
+        {
+          "text": " looks",
+          "start": 224.86175,
+          "end": 225.10174999999998,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 225.10174999999998,
+          "end": 225.30175,
+          "speaker": 0
+        },
+        {
+          "text": " when",
+          "start": 225.30175,
+          "end": 225.42175,
+          "speaker": 0
+        },
+        {
+          "text": " it's",
+          "start": 225.42175,
+          "end": 225.58175,
+          "speaker": 0
+        },
+        {
+          "text": " done",
+          "start": 225.58175,
+          "end": 225.86175,
+          "speaker": 0
+        },
+        {
+          "text": " from",
+          "start": 225.86175,
+          "end": 226.42175,
+          "speaker": 0
+        },
+        {
+          "text": " reading",
+          "start": 226.42175,
+          "end": 226.64175,
+          "speaker": 0
+        },
+        {
+          "text": " this.",
+          "start": 226.64175,
+          "end": 227.00175,
+          "speaker": 0
+        },
+        {
+          "text": " Okay.",
+          "start": 227.02175,
+          "end": 227.16174999999998,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " a",
+          "start": 229.362625,
+          "end": 229.362625,
+          "speaker": 0
+        },
+        {
+          "text": " little",
+          "start": 229.362625,
+          "end": 229.502625,
+          "speaker": 0
+        },
+        {
+          "text": " bit,",
+          "start": 229.502625,
+          "end": 229.762625,
+          "speaker": 0
+        },
+        {
+          "text": " right?",
+          "start": 229.862625,
+          "end": 230.022625,
+          "speaker": 0
+        },
+        {
+          "text": " Ask",
+          "start": 230.582625,
+          "end": 230.802625,
+          "speaker": 0
+        },
+        {
+          "text": " questions",
+          "start": 230.802625,
+          "end": 231.262625,
+          "speaker": 0
+        },
+        {
+          "text": " naturally.",
+          "start": 231.262625,
+          "end": 231.642625,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 232.142625,
+          "end": 232.302625,
+          "speaker": 0
+        },
+        {
+          "text": " don't",
+          "start": 232.302625,
+          "end": 232.422625,
+          "speaker": 0
+        },
+        {
+          "text": " know.",
+          "start": 232.422625,
+          "end": 232.522625,
+          "speaker": 0
+        },
+        {
+          "text": " I",
+          "start": 232.582625,
+          "end": 232.682625,
+          "speaker": 0
+        },
+        {
+          "text": " don't",
+          "start": 232.682625,
+          "end": 233.022625,
+          "speaker": 0
+        },
+        {
+          "text": " quite",
+          "start": 233.022625,
+          "end": 233.302625,
+          "speaker": 0
+        },
+        {
+          "text": " know",
+          "start": 233.302625,
+          "end": 233.502625,
+          "speaker": 0
+        },
+        {
+          "text": " what",
+          "start": 233.502625,
+          "end": 233.682625,
+          "speaker": 0
+        },
+        {
+          "text": " ask",
+          "start": 233.682625,
+          "end": 233.982625,
+          "speaker": 0
+        },
+        {
+          "text": " questions",
+          "start": 233.982625,
+          "end": 234.622625,
+          "speaker": 0
+        },
+        {
+          "text": " naturally",
+          "start": 234.622625,
+          "end": 234.802625,
+          "speaker": 0
+        },
+        {
+          "text": " is.",
+          "start": 234.802625,
+          "end": 234.802625,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " naturally",
+          "start": 234.82352083333333,
+          "end": 235.00352083333334,
+          "speaker": 0
+        },
+        {
+          "text": " means",
+          "start": 235.00352083333334,
+          "end": 235.52352083333332,
+          "speaker": 0
+        },
+        {
+          "text": " get",
+          "start": 235.52352083333332,
+          "end": 237.26352083333333,
+          "speaker": 0
+        },
+        {
+          "text": " enriched,",
+          "start": 237.26352083333333,
+          "end": 237.74352083333332,
+          "speaker": 0
+        },
+        {
+          "text": " ranked",
+          "start": 237.94352083333334,
+          "end": 238.26352083333333,
+          "speaker": 0
+        },
+        {
+          "text": " results",
+          "start": 238.26352083333333,
+          "end": 238.86352083333333,
+          "speaker": 0
+        },
+        {
+          "text": " instantly.",
+          "start": 238.86352083333333,
+          "end": 239.28352083333334,
+          "speaker": 0
+        },
+        {
+          "text": " So",
+          "start": 239.62352083333334,
+          "end": 239.82352083333333,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 239.82352083333333,
+          "end": 239.98352083333333,
+          "speaker": 0
+        },
+        {
+          "text": " maybe.",
+          "start": 239.98352083333333,
+          "end": 240.20352083333333,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Maybe",
+          "start": 240.284375,
+          "end": 240.504375,
+          "speaker": 0
+        },
+        {
+          "text": " a",
+          "start": 240.504375,
+          "end": 240.824375,
+          "speaker": 0
+        },
+        {
+          "text": " specific",
+          "start": 240.824375,
+          "end": 241.164375,
+          "speaker": 0
+        },
+        {
+          "text": " example,",
+          "start": 241.164375,
+          "end": 241.704375,
+          "speaker": 0
+        },
+        {
+          "text": " right,",
+          "start": 241.884375,
+          "end": 242.104375,
+          "speaker": 0
+        },
+        {
+          "text": " would",
+          "start": 242.204375,
+          "end": 242.30437500000002,
+          "speaker": 0
+        },
+        {
+          "text": " help",
+          "start": 242.30437500000002,
+          "end": 242.724375,
+          "speaker": 0
+        },
+        {
+          "text": " here,",
+          "start": 242.724375,
+          "end": 242.944375,
+          "speaker": 0
+        },
+        {
+          "text": " where",
+          "start": 243.164375,
+          "end": 243.24437500000002,
+          "speaker": 0
+        },
+        {
+          "text": " you're",
+          "start": 243.24437500000002,
+          "end": 243.40437500000002,
+          "speaker": 0
+        },
+        {
+          "text": " like,",
+          "start": 243.40437500000002,
+          "end": 243.724375,
+          "speaker": 0
+        },
+        {
+          "text": " you",
+          "start": 244.064375,
+          "end": 244.384375,
+          "speaker": 0
+        },
+        {
+          "text": " know,",
+          "start": 244.384375,
+          "end": 244.504375,
+          "speaker": 0
+        },
+        {
+          "text": " for",
+          "start": 244.604375,
+          "end": 244.724375,
+          "speaker": 0
+        },
+        {
+          "text": " example.",
+          "start": 244.724375,
+          "end": 245.064375,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " X",
+          "start": 246.68525,
+          "end": 247.28525,
+          "speaker": 0
+        },
+        {
+          "text": " user",
+          "start": 247.28525,
+          "end": 247.62525,
+          "speaker": 0
+        },
+        {
+          "text": " is",
+          "start": 247.62525,
+          "end": 247.82525,
+          "speaker": 0
+        },
+        {
+          "text": " looking",
+          "start": 247.82525,
+          "end": 248.10525,
+          "speaker": 0
+        },
+        {
+          "text": " for",
+          "start": 248.10525,
+          "end": 248.32525,
+          "speaker": 0
+        },
+        {
+          "text": " Y",
+          "start": 248.32525,
+          "end": 248.72525,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 248.72525,
+          "end": 249.16525,
+          "speaker": 0
+        },
+        {
+          "text": " they",
+          "start": 249.16525,
+          "end": 249.72525,
+          "speaker": 0
+        },
+        {
+          "text": " will",
+          "start": 249.72525,
+          "end": 250.02525,
+          "speaker": 0
+        },
+        {
+          "text": " go",
+          "start": 250.02525,
+          "end": 250.20525,
+          "speaker": 0
+        },
+        {
+          "text": " through",
+          "start": 250.20525,
+          "end": 250.38524999999998,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 250.38524999999998,
+          "end": 250.60525,
+          "speaker": 0
+        },
+        {
+          "text": " process",
+          "start": 250.60525,
+          "end": 251.00525,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " And",
+          "start": 251.206125,
+          "end": 251.80612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " so",
+          "start": 251.80612499999998,
+          "end": 252.12612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " far",
+          "start": 252.12612499999997,
+          "end": 252.30612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " we",
+          "start": 252.30612499999998,
+          "end": 252.46612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " have",
+          "start": 252.46612499999998,
+          "end": 252.666125,
+          "speaker": 0
+        },
+        {
+          "text": " these",
+          "start": 252.666125,
+          "end": 252.886125,
+          "speaker": 0
+        },
+        {
+          "text": " pieces",
+          "start": 252.886125,
+          "end": 253.206125,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 253.206125,
+          "end": 253.34612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " it",
+          "start": 253.34612499999997,
+          "end": 253.42612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " built",
+          "start": 253.42612499999998,
+          "end": 253.62612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " and",
+          "start": 253.62612499999997,
+          "end": 253.80612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " I'm",
+          "start": 253.80612499999998,
+          "end": 253.946125,
+          "speaker": 0
+        },
+        {
+          "text": " working",
+          "start": 253.946125,
+          "end": 254.12612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " on",
+          "start": 254.12612499999997,
+          "end": 254.30612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " this",
+          "start": 254.30612499999998,
+          "end": 254.46612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " piece",
+          "start": 254.46612499999998,
+          "end": 254.706125,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 254.706125,
+          "end": 254.86612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 254.86612499999998,
+          "end": 255.046125,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 255.046125,
+          "end": 255.34612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 255.34612499999997,
+          "end": 255.52612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " process",
+          "start": 255.52612499999998,
+          "end": 255.92612499999998,
+          "speaker": 0
+        },
+        {
+          "text": " right",
+          "start": 255.92612499999998,
+          "end": 256.22612499999997,
+          "speaker": 0
+        },
+        {
+          "text": " like",
+          "start": 256.22612499999997,
+          "end": 256.646125,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 256.646125,
+          "end": 256.646125,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " I",
+          "start": 256.667,
+          "end": 257.027,
+          "speaker": 0
+        },
+        {
+          "text": " think",
+          "start": 257.027,
+          "end": 257.167,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 257.167,
+          "end": 257.36699999999996,
+          "speaker": 0
+        },
+        {
+          "text": " kind",
+          "start": 257.36699999999996,
+          "end": 258.027,
+          "speaker": 0
+        },
+        {
+          "text": " of",
+          "start": 258.287,
+          "end": 259.36699999999996,
+          "speaker": 0
+        },
+        {
+          "text": " user",
+          "start": 259.36699999999996,
+          "end": 259.54699999999997,
+          "speaker": 0
+        },
+        {
+          "text": " story",
+          "start": 259.54699999999997,
+          "end": 260.10699999999997,
+          "speaker": 0
+        },
+        {
+          "text": " would",
+          "start": 260.10699999999997,
+          "end": 260.667,
+          "speaker": 0
+        },
+        {
+          "text": " be",
+          "start": 260.667,
+          "end": 261.04699999999997,
+          "speaker": 0
+        },
+        {
+          "text": " helpful.",
+          "start": 261.04699999999997,
+          "end": 262.10699999999997,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " would",
+          "start": 262.127875,
+          "end": 262.247875,
+          "speaker": 0
+        },
+        {
+          "text": " really",
+          "start": 262.247875,
+          "end": 262.507875,
+          "speaker": 0
+        },
+        {
+          "text": " help.",
+          "start": 262.507875,
+          "end": 262.747875,
+          "speaker": 0
+        },
+        {
+          "text": " OK.",
+          "start": 264.03787500000004,
+          "end": 264.137875,
+          "speaker": 0
+        },
+        {
+          "text": " OK,",
+          "start": 264.577875,
+          "end": 264.817875,
+          "speaker": 0
+        },
+        {
+          "text": " that",
+          "start": 264.91787500000004,
+          "end": 264.97787500000004,
+          "speaker": 0
+        },
+        {
+          "text": " makes",
+          "start": 264.97787500000004,
+          "end": 265.17787500000003,
+          "speaker": 0
+        },
+        {
+          "text": " sense.",
+          "start": 265.17787500000003,
+          "end": 265.837875,
+          "speaker": 0
+        }
+      ]
+    }
+  },
+  {
+    "processor": "AudioTranscriptModalProcessor",
+    "data_type": "Transcript",
+    "data": {
+      "translation": null,
+      "words": [
+        {
+          "text": " Does",
+          "start": 267.58875,
+          "end": 267.70875,
+          "speaker": 0
+        },
+        {
+          "text": " anybody",
+          "start": 267.70875,
+          "end": 267.86875,
+          "speaker": 0
+        },
+        {
+          "text": " else",
+          "start": 267.86875,
+          "end": 268.20875,
+          "speaker": 0
+        },
+        {
+          "text": " want",
+          "start": 268.20875,
+          "end": 268.34875,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 268.34875,
+          "end": 268.44875,
+          "speaker": 0
+        },
+        {
+          "text": " volunteer",
+          "start": 268.44875,
+          "end": 269.04875,
+          "speaker": 0
+        },
+        {
+          "text": " to",
+          "start": 269.04875,
+          "end": 269.26875,
+          "speaker": 0
+        },
+        {
+          "text": " have",
+          "start": 269.26875,
+          "end": 269.84875,
+          "speaker": 0
+        },
+        {
+          "text": " their",
+          "start": 269.84875,
+          "end": 269.98875,
+          "speaker": 0
+        },
+        {
+          "text": " hand",
+          "start": 269.98875,
+          "end": 269.98875,
+          "speaker": 0
+        },
+        {
+          "text": " raised?",
+          "start": 269.98875,
+          "end": 269.98875,
+          "speaker": 0
+        }
+      ]
+    }
+  }
+]
