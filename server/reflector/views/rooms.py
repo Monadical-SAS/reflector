@@ -145,28 +145,8 @@ async def rooms_create_meeting(
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
 
-        # Create Whereby meeting first with proper error handling
-        try:
-            whereby_meeting = await create_meeting("", end_date=end_date, room=room)
-        except Exception as e:
-            logger.error(
-                "Failed to create Whereby meeting for room %s: %s", room.name, str(e)
-            )
-            raise HTTPException(
-                status_code=503,
-                detail="Video conferencing service temporarily unavailable",
-            )
-
-        # Try to upload logo, but don't fail if it doesn't work
-        try:
-            await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
-        except Exception as e:
-            # Log this but don't fail the request
-            logger.warning(
-                "Logo upload failed for meeting %s: %s",
-                whereby_meeting["roomName"],
-                str(e),
-            )
+        whereby_meeting = await create_meeting("", end_date=end_date, room=room)
+        await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
         # Now try to save to database
         try:
