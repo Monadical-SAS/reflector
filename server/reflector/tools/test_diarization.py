@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+@vibe-generated
 Test script for the diarization CLI tool
 =========================================
 

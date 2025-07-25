@@ -181,8 +181,3 @@ data/
 
 dump.rdb
 
-# Test output files
-test_*.json
-test_*.jsonl
-test_*.log
-test_audio.mp4

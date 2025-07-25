@@ -1,4 +1,5 @@
 """
+@vibe-generated
 Process audio file with diarization support
 ===========================================
 
