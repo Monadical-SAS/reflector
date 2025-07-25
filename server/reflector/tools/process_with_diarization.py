@@ -9,7 +9,7 @@ This tool processes audio files locally without requiring the full server infras
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 import uuid
 
 import av
@@ -37,15 +37,15 @@ from reflector.processors.types import (
 
 class TopicCollectorProcessor(Processor):
     """Collect topics for diarization"""
-    
+
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = TitleSummary
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.topics: List[TitleSummaryWithId] = []
         self._topic_id = 0
-    
+
     async def _push(self, data: TitleSummary):
         # Convert to TitleSummaryWithId and collect
         self._topic_id += 1
@@ -55,17 +55,15 @@ class TopicCollectorProcessor(Processor):
             summary=data.summary,
             timestamp=data.timestamp,
             duration=data.duration,
-            transcript=data.transcript
+            transcript=data.transcript,
         )
         self.topics.append(topic_with_id)
-        
+
         # Pass through the original topic
         await self.emit(data)
-    
+
     def get_topics(self) -> List[TitleSummaryWithId]:
         return self.topics
-
-
 
 
 async def process_audio_file_with_diarization(
@@ -83,29 +81,29 @@ async def process_audio_file_with_diarization(
         audio_temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         audio_temp_path = audio_temp_file.name
         audio_temp_file.close()
-    
+
     # Create processor for collecting topics
     topic_collector = TopicCollectorProcessor()
-    
+
     # Build pipeline for audio processing
     processors = []
-    
+
     # Add audio file writer at the beginning if diarization is enabled
     if enable_diarization:
         processors.append(AudioFileWriterProcessor(audio_temp_path))
-    
+
     # Add the rest of the processors
     processors += [
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(),
     ]
-    
+
     processors += [
         TranscriptLinerProcessor(),
         TranscriptTranslatorProcessor.as_threaded(),
     ]
-    
+
     if not only_transcript:
         processors += [
             TranscriptTopicDetectorProcessor.as_threaded(),
@@ -140,82 +138,86 @@ async def process_audio_file_with_diarization(
     # Run diarization if enabled and we have topics
     if enable_diarization and not only_transcript and audio_temp_path:
         topics = topic_collector.get_topics()
-        
+
         if topics:
             logger.info(f"Starting diarization with {len(topics)} topics")
-            
+
             try:
                 # Import diarization processor
                 if diarization_backend == "local":
                     # This will automatically register the local backend
-                    import reflector.processors.audio_diarization_local
-                
+                    import reflector.processors.audio_diarization_local  # noqa: F401
+
                 from reflector.processors import AudioDiarizationAutoProcessor
-                
+
                 # Create diarization processor
-                diarization_processor = AudioDiarizationAutoProcessor(name=diarization_backend)
+                diarization_processor = AudioDiarizationAutoProcessor(
+                    name=diarization_backend
+                )
                 diarization_processor.on(event_callback)
-                
+
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
                     from reflector.storage import get_transcripts_storage
                     from reflector.utils.s3_temp_file import S3TemporaryFile
                     from datetime import datetime
-                    
+
                     storage = get_transcripts_storage()
-                    
+
                     # Generate a unique filename in evaluation folder
                     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
                     audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
-                    
+
                     # Use context manager for automatic cleanup
                     async with S3TemporaryFile(storage, audio_filename) as s3_file:
                         # Read and upload the audio file
-                        with open(audio_temp_path, 'rb') as f:
+                        with open(audio_temp_path, "rb") as f:
                             audio_data = f.read()
-                        
+
                         audio_url = await s3_file.upload(audio_data)
                         logger.info(f"Uploaded audio to S3: {audio_filename}")
-                        
+
                         # Create diarization input with S3 URL
                         diarization_input = AudioDiarizationInput(
-                            audio_url=audio_url,
-                            topics=topics
+                            audio_url=audio_url, topics=topics
                         )
-                        
+
                         # Run diarization
                         await diarization_processor.push(diarization_input)
                         await diarization_processor.flush()
-                        
+
                         logger.info("Diarization complete")
                         # File will be automatically cleaned up when exiting the context
                 else:
                     # For local backend, use local file path
                     audio_url = audio_temp_path
-                    
+
                     # Create diarization input
                     diarization_input = AudioDiarizationInput(
-                        audio_url=audio_url,
-                        topics=topics
+                        audio_url=audio_url, topics=topics
                     )
-                    
+
                     # Run diarization
                     await diarization_processor.push(diarization_input)
                     await diarization_processor.flush()
-                    
+
                     logger.info("Diarization complete")
-                
+
             except ImportError as e:
                 logger.error(f"Failed to import diarization dependencies: {e}")
-                logger.error("Install with: uv pip install pyannote.audio torch torchaudio")
-                logger.error("And set HF_TOKEN environment variable for pyannote models")
+                logger.error(
+                    "Install with: uv pip install pyannote.audio torch torchaudio"
+                )
+                logger.error(
+                    "And set HF_TOKEN environment variable for pyannote models"
+                )
                 raise SystemExit(1)
             except Exception as e:
                 logger.error(f"Diarization failed: {e}")
                 raise SystemExit(1)
         else:
             logger.warning("Skipping diarization: no topics available")
-    
+
     # Clean up temp file
     if audio_temp_path:
         try:
@@ -234,20 +236,33 @@ if __name__ == "__main__":
         description="Process audio files with optional speaker diarization"
     )
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
-    parser.add_argument("--only-transcript", "-t", action="store_true",
-                       help="Only generate transcript without topics/summaries")
-    parser.add_argument("--source-language", default="en",
-                       help="Source language code (default: en)")
-    parser.add_argument("--target-language", default="en",
-                       help="Target language code (default: en)")
+    parser.add_argument(
+        "--only-transcript",
+        "-t",
+        action="store_true",
+        help="Only generate transcript without topics/summaries",
+    )
+    parser.add_argument(
+        "--source-language", default="en", help="Source language code (default: en)"
+    )
+    parser.add_argument(
+        "--target-language", default="en", help="Target language code (default: en)"
+    )
     parser.add_argument("--output", "-o", help="Output file (output.jsonl)")
-    parser.add_argument("--enable-diarization", "-d", action="store_true",
-                       help="Enable speaker diarization")
-    parser.add_argument("--diarization-backend", default="local",
-                       choices=["local", "modal"],
-                       help="Diarization backend to use (default: local)")
+    parser.add_argument(
+        "--enable-diarization",
+        "-d",
+        action="store_true",
+        help="Enable speaker diarization",
+    )
+    parser.add_argument(
+        "--diarization-backend",
+        default="local",
+        choices=["local", "modal"],
+        help="Diarization backend to use (default: local)",
+    )
     args = parser.parse_args()
-    
+
     # Set REDIS_HOST to localhost if not provided
     if "REDIS_HOST" not in os.environ:
         os.environ["REDIS_HOST"] = "localhost"
@@ -260,21 +275,25 @@ if __name__ == "__main__":
     async def event_callback(event: PipelineEvent):
         processor = event.processor
         data = event.data
-        
+
         # Ignore internal processors
-        if processor in ("AudioChunkerProcessor", "AudioMergeProcessor", 
-                        "AudioFileWriterProcessor", "TopicCollectorProcessor",
-                        "BroadcastProcessor"):
+        if processor in (
+            "AudioChunkerProcessor",
+            "AudioMergeProcessor",
+            "AudioFileWriterProcessor",
+            "TopicCollectorProcessor",
+            "BroadcastProcessor",
+        ):
             return
-        
+
         # If diarization is enabled, skip the original topic events from the pipeline
         # The diarization processor will emit the same topics but with speaker info
         if processor == "TranscriptTopicDetectorProcessor" and args.enable_diarization:
             return
-        
+
         # Log all events
         logger.info(f"Event: {processor} - {type(data).__name__}")
-        
+
         # Write to output
         if output_fd:
             output_fd.write(event.model_dump_json())
