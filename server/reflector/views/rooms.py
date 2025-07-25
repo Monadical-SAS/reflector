@@ -8,7 +8,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
 from reflector.db import database
-from reflector.db.meetings import Meeting, meetings_controller
+from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
