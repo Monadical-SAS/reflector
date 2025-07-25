@@ -35,7 +35,7 @@ class Room(BaseModel):
     is_shared: bool
 
 
-class Meeting(BaseModel):  # noqa: F811  # Response model, different from db.meetings.Meeting
+class Meeting(BaseModel):
     id: str
     room_name: str
     room_url: str
