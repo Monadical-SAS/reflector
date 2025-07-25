@@ -157,74 +157,61 @@ async def process_audio_file_with_diarization(
                 diarization_processor.on(event_callback)
                 
                 # For Modal backend, we need to upload the file to S3 first
-                audio_url = audio_temp_path
-                s3_audio_filename = None  # Track for cleanup
-                storage = None  # Track storage instance for cleanup
                 if diarization_backend == "modal":
-                    try:
-                        from reflector.storage import get_transcripts_storage
-                        storage = get_transcripts_storage()
-                        
-                        # Read the audio file
+                    from reflector.storage import get_transcripts_storage
+                    from reflector.utils.s3_temp_file import S3TemporaryFile
+                    from datetime import datetime
+                    
+                    storage = get_transcripts_storage()
+                    
+                    # Generate a unique filename in evaluation folder
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
+                    
+                    # Use context manager for automatic cleanup
+                    async with S3TemporaryFile(storage, audio_filename) as s3_file:
+                        # Read and upload the audio file
                         with open(audio_temp_path, 'rb') as f:
                             audio_data = f.read()
                         
-                        # Generate a unique filename in evaluation folder
-                        import os
-                        from datetime import datetime
-                        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                        audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
+                        audio_url = await s3_file.upload(audio_data)
+                        logger.info(f"Uploaded audio to S3: {audio_filename}")
                         
-                        # Upload to S3
-                        await storage.put_file(audio_filename, audio_data)
+                        # Create diarization input with S3 URL
+                        diarization_input = AudioDiarizationInput(
+                            audio_url=audio_url,
+                            topics=topics
+                        )
                         
-                        # Get the public URL
-                        audio_url = await storage.get_file_url(audio_filename)
+                        # Run diarization
+                        await diarization_processor.push(diarization_input)
+                        await diarization_processor.flush()
                         
-                        # Store filename for cleanup later
-                        s3_audio_filename = audio_filename
-                    except Exception as e:
-                        logger.error(f"Failed to upload audio to S3: {e}")
-                        raise
-                
-                # Create diarization input
-                diarization_input = AudioDiarizationInput(
-                    audio_url=audio_url,  # S3 URL for Modal, local path for local backend
-                    topics=topics
-                )
-                
-                # Run diarization
-                await diarization_processor.push(diarization_input)
-                await diarization_processor.flush()
-                
-                logger.info("Diarization complete")
-                
-                # Clean up S3 file if we uploaded one
-                if s3_audio_filename and diarization_backend == "modal":
-                    try:
-                        await storage.delete_file(s3_audio_filename)
-                    except Exception as e:
-                        logger.warning(f"Failed to clean up S3 file: {e}")
+                        logger.info("Diarization complete")
+                        # File will be automatically cleaned up when exiting the context
+                else:
+                    # For local backend, use local file path
+                    audio_url = audio_temp_path
+                    
+                    # Create diarization input
+                    diarization_input = AudioDiarizationInput(
+                        audio_url=audio_url,
+                        topics=topics
+                    )
+                    
+                    # Run diarization
+                    await diarization_processor.push(diarization_input)
+                    await diarization_processor.flush()
+                    
+                    logger.info("Diarization complete")
                 
             except ImportError as e:
                 logger.error(f"Failed to import diarization dependencies: {e}")
                 logger.error("Install with: uv pip install pyannote.audio torch torchaudio")
                 logger.error("And set HF_TOKEN environment variable for pyannote models")
-                # Clean up S3 file on error
-                if s3_audio_filename and diarization_backend == "modal" and storage:
-                    try:
-                        await storage.delete_file(s3_audio_filename)
-                    except:
-                        pass
                 raise SystemExit(1)
             except Exception as e:
                 logger.error(f"Diarization failed: {e}")
-                # Clean up S3 file on error
-                if s3_audio_filename and diarization_backend == "modal" and storage:
-                    try:
-                        await storage.delete_file(s3_audio_filename)
-                    except:
-                        pass
                 raise SystemExit(1)
         else:
             logger.warning("Skipping diarization: no topics available")
