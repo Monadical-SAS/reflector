@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from typing import Annotated, Optional, Literal
+from typing import Annotated, Optional
+import logging
 
 import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,10 +8,14 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
 from reflector.db import database
-from reflector.db.meetings import meetings_controller
+from reflector.db.meetings import Meeting, meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
+import asyncpg.exceptions
+import sqlite3
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,16 +33,6 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
-
-
-class Meeting(BaseModel):
-    id: str
-    room_name: str
-    room_url: str
-    host_room_url: str
-    start_date: datetime
-    end_date: datetime
-    recording_type: Literal["none", "local", "cloud"] = "cloud"
 
 
 class CreateRoom(BaseModel):
@@ -149,19 +144,67 @@ async def rooms_create_meeting(
 
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
-        meeting = await create_meeting("", end_date=end_date, room=room)
-        await upload_logo(meeting["roomName"], "./images/logo.png")
 
-        meeting = await meetings_controller.create(
-            id=meeting["meetingId"],
-            room_name=meeting["roomName"],
-            room_url=meeting["roomUrl"],
-            host_room_url=meeting["hostRoomUrl"],
-            start_date=datetime.fromisoformat(meeting["startDate"]),
-            end_date=datetime.fromisoformat(meeting["endDate"]),
-            user_id=user_id,
-            room=room,
-        )
+        # Create Whereby meeting first with proper error handling
+        try:
+            whereby_meeting = await create_meeting("", end_date=end_date, room=room)
+        except Exception as e:
+            logger.error(
+                "Failed to create Whereby meeting for room %s: %s", room.name, str(e)
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Video conferencing service temporarily unavailable",
+            )
+
+        # Try to upload logo, but don't fail if it doesn't work
+        try:
+            await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+        except Exception as e:
+            # Log this but don't fail the request
+            logger.warning(
+                "Logo upload failed for meeting %s: %s",
+                whereby_meeting["roomName"],
+                str(e),
+            )
+
+        # Now try to save to database
+        try:
+            meeting = await meetings_controller.create(
+                id=whereby_meeting["meetingId"],
+                room_name=whereby_meeting["roomName"],
+                room_url=whereby_meeting["roomUrl"],
+                host_room_url=whereby_meeting["hostRoomUrl"],
+                start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
+                end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+                user_id=user_id,
+                room=room,
+            )
+        except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError):
+            # Another request already created a meeting for this room
+            # Log this race condition occurrence
+            logger.info(
+                "Race condition detected for room %s - fetching existing meeting",
+                room.name,
+            )
+            logger.warning(
+                "Whereby meeting %s was created but not used (resource leak) for room %s",
+                whereby_meeting["meetingId"],
+                room.name,
+            )
+
+            # Fetch the meeting that was created by the other request
+            meeting = await meetings_controller.get_active(
+                room=room, current_time=current_time
+            )
+            if meeting is None:
+                # Edge case: meeting was created but expired/deleted between checks
+                logger.error(
+                    "Meeting disappeared after race condition for room %s", room.name
+                )
+                raise HTTPException(
+                    status_code=503, detail="Unable to join meeting - please try again"
+                )
 
     if user_id != room.user_id:
         meeting.host_room_url = ""
