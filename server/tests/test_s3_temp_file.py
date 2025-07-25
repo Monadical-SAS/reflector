@@ -1,4 +1,5 @@
 """
+@vibe-generated
 Tests for S3 temporary file context manager.
 """
 

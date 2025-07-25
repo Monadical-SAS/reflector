@@ -41,7 +41,7 @@ async def test_diarization(audio_file: str):
             source_language="en",
             target_language="en",
             enable_diarization=True,
-            diarization_backend="local",
+            diarization_backend="modal",
         )
         
         # Analyze results

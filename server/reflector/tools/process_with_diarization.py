@@ -73,7 +73,7 @@ async def process_audio_file_with_diarization(
     source_language="en",
     target_language="en",
     enable_diarization=True,
-    diarization_backend="local",
+    diarization_backend="modal",
 ):
     # Create temp file for audio if diarization is enabled
     audio_temp_path = None
@@ -144,10 +144,6 @@ async def process_audio_file_with_diarization(
 
             try:
                 # Import diarization processor
-                if diarization_backend == "local":
-                    # This will automatically register the local backend
-                    import reflector.processors.audio_diarization_local  # noqa: F401
-
                 from reflector.processors import AudioDiarizationAutoProcessor
 
                 # Create diarization processor
@@ -257,9 +253,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--diarization-backend",
-        default="local",
-        choices=["local", "modal"],
-        help="Diarization backend to use (default: local)",
+        default="modal",
+        choices=["modal"],
+        help="Diarization backend to use (default: modal)",
     )
     args = parser.parse_args()
 

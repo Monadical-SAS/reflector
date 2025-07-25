@@ -1,4 +1,5 @@
 """
+@vibe-generated
 S3 Temporary File Context Manager
 
 Provides automatic cleanup of S3 files with retry logic and proper error handling.
