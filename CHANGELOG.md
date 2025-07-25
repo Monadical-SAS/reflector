@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Monadical-SAS/reflector/compare/v0.3.2...v0.4.0) (2025-07-25)
+
+
+### Features
+
+* Diarization cli ([#509](https://github.com/Monadical-SAS/reflector/issues/509)) ([ffc8003](https://github.com/Monadical-SAS/reflector/commit/ffc8003e6dad236930a27d0fe3e2f2adfb793890))
+
+
+### Bug Fixes
+
+* remove faulty import Meeting ([#512](https://github.com/Monadical-SAS/reflector/issues/512)) ([0e68c79](https://github.com/Monadical-SAS/reflector/commit/0e68c798434e1b481f9482cc3a4702ea00365df4))
+* room concurrency (theoretically) ([#511](https://github.com/Monadical-SAS/reflector/issues/511)) ([7bb3676](https://github.com/Monadical-SAS/reflector/commit/7bb367653afeb2778cff697a0eb217abf0b81b84))
+
 ## [0.3.2](https://github.com/Monadical-SAS/reflector/compare/v0.3.1...v0.3.2) (2025-07-22)
 
 
