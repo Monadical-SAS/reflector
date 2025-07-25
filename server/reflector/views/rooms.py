@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 import logging
 
 import reflector.auth as auth
@@ -33,6 +33,16 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+
+
+class Meeting(BaseModel):  # noqa: F811  # Response model, different from db.meetings.Meeting
+    id: str
+    room_name: str
+    room_url: str
+    host_room_url: str
+    start_date: datetime
+    end_date: datetime
+    recording_type: Literal["none", "local", "cloud"] = "cloud"
 
 
 class CreateRoom(BaseModel):
