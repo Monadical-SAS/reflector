@@ -17,6 +17,7 @@ T = TypeVar("T", bound="LLM")
 class LLM:
     _nltk_downloaded = False
     _registry = {}
+    model_name: str
     m_generate = Histogram(
         "llm_generate",
         "Time spent in LLM.generate",

@@ -11,9 +11,13 @@ import sys
 from datetime import datetime
 from enum import Enum
 from functools import partial
+from textwrap import dedent
 
 import jsonschema
 import structlog
+from llama_index.core import Document, Settings, VectorStoreIndex
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.llms.openai_like import OpenAILike
 from reflector.llm.base import LLM
 from reflector.llm.openai_llm import OpenAILLM
 from reflector.settings import settings
@@ -131,7 +135,7 @@ class Messages:
 
 
 class SummaryBuilder:
-    def __init__(self, llm, filename: str | None = None, logger=None):
+    def __init__(self, llm: LLM, filename: str | None = None, logger=None):
         self.transcript: str | None = None
         self.recap: str | None = None
         self.summaries: list[dict] = []
@@ -150,6 +154,17 @@ class SummaryBuilder:
         )
         if filename:
             self.read_transcript_from_file(filename)
+
+        Settings.llm = OpenAILike(
+            model=llm.model_name,
+            api_base=llm.url,
+            api_key=llm.api_key,
+            context_window=settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS,
+            is_chat_model=True,
+            is_function_calling_model=False,
+            temperature=llm.temperature,
+            max_tokens=llm.max_tokens,
+        )
 
     def read_transcript_from_file(self, filename):
         """
@@ -493,7 +508,7 @@ class SummaryBuilder:
     # Summary
     # ----------------------------------------------------------------------------
 
-    async def generate_summary(self, only_subjects=False):
+    async def __old_version__generate_summary(self, only_subjects=False):
         """
         This is the main function to build the summary.
 
@@ -505,6 +520,8 @@ class SummaryBuilder:
         - Generate a summary for all the main subjects
         - Generate a quick recap
         """
+
+        # Otherwise use the original implementation
         self.logger.info("--- extract main subjects")
 
         m = Messages(
@@ -655,6 +672,149 @@ class SummaryBuilder:
         recap = await self.llm(m3)
         self.logger.info(f"Quick recap: {recap}")
         self.recap = recap
+
+    async def generate_summary(self, only_subjects=False):
+        """
+        LlamaIndex-based implementation of generate_summary.
+        Uses VectorStoreIndex for better chunking and context management.
+        """
+        self.logger.info("--- extract main subjects using LlamaIndex")
+
+        # Configure LlamaIndex Settings with OpenAILike LLM
+
+        # Create Document from transcript text
+        documents = [Document(text=self.transcript)]
+
+        # Configure text splitter
+        text_splitter = SentenceSplitter(chunk_size=1024, chunk_overlap=200)
+
+        # Create index with the text splitter
+        index = VectorStoreIndex.from_documents(
+            documents, transformations=[text_splitter]
+        )
+
+        # Create query engine
+        query_engine = index.as_query_engine(response_mode="tree_summarize")
+
+        # Extract main subjects
+        subjects_prompt = (
+            "List each main topic discussed in the meeting."
+            "Do not include direct quotes or unnecessary details. "
+            "Be concise and focused on the main ideas. "
+            "A subject briefly mentioned should not be included. "
+            "Do not write complete narrative sentences for the subject, "
+            "you must write a concise subject using noun phrases.\n\n"
+            "Return the subjects as a JSON array of strings, like: "
+            '["Subject 1", "Subject 2", "Subject 3"]'
+        )
+
+        subjects_response = await query_engine.aquery(subjects_prompt)
+
+        # Parse subjects from response
+        try:
+            subjects_text = subjects_response.response
+            # Try to find JSON array in the response
+            match = re.search(r"\[.*?\]", subjects_text, re.DOTALL)
+            if match:
+                self.subjects = json.loads(match.group())
+            else:
+                # Fallback: split by newlines and clean up
+                self.subjects = [
+                    line.strip().lstrip("- ").lstrip("* ").strip()
+                    for line in subjects_text.split("\n")
+                    if line.strip() and not line.strip().startswith("#")
+                ][
+                    :6
+                ]  # Limit to 6 subjects
+        except Exception as e:
+            self.logger.error(f"Error parsing subjects: {e}, using fallback")
+            # Fallback to line-based extraction
+            lines = [line.strip() for line in subjects_text.split("\n") if line.strip()]
+            self.subjects = [
+                line.lstrip("- ").lstrip("* ").strip() for line in lines[:6]
+            ]
+
+        # Limit to 6 subjects if we got more
+        if len(self.subjects) > 6:
+            self.logger.warning(f"Got {len(self.subjects)} subjects, limiting to 6")
+            self.subjects = self.subjects[:6]
+
+        self.logger.info(f"Extracted subjects: {self.subjects}")
+
+        if only_subjects:
+            return
+
+        # Generate summaries for each subject
+        summaries = []
+
+        async def create_summary_prompt(subject):
+            return dedent(
+                f"""
+                Let's summarize the topic: '{subject}'.
+                #RESPONSE GUIDELINES
+                Follow this structured approach to create the topic summary:
+                - Highlight any important arguments, insights or data presented.
+                - Outline decisions made.
+                - Indicate any decisions that were reached, including any rational or key
+                factors that influenced theses decisions.
+                - Detail action items and responsabilities.
+                - For each decision or unresolved issue, list out the specific action
+                items that were agreed upon, along with the assigned individuals or
+                teams responsible for each task.
+                - Specify deadlines or timelines if talked about. For each action item,
+                include any deadlines or timeframes discussed for completions or follow-up.
+                - Mention any unresolved issues or topics that need further discussion.
+                This help in planning future meetings or follow-up actions.
+
+                #OUTPUT
+                Your summary should be clear, concise, and structured, covering all the
+                major points, decisions, and action items from the meeting.
+                It should be easily understandable to someone who wasn’t present, giving
+                them a comprehensive understanding of what transpired and what needs to
+                be done next. The summary should not exceed one page to ensure brevity
+                and focus.
+                """
+            )
+
+        async def get_summary_for_subject(subject):
+            prompt = await create_summary_prompt(subject)
+            result = await query_engine.aquery(prompt)
+
+            m4 = Messages(
+                model_name=self.model_name,
+                tokenizer=self.llm_instance.tokenizer,
+                logger=self.logger,
+            )
+            m4.add_system(
+                "You are an advanced summarization agent tasked with creating concise summaries."
+            )
+            m4.add_user(
+                f"Using the detailed summary of the subject '{subject}', produce a single paragraph summary that captures the essence and main points of the discussion."
+                f"<topic_information>{result}</topic_information>"
+            )
+            paragraph_summary = await self.llm(m4)
+            return paragraph_summary
+
+        summary_responses = []
+        for subject in self.subjects:
+            summary = await get_summary_for_subject(subject)
+            summary_responses.append(summary)
+
+        for subject, summary_response in zip(self.subjects, summary_responses):
+            summaries.append({"subject": subject, "summary": summary_response})
+            self.logger.debug(f"Summary for {subject}: {summary_response}")
+
+        self.summaries = summaries
+
+        # Generate quick recap
+        recap_prompt = (
+            "Provide a quick recap of the meeting that fits into a small to medium paragraph. "
+            "As we know it is a meeting, do not start with 'During the meeting' or equivalent."
+        )
+
+        recap_response = await query_engine.aquery(recap_prompt)
+        self.recap = recap_response.response
+        self.logger.info(f"Quick recap: {self.recap}")
 
     # ----------------------------------------------------------------------------
     # Markdown
@@ -901,9 +1061,6 @@ if __name__ == "__main__":
         if not args.summary and not args.items and not args.subjects:
             args.summary = True
             args.items = True
-
-        await sm.identify_participants()
-        await sm.identify_transcription_type()
 
         if args.summary:
             await sm.generate_summary()
