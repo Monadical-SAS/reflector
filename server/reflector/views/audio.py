@@ -3,12 +3,13 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response, Depends
+from fastapi import APIRouter, HTTPException, Query, Response, Depends, Header
 from reflector.db import database
 from reflector.db.jobs import jobs, JobStatus, JobType, JobCreate as JobCreateDB
 from reflector.logger import logger
 from reflector.worker.result_consolidator import consolidate_results
 from reflector import auth
+from reflector.settings import settings
 from reflector.views.audio_api_models import (
     AudioProcessRequest,
     AudioProcessWithDiarizationRequest,
@@ -32,6 +33,18 @@ from reflector.worker.audio_tasks import (
 router = APIRouter()
 
 
+def verify_ci_evaluation_token(authorization: Optional[str] = Header(None)) -> bool:
+    """Verify CI evaluation token from Authorization header."""
+    if not authorization:
+        return False
+    
+    if not authorization.startswith("Bearer "):
+        return False
+        
+    token = authorization[7:]  # Remove "Bearer " prefix
+    return token == settings.CI_EVALUATION_TOKEN
+
+
 def create_error_response(code: str, message: str, details: Optional[Dict] = None) -> ErrorResponse:
     return ErrorResponse(
         error=ErrorDetail(code=code, message=message, details=details or {})
@@ -49,20 +62,18 @@ def create_error_response(code: str, message: str, details: Optional[Dict] = Non
 )
 async def process_audio(
     request: AudioProcessRequest,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
 ):
     """Process an audio file for transcription, translation, and optionally generate topics, titles, and summaries."""
-    # Check authentication
-    if not user:
+    # Check CI evaluation token
+    if not is_valid_token:
         raise HTTPException(
             status_code=401,
             detail=create_error_response(
                 "UNAUTHORIZED",
-                "Authentication required"
+                "Valid CI evaluation token required"
             ).model_dump(),
         )
-    
-    user_id = user["sub"]
     
     try:
         # Create job in database
@@ -71,7 +82,6 @@ async def process_audio(
             "id": str(job_id),
             "type": JobType.AUDIO_PROCESS,
             "status": JobStatus.PENDING,
-            "user_id": user_id,  # Track job ownership
             "request_data": {
                 "audio_url": str(request.audio_url),
                 "options": request.options.model_dump(),
@@ -129,20 +139,18 @@ async def process_audio(
 )
 async def process_audio_with_diarization(
     request: AudioProcessWithDiarizationRequest,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
 ):
     """Process an audio file with speaker diarization enabled."""
-    # Check authentication
-    if not user:
+    # Check CI evaluation token
+    if not is_valid_token:
         raise HTTPException(
             status_code=401,
             detail=create_error_response(
                 "UNAUTHORIZED",
-                "Authentication required"
+                "Valid CI evaluation token required"
             ).model_dump(),
         )
-    
-    user_id = user["sub"]
     
     try:
         # Create job in database
@@ -151,7 +159,6 @@ async def process_audio_with_diarization(
             "id": str(job_id),
             "type": JobType.AUDIO_PROCESS_WITH_DIARIZATION,
             "status": JobStatus.PENDING,
-            "user_id": user_id,  # Track job ownership
             "request_data": {
                 "audio_url": str(request.audio_url),
                 "options": request.options.model_dump(),
@@ -209,20 +216,18 @@ async def process_audio_with_diarization(
 )
 async def get_job_status(
     job_id: uuid.UUID,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
 ):
     """Check the status of a processing job."""
-    # Check authentication
-    if not user:
+    # Check CI evaluation token
+    if not is_valid_token:
         raise HTTPException(
             status_code=401,
             detail=create_error_response(
                 "UNAUTHORIZED",
-                "Authentication required"
+                "Valid CI evaluation token required"
             ).model_dump(),
         )
-    
-    user_id = user["sub"]
     
     try:
         # Validate UUID format to prevent SQL injection
@@ -234,15 +239,6 @@ async def get_job_status(
         if not result:
             raise HTTPException(
                 status_code=404,
-                detail=create_error_response(
-                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
-                ).model_dump(),
-            )
-        
-        # Check job ownership
-        if result["user_id"] != user_id:
-            raise HTTPException(
-                status_code=404,  # Return 404 instead of 403 to not leak job existence
                 detail=create_error_response(
                     "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
                 ).model_dump(),
@@ -301,22 +297,20 @@ async def get_job_status(
 )
 async def get_job_results(
     job_id: uuid.UUID,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
     format: ResultFormat = Query(default=ResultFormat.JSON),
     include_metadata: bool = Query(default=True),
 ):
     """Retrieve the results of a completed processing job."""
-    # Check authentication
-    if not user:
+    # Check CI evaluation token
+    if not is_valid_token:
         raise HTTPException(
             status_code=401,
             detail=create_error_response(
                 "UNAUTHORIZED",
-                "Authentication required"
+                "Valid CI evaluation token required"
             ).model_dump(),
         )
-    
-    user_id = user["sub"]
     
     try:
         # Validate UUID format to prevent SQL injection
@@ -328,15 +322,6 @@ async def get_job_results(
         if not result:
             raise HTTPException(
                 status_code=404,
-                detail=create_error_response(
-                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
-                ).model_dump(),
-            )
-        
-        # Check job ownership
-        if result["user_id"] != user_id:
-            raise HTTPException(
-                status_code=404,  # Return 404 instead of 403 to not leak job existence
                 detail=create_error_response(
                     "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
                 ).model_dump(),

@@ -30,6 +30,18 @@ def mock_url_validator():
         yield mock_validate
 
 
+@pytest.fixture(autouse=True)
+def mock_ci_token():
+    """Mock CI evaluation token verification"""
+    from reflector.app import app
+    from reflector.views.audio import verify_ci_evaluation_token
+    
+    app.dependency_overrides[verify_ci_evaluation_token] = lambda: True
+    yield
+    if verify_ci_evaluation_token in app.dependency_overrides:
+        del app.dependency_overrides[verify_ci_evaluation_token]
+
+
 @pytest.fixture
 def client():
     """Create test client"""
@@ -164,7 +176,7 @@ class TestAudioProcessWithDiarizationEndpoint:
         call_args = mock_celery_diarization_task.call_args
         assert call_args.kwargs["args"][1] == request_data["audio_url"]
         assert call_args.kwargs["args"][5] == "modal"  # diarization_backend
-        assert call_args.kwargs["time_limit"] == 600
+        assert call_args.kwargs["time_limit"] == 600  # 600000ms / 1000
 
 
 class TestJobStatusEndpoint:

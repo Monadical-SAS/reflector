@@ -41,9 +41,6 @@ jobs = sqlalchemy.Table(
     sqlalchemy.Column("current_step", sqlalchemy.String(100), nullable=True),
     sqlalchemy.Column("progress_percentage", sqlalchemy.Integer(), nullable=True),
     
-    # User tracking
-    sqlalchemy.Column("user_id", sqlalchemy.String(100), nullable=True, index=True),
-    
     # Request data
     sqlalchemy.Column(
         "request_data", sqlalchemy.JSON(), nullable=False, default=dict

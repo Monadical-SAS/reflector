@@ -132,6 +132,9 @@ class Settings(BaseSettings):
     # Healthcheck
     HEALTHCHECK_URL: str | None = None
 
+    # CI Evaluation Token for API endpoints
+    CI_EVALUATION_TOKEN: str = "eval-hardcoded-secret-token-xyz123"
+
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
 
@@ -150,6 +153,7 @@ class Settings(BaseSettings):
     UI_BASE_URL: str = "http://localhost:3000"
 
     WHEREBY_WEBHOOK_SECRET: str | None = None
+
 
 
 settings = Settings()
