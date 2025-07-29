@@ -132,20 +132,7 @@ class ReflectorOutput(BaseModel):
     
     processor: str
     uid: Optional[str] = None
-    output: Optional[ReflectorOutputData] = None  # Legacy field
-    data: Optional[ReflectorOutputData] = None     # Current field
-    
-    def model_dump(self, **kwargs):
-        # Exclude None values and legacy output field
-        kwargs['exclude_none'] = True
-        kwargs['exclude'] = kwargs.get('exclude', set()) | {'output'}
-        return super().model_dump(**kwargs)
-    
-    def model_dump_json(self, **kwargs):
-        # Exclude None values and legacy output field
-        kwargs['exclude_none'] = True
-        kwargs['exclude'] = kwargs.get('exclude', set()) | {'output'}
-        return super().model_dump_json(**kwargs)
+    data: Optional[ReflectorOutputData] = None
 
 
 class ResultFormat(str, Enum):

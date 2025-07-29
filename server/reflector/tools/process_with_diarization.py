@@ -40,7 +40,7 @@ class TopicCollectorProcessor(Processor):
     """Collect topics for diarization"""
 
     INPUT_TYPE = TitleSummary
-    OUTPUT_TYPE = TitleSummary
+    OUTPUT_TYPE = TitleSummary  # Keep as TitleSummary for compatibility with downstream processors
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -60,7 +60,7 @@ class TopicCollectorProcessor(Processor):
         )
         self.topics.append(topic_with_id)
 
-        # Pass through the original topic
+        # Emit the original TitleSummary for downstream processors
         await self.emit(data)
 
     def get_topics(self) -> List[TitleSummaryWithId]:

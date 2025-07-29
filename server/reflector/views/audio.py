@@ -1,13 +1,14 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response, Depends
 from reflector.db import database
 from reflector.db.jobs import jobs, JobStatus, JobType, JobCreate as JobCreateDB
 from reflector.logger import logger
 from reflector.worker.result_consolidator import consolidate_results
+from reflector import auth
 from reflector.views.audio_api_models import (
     AudioProcessRequest,
     AudioProcessWithDiarizationRequest,
@@ -42,11 +43,27 @@ def create_error_response(code: str, message: str, details: Optional[Dict] = Non
     response_model=JobCreatedResponse,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid request"},
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
-async def process_audio(request: AudioProcessRequest):
+async def process_audio(
+    request: AudioProcessRequest,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
     """Process an audio file for transcription, translation, and optionally generate topics, titles, and summaries."""
+    # Check authentication
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail=create_error_response(
+                "UNAUTHORIZED",
+                "Authentication required"
+            ).model_dump(),
+        )
+    
+    user_id = user["sub"]
+    
     try:
         # Create job in database
         job_id = uuid.uuid4()
@@ -54,6 +71,7 @@ async def process_audio(request: AudioProcessRequest):
             "id": str(job_id),
             "type": JobType.AUDIO_PROCESS,
             "status": JobStatus.PENDING,
+            "user_id": user_id,  # Track job ownership
             "request_data": {
                 "audio_url": str(request.audio_url),
                 "options": request.options.model_dump(),
@@ -105,11 +123,27 @@ async def process_audio(request: AudioProcessRequest):
     response_model=JobCreatedResponse,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid request"},
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
-async def process_audio_with_diarization(request: AudioProcessWithDiarizationRequest):
+async def process_audio_with_diarization(
+    request: AudioProcessWithDiarizationRequest,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
     """Process an audio file with speaker diarization enabled."""
+    # Check authentication
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail=create_error_response(
+                "UNAUTHORIZED",
+                "Authentication required"
+            ).model_dump(),
+        )
+    
+    user_id = user["sub"]
+    
     try:
         # Create job in database
         job_id = uuid.uuid4()
@@ -117,6 +151,7 @@ async def process_audio_with_diarization(request: AudioProcessWithDiarizationReq
             "id": str(job_id),
             "type": JobType.AUDIO_PROCESS_WITH_DIARIZATION,
             "status": JobStatus.PENDING,
+            "user_id": user_id,  # Track job ownership
             "request_data": {
                 "audio_url": str(request.audio_url),
                 "options": request.options.model_dump(),
@@ -167,14 +202,33 @@ async def process_audio_with_diarization(request: AudioProcessWithDiarizationReq
     "/jobs/{job_id}/status",
     response_model=JobStatusResponse,
     responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
         404: {"model": ErrorResponse, "description": "Job not found"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
-async def get_job_status(job_id: uuid.UUID):
+async def get_job_status(
+    job_id: uuid.UUID,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
     """Check the status of a processing job."""
+    # Check authentication
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail=create_error_response(
+                "UNAUTHORIZED",
+                "Authentication required"
+            ).model_dump(),
+        )
+    
+    user_id = user["sub"]
+    
     try:
-        query = jobs.select().where(jobs.c.id == str(job_id))
+        # Validate UUID format to prevent SQL injection
+        validated_id = uuid.UUID(str(job_id))
+        
+        query = jobs.select().where(jobs.c.id == str(validated_id))
         result = await database.fetch_one(query)
         
         if not result:
@@ -185,13 +239,27 @@ async def get_job_status(job_id: uuid.UUID):
                 ).model_dump(),
             )
         
+        # Check job ownership
+        if result["user_id"] != user_id:
+            raise HTTPException(
+                status_code=404,  # Return 404 instead of 403 to not leak job existence
+                detail=create_error_response(
+                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
+                ).model_dump(),
+            )
+        
         # Build error object if job failed
         error = None
         if result["status"] == JobStatus.FAILED:
+            error_details = result["error_details"] or {}
+            # Handle SQLite JSON serialization
+            if isinstance(error_details, str):
+                error_details = json.loads(error_details)
+            
             error = {
                 "code": result["error_code"] or "UNKNOWN_ERROR",
                 "message": result["error_message"] or "Processing failed",
-                "details": result["error_details"] or {},
+                "details": error_details,
             }
         
         return JobStatusResponse(
@@ -225,6 +293,7 @@ async def get_job_status(job_id: uuid.UUID):
     "/jobs/{job_id}/results",
     response_model=JobResultsResponse,
     responses={
+        401: {"model": ErrorResponse, "description": "Unauthorized"},
         404: {"model": ErrorResponse, "description": "Job not found"},
         400: {"model": ErrorResponse, "description": "Job not completed"},
         500: {"model": ErrorResponse, "description": "Internal server error"},
@@ -232,17 +301,42 @@ async def get_job_status(job_id: uuid.UUID):
 )
 async def get_job_results(
     job_id: uuid.UUID,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
     format: ResultFormat = Query(default=ResultFormat.JSON),
     include_metadata: bool = Query(default=True),
 ):
     """Retrieve the results of a completed processing job."""
+    # Check authentication
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail=create_error_response(
+                "UNAUTHORIZED",
+                "Authentication required"
+            ).model_dump(),
+        )
+    
+    user_id = user["sub"]
+    
     try:
-        query = jobs.select().where(jobs.c.id == str(job_id))
+        # Validate UUID format to prevent SQL injection
+        validated_id = uuid.UUID(str(job_id))
+        
+        query = jobs.select().where(jobs.c.id == str(validated_id))
         result = await database.fetch_one(query)
         
         if not result:
             raise HTTPException(
                 status_code=404,
+                detail=create_error_response(
+                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
+                ).model_dump(),
+            )
+        
+        # Check job ownership
+        if result["user_id"] != user_id:
+            raise HTTPException(
+                status_code=404,  # Return 404 instead of 403 to not leak job existence
                 detail=create_error_response(
                     "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
                 ).model_dump(),
@@ -260,29 +354,33 @@ async def get_job_results(
         # Get result data
         result_data = result["result_data"] or []
         
+        # Handle SQLite JSON serialization - if result_data is a string, parse it
+        if isinstance(result_data, str):
+            result_data = json.loads(result_data)
+        
         # Consolidate fragmented results to match CLI behavior
         consolidated_data = consolidate_results(result_data)
         
         # Convert to ReflectorOutput objects
         outputs = []
-        processors_used = set()
+        processors_used = []
         
         for item in consolidated_data:
-            # Handle both 'data' and 'output' fields for compatibility
-            output_data = item.get("data") or item.get("output")
+            output_data = item.get("data")
             
             output = ReflectorOutput(
                 processor=item.get("processor", "Unknown"),
                 uid=item.get("uid"),
                 data=output_data,
-                output=output_data,  # Include for legacy compatibility
             )
             outputs.append(output)
-            processors_used.add(output.processor)
+            # Maintain order and avoid duplicates
+            if output.processor not in processors_used:
+                processors_used.append(output.processor)
         
         # Calculate metadata
         metadata = JobResultsMetadata(
-            processors_used=list(processors_used)
+            processors_used=processors_used
         )
         
         if include_metadata and result["metadata"]:
@@ -317,7 +415,7 @@ async def get_job_results(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting job results: {e}")
+        logger.error(f"Error getting job results: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=create_error_response(

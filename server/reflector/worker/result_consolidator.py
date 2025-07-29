@@ -156,7 +156,12 @@ def _consolidate_translator(events: List[Dict[str, Any]]) -> Dict[str, Any]:
                 all_words.append(word)
         
         if data.get("translation"):
-            translations.append(data["translation"])
+            translation = data["translation"]
+            # Handle both string and dict translations
+            if isinstance(translation, dict):
+                translations.append(translation.get("text", ""))
+            else:
+                translations.append(translation)
     
     # Sort words by start time
     all_words.sort(key=lambda w: w.get("start", 0))
@@ -164,9 +169,15 @@ def _consolidate_translator(events: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Combine translations
     combined_translation = " ".join(translations) if translations else None
     
+    # If we have the original translation dict structure, use it
+    if events and len(events) == 1 and isinstance(events[0].get("data", {}).get("translation"), dict):
+        # Return the original single event as-is for dict translations
+        return events[0]
+    
+    # Otherwise, consolidate multiple string translations
     return {
         "processor": "TranscriptTranslatorProcessor",
-        "uid": events[0].get("uid", "consolidated"),
+        "uid": events[0].get("uid", "consolidated") if events else "consolidated",
         "data": {
             "words": all_words,
             "translation": combined_translation

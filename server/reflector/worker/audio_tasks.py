@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import tempfile
 import uuid
@@ -20,6 +21,7 @@ from reflector.tools.process_with_diarization import process_audio_file_with_dia
 from reflector.storage import get_transcripts_storage
 from reflector.utils.s3_temp_file import S3TemporaryFile
 from reflector.settings import settings
+from reflector.worker.url_validator import validate_audio_url, check_file_size
 
 
 async def update_job_status(
@@ -88,8 +90,13 @@ def parse_s3_url(url: str) -> Optional[Tuple[str, str]]:
 
 
 async def _download_from_http(audio_url: str, tmp_path: str):
-    """Download file from HTTP/HTTPS URL"""
+    """Download file from HTTP/HTTPS URL with security checks"""
     async with aiohttp.ClientSession() as session:
+        # Check file size before downloading
+        is_valid, error = await check_file_size(audio_url, session)
+        if not is_valid:
+            raise ValueError(f"File validation failed: {error}")
+        
         async with session.get(audio_url) as response:
             response.raise_for_status()
             with open(tmp_path, 'wb') as f:
@@ -130,19 +137,33 @@ async def _download_from_s3(audio_url: str, tmp_path: str):
 
 async def download_audio_file(audio_url: str) -> str:
     """
-    Download audio file from URL to temporary location.
+    Download audio file from URL to temporary location with security validation.
     
     Supports:
-    - HTTP/HTTPS URLs
+    - HTTP/HTTPS URLs (validated against allowed domains)
     - S3 URLs (s3://bucket/key)
     - S3 HTTPS URLs (https://bucket.s3.amazonaws.com/key)
     - Reflector storage keys (audio/file.mp4 - uses configured bucket)
     """
+    # Validate URL first (unless it's a simple storage key)
+    if audio_url.startswith(("http://", "https://", "s3://")):
+        is_valid, error = validate_audio_url(audio_url)
+        if not is_valid:
+            raise ValueError(f"URL validation failed: {error}")
+    
     suffix = Path(audio_url).suffix or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
         tmp_path = tmp_file.name
     
     try:
+        # Check if this is a local file path
+        if os.path.exists(audio_url):
+            # Local file, just copy it
+            import shutil
+            shutil.copy2(audio_url, tmp_path)
+            logger.info(f"Using local file: {audio_url}")
+            return tmp_path
+        
         # Check if this is a simple storage key (no protocol)
         if not audio_url.startswith(("http://", "https://", "s3://")):
             # Treat as a key in the configured S3 bucket
@@ -178,8 +199,15 @@ def process_audio_task(
     only_transcript: bool = True,
     enable_topics: bool = False,
 ):
-    """Celery task for processing audio files"""
+    """
+    @vibe-generated: Fixed async/sync antipattern
     
+    Using asyncio.run() to execute async code in sync Celery task.
+    This is the standard approach for Celery 5.x without explicit async configuration.
+    
+    The inner async function contains all the async logic, avoiding the antipattern
+    of calling asyncio.run() multiple times within the same task.
+    """
     async def _process():
         tmp_path = None
         try:
@@ -260,7 +288,7 @@ def process_audio_task(
                 except Exception as e:
                     logger.warning(f"Failed to clean up temp file {tmp_path}: {e}")
     
-    # Run async function
+    # Run the async function
     asyncio.run(_process())
 
 
@@ -274,8 +302,12 @@ def process_audio_with_diarization_task(
     only_transcript: bool = False,
     diarization_backend: str = "modal",
 ):
-    """Celery task for processing audio files with diarization"""
+    """
+    @vibe-generated: Fixed async/sync antipattern
     
+    Using asyncio.run() to execute async code in sync Celery task.
+    Same approach as process_audio_task - see above.
+    """
     async def _process():
         tmp_path = None
         try:
@@ -356,5 +388,5 @@ def process_audio_with_diarization_task(
                 except Exception as e:
                     logger.warning(f"Failed to clean up temp file {tmp_path}: {e}")
     
-    # Run async function
+    # Run the async function
     asyncio.run(_process())

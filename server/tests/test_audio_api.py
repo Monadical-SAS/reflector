@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -5,6 +6,44 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from reflector.db.jobs import JobStatus, JobType
+
+
+@pytest.fixture(autouse=True)
+def mock_auth():
+    """Mock authentication for all tests"""
+    from reflector.app import app
+    from reflector.auth import current_user_optional
+    
+    app.dependency_overrides[current_user_optional] = lambda: {
+        "sub": "test-user-123",
+        "email": "test@example.com",
+    }
+    yield
+    del app.dependency_overrides[current_user_optional]
+
+
+@pytest.fixture(autouse=True)
+def mock_url_validator():
+    """Mock URL validator to allow test URLs"""
+    with patch("reflector.worker.audio_tasks.validate_audio_url") as mock_validate:
+        mock_validate.return_value = (True, None)
+        yield mock_validate
+
+
+@pytest.fixture
+def client():
+    """Create test client"""
+    from reflector.app import app
+    return TestClient(app)
+
+
+@pytest.fixture
+async def db_session():
+    """Create database session for tests"""
+    from reflector.db import database
+    await database.connect()
+    yield database
+    await database.disconnect()
 
 
 @pytest.fixture
@@ -54,13 +93,14 @@ class TestAudioProcessEndpoint:
         
         # Verify Celery task was called
         mock_celery_task.assert_called_once()
-        args, kwargs = mock_celery_task.call_args
-        assert args[0][1] == request_data["audio_url"]
-        assert args[0][2] == "en"
-        assert args[0][3] == "es"
-        assert args[0][4] == False  # only_transcript
-        assert args[0][5] == True   # enable_topics
-        assert kwargs["time_limit"] == 300  # 300000ms / 1000
+        call_args = mock_celery_task.call_args
+        # apply_async is called with args=list and kwargs
+        assert call_args.kwargs["args"][1] == request_data["audio_url"]
+        assert call_args.kwargs["args"][2] == "en"
+        assert call_args.kwargs["args"][3] == "es"
+        assert call_args.kwargs["args"][4] == False  # only_transcript
+        assert call_args.kwargs["args"][5] == True   # enable_topics
+        assert call_args.kwargs["time_limit"] == 300  # 300000ms / 1000
     
     @pytest.mark.asyncio
     async def test_process_audio_default_options(self, client: TestClient, mock_celery_task):
@@ -74,11 +114,11 @@ class TestAudioProcessEndpoint:
         assert response.status_code == 200
         
         # Verify defaults were used
-        args, _ = mock_celery_task.call_args
-        assert args[0][2] == "en"  # default source_language
-        assert args[0][3] == "en"  # default target_language
-        assert args[0][4] == True   # default only_transcript
-        assert args[0][5] == False  # default enable_topics
+        call_args = mock_celery_task.call_args
+        assert call_args.kwargs["args"][2] == "en"  # default source_language
+        assert call_args.kwargs["args"][3] == "en"  # default target_language
+        assert call_args.kwargs["args"][4] == True   # default only_transcript
+        assert call_args.kwargs["args"][5] == False  # default enable_topics
     
     @pytest.mark.asyncio
     async def test_process_audio_invalid_url(self, client: TestClient):
@@ -121,10 +161,10 @@ class TestAudioProcessWithDiarizationEndpoint:
         
         # Verify Celery task was called
         mock_celery_diarization_task.assert_called_once()
-        args, kwargs = mock_celery_diarization_task.call_args
-        assert args[0][1] == request_data["audio_url"]
-        assert args[0][5] == "modal"  # diarization_backend
-        assert kwargs["time_limit"] == 600
+        call_args = mock_celery_diarization_task.call_args
+        assert call_args.kwargs["args"][1] == request_data["audio_url"]
+        assert call_args.kwargs["args"][5] == "modal"  # diarization_backend
+        assert call_args.kwargs["time_limit"] == 600
 
 
 class TestJobStatusEndpoint:
@@ -136,15 +176,17 @@ class TestJobStatusEndpoint:
         # Create a test job
         job_id = uuid.uuid4()
         await db_session.execute(
-            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data) "
-            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data)",
+            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata, user_id) "
+            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
                 "status": JobStatus.PENDING,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -164,9 +206,9 @@ class TestJobStatusEndpoint:
         job_id = uuid.uuid4()
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, current_step, progress_percentage, "
-            "created_at, updated_at, request_data) "
+            "created_at, updated_at, request_data, metadata, user_id) "
             "VALUES (:id, :type, :status, :current_step, :progress_percentage, "
-            ":created_at, :updated_at, :request_data)",
+            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
@@ -175,7 +217,9 @@ class TestJobStatusEndpoint:
                 "progress_percentage": 30,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -194,19 +238,21 @@ class TestJobStatusEndpoint:
         job_id = uuid.uuid4()
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, error_code, error_message, "
-            "error_details, created_at, updated_at, request_data) "
+            "error_details, created_at, updated_at, request_data, metadata, user_id) "
             "VALUES (:id, :type, :status, :error_code, :error_message, "
-            ":error_details, :created_at, :updated_at, :request_data)",
+            ":error_details, :created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
                 "status": JobStatus.FAILED,
                 "error_code": "PROCESSING_ERROR",
                 "error_message": "Failed to process audio",
-                "error_details": {"exception": "ValueError"},
+                "error_details": json.dumps({"exception": "ValueError"}),  # Serialize for SQLite
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -228,7 +274,7 @@ class TestJobStatusEndpoint:
         
         assert response.status_code == 404
         data = response.json()
-        assert data["error"]["code"] == "JOB_NOT_FOUND"
+        assert data["detail"]["error"]["code"] == "JOB_NOT_FOUND"
 
 
 class TestJobResultsEndpoint:
@@ -263,18 +309,20 @@ class TestJobResultsEndpoint:
         
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, result_data, completed_at, "
-            "created_at, updated_at, request_data) "
+            "created_at, updated_at, request_data, metadata, user_id) "
             "VALUES (:id, :type, :status, :result_data, :completed_at, "
-            ":created_at, :updated_at, :request_data)",
+            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
                 "status": JobStatus.COMPLETED,
-                "result_data": result_data,
+                "result_data": json.dumps(result_data),  # Serialize for SQLite
                 "completed_at": datetime.utcnow(),
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -306,18 +354,20 @@ class TestJobResultsEndpoint:
         
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, result_data, completed_at, "
-            "created_at, updated_at, request_data) "
+            "created_at, updated_at, request_data, metadata, user_id) "
             "VALUES (:id, :type, :status, :result_data, :completed_at, "
-            ":created_at, :updated_at, :request_data)",
+            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
                 "status": JobStatus.COMPLETED,
-                "result_data": result_data,
+                "result_data": json.dumps(result_data),  # Serialize for SQLite
                 "completed_at": datetime.utcnow(),
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -330,8 +380,8 @@ class TestJobResultsEndpoint:
         lines = response.text.strip().split("\n")
         assert len(lines) == 1
         
-        import json
-        first_line = json.loads(lines[0])
+        import json as json_module
+        first_line = json_module.loads(lines[0])
         assert first_line["processor"] == "AudioTranscriptAutoProcessor"
     
     @pytest.mark.asyncio
@@ -339,15 +389,17 @@ class TestJobResultsEndpoint:
         """Test getting results of non-completed job"""
         job_id = uuid.uuid4()
         await db_session.execute(
-            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data) "
-            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data)",
+            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata, user_id) "
+            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata, :user_id)",
             {
                 "id": str(job_id),
                 "type": JobType.AUDIO_PROCESS,
                 "status": JobStatus.PROCESSING,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
-                "request_data": {},
+                "request_data": json.dumps({}),  # Serialize for SQLite
+                "metadata": json.dumps({}),  # Serialize for SQLite
+                "user_id": "test-user-123",
             }
         )
         
@@ -355,7 +407,7 @@ class TestJobResultsEndpoint:
         
         assert response.status_code == 400
         data = response.json()
-        assert data["error"]["code"] == "JOB_NOT_COMPLETED"
+        assert data["detail"]["error"]["code"] == "JOB_NOT_COMPLETED"
 
 
 class TestHealthCheckEndpoint:
@@ -388,8 +440,10 @@ class TestHealthCheckEndpoint:
             data = response.json()
             
             if response.status_code == 200:
+                # Normal health check response
                 assert data["status"] in ["degraded", "unhealthy"]
+                assert data["services"]["database"] == "unavailable"
             else:
-                assert data["status"] == "unhealthy"
-            
-            assert data["services"]["database"] == "unavailable"
+                # Error response when service is completely down
+                assert response.status_code == 503
+                # Error response format will have error field, not services

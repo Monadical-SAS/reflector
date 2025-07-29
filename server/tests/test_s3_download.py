@@ -52,15 +52,17 @@ class TestAudioFileDownload:
         mock_s3_download.assert_called_once_with("s3://my-bucket/audio/test.mp4", "/tmp/test_abc123.mp4")
     
     @pytest.mark.asyncio
+    @patch('reflector.worker.audio_tasks.validate_audio_url')
     @patch('reflector.worker.audio_tasks._download_from_http')
     @patch('reflector.worker.audio_tasks.tempfile.NamedTemporaryFile')
-    async def test_download_http_url(self, mock_tempfile, mock_http_download):
+    async def test_download_http_url(self, mock_tempfile, mock_http_download, mock_validate):
         """Test downloading from HTTP URL"""
         # Setup
         mock_file = MagicMock()
         mock_file.name = "/tmp/test_xyz789.mp4"
         mock_tempfile.return_value.__enter__.return_value = mock_file
         mock_http_download.return_value = None
+        mock_validate.return_value = (True, None)  # URL is valid
         
         # Test
         result = await download_audio_file("https://example.com/audio/test.mp4")
