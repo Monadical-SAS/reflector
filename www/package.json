@@ -55,7 +55,7 @@
   "author": "Andreas <andreas@monadical.com>",
   "license": "All Rights Reserved",
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.48.0",
+    "@hey-api/openapi-ts": "^0.80.1",
     "@types/react": "18.2.20",
     "prettier": "^3.0.0",
     "vercel": "^37.3.0"

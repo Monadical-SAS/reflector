@@ -33,6 +33,7 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    background_information: str
 
 
 class Meeting(BaseModel):
@@ -55,6 +56,7 @@ class CreateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    background_information: str = ""
 
 
 class UpdateRoom(BaseModel):
@@ -67,6 +69,7 @@ class UpdateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    background_information: str = ""
 
 
 class DeletionStatus(BaseModel):
@@ -108,6 +111,7 @@ async def rooms_create(
         recording_type=room.recording_type,
         recording_trigger=room.recording_trigger,
         is_shared=room.is_shared,
+        background_information=room.background_information,
     )
 
 
