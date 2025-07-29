@@ -12,9 +12,10 @@ class TranscriptFinalSummaryProcessor(Processor):
     INPUT_TYPE = TitleSummary
     OUTPUT_TYPE = FinalLongSummary
 
-    def __init__(self, transcript=None, **kwargs):
+    def __init__(self, transcript=None, room=None, **kwargs):
         super().__init__(**kwargs)
         self.transcript = transcript
+        self.room = room
         self.chunks: list[TitleSummary] = []
         self.llm = LLM.get_instance(model_name="NousResearch/Hermes-3-Llama-3.1-8B")
         self.builder = None
@@ -23,7 +24,7 @@ class TranscriptFinalSummaryProcessor(Processor):
         self.chunks.append(data)
 
     async def get_summary_builder(self, text) -> SummaryBuilder:
-        builder = SummaryBuilder(self.llm)
+        builder = SummaryBuilder(self.llm, room=self.room)
         builder.set_transcript(text)
         await builder.identify_participants()
         await builder.generate_summary()

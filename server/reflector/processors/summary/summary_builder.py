@@ -135,7 +135,7 @@ class Messages:
 
 
 class SummaryBuilder:
-    def __init__(self, llm, filename: str | None = None, logger=None):
+    def __init__(self, llm, filename: str | None = None, logger=None, room=None):
         self.transcript: str | None = None
         self.recap: str | None = None
         self.summaries: list[dict] = []
@@ -147,6 +147,7 @@ class SummaryBuilder:
         self.llm_instance: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
+        self.room = room
         self.m = Messages(model_name=self.model_name, logger=self.logger)
         if filename:
             self.read_transcript_from_file(filename)
@@ -465,26 +466,31 @@ class SummaryBuilder:
         self.logger.debug("--- extract main subjects")
 
         m = Messages(model_name=self.model_name, logger=self.logger)
-        m.add_system(
-            (
-                "You are an advanced transcription summarization assistant."
-                "Your task is to summarize discussions by focusing only on the main ideas contributed by participants."
-                # Prevent generating another transcription
-                "Exclude direct quotes and unnecessary details."
-                # Do not mention others participants just because they didn't contributed
-                "Only include participant names if they actively contribute to the subject."
-                # Prevent generation of summary with "no others participants contributed" etc
-                "Keep summaries concise and focused on main subjects without adding conclusions such as 'no other participant contributed'. "
-                # Avoid: In the discussion, they talked about...
-                "Do not include contextual preface. "
-                # Prevention to have too long summary
-                "Summary should fit in a single paragraph. "
-                # Using other pronouns that the participants or the group
-                'Mention the participants or the group using "they".'
-                # Avoid finishing the summary with "No conclusions were added by the summarizer"
-                "Do not mention conclusion if there is no conclusion"
-            )
+        
+        system_prompt = (
+            "You are an advanced transcription summarization assistant."
+            "Your task is to summarize discussions by focusing only on the main ideas contributed by participants."
+            # Prevent generating another transcription
+            "Exclude direct quotes and unnecessary details."
+            # Do not mention others participants just because they didn't contributed
+            "Only include participant names if they actively contribute to the subject."
+            # Prevent generation of summary with "no others participants contributed" etc
+            "Keep summaries concise and focused on main subjects without adding conclusions such as 'no other participant contributed'. "
+            # Avoid: In the discussion, they talked about...
+            "Do not include contextual preface. "
+            # Prevention to have too long summary
+            "Summary should fit in a single paragraph. "
+            # Using other pronouns that the participants or the group
+            'Mention the participants or the group using "they".'
+            # Avoid finishing the summary with "No conclusions were added by the summarizer"
+            "Do not mention conclusion if there is no conclusion"
         )
+        
+        # Add room context if available
+        if self.room and self.room.background_information:
+            system_prompt += f"\n\nContext about this meeting room: {self.room.background_information}"
+        
+        m.add_system(system_prompt)
         m.add_user(
             f"# Transcript\n\n{self.transcript}\n\n"
             + (

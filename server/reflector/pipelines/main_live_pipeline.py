@@ -454,14 +454,46 @@ class PipelineMainFinalSummaries(PipelineMainFromTopics):
     Generate summaries from the topics
     """
 
+    async def get_room(self):
+        """Get room information for the transcript"""
+        if not self._transcript.room_id:
+            return None
+        return await rooms_controller.get_by_id(self._transcript.room_id)
+
     def get_processors(self) -> list:
         return [
             TranscriptFinalSummaryProcessor.as_threaded(
                 transcript=self._transcript,
+                room=getattr(self, '_room', None),
                 callback=self.on_long_summary,
                 on_short_summary=self.on_short_summary,
             ),
         ]
+
+    async def create(self) -> Pipeline:
+        self.prepare()
+
+        # get transcript
+        self._transcript = transcript = await self.get_transcript()
+        
+        # get room information
+        self._room = await self.get_room()
+
+        # create pipeline
+        processors = self.get_processors()
+        pipeline = Pipeline(*processors)
+        pipeline.options = self
+        pipeline.logger.bind(transcript_id=transcript.id)
+        pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
+
+        # push topics
+        topics = self.get_transcript_topics(transcript)
+        for topic in topics:
+            await self.push(topic)
+
+        await self.flush()
+
+        return pipeline
 
 
 class PipelineMainWaveform(PipelineMainFromTopics):

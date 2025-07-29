@@ -11,13 +11,14 @@ import {
   Input,
   Select,
   Spinner,
+  Textarea,
   createListCollection,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError, Room } from "../../api";
+import { Room } from "../../api";
 import { RoomList } from "./_components/RoomList";
 
 interface SelectOption {
@@ -54,6 +55,7 @@ const roomInitialState = {
   recordingType: "cloud",
   recordingTrigger: "automatic-2nd-participant",
   isShared: false,
+  backgroundInformation: "",
 };
 
 export default function RoomsList() {
@@ -170,6 +172,7 @@ export default function RoomsList() {
         recording_type: room.recordingType,
         recording_trigger: room.recordingTrigger,
         is_shared: room.isShared,
+        background_information: room.backgroundInformation,
       };
 
       if (isEditing) {
@@ -189,11 +192,10 @@ export default function RoomsList() {
       setNameError("");
       refetch();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       if (
-        err instanceof ApiError &&
         err.status === 400 &&
-        (err.body as any).detail == "Room name is not unique"
+        err.body?.detail === "Room name is not unique"
       ) {
         setNameError(
           "This room name is already taken. Please choose a different name.",
@@ -215,6 +217,7 @@ export default function RoomsList() {
       recordingType: roomData.recording_type,
       recordingTrigger: roomData.recording_trigger,
       isShared: roomData.is_shared,
+      backgroundInformation: roomData.background_information || "",
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -321,6 +324,20 @@ export default function RoomsList() {
                   No spaces or special characters allowed
                 </Field.HelperText>
                 {nameError && <Field.ErrorText>{nameError}</Field.ErrorText>}
+              </Field.Root>
+
+              <Field.Root mt={4}>
+                <Field.Label>Background Information</Field.Label>
+                <Textarea
+                  name="backgroundInformation"
+                  placeholder="Provide context about this room's purpose, meeting type, or any relevant background information that will help generate better summaries..."
+                  value={room.backgroundInformation}
+                  onChange={handleRoomChange}
+                  rows={3}
+                />
+                <Field.HelperText>
+                  This information will be used to provide context for AI-generated summaries
+                </Field.HelperText>
               </Field.Root>
 
               <Field.Root mt={4}>
