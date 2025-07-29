@@ -1,31 +1,14 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useContext,
-  RefObject,
-} from "react";
-import {
-  Box,
-  Button,
-  Text,
-  VStack,
-  HStack,
-  Spinner,
-  Icon,
-} from "@chakra-ui/react";
-import { toaster } from "../components/ui/toaster";
+import { useCallback, useEffect, useRef, useState, useContext, RefObject } from "react";
+import { Box, Button, Text, VStack, HStack, Spinner, useToast } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useApi from "../lib/useApi";
-import { Meeting } from "../api";
-import { FaBars } from "react-icons/fa6";
+import { Meeting } from '../api';
 
 export type RoomDetails = {
   params: {
@@ -34,34 +17,26 @@ export type RoomDetails = {
 };
 
 // stages: we focus on the consent, then whereby steals focus, then we focus on the consent again, then return focus to whoever stole it initially
-const useConsentWherebyFocusManagement = (
-  acceptButtonRef: RefObject<HTMLButtonElement>,
-  wherebyRef: RefObject<HTMLElement>,
-) => {
+const useConsentWherebyFocusManagement = (acceptButtonRef: RefObject<HTMLButtonElement>, wherebyRef: RefObject<HTMLElement>) => {
   const currentFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (acceptButtonRef.current) {
       acceptButtonRef.current.focus();
     } else {
-      console.error(
-        "accept button ref not available yet for focus management - seems to be illegal state",
-      );
+      console.error("accept button ref not available yet for focus management - seems to be illegal state");
     }
 
     const handleWherebyReady = () => {
-      console.log("whereby ready - refocusing consent button");
       currentFocusRef.current = document.activeElement as HTMLElement;
-      if (acceptButtonRef.current) {
-        acceptButtonRef.current.focus();
-      }
+      setTimeout(() => {
+        acceptButtonRef.current?.focus();
+      }, 300/*best guess, still non deterministic*/)
     };
 
     if (wherebyRef.current) {
       wherebyRef.current.addEventListener("ready", handleWherebyReady);
     } else {
-      console.warn(
-        "whereby ref not available yet for focus management - seems to be illegal state. not waiting, focus management off.",
-      );
+      console.warn("whereby ref not available yet for focus management - seems to be illegal state. not waiting, focus management off.");
     }
 
     return () => {
@@ -69,187 +44,121 @@ const useConsentWherebyFocusManagement = (
       currentFocusRef.current?.focus();
     };
   }, []);
-};
-
-const useConsentDialog = (
-  meetingId: string,
-  wherebyRef: RefObject<HTMLElement> /*accessibility*/,
-) => {
-  const { state: consentState, touch, hasConsent } = useRecordingConsent();
-  const [consentLoading, setConsentLoading] = useState(false);
-  // toast would open duplicates, even with using "id=" prop
-  const [modalOpen, setModalOpen] = useState(false);
-  const api = useApi();
-
-  const handleConsent = useCallback(
-    async (meetingId: string, given: boolean) => {
-      if (!api) return;
-
-      setConsentLoading(true);
-
-      try {
-        await api.v1MeetingAudioConsent({
-          meetingId,
-          requestBody: { consent_given: given },
-        });
-
-        touch(meetingId);
-      } catch (error) {
-        console.error("Error submitting consent:", error);
-      } finally {
-        setConsentLoading(false);
-      }
-    },
-    [api, touch],
-  );
-
-  const showConsentModal = useCallback(() => {
-    if (modalOpen) return;
-
-    setModalOpen(true);
-
-    const toastId = toaster.create({
-      placement: "top",
-      duration: null,
-      render: ({ dismiss }) => {
-        const AcceptButton = () => {
-          const buttonRef = useRef<HTMLButtonElement>(null);
-          useConsentWherebyFocusManagement(buttonRef, wherebyRef);
-          return (
-            <Button
-              ref={buttonRef}
-              colorPalette="primary"
-              size="sm"
-              onClick={() => {
-                handleConsent(meetingId, true).then(() => {
-                  /*signifies it's ok to now wait here.*/
-                });
-                dismiss();
-              }}
-            >
-              Yes, store the audio
-            </Button>
-          );
-        };
-
-        return (
-          <Box
-            p={6}
-            bg="rgba(255, 255, 255, 0.7)"
-            borderRadius="lg"
-            boxShadow="lg"
-            maxW="md"
-            mx="auto"
-          >
-            <VStack gap={4} alignItems="center">
-              <Text fontSize="md" textAlign="center" fontWeight="medium">
-                Can we have your permission to store this meeting's audio
-                recording on our servers?
-              </Text>
-              <HStack gap={4} justifyContent="center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    handleConsent(meetingId, false).then(() => {
-                      /*signifies it's ok to now wait here.*/
-                    });
-                    dismiss();
-                  }}
-                >
-                  No, delete after transcription
-                </Button>
-                <AcceptButton />
-              </HStack>
-            </VStack>
-          </Box>
-        );
-      },
-    });
-
-    // Set modal state when toast is dismissed
-    toastId.then((id) => {
-      const checkToastStatus = setInterval(() => {
-        if (!toaster.isActive(id)) {
-          setModalOpen(false);
-          clearInterval(checkToastStatus);
-        }
-      }, 100);
-    });
-
-    // Handle escape key to close the toast
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        toastId.then((id) => toaster.dismiss(id));
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-
-    const cleanup = () => {
-      toastId.then((id) => toaster.dismiss(id));
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-
-    return cleanup;
-  }, [meetingId, handleConsent, wherebyRef, modalOpen]);
-
-  return { showConsentModal, consentState, hasConsent, consentLoading };
-};
-
-function ConsentDialogButton({
-  meetingId,
-  wherebyRef,
-}: {
-  meetingId: string;
-  wherebyRef: React.RefObject<HTMLElement>;
-}) {
-  const { showConsentModal, consentState, hasConsent, consentLoading } =
-    useConsentDialog(meetingId, wherebyRef);
-
-  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
-    return null;
-  }
-
-  return (
-    <Button
-      position="absolute"
-      top="56px"
-      left="8px"
-      zIndex={1000}
-      colorPalette="blue"
-      size="sm"
-      onClick={showConsentModal}
-    >
-      Meeting is being recorded
-      <Icon as={FaBars} ml={2} />
-    </Button>
-  );
 }
 
-const recordingTypeRequiresConsent = (
-  recordingType: NonNullable<Meeting["recording_type"]>,
-) => {
-  return recordingType === "cloud";
-};
+const useConsentDialog = (meetingId: string, wherebyRef: RefObject<HTMLElement>/*accessibility*/) => {
+  const { state: consentState, touch, hasConsent } = useRecordingConsent();
+  const [consentLoading, setConsentLoading] = useState(false);
+  const api = useApi();
+  const toast = useToast();
+  const handleConsent = useCallback(async (meetingId: string, given: boolean) => {
+    if (!api) return;
 
-// next throws even with "use client"
-const useWhereby = () => {
-  const [wherebyLoaded, setWherebyLoaded] = useState(false);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("@whereby.com/browser-sdk/embed")
-        .then(() => {
-          setWherebyLoaded(true);
-        })
-        .catch(console.error.bind(console));
+    setConsentLoading(true);
+
+    try {
+      await api.v1MeetingAudioConsent({
+        meetingId,
+        requestBody: { consent_given: given }
+      });
+
+      touch(meetingId);
+    } catch (error) {
+      console.error("Error submitting consent:", error);
+    } finally {
+      setConsentLoading(false);
     }
-  }, []);
-  return wherebyLoaded;
-};
+  }, [api, touch]);
+
+  useEffect(() => {
+    if (
+      consentState.ready &&
+      meetingId &&
+      !hasConsent(meetingId) &&
+      !consentLoading
+    ) {
+
+      const toastId = toast({
+        position: "top",
+        duration: null,
+        render: ({ onClose }) => {
+          const AcceptButton = () => {
+            const buttonRef = useRef<HTMLButtonElement>(null);
+            useConsentWherebyFocusManagement(buttonRef, wherebyRef);
+            return (
+              <Button
+                ref={buttonRef}
+                colorScheme="blue"
+                size="sm"
+                onClick={() => {
+                  handleConsent(meetingId, true).then(() => {/*signifies it's ok to now wait here.*/})
+                  onClose()
+                }}
+              >
+                Yes, store the audio
+              </Button>
+            );
+          };
+
+          return (
+            <Box p={6} bg="rgba(255, 255, 255, 0.7)" borderRadius="lg" boxShadow="lg" maxW="md" mx="auto">
+              <VStack spacing={4} align="center">
+                <Text fontSize="md" textAlign="center" fontWeight="medium">
+                  Can we have your permission to store this meeting's audio recording on our servers?
+                </Text>
+                <HStack spacing={4} justify="center">
+                  <AcceptButton />
+                  <Button
+                    colorScheme="gray"
+                    size="sm"
+                    onClick={() => {
+                      handleConsent(meetingId, false).then(() => {/*signifies it's ok to now wait here.*/})
+                      onClose()
+                    }}
+                  >
+                    No, delete after transcription
+                  </Button>
+                </HStack>
+              </VStack>
+            </Box>
+          );
+        },
+      });
+
+      // Handle escape key to close the toast
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          toast.close(toastId);
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+
+      return () => {
+        toast.close(toastId);
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [consentState.ready, meetingId, hasConsent, consentLoading, toast, handleConsent]);
+}
+
+function ConsentDialog({ meetingId, wherebyRef }: { meetingId: string; wherebyRef: React.RefObject<HTMLElement> }) {
+  useConsentDialog(meetingId, wherebyRef);
+  return <></>
+}
+
+const recordingTypeRequiresConsent = (recordingType: NonNullable<Meeting['recording_type']>) => {
+  return recordingType === 'cloud';
+}
+
+let wherebyLoaded = false;
+if (typeof window !== 'undefined') {
+  import("@whereby.com/browser-sdk/embed").then(() => {
+    wherebyLoaded = true;
+  });
+}
 
 export default function Room(details: RoomDetails) {
-  const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
@@ -280,14 +189,14 @@ export default function Room(details: RoomDetails) {
   }, [isLoading, meeting?.error]);
 
   useEffect(() => {
-    if (isLoading || !isAuthenticated || !roomUrl || !wherebyLoaded) return;
+    if (isLoading || !isAuthenticated || !roomUrl) return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
-  }, [handleLeave, roomUrl, isLoading, isAuthenticated, wherebyLoaded]);
+  }, [handleLeave, roomUrl, isLoading, isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -299,10 +208,17 @@ export default function Room(details: RoomDetails) {
         bg="gray.50"
         p={4}
       >
-        <Spinner color="blue.500" size="xl" />
+        <Spinner
+          thickness="4px"
+          speed="0.65s"
+          emptyColor="gray.200"
+          color="blue.500"
+          size="xl"
+        />
       </Box>
     );
   }
+
 
   return (
     <>
@@ -313,12 +229,7 @@ export default function Room(details: RoomDetails) {
             room={roomUrl}
             style={{ width: "100vw", height: "100vh" }}
           />
-          {recordingType && recordingTypeRequiresConsent(recordingType) && (
-            <ConsentDialogButton
-              meetingId={meetingId}
-              wherebyRef={wherebyRef}
-            />
-          )}
+          {recordingType && recordingTypeRequiresConsent(recordingType) && <ConsentDialog meetingId={meetingId} wherebyRef={wherebyRef} />}
         </>
       )}
     </>

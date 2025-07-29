@@ -1,10 +1,25 @@
 from reflector.processors.base import Processor
-from reflector.processors.types import AudioDiarizationInput, TitleSummary, Word
+from reflector.processors.types import AudioDiarizationInput, TitleSummary, TitleSummaryWithId, Word
 
 
 class AudioDiarizationProcessor(Processor):
     INPUT_TYPE = AudioDiarizationInput
-    OUTPUT_TYPE = TitleSummary
+    OUTPUT_TYPE = TitleSummaryWithId
+
+    # TODO: @vibe-generated Type System Fix Documentation
+    # FIXED: Previous type mismatch issues have been resolved:
+    # - OUTPUT_TYPE now correctly declares TitleSummaryWithId (was TitleSummary)
+    # - iter_words_from_topics() now has correct signature: list[TitleSummaryWithId]
+    # 
+    # REMAINING CONSIDERATIONS:
+    # 1. This processor emits multiple objects (one per topic) in a loop, not a single output
+    #    - This is intentional for streaming/real-time processing
+    #    - Consider if downstream processors expect single vs multiple emissions
+    # 2. Input contains list[TitleSummaryWithId] but emits them individually
+    #    - This transforms batch input into streaming output
+    # 3. Modal processor also updated to OUTPUT_TYPE = TitleSummaryWithId for consistency
+    #
+    # HISTORY: Type mismatch existed from Oct 2023 (commit bd4b6672) to July 2025
 
     async def _push(self, data: AudioDiarizationInput):
         try:
@@ -39,7 +54,7 @@ class AudioDiarizationProcessor(Processor):
         self._diarization_merge_same_speaker(words, diarization)
         self._diarization_assign_speaker(words, diarization)
 
-    def iter_words_from_topics(self, topics: TitleSummary):
+    def iter_words_from_topics(self, topics: list[TitleSummaryWithId]):
         for topic in topics:
             for word in topic.transcript.words:
                 yield word

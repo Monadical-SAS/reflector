@@ -24,3 +24,10 @@ from .types import (  # noqa: F401
     Transcript,
     Word,
 )
+from .event_handling import (  # noqa: F401
+    EventHandlerConfig,
+    create_event_handler,
+    create_diarization_wrapper,
+    create_progress_reporter,
+    serialize_data,
+)

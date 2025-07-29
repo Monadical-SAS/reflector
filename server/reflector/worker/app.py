@@ -16,6 +16,7 @@ else:
     app.autodiscover_tasks(
         [
             "reflector.pipelines.main_live_pipeline",
+            "reflector.worker.audio_tasks",
             "reflector.worker.healthcheck",
             "reflector.worker.process",
         ]

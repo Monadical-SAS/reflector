@@ -151,7 +151,18 @@ async def process_audio_file_with_diarization(
                 diarization_processor = AudioDiarizationAutoProcessor(
                     name=diarization_backend
                 )
-                diarization_processor.on(event_callback)
+                
+                # Import the wrapper creator
+                from reflector.processors import create_diarization_wrapper
+                
+                # Create a wrapper for the event callback that handles raw data
+                diarization_event_wrapper = create_diarization_wrapper(
+                    diarization_processor.name,
+                    diarization_processor.uid,
+                    event_callback
+                )
+                
+                diarization_processor.on(diarization_event_wrapper)
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
@@ -228,6 +239,7 @@ async def process_audio_file_with_diarization(
 if __name__ == "__main__":
     import argparse
     import os
+    from reflector.processors import EventHandlerConfig, create_event_handler
 
     parser = argparse.ArgumentParser(
         description="Process audio files with optional speaker diarization"
@@ -269,33 +281,27 @@ if __name__ == "__main__":
     if args.output:
         output_fd = open(args.output, "w")
 
-    async def event_callback(event: PipelineEvent):
-        processor = event.processor
-        data = event.data
-
-        # Ignore internal processors
-        if processor in (
-            "AudioChunkerProcessor",
-            "AudioMergeProcessor",
-            "AudioFileWriterProcessor",
-            "TopicCollectorProcessor",
-            "BroadcastProcessor",
-        ):
-            return
-
-        # If diarization is enabled, skip the original topic events from the pipeline
-        # The diarization processor will emit the same topics but with speaker info
-        if processor == "TranscriptTopicDetectorProcessor" and args.enable_diarization:
-            return
-
-        # Log all events
-        logger.info(f"Event: {processor} - {type(data).__name__}")
-
-        # Write to output
+    # Create event handler configuration
+    config = EventHandlerConfig(
+        enable_diarization=args.enable_diarization,
+        track_progress=False,  # CLI doesn't need progress tracking
+        collect_events=False,  # CLI writes directly to file
+    )
+    
+    # Custom event writer for CLI
+    async def write_event(event_dict):
         if output_fd:
-            output_fd.write(event.model_dump_json())
+            # Convert event dict to PipelineEvent-like JSON for compatibility
+            output_fd.write(PipelineEvent(
+                processor=event_dict["processor"],
+                uid=event_dict["uid"], 
+                data=event_dict["data"]
+            ).model_dump_json())
             output_fd.write("\n")
             output_fd.flush()
+    
+    # Create standardized event handler
+    event_callback = create_event_handler(config, write_event)
 
     asyncio.run(
         process_audio_file_with_diarization(

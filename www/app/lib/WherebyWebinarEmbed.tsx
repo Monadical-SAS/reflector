@@ -1,8 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef } from "react";
 import "@whereby.com/browser-sdk/embed";
-import { Box, Button, HStack, Text, Link } from "@chakra-ui/react";
-import { toaster } from "../components/ui/toaster";
+import { Box, Button, HStack, useToast, Text } from "@chakra-ui/react";
 
 interface WherebyEmbedProps {
   roomUrl: string;
@@ -10,38 +9,38 @@ interface WherebyEmbedProps {
 }
 
 // currently used for webinars only
-export default function WherebyWebinarEmbed({
-  roomUrl,
-  onLeave,
-}: WherebyEmbedProps) {
+export default function WherebyWebinarEmbed({ roomUrl, onLeave }: WherebyEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
-  // TODO extract common toast logic / styles to be used by consent toast on normal rooms
+  // note: similar toast is in Consent for normal calls
+  const toast = useToast();
   useEffect(() => {
     if (roomUrl && !localStorage.getItem("recording-notice-dismissed")) {
-      const toastIdPromise = toaster.create({
-        placement: "top",
+      const toastId = toast({
+        position: "top",
         duration: null,
-        render: ({ dismiss }) => (
+        render: ({ onClose }) => (
           <Box p={4} bg="white" borderRadius="md" boxShadow="md">
-            <HStack justifyContent="space-between" alignItems="center">
+            <HStack justify="space-between" align="center">
               <Text>
                 This webinar is being recorded. By continuing, you agree to our{" "}
-                <Link
+                <Button
+                  as="a"
                   href="https://monadical.com/privacy"
+                  variant="link"
                   color="blue.600"
                   textDecoration="underline"
                   target="_blank"
                 >
                   Privacy Policy
-                </Link>
+                </Button>
               </Text>
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => {
                   localStorage.setItem("recording-notice-dismissed", "true");
-                  dismiss();
+                  onClose();
                 }}
               >
                 ✕
@@ -52,10 +51,10 @@ export default function WherebyWebinarEmbed({
       });
 
       return () => {
-        toastIdPromise.then((id) => toaster.dismiss(id));
+        toast.close(toastId);
       };
     }
-  }, [roomUrl]);
+  }, [roomUrl, toast]);
 
   const handleLeave = () => {
     if (onLeave) {

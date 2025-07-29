@@ -7,6 +7,7 @@ database = databases.Database(settings.DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
 # import models
+import reflector.db.jobs  # noqa
 import reflector.db.meetings  # noqa
 import reflector.db.recordings  # noqa
 import reflector.db.rooms  # noqa
