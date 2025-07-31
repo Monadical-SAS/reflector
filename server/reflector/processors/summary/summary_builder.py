@@ -97,7 +97,7 @@ RECAP_PROMPT = dedent(
     Provide a high-level quick recap of the following meeting, fitting in one paragraph.
     Do not include decisions, action items or unresolved issue, just highlight the high moments.
     Just dive into the meeting, be concise and do not include unnecessary details.
-    As we know it is a meeting, do not start with 'During the meeting' or equivalent.
+    As we already know it is a meeting, do not start with 'During the meeting' or equivalent.
     """
 ).strip()
 
