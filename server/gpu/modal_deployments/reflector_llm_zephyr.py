@@ -9,6 +9,7 @@ import os
 import threading
 from typing import Optional
 
+import modal
 from modal import App, Image, Secret, asgi_app, enter, exit, method
 
 # LLM

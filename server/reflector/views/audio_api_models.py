@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
 # Request Models
@@ -14,16 +14,17 @@ class DiarizationBackend(str, Enum):
 
 
 class DiarizationOptions(BaseModel):
-    source_language: str = Field(default="en", description="Source language code")
+    source_language: str = Field(default="en", description="Source language code") 
     target_language: str = Field(default="en", description="Target language code")
     diarization_backend: DiarizationBackend = Field(
-        default=DiarizationBackend.MODAL, description="Diarization backend to use"
+        default=DiarizationBackend.MODAL,
+        description="Diarization backend to use"
     )
     timeout_ms: int = Field(
-        default=900000,
-        ge=1000,
+        default=900000, 
+        ge=1000, 
         le=3600000,
-        description="Processing timeout in milliseconds",
+        description="Processing timeout in milliseconds"
     )
 
 
@@ -73,21 +74,21 @@ class Segment(BaseModel):
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="allow")
-
+    
     name: Optional[str] = None
     confidence: Optional[float] = None
 
 
 class Translation(BaseModel):
     model_config = ConfigDict(extra="allow")
-
+    
     text: Optional[str] = None
     language: Optional[str] = None
 
 
 class ReflectorOutputData(BaseModel):
     model_config = ConfigDict(extra="allow")
-
+    
     segments: Optional[List[Segment]] = None
     topics: Optional[List[Topic]] = None
     title: Optional[str] = None
@@ -99,7 +100,7 @@ class ReflectorOutputData(BaseModel):
 
 class ReflectorOutput(BaseModel):
     model_config = ConfigDict(extra="allow")
-
+    
     processor: str
     uid: Optional[str] = None
     data: Optional[ReflectorOutputData] = None

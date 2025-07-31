@@ -253,7 +253,9 @@ def summarize(
         LOGGER.info("Breaking transcript into smaller chunks")
         chunks = chunk_text(transcript_text)
 
-        LOGGER.info(f"Transcript broken into {len(chunks)} chunks of at most 500 words")
+        LOGGER.info(
+            f"Transcript broken into {len(chunks)} " f"chunks of at most 500 words"
+        )
 
         LOGGER.info(f"Writing summary text to: {output_file}")
         with open(output_file, "w") as f:

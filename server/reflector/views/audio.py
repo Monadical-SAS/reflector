@@ -2,14 +2,15 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Annotated
+from typing import Dict, List, Optional, Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, Depends, Header
 from fastapi.responses import JSONResponse
 from reflector.db import database
-from reflector.db.jobs import jobs, JobStatus, JobType
+from reflector.db.jobs import jobs, JobStatus, JobType, JobCreate as JobCreateDB
 from reflector.logger import logger
 from reflector.worker.result_consolidator import consolidate_results
+from reflector import auth
 from reflector.settings import settings
 from reflector.views.audio_api_models import (
     DiarizationRequest,
@@ -29,11 +30,8 @@ from reflector.worker.audio_tasks import (
     process_audio_with_diarization_task,
 )
 
-
 class AudioAPIException(HTTPException):
-    def __init__(
-        self, status_code: int, code: str, message: str, details: Optional[Dict] = None
-    ):
+    def __init__(self, status_code: int, code: str, message: str, details: Optional[Dict] = None):
         self.code = code
         self.message = message
         self.details = details or {}
@@ -44,8 +42,12 @@ async def audio_api_exception_handler(request, exc: AudioAPIException):
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
-            error=ErrorDetail(code=exc.code, message=exc.message, details=exc.details)
-        ).model_dump(),
+            error=ErrorDetail(
+                code=exc.code,
+                message=exc.message,
+                details=exc.details
+            )
+        ).model_dump()
     )
 
 
@@ -56,10 +58,10 @@ def verify_ci_evaluation_token(authorization: Optional[str] = Header(None)) -> b
     """Verify CI evaluation token from Authorization header."""
     if not authorization:
         return False
-
+    
     if not authorization.startswith("Bearer "):
         return False
-
+        
     token = authorization[7:]  # Remove "Bearer " prefix
     return token == settings.CI_EVALUATION_TOKEN
 
@@ -83,9 +85,9 @@ async def diarize_audio(
         raise AudioAPIException(
             status_code=401,
             code="UNAUTHORIZED",
-            message="Valid CI evaluation token required",
+            message="Valid CI evaluation token required"
         )
-
+    
     try:
         # Create job in database
         job_id = uuid.uuid4()
@@ -100,10 +102,10 @@ async def diarize_audio(
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
-
+        
         query = jobs.insert().values(**job_data)
         await database.execute(query)
-
+        
         # Submit to Celery (diarization includes transcription)
         process_audio_with_diarization_task.apply_async(
             args=[
@@ -116,24 +118,24 @@ async def diarize_audio(
             ],
             time_limit=request.options.timeout_ms / 1000,
         )
-
+        
         # Estimate completion time
         estimated_completion = datetime.utcnow() + timedelta(minutes=10)
-
+        
         return JobCreatedResponse(
             job_id=job_id,
             status=JobStatus.PENDING,
             created_at=job_data["created_at"],
             estimated_completion=estimated_completion,
         )
-
+        
     except Exception as e:
         logger.error(f"Error creating diarization job: {e}")
         raise AudioAPIException(
             status_code=500,
             code="INTERNAL_ERROR",
             message="Failed to create diarization job",
-            details={"exception": str(e)},
+            details={"exception": str(e)}
         )
 
 
@@ -156,23 +158,23 @@ async def get_job_status(
         raise AudioAPIException(
             status_code=401,
             code="UNAUTHORIZED",
-            message="Valid CI evaluation token required",
+            message="Valid CI evaluation token required"
         )
-
+    
     try:
         # Validate UUID format to prevent SQL injection
         validated_id = uuid.UUID(str(job_id))
-
+        
         query = jobs.select().where(jobs.c.id == str(validated_id))
         result = await database.fetch_one(query)
-
+        
         if not result:
             raise AudioAPIException(
                 status_code=404,
                 code="JOB_NOT_FOUND",
-                message=f"Job with ID {job_id} not found",
+                message=f"Job with ID {job_id} not found"
             )
-
+        
         # Build error object if job failed
         error = None
         if result["status"] == JobStatus.FAILED:
@@ -180,13 +182,13 @@ async def get_job_status(
             # Handle SQLite JSON serialization
             if isinstance(error_details, str):
                 error_details = json.loads(error_details)
-
+            
             error = {
                 "code": result["error_code"] or "UNKNOWN_ERROR",
                 "message": result["error_message"] or "Processing failed",
                 "details": error_details,
             }
-
+        
         return JobStatusResponse(
             job_id=uuid.UUID(result["id"]),
             status=result["status"],
@@ -199,7 +201,7 @@ async def get_job_status(
             completed_at=result["completed_at"],
             error=error,
         )
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -208,7 +210,7 @@ async def get_job_status(
             status_code=500,
             code="INTERNAL_ERROR",
             message="Failed to get job status",
-            details={"exception": str(e)},
+            details={"exception": str(e)}
         )
 
 
@@ -234,61 +236,61 @@ async def get_job_results(
         raise AudioAPIException(
             status_code=401,
             code="UNAUTHORIZED",
-            message="Valid CI evaluation token required",
+            message="Valid CI evaluation token required"
         )
-
+    
     try:
         # Validate UUID format to prevent SQL injection
         validated_id = uuid.UUID(str(job_id))
-
+        
         query = jobs.select().where(jobs.c.id == str(validated_id))
         result = await database.fetch_one(query)
-
+        
         if not result:
             raise AudioAPIException(
                 status_code=404,
                 code="JOB_NOT_FOUND",
-                message=f"Job with ID {job_id} not found",
+                message=f"Job with ID {job_id} not found"
             )
-
+        
         if result["status"] != JobStatus.COMPLETED:
             raise AudioAPIException(
                 status_code=400,
                 code="JOB_NOT_COMPLETED",
-                message=f"Job is in {result['status']} state, not completed",
+                message=f"Job is in {result['status']} state, not completed"
             )
-
+        
         # Get result data
         result_data = result["result_data"] or []
-
+        
         # Handle SQLite JSON serialization - if result_data is a string, parse it
         if isinstance(result_data, str):
             result_data = json.loads(result_data)
-
+        
         # Consolidate fragmented results to match CLI behavior
         consolidated_data = consolidate_results(result_data)
-
+        
         # Convert to ReflectorOutput objects
         outputs = []
-
+        
         for item in consolidated_data:
             output_data = item.get("data")
-
+            
             output = ReflectorOutput(
                 processor=item.get("processor", "Unknown"),
                 uid=item.get("uid"),
                 data=output_data,
             )
             outputs.append(output)
-
+        
         # Calculate metadata
         metadata = JobResultsMetadata()
-
+        
         if include_metadata and result["metadata"]:
             job_metadata = result["metadata"]
             metadata.audio_duration = job_metadata.get("audio_duration")
             metadata.processing_time = job_metadata.get("processing_time")
-
+        
         # Return based on format
         if format == ResultFormat.JSONL:
             # Return as newline-delimited JSON with consolidated results
@@ -296,7 +298,7 @@ async def get_job_results(
             for item in consolidated_data:
                 # Return the raw data as stored by the worker
                 jsonl_lines.append(json.dumps(item))
-
+            
             content = "\n".join(jsonl_lines)
             return Response(
                 content=content,
@@ -305,14 +307,14 @@ async def get_job_results(
                     "Content-Disposition": f"attachment; filename=job_{job_id}_results.jsonl"
                 },
             )
-
+        
         # Default JSON format
         return JobResultsResponse(
             job_id=uuid.UUID(result["id"]),
             results=outputs,
             metadata=metadata,
         )
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -321,7 +323,7 @@ async def get_job_results(
             status_code=500,
             code="INTERNAL_ERROR",
             message="Failed to get job results",
-            details={"exception": str(e)},
+            details={"exception": str(e)}
         )
 
 
@@ -342,30 +344,30 @@ async def health_check():
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             db_status = ServiceStatus.UNAVAILABLE
-
+        
         # Check if we can import required processors
         transcription_status = ServiceStatus.AVAILABLE
         diarization_status = ServiceStatus.AVAILABLE
         translation_status = ServiceStatus.AVAILABLE
-
+        
         try:
-            pass
+            from reflector.processors import AudioTranscriptAutoProcessor
         except Exception as e:
             logger.error(f"Transcription import check failed: {e}")
             transcription_status = ServiceStatus.UNAVAILABLE
-
+        
         try:
-            pass
+            from reflector.processors import AudioDiarizationAutoProcessor
         except Exception as e:
             logger.error(f"Diarization import check failed: {e}")
             diarization_status = ServiceStatus.UNAVAILABLE
-
+        
         try:
-            pass
+            from reflector.processors import TranscriptTranslatorProcessor
         except Exception as e:
             logger.error(f"Translation import check failed: {e}")
             translation_status = ServiceStatus.UNAVAILABLE
-
+        
         # Overall health status
         all_services = [
             db_status,
@@ -373,14 +375,14 @@ async def health_check():
             diarization_status,
             translation_status,
         ]
-
+        
         if all(s == ServiceStatus.AVAILABLE for s in all_services):
             overall_status = "healthy"
         elif any(s == ServiceStatus.UNAVAILABLE for s in all_services):
             overall_status = "unhealthy"
         else:
             overall_status = "degraded"
-
+        
         response = HealthCheckResponse(
             status=overall_status,
             version="1.0.0",
@@ -391,13 +393,13 @@ async def health_check():
                 "translation": translation_status,
             },
         )
-
+        
         # Return 503 if unhealthy
         if overall_status == "unhealthy":
             raise HTTPException(status_code=503, detail=response.model_dump())
-
+        
         return response
-
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -406,5 +408,5 @@ async def health_check():
             status_code=503,
             code="HEALTH_CHECK_FAILED",
             message="Health check encountered an error",
-            details={"exception": str(e)},
+            details={"exception": str(e)}
         )
