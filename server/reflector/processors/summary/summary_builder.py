@@ -9,16 +9,20 @@ import sys
 from datetime import datetime
 from enum import Enum
 from textwrap import dedent
-from typing import cast
+from typing import Type, TypeVar
 
 import structlog
 from llama_index.core import Settings
+from llama_index.core.output_parsers import PydanticOutputParser
+from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, Field
 from reflector.llm.base import LLM
 from reflector.llm.openai_llm import OpenAILLM
 from reflector.settings import settings
+
+T = TypeVar("T", bound=BaseModel)
 
 PARTICIPANTS_PROMPT = dedent(
     """
@@ -32,12 +36,12 @@ PARTICIPANTS_PROMPT = dedent(
 TRANSCRIPTION_TYPE_PROMPT = dedent(
     """
     Analyze the transcript to determine if it is a meeting, podcast, or interview.
-    A meeting typically involves numerous participants engaging in discussions,
+    A meeting typically involves severals participants engaging in discussions,
     making decisions, and planning actions. A podcast often includes hosts
     discussing topics or interviewing guests for an audience in a structured format.
-    An interview generally features an interviewer questioning one or more interviewees,
-    often for hiring, research, or journalism. Deliver your classification with a
-    confidence score and reasoning.
+    An interview generally features one or more interviewer questioning one or
+    more interviewees, often for hiring, research, or journalism. Deliver your
+    classification with a confidence score and reasoning.
     """
 ).strip()
 
@@ -200,12 +204,9 @@ class SummaryBuilder:
         self.llm_instance = llm
 
     async def _get_structured_response(
-        self, prompt: str, output_cls: type[BaseModel], tone_name: str | None = None
-    ) -> BaseModel:
+        self, prompt: str, output_cls: Type[T], tone_name: str | None = None
+    ) -> Type[T]:
         """Generic function to get structured output from LLM for non-function-calling models."""
-        from llama_index.core.output_parsers import PydanticOutputParser
-        from llama_index.core.program import LLMTextCompletionProgram
-
         # First, use TreeSummarize to get the response
         summarizer = TreeSummarize(verbose=True)
 
@@ -250,13 +251,10 @@ class SummaryBuilder:
         participants_prompt = PARTICIPANTS_PROMPT
 
         try:
-            response = cast(
+            response = await self._get_structured_response(
+                participants_prompt,
                 ParticipantsResponse,
-                await self._get_structured_response(
-                    participants_prompt,
-                    ParticipantsResponse,
-                    tone_name="Participant identifier",
-                ),
+                tone_name="Participant identifier",
             )
 
             all_participants = [p.name for p in response.participants]
@@ -269,7 +267,7 @@ class SummaryBuilder:
                 total_identified=len(all_participants) + len(response.mentioned_only),
             )
 
-            unique_participants = all_participants + response.mentioned_only
+            unique_participants = list(set(all_participants + response.mentioned_only))
 
             if unique_participants:
                 participants_md = self.format_list_md(unique_participants)
@@ -299,13 +297,10 @@ class SummaryBuilder:
         transcription_type_prompt = TRANSCRIPTION_TYPE_PROMPT
 
         try:
-            response = cast(
+            response = await self._get_structured_response(
+                transcription_type_prompt,
                 TranscriptionTypeResponse,
-                await self._get_structured_response(
-                    transcription_type_prompt,
-                    TranscriptionTypeResponse,
-                    tone_name="Transcription type classifier",
-                ),
+                tone_name="Transcription type classifier",
             )
 
             self.logger.info(
@@ -342,13 +337,10 @@ class SummaryBuilder:
         subjects_prompt = SUBJECTS_PROMPT
 
         try:
-            response = cast(
+            response = await self._get_structured_response(
+                subjects_prompt,
                 SubjectsResponse,
-                await self._get_structured_response(
-                    subjects_prompt,
-                    SubjectsResponse,
-                    tone_name="Meeting assistant that talk only as list item",
-                ),
+                tone_name="Meeting assistant that talk only as list item",
             )
 
             self.subjects = response.subjects
