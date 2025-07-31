@@ -61,7 +61,7 @@ class LLM:
         Return an instance depending on the settings.
         Settings used:
 
-        - `LLM_BACKEND`: key of the backend, defaults to `oobabooga`
+        - `LLM_BACKEND`: key of the backend
         - `LLM_URL`: url of the backend
         """
         if name is None:
