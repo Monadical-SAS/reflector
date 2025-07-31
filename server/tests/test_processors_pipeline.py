@@ -11,9 +11,10 @@ async def test_basic_process(
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
-    from reflector.tools.process import process_audio_file
-    from reflector.settings import settings
     from pathlib import Path
+
+    from reflector.settings import settings
+    from reflector.tools.process import process_audio_file
 
     # use an LLM test backend
     settings.LLM_BACKEND = "test"

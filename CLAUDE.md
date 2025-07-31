@@ -51,6 +51,18 @@ uv run pytest tests/test_transcripts.py
 uv run pytest -v
 ```
 
+**Linting and Formatting:**
+```bash
+# Format with black
+uv run black server/reflector server/tests
+
+# Sort imports  
+uv run isort server/reflector server/tests --profile black
+
+# Lint with ruff
+uv run ruff check server/reflector server/tests --fix
+```
+
 **Process Audio Files:**
 ```bash
 # Process local audio file manually

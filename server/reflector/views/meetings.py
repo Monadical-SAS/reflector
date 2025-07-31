@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Annotated, Optional
 
-import reflector.auth as auth
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+import reflector.auth as auth
 from reflector.db.meetings import (
     MeetingConsent,
     meeting_consent_controller,

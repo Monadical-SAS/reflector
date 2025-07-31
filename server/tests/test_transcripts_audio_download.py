@@ -1,13 +1,14 @@
-import pytest
 import shutil
-from httpx import AsyncClient
 from pathlib import Path
+
+import pytest
+from httpx import AsyncClient
 
 
 @pytest.fixture
 async def fake_transcript(tmpdir):
-    from reflector.settings import settings
     from reflector.app import app
+    from reflector.settings import settings
     from reflector.views.transcripts import transcripts_controller
 
     settings.DATA_DIR = Path(tmpdir)

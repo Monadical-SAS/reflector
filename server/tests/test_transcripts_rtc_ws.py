@@ -33,8 +33,8 @@ class ThreadedUvicorn:
 
 @pytest.fixture
 async def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
-    from reflector.settings import settings
     from reflector.app import app
+    from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
     settings.DATA_DIR = Path(tmpdir)
@@ -110,8 +110,10 @@ async def test_transcript_rtc_and_websocket(
 
     # create stream client
     import argparse
-    from reflector.stream_client import StreamClient
+
     from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
+
+    from reflector.stream_client import StreamClient
 
     parser = argparse.ArgumentParser()
     add_signaling_arguments(parser)
@@ -270,8 +272,10 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     # create stream client
     import argparse
-    from reflector.stream_client import StreamClient
+
     from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
+
+    from reflector.stream_client import StreamClient
 
     parser = argparse.ArgumentParser()
     add_signaling_arguments(parser)

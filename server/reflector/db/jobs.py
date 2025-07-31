@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 
 import sqlalchemy
 from pydantic import BaseModel, ConfigDict, Field
+
 from reflector.db import metadata
-from reflector.utils import generate_uuid4
 
 
 class JobStatus(enum.StrEnum):
@@ -40,20 +40,14 @@ jobs = sqlalchemy.Table(
     ),
     sqlalchemy.Column("current_step", sqlalchemy.String(100), nullable=True),
     sqlalchemy.Column("progress_percentage", sqlalchemy.Integer(), nullable=True),
-    
     # Request data
-    sqlalchemy.Column(
-        "request_data", sqlalchemy.JSON(), nullable=False, default=dict
-    ),
-    
+    sqlalchemy.Column("request_data", sqlalchemy.JSON(), nullable=False, default=dict),
     # Result data - stores the JSONL output as JSON array
     sqlalchemy.Column("result_data", sqlalchemy.JSON(), nullable=True),
-    
     # Error information
     sqlalchemy.Column("error_code", sqlalchemy.String(50), nullable=True),
     sqlalchemy.Column("error_message", sqlalchemy.Text(), nullable=True),
     sqlalchemy.Column("error_details", sqlalchemy.JSON(), nullable=True),
-    
     # Timestamps
     sqlalchemy.Column(
         "created_at",
@@ -69,7 +63,6 @@ jobs = sqlalchemy.Table(
     sqlalchemy.Column(
         "completed_at", sqlalchemy.DateTime(timezone=True), nullable=True
     ),
-    
     # Metadata
     sqlalchemy.Column("metadata", sqlalchemy.JSON(), nullable=False, default=dict),
 )
@@ -78,7 +71,7 @@ jobs = sqlalchemy.Table(
 # Pydantic models for API
 class JobBase(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
-    
+
     type: JobType
     status: JobStatus = JobStatus.PENDING
     current_step: Optional[str] = None
