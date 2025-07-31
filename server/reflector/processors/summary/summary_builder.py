@@ -9,6 +9,7 @@ import sys
 from datetime import datetime
 from enum import Enum
 from textwrap import dedent
+from typing import cast
 
 import structlog
 from llama_index.core import Settings
@@ -151,7 +152,6 @@ class SubjectsResponse(BaseModel):
 
     subjects: list[str] = Field(
         description="List of main subjects/topics discussed, maximum 6 items",
-        max_items=6,
     )
 
 
@@ -249,10 +249,13 @@ class SummaryBuilder:
         participants_prompt = PARTICIPANTS_PROMPT
 
         try:
-            response = await self._get_structured_response(
-                participants_prompt,
+            response = cast(
                 ParticipantsResponse,
-                tone_name="Participant identifier",
+                await self._get_structured_response(
+                    participants_prompt,
+                    ParticipantsResponse,
+                    tone_name="Participant identifier",
+                ),
             )
 
             all_participants = [p.name for p in response.participants]
@@ -295,10 +298,13 @@ class SummaryBuilder:
         transcription_type_prompt = TRANSCRIPTION_TYPE_PROMPT
 
         try:
-            response = await self._get_structured_response(
-                transcription_type_prompt,
+            response = cast(
                 TranscriptionTypeResponse,
-                tone_name="Transcription type classifier",
+                await self._get_structured_response(
+                    transcription_type_prompt,
+                    TranscriptionTypeResponse,
+                    tone_name="Transcription type classifier",
+                ),
             )
 
             self.logger.info(
@@ -335,10 +341,13 @@ class SummaryBuilder:
         subjects_prompt = SUBJECTS_PROMPT
 
         try:
-            response = await self._get_structured_response(
-                subjects_prompt,
+            response = cast(
                 SubjectsResponse,
-                tone_name="Meeting assistant that talk only as list item",
+                await self._get_structured_response(
+                    subjects_prompt,
+                    SubjectsResponse,
+                    tone_name="Meeting assistant that talk only as list item",
+                ),
             )
 
             self.subjects = response.subjects
@@ -350,7 +359,8 @@ class SummaryBuilder:
 
     async def generate_subject_summaries(self) -> None:
         """Generate detailed summaries for each extracted subject."""
-        summarizer = TreeSummarize(verbose=True)
+        assert self.transcript is not None
+        summarizer = TreeSummarize(verbose=False)
         summaries = []
 
         for subject in self.subjects:
