@@ -8,8 +8,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    OPENMP_KMP_DUPLICATE_LIB_OK: bool = False
-
     # CORS
     CORS_ORIGIN: str = "*"
     CORS_ALLOW_CREDENTIALS: bool = False
@@ -19,26 +17,6 @@ class Settings(BaseSettings):
 
     # local data directory (audio for no)
     DATA_DIR: str = "./data"
-
-    # Whisper
-    WHISPER_MODEL_SIZE: str = "tiny"
-    WHISPER_REAL_TIME_MODEL_SIZE: str = "tiny"
-
-    # Summarizer
-    SUMMARIZER_MODEL: str = "facebook/bart-large-cnn"
-    SUMMARIZER_INPUT_ENCODING_MAX_LENGTH: int = 1024
-    SUMMARIZER_MAX_LENGTH: int = 2048
-    SUMMARIZER_BEAM_SIZE: int = 6
-    SUMMARIZER_MAX_CHUNK_LENGTH: int = 1024
-    SUMMARIZER_USING_CHUNKS: bool = True
-
-    # Audio
-    AUDIO_BLACKHOLE_INPUT_AGGREGATOR_DEVICE_NAME: str = "aggregator"
-    AUDIO_AV_FOUNDATION_DEVICE_ID: int = 1
-    AUDIO_CHANNELS: int = 2
-    AUDIO_SAMPLING_RATE: int = 48000
-    AUDIO_SAMPLING_WIDTH: int = 2
-    AUDIO_BUFFER_SIZE: int = 256 * 960
 
     # Audio Transcription
     # backends: whisper, modal
@@ -63,8 +41,8 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # LLM
-    # available backend: openai, modal, oobabooga
-    LLM_BACKEND: str = "oobabooga"
+    # available backend: openai, modal
+    LLM_BACKEND: str = "modal"
 
     # LLM common configuration
     LLM_URL: str | None = None
