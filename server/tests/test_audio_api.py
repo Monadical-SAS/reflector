@@ -23,9 +23,6 @@ def mock_auth():
     del app.dependency_overrides[current_user_optional]
 
 
-# URL validator mock removed - no longer needed since validation is disabled
-
-
 @pytest.fixture(autouse=True)
 def mock_ci_token():
     """Mock CI evaluation token verification"""
@@ -52,9 +49,6 @@ async def db_session():
     await database.connect()
     yield database
     await database.disconnect()
-
-
-# Removed process_audio_task mock - no longer needed
 
 
 @pytest.fixture

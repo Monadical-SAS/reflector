@@ -22,7 +22,7 @@ from reflector.tools.process_with_diarization import process_audio_file_with_dia
 from reflector.storage import get_transcripts_storage
 from reflector.utils.s3_temp_file import S3TemporaryFile
 from reflector.settings import settings
-from reflector.worker.url_validator import validate_audio_url, check_file_size
+from reflector.worker.url_validator import check_file_size
 
 
 async def update_job_status(
@@ -146,7 +146,6 @@ async def download_audio_file(audio_url: str) -> str:
     - S3 HTTPS URLs (https://bucket.s3.amazonaws.com/key)
     - Reflector storage keys (audio/file.mp4 - uses configured bucket)
     """
-    # URL validation removed - allow all HTTP/HTTPS/S3 URLs
     
     suffix = Path(audio_url).suffix or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
@@ -197,13 +196,7 @@ def process_audio_task(
     enable_topics: bool = False,
 ):
     """
-    @vibe-generated: Fixed async/sync antipattern
-    
-    Using asyncio.run() to execute async code in sync Celery task.
-    This is the standard approach for Celery 5.x without explicit async configuration.
-    
-    The inner async function contains all the async logic, avoiding the antipattern
-    of calling asyncio.run() multiple times within the same task.
+    Process audio file and update job status with progress tracking.
     """
     async def _process():
         tmp_path = None
@@ -217,28 +210,22 @@ def process_audio_task(
             logger.info(f"Downloading audio from {audio_url}")
             tmp_path = await download_audio_file(audio_url)
             
-            # Import common event handling utilities
             from reflector.processors import (
                 EventHandlerConfig, 
                 create_event_handler,
                 create_progress_reporter
             )
             
-            # Create progress reporter
             progress_reporter = create_progress_reporter(job_id, update_job_status, JobStatus.PROCESSING)
             
-            # Create event handler configuration
             config = EventHandlerConfig(
-                enable_diarization=False,  # Regular processing, no diarization
+                enable_diarization=False,
                 track_progress=True,
                 progress_callback=progress_reporter,
                 collect_events=True,
             )
             
-            # Create standardized event handler
             event_callback = create_event_handler(config)
-            
-            # Get reference to collected events for later use
             events = config.collected_events
             
             # Process audio file
@@ -246,7 +233,6 @@ def process_audio_task(
                 job_id, JobStatus.PROCESSING, current_step="processing (0/6)"
             )
             
-            # Determine if we should generate topics/summaries
             process_only_transcript = only_transcript or not enable_topics
             
             await process_audio_file(
@@ -300,10 +286,7 @@ def process_audio_with_diarization_task(
     diarization_backend: str = "modal",
 ):
     """
-    @vibe-generated: Fixed async/sync antipattern
-    
-    Using asyncio.run() to execute async code in sync Celery task.
-    Same approach as process_audio_task - see above.
+    Process audio file with diarization and update job status with progress tracking.
     """
     async def _process():
         tmp_path = None
@@ -317,29 +300,23 @@ def process_audio_with_diarization_task(
             logger.info(f"Downloading audio from {audio_url}")
             tmp_path = await download_audio_file(audio_url)
             
-            # Import common event handling utilities
             from reflector.processors import (
                 EventHandlerConfig, 
                 create_event_handler,
                 create_progress_reporter
             )
             
-            # Create progress reporter
             progress_reporter = create_progress_reporter(job_id, update_job_status, JobStatus.PROCESSING)
             
-            # Create event handler configuration
             config = EventHandlerConfig(
-                enable_diarization=True,  # Enable diarization filtering
-                skip_topics_for_diarization=not only_transcript,  # Skip topics unless only_transcript
+                enable_diarization=True,
+                skip_topics_for_diarization=not only_transcript,
                 track_progress=True,
                 progress_callback=progress_reporter,
                 collect_events=True,
             )
             
-            # Create standardized event handler
             event_callback = create_event_handler(config)
-            
-            # Get reference to collected events for later use
             events = config.collected_events
             
             # Process audio file with diarization

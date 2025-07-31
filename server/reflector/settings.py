@@ -135,7 +135,6 @@ class Settings(BaseSettings):
 
     # CI Evaluation Token for API endpoints
     CI_EVALUATION_TOKEN: str = Field(
-        default="eval-hardcoded-secret-token-xyz123",
         description="CI evaluation token for API endpoints",
         env="CI_EVALUATION_TOKEN"
     )

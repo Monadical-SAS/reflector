@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import List
 import uuid
+from reflector.processors import create_diarization_wrapper
 
 import av
 from reflector.logger import logger
@@ -40,7 +41,7 @@ class TopicCollectorProcessor(Processor):
     """Collect topics for diarization"""
 
     INPUT_TYPE = TitleSummary
-    OUTPUT_TYPE = TitleSummary  # Keep as TitleSummary for compatibility with downstream processors
+    OUTPUT_TYPE = TitleSummary
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -151,9 +152,7 @@ async def process_audio_file_with_diarization(
                 diarization_processor = AudioDiarizationAutoProcessor(
                     name=diarization_backend
                 )
-                
-                # Import the wrapper creator
-                from reflector.processors import create_diarization_wrapper
+
                 
                 # Create a wrapper for the event callback that handles raw data
                 diarization_event_wrapper = create_diarization_wrapper(

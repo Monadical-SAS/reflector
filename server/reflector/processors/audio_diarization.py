@@ -1,12 +1,10 @@
 from reflector.processors.base import Processor
-from reflector.processors.types import AudioDiarizationInput, TitleSummary, TitleSummaryWithId, Word
+from reflector.processors.types import AudioDiarizationInput, TitleSummary, Word
 
 
 class AudioDiarizationProcessor(Processor):
     INPUT_TYPE = AudioDiarizationInput
-    OUTPUT_TYPE = TitleSummaryWithId
-
-    # See docs/DIARIZATION_TYPES.md for type system documentation
+    OUTPUT_TYPE = TitleSummary
 
     async def _push(self, data: AudioDiarizationInput):
         try:
@@ -41,7 +39,7 @@ class AudioDiarizationProcessor(Processor):
         self._diarization_merge_same_speaker(words, diarization)
         self._diarization_assign_speaker(words, diarization)
 
-    def iter_words_from_topics(self, topics: list[TitleSummaryWithId]):
+    def iter_words_from_topics(self, topics: list[TitleSummary]):
         for topic in topics:
             for word in topic.transcript.words:
                 yield word
