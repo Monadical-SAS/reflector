@@ -4,7 +4,6 @@ from typing import Literal
 import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
 from reflector.utils import generate_uuid4

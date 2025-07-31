@@ -5,10 +5,9 @@ from typing import Literal
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.sql import false, or_
-
 from reflector.db import database, metadata
 from reflector.utils import generate_uuid4
+from sqlalchemy.sql import false, or_
 
 rooms = sqlalchemy.Table(
     "room",

@@ -11,13 +11,6 @@ from .base import (  # noqa: F401
     Processor,
     ThreadedProcessor,
 )
-from .event_handling import (  # noqa: F401
-    EventHandlerConfig,
-    create_diarization_wrapper,
-    create_event_handler,
-    create_progress_reporter,
-    serialize_data,
-)
 from .transcript_final_summary import TranscriptFinalSummaryProcessor  # noqa: F401
 from .transcript_final_title import TranscriptFinalTitleProcessor  # noqa: F401
 from .transcript_liner import TranscriptLinerProcessor  # noqa: F401
@@ -30,4 +23,11 @@ from .types import (  # noqa: F401
     TitleSummary,
     Transcript,
     Word,
+)
+from .event_handling import (  # noqa: F401
+    EventHandlerConfig,
+    create_event_handler,
+    create_diarization_wrapper,
+    create_progress_reporter,
+    serialize_data,
 )

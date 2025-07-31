@@ -1,6 +1,5 @@
-from unittest import mock
-
 import pytest
+from unittest import mock
 
 
 @pytest.mark.parametrize(
@@ -88,10 +87,10 @@ import pytest
 async def test_processors_audio_diarization(name, diarization, expected):
     from reflector.processors.audio_diarization import AudioDiarizationProcessor
     from reflector.processors.types import (
-        AudioDiarizationInput,
         TitleSummaryWithId,
         Transcript,
         Word,
+        AudioDiarizationInput,
     )
 
     # create fake topic

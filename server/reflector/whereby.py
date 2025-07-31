@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import httpx
-
 from reflector.db.rooms import Room
 from reflector.settings import settings
 

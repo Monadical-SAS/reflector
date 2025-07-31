@@ -15,7 +15,6 @@ import threading
 
 import redis.asyncio as redis
 from fastapi import WebSocket
-
 from reflector.settings import settings
 
 

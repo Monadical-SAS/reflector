@@ -5,12 +5,11 @@ from typing import TypeVar
 
 import nltk
 from prometheus_client import Counter, Histogram
-from transformers import GenerationConfig
-
 from reflector.llm.llm_params import TaskParams
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from transformers import GenerationConfig
 
 T = TypeVar("T", bound="LLM")
 

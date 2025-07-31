@@ -1,10 +1,9 @@
 import httpx
-from transformers import AutoTokenizer, GenerationConfig
-
 from reflector.llm.base import LLM
 from reflector.logger import logger as reflector_logger
 from reflector.settings import settings
 from reflector.utils.retry import retry
+from transformers import AutoTokenizer, GenerationConfig
 
 
 class ModalLLM(LLM):

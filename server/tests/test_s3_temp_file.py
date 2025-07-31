@@ -3,10 +3,8 @@
 Tests for S3 temporary file context manager.
 """
 
-from unittest.mock import AsyncMock, Mock
-
 import pytest
-
+from unittest.mock import Mock, AsyncMock
 from reflector.utils.s3_temp_file import S3TemporaryFile
 
 

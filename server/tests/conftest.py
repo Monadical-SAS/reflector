@@ -1,5 +1,5 @@
-from tempfile import NamedTemporaryFile
 from unittest.mock import patch
+from tempfile import NamedTemporaryFile
 
 import pytest
 
@@ -20,23 +20,17 @@ async def setup_database():
 
 @pytest.fixture
 def dummy_processors():
-    with (
-        patch(
-            "reflector.processors.transcript_topic_detector.TranscriptTopicDetectorProcessor.get_topic"
-        ) as mock_topic,
-        patch(
-            "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
-        ) as mock_title,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
-        ) as mock_long_summary,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
-        ) as mock_short_summary,
-        patch(
-            "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
-        ) as mock_translate,
-    ):
+    with patch(
+        "reflector.processors.transcript_topic_detector.TranscriptTopicDetectorProcessor.get_topic"
+    ) as mock_topic, patch(
+        "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
+    ) as mock_title, patch(
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
+    ) as mock_long_summary, patch(
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
+    ) as mock_short_summary, patch(
+        "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
+    ) as mock_translate:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
         mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"
@@ -178,16 +172,14 @@ def fake_mp3_upload():
 
 @pytest.fixture
 async def fake_transcript_with_topics(tmpdir):
-    import shutil
-    from pathlib import Path
-
-    from httpx import AsyncClient
-
+    from reflector.settings import settings
     from reflector.app import app
+    from reflector.views.transcripts import transcripts_controller
     from reflector.db.transcripts import TranscriptTopic
     from reflector.processors.types import Word
-    from reflector.settings import settings
-    from reflector.views.transcripts import transcripts_controller
+    from pathlib import Path
+    from httpx import AsyncClient
+    import shutil
 
     settings.DATA_DIR = Path(tmpdir)
 

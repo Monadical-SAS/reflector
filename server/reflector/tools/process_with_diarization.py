@@ -9,18 +9,18 @@ This tool processes audio files locally without requiring the full server infras
 
 import asyncio
 import tempfile
-import uuid
 from pathlib import Path
 from typing import List
+import uuid
+from reflector.processors import create_diarization_wrapper
 
 import av
-
 from reflector.logger import logger
 from reflector.processors import (
     AudioChunkerProcessor,
-    AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
+    AudioFileWriterProcessor,
     Pipeline,
     PipelineEvent,
     TranscriptFinalSummaryProcessor,
@@ -28,7 +28,6 @@ from reflector.processors import (
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
     TranscriptTranslatorProcessor,
-    create_diarization_wrapper,
 )
 from reflector.processors.base import BroadcastProcessor, Processor
 from reflector.processors.types import (
@@ -154,21 +153,21 @@ async def process_audio_file_with_diarization(
                     name=diarization_backend
                 )
 
+                
                 # Create a wrapper for the event callback that handles raw data
                 diarization_event_wrapper = create_diarization_wrapper(
                     diarization_processor.name,
                     diarization_processor.uid,
-                    event_callback,
+                    event_callback
                 )
-
+                
                 diarization_processor.on(diarization_event_wrapper)
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
-                    from datetime import datetime
-
                     from reflector.storage import get_transcripts_storage
                     from reflector.utils.s3_temp_file import S3TemporaryFile
+                    from datetime import datetime
 
                     storage = get_transcripts_storage()
 
@@ -239,7 +238,6 @@ async def process_audio_file_with_diarization(
 if __name__ == "__main__":
     import argparse
     import os
-
     from reflector.processors import EventHandlerConfig, create_event_handler
 
     parser = argparse.ArgumentParser(
@@ -288,21 +286,19 @@ if __name__ == "__main__":
         track_progress=False,  # CLI doesn't need progress tracking
         collect_events=False,  # CLI writes directly to file
     )
-
+    
     # Custom event writer for CLI
     async def write_event(event_dict):
         if output_fd:
             # Convert event dict to PipelineEvent-like JSON for compatibility
-            output_fd.write(
-                PipelineEvent(
-                    processor=event_dict["processor"],
-                    uid=event_dict["uid"],
-                    data=event_dict["data"],
-                ).model_dump_json()
-            )
+            output_fd.write(PipelineEvent(
+                processor=event_dict["processor"],
+                uid=event_dict["uid"], 
+                data=event_dict["data"]
+            ).model_dump_json())
             output_fd.write("\n")
             output_fd.flush()
-
+    
     # Create standardized event handler
     event_callback = create_event_handler(config, write_event)
 
