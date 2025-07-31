@@ -9,20 +9,8 @@ import { useError } from "../../(errors)/errorContext";
 import FileUploadButton from "./fileUploadButton";
 import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
-import {
-  Box,
-  Flex,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItemOption,
-  MenuList,
-  MenuOptionGroup,
-} from "@chakra-ui/react";
-import StopRecordIcon from "../../styles/icons/stopRecord";
-import PlayIcon from "../../styles/icons/play";
-import { LuScreenShare } from "react-icons/lu";
-import { FaMicrophone } from "react-icons/fa";
+import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
+import { LuScreenShare, LuMic, LuPlay, LuStopCircle } from "react-icons/lu";
 
 type RecorderProps = {
   transcriptId: string;
@@ -139,7 +127,7 @@ export default function Recorder(props: RecorderProps) {
     } else {
       clearInterval(timeInterval as number);
       setCurrentTime((prev) => {
-        setDuration(prev);
+        setDuration(prev / 1000);
         return 0;
       });
     }
@@ -260,48 +248,56 @@ export default function Recorder(props: RecorderProps) {
     <Flex className="flex items-center w-full relative">
       <IconButton
         aria-label={isRecording ? "Stop" : "Record"}
-        icon={isRecording ? <StopRecordIcon /> : <PlayIcon />}
         variant={"ghost"}
-        colorScheme={"blue"}
+        colorPalette={"blue"}
         mr={2}
         onClick={handleRecClick}
-      />
+      >
+        {isRecording ? <LuStopCircle /> : <LuPlay />}
+      </IconButton>
       {!isRecording && (window as any).chrome && (
         <IconButton
           aria-label={"Record Tab"}
-          icon={<LuScreenShare />}
           variant={"ghost"}
-          colorScheme={"blue"}
+          colorPalette={"blue"}
           disabled={isRecording}
           mr={2}
           onClick={handleRecordTabClick}
-        />
+          size="sm"
+        >
+          <LuScreenShare />
+        </IconButton>
       )}
       {audioDevices && audioDevices?.length > 0 && deviceId && !isRecording && (
-        <Menu>
-          <MenuButton
-            as={IconButton}
-            aria-label={"Switch microphone"}
-            icon={<FaMicrophone />}
-            variant={"ghost"}
-            disabled={isRecording}
-            colorScheme={"blue"}
-            mr={2}
-          />
-          <MenuList>
-            <MenuOptionGroup defaultValue={audioDevices[0].value} type="radio">
-              {audioDevices.map((device) => (
-                <MenuItemOption
-                  key={device.value}
-                  value={device.value}
-                  onClick={() => setDeviceId(device.value)}
-                >
-                  {device.label}
-                </MenuItemOption>
-              ))}
-            </MenuOptionGroup>
-          </MenuList>
-        </Menu>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <IconButton
+              aria-label={"Switch microphone"}
+              variant={"ghost"}
+              disabled={isRecording}
+              colorPalette={"blue"}
+              mr={2}
+              size="sm"
+            >
+              <LuMic />
+            </IconButton>
+          </Menu.Trigger>
+          <Menu.Positioner>
+            <Menu.Content>
+              <Menu.RadioItemGroup
+                value={deviceId}
+                onValueChange={(e) => setDeviceId(e.value)}
+              >
+                {audioDevices.map((device) => (
+                  <Menu.RadioItem key={device.value} value={device.value}>
+                    <Menu.ItemIndicator />
+                    {device.label}
+                  </Menu.RadioItem>
+                ))}
+              </Menu.RadioItemGroup>
+            </Menu.Content>
+          </Menu.Positioner>
+        </Menu.Root>
       )}
       <Box position="relative" flex={1}>
         <Box ref={waveformRef} height={14}></Box>

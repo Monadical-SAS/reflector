@@ -199,61 +199,54 @@ const TopicPlayer = ({
       </Text>
     );
   }
-  return (
-    <Skeleton
-      isLoaded={isLoaded}
-      h={isLoaded ? "auto" : "40px"}
-      fadeDuration={1}
-      w={isLoaded ? "auto" : "container.md"}
-      margin="auto"
-      {...chakraProps}
-    >
-      <Wrap spacing="4" justify="center" align="center">
-        <WrapItem>
-          <SoundWaveCss playing={isPlaying} />
-          <Text fontSize="sm" pt="1" pl="2">
-            {showTime}
-          </Text>
-        </WrapItem>
-        <WrapItem>
-          <Button onClick={playTopic} colorScheme="blue">
-            Play from start
-          </Button>
-        </WrapItem>
-        <WrapItem>
-          {!isPlaying ? (
-            <Button
-              onClick={playCurrent}
-              ref={playButton}
-              id="playButton"
-              colorScheme="blue"
-              w="120px"
-            >
-              <Kbd color="blue.600">Space</Kbd>&nbsp;Play
-            </Button>
-          ) : (
-            <Button
-              onClick={pause}
-              ref={playButton}
-              id="playButton"
-              colorScheme="blue"
-              w="120px"
-            >
-              <Kbd color="blue.600">Space</Kbd>&nbsp;Pause
-            </Button>
-          )}
-        </WrapItem>
-        <WrapItem visibility={selectedTime ? "visible" : "hidden"}>
+  return isLoaded ? (
+    <Wrap gap="4" justify="center" align="center">
+      <WrapItem>
+        <SoundWaveCss playing={isPlaying} />
+        <Text fontSize="sm" pt="1" pl="2">
+          {showTime}
+        </Text>
+      </WrapItem>
+      <WrapItem>
+        <Button onClick={playTopic} colorPalette="blue">
+          Play from start
+        </Button>
+      </WrapItem>
+      <WrapItem>
+        {!isPlaying ? (
           <Button
-            disabled={!selectedTime}
-            onClick={playSelection}
-            colorScheme="blue"
+            onClick={playCurrent}
+            ref={playButton}
+            id="playButton"
+            colorPalette="blue"
+            w="120px"
           >
-            <Kbd color="blue.600">,</Kbd>&nbsp;Play selection
+            <Kbd color="blue.600">Space</Kbd>&nbsp;Play
           </Button>
-        </WrapItem>
-      </Wrap>
-    </Skeleton>
+        ) : (
+          <Button
+            onClick={pause}
+            ref={playButton}
+            id="playButton"
+            colorPalette="blue"
+            w="120px"
+          >
+            <Kbd color="blue.600">Space</Kbd>&nbsp;Pause
+          </Button>
+        )}
+      </WrapItem>
+      <WrapItem visibility={selectedTime ? "visible" : "hidden"}>
+        <Button
+          disabled={!selectedTime}
+          onClick={playSelection}
+          colorPalette="blue"
+        >
+          <Kbd color="blue.600">,</Kbd>&nbsp;Play selection
+        </Button>
+      </WrapItem>
+    </Wrap>
+  ) : (
+    <Skeleton h="40px" w="container.md" margin="auto" {...chakraProps} />
   );
 };
 

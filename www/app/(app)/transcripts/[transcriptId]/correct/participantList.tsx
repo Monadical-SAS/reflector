@@ -11,11 +11,10 @@ import {
   Button,
   Flex,
   Text,
-  UnorderedList,
+  List,
   Input,
   Kbd,
   Spinner,
-  ListItem,
   Grid,
 } from "@chakra-ui/react";
 
@@ -351,7 +350,7 @@ const ParticipantList = ({
           />
           <Button
             onClick={doAction}
-            colorScheme="blue"
+            colorPalette="blue"
             disabled={!action || anyLoading}
           >
             {!anyLoading ? (
@@ -371,14 +370,14 @@ const ParticipantList = ({
         </Flex>
 
         {participants.response && (
-          <UnorderedList
+          <List.Root
             mx="0"
             mb={{ base: 2, md: 4 }}
             maxH="100%"
             overflow="scroll"
           >
             {participants.response.map((participant: Participant) => (
-              <ListItem
+              <List.Item
                 onClick={selectParticipant(participant)}
                 cursor="pointer"
                 className={
@@ -410,7 +409,7 @@ const ParticipantList = ({
                     !loading && (
                       <Button
                         onClick={mergeSpeaker(selectedText, participant)}
-                        colorScheme="blue"
+                        colorPalette="blue"
                         ml="2"
                         size="sm"
                       >
@@ -435,7 +434,7 @@ const ParticipantList = ({
                   {selectedTextIsTimeSlice(selectedText) && !loading && (
                     <Button
                       onClick={assignTo(participant)}
-                      colorScheme="blue"
+                      colorPalette="blue"
                       ml="2"
                       size="sm"
                     >
@@ -460,16 +459,16 @@ const ParticipantList = ({
 
                   <Button
                     onClick={deleteParticipant(participant.id)}
-                    colorScheme="blue"
+                    colorPalette="blue"
                     ml="2"
                     size="sm"
                   >
                     Delete
                   </Button>
                 </Box>
-              </ListItem>
+              </List.Item>
             ))}
-          </UnorderedList>
+          </List.Root>
         )}
       </Grid>
     </Box>

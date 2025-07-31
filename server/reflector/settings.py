@@ -96,13 +96,8 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: str | None = None
 
-    # User authentication (none, fief)
+    # User authentication (none, jwt)
     AUTH_BACKEND: str = "none"
-
-    # User authentication using fief
-    AUTH_FIEF_URL: str | None = None
-    AUTH_FIEF_CLIENT_ID: str | None = None
-    AUTH_FIEF_CLIENT_SECRET: str | None = None
 
     # User authentication using JWT
     AUTH_JWT_ALGORITHM: str = "RS256"

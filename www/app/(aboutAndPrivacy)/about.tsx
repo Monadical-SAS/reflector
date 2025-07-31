@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import FullscreenModal from "./fullsreenModal";
 import AboutContent from "./aboutContent";
+import { Button } from "@chakra-ui/react";
 
 type AboutProps = {
   buttonText: string;
@@ -12,12 +13,9 @@ export default function About({ buttonText }: AboutProps) {
 
   return (
     <>
-      <button
-        className="hover:underline focus-within:underline underline-offset-2 decoration-[.5px] font-light px-2"
-        onClick={() => setModalOpen(true)}
-      >
+      <Button mt={2} onClick={() => setModalOpen(true)} variant="subtle">
         {buttonText}
-      </button>
+      </Button>
       {modalOpen && (
         <FullscreenModal close={() => setModalOpen(false)}>
           <AboutContent />

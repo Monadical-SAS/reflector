@@ -9,7 +9,7 @@ const WherebyEmbed = dynamic(() => import("../../lib/WherebyWebinarEmbed"), {
   ssr: false,
 });
 import { FormEvent } from "react";
-import { Input, FormControl } from "@chakra-ui/react";
+import { Input, Field } from "@chakra-ui/react";
 import { VStack } from "@chakra-ui/react";
 import { Alert } from "@chakra-ui/react";
 import { Text } from "@chakra-ui/react";
@@ -258,17 +258,18 @@ export default function WebinarPage(details: WebinarDetails) {
               </h2>
 
               {formSubmitted ? (
-                <Alert status="success" borderRadius="lg" mb={4}>
-                  <Text>
+                <Alert.Root status="success" borderRadius="lg" mb={4}>
+                  <Alert.Indicator />
+                  <Alert.Title>
                     Thanks for signing up! The webinar recording will be ready
                     soon, and we'll email you as soon as it's available. Stay
                     tuned!
-                  </Text>
-                </Alert>
+                  </Alert.Title>
+                </Alert.Root>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <VStack spacing={4} w="full">
-                    <FormControl isRequired>
+                  <VStack gap={4} w="full">
+                    <Field.Root required>
                       <Input
                         type="text"
                         placeholder="Your Name"
@@ -279,8 +280,8 @@ export default function WebinarPage(details: WebinarDetails) {
                           setFormData({ ...formData, name: e.target.value })
                         }
                       />
-                    </FormControl>
-                    <FormControl isRequired>
+                    </Field.Root>
+                    <Field.Root required>
                       <Input
                         type="email"
                         placeholder="Your Email"
@@ -291,7 +292,7 @@ export default function WebinarPage(details: WebinarDetails) {
                           setFormData({ ...formData, email: e.target.value })
                         }
                       />
-                    </FormControl>
+                    </Field.Root>
                     <Input
                       type="text"
                       placeholder="Company Name"

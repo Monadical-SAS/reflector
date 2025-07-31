@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Recorder from "../../recorder";
-import { TopicList } from "../../topicList";
+import { TopicList } from "../_components/TopicList";
 import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
-import "../../../../styles/button.css";
 import { Topic } from "../../webSocketTypes";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
@@ -105,7 +104,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
           </Box>
           <Box w={{ md: "50%" }} h={{ base: "20%", md: "full" }}>
             {!transcriptStarted ? (
-              <Box textAlign={"center"} textColor="gray">
+              <Box textAlign={"center"} color="gray">
                 <Text>
                   Live transcript will appear here shortly after you'll start
                   recording.

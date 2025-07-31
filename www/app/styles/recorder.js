@@ -1,10 +1,9 @@
-import { theme } from "@chakra-ui/react";
-
+// Hardcoded colors for now - can be replaced with token system in Chakra v3
 export const waveSurferStyles = {
   playerSettings: {
-    waveColor: theme.colors.blue[500],
-    progressColor: theme.colors.blue[700],
-    cursorColor: theme.colors.red[500],
+    waveColor: "#3182ce",
+    progressColor: "#2c5282",
+    cursorColor: "#e53e3e",
     hideScrollbar: true,
     autoScroll: false,
     autoCenter: false,
@@ -31,5 +30,5 @@ export const waveSurferStyles = {
     transition: width 100ms linear;
     z-index: 0;
   `,
-  markerHover: { backgroundColor: theme.colors.gray[200] },
+  markerHover: { backgroundColor: "#e2e8f0" },
 };

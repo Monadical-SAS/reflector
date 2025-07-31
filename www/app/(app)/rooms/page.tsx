@@ -2,61 +2,43 @@
 
 import {
   Button,
-  Card,
-  CardBody,
+  Checkbox,
+  CloseButton,
+  Dialog,
+  Field,
   Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
   Heading,
   Input,
-  Link,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Spacer,
+  Select,
   Spinner,
+  createListCollection,
   useDisclosure,
-  VStack,
-  Text,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  IconButton,
-  Checkbox,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { Container } from "@chakra-ui/react";
-import { FaEllipsisVertical, FaTrash, FaPencil, FaLink } from "react-icons/fa6";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { Select, Options, OptionBase } from "chakra-react-select";
-import { ApiError } from "../../api";
+import { ApiError, Room } from "../../api";
+import { RoomList } from "./_components/RoomList";
 
-interface SelectOption extends OptionBase {
+interface SelectOption {
   label: string;
   value: string;
 }
 
 const RESERVED_PATHS = ["browse", "rooms", "transcripts"];
 
-const roomModeOptions: Options<SelectOption> = [
+const roomModeOptions: SelectOption[] = [
   { label: "2-4 people", value: "normal" },
   { label: "2-200 people", value: "group" },
 ];
 
-const recordingTriggerOptions: Options<SelectOption> = [
+const recordingTriggerOptions: SelectOption[] = [
   { label: "None", value: "none" },
   { label: "Prompt", value: "prompt" },
   { label: "Automatic", value: "automatic-2nd-participant" },
 ];
 
-const recordingTypeOptions: Options<SelectOption> = [
+const recordingTypeOptions: SelectOption[] = [
   { label: "None", value: "none" },
   { label: "Local", value: "local" },
   { label: "Cloud", value: "cloud" },
@@ -75,7 +57,20 @@ const roomInitialState = {
 };
 
 export default function RoomsList() {
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { open, onOpen, onClose } = useDisclosure();
+
+  // Create collections for Select components
+  const roomModeCollection = createListCollection({
+    items: roomModeOptions,
+  });
+
+  const recordingTriggerCollection = createListCollection({
+    items: recordingTriggerOptions,
+  });
+
+  const recordingTypeCollection = createListCollection({
+    items: recordingTypeOptions,
+  });
   const [room, setRoom] = useState(roomInitialState);
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState("");
@@ -131,14 +126,22 @@ export default function RoomsList() {
     fetchZulipTopics();
   }, [room.zulipStream, streams, api]);
 
-  const streamOptions: Options<SelectOption> = streams.map((stream) => {
+  const streamOptions: SelectOption[] = streams.map((stream) => {
     return { label: stream.name, value: stream.name };
   });
 
-  const topicOptions: Options<SelectOption> = topics.map((topic) => ({
+  const topicOptions: SelectOption[] = topics.map((topic) => ({
     label: topic.name,
     value: topic.name,
   }));
+
+  const streamCollection = createListCollection({
+    items: streamOptions,
+  });
+
+  const topicCollection = createListCollection({
+    items: topicOptions,
+  });
 
   const handleCopyUrl = (roomName: string) => {
     const roomUrl = `${window.location.origin}/${roomName}`;
@@ -245,312 +248,350 @@ export default function RoomsList() {
     });
   };
 
-  const myRooms =
+  const myRooms: Room[] =
     response?.items.filter((roomData) => !roomData.is_shared) || [];
-  const sharedRooms =
+  const sharedRooms: Room[] =
     response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Spinner size="xl" />
       </Flex>
     );
 
   return (
-    <>
-      <Container maxW={"container.lg"}>
-        <Flex
-          flexDir="row"
-          justify="flex-end"
-          align="center"
-          flexWrap={"wrap-reverse"}
-          mb={2}
+    <Flex
+      flexDir="column"
+      w={{ base: "full", md: "container.xl" }}
+      mx="auto"
+      pt={2}
+    >
+      <Flex
+        flexDir="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+      >
+        <Heading size="lg">Rooms {loading && <Spinner size="sm" />}</Heading>
+        <Button
+          colorPalette="primary"
+          onClick={() => {
+            setIsEditing(false);
+            setRoom(roomInitialState);
+            setNameError("");
+            onOpen();
+          }}
         >
-          <Heading>Rooms</Heading>
-          <Spacer />
-          <Button
-            colorScheme="blue"
-            onClick={() => {
-              setIsEditing(false);
-              setRoom(roomInitialState);
-              setNameError("");
-              onOpen();
-            }}
-          >
-            Add Room
-          </Button>
-          <Modal isOpen={isOpen} onClose={onClose}>
-            <ModalOverlay />
-            <ModalContent>
-              <ModalHeader>{isEditing ? "Edit Room" : "Add Room"}</ModalHeader>
-              <ModalCloseButton />
-              <ModalBody>
-                <FormControl>
-                  <FormLabel>Room name</FormLabel>
-                  <Input
-                    name="name"
-                    placeholder="room-name"
-                    value={room.name}
-                    onChange={handleRoomChange}
-                  />
-                  <FormHelperText>
-                    No spaces or special characters allowed
-                  </FormHelperText>
-                  {nameError && <Text color="red.500">{nameError}</Text>}
-                </FormControl>
+          Add Room
+        </Button>
+      </Flex>
 
-                <FormControl mt={4}>
-                  <Checkbox
-                    name="isLocked"
-                    isChecked={room.isLocked}
-                    onChange={handleRoomChange}
-                  >
-                    Locked room
-                  </Checkbox>
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Room size</FormLabel>
-                  <Select
-                    name="roomMode"
-                    options={roomModeOptions}
-                    value={{
-                      label: roomModeOptions.find(
-                        (rm) => rm.value === room.roomMode,
-                      )?.label,
-                      value: room.roomMode,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        roomMode: newValue!.value,
-                      })
-                    }
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Recording type</FormLabel>
-                  <Select
-                    name="recordingType"
-                    options={recordingTypeOptions}
-                    value={{
-                      label: recordingTypeOptions.find(
-                        (rt) => rt.value === room.recordingType,
-                      )?.label,
-                      value: room.recordingType,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        recordingType: newValue!.value,
-                        recordingTrigger:
-                          newValue!.value !== "cloud"
-                            ? "none"
-                            : room.recordingTrigger,
-                      })
-                    }
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Cloud recording start trigger</FormLabel>
-                  <Select
-                    name="recordingTrigger"
-                    options={recordingTriggerOptions}
-                    value={{
-                      label: recordingTriggerOptions.find(
-                        (rt) => rt.value === room.recordingTrigger,
-                      )?.label,
-                      value: room.recordingTrigger,
-                    }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        recordingTrigger: newValue!.value,
-                      })
-                    }
-                    isDisabled={room.recordingType !== "cloud"}
-                  />
-                </FormControl>
-                <FormControl mt={8}>
-                  <Checkbox
-                    name="zulipAutoPost"
-                    isChecked={room.zulipAutoPost}
-                    onChange={handleRoomChange}
-                  >
-                    Automatically post transcription to Zulip
-                  </Checkbox>
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Zulip stream</FormLabel>
-                  <Select
-                    name="zulipStream"
-                    options={streamOptions}
-                    placeholder="Select stream"
-                    value={{ label: room.zulipStream, value: room.zulipStream }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        zulipStream: newValue!.value,
-                        zulipTopic: "",
-                      })
-                    }
-                    isDisabled={!room.zulipAutoPost}
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <FormLabel>Zulip topic</FormLabel>
-                  <Select
-                    name="zulipTopic"
-                    options={topicOptions}
-                    placeholder="Select topic"
-                    value={{ label: room.zulipTopic, value: room.zulipTopic }}
-                    onChange={(newValue) =>
-                      setRoom({
-                        ...room,
-                        zulipTopic: newValue!.value,
-                      })
-                    }
-                    isDisabled={!room.zulipAutoPost}
-                  />
-                </FormControl>
-                <FormControl mt={4}>
-                  <Checkbox
-                    name="isShared"
-                    isChecked={room.isShared}
-                    onChange={handleRoomChange}
-                  >
-                    Shared room
-                  </Checkbox>
-                </FormControl>
-              </ModalBody>
+      <Dialog.Root
+        open={open}
+        onOpenChange={(e) => (e.open ? onOpen() : onClose())}
+        size="lg"
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>
+                {isEditing ? "Edit Room" : "Add Room"}
+              </Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton />
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Field.Root>
+                <Field.Label>Room name</Field.Label>
+                <Input
+                  name="name"
+                  placeholder="room-name"
+                  value={room.name}
+                  onChange={handleRoomChange}
+                />
+                <Field.HelperText>
+                  No spaces or special characters allowed
+                </Field.HelperText>
+                {nameError && <Field.ErrorText>{nameError}</Field.ErrorText>}
+              </Field.Root>
 
-              <ModalFooter>
-                <Button variant="ghost" mr={3} onClick={onClose}>
-                  Cancel
-                </Button>
-
-                <Button
-                  colorScheme="blue"
-                  onClick={handleSaveRoom}
-                  isDisabled={
-                    !room.name || (room.zulipAutoPost && !room.zulipTopic)
-                  }
+              <Field.Root mt={4}>
+                <Checkbox.Root
+                  name="isLocked"
+                  checked={room.isLocked}
+                  onCheckedChange={(e) => {
+                    const syntheticEvent = {
+                      target: {
+                        name: "isLocked",
+                        type: "checkbox",
+                        checked: e.checked,
+                      },
+                    };
+                    handleRoomChange(syntheticEvent);
+                  }}
                 >
-                  {isEditing ? "Save" : "Add"}
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </Modal>
-        </Flex>
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Label>Locked room</Checkbox.Label>
+                </Checkbox.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Field.Label>Room size</Field.Label>
+                <Select.Root
+                  value={[room.roomMode]}
+                  onValueChange={(e) =>
+                    setRoom({ ...room, roomMode: e.value[0] })
+                  }
+                  collection={roomModeCollection}
+                >
+                  <Select.HiddenSelect />
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select room size" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {roomModeOptions.map((option) => (
+                        <Select.Item key={option.value} item={option}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Field.Label>Recording type</Field.Label>
+                <Select.Root
+                  value={[room.recordingType]}
+                  onValueChange={(e) =>
+                    setRoom({
+                      ...room,
+                      recordingType: e.value[0],
+                      recordingTrigger:
+                        e.value[0] !== "cloud" ? "none" : room.recordingTrigger,
+                    })
+                  }
+                  collection={recordingTypeCollection}
+                >
+                  <Select.HiddenSelect />
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select recording type" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {recordingTypeOptions.map((option) => (
+                        <Select.Item key={option.value} item={option}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Field.Label>Cloud recording start trigger</Field.Label>
+                <Select.Root
+                  value={[room.recordingTrigger]}
+                  onValueChange={(e) =>
+                    setRoom({ ...room, recordingTrigger: e.value[0] })
+                  }
+                  collection={recordingTriggerCollection}
+                  disabled={room.recordingType !== "cloud"}
+                >
+                  <Select.HiddenSelect />
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select trigger" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {recordingTriggerOptions.map((option) => (
+                        <Select.Item key={option.value} item={option}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              </Field.Root>
+              <Field.Root mt={8}>
+                <Checkbox.Root
+                  name="zulipAutoPost"
+                  checked={room.zulipAutoPost}
+                  onCheckedChange={(e) => {
+                    const syntheticEvent = {
+                      target: {
+                        name: "zulipAutoPost",
+                        type: "checkbox",
+                        checked: e.checked,
+                      },
+                    };
+                    handleRoomChange(syntheticEvent);
+                  }}
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Label>
+                    Automatically post transcription to Zulip
+                  </Checkbox.Label>
+                </Checkbox.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Field.Label>Zulip stream</Field.Label>
+                <Select.Root
+                  value={room.zulipStream ? [room.zulipStream] : []}
+                  onValueChange={(e) =>
+                    setRoom({
+                      ...room,
+                      zulipStream: e.value[0],
+                      zulipTopic: "",
+                    })
+                  }
+                  collection={streamCollection}
+                  disabled={!room.zulipAutoPost}
+                >
+                  <Select.HiddenSelect />
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select stream" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {streamOptions.map((option) => (
+                        <Select.Item key={option.value} item={option}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Field.Label>Zulip topic</Field.Label>
+                <Select.Root
+                  value={room.zulipTopic ? [room.zulipTopic] : []}
+                  onValueChange={(e) =>
+                    setRoom({ ...room, zulipTopic: e.value[0] })
+                  }
+                  collection={topicCollection}
+                  disabled={!room.zulipAutoPost}
+                >
+                  <Select.HiddenSelect />
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="Select topic" />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                      <Select.Indicator />
+                    </Select.IndicatorGroup>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {topicOptions.map((option) => (
+                        <Select.Item key={option.value} item={option}>
+                          {option.label}
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              </Field.Root>
+              <Field.Root mt={4}>
+                <Checkbox.Root
+                  name="isShared"
+                  checked={room.isShared}
+                  onCheckedChange={(e) => {
+                    const syntheticEvent = {
+                      target: {
+                        name: "isShared",
+                        type: "checkbox",
+                        checked: e.checked,
+                      },
+                    };
+                    handleRoomChange(syntheticEvent);
+                  }}
+                >
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Label>Shared room</Checkbox.Label>
+                </Checkbox.Root>
+              </Field.Root>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                colorPalette="primary"
+                onClick={handleSaveRoom}
+                disabled={
+                  !room.name || (room.zulipAutoPost && !room.zulipTopic)
+                }
+              >
+                {isEditing ? "Save" : "Add"}
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
 
-        <VStack align="start" mb={10} pt={4} gap={4}>
-          <Heading size="md">My Rooms</Heading>
-          {myRooms.length > 0 ? (
-            myRooms.map((roomData) => (
-              <Card w={"full"} key={roomData.id}>
-                <CardBody>
-                  <Flex align={"center"}>
-                    <Heading size="md">
-                      <Link href={`/${roomData.name}`}>{roomData.name}</Link>
-                    </Heading>
-                    <Spacer />
-                    {linkCopied === roomData.name ? (
-                      <Text mr={2} color="green.500">
-                        Link copied!
-                      </Text>
-                    ) : (
-                      <IconButton
-                        aria-label="Copy URL"
-                        icon={<FaLink />}
-                        onClick={() => handleCopyUrl(roomData.name)}
-                        mr={2}
-                      />
-                    )}
+      <RoomList
+        title="My Rooms"
+        rooms={myRooms}
+        linkCopied={linkCopied}
+        onCopyUrl={handleCopyUrl}
+        onEdit={handleEditRoom}
+        onDelete={handleDeleteRoom}
+        emptyMessage="No rooms found"
+      />
 
-                    <Menu closeOnSelect={true}>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FaEllipsisVertical />}
-                        aria-label="actions"
-                      />
-                      <MenuList>
-                        <MenuItem
-                          onClick={() => handleEditRoom(roomData.id, roomData)}
-                          icon={<FaPencil />}
-                        >
-                          Edit
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => handleDeleteRoom(roomData.id)}
-                          icon={<FaTrash color={"red.500"} />}
-                        >
-                          Delete
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
-                  </Flex>
-                </CardBody>
-              </Card>
-            ))
-          ) : (
-            <Text>No rooms found</Text>
-          )}
-        </VStack>
-
-        <VStack align="start" pt={4} gap={4}>
-          <Heading size="md">Shared Rooms</Heading>
-          {sharedRooms.length > 0 ? (
-            sharedRooms.map((roomData) => (
-              <Card w={"full"} key={roomData.id}>
-                <CardBody>
-                  <Flex align={"center"}>
-                    <Heading size="md">
-                      <Link href={`/${roomData.name}`}>{roomData.name}</Link>
-                    </Heading>
-                    <Spacer />
-                    {linkCopied === roomData.name ? (
-                      <Text mr={2} color="green.500">
-                        Link copied!
-                      </Text>
-                    ) : (
-                      <IconButton
-                        aria-label="Copy URL"
-                        icon={<FaLink />}
-                        onClick={() => handleCopyUrl(roomData.name)}
-                        mr={2}
-                      />
-                    )}
-
-                    <Menu closeOnSelect={true}>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<FaEllipsisVertical />}
-                        aria-label="actions"
-                      />
-                      <MenuList>
-                        <MenuItem
-                          onClick={() => handleEditRoom(roomData.id, roomData)}
-                          icon={<FaPencil />}
-                        >
-                          Edit
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => handleDeleteRoom(roomData.id)}
-                          icon={<FaTrash color={"red.500"} />}
-                        >
-                          Delete
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
-                  </Flex>
-                </CardBody>
-              </Card>
-            ))
-          ) : (
-            <Text>No shared rooms found</Text>
-          )}
-        </VStack>
-      </Container>
-    </>
+      <RoomList
+        title="Shared Rooms"
+        rooms={sharedRooms}
+        linkCopied={linkCopied}
+        onCopyUrl={handleCopyUrl}
+        onEdit={handleEditRoom}
+        onDelete={handleDeleteRoom}
+        emptyMessage="No shared rooms found"
+        pt={4}
+      />
+    </Flex>
   );
 }

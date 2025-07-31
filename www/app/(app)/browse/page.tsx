@@ -1,55 +1,18 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  Flex,
-  Spinner,
-  Heading,
-  Box,
-  Text,
-  Link,
-  Stack,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Button,
-  Divider,
-  Input,
-  Icon,
-  Tooltip,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  IconButton,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
-  Spacer,
-} from "@chakra-ui/react";
-import {
-  FaCheck,
-  FaTrash,
-  FaStar,
-  FaMicrophone,
-  FaGear,
-  FaEllipsisVertical,
-  FaArrowRotateRight,
-} from "react-icons/fa6";
+import { Flex, Spinner, Heading, Text, Link } from "@chakra-ui/react";
 import useTranscriptList from "../transcripts/useTranscriptList";
 import useSessionUser from "../../lib/useSessionUser";
-import NextLink from "next/link";
-import { Room, GetTranscriptMinimal } from "../../api";
-import Pagination from "./pagination";
-import { formatTimeMs, formatLocalDate } from "../../lib/time";
+import { Room } from "../../api";
+import Pagination from "./_components/Pagination";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import { SourceKind } from "../../api";
+import FilterSidebar from "./_components/FilterSidebar";
+import SearchBar from "./_components/SearchBar";
+import TranscriptTable from "./_components/TranscriptTable";
+import TranscriptCards from "./_components/TranscriptCards";
+import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 
 export default function TranscriptBrowser() {
   const [selectedSourceKind, setSelectedSourceKind] =
@@ -58,7 +21,6 @@ export default function TranscriptBrowser() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchInputValue, setSearchInputValue] = useState("");
   const { loading, response, refetch } = useTranscriptList(
     page,
     selectedSourceKind,
@@ -74,16 +36,9 @@ export default function TranscriptBrowser() {
     React.useState<string>();
   const [deletedItemIds, setDeletedItemIds] = React.useState<string[]>();
 
-  const myRooms = rooms.filter((room) => !room.is_shared);
-  const sharedRooms = rooms.filter((room) => room.is_shared);
-
   useEffect(() => {
     setDeletedItemIds([]);
   }, [page, response]);
-
-  useEffect(() => {
-    refetch();
-  }, [selectedRoomId, page, searchTerm]);
 
   useEffect(() => {
     if (!api) return;
@@ -100,33 +55,35 @@ export default function TranscriptBrowser() {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
     setPage(1);
-    refetch();
   };
 
-  const handleSearch = () => {
+  const handleSearch = (searchTerm: string) => {
     setPage(1);
-    setSearchTerm(searchInputValue);
+    setSearchTerm(searchTerm);
     setSelectedSourceKind(null);
     setSelectedRoomId("");
-    refetch();
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
   };
 
   if (loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Spinner size="xl" />
       </Flex>
     );
 
   if (!loading && !response)
     return (
-      <Flex flexDir="column" align="center" justify="center" h="100%">
+      <Flex
+        flexDir="column"
+        alignItems="center"
+        justifyContent="center"
+        h="100%"
+      >
         <Text>
           No transcripts found, but you can&nbsp;
           <Link href="/transcripts/new" className="underline">
@@ -185,334 +142,64 @@ export default function TranscriptBrowser() {
       flexDir="column"
       w={{ base: "full", md: "container.xl" }}
       mx="auto"
-      p={4}
+      pt={4}
     >
-      <Flex flexDir="row" justify="space-between" align="center" mb={4}>
-        <Heading size="md">
+      <Flex
+        flexDir="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+      >
+        <Heading size="lg">
           {userName ? `${userName}'s Transcriptions` : "Your Transcriptions"}{" "}
           {loading || (deletionLoading && <Spinner size="sm" />)}
         </Heading>
       </Flex>
 
       <Flex flexDir={{ base: "column", md: "row" }}>
-        <Box w={{ base: "full", md: "300px" }} p={4} bg="gray.100">
-          <Stack spacing={3}>
-            <Link
-              as={NextLink}
-              href="#"
-              onClick={() => handleFilterTranscripts(null, "")}
-              color={selectedSourceKind === null ? "blue.500" : "gray.600"}
-              _hover={{ color: "blue.300" }}
-              fontWeight={selectedSourceKind === null ? "bold" : "normal"}
-            >
-              All Transcripts
-            </Link>
+        <FilterSidebar
+          rooms={rooms}
+          selectedSourceKind={selectedSourceKind}
+          selectedRoomId={selectedRoomId}
+          onFilterChange={handleFilterTranscripts}
+        />
 
-            <Divider />
-
-            {myRooms.length > 0 && (
-              <>
-                <Heading size="sm">My Rooms</Heading>
-
-                {myRooms.map((room) => (
-                  <Link
-                    key={room.id}
-                    as={NextLink}
-                    href="#"
-                    onClick={() => handleFilterTranscripts("room", room.id)}
-                    color={
-                      selectedSourceKind === "room" &&
-                      selectedRoomId === room.id
-                        ? "blue.500"
-                        : "gray.600"
-                    }
-                    _hover={{ color: "blue.300" }}
-                    fontWeight={
-                      selectedSourceKind === "room" &&
-                      selectedRoomId === room.id
-                        ? "bold"
-                        : "normal"
-                    }
-                    ml={4}
-                  >
-                    {room.name}
-                  </Link>
-                ))}
-              </>
-            )}
-
-            {sharedRooms.length > 0 && (
-              <>
-                <Heading size="sm">Shared Rooms</Heading>
-
-                {sharedRooms.map((room) => (
-                  <Link
-                    key={room.id}
-                    as={NextLink}
-                    href="#"
-                    onClick={() => handleFilterTranscripts("room", room.id)}
-                    color={
-                      selectedSourceKind === "room" &&
-                      selectedRoomId === room.id
-                        ? "blue.500"
-                        : "gray.600"
-                    }
-                    _hover={{ color: "blue.300" }}
-                    fontWeight={
-                      selectedSourceKind === "room" &&
-                      selectedRoomId === room.id
-                        ? "bold"
-                        : "normal"
-                    }
-                    ml={4}
-                  >
-                    {room.name}
-                  </Link>
-                ))}
-              </>
-            )}
-
-            <Divider />
-            <Link
-              as={NextLink}
-              href="#"
-              onClick={() => handleFilterTranscripts("live", "")}
-              color={selectedSourceKind === "live" ? "blue.500" : "gray.600"}
-              _hover={{ color: "blue.300" }}
-              fontWeight={selectedSourceKind === "live" ? "bold" : "normal"}
-            >
-              Live Transcripts
-            </Link>
-            <Link
-              as={NextLink}
-              href="#"
-              onClick={() => handleFilterTranscripts("file", "")}
-              color={selectedSourceKind === "file" ? "blue.500" : "gray.600"}
-              _hover={{ color: "blue.300" }}
-              fontWeight={selectedSourceKind === "file" ? "bold" : "normal"}
-            >
-              Uploaded Files
-            </Link>
-          </Stack>
-        </Box>
-
-        <Flex flexDir="column" flex="1" p={4} gap={4}>
-          <Flex mb={4} alignItems="center">
-            <Input
-              placeholder="Search transcriptions..."
-              value={searchInputValue}
-              onChange={(e) => setSearchInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <Button ml={2} onClick={handleSearch}>
-              Search
-            </Button>
-          </Flex>
+        <Flex
+          flexDir="column"
+          flex="1"
+          pt={{ base: 4, md: 0 }}
+          pb={4}
+          gap={4}
+          px={{ base: 0, md: 4 }}
+        >
+          <SearchBar onSearch={handleSearch} />
           <Pagination
             page={page}
             setPage={setPage}
             total={response?.total || 0}
             size={response?.size || 0}
           />
-          <Box display={{ base: "none", md: "block" }}>
-            <Table colorScheme="gray">
-              <Thead>
-                <Tr>
-                  <Th pl={12} width="400px">
-                    Transcription Title
-                  </Th>
-                  <Th width="150px">Source</Th>
-                  <Th width="200px">Date</Th>
-                  <Th width="100px">Duration</Th>
-                  <Th width="50px"></Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {response?.items?.map((item: GetTranscriptMinimal) => (
-                  <Tr key={item.id}>
-                    <Td>
-                      <Flex alignItems="start">
-                        {item.status === "ended" && (
-                          <Tooltip label="Processing done">
-                            <span>
-                              <Icon color="green" as={FaCheck} />
-                            </span>
-                          </Tooltip>
-                        )}
-                        {item.status === "error" && (
-                          <Tooltip label="Processing error">
-                            <span>
-                              <Icon color="red.500" as={FaTrash} />
-                            </span>
-                          </Tooltip>
-                        )}
-                        {item.status === "idle" && (
-                          <Tooltip label="New meeting, no recording">
-                            <span>
-                              <Icon color="yellow.500" as={FaStar} />
-                            </span>
-                          </Tooltip>
-                        )}
-                        {item.status === "processing" && (
-                          <Tooltip label="Processing in progress">
-                            <span>
-                              <Icon color="gray.500" as={FaGear} />
-                            </span>
-                          </Tooltip>
-                        )}
-                        {item.status === "recording" && (
-                          <Tooltip label="Recording in progress">
-                            <span>
-                              <Icon color="blue.500" as={FaMicrophone} />
-                            </span>
-                          </Tooltip>
-                        )}
-                        <Link
-                          as={NextLink}
-                          href={`/transcripts/${item.id}`}
-                          ml={2}
-                        >
-                          {item.title || "Unnamed Transcript"}
-                        </Link>
-                      </Flex>
-                    </Td>
-                    <Td>
-                      {item.source_kind === "room"
-                        ? item.room_name
-                        : item.source_kind}
-                    </Td>
-                    <Td>{formatLocalDate(item.created_at)}</Td>
-                    <Td>{formatTimeMs(item.duration)}</Td>
-                    <Td>
-                      <Menu closeOnSelect={true}>
-                        <MenuButton
-                          as={IconButton}
-                          icon={<Icon as={FaEllipsisVertical} />}
-                          variant="outline"
-                          aria-label="Options"
-                        />
-                        <MenuList>
-                          <MenuItem onClick={handleDeleteTranscript(item.id)}>
-                            Delete
-                          </MenuItem>
-                          <MenuItem onClick={handleProcessTranscript(item.id)}>
-                            Reprocess
-                          </MenuItem>
-                        </MenuList>
-                      </Menu>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-          <Box display={{ base: "block", md: "none" }}>
-            <Stack spacing={2}>
-              {response?.items?.map((item: GetTranscriptMinimal) => (
-                <Box key={item.id} borderWidth={1} p={4} borderRadius="md">
-                  <Flex justify="space-between" alignItems="flex-start" gap="2">
-                    <Box>
-                      {item.status === "ended" && (
-                        <Tooltip label="Processing done">
-                          <span>
-                            <Icon color="green" as={FaCheck} />
-                          </span>
-                        </Tooltip>
-                      )}
-                      {item.status === "error" && (
-                        <Tooltip label="Processing error">
-                          <span>
-                            <Icon color="red.500" as={FaTrash} />
-                          </span>
-                        </Tooltip>
-                      )}
-                      {item.status === "idle" && (
-                        <Tooltip label="New meeting, no recording">
-                          <span>
-                            <Icon color="yellow.500" as={FaStar} />
-                          </span>
-                        </Tooltip>
-                      )}
-                      {item.status === "processing" && (
-                        <Tooltip label="Processing in progress">
-                          <span>
-                            <Icon color="gray.500" as={FaGear} />
-                          </span>
-                        </Tooltip>
-                      )}
-                      {item.status === "recording" && (
-                        <Tooltip label="Recording in progress">
-                          <span>
-                            <Icon color="blue.500" as={FaMicrophone} />
-                          </span>
-                        </Tooltip>
-                      )}
-                    </Box>
-                    <Box flex="1">
-                      <Text fontWeight="bold">
-                        {item.title || "Unnamed Transcript"}
-                      </Text>
-                      <Text>
-                        Source:{" "}
-                        {item.source_kind === "room"
-                          ? item.room_name
-                          : item.source_kind}
-                      </Text>
-                      <Text>Date: {formatLocalDate(item.created_at)}</Text>
-                      <Text>Duration: {formatTimeMs(item.duration)}</Text>
-                    </Box>
-                    <Menu>
-                      <MenuButton
-                        as={IconButton}
-                        icon={<Icon as={FaEllipsisVertical} />}
-                        variant="outline"
-                        aria-label="Options"
-                      />
-                      <MenuList>
-                        <MenuItem onClick={handleDeleteTranscript(item.id)}>
-                          Delete
-                        </MenuItem>
-                        <MenuItem onClick={handleProcessTranscript(item.id)}>
-                          Reprocess
-                        </MenuItem>
-                      </MenuList>
-                    </Menu>
-                  </Flex>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
+          <TranscriptTable
+            transcripts={response?.items || []}
+            onDelete={handleDeleteTranscript}
+            onReprocess={handleProcessTranscript}
+            loading={loading}
+          />
+          <TranscriptCards
+            transcripts={response?.items || []}
+            onDelete={handleDeleteTranscript}
+            onReprocess={handleProcessTranscript}
+            loading={loading}
+          />
         </Flex>
       </Flex>
 
-      <AlertDialog
+      <DeleteTranscriptDialog
         isOpen={!!transcriptToDeleteId}
-        leastDestructiveRef={cancelRef}
         onClose={onCloseDeletion}
-      >
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Delete Transcript
-            </AlertDialogHeader>
-            <AlertDialogBody>
-              Are you sure? You can't undo this action afterwards.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onCloseDeletion}>
-                Cancel
-              </Button>
-              <Button
-                colorScheme="red"
-                onClick={handleDeleteTranscript(transcriptToDeleteId)}
-                ml={3}
-              >
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+        onConfirm={() => handleDeleteTranscript(transcriptToDeleteId)(null)}
+        cancelRef={cancelRef}
+      />
     </Flex>
   );
 }

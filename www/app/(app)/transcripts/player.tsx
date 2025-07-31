@@ -8,8 +8,7 @@ import { Topic } from "./webSocketTypes";
 import { AudioWaveform } from "../../api";
 import { waveSurferStyles } from "../../styles/recorder";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
-import PlayIcon from "../../styles/icons/play";
-import PauseIcon from "../../styles/icons/pause";
+import { LuPause, LuPlay } from "react-icons/lu";
 
 type PlayerProps = {
   topics: Topic[];
@@ -167,13 +166,15 @@ export default function Player(props: PlayerProps) {
     <Flex className="flex items-center w-full relative">
       <IconButton
         aria-label={isPlaying ? "Pause" : "Play"}
-        icon={isPlaying ? <PauseIcon /> : <PlayIcon />}
         variant={"ghost"}
-        colorScheme={"blue"}
+        colorPalette={"blue"}
         mr={2}
         id="play-btn"
         onClick={handlePlayClick}
-      />
+        size="sm"
+      >
+        {isPlaying ? <LuPause /> : <LuPlay />}
+      </IconButton>
 
       <Box position="relative" flex={1}>
         <Box ref={waveformRef} height={14}></Box>
