@@ -71,7 +71,6 @@ instrumentator = Instrumentator(
 ).instrument(app)
 metrics_init(app, instrumentator)
 
-# register exception handlers
 app.add_exception_handler(AudioAPIException, audio_api_exception_handler)
 
 # register views
