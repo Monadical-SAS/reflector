@@ -172,3 +172,18 @@ Modal.com integration for scalable ML processing:
 - **Audio Routing**: Use BlackHole (Mac) for merging multiple audio sources
 - **WebRTC**: Ensure proper CORS configuration for cross-origin streaming
 - **Database**: Run `uv run alembic upgrade head` after pulling schema changes
+
+**Linting and Formatting:**
+```bash
+# Format with black (only server/reflector and server/tests)
+uv run black server/reflector server/tests
+
+# Sort imports (only server/reflector, excludes tests to match pre-commit)
+uv run isort server/reflector --profile black
+
+# Lint with ruff (only server/reflector and server/tests)
+uv run ruff check server/reflector server/tests --fix
+
+# Better approach - use pre-commit directly (only runs on changed files)
+pre-commit run --all-files
+```

@@ -7,9 +7,10 @@ Transcripts audio related endpoints
 from typing import Annotated, Optional
 
 import httpx
-import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jose import jwt
+
+import reflector.auth as auth
 from reflector.db.transcripts import AudioWaveform, transcripts_controller
 from reflector.settings import settings
 from reflector.views.transcripts import ALGORITHM

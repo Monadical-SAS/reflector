@@ -7,6 +7,7 @@ from hashlib import sha256
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+
 from reflector.db.meetings import meetings_controller
 from reflector.settings import settings
 

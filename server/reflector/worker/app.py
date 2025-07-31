@@ -2,6 +2,7 @@ import celery
 import structlog
 from celery import Celery
 from celery.schedules import crontab
+
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)

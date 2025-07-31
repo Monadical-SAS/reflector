@@ -2,6 +2,7 @@ from datetime import timedelta
 from urllib.parse import urlparse
 
 import httpx
+
 from reflector.db.transcripts import Transcript
 from reflector.settings import settings
 

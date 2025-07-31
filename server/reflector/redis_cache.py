@@ -2,6 +2,7 @@ import functools
 import json
 
 import redis
+
 from reflector.settings import settings
 
 redis_clients = {}

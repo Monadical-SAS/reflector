@@ -1,9 +1,11 @@
-from reflector.processors.base import Processor
-from reflector.processors.types import AudioFile
+import io
 from time import monotonic_ns
 from uuid import uuid4
-import io
+
 import av
+
+from reflector.processors.base import Processor
+from reflector.processors.types import AudioFile
 
 
 class AudioMergeProcessor(Processor):

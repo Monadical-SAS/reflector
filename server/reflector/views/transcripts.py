@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
-import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
+
+import reflector.auth as auth
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (

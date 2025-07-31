@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import av
+
 from reflector.processors.base import Processor
 
 

@@ -14,8 +14,9 @@ from functools import partial
 
 import jsonschema
 import structlog
-from reflector.llm.base import LLM
 from transformers import AutoTokenizer
+
+from reflector.llm.base import LLM
 
 JSON_SCHEMA_LIST_STRING = {
     "$schema": "http://json-schema.org/draft-07/schema#",

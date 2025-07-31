@@ -18,6 +18,8 @@ from contextlib import asynccontextmanager
 import boto3
 from celery import chord, group, shared_task
 from pydantic import BaseModel
+from structlog import BoundLogger as Logger
+
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -61,7 +63,6 @@ from reflector.zulip import (
     send_message_to_zulip,
     update_zulip_message,
 )
-from structlog import BoundLogger as Logger
 
 
 def asynctask(f):
