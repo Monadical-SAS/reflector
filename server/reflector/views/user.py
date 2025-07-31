@@ -1,8 +1,9 @@
 from typing import Annotated, Optional
 
-import reflector.auth as auth
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
+import reflector.auth as auth
 
 router = APIRouter()
 

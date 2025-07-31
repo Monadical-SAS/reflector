@@ -1,8 +1,10 @@
-from reflector.logger import logger
-from time import monotonic
-from httpx import HTTPStatusError, Response
-from random import random
 import asyncio
+from random import random
+from time import monotonic
+
+from httpx import HTTPStatusError, Response
+
+from reflector.logger import logger
 
 
 class RetryException(Exception):

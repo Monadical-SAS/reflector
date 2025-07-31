@@ -5,13 +5,13 @@ Revises: 38a927dcb099
 Create Date: 2023-11-10 18:12:17.886522
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import table, column
+from alembic import op
 from sqlalchemy import select
-
+from sqlalchemy.sql import column, table
 
 # revision identifiers, used by Alembic.
 revision: str = "4814901632bc"
@@ -24,8 +24,10 @@ def upgrade() -> None:
     # for all the transcripts, calculate the duration from the mp3
     # and update the duration column
     from pathlib import Path
-    from reflector.settings import settings
+
     import av
+
+    from reflector.settings import settings
 
     bind = op.get_bind()
     transcript = table(

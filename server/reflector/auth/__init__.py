@@ -1,6 +1,7 @@
-from reflector.settings import settings
-from reflector.logger import logger
 import importlib
+
+from reflector.logger import logger
+from reflector.settings import settings
 
 logger.info(f"User authentication using {settings.AUTH_BACKEND}")
 module_name = f"reflector.auth.auth_{settings.AUTH_BACKEND}"

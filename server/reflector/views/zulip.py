@@ -1,8 +1,9 @@
 from typing import Annotated, Optional
 
-import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+import reflector.auth as auth
 from reflector.zulip import get_zulip_streams, get_zulip_topics
 
 router = APIRouter()

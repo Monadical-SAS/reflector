@@ -1,7 +1,8 @@
 from typing import Annotated, Optional
 
-import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException, Request
+
+import reflector.auth as auth
 from reflector.db.transcripts import transcripts_controller
 
 from .rtc_offer import RtcOffer, rtc_offer_base

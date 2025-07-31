@@ -9,17 +9,18 @@ This tool processes audio files locally without requiring the full server infras
 
 import asyncio
 import tempfile
+import uuid
 from pathlib import Path
 from typing import List
-import uuid
 
 import av
+
 from reflector.logger import logger
 from reflector.processors import (
     AudioChunkerProcessor,
+    AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
-    AudioFileWriterProcessor,
     Pipeline,
     PipelineEvent,
     TranscriptFinalSummaryProcessor,
@@ -155,9 +156,10 @@ async def process_audio_file_with_diarization(
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
+                    from datetime import datetime
+
                     from reflector.storage import get_transcripts_storage
                     from reflector.utils.s3_temp_file import S3TemporaryFile
-                    from datetime import datetime
 
                     storage = get_transcripts_storage()
 
