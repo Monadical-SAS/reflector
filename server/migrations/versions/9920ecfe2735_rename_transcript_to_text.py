@@ -5,13 +5,13 @@ Revises: 99365b0cd87b
 Create Date: 2023-11-02 18:55:17.019498
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import table, column
+from alembic import op
 from sqlalchemy import select
-
+from sqlalchemy.sql import column, table
 
 # revision identifiers, used by Alembic.
 revision: str = "9920ecfe2735"

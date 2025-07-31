@@ -5,6 +5,7 @@ from pathlib import Path
 
 from profanityfilter import ProfanityFilter
 from pydantic import BaseModel, PrivateAttr
+
 from reflector.redis_cache import redis_cache
 
 PUNC_RE = re.compile(r"[.;:?!…]")
