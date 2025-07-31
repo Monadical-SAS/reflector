@@ -31,7 +31,7 @@ class ModalLLM(LLM):
 
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
-    ):
+    ) -> str:
         json_payload = {"prompt": prompt}
         if gen_schema:
             json_payload["gen_schema"] = gen_schema
@@ -52,12 +52,14 @@ class ModalLLM(LLM):
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
                 follow_redirects=True,
+                logger=kwargs.get("logger", reflector_logger),
             )
             response.raise_for_status()
             text = response.json()["text"]
             return text
 
     async def _completion(self, messages: list, **kwargs) -> dict:
+        # returns full api response
         kwargs.setdefault("temperature", 0.3)
         kwargs.setdefault("max_tokens", 2048)
         kwargs.setdefault("stream", False)
@@ -78,6 +80,7 @@ class ModalLLM(LLM):
                 timeout=self.timeout,
                 retry_timeout=60 * 5,
                 follow_redirects=True,
+                logger=kwargs.get("logger", reflector_logger),
             )
             response.raise_for_status()
             return response.json()

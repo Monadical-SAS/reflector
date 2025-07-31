@@ -126,7 +126,7 @@ class StreamClient:
         answer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
         await pc.setRemoteDescription(answer)
 
-        self.reader = self.worker(f'{"worker"}', self.queue)
+        self.reader = self.worker(f"{'worker'}", self.queue)
 
     def get_reader(self):
         return self.reader

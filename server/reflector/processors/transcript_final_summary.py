@@ -1,7 +1,8 @@
-from reflector.llm import LLM
+from reflector.llm.openai_llm import OpenAILLM
 from reflector.processors.base import Processor
 from reflector.processors.summary.summary_builder import SummaryBuilder
 from reflector.processors.types import FinalLongSummary, FinalShortSummary, TitleSummary
+from reflector.settings import settings
 
 
 class TranscriptFinalSummaryProcessor(Processor):
@@ -16,14 +17,14 @@ class TranscriptFinalSummaryProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = transcript
         self.chunks: list[TitleSummary] = []
-        self.llm = LLM.get_instance(model_name="NousResearch/Hermes-3-Llama-3.1-8B")
+        self.llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
         self.builder = None
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def get_summary_builder(self, text) -> SummaryBuilder:
-        builder = SummaryBuilder(self.llm)
+        builder = SummaryBuilder(self.llm, logger=self.logger)
         builder.set_transcript(text)
         await builder.identify_participants()
         await builder.generate_summary()

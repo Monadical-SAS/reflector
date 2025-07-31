@@ -36,9 +36,13 @@ async def export_db(filename: str) -> None:
             if entry["event"] == "TRANSCRIPT":
                 yield tid, "event_transcript", idx, "text", entry["data"]["text"]
                 if entry["data"].get("translation") is not None:
-                    yield tid, "event_transcript", idx, "translation", entry[
-                        "data"
-                    ].get("translation", None)
+                    yield (
+                        tid,
+                        "event_transcript",
+                        idx,
+                        "translation",
+                        entry["data"].get("translation", None),
+                    )
 
     def export_transcripts(transcripts):
         for transcript in transcripts:

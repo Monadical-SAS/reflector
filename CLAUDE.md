@@ -172,3 +172,7 @@ Modal.com integration for scalable ML processing:
 - **Audio Routing**: Use BlackHole (Mac) for merging multiple audio sources
 - **WebRTC**: Ensure proper CORS configuration for cross-origin streaming
 - **Database**: Run `uv run alembic upgrade head` after pulling schema changes
+
+## Pipeline/worker related info
+
+If you need to do any worker/pipeline related work, search for "Pipeline" classes and their "create" or "build" methods to find the main processor sequence. Look for task orchestration patterns (like "chord", "group", or "chain") to identify the post-processing flow with parallel execution chains. This will give you abstract vision on how processing pipeling is organized.
