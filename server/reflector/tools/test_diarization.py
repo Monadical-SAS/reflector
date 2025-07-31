@@ -8,7 +8,6 @@ This script helps test the diarization functionality with sample audio files.
 """
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 

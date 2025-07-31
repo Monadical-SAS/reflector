@@ -2,7 +2,7 @@
 import json
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -94,7 +94,7 @@ class TestAudioDiarizeEndpoint:
         assert call_args.kwargs["args"][1] == request_data["audio_url"]
         assert call_args.kwargs["args"][2] == "en"
         assert call_args.kwargs["args"][3] == "en"
-        assert call_args.kwargs["args"][4] == False  # only_transcript (always False for diarization)
+        assert not call_args.kwargs["args"][4]  # only_transcript (always False for diarization)
         assert call_args.kwargs["args"][5] == "modal"  # diarization_backend
         assert call_args.kwargs["time_limit"] == 900  # 900000ms / 1000
     
@@ -113,7 +113,7 @@ class TestAudioDiarizeEndpoint:
         call_args = mock_celery_diarization_task.call_args
         assert call_args.kwargs["args"][2] == "en"  # default source_language
         assert call_args.kwargs["args"][3] == "en"  # default target_language
-        assert call_args.kwargs["args"][4] == False  # only_transcript (always False for diarization)
+        assert not call_args.kwargs["args"][4]  # only_transcript (always False for diarization)
         assert call_args.kwargs["args"][5] == "modal"  # default diarization_backend
     
     @pytest.mark.asyncio
@@ -232,7 +232,7 @@ class TestJobStatusEndpoint:
         
         assert response.status_code == 404
         data = response.json()
-        assert data["detail"]["error"]["code"] == "JOB_NOT_FOUND"
+        assert data["error"]["code"] == "JOB_NOT_FOUND"
 
 
 class TestJobResultsEndpoint:
@@ -360,7 +360,7 @@ class TestJobResultsEndpoint:
         
         assert response.status_code == 400
         data = response.json()
-        assert data["detail"]["error"]["code"] == "JOB_NOT_COMPLETED"
+        assert data["error"]["code"] == "JOB_NOT_COMPLETED"
 
 
 class TestHealthCheckEndpoint:

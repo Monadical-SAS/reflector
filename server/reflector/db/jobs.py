@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional
 import sqlalchemy
 from pydantic import BaseModel, ConfigDict, Field
 from reflector.db import metadata
-from reflector.utils import generate_uuid4
 
 
 class JobStatus(enum.StrEnum):

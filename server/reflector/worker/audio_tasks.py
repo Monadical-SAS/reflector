@@ -1,10 +1,8 @@
 # @vibe-generated
 import asyncio
-import json
 import os
 import re
 import tempfile
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -14,13 +12,10 @@ import aioboto3
 
 from celery import shared_task
 from reflector.db import database
-from reflector.db.jobs import jobs, JobStatus, JobUpdate
+from reflector.db.jobs import jobs, JobStatus
 from reflector.logger import logger
-from reflector.processors import PipelineEvent
 from reflector.tools.process import process_audio_file
 from reflector.tools.process_with_diarization import process_audio_file_with_diarization
-from reflector.storage import get_transcripts_storage
-from reflector.utils.s3_temp_file import S3TemporaryFile
 from reflector.settings import settings
 from reflector.worker.url_validator import check_file_size
 
@@ -176,11 +171,11 @@ async def download_audio_file(audio_url: str) -> str:
         
         logger.info(f"Successfully downloaded audio file to {tmp_path}")
         return tmp_path
-    except Exception as e:
+    except Exception:
         # Clean up the temp file if download failed
         try:
             Path(tmp_path).unlink()
-        except:
+        except Exception:
             pass
         raise
 

@@ -5,7 +5,7 @@ Tests for S3 download functionality in audio_tasks
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from reflector.worker.audio_tasks import parse_s3_url, download_audio_file, _download_from_s3, _download_from_http
+from reflector.worker.audio_tasks import parse_s3_url, download_audio_file, _download_from_s3
 
 
 class TestS3URLParsing:

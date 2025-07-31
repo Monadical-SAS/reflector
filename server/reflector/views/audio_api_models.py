@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 # Request Models

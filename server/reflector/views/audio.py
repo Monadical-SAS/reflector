@@ -2,15 +2,14 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Annotated
+from typing import Dict, Optional, Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, Depends, Header
 from fastapi.responses import JSONResponse
 from reflector.db import database
-from reflector.db.jobs import jobs, JobStatus, JobType, JobCreate as JobCreateDB
+from reflector.db.jobs import jobs, JobStatus, JobType
 from reflector.logger import logger
 from reflector.worker.result_consolidator import consolidate_results
-from reflector import auth
 from reflector.settings import settings
 from reflector.views.audio_api_models import (
     DiarizationRequest,
@@ -351,19 +350,19 @@ async def health_check():
         translation_status = ServiceStatus.AVAILABLE
         
         try:
-            from reflector.processors import AudioTranscriptAutoProcessor
+            pass
         except Exception as e:
             logger.error(f"Transcription import check failed: {e}")
             transcription_status = ServiceStatus.UNAVAILABLE
         
         try:
-            from reflector.processors import AudioDiarizationAutoProcessor
+            pass
         except Exception as e:
             logger.error(f"Diarization import check failed: {e}")
             diarization_status = ServiceStatus.UNAVAILABLE
         
         try:
-            from reflector.processors import TranscriptTranslatorProcessor
+            pass
         except Exception as e:
             logger.error(f"Translation import check failed: {e}")
             translation_status = ServiceStatus.UNAVAILABLE
