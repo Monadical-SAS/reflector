@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/Monadical-SAS/reflector/compare/v0.4.0...v0.5.0) (2025-07-31)
+
+
+### Features
+
+* new summary using phi-4 and llama-index ([#519](https://github.com/Monadical-SAS/reflector/issues/519)) ([1bf9ce0](https://github.com/Monadical-SAS/reflector/commit/1bf9ce07c12f87f89e68a1dbb3b2c96c5ee62466))
+
+
+### Bug Fixes
+
+* remove unused settings and utils files ([#522](https://github.com/Monadical-SAS/reflector/issues/522)) ([2af4790](https://github.com/Monadical-SAS/reflector/commit/2af4790e4be9e588f282fbc1bb171c88a03d6479))
+
 ## [0.4.0](https://github.com/Monadical-SAS/reflector/compare/v0.3.2...v0.4.0) (2025-07-25)
 
 
