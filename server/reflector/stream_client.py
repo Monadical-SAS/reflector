@@ -1,14 +1,13 @@
 import asyncio
 import time
 import uuid
+from os import environ
 
 import httpx
 import stamina
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
-
 from reflector.logger import logger
-from reflector.settings import settings
 
 
 class StreamClient:
@@ -43,8 +42,9 @@ class StreamClient:
         else:
             if self.relay is None:
                 self.relay = MediaRelay()
+            audio_device_id = int(environ.get("AUDIO_AV_FOUNDATION_DEVICE_ID", 1))
             self.player = MediaPlayer(
-                f":{settings.AUDIO_AV_FOUNDATION_DEVICE_ID}",
+                f":{audio_device_id}",
                 format="avfoundation",
                 options={"channels": "2"},
             )
