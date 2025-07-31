@@ -175,7 +175,7 @@ class SummaryBuilder:
             api_key=llm.api_key,
             context_window=settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS,
             is_chat_model=True,
-            is_function_calling_model=False,
+            is_function_calling_model=llm.has_structured_output,
             temperature=llm.temperature,
             max_tokens=llm.max_tokens,
         )

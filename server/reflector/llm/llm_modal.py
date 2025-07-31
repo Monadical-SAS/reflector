@@ -29,10 +29,9 @@ class ModalLLM(LLM):
             "NousResearch/Hermes-3-Llama-3.1-8B",
         ]
 
-    # returns text
     async def _generate(
         self, prompt: str, gen_schema: dict | None, gen_cfg: dict | None, **kwargs
-    ):
+    ) -> str:
         json_payload = {"prompt": prompt}
         if gen_schema:
             json_payload["gen_schema"] = gen_schema
@@ -59,8 +58,8 @@ class ModalLLM(LLM):
             text = response.json()["text"]
             return text
 
-    # returns full api response
     async def _completion(self, messages: list, **kwargs) -> dict:
+        # returns full api response
         kwargs.setdefault("temperature", 0.3)
         kwargs.setdefault("max_tokens", 2048)
         kwargs.setdefault("stream", False)

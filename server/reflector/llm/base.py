@@ -123,8 +123,9 @@ class LLM:
     def _get_tokenizer(self):
         pass
 
-    # whether implementation supports structured output on the model side (otherwise it's prompt engineering)
     def has_structured_output(self):
+        # whether implementation supports structured output
+        # on the model side (otherwise it's prompt engineering)
         return False
 
     async def generate(
