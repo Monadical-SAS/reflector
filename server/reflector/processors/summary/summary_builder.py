@@ -70,6 +70,7 @@ DETAILED_SUBJECT_PROMPT_TEMPLATE = dedent(
       include any deadlines or timeframes discussed for completion or follow-up.
     - Mention unresolved issues or topics needing further discussion, aiding in
       planning future meetings or follow-up actions.
+    - Do not include topic unrelated to {subject}.
 
     # OUTPUT
     Your summary should be clear, concise, and structured, covering all major
