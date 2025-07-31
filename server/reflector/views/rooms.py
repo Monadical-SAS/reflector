@@ -1,19 +1,20 @@
-from datetime import datetime, timedelta
-from typing import Annotated, Optional, Literal
 import logging
+import sqlite3
+from datetime import datetime, timedelta
+from typing import Annotated, Literal, Optional
 
-import reflector.auth as auth
+import asyncpg.exceptions
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
+
+import reflector.auth as auth
 from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
-import asyncpg.exceptions
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

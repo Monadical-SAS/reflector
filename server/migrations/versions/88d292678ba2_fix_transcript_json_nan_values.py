@@ -9,8 +9,6 @@ Create Date: 2025-07-15 19:30:19.876332
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision: str = "88d292678ba2"
@@ -21,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     import json
-    import re
+
     from sqlalchemy import text
 
     # Get database connection
@@ -58,7 +56,9 @@ def upgrade() -> None:
             fixed_events = json.dumps(jevents)
             assert "NaN" not in fixed_events
         except (json.JSONDecodeError, AssertionError) as e:
-            print(f"Warning: Invalid JSON for transcript {transcript_id}, skipping: {e}")
+            print(
+                f"Warning: Invalid JSON for transcript {transcript_id}, skipping: {e}"
+            )
             continue
 
         # Update the record with fixed JSON

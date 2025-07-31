@@ -15,25 +15,16 @@ repos:
     hooks:
       - id: debug-statements
       - id: trailing-whitespace
-        exclude: ^server/trials
       - id: detect-private-key
 
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
-        files: ^server/(reflector|tests)/
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        name: isort (python)
-        files: ^server/(gpu|evaluate|reflector)/
-        args: [ "--profile", "black", "--filter-files" ]
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.5
+    rev: v0.8.2
     hooks:
       - id: ruff
-        files: ^server/(reflector|tests)/
+        args:
+          - --fix
+          - --select
+          - I,F401
+        files: ^server/
+      - id: ruff-format
+        files: ^server/

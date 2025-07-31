@@ -13,6 +13,7 @@ API will be a POST request to TRANSCRIPT_URL:
 """
 
 from openai import AsyncOpenAI
+
 from reflector.processors.audio_transcript import AudioTranscriptProcessor
 from reflector.processors.audio_transcript_auto import AudioTranscriptAutoProcessor
 from reflector.processors.types import AudioFile, Transcript, Word

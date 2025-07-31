@@ -3,7 +3,7 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_processor_broadcast(nltk):
-    from reflector.processors.base import Processor, BroadcastProcessor, Pipeline
+    from reflector.processors.base import BroadcastProcessor, Pipeline, Processor
 
     class TestProcessor(Processor):
         INPUT_TYPE = str

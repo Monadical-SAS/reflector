@@ -1,6 +1,7 @@
 import httpx
 import structlog
 from celery import shared_task
+
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)
