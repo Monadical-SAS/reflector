@@ -20,3 +20,23 @@ Polls SQS every 60 seconds via /server/reflector/worker/process.py:24-62:
 # Every 60 seconds, check for new recordings
 sqs = boto3.client("sqs", ...)
 response = sqs.receive_message(QueueUrl=queue_url, ...)
+
+# Requeue
+
+```bash
+uv run /app/requeue_uploaded_file.py TRANSCRIPT_ID
+```
+
+## Pipeline Management
+
+### Continue stuck pipeline from final summaries (identify_participants) step:
+
+```bash
+uv run python -c "from reflector.pipelines.main_live_pipeline import task_pipeline_final_summaries; result = task_pipeline_final_summaries.delay(transcript_id='TRANSCRIPT_ID'); print(f'Task queued: {result.id}')"
+```
+
+### Run full post-processing pipeline (continues to completion):
+
+```bash
+uv run python -c "from reflector.pipelines.main_live_pipeline import pipeline_post; pipeline_post(transcript_id='TRANSCRIPT_ID')"
+```

@@ -34,6 +34,7 @@ def retry(fn):
             ),
         )
         retry_ignore_exc_types = kwargs.pop("retry_ignore_exc_types", (Exception,))
+        retry_logger = kwargs.pop("logger", logger)
 
         result = None
         last_exception = None
@@ -58,17 +59,33 @@ def retry(fn):
                 if result:
                     return result
             except HTTPStatusError as e:
-                logger.exception(e)
+                retry_logger.exception(e)
                 status_code = e.response.status_code
-                logger.debug(f"HTTP status {status_code} - {e}")
+
+                # Log detailed error information including response body
+                try:
+                    response_text = e.response.text
+                    response_headers = dict(e.response.headers)
+                    retry_logger.error(
+                        f"HTTP {status_code} error for {e.request.method} {e.request.url}\n"
+                        f"Response headers: {response_headers}\n"
+                        f"Response body: {response_text}"
+                    )
+
+                except Exception as log_error:
+                    retry_logger.warning(
+                        f"Failed to log detailed error info: {log_error}"
+                    )
+                    retry_logger.debug(f"HTTP status {status_code} - {e}")
+
                 if status_code in retry_httpx_status_stop:
                     message = f"HTTP status {status_code} is in retry_httpx_status_stop"
                     raise RetryHTTPException(message) from e
             except retry_ignore_exc_types as e:
-                logger.exception(e)
+                retry_logger.exception(e)
                 last_exception = e
 
-            logger.debug(
+            retry_logger.debug(
                 f"Retrying {fn_name} - in {retry_backoff_interval:.1f}s "
                 f"({monotonic() - start:.1f}s / {retry_timeout:.1f}s)"
             )

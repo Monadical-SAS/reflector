@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     # LLM Modal configuration
     LLM_MODAL_API_KEY: str | None = None
 
+    # per-task cases
+    SUMMARY_MODEL: str = "monadical/private/smart"
+    SUMMARY_LLM_URL: str | None = None
+    SUMMARY_LLM_API_KEY: str | None = None
+    SUMMARY_LLM_CONTEXT_SIZE_TOKENS: int = 16000
+
     # Diarization
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"

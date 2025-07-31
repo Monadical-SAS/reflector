@@ -17,6 +17,7 @@ T = TypeVar("T", bound="LLM")
 class LLM:
     _nltk_downloaded = False
     _registry = {}
+    model_name: str
     m_generate = Histogram(
         "llm_generate",
         "Time spent in LLM.generate",
@@ -69,6 +70,7 @@ class LLM:
             module_name = f"reflector.llm.llm_{name}"
             importlib.import_module(module_name)
         cls.ensure_nltk()
+
         return cls._registry[name](model_name)
 
     def get_model_name(self) -> str:
@@ -121,6 +123,11 @@ class LLM:
     def _get_tokenizer(self):
         pass
 
+    def has_structured_output(self):
+        # whether implementation supports structured output
+        # on the model side (otherwise it's prompt engineering)
+        return False
+
     async def generate(
         self,
         prompt: str,
@@ -140,6 +147,7 @@ class LLM:
                     prompt=prompt,
                     gen_schema=gen_schema,
                     gen_cfg=gen_cfg,
+                    logger=logger,
                     **kwargs,
                 )
             self.m_generate_success.inc()
@@ -167,7 +175,9 @@ class LLM:
 
         try:
             with self.m_generate.time():
-                result = await retry(self._completion)(messages=messages, **kwargs)
+                result = await retry(self._completion)(
+                    messages=messages, **{**kwargs, "logger": logger}
+                )
             self.m_generate_success.inc()
         except Exception:
             logger.exception("Failed to call llm after retrying")
@@ -253,9 +263,7 @@ class LLM:
     ) -> str:
         raise NotImplementedError
 
-    async def _completion(
-        self, messages: list, logger: reflector_logger, **kwargs
-    ) -> dict:
+    async def _completion(self, messages: list, **kwargs) -> dict:
         raise NotImplementedError
 
     def _parse_json(self, result: str) -> dict:
