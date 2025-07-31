@@ -8,6 +8,7 @@ import asyncio
 import sys
 from datetime import datetime
 from enum import Enum
+from textwrap import dedent
 
 import structlog
 from llama_index.core import Settings
@@ -17,6 +18,93 @@ from pydantic import BaseModel, Field
 from reflector.llm.base import LLM
 from reflector.llm.openai_llm import OpenAILLM
 from reflector.settings import settings
+
+PARTICIPANTS_PROMPT = dedent(
+    """
+    Identify all participants in this conversation.
+    Distinguish between people who actually spoke in the transcript and those who were only mentioned.
+    Each participant should only be listed once.
+    Do not include company names, only people's names.
+    """
+).strip()
+
+TRANSCRIPTION_TYPE_PROMPT = dedent(
+    """
+    Analyze the transcript to determine if it is a meeting, podcast, or interview.
+    A meeting typically involves numerous participants engaging in discussions,
+    making decisions, and planning actions. A podcast often includes hosts
+    discussing topics or interviewing guests for an audience in a structured format.
+    An interview generally features an interviewer questioning one or more interviewees,
+    often for hiring, research, or journalism. Deliver your classification with a
+    confidence score and reasoning.
+    """
+).strip()
+
+SUBJECTS_PROMPT = dedent(
+    """
+    What are the main / high level topic of the meeting.
+    Do not include direct quotes or unnecessary details.
+    Be concise and focused on the main ideas.
+    A subject briefly mentioned should not be included.
+    There should be maximum 6 subjects.
+    Do not write complete narrative sentences for the subject,
+    you must write a concise subject using noun phrases.
+    """
+).strip()
+
+DETAILED_SUBJECT_PROMPT_TEMPLATE = dedent(
+    """
+    Get me information about the topic "{subject}"
+
+    # RESPONSE GUIDELINES
+    Follow this structured approach to create the topic summary:
+    - Highlight important arguments, insights, or data presented.
+    - Outline decisions made.
+    - Indicate any decisions reached, including any rationale or key factors
+      that influenced these decisions.
+    - Detail action items and responsibilities.
+    - For each decision or unresolved issue, list specific action items agreed
+      upon, along with assigned individuals or teams responsible for each task.
+    - Specify deadlines or timelines if mentioned. For each action item,
+      include any deadlines or timeframes discussed for completion or follow-up.
+    - Mention unresolved issues or topics needing further discussion, aiding in
+      planning future meetings or follow-up actions.
+
+    # OUTPUT
+    Your summary should be clear, concise, and structured, covering all major
+    points, decisions, and action items from the meeting. It should be easy to
+    understand for someone not present, providing a comprehensive understanding
+    of what transpired and what needs to be done next. The summary should not
+    exceed one page to ensure brevity and focus.
+    """
+).strip()
+
+PARAGRAPH_SUMMARY_PROMPT = dedent(
+    """
+    Summarize the mentioned topic in 1 paragraph.
+    It will be integrated into the final summary, so just for this topic.
+    """
+).strip()
+
+RECAP_PROMPT = dedent(
+    """
+    Provide a high-level quick recap of the following meeting, fitting in one paragraph.
+    Do not include decisions, action items or unresolved issue, just highlight the high moments.
+    Just dive into the meeting, be concise and do not include unnecessary details.
+    As we know it is a meeting, do not start with 'During the meeting' or equivalent.
+    """
+).strip()
+
+STRUCTURED_RESPONSE_PROMPT_TEMPLATE = dedent(
+    """
+    Based on the following analysis, provide the information in the requested JSON format:
+
+    Analysis:
+    {analysis}
+
+    {format_instructions}
+    """
+).strip()
 
 
 class TranscriptionType(Enum):
@@ -127,12 +215,7 @@ class SummaryBuilder:
         # Then, use PydanticOutputParser to structure the response
         output_parser = PydanticOutputParser(output_cls)
 
-        prompt_template_str = """Based on the following analysis, provide the information in the requested JSON format:
-
-Analysis:
-{analysis}
-
-{format_instructions}"""
+        prompt_template_str = STRUCTURED_RESPONSE_PROMPT_TEMPLATE
 
         program = LLMTextCompletionProgram.from_defaults(
             output_parser=output_parser,
@@ -163,12 +246,7 @@ Analysis:
 
         self.logger.debug("--- identify_participants using TreeSummarize with Pydantic")
 
-        participants_prompt = (
-            "Identify all participants in this conversation.\n"
-            "Distinguish between people who actually spoke in the transcript and those who were only mentioned.\n"
-            "Each participant should only be listed once.\n"
-            "Do not include company names, only people's names."
-        )
+        participants_prompt = PARTICIPANTS_PROMPT
 
         try:
             response = await self._get_structured_response(
@@ -214,13 +292,7 @@ Analysis:
             "--- identify transcription type using TreeSummarizer with Pydantic"
         )
 
-        transcription_type_prompt = (
-            "Analyze this transcript and determine if it is a meeting, podcast, or interview.\n"
-            "A meeting typically has multiple participants discussing topics, making decisions, and planning actions.\n"
-            "A podcast typically has hosts discussing topics or interviewing guests in a structured format for an audience.\n"
-            "An interview typically has an interviewer asking questions to one or more interviewees, often for hiring, research, or journalism purposes.\n"
-            "Provide your classification with confidence score and reasoning."
-        )
+        transcription_type_prompt = TRANSCRIPTION_TYPE_PROMPT
 
         try:
             response = await self._get_structured_response(
@@ -260,15 +332,7 @@ Analysis:
         """Extract main subjects/topics from the transcript."""
         self.logger.info("--- extract main subjects using TreeSummarize")
 
-        subjects_prompt = (
-            "What are the main / high level topic of the meeting. "
-            "Do not include direct quotes or unnecessary details. "
-            "Be concise and focused on the main ideas. "
-            "A subject briefly mentioned should not be included. "
-            "There should be maximum 6 subjects. "
-            "Do not write complete narrative sentences for the subject, "
-            "you must write a concise subject using noun phrases."
-        )
+        subjects_prompt = SUBJECTS_PROMPT
 
         try:
             response = await self._get_structured_response(
@@ -290,41 +354,13 @@ Analysis:
         summaries = []
 
         for subject in self.subjects:
-            detailed_prompt = f"""
-Get me information about the topic "{subject}"
-
-#RESPONSE GUIDELINES
-Follow this structured approach to create the topic summary:
-- Highlight any important arguments, insights or data presented.
-- Outline decisions made.
-- Indicate any decisions that were reached, including any rational or key
-factors that influenced theses decisions.
-- Detail action items and responsabilities.
-- For each decision or unresolved issue, list out the specific action
-items that were agreed upon, along with the assigned individuals or
-teams responsible for each task.
-- Specify deadlines or timelines if talked about. For each action item,
-include any deadlines or timeframes discussed for completions or follow-up.
-- Mention any unresolved issues or topics that need further discussion.
-This help in planning future meetings or follow-up actions.
-
-#OUTPUT
-Your summary should be clear, concise, and structured, covering all the
-major points, decisions, and action items from the meeting.
-It should be easily understandable to someone who wasn't present, giving
-them a comprehensive understanding of what transpired and what needs to
-be done next. The summary should not exceed one page to ensure brevity
-and focus.
-"""
+            detailed_prompt = DETAILED_SUBJECT_PROMPT_TEMPLATE.format(subject=subject)
 
             detailed_response = await summarizer.aget_response(
                 detailed_prompt, [self.transcript], tone_name="Topic assistant"
             )
 
-            paragraph_prompt = (
-                "Summarize the mentioned topic in 1 paragraph.\n"
-                "It will be integrated into the final summary, so just for this topic.\n\n"
-            )
+            paragraph_prompt = PARAGRAPH_SUMMARY_PROMPT
 
             paragraph_response = await summarizer.aget_response(
                 paragraph_prompt, [str(detailed_response)], tone_name="Topic summarizer"
@@ -346,12 +382,7 @@ and focus.
             ]
         )
 
-        recap_prompt = (
-            "Provide a high-level quick recap of the following meeting, fitting in one paragraph.\n"
-            "Do not include decisions, action items or unresolved issue, just highlight the high moments.\n"
-            "Just dive into the meeting, be concise and do not include unnecessary details.\n"
-            "As we know it is a meeting, do not start with 'During the meeting' or equivalent.\n\n"
-        )
+        recap_prompt = RECAP_PROMPT
 
         recap_response = await summarizer.aget_response(
             recap_prompt, [summaries_text], tone_name="Recap summarizer"
