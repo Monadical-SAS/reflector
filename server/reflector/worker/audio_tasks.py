@@ -1,3 +1,4 @@
+# @vibe-generated
 import asyncio
 import json
 import os
@@ -145,11 +146,7 @@ async def download_audio_file(audio_url: str) -> str:
     - S3 HTTPS URLs (https://bucket.s3.amazonaws.com/key)
     - Reflector storage keys (audio/file.mp4 - uses configured bucket)
     """
-    # Validate URL first (unless it's a simple storage key)
-    if audio_url.startswith(("http://", "https://", "s3://")):
-        is_valid, error = validate_audio_url(audio_url)
-        if not is_valid:
-            raise ValueError(f"URL validation failed: {error}")
+    # URL validation removed - allow all HTTP/HTTPS/S3 URLs
     
     suffix = Path(audio_url).suffix or ".wav"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:

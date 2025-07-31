@@ -1,3 +1,4 @@
+# @vibe-generated
 import json
 import uuid
 from datetime import datetime
@@ -22,12 +23,7 @@ def mock_auth():
     del app.dependency_overrides[current_user_optional]
 
 
-@pytest.fixture(autouse=True)
-def mock_url_validator():
-    """Mock URL validator to allow test URLs"""
-    with patch("reflector.worker.audio_tasks.validate_audio_url") as mock_validate:
-        mock_validate.return_value = (True, None)
-        yield mock_validate
+# URL validator mock removed - no longer needed since validation is disabled
 
 
 @pytest.fixture(autouse=True)
@@ -58,13 +54,7 @@ async def db_session():
     await database.disconnect()
 
 
-@pytest.fixture
-def mock_celery_task():
-    """Mock Celery task apply_async"""
-    with patch("reflector.views.audio.process_audio_task") as mock_task:
-        mock_apply = MagicMock()
-        mock_task.apply_async = mock_apply
-        yield mock_apply
+# Removed process_audio_task mock - no longer needed
 
 
 @pytest.fixture
@@ -76,24 +66,25 @@ def mock_celery_diarization_task():
         yield mock_apply
 
 
-class TestAudioProcessEndpoint:
-    """Test /api/v1/audio/process endpoint"""
+class TestAudioDiarizeEndpoint:
+    """Test /api/v1/audio/diarize endpoint"""
     
     @pytest.mark.asyncio
-    async def test_process_audio_success(self, client: TestClient, mock_celery_task):
-        """Test successful audio processing job creation"""
+    async def test_diarize_audio_success(
+        self, client: TestClient, mock_celery_diarization_task
+    ):
+        """Test successful audio diarization job creation"""
         request_data = {
             "audio_url": "https://example.com/audio.wav",
             "options": {
                 "source_language": "en",
-                "target_language": "es",
-                "only_transcript": False,
-                "enable_topics": True,
-                "timeout_ms": 300000
+                "target_language": "en",
+                "diarization_backend": "modal",
+                "timeout_ms": 900000
             }
         }
         
-        response = client.post("/api/v1/audio/process", json=request_data)
+        response = client.post("/api/v1/audio/diarize", json=request_data)
         
         assert response.status_code == 200
         data = response.json()
@@ -104,79 +95,43 @@ class TestAudioProcessEndpoint:
         assert "estimated_completion" in data
         
         # Verify Celery task was called
-        mock_celery_task.assert_called_once()
-        call_args = mock_celery_task.call_args
-        # apply_async is called with args=list and kwargs
+        mock_celery_diarization_task.assert_called_once()
+        call_args = mock_celery_diarization_task.call_args
         assert call_args.kwargs["args"][1] == request_data["audio_url"]
         assert call_args.kwargs["args"][2] == "en"
-        assert call_args.kwargs["args"][3] == "es"
-        assert call_args.kwargs["args"][4] == False  # only_transcript
-        assert call_args.kwargs["args"][5] == True   # enable_topics
-        assert call_args.kwargs["time_limit"] == 300  # 300000ms / 1000
+        assert call_args.kwargs["args"][3] == "en"
+        assert call_args.kwargs["args"][4] == False  # only_transcript (always False for diarization)
+        assert call_args.kwargs["args"][5] == "modal"  # diarization_backend
+        assert call_args.kwargs["time_limit"] == 900  # 900000ms / 1000
     
     @pytest.mark.asyncio
-    async def test_process_audio_default_options(self, client: TestClient, mock_celery_task):
-        """Test audio processing with default options"""
+    async def test_diarize_audio_default_options(self, client: TestClient, mock_celery_diarization_task):
+        """Test audio diarization with default options"""
         request_data = {
             "audio_url": "https://example.com/audio.wav"
         }
         
-        response = client.post("/api/v1/audio/process", json=request_data)
+        response = client.post("/api/v1/audio/diarize", json=request_data)
         
         assert response.status_code == 200
         
         # Verify defaults were used
-        call_args = mock_celery_task.call_args
+        call_args = mock_celery_diarization_task.call_args
         assert call_args.kwargs["args"][2] == "en"  # default source_language
         assert call_args.kwargs["args"][3] == "en"  # default target_language
-        assert call_args.kwargs["args"][4] == True   # default only_transcript
-        assert call_args.kwargs["args"][5] == False  # default enable_topics
+        assert call_args.kwargs["args"][4] == False  # only_transcript (always False for diarization)
+        assert call_args.kwargs["args"][5] == "modal"  # default diarization_backend
     
     @pytest.mark.asyncio
-    async def test_process_audio_invalid_url(self, client: TestClient):
+    async def test_diarize_audio_invalid_url(self, client: TestClient):
         """Test with invalid audio URL"""
         request_data = {
             "audio_url": "not-a-valid-url"
         }
         
-        response = client.post("/api/v1/audio/process", json=request_data)
+        response = client.post("/api/v1/audio/diarize", json=request_data)
         
         assert response.status_code == 422  # Validation error
-
-
-class TestAudioProcessWithDiarizationEndpoint:
-    """Test /api/v1/audio/process-with-diarization endpoint"""
-    
-    @pytest.mark.asyncio
-    async def test_process_with_diarization_success(
-        self, client: TestClient, mock_celery_diarization_task
-    ):
-        """Test successful audio processing with diarization"""
-        request_data = {
-            "audio_url": "https://example.com/audio.wav",
-            "options": {
-                "source_language": "en",
-                "target_language": "en",
-                "only_transcript": False,
-                "diarization_backend": "modal",
-                "timeout_ms": 600000
-            }
-        }
-        
-        response = client.post("/api/v1/audio/process-with-diarization", json=request_data)
-        
-        assert response.status_code == 200
-        data = response.json()
-        
-        assert "job_id" in data
-        assert data["status"] == "pending"
-        
-        # Verify Celery task was called
-        mock_celery_diarization_task.assert_called_once()
-        call_args = mock_celery_diarization_task.call_args
-        assert call_args.kwargs["args"][1] == request_data["audio_url"]
-        assert call_args.kwargs["args"][5] == "modal"  # diarization_backend
-        assert call_args.kwargs["time_limit"] == 600  # 600000ms / 1000
 
 
 class TestJobStatusEndpoint:
@@ -188,17 +143,16 @@ class TestJobStatusEndpoint:
         # Create a test job
         job_id = uuid.uuid4()
         await db_session.execute(
-            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata, user_id) "
-            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata, :user_id)",
+            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata) "
+            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.PENDING,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         
@@ -218,12 +172,12 @@ class TestJobStatusEndpoint:
         job_id = uuid.uuid4()
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, current_step, progress_percentage, "
-            "created_at, updated_at, request_data, metadata, user_id) "
+            "created_at, updated_at, request_data, metadata) "
             "VALUES (:id, :type, :status, :current_step, :progress_percentage, "
-            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
+            ":created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.PROCESSING,
                 "current_step": "transcription",
                 "progress_percentage": 30,
@@ -231,7 +185,6 @@ class TestJobStatusEndpoint:
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         
@@ -250,12 +203,12 @@ class TestJobStatusEndpoint:
         job_id = uuid.uuid4()
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, error_code, error_message, "
-            "error_details, created_at, updated_at, request_data, metadata, user_id) "
+            "error_details, created_at, updated_at, request_data, metadata) "
             "VALUES (:id, :type, :status, :error_code, :error_message, "
-            ":error_details, :created_at, :updated_at, :request_data, :metadata, :user_id)",
+            ":error_details, :created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.FAILED,
                 "error_code": "PROCESSING_ERROR",
                 "error_message": "Failed to process audio",
@@ -264,7 +217,6 @@ class TestJobStatusEndpoint:
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         
@@ -321,12 +273,12 @@ class TestJobResultsEndpoint:
         
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, result_data, completed_at, "
-            "created_at, updated_at, request_data, metadata, user_id) "
+            "created_at, updated_at, request_data, metadata) "
             "VALUES (:id, :type, :status, :result_data, :completed_at, "
-            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
+            ":created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.COMPLETED,
                 "result_data": json.dumps(result_data),  # Serialize for SQLite
                 "completed_at": datetime.utcnow(),
@@ -334,7 +286,6 @@ class TestJobResultsEndpoint:
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         
@@ -347,10 +298,8 @@ class TestJobResultsEndpoint:
         assert len(data["results"]) == 2
         assert data["results"][0]["processor"] == "AudioTranscriptAutoProcessor"
         assert data["results"][1]["processor"] == "TranscriptTranslatorProcessor"
-        assert data["metadata"]["processors_used"] == [
-            "AudioTranscriptAutoProcessor",
-            "TranscriptTranslatorProcessor"
-        ]
+        # processors_used field removed from metadata
+        assert "processors_used" not in data["metadata"]
     
     @pytest.mark.asyncio
     async def test_get_job_results_jsonl_format(self, client: TestClient, db_session):
@@ -366,12 +315,12 @@ class TestJobResultsEndpoint:
         
         await db_session.execute(
             "INSERT INTO jobs (id, type, status, result_data, completed_at, "
-            "created_at, updated_at, request_data, metadata, user_id) "
+            "created_at, updated_at, request_data, metadata) "
             "VALUES (:id, :type, :status, :result_data, :completed_at, "
-            ":created_at, :updated_at, :request_data, :metadata, :user_id)",
+            ":created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.COMPLETED,
                 "result_data": json.dumps(result_data),  # Serialize for SQLite
                 "completed_at": datetime.utcnow(),
@@ -379,7 +328,6 @@ class TestJobResultsEndpoint:
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         
@@ -401,17 +349,16 @@ class TestJobResultsEndpoint:
         """Test getting results of non-completed job"""
         job_id = uuid.uuid4()
         await db_session.execute(
-            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata, user_id) "
-            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata, :user_id)",
+            "INSERT INTO jobs (id, type, status, created_at, updated_at, request_data, metadata) "
+            "VALUES (:id, :type, :status, :created_at, :updated_at, :request_data, :metadata)",
             {
                 "id": str(job_id),
-                "type": JobType.AUDIO_PROCESS,
+                "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
                 "status": JobStatus.PROCESSING,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "request_data": json.dumps({}),  # Serialize for SQLite
                 "metadata": json.dumps({}),  # Serialize for SQLite
-                "user_id": "test-user-123",
             }
         )
         

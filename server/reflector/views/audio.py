@@ -1,9 +1,11 @@
+# @vibe-generated
 import json
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response, Depends, Header
+from fastapi.responses import JSONResponse
 from reflector.db import database
 from reflector.db.jobs import jobs, JobStatus, JobType, JobCreate as JobCreateDB
 from reflector.logger import logger
@@ -11,8 +13,7 @@ from reflector.worker.result_consolidator import consolidate_results
 from reflector import auth
 from reflector.settings import settings
 from reflector.views.audio_api_models import (
-    AudioProcessRequest,
-    AudioProcessWithDiarizationRequest,
+    DiarizationRequest,
     ErrorDetail,
     ErrorResponse,
     HealthCheckResponse,
@@ -26,9 +27,29 @@ from reflector.views.audio_api_models import (
     ServiceStatus,
 )
 from reflector.worker.audio_tasks import (
-    process_audio_task,
     process_audio_with_diarization_task,
 )
+
+class AudioAPIException(HTTPException):
+    def __init__(self, status_code: int, code: str, message: str, details: Optional[Dict] = None):
+        self.code = code
+        self.message = message
+        self.details = details or {}
+        super().__init__(status_code=status_code)
+
+
+async def audio_api_exception_handler(request, exc: AudioAPIException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            error=ErrorDetail(
+                code=exc.code,
+                message=exc.message,
+                details=exc.details
+            )
+        ).model_dump()
+    )
+
 
 router = APIRouter()
 
@@ -45,14 +66,8 @@ def verify_ci_evaluation_token(authorization: Optional[str] = Header(None)) -> b
     return token == settings.CI_EVALUATION_TOKEN
 
 
-def create_error_response(code: str, message: str, details: Optional[Dict] = None) -> ErrorResponse:
-    return ErrorResponse(
-        error=ErrorDetail(code=code, message=message, details=details or {})
-    )
-
-
 @router.post(
-    "/audio/process",
+    "/audio/diarize",
     response_model=JobCreatedResponse,
     responses={
         400: {"model": ErrorResponse, "description": "Invalid request"},
@@ -60,19 +75,17 @@ def create_error_response(code: str, message: str, details: Optional[Dict] = Non
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
 )
-async def process_audio(
-    request: AudioProcessRequest,
+async def diarize_audio(
+    request: DiarizationRequest,
     is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
 ):
-    """Process an audio file for transcription, translation, and optionally generate topics, titles, and summaries."""
+    """Process an audio file with speaker diarization (includes transcription)."""
     # Check CI evaluation token
     if not is_valid_token:
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=401,
-            detail=create_error_response(
-                "UNAUTHORIZED",
-                "Valid CI evaluation token required"
-            ).model_dump(),
+            code="UNAUTHORIZED",
+            message="Valid CI evaluation token required"
         )
     
     try:
@@ -80,7 +93,7 @@ async def process_audio(
         job_id = uuid.uuid4()
         job_data = {
             "id": str(job_id),
-            "type": JobType.AUDIO_PROCESS,
+            "type": JobType.TRANSCRIPTION_WITH_DIARIZATION,
             "status": JobStatus.PENDING,
             "request_data": {
                 "audio_url": str(request.audio_url),
@@ -93,97 +106,20 @@ async def process_audio(
         query = jobs.insert().values(**job_data)
         await database.execute(query)
         
-        # Submit to Celery
-        process_audio_task.apply_async(
-            args=[
-                str(job_id),
-                str(request.audio_url),
-                request.options.source_language,
-                request.options.target_language,
-                request.options.only_transcript,
-                request.options.enable_topics,
-            ],
-            time_limit=request.options.timeout_ms / 1000,  # Convert to seconds
-        )
-        
-        # Estimate completion time based on typical processing times
-        estimated_completion = datetime.utcnow() + timedelta(minutes=5)
-        
-        return JobCreatedResponse(
-            job_id=job_id,
-            status=JobStatus.PENDING,
-            created_at=job_data["created_at"],
-            estimated_completion=estimated_completion,
-        )
-        
-    except Exception as e:
-        logger.error(f"Error creating audio processing job: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=create_error_response(
-                "INTERNAL_ERROR",
-                "Failed to create processing job",
-                {"exception": str(e)},
-            ).model_dump(),
-        )
-
-
-@router.post(
-    "/audio/process-with-diarization",
-    response_model=JobCreatedResponse,
-    responses={
-        400: {"model": ErrorResponse, "description": "Invalid request"},
-        401: {"model": ErrorResponse, "description": "Unauthorized"},
-        500: {"model": ErrorResponse, "description": "Internal server error"},
-    },
-)
-async def process_audio_with_diarization(
-    request: AudioProcessWithDiarizationRequest,
-    is_valid_token: Annotated[bool, Depends(verify_ci_evaluation_token)],
-):
-    """Process an audio file with speaker diarization enabled."""
-    # Check CI evaluation token
-    if not is_valid_token:
-        raise HTTPException(
-            status_code=401,
-            detail=create_error_response(
-                "UNAUTHORIZED",
-                "Valid CI evaluation token required"
-            ).model_dump(),
-        )
-    
-    try:
-        # Create job in database
-        job_id = uuid.uuid4()
-        job_data = {
-            "id": str(job_id),
-            "type": JobType.AUDIO_PROCESS_WITH_DIARIZATION,
-            "status": JobStatus.PENDING,
-            "request_data": {
-                "audio_url": str(request.audio_url),
-                "options": request.options.model_dump(),
-            },
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
-        }
-        
-        query = jobs.insert().values(**job_data)
-        await database.execute(query)
-        
-        # Submit to Celery
+        # Submit to Celery (diarization includes transcription)
         process_audio_with_diarization_task.apply_async(
             args=[
                 str(job_id),
                 str(request.audio_url),
                 request.options.source_language,
                 request.options.target_language,
-                request.options.only_transcript,
+                False,  # only_transcript - always False for diarization
                 request.options.diarization_backend.value,
             ],
             time_limit=request.options.timeout_ms / 1000,
         )
         
-        # Estimate completion time (diarization takes longer)
+        # Estimate completion time
         estimated_completion = datetime.utcnow() + timedelta(minutes=10)
         
         return JobCreatedResponse(
@@ -194,14 +130,12 @@ async def process_audio_with_diarization(
         )
         
     except Exception as e:
-        logger.error(f"Error creating audio processing with diarization job: {e}")
-        raise HTTPException(
+        logger.error(f"Error creating diarization job: {e}")
+        raise AudioAPIException(
             status_code=500,
-            detail=create_error_response(
-                "INTERNAL_ERROR",
-                "Failed to create processing job",
-                {"exception": str(e)},
-            ).model_dump(),
+            code="INTERNAL_ERROR",
+            message="Failed to create diarization job",
+            details={"exception": str(e)}
         )
 
 
@@ -221,12 +155,10 @@ async def get_job_status(
     """Check the status of a processing job."""
     # Check CI evaluation token
     if not is_valid_token:
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=401,
-            detail=create_error_response(
-                "UNAUTHORIZED",
-                "Valid CI evaluation token required"
-            ).model_dump(),
+            code="UNAUTHORIZED",
+            message="Valid CI evaluation token required"
         )
     
     try:
@@ -237,11 +169,10 @@ async def get_job_status(
         result = await database.fetch_one(query)
         
         if not result:
-            raise HTTPException(
+            raise AudioAPIException(
                 status_code=404,
-                detail=create_error_response(
-                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
-                ).model_dump(),
+                code="JOB_NOT_FOUND",
+                message=f"Job with ID {job_id} not found"
             )
         
         # Build error object if job failed
@@ -275,13 +206,11 @@ async def get_job_status(
         raise
     except Exception as e:
         logger.error(f"Error getting job status: {e}")
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=500,
-            detail=create_error_response(
-                "INTERNAL_ERROR",
-                "Failed to get job status",
-                {"exception": str(e)},
-            ).model_dump(),
+            code="INTERNAL_ERROR",
+            message="Failed to get job status",
+            details={"exception": str(e)}
         )
 
 
@@ -304,12 +233,10 @@ async def get_job_results(
     """Retrieve the results of a completed processing job."""
     # Check CI evaluation token
     if not is_valid_token:
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=401,
-            detail=create_error_response(
-                "UNAUTHORIZED",
-                "Valid CI evaluation token required"
-            ).model_dump(),
+            code="UNAUTHORIZED",
+            message="Valid CI evaluation token required"
         )
     
     try:
@@ -320,20 +247,17 @@ async def get_job_results(
         result = await database.fetch_one(query)
         
         if not result:
-            raise HTTPException(
+            raise AudioAPIException(
                 status_code=404,
-                detail=create_error_response(
-                    "JOB_NOT_FOUND", f"Job with ID {job_id} not found"
-                ).model_dump(),
+                code="JOB_NOT_FOUND",
+                message=f"Job with ID {job_id} not found"
             )
         
         if result["status"] != JobStatus.COMPLETED:
-            raise HTTPException(
+            raise AudioAPIException(
                 status_code=400,
-                detail=create_error_response(
-                    "JOB_NOT_COMPLETED",
-                    f"Job is in {result['status']} state, not completed",
-                ).model_dump(),
+                code="JOB_NOT_COMPLETED",
+                message=f"Job is in {result['status']} state, not completed"
             )
         
         # Get result data
@@ -348,7 +272,6 @@ async def get_job_results(
         
         # Convert to ReflectorOutput objects
         outputs = []
-        processors_used = []
         
         for item in consolidated_data:
             output_data = item.get("data")
@@ -359,14 +282,9 @@ async def get_job_results(
                 data=output_data,
             )
             outputs.append(output)
-            # Maintain order and avoid duplicates
-            if output.processor not in processors_used:
-                processors_used.append(output.processor)
         
         # Calculate metadata
-        metadata = JobResultsMetadata(
-            processors_used=processors_used
-        )
+        metadata = JobResultsMetadata()
         
         if include_metadata and result["metadata"]:
             job_metadata = result["metadata"]
@@ -401,13 +319,11 @@ async def get_job_results(
         raise
     except Exception as e:
         logger.error(f"Error getting job results: {e}", exc_info=True)
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=500,
-            detail=create_error_response(
-                "INTERNAL_ERROR",
-                "Failed to get job results",
-                {"exception": str(e)},
-            ).model_dump(),
+            code="INTERNAL_ERROR",
+            message="Failed to get job results",
+            details={"exception": str(e)}
         )
 
 
@@ -488,11 +404,9 @@ async def health_check():
         raise
     except Exception as e:
         logger.error(f"Error during health check: {e}")
-        raise HTTPException(
+        raise AudioAPIException(
             status_code=503,
-            detail=create_error_response(
-                "HEALTH_CHECK_FAILED",
-                "Health check encountered an error",
-                {"exception": str(e)},
-            ).model_dump(),
+            code="HEALTH_CHECK_FAILED",
+            message="Health check encountered an error",
+            details={"exception": str(e)}
         )

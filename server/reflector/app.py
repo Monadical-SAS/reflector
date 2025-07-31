@@ -11,7 +11,7 @@ from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
 from reflector.settings import settings
-from reflector.views.audio import router as audio_router
+from reflector.views.audio import router as audio_router, AudioAPIException, audio_api_exception_handler
 from reflector.views.meetings import router as meetings_router
 from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router
@@ -70,6 +70,9 @@ instrumentator = Instrumentator(
     excluded_handlers=["/docs", "/metrics"],
 ).instrument(app)
 metrics_init(app, instrumentator)
+
+# register exception handlers
+app.add_exception_handler(AudioAPIException, audio_api_exception_handler)
 
 # register views
 app.include_router(rtc_offer_router)

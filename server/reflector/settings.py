@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -133,7 +134,11 @@ class Settings(BaseSettings):
     HEALTHCHECK_URL: str | None = None
 
     # CI Evaluation Token for API endpoints
-    CI_EVALUATION_TOKEN: str = "eval-hardcoded-secret-token-xyz123"
+    CI_EVALUATION_TOKEN: str = Field(
+        default="eval-hardcoded-secret-token-xyz123",
+        description="CI evaluation token for API endpoints",
+        env="CI_EVALUATION_TOKEN"
+    )
 
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60

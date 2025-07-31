@@ -1,3 +1,4 @@
+# @vibe-generated
 import enum
 import uuid
 from datetime import datetime
@@ -17,8 +18,7 @@ class JobStatus(enum.StrEnum):
 
 
 class JobType(enum.StrEnum):
-    AUDIO_PROCESS = "audio_process"
-    AUDIO_PROCESS_WITH_DIARIZATION = "audio_process_with_diarization"
+    TRANSCRIPTION_WITH_DIARIZATION = "transcription_with_diarization"
 
 
 jobs = sqlalchemy.Table(

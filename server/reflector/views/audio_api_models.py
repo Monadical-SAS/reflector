@@ -1,3 +1,4 @@
+# @vibe-generated
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -7,59 +8,29 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
 # Request Models
-class AudioProcessOptions(BaseModel):
-    source_language: str = Field(default="en", description="Source language code")
-    target_language: str = Field(default="en", description="Target language code")
-    only_transcript: bool = Field(
-        default=True,
-        description="If true, only generate transcript without topics/summaries"
-    )
-    enable_topics: bool = Field(
-        default=False,
-        description="Enable topic detection, title, and summary generation"
-    )
-    timeout_ms: int = Field(
-        default=600000,
-        description="Processing timeout in milliseconds",
-        ge=1000,
-        le=3600000  # Max 1 hour
-    )
-
-
-class AudioProcessRequest(BaseModel):
-    audio_url: HttpUrl = Field(description="URL to the audio file (S3, HTTP, etc.)")
-    options: AudioProcessOptions = Field(default_factory=AudioProcessOptions)
-
-
 class DiarizationBackend(str, Enum):
     MODAL = "modal"
     LOCAL = "local"
 
 
-class AudioProcessWithDiarizationOptions(BaseModel):
-    source_language: str = Field(default="en", description="Source language code")
+class DiarizationOptions(BaseModel):
+    source_language: str = Field(default="en", description="Source language code") 
     target_language: str = Field(default="en", description="Target language code")
-    only_transcript: bool = Field(
-        default=False,
-        description="If true, only generate transcript without topics/summaries"
-    )
     diarization_backend: DiarizationBackend = Field(
         default=DiarizationBackend.MODAL,
         description="Diarization backend to use"
     )
     timeout_ms: int = Field(
-        default=600000,
-        description="Processing timeout in milliseconds",
-        ge=1000,
-        le=3600000
+        default=900000, 
+        ge=1000, 
+        le=3600000,
+        description="Processing timeout in milliseconds"
     )
 
 
-class AudioProcessWithDiarizationRequest(BaseModel):
+class DiarizationRequest(BaseModel):
     audio_url: HttpUrl = Field(description="URL to the audio file (S3, HTTP, etc.)")
-    options: AudioProcessWithDiarizationOptions = Field(
-        default_factory=AudioProcessWithDiarizationOptions
-    )
+    options: DiarizationOptions = Field(default_factory=DiarizationOptions)
 
 
 # Response Models
@@ -143,7 +114,6 @@ class ResultFormat(str, Enum):
 class JobResultsMetadata(BaseModel):
     audio_duration: Optional[float] = None
     processing_time: Optional[float] = None
-    processors_used: List[str] = Field(default_factory=list)
 
 
 class JobResultsResponse(BaseModel):

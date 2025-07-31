@@ -1,4 +1,5 @@
 """
+@vibe-generated
 URL validation for preventing SSRF attacks
 """
 import ipaddress

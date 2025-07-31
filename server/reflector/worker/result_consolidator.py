@@ -1,4 +1,5 @@
 """
+@vibe-generated
 Consolidate fragmented processor results into clean, deduplicated output
 Similar to how CLI handles the data
 """

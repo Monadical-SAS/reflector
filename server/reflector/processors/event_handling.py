@@ -1,4 +1,5 @@
 """
+@vibe-generated
 Common event handling utilities for transcription and diarization processing.
 Provides DRY functionality for both CLI and API implementations.
 

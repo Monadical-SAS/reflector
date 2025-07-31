@@ -1,4 +1,7 @@
-"""Tests for S3 download functionality in audio_tasks"""
+"""
+@vibe-generated
+Tests for S3 download functionality in audio_tasks
+"""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
