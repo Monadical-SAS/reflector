@@ -1,7 +1,6 @@
 import asyncio
 
 import av
-
 from reflector.logger import logger
 from reflector.processors import (
     AudioChunkerProcessor,

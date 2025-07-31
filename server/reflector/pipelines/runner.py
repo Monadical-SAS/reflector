@@ -18,7 +18,6 @@ During its lifecycle, it will emit the following status:
 import asyncio
 
 from pydantic import BaseModel, ConfigDict
-
 from reflector.logger import logger
 from reflector.processors import Pipeline
 

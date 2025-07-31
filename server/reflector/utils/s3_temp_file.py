@@ -6,9 +6,8 @@ Provides automatic cleanup of S3 files with retry logic and proper error handlin
 """
 
 from typing import Optional
-
-from reflector.logger import logger
 from reflector.storage.base import Storage
+from reflector.logger import logger
 from reflector.utils.retry import retry
 
 

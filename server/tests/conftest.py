@@ -20,23 +20,17 @@ async def setup_database():
 
 @pytest.fixture
 def dummy_processors():
-    with (
-        patch(
-            "reflector.processors.transcript_topic_detector.TranscriptTopicDetectorProcessor.get_topic"
-        ) as mock_topic,
-        patch(
-            "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
-        ) as mock_title,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
-        ) as mock_long_summary,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
-        ) as mock_short_summary,
-        patch(
-            "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
-        ) as mock_translate,
-    ):
+    with patch(
+        "reflector.processors.transcript_topic_detector.TranscriptTopicDetectorProcessor.get_topic"
+    ) as mock_topic, patch(
+        "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
+    ) as mock_title, patch(
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
+    ) as mock_long_summary, patch(
+        "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
+    ) as mock_short_summary, patch(
+        "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
+    ) as mock_translate:
         mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
         mock_title.return_value = {"title": "LLM TITLE"}
         mock_long_summary.return_value = "LLM LONG SUMMARY"

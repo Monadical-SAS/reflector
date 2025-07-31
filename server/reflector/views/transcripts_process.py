@@ -1,10 +1,9 @@
 from typing import Annotated, Optional
 
 import celery
+import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-
-import reflector.auth as auth
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import task_pipeline_process
 

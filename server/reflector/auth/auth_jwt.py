@@ -4,7 +4,6 @@ from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
-
 from reflector.logger import logger
 from reflector.settings import settings
 

@@ -1,19 +1,17 @@
 from contextlib import asynccontextmanager
 
+import reflector.auth  # noqa
+import reflector.db  # noqa
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from fastapi_pagination import add_pagination
 from prometheus_fastapi_instrumentator import Instrumentator
-
-import reflector.auth  # noqa
-import reflector.db  # noqa
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
 from reflector.settings import settings
-from reflector.views.audio import AudioAPIException, audio_api_exception_handler
-from reflector.views.audio import router as audio_router
+from reflector.views.audio import router as audio_router, AudioAPIException, audio_api_exception_handler
 from reflector.views.meetings import router as meetings_router
 from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router

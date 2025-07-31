@@ -1,6 +1,5 @@
-import av
-
 from reflector.processors.base import Processor
+import av
 
 
 class AudioChunkerProcessor(Processor):

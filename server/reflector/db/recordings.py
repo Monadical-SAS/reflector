@@ -3,7 +3,6 @@ from typing import Literal
 
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
-
 from reflector.db import database, metadata
 from reflector.utils import generate_uuid4
 

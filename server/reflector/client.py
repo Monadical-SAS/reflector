@@ -1,12 +1,12 @@
 import argparse
 import asyncio
 import signal
-from typing import NoReturn
 
 from aiortc.contrib.signaling import add_signaling_arguments, create_signaling
 
 from reflector.logger import logger
 from reflector.stream_client import StreamClient
+from typing import NoReturn
 
 
 async def main() -> NoReturn:

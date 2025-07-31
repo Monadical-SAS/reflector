@@ -6,10 +6,9 @@ Transcript participants API endpoints
 
 from typing import Annotated, Optional
 
+import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-
-import reflector.auth as auth
 from reflector.db.transcripts import TranscriptParticipant, transcripts_controller
 from reflector.views.types import DeletionStatus
 
