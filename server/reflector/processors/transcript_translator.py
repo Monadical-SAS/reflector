@@ -13,7 +13,6 @@ class TranscriptTranslatorProcessor(Processor):
 
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = Transcript
-    TASK = "translate"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

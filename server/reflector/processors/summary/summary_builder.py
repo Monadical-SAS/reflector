@@ -162,7 +162,7 @@ class SummaryBuilder:
         self.summaries: list[dict[str, str]] = []
         self.subjects: list[str] = []
         self.transcription_type: TranscriptionType | None = None
-        self.llm_instance: LLM = llm
+        self.llm: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
         if filename:
@@ -185,13 +185,13 @@ class SummaryBuilder:
         self.transcript = transcript
 
     def set_llm_instance(self, llm: LLM) -> None:
-        self.llm_instance = llm
+        self.llm = llm
 
     async def _get_structured_response(
         self, prompt: str, output_cls: Type[T], tone_name: str | None = None
     ) -> Type[T]:
         """Generic function to get structured output from LLM for non-function-calling models."""
-        return await self.llm_instance.get_structured_response(
+        return await self.llm.get_structured_response(
             prompt, [self.transcript], output_cls, tone_name=tone_name
         )
 
@@ -318,13 +318,13 @@ class SummaryBuilder:
         for subject in self.subjects:
             detailed_prompt = DETAILED_SUBJECT_PROMPT_TEMPLATE.format(subject=subject)
 
-            detailed_response = await self.llm_instance.get_response(
+            detailed_response = await self.llm.get_response(
                 detailed_prompt, [self.transcript], tone_name="Topic assistant"
             )
 
             paragraph_prompt = PARAGRAPH_SUMMARY_PROMPT
 
-            paragraph_response = await self.llm_instance.get_response(
+            paragraph_response = await self.llm.get_response(
                 paragraph_prompt, [str(detailed_response)], tone_name="Topic summarizer"
             )
 
@@ -345,7 +345,7 @@ class SummaryBuilder:
 
         recap_prompt = RECAP_PROMPT
 
-        recap_response = await self.llm_instance.get_response(
+        recap_response = await self.llm.get_response(
             recap_prompt, [summaries_text], tone_name="Recap summarizer"
         )
 
