@@ -27,13 +27,9 @@ $ modal deploy reflector_llm.py
 Then in your reflector api configuration `.env`, you can set theses keys:
 
 ```
-TRANSCRIPT_BACKEND=modal
 TRANSCRIPT_URL=https://xxxx--reflector-transcriber-web.modal.run
-TRANSCRIPT_MODAL_API_KEY=REFLECTOR_APIKEY
-
-LLM_BACKEND=modal
-LLM_URL=https://xxxx--reflector-llm-web.modal.run
-LLM_MODAL_API_KEY=REFLECTOR_APIKEY
+DIARIZATION_URL=https://xxxx--reflector-transcriber-web.modal.run
+MODAL_API_KEY=REFLECTOR_APIKEY
 ```
 
 ## API

@@ -12,10 +12,14 @@ class AudioDiarizationModalProcessor(AudioDiarizationProcessor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if not settings.DIARIZATION_URL:
+            raise Exception(
+                "DIARIZATION_URL required to use AudioDiarizationModalProcessor"
+            )
         self.diarization_url = settings.DIARIZATION_URL + "/diarize"
-        self.headers = {
-            "Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}",
-        }
+        self.headers = {}
+        if settings.DIARIZATION_API_KEY:
+            self.headers["Authorization"] = f"Bearer {settings.DIARIZATION_API_KEY}"
 
     async def _diarize(self, data: AudioDiarizationInput):
         # Gather diarization data

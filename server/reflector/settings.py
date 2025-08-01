@@ -24,9 +24,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
-
-    # Audio transcription modal.com configuration
-    TRANSCRIPT_MODAL_API_KEY: str | None = None
+    TRANSCRIPT_API_KEY: str | None = None
 
     # Audio transcription storage
     TRANSCRIPT_STORAGE_BACKEND: str | None = None
@@ -40,6 +38,7 @@ class Settings(BaseSettings):
     # Translate into the target language
     TRANSLATE_URL: str | None = None
     TRANSLATE_TIMEOUT: int = 90
+    TRANSLATE_API_KEY: str | None = None
 
     # LLM
     LLM_MODEL: str = "microsoft/phi-4"
@@ -51,6 +50,7 @@ class Settings(BaseSettings):
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
+    DIARIZATION_API_KEY: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None

@@ -16,10 +16,16 @@ class TranscriptTranslatorProcessor(Processor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if not settings.TRANSLATE_URL:
+            raise Exception(
+                "TRANSLATE_URL is required for TranscriptTranslatorProcessor"
+            )
         self.transcript = None
         self.translate_url = settings.TRANSLATE_URL
         self.timeout = settings.TRANSLATE_TIMEOUT
-        self.headers = {"Authorization": f"Bearer {settings.TRANSCRIPT_MODAL_API_KEY}"}
+        self.headers = {}
+        if settings.TRANSLATE_API_KEY:
+            self.headers["Authorization"] = f"Bearer {settings.TRANSLATE_API_KEY}"
 
     async def _push(self, data: Transcript):
         self.transcript = data
