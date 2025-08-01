@@ -189,7 +189,7 @@ class SummaryBuilder:
 
     async def _get_structured_response(
         self, prompt: str, output_cls: Type[T], tone_name: str | None = None
-    ) -> Type[T]:
+    ) -> T:
         """Generic function to get structured output from LLM for non-function-calling models."""
         return await self.llm.get_structured_response(
             prompt, [self.transcript], output_cls, tone_name=tone_name
