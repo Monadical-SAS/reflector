@@ -68,7 +68,7 @@ async def test_transcript_process(
     transcript = resp.json()
     assert transcript["status"] == "ended"
     assert transcript["short_summary"] == "LLM SHORT SUMMARY"
-    assert transcript["title"] == "LLM Title"
+    assert transcript["title"] == "Llm Title"
 
     # check topics and transcript
     response = await ac.get(f"/transcripts/{tid}/topics")

@@ -183,7 +183,7 @@ async def test_transcript_rtc_and_websocket(
 
     assert "FINAL_TITLE" in eventnames
     ev = events[eventnames.index("FINAL_TITLE")]
-    assert ev["data"]["title"] == "LLM TITLE"
+    assert ev["data"]["title"] == "Llm Title"
 
     assert "WAVEFORM" in eventnames
     ev = events[eventnames.index("WAVEFORM")]
@@ -351,7 +351,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     assert "FINAL_TITLE" in eventnames
     ev = events[eventnames.index("FINAL_TITLE")]
-    assert ev["data"]["title"] == "LLM TITLE"
+    assert ev["data"]["title"] == "LLm Title"
 
     # check status order
     statuses = [e["data"]["value"] for e in events if e["event"] == "STATUS"]
