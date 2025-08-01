@@ -14,7 +14,10 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
-from reflector.whereby import create_meeting, upload_logo
+from reflector.video_platforms.factory import (
+    create_platform_client,
+    get_platform_for_room,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,7 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    platform: str
 
 
 class Meeting(BaseModel):
@@ -44,6 +48,7 @@ class Meeting(BaseModel):
     start_date: datetime
     end_date: datetime
     recording_type: Literal["none", "local", "cloud"] = "cloud"
+    platform: str
 
 
 class CreateRoom(BaseModel):
@@ -98,6 +103,14 @@ async def rooms_create(
 ):
     user_id = user["sub"] if user else None
 
+    # Determine platform for this room (will be "whereby" unless feature flag is enabled)
+    # Note: Since room doesn't exist yet, we can't use room_id for selection
+    platform = (
+        settings.DEFAULT_VIDEO_PLATFORM
+        if settings.DAILY_MIGRATION_ENABLED
+        else "whereby"
+    )
+
     return await rooms_controller.add(
         name=room.name,
         user_id=user_id,
@@ -109,6 +122,7 @@ async def rooms_create(
         recording_type=room.recording_type,
         recording_trigger=room.recording_trigger,
         is_shared=room.is_shared,
+        platform=platform,
     )
 
 
@@ -156,18 +170,26 @@ async def rooms_create_meeting(
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
 
-        whereby_meeting = await create_meeting("", end_date=end_date, room=room)
-        await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+        # Use the platform abstraction to create meeting
+        platform = get_platform_for_room(room.id)
+        client = create_platform_client(platform)
+
+        meeting_data = await client.create_meeting(
+            room_name_prefix=room.name, end_date=end_date, room=room
+        )
+
+        # Upload logo if supported by platform
+        await client.upload_logo(meeting_data.room_name, "./images/logo.png")
 
         # Now try to save to database
         try:
             meeting = await meetings_controller.create(
-                id=whereby_meeting["meetingId"],
-                room_name=whereby_meeting["roomName"],
-                room_url=whereby_meeting["roomUrl"],
-                host_room_url=whereby_meeting["hostRoomUrl"],
-                start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
-                end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+                id=meeting_data.meeting_id,
+                room_name=meeting_data.room_name,
+                room_url=meeting_data.room_url,
+                host_room_url=meeting_data.host_room_url,
+                start_date=current_time,
+                end_date=end_date,
                 user_id=user_id,
                 room=room,
             )
@@ -179,8 +201,9 @@ async def rooms_create_meeting(
                 room.name,
             )
             logger.warning(
-                "Whereby meeting %s was created but not used (resource leak) for room %s",
-                whereby_meeting["meetingId"],
+                "%s meeting %s was created but not used (resource leak) for room %s",
+                platform,
+                meeting_data.meeting_id,
                 room.name,
             )
 

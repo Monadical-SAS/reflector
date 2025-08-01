@@ -40,6 +40,9 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
+    sqlalchemy.Column(
+        "platform", sqlalchemy.String, nullable=False, server_default="whereby"
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -59,6 +62,7 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
+    platform: Literal["whereby", "daily"] = "whereby"
 
 
 class RoomController:
@@ -107,6 +111,7 @@ class RoomController:
         recording_type: str,
         recording_trigger: str,
         is_shared: bool,
+        platform: str = "whereby",
     ):
         """
         Add a new room
@@ -122,6 +127,7 @@ class RoomController:
             recording_type=recording_type,
             recording_trigger=recording_trigger,
             is_shared=is_shared,
+            platform=platform,
         )
         query = rooms.insert().values(**room.model_dump())
         try:
