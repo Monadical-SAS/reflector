@@ -19,7 +19,7 @@ class TranscriptTranslatorProcessor(Processor):
         self.transcript = None
         self.translate_url = settings.TRANSLATE_URL
         self.timeout = settings.TRANSLATE_TIMEOUT
-        self.headers = {"Authorization": f"Bearer {settings.LLM_MODAL_API_KEY}"}
+        self.headers = {"Authorization": f"Bearer {settings.TRANSCRIPT_MODAL_API_KEY}"}
 
     async def _push(self, data: Transcript):
         self.transcript = data

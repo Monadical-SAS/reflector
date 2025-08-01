@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_processor_broadcast(nltk):
+async def test_processor_broadcast():
     from reflector.processors.base import BroadcastProcessor, Pipeline, Processor
 
     class TestProcessor(Processor):

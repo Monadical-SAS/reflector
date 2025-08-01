@@ -25,7 +25,7 @@ class LLM:
         self.model_name = settings.LLM_MODEL
         self.url = settings.LLM_URL
         self.api_key = settings.LLM_API_KEY
-        self.context_window = settings.CONTEXT_WINDOW
+        self.context_window = settings.LLM_CONTEXT_WINDOW
         self.temperature = temperature
         self.max_tokens = max_tokens
 

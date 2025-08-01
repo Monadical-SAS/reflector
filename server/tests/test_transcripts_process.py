@@ -10,7 +10,6 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_transcript_process(
     tmpdir,
-    ensure_casing,
     dummy_llm,
     dummy_processors,
     dummy_diarization,
@@ -69,7 +68,7 @@ async def test_transcript_process(
     transcript = resp.json()
     assert transcript["status"] == "ended"
     assert transcript["short_summary"] == "LLM SHORT SUMMARY"
-    assert transcript["title"] == "LLM TITLE"
+    assert transcript["title"] == "LLM Title"
 
     # check topics and transcript
     response = await ac.get(f"/transcripts/{tid}/topics")
