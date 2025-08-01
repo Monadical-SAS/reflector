@@ -12,15 +12,9 @@ from textwrap import dedent
 from typing import Type, TypeVar
 
 import structlog
-from llama_index.core import Settings
-from llama_index.core.output_parsers import PydanticOutputParser
-from llama_index.core.program import LLMTextCompletionProgram
-from llama_index.core.response_synthesizers import TreeSummarize
-from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, Field
 
-from reflector.llm.base import LLM
-from reflector.llm.openai_llm import OpenAILLM
+from reflector.llm import LLM
 from reflector.settings import settings
 
 T = TypeVar("T", bound=BaseModel)
@@ -168,22 +162,11 @@ class SummaryBuilder:
         self.summaries: list[dict[str, str]] = []
         self.subjects: list[str] = []
         self.transcription_type: TranscriptionType | None = None
-        self.llm_instance: LLM = llm
+        self.llm: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
         if filename:
             self.read_transcript_from_file(filename)
-
-        Settings.llm = OpenAILike(
-            model=llm.model_name,
-            api_base=llm.url,
-            api_key=llm.api_key,
-            context_window=settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS,
-            is_chat_model=True,
-            is_function_calling_model=llm.has_structured_output,
-            temperature=llm.temperature,
-            max_tokens=llm.max_tokens,
-        )
 
     def read_transcript_from_file(self, filename: str) -> None:
         """
@@ -202,39 +185,15 @@ class SummaryBuilder:
         self.transcript = transcript
 
     def set_llm_instance(self, llm: LLM) -> None:
-        self.llm_instance = llm
+        self.llm = llm
 
     async def _get_structured_response(
         self, prompt: str, output_cls: Type[T], tone_name: str | None = None
-    ) -> Type[T]:
+    ) -> T:
         """Generic function to get structured output from LLM for non-function-calling models."""
-        # First, use TreeSummarize to get the response
-        summarizer = TreeSummarize(verbose=True)
-
-        response = await summarizer.aget_response(
-            prompt, [self.transcript], tone_name=tone_name
+        return await self.llm.get_structured_response(
+            prompt, [self.transcript], output_cls, tone_name=tone_name
         )
-
-        # Then, use PydanticOutputParser to structure the response
-        output_parser = PydanticOutputParser(output_cls)
-
-        prompt_template_str = STRUCTURED_RESPONSE_PROMPT_TEMPLATE
-
-        program = LLMTextCompletionProgram.from_defaults(
-            output_parser=output_parser,
-            prompt_template_str=prompt_template_str,
-            verbose=False,
-        )
-
-        format_instructions = output_parser.format(
-            "Please structure the above information in the following JSON format:"
-        )
-
-        output = await program.acall(
-            analysis=str(response), format_instructions=format_instructions
-        )
-
-        return output
 
     # ----------------------------------------------------------------------------
     # Participants
@@ -354,19 +313,18 @@ class SummaryBuilder:
     async def generate_subject_summaries(self) -> None:
         """Generate detailed summaries for each extracted subject."""
         assert self.transcript is not None
-        summarizer = TreeSummarize(verbose=False)
         summaries = []
 
         for subject in self.subjects:
             detailed_prompt = DETAILED_SUBJECT_PROMPT_TEMPLATE.format(subject=subject)
 
-            detailed_response = await summarizer.aget_response(
+            detailed_response = await self.llm.get_response(
                 detailed_prompt, [self.transcript], tone_name="Topic assistant"
             )
 
             paragraph_prompt = PARAGRAPH_SUMMARY_PROMPT
 
-            paragraph_response = await summarizer.aget_response(
+            paragraph_response = await self.llm.get_response(
                 paragraph_prompt, [str(detailed_response)], tone_name="Topic summarizer"
             )
 
@@ -377,7 +335,6 @@ class SummaryBuilder:
 
     async def generate_recap(self) -> None:
         """Generate a quick recap from the subject summaries."""
-        summarizer = TreeSummarize(verbose=True)
 
         summaries_text = "\n\n".join(
             [
@@ -388,7 +345,7 @@ class SummaryBuilder:
 
         recap_prompt = RECAP_PROMPT
 
-        recap_response = await summarizer.aget_response(
+        recap_response = await self.llm.get_response(
             recap_prompt, [summaries_text], tone_name="Recap summarizer"
         )
 
@@ -483,7 +440,7 @@ if __name__ == "__main__":
     async def main():
         # build the summary
 
-        llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
+        llm = LLM(settings=settings)
         sm = SummaryBuilder(llm=llm, filename=args.transcript)
 
         if args.subjects:

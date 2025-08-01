@@ -3,11 +3,9 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_basic_process(
-    nltk,
     dummy_transcript,
     dummy_llm,
     dummy_processors,
-    ensure_casing,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
@@ -16,8 +14,8 @@ async def test_basic_process(
     from reflector.settings import settings
     from reflector.tools.process import process_audio_file
 
-    # use an LLM test backend
-    settings.LLM_BACKEND = "test"
+    # LLM_BACKEND no longer exists in settings
+    # settings.LLM_BACKEND = "test"
     settings.TRANSCRIPT_BACKEND = "whisper"
 
     # event callback

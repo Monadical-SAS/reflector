@@ -1,7 +1,41 @@
-from reflector.llm import LLM, LLMTaskParams
+from textwrap import dedent
+
+from pydantic import BaseModel, Field
+
+from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
 from reflector.settings import settings
+from reflector.utils.text import clean_title
+
+TOPIC_PROMPT = dedent(
+    """
+    Analyze the following transcript segment and extract the main topic being discussed.
+    Focus on the substantive content and ignore small talk or administrative chatter.
+
+    Create a title that:
+    - Captures the specific subject matter being discussed
+    - Is descriptive and self-explanatory
+    - Uses professional language
+    - Is specific rather than generic
+
+    For the summary:
+    - Summarize the key points in maximum two sentences
+    - Focus on what was discussed, decided, or accomplished
+    - Be concise but informative
+
+    <transcript>
+    {text}
+    </transcript>
+    """
+).strip()
+
+
+class TopicResponse(BaseModel):
+    """Structured response for topic detection"""
+
+    title: str = Field(description="A descriptive title for the topic being discussed")
+    summary: str = Field(description="A concise 1-2 sentence summary of the discussion")
 
 
 class TranscriptTopicDetectorProcessor(Processor):
@@ -11,7 +45,6 @@ class TranscriptTopicDetectorProcessor(Processor):
 
     INPUT_TYPE = Transcript
     OUTPUT_TYPE = TitleSummary
-    TASK = "topic"
 
     def __init__(
         self, min_transcript_length: int = int(settings.MIN_TRANSCRIPT_LENGTH), **kwargs
@@ -19,8 +52,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
-        self.llm = LLM.get_instance()
-        self.params = LLMTaskParams.get_instance(self.TASK).task_params
+        self.llm = LLM(settings=settings, temperature=0.9, max_tokens=500)
 
     async def _push(self, data: Transcript):
         if self.transcript is None:
@@ -34,18 +66,15 @@ class TranscriptTopicDetectorProcessor(Processor):
             return
         await self.flush()
 
-    async def get_topic(self, text: str) -> dict:
+    async def get_topic(self, text: str) -> TopicResponse:
         """
-        Generate a topic and description for a transcription excerpt
+        Generate a topic and description for a transcription excerpt using LLM
         """
-        prompt = self.llm.create_prompt(instruct=self.params.instruct, text=text)
-        topic_result = await self.llm.generate(
-            prompt=prompt,
-            gen_schema=self.params.gen_schema,
-            gen_cfg=self.params.gen_cfg,
-            logger=self.logger,
+        prompt = TOPIC_PROMPT.format(text=text)
+        response = await self.llm.get_structured_response(
+            prompt, [text], TopicResponse, tone_name="Topic analyzer"
         )
-        return topic_result
+        return response
 
     async def _flush(self):
         if not self.transcript:
@@ -53,13 +82,13 @@ class TranscriptTopicDetectorProcessor(Processor):
 
         text = self.transcript.text
         self.logger.info(f"Topic detector got {len(text)} length transcript")
+
         topic_result = await self.get_topic(text=text)
-        title = self.llm.trim_title(topic_result["title"])
-        title = self.llm.ensure_casing(title)
+        title = clean_title(topic_result.title)
 
         summary = TitleSummary(
             title=title,
-            summary=topic_result["summary"],
+            summary=topic_result.summary,
             timestamp=self.transcript.timestamp,
             duration=self.transcript.duration,
             transcript=self.transcript,
