@@ -6,6 +6,7 @@ from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import TitleSummary, Transcript
 from reflector.settings import settings
+from reflector.utils.text import clean_title
 
 TOPIC_PROMPT = dedent(
     """
@@ -25,7 +26,7 @@ TOPIC_PROMPT = dedent(
 
     <transcript>
     {text}
-    <transcript>
+    </transcript>
     """
 ).strip()
 
@@ -83,7 +84,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         self.logger.info(f"Topic detector got {len(text)} length transcript")
 
         topic_result = await self.get_topic(text=text)
-        title = self._clean_title(topic_result.title)
+        title = clean_title(topic_result.title)
 
         summary = TitleSummary(
             title=title,
@@ -94,14 +95,3 @@ class TranscriptTopicDetectorProcessor(Processor):
         )
         self.transcript = None
         await self.emit(summary)
-
-    def _clean_title(self, title: str) -> str:
-        title = title.strip("\"'")
-        words = title.split()
-        if words:
-            words = [
-                word.capitalize() if i == 0 or len(word) > 3 else word.lower()
-                for i, word in enumerate(words)
-            ]
-            title = " ".join(words)
-        return title

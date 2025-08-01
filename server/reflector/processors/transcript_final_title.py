@@ -4,6 +4,7 @@ from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalTitle, TitleSummary
 from reflector.settings import settings
+from reflector.utils.text import clean_title
 
 TITLE_PROMPT = dedent(
     """
@@ -65,18 +66,7 @@ class TranscriptFinalTitleProcessor(Processor):
 
         accumulated_titles = "\n".join([f"- {chunk.title}" for chunk in self.chunks])
         title = await self.get_title(accumulated_titles)
-        title = self._clean_title(title)
+        title = clean_title(title)
 
         final_title = FinalTitle(title=title)
         await self.emit(final_title)
-
-    def _clean_title(self, title: str) -> str:
-        title = title.strip("\"'")
-        words = title.split()
-        if words:
-            words = [
-                word.capitalize() if i == 0 or len(word) > 3 else word.lower()
-                for i, word in enumerate(words)
-            ]
-            title = " ".join(words)
-        return title
