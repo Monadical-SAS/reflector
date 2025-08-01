@@ -1,10 +1,6 @@
 from textwrap import dedent
 
-from llama_index.core import Settings
-from llama_index.core.response_synthesizers import TreeSummarize
-from llama_index.llms.openai_like import OpenAILike
-
-from reflector.llm.openai_llm import OpenAILLM
+from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.types import FinalTitle, TitleSummary
 from reflector.settings import settings
@@ -42,32 +38,17 @@ class TranscriptFinalTitleProcessor(Processor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
-
-        # Initialize OpenAI-compatible LLM
-        llm = OpenAILLM(config_prefix="SUMMARY", settings=settings)
-
-        # Configure LlamaIndex settings
-        Settings.llm = OpenAILike(
-            model=llm.model_name,
-            api_base=llm.url,
-            api_key=llm.api_key,
-            context_window=settings.SUMMARY_LLM_CONTEXT_SIZE_TOKENS,
-            is_chat_model=True,
-            is_function_calling_model=False,
-            temperature=0.5,
-            max_tokens=200,
-        )
+        self.llm = LLM(settings=settings, temperature=0.5, max_tokens=200)
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
 
     async def get_title(self, accumulated_titles: str) -> str:
         """
-        Generate a title for the whole recording using LlamaIndex
+        Generate a title for the whole recording using LLM
         """
         prompt = TITLE_PROMPT.format(titles=accumulated_titles)
-        summarizer = TreeSummarize(verbose=False)
-        response = await summarizer.aget_response(
+        response = await self.llm.get_response(
             prompt,
             [accumulated_titles],
             tone_name="Title generator",
@@ -75,7 +56,7 @@ class TranscriptFinalTitleProcessor(Processor):
 
         self.logger.info(f"Generated title response: {response}")
 
-        return str(response).strip()
+        return response
 
     async def _flush(self):
         if not self.chunks:

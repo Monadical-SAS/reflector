@@ -9,13 +9,14 @@ class Settings(BaseSettings):
     )
 
     # CORS
+    UI_BASE_URL: str = "http://localhost:3000"
     CORS_ORIGIN: str = "*"
     CORS_ALLOW_CREDENTIALS: bool = False
 
     # Database
     DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
 
-    # local data directory (audio for no)
+    # local data directory
     DATA_DIR: str = "./data"
 
     # Audio Transcription
@@ -23,10 +24,6 @@ class Settings(BaseSettings):
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
-
-    # Translate into the target language
-    TRANSLATE_URL: str | None = None
-    TRANSLATE_TIMEOUT: int = 90
 
     # Audio transcription modal.com configuration
     TRANSCRIPT_MODAL_API_KEY: str | None = None
@@ -40,31 +37,15 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
+    # Translate into the target language
+    TRANSLATE_URL: str | None = None
+    TRANSLATE_TIMEOUT: int = 90
+
     # LLM
-    # available backend: openai, modal
-    LLM_BACKEND: str = "modal"
-
-    # LLM common configuration
+    LLM_MODEL: str = "microsoft/phi-4"
     LLM_URL: str | None = None
-    LLM_HOST: str = "localhost"
-    LLM_PORT: int = 7860
-    LLM_OPENAI_KEY: str | None = None
-    LLM_OPENAI_MODEL: str = "gpt-3.5-turbo"
-    LLM_OPENAI_TEMPERATURE: float = 0.7
-    LLM_TIMEOUT: int = 60 * 5  # take cold start into account
-    LLM_MAX_TOKENS: int = 1024
-    LLM_TEMPERATURE: float = 0.7
-    ZEPHYR_LLM_URL: str | None = None
-    HERMES_3_8B_LLM_URL: str | None = None
-
-    # LLM Modal configuration
-    LLM_MODAL_API_KEY: str | None = None
-
-    # per-task cases
-    SUMMARY_MODEL: str = "monadical/private/smart"
-    SUMMARY_LLM_URL: str | None = None
-    SUMMARY_LLM_API_KEY: str | None = None
-    SUMMARY_LLM_CONTEXT_SIZE_TOKENS: int = 16000
+    LLM_API_KEY: str | None = None
+    LLM_CONTEXT_WINDOW: int = 16000
 
     # Diarization
     DIARIZATION_ENABLED: bool = True
@@ -85,12 +66,6 @@ class Settings(BaseSettings):
     # API public mode
     # if set, all anonymous record will be public
     PUBLIC_MODE: bool = False
-
-    # Default LLM model name
-    DEFAULT_LLM: str = "lmsys/vicuna-13b-v1.5"
-
-    # Cache directory for all model storage
-    CACHE_DIR: str = "./data"
 
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750
@@ -116,24 +91,20 @@ class Settings(BaseSettings):
     # Healthcheck
     HEALTHCHECK_URL: str | None = None
 
-    AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
-    SQS_POLLING_TIMEOUT_SECONDS: int = 60
-
+    # Whereby integration
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
-
     WHEREBY_API_KEY: str | None = None
-
+    WHEREBY_WEBHOOK_SECRET: str | None = None
     AWS_WHEREBY_S3_BUCKET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
+    AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
+    SQS_POLLING_TIMEOUT_SECONDS: int = 60
 
+    # Zulip integration
     ZULIP_REALM: str | None = None
     ZULIP_API_KEY: str | None = None
     ZULIP_BOT_EMAIL: str | None = None
-
-    UI_BASE_URL: str = "http://localhost:3000"
-
-    WHEREBY_WEBHOOK_SECRET: str | None = None
 
 
 settings = Settings()
