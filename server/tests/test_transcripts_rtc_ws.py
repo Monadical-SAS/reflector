@@ -226,8 +226,6 @@ async def test_transcript_rtc_and_websocket_and_fr(
     dummy_diarization,
     dummy_storage,
     fake_mp3_upload,
-    ensure_casing,
-    nltk,
     appserver,
 ):
     # goal: start the server, exchange RTC, receive websocket events
