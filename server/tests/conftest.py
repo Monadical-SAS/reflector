@@ -34,7 +34,7 @@ def dummy_processors():
             "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
         ) as mock_short_summary,
         patch(
-            "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
+            "reflector.processors.transcript_translator.TranscriptTranslatorProcessor._translate"
         ) as mock_translate,
     ):
         from reflector.processors.transcript_topic_detector import TopicResponse

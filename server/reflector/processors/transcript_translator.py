@@ -1,9 +1,5 @@
-import httpx
-
 from reflector.processors.base import Processor
-from reflector.processors.types import Transcript, TranslationLanguages
-from reflector.settings import settings
-from reflector.utils.retry import retry
+from reflector.processors.types import Transcript
 
 
 class TranscriptTranslatorProcessor(Processor):
@@ -16,63 +12,24 @@ class TranscriptTranslatorProcessor(Processor):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not settings.TRANSLATE_URL:
-            raise Exception(
-                "TRANSLATE_URL is required for TranscriptTranslatorProcessor"
-            )
         self.transcript = None
-        self.translate_url = settings.TRANSLATE_URL
-        self.timeout = settings.TRANSLATE_TIMEOUT
-        self.headers = {}
-        if settings.TRANSLATE_API_KEY:
-            self.headers["Authorization"] = f"Bearer {settings.TRANSLATE_API_KEY}"
 
     async def _push(self, data: Transcript):
         self.transcript = data
         await self.flush()
 
-    async def get_translation(self, text: str) -> str | None:
-        # FIXME this should be a processor after, as each user may want
-        # different languages
-
-        source_language = self.get_pref("audio:source_language", "en")
-        target_language = self.get_pref("audio:target_language", "en")
-        if source_language == target_language:
-            return
-
-        languages = TranslationLanguages()
-        # Only way to set the target should be the UI element like dropdown.
-        # Hence, this assert should never fail.
-        assert languages.is_supported(target_language)
-        self.logger.debug(f"Try to translate {text=}")
-        json_payload = {
-            "text": text,
-            "source_language": source_language,
-            "target_language": target_language,
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await retry(client.post)(
-                self.translate_url + "/translate",
-                headers=self.headers,
-                params=json_payload,
-                timeout=self.timeout,
-                follow_redirects=True,
-                logger=self.logger,
-            )
-            response.raise_for_status()
-            result = response.json()["text"]
-
-            # Sanity check for translation status in the result
-            if target_language in result:
-                translation = result[target_language]
-            self.logger.debug(f"Translation response: {text=}, {translation=}")
-        return translation
+    async def _translate(self, text: str) -> str | None:
+        raise NotImplementedError
 
     async def _flush(self):
         if not self.transcript:
             return
-        self.transcript.translation = await self.get_translation(
-            text=self.transcript.text
-        )
+
+        source_language = self.get_pref("audio:source_language", "en")
+        target_language = self.get_pref("audio:target_language", "en")
+        if source_language == target_language:
+            self.transcript.translation = None
+        else:
+            self.transcript.translation = await self._translate(self.transcript.text)
+
         await self.emit(self.transcript)
