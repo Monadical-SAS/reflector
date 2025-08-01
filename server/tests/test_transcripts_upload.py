@@ -10,7 +10,6 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_transcript_upload_file(
     tmpdir,
-    ensure_casing,
     dummy_llm,
     dummy_processors,
     dummy_diarization,
@@ -53,7 +52,7 @@ async def test_transcript_upload_file(
     transcript = resp.json()
     assert transcript["status"] == "ended"
     assert transcript["short_summary"] == "LLM SHORT SUMMARY"
-    assert transcript["title"] == "LLM TITLE"
+    assert transcript["title"] == "Llm Title"
 
     # check topics and transcript
     response = await ac.get(f"/transcripts/{tid}/topics")

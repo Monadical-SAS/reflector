@@ -3,8 +3,9 @@
 This repository hold an API for the GPU implementation of the Reflector API service,
 and use [Modal.com](https://modal.com)
 
-- `reflector_llm.py` - LLM API
+- `reflector_diarizer.py` - Diarization API
 - `reflector_transcriber.py` - Transcription API
+- `reflector_translator.py` - Translation API
 
 ## Modal.com deployment
 

@@ -37,8 +37,12 @@ def dummy_processors():
             "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
         ) as mock_translate,
     ):
-        mock_topic.return_value = {"title": "LLM TITLE", "summary": "LLM SUMMARY"}
-        mock_title.return_value = {"title": "LLM TITLE"}
+        from reflector.processors.transcript_topic_detector import TopicResponse
+
+        mock_topic.return_value = TopicResponse(
+            title="LLM TITLE", summary="LLM SUMMARY"
+        )
+        mock_title.return_value = "LLM Title"
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = "LLM SHORT SUMMARY"
         mock_translate.return_value = "Bonjour le monde"
@@ -103,14 +107,15 @@ async def dummy_diarization():
 
 @pytest.fixture
 async def dummy_llm():
-    from reflector.llm.base import LLM
+    from reflector.llm import LLM
 
     class TestLLM(LLM):
         def __init__(self):
             self.model_name = "DUMMY MODEL"
             self.llm_tokenizer = "DUMMY TOKENIZER"
 
-    with patch("reflector.llm.base.LLM.get_instance") as mock_llm:
+    # LLM doesn't have get_instance anymore, mocking constructor instead
+    with patch("reflector.llm.LLM") as mock_llm:
         mock_llm.return_value = TestLLM()
         yield
 
@@ -129,22 +134,19 @@ async def dummy_storage():
         async def _get_file_url(self, *args, **kwargs):
             return "http://fake_server/audio.mp3"
 
-    with patch("reflector.storage.base.Storage.get_instance") as mock_storage:
-        mock_storage.return_value = DummyStorage()
-        yield
+        async def _get_file(self, *args, **kwargs):
+            from pathlib import Path
 
+            test_mp3 = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
+            return test_mp3.read_bytes()
 
-@pytest.fixture
-def nltk():
-    with patch("reflector.llm.base.LLM.ensure_nltk") as mock_nltk:
-        mock_nltk.return_value = "NLTK PACKAGE"
-        yield
-
-
-@pytest.fixture
-def ensure_casing():
-    with patch("reflector.llm.base.LLM.ensure_casing") as mock_casing:
-        mock_casing.return_value = "LLM TITLE"
+    dummy = DummyStorage()
+    with (
+        patch("reflector.storage.base.Storage.get_instance") as mock_storage,
+        patch("reflector.storage.get_transcripts_storage") as mock_get_transcripts,
+    ):
+        mock_storage.return_value = dummy
+        mock_get_transcripts.return_value = dummy
         yield
 
 
