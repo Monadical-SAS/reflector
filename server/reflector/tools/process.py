@@ -13,7 +13,7 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptTranslatorProcessor,
+    TranscriptTranslatorAutoProcessor,
 )
 from reflector.processors.base import BroadcastProcessor
 
@@ -31,7 +31,7 @@ async def process_audio_file(
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(),
         TranscriptLinerProcessor(),
-        TranscriptTranslatorProcessor.as_threaded(),
+        TranscriptTranslatorAutoProcessor.as_threaded(),
     ]
     if not only_transcript:
         processors += [
