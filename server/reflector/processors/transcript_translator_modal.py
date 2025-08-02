@@ -14,7 +14,7 @@ class TranscriptTranslatorModalProcessor(TranscriptTranslatorProcessor):
     Translate the transcript into the target language using Modal.com
     """
 
-    def __init__(self, modal_api_key: str = None, **kwargs):
+    def __init__(self, modal_api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if not settings.TRANSLATE_URL:
             raise Exception(
