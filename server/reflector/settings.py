@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # Translate into the target language
-    TRANSLATION_BACKEND: str = "modal"
+    TRANSLATION_BACKEND: str = "mock"
     TRANSLATE_URL: str | None = None
     TRANSLATE_TIMEOUT: int = 90
 
