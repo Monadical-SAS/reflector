@@ -10,7 +10,7 @@ class AudioDiarizationModalProcessor(AudioDiarizationProcessor):
     INPUT_TYPE = AudioDiarizationInput
     OUTPUT_TYPE = TitleSummary
 
-    def __init__(self, modal_api_key: str = None, **kwargs):
+    def __init__(self, modal_api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if not settings.DIARIZATION_URL:
             raise Exception(
