@@ -40,6 +40,7 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "llama-index>=0.12.52",
     "llama-index-llms-openai-like>=0.4.0",
+    "pytest-env>=1.1.5",
 ]
 
 [dependency-groups]
@@ -82,6 +83,10 @@ packages = ["reflector"]
 
 [tool.coverage.run]
 source = ["reflector"]
+
+[tool.pytest_env]
+ENVIRONMENT = "pytest"
+DATABASE_URL = "sqlite:///test.sqlite"
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
