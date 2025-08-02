@@ -32,10 +32,9 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.modal_api_key = modal_api_key
 
     async def _transcript(self, data: AudioFile):
-        api_key = f"Bearer {self.modal_api_key}" if self.modal_api_key else None
         async with AsyncOpenAI(
             base_url=self.transcript_url,
-            api_key=api_key,
+            api_key=self.modal_api_key,
             timeout=self.timeout,
         ) as client:
             self.logger.debug(f"Try to transcribe audio {data.name}")
