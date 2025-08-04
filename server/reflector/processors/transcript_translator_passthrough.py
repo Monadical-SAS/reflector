@@ -4,13 +4,11 @@ from reflector.processors.transcript_translator_auto import (
 )
 
 
-class TranscriptTranslatorMockProcessor(TranscriptTranslatorProcessor):
-    """
-    Translate the transcript into the target language using Modal.com
-    """
-
+class TranscriptTranslatorPassthroughProcessor(TranscriptTranslatorProcessor):
     async def _translate(self, text: str) -> None:
         return None
 
 
-TranscriptTranslatorAutoProcessor.register("mock", TranscriptTranslatorMockProcessor)
+TranscriptTranslatorAutoProcessor.register(
+    "passthrough", TranscriptTranslatorPassthroughProcessor
+)
