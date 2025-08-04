@@ -27,7 +27,7 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptTranslatorProcessor,
+    TranscriptTranslatorAutoProcessor,
 )
 from reflector.processors.base import BroadcastProcessor, Processor
 from reflector.processors.types import (
@@ -103,7 +103,7 @@ async def process_audio_file_with_diarization(
 
     processors += [
         TranscriptLinerProcessor(),
-        TranscriptTranslatorProcessor.as_threaded(),
+        TranscriptTranslatorAutoProcessor.as_threaded(),
     ]
 
     if not only_transcript:
