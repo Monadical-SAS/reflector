@@ -144,7 +144,9 @@ All endpoints prefixed `/v1/`:
 **Backend** (`server/.env`):
 - `DATABASE_URL` - Database connection string
 - `REDIS_URL` - Redis broker for Celery
-- `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` - Modal.com GPU processing
+- `TRANSCRIPT_BACKEND=modal` + `TRANSCRIPT_MODAL_API_KEY` - Modal.com transcription
+- `DIARIZATION_BACKEND=modal` + `DIARIZATION_MODAL_API_KEY` - Modal.com diarization
+- `TRANSLATION_BACKEND=modal` + `TRANSLATION_MODAL_API_KEY` - Modal.com translation
 - `WHEREBY_API_KEY` - Video platform integration
 - `REFLECTOR_AUTH_BACKEND` - Authentication method (none, jwt)
 

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
 
-    # Audio transcription modal.com configuration
+    # Audio Transcription: modal backend
     TRANSCRIPT_MODAL_API_KEY: str | None = None
 
     # Audio transcription storage
@@ -38,8 +38,12 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # Translate into the target language
+    TRANSLATION_BACKEND: str = "passthrough"
     TRANSLATE_URL: str | None = None
     TRANSLATE_TIMEOUT: int = 90
+
+    # Translation: modal backend
+    TRANSLATE_MODAL_API_KEY: str | None = None
 
     # LLM
     LLM_MODEL: str = "microsoft/phi-4"
@@ -51,6 +55,9 @@ class Settings(BaseSettings):
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
+
+    # Diarization: modal backend
+    DIARIZATION_MODAL_API_KEY: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None

@@ -21,16 +21,20 @@ from reflector.settings import settings
 
 
 class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
-    def __init__(self, modal_api_key: str):
+    def __init__(self, modal_api_key: str | None = None, **kwargs):
         super().__init__()
+        if not settings.TRANSCRIPT_URL:
+            raise Exception(
+                "TRANSCRIPT_URL required to use AudioTranscriptModalProcessor"
+            )
         self.transcript_url = settings.TRANSCRIPT_URL + "/v1"
         self.timeout = settings.TRANSCRIPT_TIMEOUT
-        self.api_key = settings.TRANSCRIPT_MODAL_API_KEY
+        self.modal_api_key = modal_api_key
 
     async def _transcript(self, data: AudioFile):
         async with AsyncOpenAI(
             base_url=self.transcript_url,
-            api_key=self.api_key,
+            api_key=self.modal_api_key,
             timeout=self.timeout,
         ) as client:
             self.logger.debug(f"Try to transcribe audio {data.name}")

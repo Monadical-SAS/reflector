@@ -67,6 +67,7 @@ async def test_transcript_rtc_and_websocket(
     dummy_transcript,
     dummy_processors,
     dummy_diarization,
+    dummy_transcript_translator,
     dummy_storage,
     fake_mp3_upload,
     appserver,
@@ -164,7 +165,7 @@ async def test_transcript_rtc_and_websocket(
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
     assert ev["data"]["text"].startswith("Hello world.")
-    assert ev["data"]["translation"] == "Bonjour le monde"
+    assert ev["data"]["translation"] is None
 
     assert "TOPIC" in eventnames
     ev = events[eventnames.index("TOPIC")]
@@ -224,6 +225,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     dummy_transcript,
     dummy_processors,
     dummy_diarization,
+    dummy_transcript_translator,
     dummy_storage,
     fake_mp3_upload,
     appserver,
@@ -330,7 +332,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     assert "TRANSCRIPT" in eventnames
     ev = events[eventnames.index("TRANSCRIPT")]
     assert ev["data"]["text"].startswith("Hello world.")
-    assert ev["data"]["translation"] == "Bonjour le monde"
+    assert ev["data"]["translation"] == "en:fr:Hello world."
 
     assert "TOPIC" in eventnames
     ev = events[eventnames.index("TOPIC")]

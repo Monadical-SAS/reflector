@@ -7,15 +7,11 @@ import pytest
 @pytest.fixture(scope="function", autouse=True)
 @pytest.mark.asyncio
 async def setup_database():
-    from reflector.settings import settings
+    from reflector.db import engine, metadata  # noqa
 
-    with NamedTemporaryFile() as f:
-        settings.DATABASE_URL = f"sqlite:///{f.name}"
-        from reflector.db import engine, metadata
-
-        metadata.create_all(bind=engine)
-
-        yield
+    metadata.drop_all(bind=engine)
+    metadata.create_all(bind=engine)
+    yield
 
 
 @pytest.fixture
@@ -33,9 +29,6 @@ def dummy_processors():
         patch(
             "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
         ) as mock_short_summary,
-        patch(
-            "reflector.processors.transcript_translator.TranscriptTranslatorProcessor.get_translation"
-        ) as mock_translate,
     ):
         from reflector.processors.transcript_topic_detector import TopicResponse
 
@@ -45,9 +38,7 @@ def dummy_processors():
         mock_title.return_value = "LLM Title"
         mock_long_summary.return_value = "LLM LONG SUMMARY"
         mock_short_summary.return_value = "LLM SHORT SUMMARY"
-        mock_translate.return_value = "Bonjour le monde"
         yield (
-            mock_translate,
             mock_topic,
             mock_title,
             mock_long_summary,
@@ -102,6 +93,27 @@ async def dummy_diarization():
         ".AudioDiarizationAutoProcessor.__new__"
     ) as mock_audio:
         mock_audio.return_value = TestAudioDiarizationProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_transcript_translator():
+    from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
+
+    class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
+        async def _translate(self, text: str) -> str:
+            source_language = self.get_pref("audio:source_language", "en")
+            target_language = self.get_pref("audio:target_language", "en")
+            return f"{source_language}:{target_language}:{text}"
+
+    def mock_new(cls, *args, **kwargs):
+        return TestTranscriptTranslatorProcessor(*args, **kwargs)
+
+    with patch(
+        "reflector.processors.transcript_translator_auto"
+        ".TranscriptTranslatorAutoProcessor.__new__",
+        mock_new,
+    ):
         yield
 
 

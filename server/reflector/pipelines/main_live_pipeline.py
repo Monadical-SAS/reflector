@@ -47,7 +47,7 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptLinerProcessor,
     TranscriptTopicDetectorProcessor,
-    TranscriptTranslatorProcessor,
+    TranscriptTranslatorAutoProcessor,
 )
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import AudioDiarizationInput
@@ -361,7 +361,7 @@ class PipelineMainLive(PipelineMainBase):
             AudioMergeProcessor(),
             AudioTranscriptAutoProcessor.as_threaded(),
             TranscriptLinerProcessor(),
-            TranscriptTranslatorProcessor.as_threaded(callback=self.on_transcript),
+            TranscriptTranslatorAutoProcessor.as_threaded(callback=self.on_transcript),
             TranscriptTopicDetectorProcessor.as_threaded(callback=self.on_topic),
         ]
         pipeline = Pipeline(*processors)
