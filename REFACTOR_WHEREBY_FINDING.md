@@ -147,7 +147,7 @@ class DailyClient:
             "name": f"{room_name_prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
             "privacy": "private" if room.is_locked else "public",
             "properties": {
-                "enable_recording": "cloud",  # Same as Whereby
+                "enable_recording": "raw-tracks", #"cloud",
                 "enable_chat": True,
                 "enable_screenshare": True,
                 "start_video_off": False,
@@ -157,14 +157,13 @@ class DailyClient:
             }
         }
 
-        # Configure S3 bucket for recordings (same as Whereby)
-        if room.recording_type == "cloud":
-            data["properties"]["recording_bucket"] = {
-                "bucket_name": settings.AWS_S3_BUCKET,
-                "bucket_region": settings.AWS_REGION,
-                "assume_role_arn": settings.AWS_DAILY_ROLE_ARN,
-                "path": f"recordings/{data['name']}"
-            }
+        # if room.recording_type == "cloud":
+        data["properties"]["recording_bucket"] = {
+            "bucket_name": settings.AWS_S3_BUCKET,
+            "bucket_region": settings.AWS_REGION,
+            "assume_role_arn": settings.AWS_DAILY_ROLE_ARN,
+            "path": f"recordings/{data['name']}"
+        }
 
         async with httpx.AsyncClient() as client:
             response = await client.post(

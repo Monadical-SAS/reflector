@@ -97,6 +97,100 @@ The Daily.co migration implementation is now complete and ready for testing with
 - ✅ Frontend platform-agnostic components
 - ✅ Comprehensive test suite with >95% coverage
 
+## Daily.co Webhook Integration
+
+### Webhook Configuration
+
+Daily.co webhooks are configured via API (no dashboard interface). Use the Daily.co REST API to set up webhook endpoints:
+
+```bash
+# Configure webhook endpoint
+curl -X POST https://api.daily.co/v1/webhook-endpoints \
+  -H "Authorization: Bearer ${DAILY_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://yourdomain.com/v1/daily_webhook",
+    "events": [
+      "participant.joined",
+      "participant.left",
+      "recording.started",
+      "recording.ready-to-download",
+      "recording.error"
+    ]
+  }'
+```
+
+### Webhook Event Examples
+
+**Participant Joined:**
+```json
+{
+  "type": "participant.joined",
+  "id": "evt_participant_joined_1640995200",
+  "ts": 1640995200000,
+  "data": {
+    "room": {"name": "test-room-123-abc"},
+    "participant": {
+      "id": "participant-123",
+      "user_name": "John Doe",
+      "session_id": "session-456"
+    }
+  }
+}
+```
+
+**Recording Ready:**
+```json
+{
+  "type": "recording.ready-to-download",
+  "id": "evt_recording_ready_1640995200",
+  "ts": 1640995200000,
+  "data": {
+    "room": {"name": "test-room-123-abc"},
+    "recording": {
+      "id": "recording-789",
+      "status": "finished",
+      "download_url": "https://bucket.s3.amazonaws.com/recording.mp4",
+      "start_time": "2025-01-01T10:00:00Z",
+      "duration": 1800
+    }
+  }
+}
+```
+
+### Webhook Signature Verification
+
+Daily.co uses HMAC-SHA256 for webhook verification:
+
+```python
+import hmac
+import hashlib
+
+def verify_daily_webhook(body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+Signature is sent in the `X-Daily-Signature` header.
+
+### Recording Processing Flow
+
+1. **Daily.co Meeting Ends** → Recording processed
+2. **Webhook Fired** → `recording.ready-to-download` event
+3. **Webhook Handler** → Extracts download URL and recording ID
+4. **Background Task** → `process_recording_from_url.delay()` queued
+5. **Download & Process** → Audio downloaded, validated, transcribed
+6. **ML Pipeline** → Same processing as Whereby recordings
+
+```python
+# New Celery task for Daily.co recordings
+@shared_task
+@asynctask
+async def process_recording_from_url(recording_url: str, meeting_id: str, recording_id: str):
+    # Downloads from Daily.co URL → Creates transcript → Triggers ML pipeline
+    # Identical processing to S3-based recordings after download
+```
+
 ## Testing the Current Implementation
 
 ### Running the Test Suite
@@ -131,6 +225,35 @@ meeting = await client.create_meeting(
     room=mock_room
 )
 print(f"Created meeting: {meeting.room_url}")
+```
+
+### Testing Daily.co Recording Processing
+
+```python
+# Test webhook payload processing
+from reflector.views.daily import daily_webhook
+from reflector.worker.process import process_recording_from_url
+
+# Simulate webhook event
+event_data = {
+    "type": "recording.ready-to-download",
+    "id": "evt_123",
+    "ts": 1640995200000,
+    "data": {
+        "room": {"name": "test-room-123"},
+        "recording": {
+            "id": "rec-456",
+            "download_url": "https://daily.co/recordings/test.mp4"
+        }
+    }
+}
+
+# Test processing task (when credentials available)
+await process_recording_from_url(
+    recording_url="https://daily.co/recordings/test.mp4",
+    meeting_id="meeting-123",
+    recording_id="rec-456"
+)
 ```
 
 ## Architecture Benefits
