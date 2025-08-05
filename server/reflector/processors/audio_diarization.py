@@ -1,10 +1,10 @@
 from reflector.processors.base import Processor
-from reflector.processors.types import AudioDiarizationInput, TitleSummary, Word
+from reflector.processors.types import AudioDiarizationInput, TitleSummary, TitleSummaryWithId, Word
 
 
 class AudioDiarizationProcessor(Processor):
     INPUT_TYPE = AudioDiarizationInput
-    OUTPUT_TYPE = TitleSummary
+    OUTPUT_TYPE = TitleSummaryWithId
 
     async def _push(self, data: AudioDiarizationInput):
         try:

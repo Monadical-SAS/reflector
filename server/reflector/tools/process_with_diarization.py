@@ -155,9 +155,6 @@ async def process_audio_file_with_diarization(
                 
                 # Set the pipeline on the diarization processor so it emits PipelineEvents properly
                 diarization_processor.set_pipeline(pipeline)
-                
-                # Register the event callback - the processor will wrap data in PipelineEvent automatically
-                diarization_processor.on(event_callback)
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
