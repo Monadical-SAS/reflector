@@ -202,7 +202,7 @@ class TestDailyWebhookIntegration:
                     "reflector.db.meetings.meetings_controller.update_meeting"
                 ) as mock_update_url:
                     with patch(
-                        "reflector.worker.tasks.process_recording.delay"
+                        "reflector.worker.process.process_recording_from_url.delay"
                     ) as mock_process:
                         async with AsyncClient(
                             app=app, base_url="http://test/v1"
@@ -216,14 +216,12 @@ class TestDailyWebhookIntegration:
                             assert response.status_code == 200
                             assert response.json() == {"status": "ok"}
 
-                            # Verify recording URL was updated
-                            mock_update_url.assert_called_once_with(
-                                mock_meeting.id,
-                                "https://s3.amazonaws.com/bucket/recording.mp4",
+                            # Verify processing was triggered with correct parameters
+                            mock_process.assert_called_once_with(
+                                recording_url="https://s3.amazonaws.com/bucket/recording.mp4",
+                                meeting_id=mock_meeting.id,
+                                recording_id="recording-789",
                             )
-
-                            # Verify processing was triggered
-                            mock_process.assert_called_once_with(mock_meeting.id)
 
     @pytest.mark.asyncio
     async def test_webhook_invalid_signature_rejected(self, webhook_secret):

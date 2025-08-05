@@ -28,7 +28,6 @@ class DailyClient(VideoPlatformClient):
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> MeetingData:
         """Create a Daily.co room."""
-        # Generate unique room name
         room_name = f"{room_name_prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
         data = {
@@ -43,17 +42,16 @@ class DailyClient(VideoPlatformClient):
                 "start_video_off": False,
                 "start_audio_off": False,
                 "exp": int(end_date.timestamp()),
-                "enable_recording_ui": False,  # We handle consent ourselves
             },
         }
 
         # Configure S3 bucket for cloud recordings
         if room.recording_type == "cloud" and self.config.s3_bucket:
-            data["properties"]["recording_bucket"] = {
+            data["properties"]["recordings_bucket"] = {
                 "bucket_name": self.config.s3_bucket,
                 "bucket_region": self.config.s3_region,
                 "assume_role_arn": self.config.aws_role_arn,
-                "path": f"recordings/{room_name}",
+                "allow_api_access": True,
             }
 
         async with httpx.AsyncClient() as client:
@@ -68,13 +66,12 @@ class DailyClient(VideoPlatformClient):
 
         # Format response to match our standard
         room_url = result["url"]
-        host_room_url = f"{room_url}?t={result['config']['token']}"
 
         return MeetingData(
             meeting_id=result["id"],
             room_name=result["name"],
             room_url=room_url,
-            host_room_url=host_room_url,
+            host_room_url=room_url,
             platform=self.PLATFORM_NAME,
             extra_data=result,
         )
@@ -128,25 +125,3 @@ class DailyClient(VideoPlatformClient):
             return hmac.compare_digest(expected, signature)
         except Exception:
             return False
-
-    async def start_recording(self, room_name: str) -> Dict[str, Any]:
-        """Start recording for a room - Daily.co specific method."""
-        data = {
-            "layout": {
-                "preset": "audio-only"  # For transcription use case
-            },
-            "streaming_settings": {
-                "width": 1280,
-                "height": 720,
-            },
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/rooms/{room_name}/recordings",
-                headers=self.headers,
-                json=data,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()

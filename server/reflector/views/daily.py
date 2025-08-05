@@ -106,8 +106,9 @@ async def _handle_recording_started(event: DailyWebhookEvent):
 async def _handle_recording_ready(event: DailyWebhookEvent):
     """Handle recording ready for download event."""
     room_name = event.data.get("room", {}).get("name")
-    download_link = event.data.get("download_link")
-    recording_id = event.data.get("recording_id")
+    recording_data = event.data.get("recording", {})
+    download_link = recording_data.get("download_url")
+    recording_id = recording_data.get("id")
 
     if not room_name or not download_link:
         return
@@ -117,11 +118,13 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         # Queue recording processing task (same as Whereby)
         try:
             # Import here to avoid circular imports
-            from reflector.worker.tasks import process_recording
+            from reflector.worker.process import process_recording_from_url
 
-            process_recording.delay(
-                meeting_id=meeting.id,
+            # For Daily.co, we need to queue recording processing with URL
+            # This will download from the URL and process similar to S3
+            process_recording_from_url.delay(
                 recording_url=download_link,
+                meeting_id=meeting.id,
                 recording_id=recording_id or event.id,
             )
         except ImportError:

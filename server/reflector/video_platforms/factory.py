@@ -25,9 +25,7 @@ def get_platform_config(platform: str) -> VideoPlatformConfig:
             webhook_secret=settings.DAILY_WEBHOOK_SECRET or "",
             subdomain=settings.DAILY_SUBDOMAIN,
             s3_bucket=settings.AWS_DAILY_S3_BUCKET,
-            s3_region=settings.AWS_REGION
-            if hasattr(settings, "AWS_REGION")
-            else "us-west-2",
+            s3_region=settings.AWS_DAILY_S3_REGION,
             aws_role_arn=settings.AWS_DAILY_ROLE_ARN,
         )
     else:

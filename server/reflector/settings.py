@@ -106,12 +106,13 @@ class Settings(BaseSettings):
     DAILY_WEBHOOK_SECRET: str | None = None
     DAILY_SUBDOMAIN: str | None = None
     AWS_DAILY_S3_BUCKET: str | None = None
+    AWS_DAILY_S3_REGION: str = "us-west-2"
     AWS_DAILY_ROLE_ARN: str | None = None
 
     # Video platform migration feature flags
-    DAILY_MIGRATION_ENABLED: bool = False
+    DAILY_MIGRATION_ENABLED: bool = True
     DAILY_MIGRATION_ROOM_IDS: list[str] = []
-    DEFAULT_VIDEO_PLATFORM: str = "whereby"
+    DEFAULT_VIDEO_PLATFORM: str = "daily"
 
     # Zulip integration
     ZULIP_REALM: str | None = None
