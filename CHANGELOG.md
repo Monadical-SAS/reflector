@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.6.0](https://github.com/Monadical-SAS/reflector/compare/v0.5.0...v0.6.0) (2025-08-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* Configuration keys have changed. Update your .env file:
+    - TRANSCRIPT_MODAL_API_KEY → TRANSCRIPT_API_KEY
+    - LLM_MODAL_API_KEY → (removed, use TRANSCRIPT_API_KEY)
+    - Add DIARIZATION_API_KEY and TRANSLATE_API_KEY if using those services
+
+### Features
+
+* implement service-specific Modal API keys with auto processor pattern ([#528](https://github.com/Monadical-SAS/reflector/issues/528)) ([650befb](https://github.com/Monadical-SAS/reflector/commit/650befb291c47a1f49e94a01ab37d8fdfcd2b65d))
+* use llamaindex everywhere ([#525](https://github.com/Monadical-SAS/reflector/issues/525)) ([3141d17](https://github.com/Monadical-SAS/reflector/commit/3141d172bc4d3b3d533370c8e6e351ea762169bf))
+
+
+### Miscellaneous Chores
+
+* **main:** release 0.6.0 ([ecdbf00](https://github.com/Monadical-SAS/reflector/commit/ecdbf003ea2476c3e95fd231adaeb852f2943df0))
+
 ## [0.5.0](https://github.com/Monadical-SAS/reflector/compare/v0.4.0...v0.5.0) (2025-07-31)
 
 
