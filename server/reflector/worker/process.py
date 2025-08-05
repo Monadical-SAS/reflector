@@ -5,6 +5,7 @@ from urllib.parse import unquote
 
 import av
 import boto3
+import httpx
 import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -220,3 +221,98 @@ async def reprocess_failed_recordings():
 
     logger.info(f"Reprocessing complete. Requeued {reprocessed_count} recordings")
     return reprocessed_count
+
+
+@shared_task
+@asynctask
+async def process_recording_from_url(
+    recording_url: str, meeting_id: str, recording_id: str
+):
+    """Process recording from Direct URL (Daily.co webhook)."""
+    logger.info("Processing recording from URL for meeting: %s", meeting_id)
+
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        logger.error("Meeting not found: %s", meeting_id)
+        return
+
+    room = await rooms_controller.get_by_id(meeting.room_id)
+    if not room:
+        logger.error("Room not found for meeting: %s", meeting_id)
+        return
+
+    # Create recording record with URL instead of S3 bucket/key
+    recording = await recordings_controller.get_by_object_key(
+        "daily-recordings", recording_id
+    )
+    if not recording:
+        recording = await recordings_controller.create(
+            Recording(
+                bucket_name="daily-recordings",  # Logical bucket name for Daily.co
+                object_key=recording_id,  # Store Daily.co recording ID
+                recorded_at=datetime.utcnow(),
+                meeting_id=meeting.id,
+            )
+        )
+
+    # Get or create transcript record
+    transcript = await transcripts_controller.get_by_recording_id(recording.id)
+    if transcript:
+        await transcripts_controller.update(transcript, {"topics": []})
+    else:
+        transcript = await transcripts_controller.add(
+            "",
+            source_kind=SourceKind.ROOM,
+            source_language="en",
+            target_language="en",
+            user_id=room.user_id,
+            recording_id=recording.id,
+            share_mode="public",
+            meeting_id=meeting.id,
+            room_id=room.id,
+        )
+
+    # Download file from URL
+    upload_filename = transcript.data_path / "upload.mp4"
+    upload_filename.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        logger.info("Downloading recording from URL: %s", recording_url)
+        async with httpx.AsyncClient(timeout=300.0) as client:  # 5 minute timeout
+            async with client.stream("GET", recording_url) as response:
+                response.raise_for_status()
+
+                with open(upload_filename, "wb") as f:
+                    async for chunk in response.aiter_bytes(8192):
+                        f.write(chunk)
+
+        logger.info("Download completed: %s", upload_filename)
+    except Exception as e:
+        logger.error("Failed to download recording: %s", str(e))
+        await transcripts_controller.update(transcript, {"status": "error"})
+        if upload_filename.exists():
+            upload_filename.unlink()
+        raise
+
+    # Validate audio content (same as S3 version)
+    try:
+        container = av.open(upload_filename.as_posix())
+        try:
+            if not len(container.streams.audio):
+                raise Exception("File has no audio stream")
+            logger.info("Audio validation successful")
+        finally:
+            container.close()
+    except Exception as e:
+        logger.error("Audio validation failed: %s", str(e))
+        await transcripts_controller.update(transcript, {"status": "error"})
+        if upload_filename.exists():
+            upload_filename.unlink()
+        raise
+
+    # Mark as uploaded and trigger processing pipeline
+    await transcripts_controller.update(transcript, {"status": "uploaded"})
+    logger.info("Queuing transcript for processing pipeline: %s", transcript.id)
+
+    # Start the ML pipeline (same as S3 version)
+    task_pipeline_process.delay(transcript_id=transcript.id)
