@@ -14,6 +14,7 @@ It is directly linked to our data model.
 import asyncio
 import functools
 from contextlib import asynccontextmanager
+from typing import TypeVar, Generic
 
 import boto3
 from celery import chord, current_task, group, shared_task
@@ -35,7 +36,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.runner import PipelineRunner
+from reflector.pipelines.runner import PipelineRunner, MSG
 from reflector.processors import (
     AudioChunkerProcessor,
     AudioDiarizationAutoProcessor,
@@ -63,6 +64,8 @@ from reflector.zulip import (
     send_message_to_zulip,
     update_zulip_message,
 )
+
+from reflector.utils.webvtt import topics_to_webvtt
 
 
 def asynctask(f):
@@ -143,8 +146,7 @@ def get_transcript(func):
 class StrValue(BaseModel):
     value: str
 
-
-class PipelineMainBase(PipelineRunner):
+class PipelineMainBase(PipelineRunner[MSG], Generic[MSG]):
     transcript_id: str
     ws_room_id: str | None = None
     ws_manager: WebsocketManager | None = None
@@ -164,7 +166,9 @@ class PipelineMainBase(PipelineRunner):
             raise Exception("Transcript not found")
         return result
 
-    def get_transcript_topics(self, transcript: Transcript) -> list[TranscriptTopic]:
+    @staticmethod
+    def wrap_transcript_topics(topics: list[TranscriptTopic]) -> list[TitleSummaryWithIdProcessorType]:
+        # transformation to a pipe-supported format
         return [
             TitleSummaryWithIdProcessorType(
                 id=topic.id,
@@ -174,7 +178,7 @@ class PipelineMainBase(PipelineRunner):
                 duration=topic.duration,
                 transcript=TranscriptProcessorType(words=topic.words),
             )
-            for topic in transcript.topics
+            for topic in topics
         ]
 
     @asynccontextmanager
@@ -380,7 +384,7 @@ class PipelineMainLive(PipelineMainBase):
         pipeline_post(transcript_id=self.transcript_id)
 
 
-class PipelineMainDiarization(PipelineMainBase):
+class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
     """
     Diarize the audio and update topics
     """
@@ -404,11 +408,10 @@ class PipelineMainDiarization(PipelineMainBase):
             pipeline.logger.info("Audio is local, skipping diarization")
             return
 
-        topics = self.get_transcript_topics(transcript)
         audio_url = await transcript.get_audio_url()
         audio_diarization_input = AudioDiarizationInput(
             audio_url=audio_url,
-            topics=topics,
+            topics=self.wrap_transcript_topics(transcript.topics),
         )
 
         # as tempting to use pipeline.push, prefer to use the runner
@@ -421,7 +424,7 @@ class PipelineMainDiarization(PipelineMainBase):
         return pipeline
 
 
-class PipelineMainFromTopics(PipelineMainBase):
+class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
     """
     Pseudo class for generating a pipeline from topics
     """
@@ -442,9 +445,7 @@ class PipelineMainFromTopics(PipelineMainBase):
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
 
-        # push topics
-        topics = self.get_transcript_topics(transcript)
-        for topic in topics:
+        for topic in self.wrap_transcript_topics(transcript.topics):
             await self.push(topic)
 
         await self.flush()

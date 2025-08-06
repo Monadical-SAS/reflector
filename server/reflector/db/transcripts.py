@@ -5,7 +5,7 @@ import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -18,6 +18,7 @@ from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
+from reflector.utils.webvtt import topics_to_webvtt
 
 
 class SourceKind(enum.StrEnum):
@@ -25,6 +26,8 @@ class SourceKind(enum.StrEnum):
     LIVE = enum.auto()
     FILE = enum.auto()
 
+WEBVTT_COLUMN_NAME = 'webvtt'
+TOPICS_COLUMN_NAME = 'topics'
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -38,7 +41,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),
-    sqlalchemy.Column("topics", sqlalchemy.JSON),
+    sqlalchemy.Column(TOPICS_COLUMN_NAME, sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("participants", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String),
@@ -76,13 +79,13 @@ transcripts = sqlalchemy.Table(
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
     sqlalchemy.Column("room_id", sqlalchemy.String),
+    sqlalchemy.Column(WEBVTT_COLUMN_NAME, sqlalchemy.Text),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
     sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_room_id", "room_id"),
 )
-
 
 def generate_transcript_name() -> str:
     now = datetime.now(timezone.utc)
@@ -145,7 +148,6 @@ class TranscriptParticipant(BaseModel):
     speaker: int | None
     name: str
 
-
 class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
@@ -171,6 +173,7 @@ class Transcript(BaseModel):
     source_kind: SourceKind
     audio_deleted: bool | None = None
     room_id: str | None = None
+    webvtt: str | None = None
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -308,6 +311,8 @@ class Transcript(BaseModel):
             i += 1
         raise Exception("No empty speaker found")
 
+assert WEBVTT_COLUMN_NAME in Transcript.model_fields
+assert TOPICS_COLUMN_NAME in Transcript.model_fields
 
 class TranscriptController:
     async def get_all(
@@ -515,6 +520,12 @@ class TranscriptController:
         if mutate:
             for key, value in values.items():
                 setattr(transcript, key, value)
+
+    async def _handle_topics_update(self, _oldie: Transcript, values: dict):
+        topics = values.get(TOPICS_COLUMN_NAME)
+        if topics is None:
+            return
+        values[WEBVTT_COLUMN_NAME] = topics_to_webvtt(topics)
 
     async def remove_by_id(
         self,

@@ -2,9 +2,10 @@ import io
 import re
 import tempfile
 from pathlib import Path
+from typing import NewType, Annotated
 
 from profanityfilter import ProfanityFilter
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, Field
 
 from reflector.redis_cache import redis_cache
 
@@ -47,18 +48,18 @@ class AudioFile(BaseModel):
         if self._path:
             self._path.unlink()
 
-
+# non-negative seconds with float part
+Seconds = Annotated[float, Field(ge=0.0, description="Time in seconds with float part")]
 class Word(BaseModel):
     text: str
-    start: float
-    end: float
+    start: Seconds
+    end: Seconds
     speaker: int = 0
-
 
 class TranscriptSegment(BaseModel):
     text: str
-    start: float
-    end: float
+    start: Seconds
+    end: Seconds
     speaker: int = 0
 
 
@@ -116,7 +117,9 @@ class Transcript(BaseModel):
         ]
         return Transcript(text=self.text, translation=self.translation, words=words)
 
-    def as_segments(self) -> list[TranscriptSegment]:
+    @staticmethod
+    def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
+        """Static version of segment creation from words."""
         # from a list of word, create a list of segments
         # join the word that are less than 2 seconds apart
         # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
@@ -124,7 +127,7 @@ class Transcript(BaseModel):
         current_segment = None
         MAX_SEGMENT_LENGTH = 120
 
-        for word in self.words:
+        for word in words:
             if current_segment is None:
                 current_segment = TranscriptSegment(
                     text=word.text,
@@ -160,6 +163,9 @@ class Transcript(BaseModel):
             segments.append(current_segment)
 
         return segments
+
+    def as_segments(self) -> list[TranscriptSegment]:
+        return Transcript.words_to_segments(self.words)
 
 
 class TitleSummary(BaseModel):

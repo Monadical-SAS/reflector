@@ -16,14 +16,16 @@ During its lifecycle, it will emit the following status:
 """
 
 import asyncio
+from typing import TypeVar, Generic
 
 from pydantic import BaseModel, ConfigDict
 
 from reflector.logger import logger
 from reflector.processors import Pipeline
 
+MSG = TypeVar('MSG')
 
-class PipelineRunner(BaseModel):
+class PipelineRunner(BaseModel, Generic[MSG]):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     status: str = "idle"
@@ -67,7 +69,7 @@ class PipelineRunner(BaseModel):
         coro = self.run()
         asyncio.run(coro)
 
-    async def push(self, data):
+    async def push(self, data: MSG):
         """
         Push data to the pipeline
         """
@@ -92,7 +94,7 @@ class PipelineRunner(BaseModel):
         pass
 
     async def _add_cmd(
-        self, cmd: str, data, max_retries: int = 3, retry_time_limit: int = 3
+        self, cmd: str, data: MSG, max_retries: int = 3, retry_time_limit: int = 3
     ):
         """
         Enqueue a command to be executed in the runner.
@@ -152,13 +154,13 @@ class PipelineRunner(BaseModel):
             self._ev_done.set()
             raise
 
-    async def cmd_push(self, data):
+    async def cmd_push(self, data: MSG):
         if self._is_first_push:
             await self._set_status("push")
             self._is_first_push = False
         await self.pipeline.push(data)
 
-    async def cmd_flush(self, data):
+    async def cmd_flush(self):
         await self._set_status("flush")
         await self.pipeline.flush()
         await self._set_status("ended")
