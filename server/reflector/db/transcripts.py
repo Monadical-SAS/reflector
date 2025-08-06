@@ -10,7 +10,7 @@ from typing import Any, Literal, cast
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
-from sqlalchemy import Enum
+from sqlalchemy import Enum, event
 from sqlalchemy.sql import false, or_
 
 from reflector.db import database, metadata
@@ -507,10 +507,14 @@ class TranscriptController:
         await database.execute(query)
         return transcript
 
-    async def update(self, transcript: Transcript, values: dict, mutate=True):
+    # TODO investigate why mutate= is used. it's used in one place currently, maybe because of ORM field updates.
+    # using mutate=True is discouraged
+    async def update(self, transcript: Transcript, values: dict, mutate=False):
         """
         Update a transcript fields with key/values in values
         """
+        values = TranscriptController._handle_topics_update(values)
+        
         query = (
             transcripts.update()
             .where(transcripts.c.id == transcript.id)
@@ -521,11 +525,19 @@ class TranscriptController:
             for key, value in values.items():
                 setattr(transcript, key, value)
 
-    async def _handle_topics_update(self, _oldie: Transcript, values: dict):
-        topics = values.get(TOPICS_COLUMN_NAME)
-        if topics is None:
-            return
-        values[WEBVTT_COLUMN_NAME] = topics_to_webvtt(topics)
+    @staticmethod
+    def _handle_topics_update(values: dict) -> dict:
+        """Auto-update WebVTT when topics are updated."""
+
+        if values.get(WEBVTT_COLUMN_NAME) is not None:
+            # TODO log warn - user tries to update read-only column
+            pass
+
+        topics_data = values.get(TOPICS_COLUMN_NAME)
+        if topics_data is None:
+            return values
+
+        return {**values, WEBVTT_COLUMN_NAME: topics_to_webvtt([TranscriptTopic(**topic_dict) for topic_dict in topics_data])}
 
     async def remove_by_id(
         self,
@@ -571,8 +583,7 @@ class TranscriptController:
         resp = transcript.add_event(event=event, data=data)
         await self.update(
             transcript,
-            {"events": transcript.events_dump()},
-            mutate=False,
+            {"events": transcript.events_dump()}
         )
         return resp
 
@@ -587,8 +598,7 @@ class TranscriptController:
         transcript.upsert_topic(topic)
         await self.update(
             transcript,
-            {"topics": transcript.topics_dump()},
-            mutate=False,
+            {"topics": transcript.topics_dump()}
         )
 
     async def move_mp3_to_storage(self, transcript: Transcript):
@@ -614,7 +624,8 @@ class TranscriptController:
             )
 
             # indicate on the transcript that the audio is now on storage
-            await self.update(transcript, {"audio_location": "storage"})
+            # mutates transcript argument
+            await self.update(transcript, {"audio_location": "storage"}, mutate=True)
 
         # unlink the local file
         transcript.audio_mp3_filename.unlink(missing_ok=True)
@@ -640,8 +651,7 @@ class TranscriptController:
         result = transcript.upsert_participant(participant)
         await self.update(
             transcript,
-            {"participants": transcript.participants_dump()},
-            mutate=False,
+            {"participants": transcript.participants_dump()}
         )
         return result
 
@@ -656,8 +666,7 @@ class TranscriptController:
         transcript.delete_participant(participant_id)
         await self.update(
             transcript,
-            {"participants": transcript.participants_dump()},
-            mutate=False,
+            {"participants": transcript.participants_dump()}
         )
 
 
