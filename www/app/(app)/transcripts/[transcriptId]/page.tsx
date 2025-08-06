@@ -32,7 +32,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const topics = useTopics(transcriptId);
   const waveform = useWaveform(
     transcriptId,
-    waiting || mp3.loading || mp3.audioDeleted === true,
+    waiting || mp3.audioDeleted === true,
   );
   const useActiveTopic = useState<Topic | null>(null);
 
