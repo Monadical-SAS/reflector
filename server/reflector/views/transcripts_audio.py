@@ -69,24 +69,6 @@ async def transcript_get_audio_mp3(
                 headers=resp.headers,
             )
 
-    if transcript.audio_location == "storage":
-        # proxy S3 file, to prevent issue with CORS
-        url = await transcript.get_audio_url()
-        headers = {}
-
-        copy_headers = ["range", "accept-encoding"]
-        for header in copy_headers:
-            if header in request.headers:
-                headers[header] = request.headers[header]
-
-        async with httpx.AsyncClient() as client:
-            resp = await client.request(request.method, url, headers=headers)
-            return Response(
-                content=resp.content,
-                status_code=resp.status_code,
-                headers=resp.headers,
-            )
-
     if transcript.audio_deleted:
         raise HTTPException(
             status_code=404, detail="Audio unavailable due to privacy settings"
