@@ -209,7 +209,6 @@ export const $GetTranscript = {
     },
     created_at: {
       type: "string",
-      format: "date-time",
       title: "Created At",
     },
     share_mode: {
@@ -395,7 +394,6 @@ export const $GetTranscriptMinimal = {
     },
     created_at: {
       type: "string",
-      format: "date-time",
       title: "Created At",
     },
     share_mode: {
@@ -758,8 +756,15 @@ export const $Page_GetTranscriptMinimal_ = {
       title: "Items",
     },
     total: {
-      type: "integer",
-      minimum: 0,
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Total",
     },
     page: {
@@ -800,7 +805,7 @@ export const $Page_GetTranscriptMinimal_ = {
     },
   },
   type: "object",
-  required: ["items", "total", "page", "size"],
+  required: ["items", "page", "size"],
   title: "Page[GetTranscriptMinimal]",
 } as const;
 
@@ -814,8 +819,15 @@ export const $Page_Room_ = {
       title: "Items",
     },
     total: {
-      type: "integer",
-      minimum: 0,
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Total",
     },
     page: {
@@ -856,7 +868,7 @@ export const $Page_Room_ = {
     },
   },
   type: "object",
-  required: ["items", "total", "page", "size"],
+  required: ["items", "page", "size"],
   title: "Page[Room]",
 } as const;
 
@@ -971,6 +983,138 @@ export const $RtcOffer = {
   type: "object",
   required: ["sdp", "type"],
   title: "RtcOffer",
+} as const;
+
+export const $SearchResponse = {
+  properties: {
+    results: {
+      items: {
+        $ref: "#/components/schemas/SearchResult",
+      },
+      type: "array",
+      title: "Results",
+    },
+    total: {
+      type: "integer",
+      minimum: 0,
+      title: "Total",
+      description: "Total number of search results",
+    },
+    query: {
+      type: "string",
+      minLength: 3,
+      title: "Query",
+      description: "Search query text",
+    },
+    limit: {
+      type: "integer",
+      maximum: 100,
+      minimum: 1,
+      title: "Limit",
+      description: "Results per page",
+    },
+    offset: {
+      type: "integer",
+      minimum: 0,
+      title: "Offset",
+      description: "Number of results to skip",
+    },
+  },
+  type: "object",
+  required: ["results", "total", "query", "limit", "offset"],
+  title: "SearchResponse",
+} as const;
+
+export const $SearchResult = {
+  properties: {
+    id: {
+      type: "string",
+      minLength: 1,
+      title: "Id",
+    },
+    user_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "User Id",
+    },
+    status: {
+      type: "string",
+      minLength: 1,
+      title: "Status",
+    },
+    duration: {
+      anyOf: [
+        {
+          type: "number",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Duration",
+    },
+    created_at: {
+      type: "string",
+      title: "Created At",
+    },
+    title: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Title",
+    },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
+    room_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Id",
+    },
+    rank: {
+      type: "number",
+      maximum: 1,
+      minimum: 0,
+      title: "Rank",
+    },
+    search_snippets: {
+      items: {
+        type: "string",
+      },
+      type: "array",
+      title: "Search Snippets",
+      description: "Text snippets around search matches",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "status",
+    "created_at",
+    "source_kind",
+    "rank",
+    "search_snippets",
+  ],
+  title: "SearchResult",
+  description: "Extended search result with computed snippets field.",
 } as const;
 
 export const $SourceKind = {
@@ -1397,6 +1541,7 @@ export const $WherebyWebhookEvent = {
       title: "Type",
     },
     data: {
+      additionalProperties: true,
       type: "object",
       title: "Data",
     },
@@ -1414,11 +1559,15 @@ export const $Word = {
     },
     start: {
       type: "number",
+      minimum: 0,
       title: "Start",
+      description: "Time in seconds with float part",
     },
     end: {
       type: "number",
+      minimum: 0,
       title: "End",
+      description: "Time in seconds with float part",
     },
     speaker: {
       type: "integer",

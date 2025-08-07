@@ -6,7 +6,7 @@ import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Annotated
+from typing import Any, Literal, Annotated, Dict
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -30,8 +30,14 @@ MAX_SEARCH_LIMIT = 100
 DEFAULT_SEARCH_LIMIT = 20
 MIN_SEARCH_OFFSET = 0
 
+# Snippet generation constants
+MAX_WEBVTT_SIZE = 1024 * 1024  # 1MB limit for WebVTT content processing
+SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
+DEFAULT_SNIPPET_MAX_LENGTH = 150  # Maximum length of each snippet
+DEFAULT_MAX_SNIPPETS = 3  # Maximum number of snippets per result
+
 # Base constrained types - shared validation logic
-SearchQueryBase = constr(min_length=MIN_QUERY_LENGTH)
+SearchQueryBase = constr(min_length=MIN_QUERY_LENGTH, strip_whitespace=True)
 SearchLimitBase = conint(ge=MIN_SEARCH_LIMIT, le=MAX_SEARCH_LIMIT)
 SearchOffsetBase = conint(ge=MIN_SEARCH_OFFSET)
 SearchTotalBase = conint(ge=0)
@@ -230,20 +236,35 @@ class TranscriptBase(BaseModel):
         return v
 
 
-class SearchResult(TranscriptBase):
-    """Search result model inheriting common fields from TranscriptBase."""
+class SearchResultDB(TranscriptBase):
+    """Database search result model - only DB fields, no computed fields."""
     # Override fields without defaults for search results (required from DB)
     id: str = Field(..., min_length=1)  # Required, no default
     created_at: datetime  # Required, no default  
     status: str = Field(..., min_length=1)  # Required, no default
-    duration: float | None = Field(None, ge=0)  # Optional but validated
+    duration: float | None = Field(None, ge=0)  # Nullable in DB schema
     
-    # Search-specific field
+    # Search-specific field from database
     rank: float = Field(..., ge=0, le=1)
+    # Note: webvtt is fetched but not included in the model (we pop it during processing)
     
     model_config = ConfigDict(
         from_attributes=True  # Allows creating from ORM objects/dict rows
     )
+
+
+class SearchResult(SearchResultDB):
+    """Extended search result with computed snippets field."""
+    # Override duration to be non-nullable - search results always have duration
+    duration: float = Field(..., ge=0, description="Duration in seconds")
+    search_snippets: list[str] = Field(description="Text snippets around search matches")
+    
+    def __init__(self, **data):
+        # Duration must be present in search results - indicates data integrity issue if NULL
+        assert data.get('duration') is not None, "Search result has NULL duration - data integrity issue"
+        if 'search_snippets' not in data:
+            data['search_snippets'] = []
+        super().__init__(**data)
 
 
 class Transcript(TranscriptBase):
@@ -756,6 +777,94 @@ class TranscriptController:
         )
 
     @staticmethod
+    def _extract_webvtt_text(webvtt_content: str) -> str:
+        """Extract plain text from WebVTT content, removing timestamps and speaker tags."""
+        if not webvtt_content:
+            return ""
+        
+        import webvtt
+        from io import StringIO
+        
+        try:
+            buffer = StringIO(webvtt_content)
+            vtt = webvtt.read_buffer(buffer)
+            # Join all caption texts with spaces
+            return " ".join(caption.text for caption in vtt if caption.text)
+        except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
+            logger.warning(f"Failed to parse WebVTT content: {e}")
+            return ""
+        except AttributeError as e:
+            # Handle case where webvtt object doesn't have expected attributes
+            logger.warning(f"WebVTT parsing error - unexpected format: {e}")
+            return ""
+    
+    @staticmethod
+    def _generate_snippets(
+        text: str, 
+        q: SearchQuery,
+        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH, 
+        max_snippets: int = DEFAULT_MAX_SNIPPETS
+    ) -> list[str]:
+        """Generate multiple snippets around all occurrences of search term.
+            METHOD IS SUBJECT TO CHANGE. Implementation is likely to change in the future.
+        """
+        if not text or not q:
+            return []
+        
+        snippets = []
+        # Case-insensitive search
+        lower_text = text.lower()
+        search_lower = q.lower()
+        
+        # Track the end of the last snippet to avoid overlap
+        last_snippet_end = 0
+        start_pos = 0
+        
+        while len(snippets) < max_snippets:
+            match_pos = lower_text.find(search_lower, start_pos)
+            
+            if match_pos == -1:
+                # If no more exact matches, try first word of search term
+                if not snippets and search_lower.split():
+                    first_word = search_lower.split()[0]
+                    match_pos = lower_text.find(first_word, start_pos)
+                    if match_pos == -1:
+                        break
+                else:
+                    break
+            
+            # Calculate snippet window around match
+            snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
+            snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
+            
+            # Skip if this snippet would overlap with the previous one
+            if snippet_start < last_snippet_end:
+                # Move past this match and continue searching
+                start_pos = match_pos + len(search_lower)
+                continue
+            
+            snippet = text[snippet_start:snippet_end]
+            
+            # Add ellipsis if truncated
+            if snippet_start > 0:
+                snippet = "..." + snippet
+            if snippet_end < len(text):
+                snippet = snippet + "..."
+            
+            snippet = snippet.strip()
+            
+            if snippet:
+                snippets.append(snippet)
+                last_snippet_end = snippet_end
+            
+            # Move past this match for next search
+            start_pos = match_pos + len(search_lower)
+            if start_pos >= len(text):
+                break
+        
+        return snippets
+    
+    @staticmethod
     async def search_full_text(
         params: SearchParameters,
     ) -> tuple[list[SearchResult], int]:
@@ -789,6 +898,7 @@ class TranscriptController:
                 transcripts.c.user_id,
                 transcripts.c.room_id,
                 transcripts.c.source_kind,
+                transcripts.c.webvtt,  # Include webvtt in initial query to avoid N+1 for snippets
                 sqlalchemy.func.ts_rank(
                     transcripts.c.search_vector_en,
                     search_query,
@@ -811,10 +921,22 @@ class TranscriptController:
         )
         total = await database.fetch_val(count_query)
         
-        results = [
-            SearchResult.model_validate(dict(r))
-            for r in rs
-        ]
+        # Process results: validate DB fields, then add computed snippets
+        def _process_result(r) -> SearchResult:
+            r_dict: Dict[str, Any] = dict(r)
+            webvtt: str | None = r_dict.pop('webvtt', None)  # Remove webvtt field, not part of model
+            db_result = SearchResultDB.model_validate(r_dict)
+            
+            # Generate snippets only if webvtt exists
+            # (webvtt is NULL when match was on title only, not transcript content)
+            snippets = []
+            if webvtt:
+                plain_text = TranscriptController._extract_webvtt_text(webvtt)
+                snippets = TranscriptController._generate_snippets(plain_text, params.query_text)
+            
+            return SearchResult(**db_result.model_dump(), search_snippets=snippets)
+        
+        results = [_process_result(r) for r in rs]
         
         return results, total
 

@@ -141,7 +141,7 @@ export type MeetingConsentRequest = {
 
 export type Page_GetTranscriptMinimal_ = {
   items: Array<GetTranscriptMinimal>;
-  total: number;
+  total?: number | null;
   page: number | null;
   size: number | null;
   pages?: number | null;
@@ -149,7 +149,7 @@ export type Page_GetTranscriptMinimal_ = {
 
 export type Page_Room_ = {
   items: Array<Room>;
-  total: number;
+  total?: number | null;
   page: number | null;
   size: number | null;
   pages?: number | null;
@@ -179,6 +179,45 @@ export type Room = {
 export type RtcOffer = {
   sdp: string;
   type: string;
+};
+
+export type SearchResponse = {
+  results: Array<SearchResult>;
+  /**
+   * Total number of search results
+   */
+  total: number;
+  /**
+   * Search query text
+   */
+  query: string;
+  /**
+   * Results per page
+   */
+  limit: number;
+  /**
+   * Number of results to skip
+   */
+  offset: number;
+};
+
+/**
+ * Extended search result with computed snippets field.
+ */
+export type SearchResult = {
+  id: string;
+  user_id?: string | null;
+  status: string;
+  duration: number | null;
+  created_at: string;
+  title?: string | null;
+  source_kind: SourceKind;
+  room_id?: string | null;
+  rank: number;
+  /**
+   * Text snippets around search matches
+   */
+  search_snippets: Array<string>;
 };
 
 export type SourceKind = "room" | "live" | "file";
@@ -272,7 +311,13 @@ export type WherebyWebhookEvent = {
 
 export type Word = {
   text: string;
+  /**
+   * Time in seconds with float part
+   */
   start: number;
+  /**
+   * Time in seconds with float part
+   */
   end: number;
   speaker?: number;
 };
@@ -345,6 +390,24 @@ export type V1TranscriptsCreateData = {
 };
 
 export type V1TranscriptsCreateResponse = GetTranscript;
+
+export type V1TranscriptsSearchData = {
+  /**
+   * Results per page
+   */
+  limit?: number;
+  /**
+   * Number of results to skip
+   */
+  offset?: number;
+  /**
+   * Search query text
+   */
+  q: string;
+  roomId?: string | null;
+};
+
+export type V1TranscriptsSearchResponse = SearchResponse;
 
 export type V1TranscriptGetData = {
   transcriptId: string;
@@ -626,6 +689,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: GetTranscript;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/transcripts/search": {
+    get: {
+      req: V1TranscriptsSearchData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: SearchResponse;
         /**
          * Validation Error
          */
