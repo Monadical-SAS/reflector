@@ -217,23 +217,9 @@ class TranscriptBase(BaseModel):
     
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
-    
-    @field_validator('created_at')
-    @classmethod
-    def ensure_timezone(cls, v: datetime) -> datetime:
-        """Ensure datetime is timezone-aware."""
-        if v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
-        return v
-    
-    @field_validator('source_kind', mode='before')
-    @classmethod
-    def parse_source_kind(cls, v) -> SourceKind:
-        """Parse source_kind from string if needed."""
-        if isinstance(v, str):
-            return SourceKind(v)
-        return v
 
 
 class SearchResultDB(TranscriptBase):
