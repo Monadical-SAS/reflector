@@ -1,225 +1,207 @@
-# Full-Text Search Implementation Task
+# TASK: Add Search API Endpoint
 
-## Overview
-Implement PostgreSQL full-text search for the transcripts table using `title` and `vtt` fields with automatic index maintenance via generated columns.
+## Objective
+Expose the existing `search_full_text` method from `TranscriptController` as a REST API endpoint. The search functionality is already implemented at the database layer - we need to create a proper API layer on top of it.
 
-## Database Changes
+## Current State Analysis
 
-### 1. Add Search Vector Column
-```sql
-ALTER TABLE transcript ADD COLUMN search_vector_en tsvector 
-GENERATED ALWAYS AS (
-    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')
-) STORED;
+### Existing Components
+1. **Database Layer** (`server/reflector/db/transcripts.py`):
+   - `TranscriptController.search_full_text()` method fully implemented
+   - Returns `tuple[list[SearchResult], int]` (results + total count)
+   - PostgreSQL-only with SQLite graceful degradation
+   - Branded types already defined:
+     - `SearchQuery`: Annotated[str, Field(min_length=3)]
+     - `SearchLimit`: Annotated[int, Field(ge=1, le=100)]
+     - `SearchOffset`: Annotated[int, Field(ge=0)]
+   - `SearchResult` model extends `TranscriptBase` with `rank` field
 
-CREATE INDEX idx_transcript_search_vector_en ON transcript USING GIN(search_vector_en);
+2. **Search Infrastructure**:
+   - Full-text search vector (`search_vector_en`) already in database
+   - GIN index configured for performance
+   - WebVTT column populated automatically from topics
+   - Search uses `websearch_to_tsquery` for advanced syntax support
+
+3. **Existing API Pattern** (`server/reflector/views/transcripts.py`):
+   - Current list endpoint: `GET /v1/transcripts?search_term=...` (uses ILIKE)
+   - Authentication via `auth.current_user_optional`
+   - Pagination via `fastapi_pagination`
+
+## Implementation Requirements
+
+### 1. Create New Search Endpoint
+
+**Endpoint**: `GET /v1/transcripts/search`
+
+**Request Parameters**:
+```python
+q: SearchQuery          # Query text (min 3 chars), uses branded type
+limit: SearchLimit = 20  # Results per page (1-100), uses branded type  
+offset: SearchOffset = 0 # Pagination offset (>=0), uses branded type
+room_id: Optional[str] = None  # Filter by room
 ```
 
-### 2. Migration File
-Create `migrations/versions/xxx_add_full_text_search.py`:
+**Response Model**:
 ```python
-def upgrade():
-    conn = op.get_bind()
-    if conn.dialect.name != 'postgresql':
-        return  # Skip for SQLite
-    
-    op.execute("""
-        ALTER TABLE transcript ADD COLUMN search_vector_en tsvector 
-        GENERATED ALWAYS AS (
-            setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-            setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')
-        ) STORED
-    """)
-    
-    op.create_index(
-        'idx_transcript_search_vector_en',
-        'transcript',
-        ['search_vector_en'],
-        postgresql_using='gin'
-    )
+# Define branded type for total count
+SearchTotal = Annotated[int, Field(ge=0, description="Total number of search results")]
 
-def downgrade():
-    conn = op.get_bind()
-    if conn.dialect.name != 'postgresql':
-        return
-    
-    op.drop_index('idx_transcript_search_vector_en')
-    op.drop_column('transcript', 'search_vector_en')
+class SearchResponse(BaseModel):
+    results: list[SearchResult]  # Uses existing SearchResult model
+    total: SearchTotal           # Total count (branded type)
+    query: SearchQuery            # Echo back the query (branded type)
+    limit: SearchLimit           # Echo back limit (branded type)
+    offset: SearchOffset          # Echo back offset (branded type)
 ```
 
-## Code Implementation
+### 2. Authentication & Authorization
+- Use existing `auth.current_user_optional` dependency
+- Pass `user_id` from auth context to `search_full_text()`
+- Respect PUBLIC_MODE setting (401 if not authenticated and not public)
 
-### 1. Database Detection Utility
-Add to `reflector/db/utils.py`:
+### 3. Error Handling (Automatic via FastAPI + Pydantic)
+- **HTTP 422 Unprocessable Entity**: Automatically returned for validation failures
+  - Query < 3 chars: `{"detail": [{"type": "string_too_short", "loc": ["query", "q"], "msg": "String should have at least 3 characters"}]}`
+  - Invalid limit/offset: Similar structured error with constraint details
+- **HTTP 200**: Empty results for SQLite (controller handles logging)
+- **HTTP 401/403**: Standard auth errors
+
+### 4. Implementation Details
+
+**File**: `server/reflector/views/transcripts.py`
+
+Add to existing router:
+
 ```python
-from reflector.settings import settings
+from fastapi import Query
+from reflector.db.transcripts import (
+    SearchResult,
+    # ... existing imports
+)
 
-def is_postgresql() -> bool:
-    """Check if using PostgreSQL database."""
-    return "postgresql" in settings.DATABASE_URL.lower()
-```
+# Define branded types for API layer (FastAPI Query validates automatically)
+SearchQuery = Annotated[str, Query(min_length=3, description="Search query text")]
+SearchLimit = Annotated[int, Query(ge=1, le=100, description="Results per page")]
+SearchOffset = Annotated[int, Query(ge=0, description="Number of results to skip")]
+SearchTotal = Annotated[int, Field(ge=0, description="Total number of search results")]
 
-### 2. Search Methods
-Add to `reflector/db/transcripts.py` in `TranscriptController`:
-```python
-async def search_full_text(
-    self,
-    query_text: str,
-    user_id: str | None = None,
-    limit: int = 20,
-    offset: int = 0,
-    source_kind: SourceKind | None = None,
-    room_id: str | None = None,
-) -> tuple[list[dict], int]:
+class SearchResponse(BaseModel):
+    results: list[SearchResult]
+    total: SearchTotal
+    query: str  # Plain string in response
+    limit: int  # Plain int in response
+    offset: int  # Plain int in response
+
+@router.get("/transcripts/search", response_model=SearchResponse)
+async def transcripts_search(
+    q: SearchQuery,  # Branded type with automatic validation
+    limit: SearchLimit = 20,  # Branded type with automatic validation
+    offset: SearchOffset = 0,  # Branded type with automatic validation
+    room_id: Optional[str] = None,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
     """
-    Full-text search using PostgreSQL tsvector.
-    Returns (results, total_count).
+    Full-text search across transcript titles and content.
+    
+    Supports advanced query syntax:
+    - OR operator: "meeting OR workshop"
+    - Exclusion: "meeting -budget"  
+    - Phrases: '"quarterly review"'
+    
+    Note: Requires PostgreSQL. Returns empty results on SQLite.
     """
-    from reflector.db.utils import is_postgresql
+    if not user and not settings.PUBLIC_MODE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
-    if not is_postgresql():
-        logger.warning(
-            "Full-text search requires PostgreSQL. Returning empty results."
-        )
-        return [], 0
+    user_id = user["sub"] if user else None
     
-    # Use websearch_to_tsquery for flexible user input
-    search_query = sa.func.websearch_to_tsquery('english', query_text)
-    
-    # Build search query with ranking
-    base_query = (
-        sa.select([
-            transcripts.c.id,
-            transcripts.c.title,
-            transcripts.c.created_at,
-            transcripts.c.duration,
-            transcripts.c.status,
-            transcripts.c.user_id,
-            transcripts.c.room_id,
-            transcripts.c.source_kind,
-            sa.func.ts_rank(
-                transcripts.c.search_vector_en,
-                search_query,
-                32  # normalization: rank/(rank+1) for 0-1 range
-            ).label('rank')
-        ])
-        .where(transcripts.c.search_vector_en.op('@@')(search_query))
-    )
-    
-    # Apply filters
-    if user_id:
-        base_query = base_query.where(transcripts.c.user_id == user_id)
-    if source_kind:
-        base_query = base_query.where(transcripts.c.source_kind == source_kind)
-    if room_id:
-        base_query = base_query.where(transcripts.c.room_id == room_id)
-    
-    # Get paginated results
-    query = base_query.order_by(sa.desc('rank')).limit(limit).offset(offset)
-    results = await database.fetch_all(query)
-    
-    # Get total count
-    count_query = sa.select([sa.func.count()]).select_from(
-        base_query.alias('search_results')
-    )
-    total = await database.fetch_val(count_query)
-    
-    return [dict(r) for r in results], total
-```
-
-
-## Testing
-
-**IMPORTANT NOTE**: Tests currently use SQLite (in-memory) for speed and isolation. PostgreSQL-specific features like full-text search cannot be tested in the current test suite. The tests below skip PostgreSQL-only features when running on SQLite.
-
-Create `tests/test_search.py`:
-```python
-import pytest
-from reflector.db.utils import is_postgresql
-
-@pytest.mark.skipif(not is_postgresql(), reason="PostgreSQL only")
-class TestFullTextSearch:
-    async def test_basic_search(self, db_session, transcript_factory):
-        # Create test data
-        t1 = await transcript_factory(
-            title="Machine Learning Workshop",
-            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n<v Speaker0>Welcome to our machine learning workshop"
-        )
-        t2 = await transcript_factory(
-            title="Quarterly Review",
-            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n<v Speaker0>Let's review the quarterly results"
-        )
-        
-        # Search for "machine learning"
-        results, total = await transcripts_controller.search_full_text(
-            "machine learning"
-        )
-        
-        assert total == 1
-        assert results[0]['id'] == t1.id
-        assert results[0]['rank'] > 0
-    
-    async def test_websearch_syntax(self, db_session, transcript_factory):
-        t1 = await transcript_factory(title="Python Programming")
-        t2 = await transcript_factory(title="Python and JavaScript")
-        
-        # Test OR syntax
-        results, total = await transcripts_controller.search_full_text(
-            "Python OR JavaScript"
-        )
-        assert total == 2
-        
-        # Test exclusion
-        results, total = await transcripts_controller.search_full_text(
-            "Python -JavaScript"
-        )
-        assert total == 1
-        assert results[0]['id'] == t1.id
-    
-    async def test_ranking(self, db_session, transcript_factory):
-        # Title match should rank higher
-        t1 = await transcript_factory(
-            title="Machine Learning",
-            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n<v Speaker0>Some other content"
-        )
-        t2 = await transcript_factory(
-            title="Other Topic",
-            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:05.000\n<v Speaker0>Discussing machine learning"
-        )
-        
-        results, _ = await transcripts_controller.search_full_text(
-            "machine learning"
-        )
-        
-        # Title match (weight A) should rank higher than content (weight B)
-        assert results[0]['id'] == t1.id
-        assert results[0]['rank'] > results[1]['rank']
-
-@pytest.mark.skipif(is_postgresql(), reason="SQLite fallback test")
-async def test_sqlite_fallback(db_session):
+    # NO VALIDATION HERE - FastAPI already guaranteed:
+    # - q has min_length=3
+    # - limit is 1-100
+    # - offset is >= 0
+    # Just pass the parsed values directly
     results, total = await transcripts_controller.search_full_text(
-        "any query"
+        query_text=q,  # Already validated by FastAPI
+        user_id=user_id,
+        limit=limit,    # Already validated by FastAPI
+        offset=offset,  # Already validated by FastAPI
+        room_id=room_id
     )
-    assert results == []
-    assert total == 0
+    
+    return SearchResponse(
+        results=results,
+        total=total,
+        query=q,
+        limit=limit,
+        offset=offset
+    )
 ```
 
+## Testing Checklist
 
-## Implementation Checklist
+### Manual Testing
+1. ✅ Query validation (< 3 chars returns 400)
+2. ✅ Basic search returns results
+3. ✅ Pagination works (offset/limit)
+4. ✅ Room filtering works
+5. ✅ User filtering (authenticated vs anonymous)
+6. ✅ Advanced syntax (OR, -, quotes)
+7. ✅ SQLite returns empty results with log
+8. ✅ PostgreSQL returns ranked results
 
-- [ ] Create database migration
-- [ ] Add `is_postgresql()` utility
-- [ ] Implement `search_full_text()` method
-- [ ] Write comprehensive tests
-- [ ] Document SQLite limitations
+### Automated Tests
+- Existing tests in `server/tests/test_search.py` cover controller
+- Add API-level tests for endpoint validation
 
-## Notes
+## Implementation Notes
 
-- WebVTT format includes timestamps and speaker tags that will be indexed. This is acceptable noise for the benefit of automatic maintenance.
-- The generated column approach ensures consistency and requires no application-level maintenance.
-- Weight A (title) > Weight B (content) ensures title matches rank higher.
-- Using `websearch_to_tsquery` allows users to use intuitive search syntax (quotes, OR, -).
-- No ts_headline implementation initially - can be added later if needed.
-- **Development uses PostgreSQL via Docker Compose** (configured in `.env` with `DATABASE_URL=postgresql://reflector:reflector@postgres:5432/reflector`)
-- **Tests still use SQLite** - PostgreSQL-specific features must be tested manually or skipped in automated tests
+### CRITICAL: Parse Don't Validate with FastAPI
+
+**Reference**: See `server/docs/API_TYPES.md` for detailed explanation of Parse Don't Validate principle and branded types.
+
+The implementation follows the "Parse Don't Validate" principle:
+
+1. **Query Parameters as Parsers**: Using `Annotated[type, Query(...)]` creates parsers, not just validators
+2. **Automatic Validation**: FastAPI validates BEFORE the function is called - returns HTTP 422 on failure
+3. **Type Transformation**: Raw query strings are parsed into typed, validated objects
+4. **Knowledge Preservation**: Once parsed, the types carry proof of validity
+
+### Branded Types for API Layer
+
+We define API-specific branded types using `Query()` for automatic validation:
+- `SearchQuery = Annotated[str, Query(min_length=3)]` - Parses and validates query length
+- `SearchLimit = Annotated[int, Query(ge=1, le=100)]` - Parses and validates bounds
+- `SearchOffset = Annotated[int, Query(ge=0)]` - Parses and validates non-negative
+
+These are **different** from the database layer types but serve the same purpose at the API boundary.
+
+### ⚠️ IMPORTANT: No Re-validation
+
+**DO NOT re-check constraints inside the function**. Once FastAPI has parsed the parameters:
+- `q` is GUARANTEED to be at least 3 characters
+- `limit` is GUARANTEED to be between 1-100
+- `offset` is GUARANTEED to be >= 0
+
+Any re-checking like `if len(q) < 3` is redundant and violates Parse Don't Validate. The controller's assertions are for internal API contracts, not for re-validating already-parsed data.
+
+### Why Not Modify Existing Endpoint?
+The existing `/v1/transcripts?search_term=...` uses ILIKE for simple title search. We're adding a new endpoint because:
+1. Full-text search has different semantics (ranking, advanced syntax)
+2. Returns different response structure (includes total count)
+3. Backwards compatibility - existing clients continue working
+4. Clear separation of simple vs advanced search
+
+### Future Considerations (NOT IN SCOPE)
+- Search snippets/highlights (PRD mentions but not implemented in controller)
+- Search filters by date/duration
+- Search suggestions/autocomplete
+- Faceted search results
+
+## Success Criteria
+1. ✅ New endpoint accessible at `/v1/transcripts/search`
+2. ✅ All branded types used correctly (no raw types)
+3. ✅ Authentication properly enforced
+4. ✅ PostgreSQL returns ranked results
+5. ✅ SQLite gracefully returns empty results
+6. ✅ OpenAPI documentation generated correctly
+7. ✅ Response includes pagination metadata

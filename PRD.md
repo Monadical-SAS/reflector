@@ -74,7 +74,7 @@ if search_term and database.url.dialect != "postgresql":
 No changes - keep existing endpoint:
 ```
 GET /v1/transcripts?search_term=machine+learning&page=1 - KEEP FOR NOW search_term - ILIKE is fine
-GET /v1/transcripts/search?q=machine+learning&page=1 - BUT KEEP FILTERS like in /transcripts
+GET /v1/transcripts/search?q=machine+learning&offset=0&limit=100 - keep reasonable filters that are already implemented in the search controller method
 
 ```
 
