@@ -8,29 +8,29 @@ from datetime import datetime
 @pytest.mark.asyncio 
 async def test_search_postgresql_only():
     from reflector.db import database
-    from reflector.db.transcripts import transcripts_controller
+    from reflector.db.transcripts import TranscriptController, SearchParameters
+    from pydantic import ValidationError
     
     await database.connect()
     
     try:
-        results, total = await transcripts_controller.search_full_text(
-            "any query here"
-        )
+        params = SearchParameters(query_text="any query here")
+        results, total = await TranscriptController.search_full_text(params)
         assert results == []
         assert total == 0
 
         # Test that empty query raises validation error
         try:
-            await transcripts_controller.search_full_text("")
+            SearchParameters(query_text="")
             assert False, "Should have raised validation error"
-        except Exception:
+        except ValidationError:
             pass  # Expected
 
         # Test that whitespace query raises validation error
         try:
-            await transcripts_controller.search_full_text("   ")
+            SearchParameters(query_text="   ")
             assert False, "Should have raised validation error"
-        except Exception:
+        except ValidationError:
             pass  # Expected
 
     finally:
@@ -40,22 +40,22 @@ async def test_search_postgresql_only():
 @pytest.mark.asyncio
 async def test_search_input_validation():
     from reflector.db import database
-    from reflector.db.transcripts import transcripts_controller
+    from reflector.db.transcripts import SearchParameters
+    from pydantic import ValidationError
     
     await database.connect()
     
     try:
         # Test that empty query raises validation error
-        from pydantic import ValidationError
         try:
-            await transcripts_controller.search_full_text("")
+            SearchParameters(query_text="")
             assert False, "Should have raised ValidationError"
         except ValidationError:
             pass  # Expected
         
         # Test that whitespace query raises validation error
         try:
-            await transcripts_controller.search_full_text("   \t\n  ")
+            SearchParameters(query_text="   \t\n  ")
             assert False, "Should have raised ValidationError"
         except ValidationError:
             pass  # Expected
@@ -70,7 +70,7 @@ async def test_postgresql_search_with_data():
     Run with: DATABASE_URL=postgresql://reflector:reflector@localhost:5432/reflector_test uv run pytest tests/test_search.py::test_postgresql_search_with_data -v -p no:env
     """
     from reflector.db import database
-    from reflector.db.transcripts import transcripts_controller, transcripts
+    from reflector.db.transcripts import TranscriptController, SearchParameters, transcripts
     from reflector.db.utils import is_postgresql
     
     # Skip if not PostgreSQL
@@ -129,19 +129,22 @@ We need to implement PostgreSQL tsvector for better performance."""
         )
         
         # Test 1: Search for a word in title
-        results, total = await transcripts_controller.search_full_text("planning")
+        params = SearchParameters(query_text="planning")
+        results, total = await TranscriptController.search_full_text(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by title word"
         
         # Test 2: Search for a word in webvtt content
-        results, total = await transcripts_controller.search_full_text("tsvector")
+        params = SearchParameters(query_text="tsvector")
+        results, total = await TranscriptController.search_full_text(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by webvtt content"
         
         # Test 3: Search with multiple words
-        results, total = await transcripts_controller.search_full_text("engineering planning")
+        params = SearchParameters(query_text="engineering planning")
+        results, total = await TranscriptController.search_full_text(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by multiple words"
@@ -156,13 +159,15 @@ We need to implement PostgreSQL tsvector for better performance."""
             assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
         
         # Test 5: Search with OR operator
-        results, total = await transcripts_controller.search_full_text("tsvector OR nosuchword")
+        params = SearchParameters(query_text="tsvector OR nosuchword")
+        results, total = await TranscriptController.search_full_text(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript with OR query"
         
         # Test 6: Quoted phrase search
-        results, total = await transcripts_controller.search_full_text('"full-text search"')
+        params = SearchParameters(query_text='"full-text search"')
+        results, total = await TranscriptController.search_full_text(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by exact phrase"

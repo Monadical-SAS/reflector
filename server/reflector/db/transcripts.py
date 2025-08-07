@@ -10,7 +10,7 @@ from typing import Any, Literal, Annotated
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, conint, constr
 from sqlalchemy import Enum, event
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
@@ -25,10 +25,31 @@ from reflector.utils.webvtt import topics_to_webvtt
 logger = logging.getLogger(__name__)
 
 MIN_QUERY_LENGTH = 3
+MIN_SEARCH_LIMIT = 1
+MAX_SEARCH_LIMIT = 100
+DEFAULT_SEARCH_LIMIT = 20
+MIN_SEARCH_OFFSET = 0
 
-SearchQuery = Annotated[str, Field(min_length=MIN_QUERY_LENGTH, description="Search query text")]
-SearchLimit = Annotated[int, Field(ge=1, le=100, description="Results per page")]
-SearchOffset = Annotated[int, Field(ge=0, description="Number of results to skip")]
+# Base constrained types - shared validation logic
+SearchQueryBase = constr(min_length=MIN_QUERY_LENGTH)
+SearchLimitBase = conint(ge=MIN_SEARCH_LIMIT, le=MAX_SEARCH_LIMIT)
+SearchOffsetBase = conint(ge=MIN_SEARCH_OFFSET)
+SearchTotalBase = conint(ge=0)
+
+# Annotated types for Pydantic models (using Field)
+SearchQuery = Annotated[SearchQueryBase, Field(description="Search query text")]
+SearchLimit = Annotated[SearchLimitBase, Field(description="Results per page")]
+SearchOffset = Annotated[SearchOffsetBase, Field(description="Number of results to skip")]
+SearchTotal = Annotated[SearchTotalBase, Field(description="Total number of search results")]
+
+
+class SearchParameters(BaseModel):
+    """Validated search parameters for full-text search."""
+    query_text: SearchQuery
+    limit: SearchLimit = DEFAULT_SEARCH_LIMIT
+    offset: SearchOffset = 0
+    user_id: str | None = None
+    room_id: str | None = None
 
 
 class SourceKind(enum.StrEnum):
@@ -734,34 +755,21 @@ class TranscriptController:
             {"participants": transcript.participants_dump()}
         )
 
+    @staticmethod
     async def search_full_text(
-        self,
-        query_text: SearchQuery,
-        # TODO accept user id
-        user_id: str | None = None,
-        limit: SearchLimit = 20,
-        offset: SearchOffset = 0,
-        room_id: str | None = None,
+        params: SearchParameters,
     ) -> tuple[list[SearchResult], int]:
         """
         Full-text search using PostgreSQL tsvector.
         Returns (results, total_count).
         
         Args:
-            query_text: Search query supporting websearch syntax (OR, -, quotes)
-            user_id: Optional filter by user ID
-            limit: Maximum number of results to return (1-100)
-            offset: Number of results to skip for pagination (>=0)
-            room_id: Optional filter by room ID
+            params: Validated search parameters
             
         Returns:
             Tuple of (search results list, total count)
         """
         from reflector.db.utils import is_postgresql
-        
-        assert len(query_text) >= MIN_QUERY_LENGTH, f"Query too short: {len(query_text)} < {MIN_QUERY_LENGTH}"
-        assert 1 <= limit <= 100, f"Limit out of range: {limit}"
-        assert offset >= 0, f"Negative offset: {offset}"
         
         if not is_postgresql():
             logger.warning(
@@ -769,7 +777,7 @@ class TranscriptController:
             )
             return [], 0
         
-        search_query = sqlalchemy.func.websearch_to_tsquery('english', query_text)
+        search_query = sqlalchemy.func.websearch_to_tsquery('english', params.query_text)
         
         base_query = (
             sqlalchemy.select([
@@ -790,25 +798,25 @@ class TranscriptController:
             .where(transcripts.c.search_vector_en.op('@@')(search_query))
         )
         
-        if user_id:
-            base_query = base_query.where(transcripts.c.user_id == user_id)
-        if room_id:
-            base_query = base_query.where(transcripts.c.room_id == room_id)
+        if params.user_id:
+            base_query = base_query.where(transcripts.c.user_id == params.user_id)
+        if params.room_id:
+            base_query = base_query.where(transcripts.c.room_id == params.room_id)
         
-        query = base_query.order_by(sqlalchemy.desc(sqlalchemy.text('rank'))).limit(limit).offset(offset)
-        results = await database.fetch_all(query)
+        query = base_query.order_by(sqlalchemy.desc(sqlalchemy.text('rank'))).limit(params.limit).offset(params.offset)
+        rs = await database.fetch_all(query)
         
         count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
             base_query.alias('search_results')
         )
         total = await database.fetch_val(count_query)
         
-        parsed_results = [
+        results = [
             SearchResult.model_validate(dict(r))
-            for r in results
+            for r in rs
         ]
         
-        return parsed_results, total or 0
+        return results, total
 
 
 transcripts_controller = TranscriptController()
