@@ -1,16 +1,18 @@
 import enum
 import json
+import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, Annotated
 
 import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 from sqlalchemy import Enum, event
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
 from reflector.db import database, metadata
@@ -20,11 +22,20 @@ from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
 
+logger = logging.getLogger(__name__)
+
+MIN_QUERY_LENGTH = 3
+
+SearchQuery = Annotated[str, Field(min_length=MIN_QUERY_LENGTH, description="Search query text")]
+SearchLimit = Annotated[int, Field(ge=1, le=100, description="Results per page")]
+SearchOffset = Annotated[int, Field(ge=0, description="Number of results to skip")]
+
 
 class SourceKind(enum.StrEnum):
     ROOM = enum.auto()
     LIVE = enum.auto()
     FILE = enum.auto()
+
 
 WEBVTT_COLUMN_NAME = 'webvtt'
 TOPICS_COLUMN_NAME = 'topics'
@@ -87,6 +98,23 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Index("idx_transcript_room_id", "room_id"),
 )
 
+# Add PostgreSQL-specific full-text search column
+# This matches the migration in migrations/versions/116b2f287eab_add_full_text_search.py
+from reflector.db.utils import is_postgresql
+if is_postgresql():
+    transcripts.append_column(
+        sqlalchemy.Column("search_vector_en", TSVECTOR, 
+                          sqlalchemy.Computed(
+                              "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
+                              "setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')",
+                              persisted=True
+                          ))
+    )
+    # Add GIN index for the search vector
+    transcripts.append_constraint(
+        sqlalchemy.Index("idx_transcript_search_vector_en", "search_vector_en", postgresql_using='gin')
+    )
+
 def generate_transcript_name() -> str:
     now = datetime.now(timezone.utc)
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -148,15 +176,60 @@ class TranscriptParticipant(BaseModel):
     speaker: int | None
     name: str
 
-class Transcript(BaseModel):
+
+class TranscriptBase(BaseModel):
+    """Base model with common transcript fields shared between Transcript and SearchResult."""
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
-    name: str = Field(default_factory=generate_transcript_name)
     status: str = "idle"
-    locked: bool = False
     duration: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
+    source_kind: SourceKind
+    room_id: str | None = None
+    
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        return dt.isoformat()
+    
+    @field_validator('created_at')
+    @classmethod
+    def ensure_timezone(cls, v: datetime) -> datetime:
+        """Ensure datetime is timezone-aware."""
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v
+    
+    @field_validator('source_kind', mode='before')
+    @classmethod
+    def parse_source_kind(cls, v) -> SourceKind:
+        """Parse source_kind from string if needed."""
+        if isinstance(v, str):
+            return SourceKind(v)
+        return v
+
+
+class SearchResult(TranscriptBase):
+    """Search result model inheriting common fields from TranscriptBase."""
+    # Override fields without defaults for search results (required from DB)
+    id: str = Field(..., min_length=1)  # Required, no default
+    created_at: datetime  # Required, no default  
+    status: str = Field(..., min_length=1)  # Required, no default
+    duration: float | None = Field(None, ge=0)  # Optional but validated
+    
+    # Search-specific field
+    rank: float = Field(..., ge=0, le=1)
+    
+    model_config = ConfigDict(
+        from_attributes=True  # Allows creating from ORM objects/dict rows
+    )
+
+
+class Transcript(TranscriptBase):
+    """Full transcript model with all fields."""
+    # Additional fields beyond TranscriptBase
+    name: str = Field(default_factory=generate_transcript_name)
+    locked: bool = False
     short_summary: str | None = None
     long_summary: str | None = None
     topics: list[TranscriptTopic] = []
@@ -170,16 +243,8 @@ class Transcript(BaseModel):
     meeting_id: str | None = None
     recording_id: str | None = None
     zulip_message_id: int | None = None
-    source_kind: SourceKind
     audio_deleted: bool | None = None
-    room_id: str | None = None
     webvtt: str | None = None
-
-    @field_serializer("created_at", when_used="json")
-    def serialize_datetime(self, dt: datetime) -> str:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat()
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -668,6 +733,82 @@ class TranscriptController:
             transcript,
             {"participants": transcript.participants_dump()}
         )
+
+    async def search_full_text(
+        self,
+        query_text: SearchQuery,
+        # TODO accept user id
+        user_id: str | None = None,
+        limit: SearchLimit = 20,
+        offset: SearchOffset = 0,
+        room_id: str | None = None,
+    ) -> tuple[list[SearchResult], int]:
+        """
+        Full-text search using PostgreSQL tsvector.
+        Returns (results, total_count).
+        
+        Args:
+            query_text: Search query supporting websearch syntax (OR, -, quotes)
+            user_id: Optional filter by user ID
+            limit: Maximum number of results to return (1-100)
+            offset: Number of results to skip for pagination (>=0)
+            room_id: Optional filter by room ID
+            
+        Returns:
+            Tuple of (search results list, total count)
+        """
+        from reflector.db.utils import is_postgresql
+        
+        assert len(query_text) >= MIN_QUERY_LENGTH, f"Query too short: {len(query_text)} < {MIN_QUERY_LENGTH}"
+        assert 1 <= limit <= 100, f"Limit out of range: {limit}"
+        assert offset >= 0, f"Negative offset: {offset}"
+        
+        if not is_postgresql():
+            logger.warning(
+                "Full-text search requires PostgreSQL. Returning empty results."
+            )
+            return [], 0
+        
+        search_query = sqlalchemy.func.websearch_to_tsquery('english', query_text)
+        
+        base_query = (
+            sqlalchemy.select([
+                transcripts.c.id,
+                transcripts.c.title,
+                transcripts.c.created_at,
+                transcripts.c.duration,
+                transcripts.c.status,
+                transcripts.c.user_id,
+                transcripts.c.room_id,
+                transcripts.c.source_kind,
+                sqlalchemy.func.ts_rank(
+                    transcripts.c.search_vector_en,
+                    search_query,
+                    32  # normalization flag: rank/(rank+1) for 0-1 range
+                ).label('rank')
+            ])
+            .where(transcripts.c.search_vector_en.op('@@')(search_query))
+        )
+        
+        if user_id:
+            base_query = base_query.where(transcripts.c.user_id == user_id)
+        if room_id:
+            base_query = base_query.where(transcripts.c.room_id == room_id)
+        
+        query = base_query.order_by(sqlalchemy.desc(sqlalchemy.text('rank'))).limit(limit).offset(offset)
+        results = await database.fetch_all(query)
+        
+        count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
+            base_query.alias('search_results')
+        )
+        total = await database.fetch_val(count_query)
+        
+        parsed_results = [
+            SearchResult.model_validate(dict(r))
+            for r in results
+        ]
+        
+        return parsed_results, total or 0
 
 
 transcripts_controller = TranscriptController()
