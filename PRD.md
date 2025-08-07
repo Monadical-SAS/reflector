@@ -15,7 +15,8 @@ Enable full-text search across transcript titles, summaries, and transcript cont
 
 ### Data Structure
 - **Transcript storage**: Title and summaries as direct columns
-- **Content storage**: Transcript text stored within `topics` JSON array as `topics[].transcript`
+- **Content storage**: Transcript text stored in `webvtt` column (auto-generated from topics)
+- **Topics**: JSON array with transcript segments, automatically converted to WebVTT
 - **Events**: Audit log only, not used for display
 
 ### User Experience
@@ -36,27 +37,19 @@ Enable searching across multiple transcript fields:
 - **Title** (existing)
 - **Short Summary** 
 - **Long Summary**
-- **Transcript Content** (text within topics)
+- **Transcript Content** (via webvtt field)
 
 ### 2. Database Implementation
 
 #### PostgreSQL Only
 Full-text search is a PostgreSQL-only feature. SQLite will log a warning and return empty results.
 
-TODO english hardcode - RETHINK
-
-TODO first add 'dupe' (from topic column) column for transcript (ILIKE on it)
-
-TODO the transcript is webvtt
-
-Igor []
-
 ```sql
 search_vector_en tsvector GENERATED ALWAYS AS (
         setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
         setweight(to_tsvector('english', coalesce(short_summary, '')), 'B') ||
         setweight(to_tsvector('english', coalesce(long_summary, '')), 'C') ||
-        setweight(to_tsvector('english', coalesce(array_to_string(topics, ' '), '')), 'D')
+        setweight(to_tsvector('english', coalesce(webvtt, '')), 'D')
     ) STORED
 ```
 
@@ -100,10 +93,7 @@ Enhanced response with search metadata:
       // New search-specific field
       "search_snippet": ["discussed machine learning applications in customer service"], # TODO RETHINK 0 maybe backend maybe front
       
-      // Existing fields
-      "short_summary": "Team alignment on AI initiatives",
-      "long_summary": "Detailed discussion about machine learning...",
-      ...
+  
     }
   ],
   "total": 42,
@@ -118,7 +108,7 @@ Enhanced response with search metadata:
 
 Snippet generation must happen on the backend because:
 
-1. **Data Access**: Frontend only receives minimal transcript data in list views. Full transcript text lives in `topics[].transcript` which isn't sent in search results to avoid massive payloads.
+1. **Data Access**: Frontend only receives minimal transcript data in list views. Full transcript text lives in the `webvtt` column which isn't sent in search results to avoid massive payloads.
 
 2. **Performance**: Sending full transcript content for each search result would create huge response sizes (potentially MBs per request), especially with multiple results.
 
@@ -171,15 +161,14 @@ def _generate_search_snippet(self, transcript, search_term):
     if transcript.long_summary and search_lower in transcript.long_summary.lower():
         return self._highlight_text(transcript.long_summary[:150], search_term)
     
-    # Priority 4: Check transcript content
-    for topic in transcript.topics:
-        if topic.get('transcript') and search_lower in topic['transcript'].lower():
-            text = topic['transcript']
-            match_pos = text.lower().find(search_lower)
-            start = max(0, match_pos - 50)
-            end = min(len(text), match_pos + 100)
-            snippet = text[start:end]
-            return self._highlight_text(snippet, search_term)
+    # Priority 4: Check webvtt content
+    if transcript.webvtt and search_lower in transcript.webvtt.lower():
+        text = transcript.webvtt
+        match_pos = text.lower().find(search_lower)
+        start = max(0, match_pos - 50)
+        end = min(len(text), match_pos + 100)
+        snippet = text[start:end]
+        return self._highlight_text(snippet, search_term)
     
     # Shouldn't happen if PostgreSQL FTS found a match
     return ""
@@ -250,7 +239,7 @@ TODO apps like reflector topic in zulip
 ## Implementation Plan
 
 ### Phase 1: MVP (2 weeks)
-1. Database migration for search_vector with transcript content extraction
+1. Database migration for search_vector using webvtt column
 2. Update transcripts_controller with FTS queries and snippet generation
 3. Add search_snippet and matched_fields to API response
 4. Update frontend to display enhanced results with match indicators
@@ -277,8 +266,8 @@ TODO apps like reflector topic in zulip
 | PostgreSQL-only feature confuses SQLite users | Medium | Clear warning messages and documentation |
 | Performance degradation with large datasets | High | GIN indexes and query optimization |
 | Search quality issues | Medium | Weighted search (A-D) and continuous tuning |
-| Snippet generation from JSON is slow | Medium | Application-level caching and optimization |
-| Transcript content increases index size | Low | Monitor storage, optimize trigger function |
+| WebVTT format noise in search | Low | Acceptable trade-off for automatic maintenance |
+| Index size growth | Low | Monitor storage, use generated columns |
 
 ## Open Questions
 
