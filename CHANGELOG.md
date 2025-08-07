@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/Monadical-SAS/reflector/compare/v0.6.0...v0.6.1) (2025-08-06)
+
+
+### Bug Fixes
+
+* delayed waveform loading ([#538](https://github.com/Monadical-SAS/reflector/issues/538)) ([ef64146](https://github.com/Monadical-SAS/reflector/commit/ef64146325d03f64dd9a1fe40234fb3e7e957ae2))
+
 ## [0.6.0](https://github.com/Monadical-SAS/reflector/compare/v0.5.0...v0.6.0) (2025-08-05)
 
 
