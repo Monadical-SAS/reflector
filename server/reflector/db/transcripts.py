@@ -17,7 +17,6 @@ from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
-from reflector.app import app
 from reflector.db import database, metadata
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
@@ -27,7 +26,6 @@ from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
-from reflector.views.transcripts import create_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -416,6 +414,12 @@ class Transcript(BaseModel):
         # we need to create an url to be used for diarization
         # we can't use the audio_mp3_filename because it's not accessible
         # from the diarization processor
+
+        # TODO don't import app in db
+        from reflector.app import app  # noqa: PLC0415
+
+        # TODO a util + don''t import views in db
+        from reflector.views.transcripts import create_access_token  # noqa: PLC0415
 
         path = app.url_path_for(
             "transcript_get_audio_mp3",
