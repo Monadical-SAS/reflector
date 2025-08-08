@@ -51,6 +51,12 @@ uv run pytest tests/test_transcripts.py
 uv run pytest -v
 ```
 
+**Linting (IMPORTANT - Run after Python changes):**
+```bash
+# Check only changed files without auto-fixing (must run from server/ directory)
+cd server && git diff --name-only main...HEAD -- '*.py' '**/*.py' | xargs ruff check --no-fix
+```
+
 **Process Audio Files:**
 ```bash
 # Process local audio file manually
@@ -190,7 +196,7 @@ The codebase contains migrations that were originally generated against SQLite b
    ```bash
    # Start containers
    docker compose up -d postgres redis server
-   
+
    # Run migrations (they will work despite SQLite syntax)
    docker compose exec server uv run alembic upgrade head
    ```
@@ -204,7 +210,7 @@ The codebase contains migrations that were originally generated against SQLite b
    ```bash
    # Create schema directly from models
    docker compose exec server uv run python -c "from reflector.db import engine, metadata; metadata.create_all(engine)"
-   
+
    # Mark all migrations as applied
    docker compose exec server uv run alembic stamp head
    ```

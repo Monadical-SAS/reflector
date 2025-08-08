@@ -23,8 +23,7 @@ repos:
       - id: ruff
         args:
           - --fix
-          - --select
-          - I,F401
+          # Uses select rules from server/pyproject.toml
         files: ^server/
       - id: ruff-format
         files: ^server/

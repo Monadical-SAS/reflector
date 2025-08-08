@@ -93,8 +93,15 @@ addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.ruff]
+preview = true  # Required for PLC0415 to work
+
 [tool.ruff.lint]
-extend-select = ["PLC0415"]  # import-outside-top-level: detect inline imports
+select = [
+    "I",       # isort - import sorting
+    "F401",    # unused imports
+    "PLC0415", # import-outside-top-level - detect inline imports
+]
 
 [tool.ruff.lint.per-file-ignores]
 "reflector/processors/summary/summary_builder.py" = ["E501"]
