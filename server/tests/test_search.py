@@ -7,11 +7,8 @@ import pytest
 from pydantic import ValidationError
 
 from reflector.db import database
-from reflector.db.transcripts import (
-    SearchParameters,
-    TranscriptController,
-    transcripts,
-)
+from reflector.db.search import SearchParameters, search_controller
+from reflector.db.transcripts import transcripts
 from reflector.db.utils import is_postgresql
 
 
@@ -21,7 +18,7 @@ async def test_search_postgresql_only():
 
     try:
         params = SearchParameters(query_text="any query here")
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert results == []
         assert total == 0
 
@@ -124,21 +121,21 @@ We need to implement PostgreSQL tsvector for better performance.""",
 
         # Test 1: Search for a word in title
         params = SearchParameters(query_text="planning")
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by title word"
 
         # Test 2: Search for a word in webvtt content
         params = SearchParameters(query_text="tsvector")
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by webvtt content"
 
         # Test 3: Search with multiple words
         params = SearchParameters(query_text="engineering planning")
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by multiple words"
@@ -154,14 +151,14 @@ We need to implement PostgreSQL tsvector for better performance.""",
 
         # Test 5: Search with OR operator
         params = SearchParameters(query_text="tsvector OR nosuchword")
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript with OR query"
 
         # Test 6: Quoted phrase search
         params = SearchParameters(query_text='"full-text search"')
-        results, total = await TranscriptController.search_full_text(params)
+        results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by exact phrase"

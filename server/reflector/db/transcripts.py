@@ -5,14 +5,12 @@ import os
 import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from io import StringIO
 from pathlib import Path
-from typing import Annotated, Any, Dict, Literal
+from typing import Any, Literal
 
 import sqlalchemy
-import webvtt
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, conint, constr, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
@@ -20,7 +18,6 @@ from sqlalchemy.sql import false, or_
 from reflector.db import database, metadata
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
-from reflector.processors.types import Seconds
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
@@ -28,44 +25,6 @@ from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
 
 logger = logging.getLogger(__name__)
-
-MIN_QUERY_LENGTH = 3
-MIN_SEARCH_LIMIT = 1
-MAX_SEARCH_LIMIT = 100
-DEFAULT_SEARCH_LIMIT = 20
-MIN_SEARCH_OFFSET = 0
-
-# Snippet generation constants
-MAX_WEBVTT_SIZE = 1024 * 1024  # 1MB limit for WebVTT content processing
-SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
-DEFAULT_SNIPPET_MAX_LENGTH = 150  # Maximum length of each snippet
-DEFAULT_MAX_SNIPPETS = 3  # Maximum number of snippets per result
-
-# Base constrained types - shared validation logic
-SearchQueryBase = constr(min_length=MIN_QUERY_LENGTH, strip_whitespace=True)
-SearchLimitBase = conint(ge=MIN_SEARCH_LIMIT, le=MAX_SEARCH_LIMIT)
-SearchOffsetBase = conint(ge=MIN_SEARCH_OFFSET)
-SearchTotalBase = conint(ge=0)
-
-# Annotated types for Pydantic models (using Field)
-SearchQuery = Annotated[SearchQueryBase, Field(description="Search query text")]
-SearchLimit = Annotated[SearchLimitBase, Field(description="Results per page")]
-SearchOffset = Annotated[
-    SearchOffsetBase, Field(description="Number of results to skip")
-]
-SearchTotal = Annotated[
-    SearchTotalBase, Field(description="Total number of search results")
-]
-
-
-class SearchParameters(BaseModel):
-    """Validated search parameters for full-text search."""
-
-    query_text: SearchQuery
-    limit: SearchLimit = DEFAULT_SEARCH_LIMIT
-    offset: SearchOffset = 0
-    user_id: str | None = None
-    room_id: str | None = None
 
 
 class SourceKind(enum.StrEnum):
@@ -229,54 +188,6 @@ class TranscriptBase(BaseModel):
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
-
-    @field_serializer("created_at", when_used="json")
-    def serialize_datetime(self, dt: datetime) -> str:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat()
-
-
-class SearchResultDB(BaseModel):
-    user_id: str | None = None
-    created_at: datetime = Field(default_factory=datetime.now)
-    title: str | None = None
-    source_kind: SourceKind
-    room_id: str | None = None
-    # Override fields without defaults for search results (required from DB)
-    id: str = Field(..., min_length=1)  # Required, no default
-    created_at: datetime  # Required, no default
-    status: str = Field(..., min_length=1)  # Required, no default
-    duration: float | None = Field(None, ge=0)  # Nullable in DB schema
-
-    # Search-specific field from database
-    rank: float = Field(..., ge=0, le=1)
-    # Note: webvtt is fetched but not included in the model (we pop it during processing)
-
-    model_config = ConfigDict(
-        from_attributes=True  # Allows creating from ORM objects/dict rows
-    )
-
-    @field_serializer("created_at", when_used="json")
-    def serialize_datetime(self, dt: datetime) -> str:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat()
-
-
-class SearchResult(BaseModel):
-    id: str = Field(..., min_length=1)
-    user_id: str | None = None
-    title: str | None = None
-    source_kind: SourceKind
-    room_id: str | None = None
-    created_at: datetime
-    status: str = Field(..., min_length=1)
-    rank: float = Field(..., ge=0, le=1)
-    duration: Seconds = Field(..., ge=0, description="Duration in seconds")
-    search_snippets: list[str] = Field(
-        description="Text snippets around search matches"
-    )
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -807,174 +718,6 @@ class TranscriptController:
         """
         transcript.delete_participant(participant_id)
         await self.update(transcript, {"participants": transcript.participants_dump()})
-
-    @staticmethod
-    def _extract_webvtt_text(webvtt_content: str) -> str:
-        """Extract plain text from WebVTT content, removing timestamps and speaker tags."""
-        if not webvtt_content:
-            return ""
-
-        try:
-            buffer = StringIO(webvtt_content)
-            vtt = webvtt.read_buffer(buffer)
-            return " ".join(caption.text for caption in vtt if caption.text)
-        except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
-            return ""
-        except AttributeError as e:
-            # Handle case where webvtt object doesn't have expected attributes
-            logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
-            return ""
-
-    @staticmethod
-    def _generate_snippets(
-        text: str,
-        q: SearchQuery,
-        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
-        max_snippets: int = DEFAULT_MAX_SNIPPETS,
-    ) -> list[str]:
-        """Generate multiple snippets around all occurrences of search term.
-        METHOD IS SUBJECT TO CHANGE. Implementation is likely to change in the future.
-        """
-        if not text or not q:
-            return []
-
-        snippets = []
-        # Case-insensitive search
-        lower_text = text.lower()
-        search_lower = q.lower()
-
-        # Track the end of the last snippet to avoid overlap
-        last_snippet_end = 0
-        start_pos = 0
-
-        while len(snippets) < max_snippets:
-            match_pos = lower_text.find(search_lower, start_pos)
-
-            if match_pos == -1:
-                # If no more exact matches, try first word of search term
-                if not snippets and search_lower.split():
-                    first_word = search_lower.split()[0]
-                    match_pos = lower_text.find(first_word, start_pos)
-                    if match_pos == -1:
-                        break
-                else:
-                    break
-
-            # Calculate snippet window around match
-            snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
-            snippet_end = min(
-                len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
-            )
-
-            # Skip if this snippet would overlap with the previous one
-            if snippet_start < last_snippet_end:
-                # Move past this match and continue searching
-                start_pos = match_pos + len(search_lower)
-                continue
-
-            snippet = text[snippet_start:snippet_end]
-
-            # Add ellipsis if truncated
-            if snippet_start > 0:
-                snippet = "..." + snippet
-            if snippet_end < len(text):
-                snippet = snippet + "..."
-
-            snippet = snippet.strip()
-
-            if snippet:
-                snippets.append(snippet)
-                last_snippet_end = snippet_end
-
-            # Move past this match for next search
-            start_pos = match_pos + len(search_lower)
-            if start_pos >= len(text):
-                break
-
-        return snippets
-
-    @staticmethod
-    async def search_full_text(
-        params: SearchParameters,
-    ) -> tuple[list[SearchResult], int]:
-        """
-        Full-text search using PostgreSQL tsvector.
-        Returns (results, total_count).
-
-        Args:
-            params: Validated search parameters
-
-        Returns:
-            Tuple of (search results list, total count)
-        """
-
-        if not is_postgresql():
-            logger.warning(
-                "Full-text search requires PostgreSQL. Returning empty results."
-            )
-            return [], 0
-
-        search_query = sqlalchemy.func.websearch_to_tsquery(
-            "english", params.query_text
-        )
-
-        base_query = sqlalchemy.select([
-            transcripts.c.id,
-            transcripts.c.title,
-            transcripts.c.created_at,
-            transcripts.c.duration,
-            transcripts.c.status,
-            transcripts.c.user_id,
-            transcripts.c.room_id,
-            transcripts.c.source_kind,
-            transcripts.c.webvtt,
-            sqlalchemy.func.ts_rank(
-                transcripts.c.search_vector_en,
-                search_query,
-                32,  # normalization flag: rank/(rank+1) for 0-1 range
-            ).label("rank"),
-        ]).where(transcripts.c.search_vector_en.op("@@")(search_query))
-
-        if params.user_id:
-            base_query = base_query.where(transcripts.c.user_id == params.user_id)
-        if params.room_id:
-            base_query = base_query.where(transcripts.c.room_id == params.room_id)
-
-        query = (
-            base_query.order_by(sqlalchemy.desc(sqlalchemy.text("rank")))
-            .limit(params.limit)
-            .offset(params.offset)
-        )
-        rs = await database.fetch_all(query)
-
-        count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
-            base_query.alias("search_results")
-        )
-        total = await database.fetch_val(count_query)
-
-        # Process results: validate DB fields, then add computed snippets
-        def _process_result(r) -> SearchResult:
-            r_dict: Dict[str, Any] = dict(r)
-            webvtt: str | None = r_dict.pop(
-                "webvtt", None
-            )  # Remove webvtt field, not part of model
-            db_result = SearchResultDB.model_validate(r_dict)
-
-            # Generate snippets only if webvtt exists
-            # (webvtt is NULL when match was on title only, not transcript content)
-            snippets = []
-            if webvtt:
-                plain_text = TranscriptController._extract_webvtt_text(webvtt)
-                snippets = TranscriptController._generate_snippets(
-                    plain_text, params.query_text
-                )
-
-            return SearchResult(**db_result.model_dump(), search_snippets=snippets)
-
-        results = [_process_result(r) for r in rs]
-
-        return results, total
 
 
 transcripts_controller = TranscriptController()

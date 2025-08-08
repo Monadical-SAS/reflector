@@ -11,7 +11,7 @@ import reflector.auth as auth
 from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
-from reflector.db.transcripts import (
+from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
     SearchLimitBase,
@@ -22,8 +22,10 @@ from reflector.db.transcripts import (
     SearchQueryBase,
     SearchResult,
     SearchTotal,
+    search_controller,
+)
+from reflector.db.transcripts import (
     SourceKind,
-    TranscriptController,
     TranscriptParticipant,
     TranscriptTopic,
     transcripts_controller,
@@ -175,7 +177,7 @@ async def transcripts_search(
         query_text=q, limit=limit, offset=offset, user_id=user_id, room_id=room_id
     )
 
-    results, total = await TranscriptController.search_full_text(search_params)
+    results, total = await search_controller.search_transcripts(search_params)
 
     return SearchResponse(
         results=results,
