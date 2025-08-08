@@ -4,8 +4,7 @@ from reflector.db.transcripts import (
     Transcript,
     TranscriptController,
     SourceKind,
-    WEBVTT_COLUMN_NAME,
-    TOPICS_COLUMN_NAME,
+    "topics",
 )
 
 
@@ -17,7 +16,7 @@ class TestWebVTTAutoUpdateImplementation:
         Verify that _handle_topics_update() properly converts dict data to TranscriptTopic objects.
         """
         values = {
-            TOPICS_COLUMN_NAME: [{
+            "topics": [{
                 "id": "topic1",
                 "title": "Test",
                 "summary": "Test",
@@ -28,7 +27,7 @@ class TestWebVTTAutoUpdateImplementation:
         
         updated_values = TranscriptController._handle_topics_update(values)
         
-        assert WEBVTT_COLUMN_NAME in updated_values
-        assert updated_values[WEBVTT_COLUMN_NAME] is not None
-        assert "WEBVTT" in updated_values[WEBVTT_COLUMN_NAME]
+        assert "webvtt" in updated_values
+        assert updated_values["webvtt"] is not None
+        assert "WEBVTT" in updated_values["webvtt"]
     

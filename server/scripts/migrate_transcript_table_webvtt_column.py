@@ -9,8 +9,6 @@ from reflector.db import database
 from reflector.db.transcripts import (
     transcripts,
     TranscriptTopic,
-    TOPICS_COLUMN_NAME,
-    WEBVTT_COLUMN_NAME,
 )
 from reflector.utils.webvtt import topics_to_webvtt
 
@@ -24,7 +22,7 @@ async def migrate_transcript_table_webvtt_column():
     try:
         # Get all transcripts with topics
         query = transcripts.select().where(
-            transcripts.c[TOPICS_COLUMN_NAME].isnot(None)
+            transcripts.c["topics"].isnot(None)
         )
         
         results = await database.fetch_all(query)
@@ -36,7 +34,7 @@ async def migrate_transcript_table_webvtt_column():
         
         for row in results:
             transcript_id = row['id']
-            topics_data = row[TOPICS_COLUMN_NAME]
+            topics_data = row["topics"]
             
             if not topics_data:
                 continue
@@ -55,7 +53,7 @@ async def migrate_transcript_table_webvtt_column():
                 update_query = (
                     transcripts.update()
                     .where(transcripts.c.id == transcript_id)
-                    .values(**{WEBVTT_COLUMN_NAME: webvtt_content})
+                    .values(**{"webvtt": webvtt_content})
                 )
                 
                 await database.execute(update_query)

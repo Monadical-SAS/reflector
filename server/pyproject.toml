@@ -93,5 +93,8 @@ addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
+[tool.ruff.lint]
+extend-select = ["PLC0415"]  # import-outside-top-level: detect inline imports
+
 [tool.ruff.lint.per-file-ignores]
 "reflector/processors/summary/summary_builder.py" = ["E501"]

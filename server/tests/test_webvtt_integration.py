@@ -6,8 +6,6 @@ from reflector.db.transcripts import (
     TranscriptController,
     TranscriptTopic,
     SourceKind,
-    WEBVTT_COLUMN_NAME,
-    TOPICS_COLUMN_NAME,
     transcripts
 )
 from reflector.processors.types import Word
@@ -34,7 +32,7 @@ class TestWebVTTAutoUpdate:
             )
             
             assert result is not None
-            assert result[WEBVTT_COLUMN_NAME] is None
+            assert result["webvtt"] is None
         finally:
             await controller.remove_by_id(transcript.id)
     
@@ -66,7 +64,7 @@ class TestWebVTTAutoUpdate:
             )
             
             assert result is not None
-            webvtt = result[WEBVTT_COLUMN_NAME]
+            webvtt = result["webvtt"]
             
             assert webvtt is not None
             assert "WEBVTT" in webvtt
@@ -101,7 +99,7 @@ class TestWebVTTAutoUpdate:
             
             await controller.update(
                 transcript,
-                {TOPICS_COLUMN_NAME: topics_data}
+                {"topics": topics_data}
             )
             
             # Fetch from DB
@@ -110,7 +108,7 @@ class TestWebVTTAutoUpdate:
             )
             
             assert result is not None
-            webvtt = result[WEBVTT_COLUMN_NAME]
+            webvtt = result["webvtt"]
             
             assert webvtt is not None
             assert "WEBVTT" in webvtt
@@ -142,7 +140,7 @@ class TestWebVTTAutoUpdate:
             
             transcript.upsert_topic(topic1)
             
-            values = {TOPICS_COLUMN_NAME: transcript.topics_dump()}
+            values = {"topics": transcript.topics_dump()}
             
             await controller.update(transcript, values)
             
@@ -152,7 +150,7 @@ class TestWebVTTAutoUpdate:
             )
             
             assert result is not None
-            webvtt = result[WEBVTT_COLUMN_NAME]
+            webvtt = result["webvtt"]
             
             assert webvtt is not None
             assert "WEBVTT" in webvtt
@@ -184,7 +182,7 @@ class TestWebVTTAutoUpdate:
             )
             
             transcript.upsert_topic(topic1)
-            values = {TOPICS_COLUMN_NAME: transcript.topics_dump()}
+            values = {"topics": transcript.topics_dump()}
             
             with pytest.raises(AssertionError) as exc_info:
                 TranscriptController._handle_topics_update(values)
@@ -217,7 +215,7 @@ class TestWebVTTAutoUpdate:
             )
             
             transcript.upsert_topic(topic)
-            values = {TOPICS_COLUMN_NAME: transcript.topics_dump()}
+            values = {"topics": transcript.topics_dump()}
             
             await controller.update(transcript, values)
             
@@ -227,7 +225,7 @@ class TestWebVTTAutoUpdate:
             )
             
             assert result is not None
-            webvtt = result[WEBVTT_COLUMN_NAME]
+            webvtt = result["webvtt"]
             
             assert webvtt is not None
             assert "<v Speaker0>" in webvtt

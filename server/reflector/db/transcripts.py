@@ -63,10 +63,6 @@ class SourceKind(enum.StrEnum):
     LIVE = enum.auto()
     FILE = enum.auto()
 
-
-WEBVTT_COLUMN_NAME = 'webvtt'
-TOPICS_COLUMN_NAME = 'topics'
-
 transcripts = sqlalchemy.Table(
     "transcript",
     metadata,
@@ -79,7 +75,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),
-    sqlalchemy.Column(TOPICS_COLUMN_NAME, sqlalchemy.JSON),
+    sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("participants", sqlalchemy.JSON),
     sqlalchemy.Column("source_language", sqlalchemy.String),
@@ -117,7 +113,7 @@ transcripts = sqlalchemy.Table(
     # same field could've been in recording/meeting, and it's maybe even ok to dupe it at need
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
     sqlalchemy.Column("room_id", sqlalchemy.String),
-    sqlalchemy.Column(WEBVTT_COLUMN_NAME, sqlalchemy.Text),
+    sqlalchemy.Column("webvtt", sqlalchemy.Text),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
@@ -404,9 +400,6 @@ class Transcript(TranscriptBase):
             i += 1
         raise Exception("No empty speaker found")
 
-assert WEBVTT_COLUMN_NAME in Transcript.model_fields
-assert TOPICS_COLUMN_NAME in Transcript.model_fields
-
 class TranscriptController:
     async def get_all(
         self,
@@ -622,15 +615,15 @@ class TranscriptController:
     def _handle_topics_update(values: dict) -> dict:
         """Auto-update WebVTT when topics are updated."""
 
-        if values.get(WEBVTT_COLUMN_NAME) is not None:
+        if values.get("webvtt") is not None:
             # TODO log warn - user tries to update read-only column
             pass
 
-        topics_data = values.get(TOPICS_COLUMN_NAME)
+        topics_data = values.get("topics")
         if topics_data is None:
             return values
 
-        return {**values, WEBVTT_COLUMN_NAME: topics_to_webvtt([TranscriptTopic(**topic_dict) for topic_dict in topics_data])}
+        return {**values, "webvtt": topics_to_webvtt([TranscriptTopic(**topic_dict) for topic_dict in topics_data])}
 
     async def remove_by_id(
         self,
@@ -774,7 +767,6 @@ class TranscriptController:
         try:
             buffer = StringIO(webvtt_content)
             vtt = webvtt.read_buffer(buffer)
-            # Join all caption texts with spaces
             return " ".join(caption.text for caption in vtt if caption.text)
         except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
             logger.warning(f"Failed to parse WebVTT content: {e}")
@@ -884,7 +876,7 @@ class TranscriptController:
                 transcripts.c.user_id,
                 transcripts.c.room_id,
                 transcripts.c.source_kind,
-                transcripts.c.webvtt,  # Include webvtt in initial query to avoid N+1 for snippets
+                transcripts.c.webvtt,
                 sqlalchemy.func.ts_rank(
                     transcripts.c.search_vector_en,
                     search_query,
