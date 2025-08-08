@@ -16,14 +16,15 @@ During its lifecycle, it will emit the following status:
 """
 
 import asyncio
-from typing import TypeVar, Generic
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
 from reflector.logger import logger
 from reflector.processors import Pipeline
 
-PipelineMessage = TypeVar('PipelineMessage')
+PipelineMessage = TypeVar("PipelineMessage")
+
 
 class PipelineRunner(BaseModel, Generic[PipelineMessage]):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -94,7 +95,11 @@ class PipelineRunner(BaseModel, Generic[PipelineMessage]):
         pass
 
     async def _add_cmd(
-        self, cmd: str, data: PipelineMessage, max_retries: int = 3, retry_time_limit: int = 3
+        self,
+        cmd: str,
+        data: PipelineMessage,
+        max_retries: int = 3,
+        retry_time_limit: int = 3,
     ):
         """
         Enqueue a command to be executed in the runner.

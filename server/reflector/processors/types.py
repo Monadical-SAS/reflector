@@ -2,10 +2,10 @@ import io
 import re
 import tempfile
 from pathlib import Path
-from typing import NewType, Annotated
+from typing import Annotated
 
 from profanityfilter import ProfanityFilter
-from pydantic import BaseModel, PrivateAttr, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from reflector.redis_cache import redis_cache
 
@@ -48,13 +48,17 @@ class AudioFile(BaseModel):
         if self._path:
             self._path.unlink()
 
+
 # non-negative seconds with float part
 Seconds = Annotated[float, Field(ge=0.0, description="Time in seconds with float part")]
+
+
 class Word(BaseModel):
     text: str
     start: Seconds
     end: Seconds
     speaker: int = 0
+
 
 class TranscriptSegment(BaseModel):
     text: str

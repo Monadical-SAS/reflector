@@ -14,13 +14,15 @@ It is directly linked to our data model.
 import asyncio
 import functools
 from contextlib import asynccontextmanager
-from typing import TypeVar, Generic
+from typing import Generic
 
+import av
 import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
 
+from reflector.db import database
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -36,7 +38,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.runner import PipelineRunner, PipelineMessage
+from reflector.pipelines.runner import PipelineMessage, PipelineRunner
 from reflector.processors import (
     AudioChunkerProcessor,
     AudioDiarizationAutoProcessor,
@@ -65,15 +67,11 @@ from reflector.zulip import (
     update_zulip_message,
 )
 
-from reflector.utils.webvtt import topics_to_webvtt
-
 
 def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         async def run_with_db():
-            from reflector.db import database
-
             await database.connect()
             try:
                 return await f(*args, **kwargs)
@@ -146,6 +144,7 @@ def get_transcript(func):
 class StrValue(BaseModel):
     value: str
 
+
 class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]):
     transcript_id: str
     ws_room_id: str | None = None
@@ -167,7 +166,9 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         return result
 
     @staticmethod
-    def wrap_transcript_topics(topics: list[TranscriptTopic]) -> list[TitleSummaryWithIdProcessorType]:
+    def wrap_transcript_topics(
+        topics: list[TranscriptTopic],
+    ) -> list[TitleSummaryWithIdProcessorType]:
         # transformation to a pipe-supported format
         return [
             TitleSummaryWithIdProcessorType(
@@ -525,8 +526,6 @@ async def pipeline_convert_to_mp3(transcript: Transcript, logger: Logger):
     # Convert to mp3
     mp3_filename = transcript.audio_mp3_filename
 
-    import av
-
     with av.open(wav_filename.as_posix()) as in_container:
         in_stream = in_container.streams.audio[0]
         with av.open(mp3_filename.as_posix(), "w") as out_container:
@@ -795,8 +794,6 @@ def pipeline_post(*, transcript_id: str):
 
 @get_transcript
 async def pipeline_process(transcript: Transcript, logger: Logger):
-    import av
-
     try:
         if transcript.audio_location == "storage":
             await transcripts_controller.download_mp3_from_storage(transcript)

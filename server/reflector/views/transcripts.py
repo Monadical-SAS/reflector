@@ -8,19 +8,20 @@ from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
 
 import reflector.auth as auth
+from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     DEFAULT_SEARCH_LIMIT,
-    SearchQueryBase,
-    SearchLimitBase,
-    SearchOffsetBase,
-    SearchQuery,
     SearchLimit,
+    SearchLimitBase,
     SearchOffset,
-    SearchTotal,
+    SearchOffsetBase,
     SearchParameters,
+    SearchQuery,
+    SearchQueryBase,
     SearchResult,
+    SearchTotal,
     SourceKind,
     TranscriptController,
     TranscriptParticipant,
@@ -114,7 +115,9 @@ class DeletionStatus(BaseModel):
 # Query-annotated types for FastAPI parameters (reusing base validation)
 SearchQueryParam = Annotated[SearchQueryBase, Query(description="Search query text")]
 SearchLimitParam = Annotated[SearchLimitBase, Query(description="Results per page")]
-SearchOffsetParam = Annotated[SearchOffsetBase, Query(description="Number of results to skip")]
+SearchOffsetParam = Annotated[
+    SearchOffsetBase, Query(description="Number of results to skip")
+]
 
 
 class SearchResponse(BaseModel):
@@ -132,8 +135,6 @@ async def transcripts_list(
     room_id: str | None = None,
     search_term: str | None = None,
 ):
-    from reflector.db import database
-
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -158,32 +159,30 @@ async def transcripts_search(
     limit: SearchLimitParam = DEFAULT_SEARCH_LIMIT,
     offset: SearchOffsetParam = 0,
     room_id: Optional[str] = None,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)] = None,
+    user: Annotated[
+        Optional[auth.UserInfo], Depends(auth.current_user_optional)
+    ] = None,
 ):
     """
     Full-text search across transcript titles and content.
     """
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     user_id = user["sub"] if user else None
-    
+
     search_params = SearchParameters(
-        query_text=q,
-        limit=limit,
-        offset=offset,
-        user_id=user_id,
-        room_id=room_id
+        query_text=q, limit=limit, offset=offset, user_id=user_id, room_id=room_id
     )
-    
+
     results, total = await TranscriptController.search_full_text(search_params)
-    
+
     return SearchResponse(
         results=results,
         total=total,
         query=search_params.query_text,
         limit=search_params.limit,
-        offset=search_params.offset
+        offset=search_params.offset,
     )
 
 

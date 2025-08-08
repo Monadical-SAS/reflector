@@ -7,12 +7,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
-from typing import Any, Literal, Annotated, Dict
+from typing import Annotated, Any, Dict, Literal
 
 import sqlalchemy
 import webvtt
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, conint, constr
+from pydantic import BaseModel, ConfigDict, Field, conint, constr, field_serializer
 from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
@@ -21,7 +21,8 @@ from reflector.app import app
 from reflector.db import database, metadata
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
-from reflector.processors.types import Word as ProcessorWord, Seconds
+from reflector.processors.types import Seconds
+from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
@@ -51,12 +52,17 @@ SearchTotalBase = conint(ge=0)
 # Annotated types for Pydantic models (using Field)
 SearchQuery = Annotated[SearchQueryBase, Field(description="Search query text")]
 SearchLimit = Annotated[SearchLimitBase, Field(description="Results per page")]
-SearchOffset = Annotated[SearchOffsetBase, Field(description="Number of results to skip")]
-SearchTotal = Annotated[SearchTotalBase, Field(description="Total number of search results")]
+SearchOffset = Annotated[
+    SearchOffsetBase, Field(description="Number of results to skip")
+]
+SearchTotal = Annotated[
+    SearchTotalBase, Field(description="Total number of search results")
+]
 
 
 class SearchParameters(BaseModel):
     """Validated search parameters for full-text search."""
+
     query_text: SearchQuery
     limit: SearchLimit = DEFAULT_SEARCH_LIMIT
     offset: SearchOffset = 0
@@ -68,6 +74,7 @@ class SourceKind(enum.StrEnum):
     ROOM = enum.auto()
     LIVE = enum.auto()
     FILE = enum.auto()
+
 
 transcripts = sqlalchemy.Table(
     "transcript",
@@ -131,17 +138,25 @@ transcripts = sqlalchemy.Table(
 # This matches the migration in migrations/versions/116b2f287eab_add_full_text_search.py
 if is_postgresql():
     transcripts.append_column(
-        sqlalchemy.Column("search_vector_en", TSVECTOR, 
-                          sqlalchemy.Computed(
-                              "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
-                              "setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')",
-                              persisted=True
-                          ))
+        sqlalchemy.Column(
+            "search_vector_en",
+            TSVECTOR,
+            sqlalchemy.Computed(
+                "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
+                "setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')",
+                persisted=True,
+            ),
+        )
     )
     # Add GIN index for the search vector
     transcripts.append_constraint(
-        sqlalchemy.Index("idx_transcript_search_vector_en", "search_vector_en", postgresql_using='gin')
+        sqlalchemy.Index(
+            "idx_transcript_search_vector_en",
+            "search_vector_en",
+            postgresql_using="gin",
+        )
     )
+
 
 def generate_transcript_name() -> str:
     now = datetime.now(timezone.utc)
@@ -207,6 +222,7 @@ class TranscriptParticipant(BaseModel):
 
 class TranscriptBase(BaseModel):
     """Base model with common transcript fields shared between Transcript and SearchResult."""
+
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
     status: str = "idle"
@@ -215,7 +231,7 @@ class TranscriptBase(BaseModel):
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
-    
+
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
         if dt.tzinfo is None:
@@ -231,14 +247,14 @@ class SearchResultDB(BaseModel):
     room_id: str | None = None
     # Override fields without defaults for search results (required from DB)
     id: str = Field(..., min_length=1)  # Required, no default
-    created_at: datetime  # Required, no default  
+    created_at: datetime  # Required, no default
     status: str = Field(..., min_length=1)  # Required, no default
     duration: float | None = Field(None, ge=0)  # Nullable in DB schema
-    
+
     # Search-specific field from database
     rank: float = Field(..., ge=0, le=1)
     # Note: webvtt is fetched but not included in the model (we pop it during processing)
-    
+
     model_config = ConfigDict(
         from_attributes=True  # Allows creating from ORM objects/dict rows
     )
@@ -260,7 +276,9 @@ class SearchResult(BaseModel):
     status: str = Field(..., min_length=1)
     rank: float = Field(..., ge=0, le=1)
     duration: Seconds = Field(..., ge=0, description="Duration in seconds")
-    search_snippets: list[str] = Field(description="Text snippets around search matches")
+    search_snippets: list[str] = Field(
+        description="Text snippets around search matches"
+    )
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -268,8 +286,10 @@ class SearchResult(BaseModel):
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
 
+
 class Transcript(BaseModel):
     """Full transcript model with all fields."""
+
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
     status: str = "idle"
@@ -300,6 +320,7 @@ class Transcript(BaseModel):
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
+
     name: str = Field(default_factory=generate_transcript_name)
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
@@ -427,6 +448,7 @@ class Transcript(BaseModel):
                 return i
             i += 1
         raise Exception("No empty speaker found")
+
 
 class TranscriptController:
     async def get_all(
@@ -627,7 +649,7 @@ class TranscriptController:
         Update a transcript fields with key/values in values
         """
         values = TranscriptController._handle_topics_update(values)
-        
+
         query = (
             transcripts.update()
             .where(transcripts.c.id == transcript.id)
@@ -650,7 +672,12 @@ class TranscriptController:
         if topics_data is None:
             return values
 
-        return {**values, "webvtt": topics_to_webvtt([TranscriptTopic(**topic_dict) for topic_dict in topics_data])}
+        return {
+            **values,
+            "webvtt": topics_to_webvtt([
+                TranscriptTopic(**topic_dict) for topic_dict in topics_data
+            ]),
+        }
 
     async def remove_by_id(
         self,
@@ -694,10 +721,7 @@ class TranscriptController:
         Append an event to a transcript
         """
         resp = transcript.add_event(event=event, data=data)
-        await self.update(
-            transcript,
-            {"events": transcript.events_dump()}
-        )
+        await self.update(transcript, {"events": transcript.events_dump()})
         return resp
 
     async def upsert_topic(
@@ -709,10 +733,7 @@ class TranscriptController:
         Upsert topics to a transcript
         """
         transcript.upsert_topic(topic)
-        await self.update(
-            transcript,
-            {"topics": transcript.topics_dump()}
-        )
+        await self.update(transcript, {"topics": transcript.topics_dump()})
 
     async def move_mp3_to_storage(self, transcript: Transcript):
         """
@@ -762,10 +783,7 @@ class TranscriptController:
         Add/update a participant to a transcript
         """
         result = transcript.upsert_participant(participant)
-        await self.update(
-            transcript,
-            {"participants": transcript.participants_dump()}
-        )
+        await self.update(transcript, {"participants": transcript.participants_dump()})
         return result
 
     async def delete_participant(
@@ -777,18 +795,14 @@ class TranscriptController:
         Delete a participant from a transcript
         """
         transcript.delete_participant(participant_id)
-        await self.update(
-            transcript,
-            {"participants": transcript.participants_dump()}
-        )
+        await self.update(transcript, {"participants": transcript.participants_dump()})
 
     @staticmethod
     def _extract_webvtt_text(webvtt_content: str) -> str:
         """Extract plain text from WebVTT content, removing timestamps and speaker tags."""
         if not webvtt_content:
             return ""
-        
-        
+
         try:
             buffer = StringIO(webvtt_content)
             vtt = webvtt.read_buffer(buffer)
@@ -800,32 +814,32 @@ class TranscriptController:
             # Handle case where webvtt object doesn't have expected attributes
             logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
             return ""
-    
+
     @staticmethod
     def _generate_snippets(
-        text: str, 
+        text: str,
         q: SearchQuery,
-        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH, 
-        max_snippets: int = DEFAULT_MAX_SNIPPETS
+        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
+        max_snippets: int = DEFAULT_MAX_SNIPPETS,
     ) -> list[str]:
         """Generate multiple snippets around all occurrences of search term.
-            METHOD IS SUBJECT TO CHANGE. Implementation is likely to change in the future.
+        METHOD IS SUBJECT TO CHANGE. Implementation is likely to change in the future.
         """
         if not text or not q:
             return []
-        
+
         snippets = []
         # Case-insensitive search
         lower_text = text.lower()
         search_lower = q.lower()
-        
+
         # Track the end of the last snippet to avoid overlap
         last_snippet_end = 0
         start_pos = 0
-        
+
         while len(snippets) < max_snippets:
             match_pos = lower_text.find(search_lower, start_pos)
-            
+
             if match_pos == -1:
                 # If no more exact matches, try first word of search term
                 if not snippets and search_lower.split():
@@ -835,38 +849,40 @@ class TranscriptController:
                         break
                 else:
                     break
-            
+
             # Calculate snippet window around match
             snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
-            snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
-            
+            snippet_end = min(
+                len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
+            )
+
             # Skip if this snippet would overlap with the previous one
             if snippet_start < last_snippet_end:
                 # Move past this match and continue searching
                 start_pos = match_pos + len(search_lower)
                 continue
-            
+
             snippet = text[snippet_start:snippet_end]
-            
+
             # Add ellipsis if truncated
             if snippet_start > 0:
                 snippet = "..." + snippet
             if snippet_end < len(text):
                 snippet = snippet + "..."
-            
+
             snippet = snippet.strip()
-            
+
             if snippet:
                 snippets.append(snippet)
                 last_snippet_end = snippet_end
-            
+
             # Move past this match for next search
             start_pos = match_pos + len(search_lower)
             if start_pos >= len(text):
                 break
-        
+
         return snippets
-    
+
     @staticmethod
     async def search_full_text(
         params: SearchParameters,
@@ -874,74 +890,81 @@ class TranscriptController:
         """
         Full-text search using PostgreSQL tsvector.
         Returns (results, total_count).
-        
+
         Args:
             params: Validated search parameters
-            
+
         Returns:
             Tuple of (search results list, total count)
         """
-        
+
         if not is_postgresql():
             logger.warning(
                 "Full-text search requires PostgreSQL. Returning empty results."
             )
             return [], 0
-        
-        search_query = sqlalchemy.func.websearch_to_tsquery('english', params.query_text)
-        
-        base_query = (
-            sqlalchemy.select([
-                transcripts.c.id,
-                transcripts.c.title,
-                transcripts.c.created_at,
-                transcripts.c.duration,
-                transcripts.c.status,
-                transcripts.c.user_id,
-                transcripts.c.room_id,
-                transcripts.c.source_kind,
-                transcripts.c.webvtt,
-                sqlalchemy.func.ts_rank(
-                    transcripts.c.search_vector_en,
-                    search_query,
-                    32  # normalization flag: rank/(rank+1) for 0-1 range
-                ).label('rank')
-            ])
-            .where(transcripts.c.search_vector_en.op('@@')(search_query))
+
+        search_query = sqlalchemy.func.websearch_to_tsquery(
+            "english", params.query_text
         )
-        
+
+        base_query = sqlalchemy.select([
+            transcripts.c.id,
+            transcripts.c.title,
+            transcripts.c.created_at,
+            transcripts.c.duration,
+            transcripts.c.status,
+            transcripts.c.user_id,
+            transcripts.c.room_id,
+            transcripts.c.source_kind,
+            transcripts.c.webvtt,
+            sqlalchemy.func.ts_rank(
+                transcripts.c.search_vector_en,
+                search_query,
+                32,  # normalization flag: rank/(rank+1) for 0-1 range
+            ).label("rank"),
+        ]).where(transcripts.c.search_vector_en.op("@@")(search_query))
+
         if params.user_id:
             base_query = base_query.where(transcripts.c.user_id == params.user_id)
         if params.room_id:
             base_query = base_query.where(transcripts.c.room_id == params.room_id)
-        
-        query = base_query.order_by(sqlalchemy.desc(sqlalchemy.text('rank'))).limit(params.limit).offset(params.offset)
+
+        query = (
+            base_query.order_by(sqlalchemy.desc(sqlalchemy.text("rank")))
+            .limit(params.limit)
+            .offset(params.offset)
+        )
         rs = await database.fetch_all(query)
-        
+
         count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
-            base_query.alias('search_results')
+            base_query.alias("search_results")
         )
         total = await database.fetch_val(count_query)
-        
+
         # Process results: validate DB fields, then add computed snippets
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
-            webvtt: str | None = r_dict.pop('webvtt', None)  # Remove webvtt field, not part of model
+            webvtt: str | None = r_dict.pop(
+                "webvtt", None
+            )  # Remove webvtt field, not part of model
             db_result = SearchResultDB.model_validate(r_dict)
-            
+
             # Generate snippets only if webvtt exists
             # (webvtt is NULL when match was on title only, not transcript content)
             snippets = []
             if webvtt:
                 plain_text = TranscriptController._extract_webvtt_text(webvtt)
-                snippets = TranscriptController._generate_snippets(plain_text, params.query_text)
-            
+                snippets = TranscriptController._generate_snippets(
+                    plain_text, params.query_text
+                )
+
             return SearchResult(**db_result.model_dump(), search_snippets=snippets)
-        
+
         results = [_process_result(r) for r in rs]
 
         results[0].duration
-        
+
         return results, total
 
 
