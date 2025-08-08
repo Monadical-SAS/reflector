@@ -150,7 +150,10 @@ class PipelineRunner(BaseModel, Generic[PipelineMessage]):
                 cmd, data = await self._q_cmd.get()
                 func = getattr(self, f"cmd_{cmd.lower()}")
                 if func:
-                    await func(data)
+                    if cmd == "FLUSH":
+                        await func()
+                    else:
+                        await func(data)
                 else:
                     raise Exception(f"Unknown command {cmd}")
         except Exception:
