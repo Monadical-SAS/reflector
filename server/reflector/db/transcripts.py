@@ -4,23 +4,29 @@ import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any, Literal, Annotated, Dict
 
 import sqlalchemy
+import webvtt
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, conint, constr
-from sqlalchemy import Enum, event
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, conint, constr
+from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
+from reflector.app import app
 from reflector.db import database, metadata
+from reflector.db.rooms import rooms
+from reflector.db.utils import is_postgresql
 from reflector.processors.types import Word as ProcessorWord, Seconds
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
+from reflector.views.transcripts import create_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +129,6 @@ transcripts = sqlalchemy.Table(
 
 # Add PostgreSQL-specific full-text search column
 # This matches the migration in migrations/versions/116b2f287eab_add_full_text_search.py
-from reflector.db.utils import is_postgresql
 if is_postgresql():
     transcripts.append_column(
         sqlalchemy.Column("search_vector_en", TSVECTOR, 
@@ -390,10 +395,6 @@ class Transcript(BaseModel):
         # we need to create an url to be used for diarization
         # we can't use the audio_mp3_filename because it's not accessible
         # from the diarization processor
-        from datetime import timedelta
-
-        from reflector.app import app
-        from reflector.views.transcripts import create_access_token
 
         path = app.url_path_for(
             "transcript_get_audio_mp3",
@@ -453,7 +454,6 @@ class TranscriptController:
         - `room_id`: filter transcripts by room ID
         - `search_term`: filter transcripts by search term
         """
-        from reflector.db.rooms import rooms
 
         query = transcripts.select().join(
             rooms, transcripts.c.room_id == rooms.c.id, isouter=True
@@ -788,8 +788,6 @@ class TranscriptController:
         if not webvtt_content:
             return ""
         
-        import webvtt
-        from io import StringIO
         
         try:
             buffer = StringIO(webvtt_content)
@@ -883,7 +881,6 @@ class TranscriptController:
         Returns:
             Tuple of (search results list, total count)
         """
-        from reflector.db.utils import is_postgresql
         
         if not is_postgresql():
             logger.warning(
