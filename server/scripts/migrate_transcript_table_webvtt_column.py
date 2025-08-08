@@ -17,11 +17,9 @@ from reflector.utils.webvtt import topics_to_webvtt
 async def migrate_transcript_table_webvtt_column():
     """Populate WebVTT for all transcripts that have topics."""
 
-    # Connect to database
     await database.connect()
 
     try:
-        # Get all transcripts with topics
         query = transcripts.select().where(transcripts.c["topics"].isnot(None))
 
         results = await database.fetch_all(query)
@@ -39,15 +37,12 @@ async def migrate_transcript_table_webvtt_column():
                 continue
 
             try:
-                # Convert dict data to TranscriptTopic objects
                 topic_objects = [
                     TranscriptTopic(**topic_dict) for topic_dict in topics_data
                 ]
 
-                # Generate WebVTT
                 webvtt_content = topics_to_webvtt(topic_objects)
 
-                # Update the transcript with WebVTT
                 update_query = (
                     transcripts.update()
                     .where(transcripts.c.id == transcript_id)

@@ -101,7 +101,6 @@ class SearchController:
             logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
             return ""
         except AttributeError as e:
-            # Handle case where webvtt object doesn't have expected attributes
             logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
             return ""
 
@@ -120,7 +119,6 @@ class SearchController:
         lower_text = text.lower()
         search_lower = q.lower()
 
-        # Track the end of the last snippet to avoid overlap
         last_snippet_end = 0
         start_pos = 0
 
@@ -128,7 +126,6 @@ class SearchController:
             match_pos = lower_text.find(search_lower, start_pos)
 
             if match_pos == -1:
-                # If no more exact matches, try first word of search term
                 if not snippets and search_lower.split():
                     first_word = search_lower.split()[0]
                     match_pos = lower_text.find(first_word, start_pos)
@@ -137,21 +134,17 @@ class SearchController:
                 else:
                     break
 
-            # Calculate snippet window around match
             snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
             snippet_end = min(
                 len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
             )
 
-            # Skip if this snippet would overlap with the previous one
             if snippet_start < last_snippet_end:
-                # Move past this match and continue searching
                 start_pos = match_pos + len(search_lower)
                 continue
 
             snippet = text[snippet_start:snippet_end]
 
-            # Add ellipsis if truncated
             if snippet_start > 0:
                 snippet = "..." + snippet
             if snippet_end < len(text):
@@ -163,7 +156,6 @@ class SearchController:
                 snippets.append(snippet)
                 last_snippet_end = snippet_end
 
-            # Move past this match for next search
             start_pos = match_pos + len(search_lower)
             if start_pos >= len(text):
                 break
@@ -223,7 +215,6 @@ class SearchController:
         )
         total = await database.fetch_val(count_query)
 
-        # Process results
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
             webvtt: str | None = r_dict.pop("webvtt", None)

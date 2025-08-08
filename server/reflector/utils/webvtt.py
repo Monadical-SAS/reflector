@@ -52,9 +52,7 @@ def topics_to_webvtt(topics: list["TranscriptTopic"]) -> WebVTTStr:
 
     all_words: list[Word] = []
     for topic in topics:
-        # Proper type handling - topics should have words attribute
-        if topic.words:
-            all_words.extend(topic.words)
+        all_words.extend(topic.words)
 
     # assert it's in sequence
     for i in range(len(all_words) - 1):

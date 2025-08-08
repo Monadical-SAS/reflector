@@ -14,7 +14,6 @@ class TestWordsToWebVTT:
 
         result = words_to_webvtt([])
 
-        # Empty WebVTT should contain just the header
         assert "WEBVTT" in result
         assert result.strip() == "WEBVTT"
 
@@ -52,7 +51,6 @@ class TestWordsToWebVTT:
         result = words_to_webvtt(words)
 
         lines = result.split("\n")
-        # Should have two caption blocks
         assert "<v Speaker0>" in result
         assert "<v Speaker1>" in result
         assert "Hello" in result
@@ -61,7 +59,6 @@ class TestWordsToWebVTT:
     def test_punctuation_creates_segment_boundary(self):
         """Should respect punctuation boundaries from segmentation logic."""
 
-        # This will depend on the static words_to_segments implementation
         words = [
             Word(text="Hello.", start=0.0, end=0.5, speaker=0),
             Word(text=" How", start=0.6, end=1.0, speaker=0),
@@ -70,7 +67,6 @@ class TestWordsToWebVTT:
         ]
         result = words_to_webvtt(words)
 
-        # Should use existing segmentation logic
         assert "WEBVTT" in result
         assert "<v Speaker0>" in result
 
@@ -88,12 +84,10 @@ class TestTopicsToWebVTT:
     def test_extracts_words_from_topics(self):
         """Should extract all words from topics in sequence."""
 
-        # Mock topic objects
         class MockTopic:
             def __init__(self, words):
                 self.words = words
 
-        # Words should be in sequence
         topics = [
             MockTopic([
                 Word(text="First", start=0.0, end=0.5, speaker=1),
@@ -103,9 +97,7 @@ class TestTopicsToWebVTT:
 
         result = topics_to_webvtt(topics)
 
-        # Should process words in the given order
         assert "WEBVTT" in result
-        # Words should appear in the order provided
         first_pos = result.find("First")
         second_pos = result.find("Second")
         assert first_pos < second_pos
@@ -113,12 +105,10 @@ class TestTopicsToWebVTT:
     def test_non_sequential_topics_raises_assertion(self):
         """Should raise assertion error when words are not in chronological sequence."""
 
-        # Mock topic objects
         class MockTopic:
             def __init__(self, words):
                 self.words = words
 
-        # Words out of sequence - second word starts before first
         topics = [
             MockTopic([
                 Word(text="Second", start=1.0, end=1.5, speaker=0),
@@ -126,7 +116,6 @@ class TestTopicsToWebVTT:
             ])
         ]
 
-        # Should raise assertion error for non-sequential words
         with pytest.raises(AssertionError) as exc_info:
             topics_to_webvtt(topics)
 
@@ -139,7 +128,6 @@ class TestTranscriptWordsToSegments:
 
     def test_static_method_exists(self):
         """Should have static words_to_segments method."""
-        # Should be callable without instance
         words = [Word(text="Hello", start=0.0, end=1.0, speaker=0)]
         segments = Transcript.words_to_segments(words)
 
@@ -153,7 +141,6 @@ class TestTranscriptWordsToSegments:
         words = [Word(text="Hello", start=0.0, end=1.0, speaker=0)]
         transcript = Transcript(words=words)
 
-        # Instance method should still work
         segments = transcript.as_segments()
         assert isinstance(segments, list)
         assert len(segments) == 1

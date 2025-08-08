@@ -22,7 +22,6 @@ async def test_search_postgresql_only():
         assert results == []
         assert total == 0
 
-        # Test that empty query raises validation error
         try:
             SearchParameters(query_text="")
             assert False, "Should have raised validation error"
@@ -45,7 +44,6 @@ async def test_search_input_validation():
     await database.connect()
 
     try:
-        # Test that empty query raises validation error
         try:
             SearchParameters(query_text="")
             assert False, "Should have raised ValidationError"
@@ -74,14 +72,12 @@ async def test_postgresql_search_with_data():
 
     await database.connect()
 
-    # Use a unique test ID to avoid collisions
+    # collision is improbable
     test_id = "test-search-e2e-7f3a9b2c"
 
     try:
-        # Clean up any existing test transcript
         await database.execute(transcripts.delete().where(transcripts.c.id == test_id))
 
-        # Create test transcript with searchable content
         test_data = {
             "id": test_id,
             "name": "Test Search Transcript",
@@ -116,7 +112,6 @@ The search feature should support complex queries with ranking.
 We need to implement PostgreSQL tsvector for better performance.""",
         }
 
-        # Insert test transcript
         await database.execute(transcripts.insert().values(**test_data))
 
         # Test 1: Search for a word in title
@@ -164,6 +159,5 @@ We need to implement PostgreSQL tsvector for better performance.""",
         assert found, "Should find test transcript by exact phrase"
 
     finally:
-        # Clean up test data
         await database.execute(transcripts.delete().where(transcripts.c.id == test_id))
         await database.disconnect()

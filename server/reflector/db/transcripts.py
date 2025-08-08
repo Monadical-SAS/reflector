@@ -578,7 +578,6 @@ class TranscriptController:
             for key, value in values.items():
                 setattr(transcript, key, value)
 
-        # Create a copy of the transcript with updated values
         updated_transcript = transcript.model_copy(update=values)
         return updated_transcript
 
@@ -587,7 +586,7 @@ class TranscriptController:
         """Auto-update WebVTT when topics are updated."""
 
         if values.get("webvtt") is not None:
-            # TODO log warn - user tries to update read-only column
+            logger.warn("trying to update read-only webvtt column")
             pass
 
         topics_data = values.get("topics")

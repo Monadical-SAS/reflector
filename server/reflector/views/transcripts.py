@@ -114,7 +114,6 @@ class DeletionStatus(BaseModel):
     status: str
 
 
-# Query-annotated types for FastAPI parameters (reusing base validation)
 SearchQueryParam = Annotated[SearchQueryBase, Query(description="Search query text")]
 SearchLimitParam = Annotated[SearchLimitBase, Query(description="Results per page")]
 SearchOffsetParam = Annotated[
