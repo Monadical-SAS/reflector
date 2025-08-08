@@ -23,9 +23,9 @@ from pydantic import BaseModel, ConfigDict
 from reflector.logger import logger
 from reflector.processors import Pipeline
 
-MSG = TypeVar('MSG')
+PipelineMessage = TypeVar('PipelineMessage')
 
-class PipelineRunner(BaseModel, Generic[MSG]):
+class PipelineRunner(BaseModel, Generic[PipelineMessage]):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     status: str = "idle"
@@ -69,7 +69,7 @@ class PipelineRunner(BaseModel, Generic[MSG]):
         coro = self.run()
         asyncio.run(coro)
 
-    async def push(self, data: MSG):
+    async def push(self, data: PipelineMessage):
         """
         Push data to the pipeline
         """
@@ -94,7 +94,7 @@ class PipelineRunner(BaseModel, Generic[MSG]):
         pass
 
     async def _add_cmd(
-        self, cmd: str, data: MSG, max_retries: int = 3, retry_time_limit: int = 3
+        self, cmd: str, data: PipelineMessage, max_retries: int = 3, retry_time_limit: int = 3
     ):
         """
         Enqueue a command to be executed in the runner.
@@ -154,7 +154,7 @@ class PipelineRunner(BaseModel, Generic[MSG]):
             self._ev_done.set()
             raise
 
-    async def cmd_push(self, data: MSG):
+    async def cmd_push(self, data: PipelineMessage):
         if self._is_first_push:
             await self._set_status("push")
             self._is_first_push = False

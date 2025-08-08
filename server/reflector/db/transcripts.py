@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
 from reflector.db import database, metadata
-from reflector.processors.types import Word as ProcessorWord
+from reflector.processors.types import Word as ProcessorWord, Seconds
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
@@ -218,8 +218,12 @@ class TranscriptBase(BaseModel):
         return dt.isoformat()
 
 
-class SearchResultDB(TranscriptBase):
-    """Database search result model - only DB fields, no computed fields."""
+class SearchResultDB(BaseModel):
+    user_id: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    title: str | None = None
+    source_kind: SourceKind
+    room_id: str | None = None
     # Override fields without defaults for search results (required from DB)
     id: str = Field(..., min_length=1)  # Required, no default
     created_at: datetime  # Required, no default  
@@ -234,25 +238,41 @@ class SearchResultDB(TranscriptBase):
         from_attributes=True  # Allows creating from ORM objects/dict rows
     )
 
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
 
-class SearchResult(SearchResultDB):
-    """Extended search result with computed snippets field."""
-    # Override duration to be non-nullable - search results always have duration
-    duration: float = Field(..., ge=0, description="Duration in seconds")
+
+class SearchResult(BaseModel):
+    id: str = Field(..., min_length=1)
+    user_id: str | None = None
+    title: str | None = None
+    source_kind: SourceKind
+    room_id: str | None = None
+    created_at: datetime
+    status: str = Field(..., min_length=1)
+    rank: float = Field(..., ge=0, le=1)
+    duration: Seconds = Field(..., ge=0, description="Duration in seconds")
     search_snippets: list[str] = Field(description="Text snippets around search matches")
-    
-    def __init__(self, **data):
-        # Duration must be present in search results - indicates data integrity issue if NULL
-        assert data.get('duration') is not None, "Search result has NULL duration - data integrity issue"
-        if 'search_snippets' not in data:
-            data['search_snippets'] = []
-        super().__init__(**data)
 
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
 
-class Transcript(TranscriptBase):
+class Transcript(BaseModel):
     """Full transcript model with all fields."""
-    # Additional fields beyond TranscriptBase
-    name: str = Field(default_factory=generate_transcript_name)
+    id: str = Field(default_factory=generate_uuid4)
+    user_id: str | None = None
+    status: str = "idle"
+    duration: float = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    title: str | None = None
+    source_kind: SourceKind
+    room_id: str | None = None
     locked: bool = False
     short_summary: str | None = None
     long_summary: str | None = None
@@ -269,6 +289,13 @@ class Transcript(TranscriptBase):
     zulip_message_id: int | None = None
     audio_deleted: bool | None = None
     webvtt: str | None = None
+
+    @field_serializer("created_at", when_used="json")
+    def serialize_datetime(self, dt: datetime) -> str:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    name: str = Field(default_factory=generate_transcript_name)
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -915,6 +942,8 @@ class TranscriptController:
             return SearchResult(**db_result.model_dump(), search_snippets=snippets)
         
         results = [_process_result(r) for r in rs]
+
+        results[0].duration
         
         return results, total
 

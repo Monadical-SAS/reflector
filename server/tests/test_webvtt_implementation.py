@@ -4,7 +4,6 @@ from reflector.db.transcripts import (
     Transcript,
     TranscriptController,
     SourceKind,
-    "topics",
 )
 
 

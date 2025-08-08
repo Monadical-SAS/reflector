@@ -36,7 +36,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.runner import PipelineRunner, MSG
+from reflector.pipelines.runner import PipelineRunner, PipelineMessage
 from reflector.processors import (
     AudioChunkerProcessor,
     AudioDiarizationAutoProcessor,
@@ -146,7 +146,7 @@ def get_transcript(func):
 class StrValue(BaseModel):
     value: str
 
-class PipelineMainBase(PipelineRunner[MSG], Generic[MSG]):
+class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]):
     transcript_id: str
     ws_room_id: str | None = None
     ws_manager: WebsocketManager | None = None
