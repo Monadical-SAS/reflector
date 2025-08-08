@@ -2,13 +2,15 @@
 
 import logging
 from datetime import datetime
+from io import StringIO
 from typing import TYPE_CHECKING, Annotated, Any, Dict
 
 import sqlalchemy
-from pydantic import BaseModel, Field, field_serializer, field_validator
+import webvtt
+from pydantic import BaseModel, Field, constr, field_serializer
 
 from reflector.db import database
-from reflector.db.transcripts import transcripts
+from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
 
 if TYPE_CHECKING:
@@ -17,10 +19,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_SEARCH_LIMIT = 20
+SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
 DEFAULT_SNIPPET_MAX_LENGTH = 150
 DEFAULT_MAX_SNIPPETS = 3
 
-SearchQueryBase = Annotated[str, Field(min_length=1)]
+SearchQueryBase = constr(min_length=1, strip_whitespace=True)
 SearchLimitBase = Annotated[int, Field(ge=1, le=100)]
 SearchOffsetBase = Annotated[int, Field(ge=0)]
 SearchTotalBase = Annotated[int, Field(ge=0)]
@@ -44,14 +47,6 @@ class SearchParameters(BaseModel):
     user_id: str | None = None
     room_id: str | None = None
 
-    @field_validator("query_text")
-    @classmethod
-    def validate_query_text(cls, v: str) -> str:
-        """Validate that query text is not empty or just whitespace."""
-        if not v or not v.strip():
-            raise ValueError("Search query cannot be empty")
-        return v.strip()
-
 
 class SearchResultDB(BaseModel):
     """Intermediate model for validating raw database results."""
@@ -62,7 +57,7 @@ class SearchResultDB(BaseModel):
     duration: float | None = Field(None, ge=0)
     user_id: str | None = None
     title: str | None = None
-    source_kind: str  # Store as string to avoid circular import
+    source_kind: SourceKind
     room_id: str | None = None
     rank: float = Field(..., ge=0, le=1)
 
@@ -94,17 +89,21 @@ class SearchController:
 
     @staticmethod
     def _extract_webvtt_text(webvtt_content: str) -> str:
-        """Extract plain text from WebVTT content."""
-        lines = webvtt_content.split("\n")
-        text_lines = []
-        for line in lines:
-            line = line.strip()
-            if not line or line == "WEBVTT" or "-->" in line or line.startswith("NOTE"):
-                continue
-            if line[0:1].isdigit() and ":" in line[:8]:
-                continue
-            text_lines.append(line)
-        return " ".join(text_lines)
+        """Extract plain text from WebVTT content using webvtt library."""
+        if not webvtt_content:
+            return ""
+
+        try:
+            buffer = StringIO(webvtt_content)
+            vtt = webvtt.read_buffer(buffer)
+            return " ".join(caption.text for caption in vtt if caption.text)
+        except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
+            logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
+            return ""
+        except AttributeError as e:
+            # Handle case where webvtt object doesn't have expected attributes
+            logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
+            return ""
 
     @staticmethod
     def _generate_snippets(
@@ -121,23 +120,53 @@ class SearchController:
         lower_text = text.lower()
         search_lower = q.lower()
 
+        # Track the end of the last snippet to avoid overlap
+        last_snippet_end = 0
         start_pos = 0
+
         while len(snippets) < max_snippets:
-            pos = lower_text.find(search_lower, start_pos)
-            if pos == -1:
-                break
+            match_pos = lower_text.find(search_lower, start_pos)
 
-            start = max(0, pos - max_length // 2)
-            end = min(len(text), pos + len(q) + max_length // 2)
+            if match_pos == -1:
+                # If no more exact matches, try first word of search term
+                if not snippets and search_lower.split():
+                    first_word = search_lower.split()[0]
+                    match_pos = lower_text.find(first_word, start_pos)
+                    if match_pos == -1:
+                        break
+                else:
+                    break
 
-            snippet = text[start:end].strip()
-            if start > 0:
+            # Calculate snippet window around match
+            snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
+            snippet_end = min(
+                len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
+            )
+
+            # Skip if this snippet would overlap with the previous one
+            if snippet_start < last_snippet_end:
+                # Move past this match and continue searching
+                start_pos = match_pos + len(search_lower)
+                continue
+
+            snippet = text[snippet_start:snippet_end]
+
+            # Add ellipsis if truncated
+            if snippet_start > 0:
                 snippet = "..." + snippet
-            if end < len(text):
+            if snippet_end < len(text):
                 snippet = snippet + "..."
 
-            snippets.append(snippet)
-            start_pos = pos + len(q)
+            snippet = snippet.strip()
+
+            if snippet:
+                snippets.append(snippet)
+                last_snippet_end = snippet_end
+
+            # Move past this match for next search
+            start_pos = match_pos + len(search_lower)
+            if start_pos >= len(text):
+                break
 
         return snippets
 
