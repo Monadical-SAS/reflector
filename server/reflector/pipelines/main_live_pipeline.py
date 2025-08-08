@@ -605,7 +605,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                         meeting.id
                     )
     except Exception as e:
-        logger.error(f"Failed to get fetch consent: {e}")
+        logger.error(f"Failed to get fetch consent: {e}", exc_info=e)
         consent_denied = True
 
     if not consent_denied:
@@ -628,7 +628,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete Whereby recording: {e}")
+            logger.error(f"Failed to delete Whereby recording: {e}", exc_info=e)
 
     # non-transactional, files marked for deletion not actually deleted is possible
     await transcripts_controller.update(transcript, {"audio_deleted": True})
@@ -641,7 +641,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted processed audio from storage: {transcript.storage_audio_path}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete processed audio: {e}")
+            logger.error(f"Failed to delete processed audio: {e}", exc_info=e)
 
     # 3. Delete local audio files
     try:
@@ -650,7 +650,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
         if hasattr(transcript, "audio_wav_filename") and transcript.audio_wav_filename:
             transcript.audio_wav_filename.unlink(missing_ok=True)
     except Exception as e:
-        logger.error(f"Failed to delete local audio files: {e}")
+        logger.error(f"Failed to delete local audio files: {e}", exc_info=e)
 
     logger.info("Consent cleanup done")
 

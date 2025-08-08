@@ -769,11 +769,11 @@ class TranscriptController:
             vtt = webvtt.read_buffer(buffer)
             return " ".join(caption.text for caption in vtt if caption.text)
         except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse WebVTT content: {e}")
+            logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
             return ""
         except AttributeError as e:
             # Handle case where webvtt object doesn't have expected attributes
-            logger.warning(f"WebVTT parsing error - unexpected format: {e}")
+            logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
             return ""
     
     @staticmethod
