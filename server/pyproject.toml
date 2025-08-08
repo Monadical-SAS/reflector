@@ -95,6 +95,9 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 preview = true  # Required for PLC0415 to work
+exclude = [
+    "migrations/versions/*.py",  # Alembic auto-generated files
+]
 
 [tool.ruff.lint]
 select = [
