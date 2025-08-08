@@ -974,8 +974,6 @@ class TranscriptController:
 
         results = [_process_result(r) for r in rs]
 
-        results[0].duration
-
         return results, total
 
 
