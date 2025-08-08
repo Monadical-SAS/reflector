@@ -16,7 +16,7 @@ jobs:
       - name: Get changed Python files
         id: changed-files
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'server/**/*.py' | tr '\n' ' ')
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'server/**/*.py' | grep -v '^server/migrations/versions/' | tr '\n' ' ')
           echo "files=$CHANGED_FILES" >> $GITHUB_OUTPUT
       - name: Setup Python and install ruff
         if: steps.changed-files.outputs.files != ''
