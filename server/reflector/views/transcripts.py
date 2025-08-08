@@ -332,8 +332,8 @@ async def transcript_update(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     values = info.dict(exclude_unset=True)
-    await transcripts_controller.update(transcript, values)
-    return transcript
+    updated_transcript = await transcripts_controller.update(transcript, values)
+    return updated_transcript
 
 
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)

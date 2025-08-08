@@ -648,9 +648,12 @@ class TranscriptController:
 
     # TODO investigate why mutate= is used. it's used in one place currently, maybe because of ORM field updates.
     # using mutate=True is discouraged
-    async def update(self, transcript: Transcript, values: dict, mutate=False):
+    async def update(
+        self, transcript: Transcript, values: dict, mutate=False
+    ) -> Transcript:
         """
-        Update a transcript fields with key/values in values
+        Update a transcript fields with key/values in values.
+        Returns a copy of the transcript with updated values.
         """
         values = TranscriptController._handle_topics_update(values)
 
@@ -663,6 +666,10 @@ class TranscriptController:
         if mutate:
             for key, value in values.items():
                 setattr(transcript, key, value)
+
+        # Create a copy of the transcript with updated values
+        updated_transcript = transcript.model_copy(update=values)
+        return updated_transcript
 
     @staticmethod
     def _handle_topics_update(values: dict) -> dict:
