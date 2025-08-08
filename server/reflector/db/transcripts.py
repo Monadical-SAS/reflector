@@ -225,7 +225,7 @@ class TranscriptBase(BaseModel):
     user_id: str | None = None
     status: str = "idle"
     duration: float = 0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=datetime.now)
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
@@ -239,7 +239,7 @@ class TranscriptBase(BaseModel):
 
 class SearchResultDB(BaseModel):
     user_id: str | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=datetime.now)
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
@@ -292,7 +292,7 @@ class Transcript(BaseModel):
     user_id: str | None = None
     status: str = "idle"
     duration: float = 0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=datetime.now)
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
