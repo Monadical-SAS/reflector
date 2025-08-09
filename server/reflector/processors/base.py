@@ -240,8 +240,8 @@ class ThreadedProcessor(Processor):
         self.INPUT_TYPE = processor.INPUT_TYPE
         self.OUTPUT_TYPE = processor.OUTPUT_TYPE
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self.queue = asyncio.Queue()
-        self.task = asyncio.get_running_loop().create_task(self.loop())
+        self.queue = asyncio.Queue(maxsize=50)
+        self.task: asyncio.Task | None = None
 
     def set_pipeline(self, pipeline: "Pipeline"):
         super().set_pipeline(pipeline)
@@ -266,7 +266,16 @@ class ThreadedProcessor(Processor):
                 finally:
                     self.queue.task_done()
 
+    async def _ensure_task(self):
+        if self.task is None:
+            self.task = asyncio.get_running_loop().create_task(self.loop())
+
+        # XXX not doing a sleep here make the whole pipeline prior the thread
+        # to be running without having a chance to work on the task here.
+        await asyncio.sleep(0)
+
     async def _push(self, data):
+        await self._ensure_task()
         await self.queue.put(data)
 
     async def _flush(self):
