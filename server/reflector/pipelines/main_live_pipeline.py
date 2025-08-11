@@ -446,7 +446,9 @@ class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
 
-        for topic in self.wrap_transcript_topics(transcript.topics):
+        # push topics
+        topics = self.get_transcript_topics(transcript)
+        for topic in topics:
             await self.push(topic)
 
         await self.flush()

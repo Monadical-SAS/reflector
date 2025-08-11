@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 from io import StringIO
-from typing import TYPE_CHECKING, Annotated, Any, Dict
+from typing import Annotated, Any, Dict
 
 import sqlalchemy
 import webvtt
@@ -12,9 +12,6 @@ from pydantic import BaseModel, Field, constr, field_serializer
 from reflector.db import database
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -181,22 +178,24 @@ class SearchController:
             "english", params.query_text
         )
 
-        base_query = sqlalchemy.select([
-            transcripts.c.id,
-            transcripts.c.title,
-            transcripts.c.created_at,
-            transcripts.c.duration,
-            transcripts.c.status,
-            transcripts.c.user_id,
-            transcripts.c.room_id,
-            transcripts.c.source_kind,
-            transcripts.c.webvtt,
-            sqlalchemy.func.ts_rank(
-                transcripts.c.search_vector_en,
-                search_query,
-                32,  # normalization flag: rank/(rank+1) for 0-1 range
-            ).label("rank"),
-        ]).where(transcripts.c.search_vector_en.op("@@")(search_query))
+        base_query = sqlalchemy.select(
+            [
+                transcripts.c.id,
+                transcripts.c.title,
+                transcripts.c.created_at,
+                transcripts.c.duration,
+                transcripts.c.status,
+                transcripts.c.user_id,
+                transcripts.c.room_id,
+                transcripts.c.source_kind,
+                transcripts.c.webvtt,
+                sqlalchemy.func.ts_rank(
+                    transcripts.c.search_vector_en,
+                    search_query,
+                    32,  # normalization flag: rank/(rank+1) for 0-1 range
+                ).label("rank"),
+            ]
+        ).where(transcripts.c.search_vector_en.op("@@")(search_query))
 
         if params.user_id:
             base_query = base_query.where(transcripts.c.user_id == params.user_id)

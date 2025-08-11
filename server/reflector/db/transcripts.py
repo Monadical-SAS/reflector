@@ -177,33 +177,15 @@ class TranscriptParticipant(BaseModel):
     name: str
 
 
-class TranscriptBase(BaseModel):
-    """Base model with common transcript fields shared between Transcript and SearchResult."""
-
-    id: str = Field(default_factory=generate_uuid4)
-    user_id: str | None = None
-    status: str = "idle"
-    duration: float = 0
-    created_at: datetime = Field(default_factory=datetime.now)
-    title: str | None = None
-    source_kind: SourceKind
-    room_id: str | None = None
-
-    @field_serializer("created_at", when_used="json")
-    def serialize_datetime(self, dt: datetime) -> str:
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat()
-
-
 class Transcript(BaseModel):
     """Full transcript model with all fields."""
 
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
+    name: str = Field(default_factory=generate_transcript_name)
     status: str = "idle"
     duration: float = 0
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
@@ -229,8 +211,6 @@ class Transcript(BaseModel):
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
-
-    name: str = Field(default_factory=generate_transcript_name)
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
@@ -595,9 +575,9 @@ class TranscriptController:
 
         return {
             **values,
-            "webvtt": topics_to_webvtt([
-                TranscriptTopic(**topic_dict) for topic_dict in topics_data
-            ]),
+            "webvtt": topics_to_webvtt(
+                [TranscriptTopic(**topic_dict) for topic_dict in topics_data]
+            ),
         }
 
     async def remove_by_id(

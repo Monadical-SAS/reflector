@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated
 
 import webvtt
 
-from reflector.processors.types import Seconds, Transcript, Word
+from reflector.processors.types import Seconds, Word, words_to_segments
 
 if TYPE_CHECKING:
     from reflector.db.transcripts import TranscriptTopic
@@ -29,7 +29,7 @@ def words_to_webvtt(words: list[Word]) -> WebVTTStr:
     if not words:
         return vtt.content
 
-    segments = Transcript.words_to_segments(words)
+    segments = words_to_segments(words)
 
     for segment in segments:
         text = segment.text.strip()
@@ -56,8 +56,8 @@ def topics_to_webvtt(topics: list["TranscriptTopic"]) -> WebVTTStr:
 
     # assert it's in sequence
     for i in range(len(all_words) - 1):
-        assert all_words[i].start <= all_words[i + 1].start, (
-            f"Words are not in sequence: {all_words[i].text} and {all_words[i + 1].text} are not consecutive: {all_words[i].start} > {all_words[i + 1].start}"
-        )
+        assert (
+            all_words[i].start <= all_words[i + 1].start
+        ), f"Words are not in sequence: {all_words[i].text} and {all_words[i + 1].text} are not consecutive: {all_words[i].start} > {all_words[i + 1].start}"
 
     return words_to_webvtt(all_words)

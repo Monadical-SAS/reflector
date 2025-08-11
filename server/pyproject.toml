@@ -93,12 +93,6 @@ addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
-[tool.ruff]
-preview = true  # Required for PLC0415 to work
-exclude = [
-    "migrations/versions/*.py",  # Alembic auto-generated files
-]
-
 [tool.ruff.lint]
 select = [
     "I",       # isort - import sorting

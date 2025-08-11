@@ -2,7 +2,7 @@
 
 import pytest
 
-from reflector.processors.types import Transcript, Word
+from reflector.processors.types import Transcript, Word, words_to_segments
 from reflector.utils.webvtt import topics_to_webvtt, words_to_webvtt
 
 
@@ -89,10 +89,12 @@ class TestTopicsToWebVTT:
                 self.words = words
 
         topics = [
-            MockTopic([
-                Word(text="First", start=0.0, end=0.5, speaker=1),
-                Word(text="Second", start=1.0, end=1.5, speaker=0),
-            ])
+            MockTopic(
+                [
+                    Word(text="First", start=0.0, end=0.5, speaker=1),
+                    Word(text="Second", start=1.0, end=1.5, speaker=0),
+                ]
+            )
         ]
 
         result = topics_to_webvtt(topics)
@@ -110,10 +112,12 @@ class TestTopicsToWebVTT:
                 self.words = words
 
         topics = [
-            MockTopic([
-                Word(text="Second", start=1.0, end=1.5, speaker=0),
-                Word(text="First", start=0.0, end=0.5, speaker=1),
-            ])
+            MockTopic(
+                [
+                    Word(text="Second", start=1.0, end=1.5, speaker=0),
+                    Word(text="First", start=0.0, end=0.5, speaker=1),
+                ]
+            )
         ]
 
         with pytest.raises(AssertionError) as exc_info:
@@ -129,7 +133,7 @@ class TestTranscriptWordsToSegments:
     def test_static_method_exists(self):
         """Should have static words_to_segments method."""
         words = [Word(text="Hello", start=0.0, end=1.0, speaker=0)]
-        segments = Transcript.words_to_segments(words)
+        segments = words_to_segments(words)
 
         assert isinstance(segments, list)
         assert len(segments) == 1

@@ -67,6 +67,52 @@ class TranscriptSegment(BaseModel):
     speaker: int = 0
 
 
+def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
+    # from a list of word, create a list of segments
+    # join the word that are less than 2 seconds apart
+    # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
+    segments = []
+    current_segment = None
+    MAX_SEGMENT_LENGTH = 120
+
+    for word in words:
+        if current_segment is None:
+            current_segment = TranscriptSegment(
+                text=word.text,
+                start=word.start,
+                end=word.end,
+                speaker=word.speaker,
+            )
+            continue
+
+        # If the word is attach to another speaker, push the current segment
+        # and start a new one
+        if word.speaker != current_segment.speaker:
+            segments.append(current_segment)
+            current_segment = TranscriptSegment(
+                text=word.text,
+                start=word.start,
+                end=word.end,
+                speaker=word.speaker,
+            )
+            continue
+
+        # if the word is the end of a sentence, and we have enough content,
+        # add the word to the current segment and push it
+        current_segment.text += word.text
+        current_segment.end = word.end
+
+        have_punc = PUNC_RE.search(word.text)
+        if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
+            segments.append(current_segment)
+            current_segment = None
+
+    if current_segment:
+        segments.append(current_segment)
+
+    return segments
+
+
 class Transcript(BaseModel):
     translation: str | None = None
     words: list[Word] = None
@@ -121,55 +167,8 @@ class Transcript(BaseModel):
         ]
         return Transcript(text=self.text, translation=self.translation, words=words)
 
-    @staticmethod
-    def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
-        """Static version of segment creation from words."""
-        # from a list of word, create a list of segments
-        # join the word that are less than 2 seconds apart
-        # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
-        segments = []
-        current_segment = None
-        MAX_SEGMENT_LENGTH = 120
-
-        for word in words:
-            if current_segment is None:
-                current_segment = TranscriptSegment(
-                    text=word.text,
-                    start=word.start,
-                    end=word.end,
-                    speaker=word.speaker,
-                )
-                continue
-
-            # If the word is attach to another speaker, push the current segment
-            # and start a new one
-            if word.speaker != current_segment.speaker:
-                segments.append(current_segment)
-                current_segment = TranscriptSegment(
-                    text=word.text,
-                    start=word.start,
-                    end=word.end,
-                    speaker=word.speaker,
-                )
-                continue
-
-            # if the word is the end of a sentence, and we have enough content,
-            # add the word to the current segment and push it
-            current_segment.text += word.text
-            current_segment.end = word.end
-
-            have_punc = PUNC_RE.search(word.text)
-            if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
-                segments.append(current_segment)
-                current_segment = None
-
-        if current_segment:
-            segments.append(current_segment)
-
-        return segments
-
     def as_segments(self) -> list[TranscriptSegment]:
-        return Transcript.words_to_segments(self.words)
+        return words_to_segments(self.words)
 
 
 class TitleSummary(BaseModel):
