@@ -2,13 +2,13 @@ import httpx
 
 from reflector.processors.audio_diarization import AudioDiarizationProcessor
 from reflector.processors.audio_diarization_auto import AudioDiarizationAutoProcessor
-from reflector.processors.types import AudioDiarizationInput, TitleSummaryWithId
+from reflector.processors.types import AudioDiarizationInput, TitleSummary
 from reflector.settings import settings
 
 
 class AudioDiarizationModalProcessor(AudioDiarizationProcessor):
     INPUT_TYPE = AudioDiarizationInput
-    OUTPUT_TYPE = TitleSummaryWithId
+    OUTPUT_TYPE = TitleSummary
 
     def __init__(self, modal_api_key: str | None = None, **kwargs):
         super().__init__(**kwargs)
