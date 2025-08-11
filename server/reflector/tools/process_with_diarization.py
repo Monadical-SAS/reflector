@@ -145,14 +145,13 @@ async def process_audio_file_with_diarization(
             logger.info(f"Starting diarization with {len(topics)} topics")
 
             try:
-                # Import diarization processor
                 from reflector.processors import AudioDiarizationAutoProcessor
 
-                # Create diarization processor
                 diarization_processor = AudioDiarizationAutoProcessor(
                     name=diarization_backend
                 )
-                diarization_processor.on(event_callback)
+
+                diarization_processor.set_pipeline(pipeline)
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":

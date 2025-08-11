@@ -1,5 +1,9 @@
 from reflector.processors.base import Processor
-from reflector.processors.types import AudioDiarizationInput, TitleSummary, Word
+from reflector.processors.types import (
+    AudioDiarizationInput,
+    TitleSummary,
+    Word,
+)
 
 
 class AudioDiarizationProcessor(Processor):
