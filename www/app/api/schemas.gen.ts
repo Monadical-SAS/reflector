@@ -1002,7 +1002,7 @@ export const $SearchResponse = {
     },
     query: {
       type: "string",
-      minLength: 3,
+      minLength: 1,
       title: "Query",
       description: "Search query text",
     },
@@ -1032,38 +1032,6 @@ export const $SearchResult = {
       minLength: 1,
       title: "Id",
     },
-    user_id: {
-      anyOf: [
-        {
-          type: "string",
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "User Id",
-    },
-    status: {
-      type: "string",
-      minLength: 1,
-      title: "Status",
-    },
-    duration: {
-      anyOf: [
-        {
-          type: "number",
-          minimum: 0,
-        },
-        {
-          type: "null",
-        },
-      ],
-      title: "Duration",
-    },
-    created_at: {
-      type: "string",
-      title: "Created At",
-    },
     title: {
       anyOf: [
         {
@@ -1075,8 +1043,16 @@ export const $SearchResult = {
       ],
       title: "Title",
     },
-    source_kind: {
-      $ref: "#/components/schemas/SourceKind",
+    user_id: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "User Id",
     },
     room_id: {
       anyOf: [
@@ -1089,11 +1065,33 @@ export const $SearchResult = {
       ],
       title: "Room Id",
     },
+    created_at: {
+      type: "string",
+      title: "Created At",
+    },
+    status: {
+      type: "string",
+      minLength: 1,
+      title: "Status",
+    },
     rank: {
       type: "number",
       maximum: 1,
       minimum: 0,
       title: "Rank",
+    },
+    duration: {
+      anyOf: [
+        {
+          type: "number",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Duration",
+      description: "Duration in seconds",
     },
     search_snippets: {
       items: {
@@ -1107,14 +1105,14 @@ export const $SearchResult = {
   type: "object",
   required: [
     "id",
-    "status",
     "created_at",
-    "source_kind",
+    "status",
     "rank",
+    "duration",
     "search_snippets",
   ],
   title: "SearchResult",
-  description: "Extended search result with computed snippets field.",
+  description: "Public search result model with computed fields.",
 } as const;
 
 export const $SourceKind = {

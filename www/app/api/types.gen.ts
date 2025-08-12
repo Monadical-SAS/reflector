@@ -202,18 +202,20 @@ export type SearchResponse = {
 };
 
 /**
- * Extended search result with computed snippets field.
+ * Public search result model with computed fields.
  */
 export type SearchResult = {
   id: string;
-  user_id?: string | null;
-  status: string;
-  duration: number | null;
-  created_at: string;
   title?: string | null;
-  source_kind: SourceKind;
+  user_id?: string | null;
   room_id?: string | null;
+  created_at: string;
+  status: string;
   rank: number;
+  /**
+   * Duration in seconds
+   */
+  duration: number | null;
   /**
    * Text snippets around search matches
    */
