@@ -220,23 +220,3 @@ The codebase contains migrations that were originally generated against SQLite b
 ## Pipeline/worker related info
 
 If you need to do any worker/pipeline related work, search for "Pipeline" classes and their "create" or "build" methods to find the main processor sequence. Look for task orchestration patterns (like "chord", "group", or "chain") to identify the post-processing flow with parallel execution chains. This will give you abstract vision on how processing pipeling is organized.
-
-## CRITICAL DESIGN REVIEW MODE
-
-Before implementing any technical requirements, you MUST act as a senior architect and:
-
-### 1. REQUIREMENTS SANITY CHECK
-Challenge requirements that seem inconsistent:
-- Question contradictions between different parts of the requirements
-- Identify potential confusion for future developers
-- Point out semantic inconsistencies
-- Consider the long-term maintainability implications
-
-### 2. PUSH BACK CONSTRUCTIVELY
-When you spot issues:
-- Stop immediately before any implementation
-- Explain the specific concern clearly
-- Propose 2-3 solutions with trade-offs
-- Wait for explicit confirmation of the approach
-
-**REMEMBER:** Your job is to prevent future WTF moments in code review, not to blindly execute specifications. Act as the senior developer who has to maintain this code in 2 years.
