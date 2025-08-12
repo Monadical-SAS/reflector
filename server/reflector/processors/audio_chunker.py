@@ -22,12 +22,14 @@ class AudioChunkerProcessor(Processor):
         max_frames=1024,
         vad_threshold=0.5,
         use_onnx=False,
+        min_frames=2,
     ):
         super().__init__()
         self.frames: list[av.AudioFrame] = []
         self.block_frames = block_frames
         self.max_frames = max_frames
         self.vad_threshold = vad_threshold
+        self.min_frames = min_frames
 
         # Initialize Silero VAD
         self._init_vad(use_onnx)
@@ -61,8 +63,13 @@ class AudioChunkerProcessor(Processor):
             )
             frames_to_emit = self.frames[: self.max_frames // 2]
             self.frames = self.frames[self.max_frames // 2 :]
-            if frames_to_emit:
+            if len(frames_to_emit) >= self.min_frames:
                 await self.emit(frames_to_emit)
+            else:
+                self.logger.debug(
+                    f"Ignoring fallback segment with {len(frames_to_emit)} frames "
+                    f"(< {self.min_frames} minimum)"
+                )
 
     async def _process_block(self):
         # Need at least 32 frames for VAD detection (~1 second)
@@ -80,7 +87,13 @@ class AudioChunkerProcessor(Processor):
                 # Fallback: emit all frames if conversion failed
                 frames_to_emit = self.frames[:]
                 self.frames = []
-                await self.emit(frames_to_emit)
+                if len(frames_to_emit) >= self.min_frames:
+                    await self.emit(frames_to_emit)
+                else:
+                    self.logger.debug(
+                        f"Ignoring conversion-failed segment with {len(frames_to_emit)} frames "
+                        f"(< {self.min_frames} minimum)"
+                    )
                 return
 
             # Find complete speech segments in the buffer
@@ -152,7 +165,14 @@ class AudioChunkerProcessor(Processor):
             # Keep remaining frames for next processing
             self.frames = self.frames[speech_end_frame:]
 
-            await self.emit(frames_to_emit)
+            # Filter out segments with too few frames
+            if len(frames_to_emit) >= self.min_frames:
+                await self.emit(frames_to_emit)
+            else:
+                self.logger.debug(
+                    f"Ignoring segment with {len(frames_to_emit)} frames "
+                    f"(< {self.min_frames} minimum)"
+                )
 
         except Exception as e:
             self.logger.error(f"Error in VAD processing: {e}")
@@ -160,7 +180,13 @@ class AudioChunkerProcessor(Processor):
             if len(self.frames) >= self.block_frames:
                 frames_to_emit = self.frames[: self.block_frames]
                 self.frames = self.frames[self.block_frames :]
-                await self.emit(frames_to_emit)
+                if len(frames_to_emit) >= self.min_frames:
+                    await self.emit(frames_to_emit)
+                else:
+                    self.logger.debug(
+                        f"Ignoring exception-fallback segment with {len(frames_to_emit)} frames "
+                        f"(< {self.min_frames} minimum)"
+                    )
 
     def _frames_to_numpy(self, frames: list[av.AudioFrame]) -> Optional[np.ndarray]:
         """Convert av.AudioFrame list to numpy array for VAD processing"""
@@ -304,4 +330,10 @@ class AudioChunkerProcessor(Processor):
         frames = self.frames[:]
         self.frames = []
         if frames:
-            await self.emit(frames)
+            if len(frames) >= self.min_frames:
+                await self.emit(frames)
+            else:
+                self.logger.debug(
+                    f"Ignoring flush segment with {len(frames)} frames "
+                    f"(< {self.min_frames} minimum)"
+                )
