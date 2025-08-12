@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 from httpx import AsyncClient
@@ -41,8 +42,8 @@ async def test_transcript_process(
 
     # wait for processing to finish (max 10 minutes)
     timeout_seconds = 600  # 10 minutes
-    start_time = asyncio.get_event_loop().time()
-    while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
+    start_time = time.monotonic()
+    while (time.monotonic() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
         resp = await ac.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
@@ -61,8 +62,8 @@ async def test_transcript_process(
 
     # wait for processing to finish (max 10 minutes)
     timeout_seconds = 600  # 10 minutes
-    start_time = asyncio.get_event_loop().time()
-    while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
+    start_time = time.monotonic()
+    while (time.monotonic() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
         resp = await ac.get(f"/transcripts/{tid}")
         assert resp.status_code == 200

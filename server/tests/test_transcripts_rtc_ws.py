@@ -23,10 +23,10 @@ class ThreadedUvicorn:
     async def start(self):
         self.thread.start()
         timeout_seconds = 600  # 10 minutes
-        start_time = asyncio.get_event_loop().time()
+        start_time = time.monotonic()
         while (
             not self.server.started
-            and (asyncio.get_event_loop().time() - start_time) < timeout_seconds
+            and (time.monotonic() - start_time) < timeout_seconds
         ):
             await asyncio.sleep(0.1)
         if not self.server.started:
@@ -111,8 +111,8 @@ async def test_transcript_rtc_and_websocket(
             print("Test websocket: CONNECTED")
             try:
                 timeout_seconds = 600  # 10 minutes
-                start_time = asyncio.get_event_loop().time()
-                while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
+                start_time = time.monotonic()
+                while (time.monotonic() - start_time) < timeout_seconds:
                     msg = await ws.receive_json()
                     print(f"Test websocket: JSON {msg}")
                     if msg is None:
@@ -279,8 +279,8 @@ async def test_transcript_rtc_and_websocket_and_fr(
             print("Test websocket: CONNECTED")
             try:
                 timeout_seconds = 600  # 10 minutes
-                start_time = asyncio.get_event_loop().time()
-                while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
+                start_time = time.monotonic()
+                while (time.monotonic() - start_time) < timeout_seconds:
                     msg = await ws.receive_json()
                     print(f"Test websocket: JSON {msg}")
                     if msg is None:
