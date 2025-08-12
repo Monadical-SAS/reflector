@@ -44,6 +44,7 @@ services:
     working_dir: /app
     volumes:
       - ./www:/app/
+      - /app/node_modules
     env_file:
       - ./www/.env.local
 
