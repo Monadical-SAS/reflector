@@ -181,42 +181,6 @@ Modal.com integration for scalable ML processing:
 - **WebRTC**: Ensure proper CORS configuration for cross-origin streaming
 - **Database**: Run `uv run alembic upgrade head` after pulling schema changes
 
-## Database Migration Notes (IMPORTANT)
-
-### SQLite vs PostgreSQL Migrations
-The codebase contains migrations that were originally generated against SQLite but are used with PostgreSQL in production. These migrations contain SQLite-specific syntax that happens to be PostgreSQL-compatible:
-
-- `REPLACE()` function works in both databases for text operations
-- Boolean defaults like `sa.text("0")` are auto-converted by PostgreSQL (0→false, 1→true)
-- `render_as_batch=True` in `migrations/env.py` helps abstract database differences
-
-**DO NOT modify existing migrations** - they work correctly despite appearing SQLite-specific. If you encounter migration errors:
-
-1. **For fresh PostgreSQL setup:**
-   ```bash
-   # Start containers
-   docker compose up -d postgres redis server
-
-   # Run migrations (they will work despite SQLite syntax)
-   docker compose exec server uv run alembic upgrade head
-   ```
-
-2. **If migrations fail:** The issue is likely NOT the SQLite syntax. Check:
-   - Database connectivity (use `localhost` for host, `postgres` for containers)
-   - PostgreSQL is fully started before running migrations
-   - No partial migration state from interrupted runs
-
-3. **Alternative fresh setup (if migrations truly fail):**
-   ```bash
-   # Create schema directly from models
-   docker compose exec server uv run python -c "from reflector.db import engine, metadata; metadata.create_all(engine)"
-
-   # Mark all migrations as applied
-   docker compose exec server uv run alembic stamp head
-   ```
-
-**Key insight:** The migrations look wrong but work correctly. PostgreSQL is forgiving enough to handle the SQLite syntax used in these migrations.
-
 ## Pipeline/worker related info
 
 If you need to do any worker/pipeline related work, search for "Pipeline" classes and their "create" or "build" methods to find the main processor sequence. Look for task orchestration patterns (like "chord", "group", or "chain") to identify the post-processing flow with parallel execution chains. This will give you abstract vision on how processing pipeling is organized.
