@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from io import StringIO
 from typing import Annotated, Any, Dict
 
 import sqlalchemy
@@ -12,6 +11,7 @@ from pydantic import BaseModel, Field, constr, field_serializer
 from reflector.db import database
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
+from reflector.utils.webvtt_types import Webvtt, WebvttText, parse_webvtt_from_db
 
 logger = logging.getLogger(__name__)
 
@@ -85,79 +85,269 @@ class SearchController:
     """Controller for search operations across different entities."""
 
     @staticmethod
-    def _extract_webvtt_text(webvtt_content: str) -> str:
-        """Extract plain text from WebVTT content using webvtt library."""
+    def _extract_webvtt_text(webvtt_content: WebvttText) -> str:
+        """Extract plain text from WebVTT content."""
         if not webvtt_content:
             return ""
 
-        try:
-            buffer = StringIO(webvtt_content)
-            vtt = webvtt.read_buffer(buffer)
-            return " ".join(caption.text for caption in vtt if caption.text)
-        except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
-            return ""
-        except AttributeError as e:
-            logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
-            return ""
+        vtt = Webvtt(webvtt_content)
+        return " ".join(caption.text for caption in vtt.captions if caption.text)
 
     @staticmethod
-    def _generate_snippets(
-        text: str,
-        q: SearchQuery,
-        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
+    def _generate_webvtt_snippets(
+        vtt: Webvtt,
+        query: str,
         max_snippets: int = DEFAULT_MAX_SNIPPETS,
-    ) -> list[str]:
-        """Generate multiple snippets around all occurrences of search term."""
-        if not text or not q:
-            return []
+        snippet_max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
+    ) -> list[WebvttText]:
+        """Generate WebVTT format snippets with surrounding context.
 
+        Returns actual WebVTT formatted snippets that can be parsed/played.
+        All captions can be truncated by words to fit max_length.
+        Timestamps are NOT adjusted - they remain as original even for truncated text.
+
+        Raises:
+            ValueError: If no matches found (indicates a bug as DB already confirmed matches)
+            ValueError: If WebVTT is empty (no captions to search)
+        """
+        if not query:
+            raise ValueError("Query cannot be empty")
+
+        if not vtt.captions:
+            raise ValueError("Empty WebVTT - no captions to search")
+
+        query_lower = query.lower()
+
+        # Find all matches with their caption indices
+        matches = []
+        for i, caption in enumerate(vtt.captions):
+            if not caption.text:
+                continue
+
+            text_lower = caption.text.lower()
+            if query_lower in text_lower:
+                matches.append(i)
+
+        if not matches:
+            raise ValueError(
+                f"No matches found for '{query}' - this indicates a bug as "
+                "database already confirmed matches exist"
+            )
+
+        # Group nearby matches into snippet ranges
+        snippet_ranges = []
+        current_range_start = matches[0]
+        current_range_end = matches[0]
+
+        for match_idx in matches[1:]:
+            # If match is within 2 captions of current range, extend it
+            if match_idx <= current_range_end + 2:
+                current_range_end = match_idx
+            else:
+                # Save current range and start new one
+                snippet_ranges.append((current_range_start, current_range_end))
+                current_range_start = match_idx
+                current_range_end = match_idx
+
+                if len(snippet_ranges) >= max_snippets:
+                    break
+
+        # Add the last range
+        if len(snippet_ranges) < max_snippets:
+            snippet_ranges.append((current_range_start, current_range_end))
+
+        # Build WebVTT snippets for each range
         snippets = []
-        lower_text = text.lower()
-        search_lower = q.lower()
+        for range_start, range_end in snippet_ranges[:max_snippets]:
+            # Determine context window (1 caption before/after)
+            snippet_start = max(0, range_start - 1)
+            snippet_end = min(len(vtt.captions) - 1, range_end + 1)
 
-        last_snippet_end = 0
-        start_pos = 0
+            # Create new WebVTT for this snippet
+            snippet_vtt = webvtt.WebVTT()
 
-        while len(snippets) < max_snippets:
-            match_pos = lower_text.find(search_lower, start_pos)
+            # We only care about textual content length, not WebVTT format overhead
+            # Calculate how many captions we're including
+            num_captions = snippet_end - snippet_start + 1
 
-            if match_pos == -1:
-                if not snippets and search_lower.split():
-                    first_word = search_lower.split()[0]
-                    match_pos = lower_text.find(first_word, start_pos)
-                    if match_pos == -1:
-                        break
+            # Simple budget distribution - each caption gets equal share
+            budget_per_caption = (
+                snippet_max_length // num_captions
+                if num_captions > 0
+                else snippet_max_length
+            )
+
+            # Identify which are match captions
+            match_indices = [
+                i for i in range(snippet_start, snippet_end + 1) if i in matches
+            ]
+
+            # Build captions for snippet
+            for i in range(snippet_start, snippet_end + 1):
+                original_caption = vtt.captions[i]
+
+                # Determine if we need to truncate this caption
+                # Match captions can also be truncated if needed
+                is_match = i in match_indices
+                is_before = i < match_indices[0] if match_indices else False
+                is_after = i > match_indices[-1] if match_indices else False
+
+                # Truncate if text exceeds budget
+                if len(original_caption.text) > budget_per_caption:
+                    truncated_text = SearchController._truncate_caption_text(
+                        original_caption.text,
+                        budget_per_caption,
+                        is_before=is_before,
+                        is_after=is_after,
+                        is_match=is_match,
+                        query=query if is_match else None,
+                    )
+                else:
+                    truncated_text = original_caption.text
+
+                # Keep original timestamps - NO adjustment even for truncated text
+                new_caption = webvtt.Caption(
+                    start=original_caption.start,
+                    end=original_caption.end,
+                    text=f"<v {original_caption.voice}>{truncated_text}"
+                    if original_caption.voice
+                    else truncated_text,
+                )
+
+                snippet_vtt.captions.append(new_caption)
+
+            # Convert to WebvttText
+            from reflector.utils.webvtt_types import cast_webvtt
+
+            snippets.append(cast_webvtt(snippet_vtt.content))
+
+        return snippets
+
+    @staticmethod
+    def _truncate_caption_text(
+        text: str,
+        max_length: int,
+        is_before: bool = False,
+        is_after: bool = False,
+        is_match: bool = False,
+        query: str | None = None,
+    ) -> str:
+        """Truncate caption text at word boundaries.
+
+        Args:
+            text: Original caption text
+            max_length: Maximum length for truncated text
+            is_before: If True, keep end of text (truncate from start)
+            is_after: If True, keep start of text (truncate from end)
+            is_match: If True, this caption contains the match
+            query: The search query (used to preserve match in truncation)
+        """
+        if len(text) <= max_length:
+            return text
+
+        words = text.split()
+
+        # If this is a match caption, try to preserve the match
+        if is_match and query:
+            query_lower = query.lower()
+            text_lower = text.lower()
+            match_pos = text_lower.find(query_lower)
+
+            if match_pos >= 0:
+                # Try to center the truncation around the match
+                match_end = match_pos + len(query_lower)
+
+                # Calculate how much context we can include around the match
+                remaining_budget = (
+                    max_length - len(query) - 6
+                )  # 6 for "..." on both sides
+                if remaining_budget > 0:
+                    context_each_side = remaining_budget // 2
+
+                    # Find word boundaries
+                    start_pos = max(0, match_pos - context_each_side)
+                    end_pos = min(len(text), match_end + context_each_side)
+
+                    # Adjust to word boundaries
+                    while start_pos > 0 and text[start_pos - 1] != " ":
+                        start_pos -= 1
+                    while end_pos < len(text) and text[end_pos] != " ":
+                        end_pos += 1
+
+                    result = text[start_pos:end_pos].strip()
+                    if start_pos > 0:
+                        result = "..." + result
+                    if end_pos < len(text):
+                        result = result + "..."
+
+                    return result
+
+        if is_before:
+            # Keep last words for context before match
+            result_words = []
+            total_length = 0
+            for word in reversed(words):
+                word_length = len(word) + 1  # +1 for space
+                if total_length + word_length + 3 <= max_length:  # +3 for "..."
+                    result_words.append(word)
+                    total_length += word_length
                 else:
                     break
 
-            snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
-            snippet_end = min(
-                len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
-            )
+            if result_words:
+                return "..." + " ".join(reversed(result_words))
+            else:
+                # At least show something
+                return "..." + words[-1][: max_length - 3]
 
-            if snippet_start < last_snippet_end:
-                start_pos = match_pos + len(search_lower)
-                continue
+        elif is_after:
+            # Keep first words for context after match
+            result_words = []
+            total_length = 0
+            for word in words:
+                word_length = len(word) + 1  # +1 for space
+                if total_length + word_length + 3 <= max_length:  # +3 for "..."
+                    result_words.append(word)
+                    total_length += word_length
+                else:
+                    break
 
-            snippet = text[snippet_start:snippet_end]
+            if result_words:
+                return " ".join(result_words) + "..."
+            else:
+                # At least show something
+                return words[0][: max_length - 3] + "..."
 
-            if snippet_start > 0:
-                snippet = "..." + snippet
-            if snippet_end < len(text):
-                snippet = snippet + "..."
+        else:
+            # Middle truncation (shouldn't happen in our use case)
+            if max_length > 6:
+                half = (max_length - 3) // 2
+                return text[:half] + "..." + text[-half:]
+            else:
+                return text[:max_length]
 
-            snippet = snippet.strip()
+    @staticmethod
+    def _format_timestamp(timestamp: str) -> str:
+        """Format timestamp for display in snippet."""
+        try:
+            # Convert "00:00:15.000" to "0:15"
+            parts = timestamp.split(":")
+            if len(parts) >= 2:
+                hours = int(parts[0]) if parts[0].isdigit() else 0
+                minutes = int(parts[1]) if parts[1].isdigit() else 0
+                if len(parts) > 2:
+                    sec_parts = parts[2].split(".")
+                    seconds = int(sec_parts[0]) if sec_parts[0].isdigit() else 0
+                else:
+                    seconds = 0
 
-            if snippet:
-                snippets.append(snippet)
-                last_snippet_end = snippet_end
-
-            start_pos = match_pos + len(search_lower)
-            if start_pos >= len(text):
-                break
-
-        return snippets
+                if hours > 0:
+                    return f"{hours}:{minutes:02d}:{seconds:02d}"
+                else:
+                    return f"{minutes}:{seconds:02d}"
+        except (ValueError, IndexError):
+            pass
+        return timestamp  # Return original if parsing fails
 
     @classmethod
     async def search_transcripts(
@@ -216,13 +406,25 @@ class SearchController:
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
-            webvtt: str | None = r_dict.pop("webvtt", None)
+            webvtt_raw: str | None = r_dict.pop("webvtt", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
             snippets = []
-            if webvtt:
-                plain_text = cls._extract_webvtt_text(webvtt)
-                snippets = cls._generate_snippets(plain_text, params.query_text)
+            if webvtt_raw:
+                try:
+                    webvtt_text = parse_webvtt_from_db(webvtt_raw)
+                    vtt = Webvtt(webvtt_text)
+                    # Use the new WebVTT-aware snippet generation
+                    webvtt_snippets = cls._generate_webvtt_snippets(
+                        vtt, params.query_text
+                    )
+                    # Convert WebvttText to str for SearchResult
+                    snippets = [str(s) for s in webvtt_snippets]
+                except ValueError as e:
+                    logger.warning(
+                        f"Invalid WebVTT content in transcript {r_dict.get('id')}",
+                        exc_info=e,
+                    )
 
             return SearchResult(**db_result.model_dump(), search_snippets=snippets)
 

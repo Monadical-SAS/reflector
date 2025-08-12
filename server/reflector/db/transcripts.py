@@ -23,6 +23,7 @@ from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
+from reflector.utils.webvtt_types import WebvttText
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +205,7 @@ class Transcript(BaseModel):
     recording_id: str | None = None
     zulip_message_id: int | None = None
     audio_deleted: bool | None = None
-    webvtt: str | None = None
+    webvtt: WebvttText | None = None
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
