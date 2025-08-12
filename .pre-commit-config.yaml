@@ -25,7 +25,5 @@ repos:
           - --fix
           # Uses select rules from server/pyproject.toml
         files: ^server/
-        exclude: ^server/migrations/versions/
       - id: ruff-format
         files: ^server/
-        exclude: ^server/migrations/versions/
