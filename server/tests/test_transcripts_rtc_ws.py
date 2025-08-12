@@ -6,6 +6,7 @@
 import asyncio
 import json
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -21,14 +22,31 @@ class ThreadedUvicorn:
 
     async def start(self):
         self.thread.start()
-        while not self.server.started:
+        timeout_seconds = 600  # 10 minutes
+        start_time = asyncio.get_event_loop().time()
+        while (
+            not self.server.started
+            and (asyncio.get_event_loop().time() - start_time) < timeout_seconds
+        ):
             await asyncio.sleep(0.1)
+        if not self.server.started:
+            raise TimeoutError(
+                f"Server failed to start after {timeout_seconds} seconds"
+            )
 
     def stop(self):
         if self.thread.is_alive():
             self.server.should_exit = True
-            while self.thread.is_alive():
-                continue
+            timeout_seconds = 600  # 10 minutes
+            start_time = time.time()
+            while (
+                self.thread.is_alive() and (time.time() - start_time) < timeout_seconds
+            ):
+                time.sleep(0.1)
+            if self.thread.is_alive():
+                raise TimeoutError(
+                    f"Thread failed to stop after {timeout_seconds} seconds"
+                )
 
 
 @pytest.fixture
@@ -92,12 +110,16 @@ async def test_transcript_rtc_and_websocket(
         async with aconnect_ws(f"{base_url}/transcripts/{tid}/events") as ws:
             print("Test websocket: CONNECTED")
             try:
-                while True:
+                timeout_seconds = 600  # 10 minutes
+                start_time = asyncio.get_event_loop().time()
+                while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
                     msg = await ws.receive_json()
                     print(f"Test websocket: JSON {msg}")
                     if msg is None:
                         break
                     events.append(msg)
+                else:
+                    print(f"Test websocket: TIMEOUT after {timeout_seconds} seconds")
             except Exception as e:
                 print(f"Test websocket: EXCEPTION {e}")
             finally:
@@ -256,12 +278,16 @@ async def test_transcript_rtc_and_websocket_and_fr(
         async with aconnect_ws(f"{base_url}/transcripts/{tid}/events") as ws:
             print("Test websocket: CONNECTED")
             try:
-                while True:
+                timeout_seconds = 600  # 10 minutes
+                start_time = asyncio.get_event_loop().time()
+                while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
                     msg = await ws.receive_json()
                     print(f"Test websocket: JSON {msg}")
                     if msg is None:
                         break
                     events.append(msg)
+                else:
+                    print(f"Test websocket: TIMEOUT after {timeout_seconds} seconds")
             except Exception as e:
                 print(f"Test websocket: EXCEPTION {e}")
             finally:

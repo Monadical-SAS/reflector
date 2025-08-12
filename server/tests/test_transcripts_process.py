@@ -41,15 +41,14 @@ async def test_transcript_process(
 
     # wait for processing to finish (max 10 minutes)
     timeout_seconds = 600  # 10 minutes
-    elapsed = 0
-    while elapsed < timeout_seconds:
+    start_time = asyncio.get_event_loop().time()
+    while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
         resp = await ac.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] in ("ended", "error"):
             break
         await asyncio.sleep(1)
-        elapsed += 1
     else:
         pytest.fail(f"Initial processing timed out after {timeout_seconds} seconds")
 
@@ -62,15 +61,14 @@ async def test_transcript_process(
 
     # wait for processing to finish (max 10 minutes)
     timeout_seconds = 600  # 10 minutes
-    elapsed = 0
-    while elapsed < timeout_seconds:
+    start_time = asyncio.get_event_loop().time()
+    while (asyncio.get_event_loop().time() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
         resp = await ac.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] in ("ended", "error"):
             break
         await asyncio.sleep(1)
-        elapsed += 1
     else:
         pytest.fail(f"Restart processing timed out after {timeout_seconds} seconds")
 
