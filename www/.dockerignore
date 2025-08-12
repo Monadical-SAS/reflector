@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.next/
+.env*.local
+.vercel
+*.tsbuildinfo
+coverage/
+.DS_Store

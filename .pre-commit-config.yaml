@@ -3,10 +3,10 @@
 repos:
   - repo: local
     hooks:
-      - id: yarn-format
-        name: run yarn format
+      - id: format
+        name: run format
         language: system
-        entry: bash -c 'cd www && yarn format'
+        entry: bash -c 'cd www && npx prettier --write .'
         pass_filenames: false
         files: ^www/
 
