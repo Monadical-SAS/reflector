@@ -145,9 +145,12 @@ async def test_transcript_rtc_and_websocket(
         if resp.json()["status"] in ("ended", "error"):
             break
         await asyncio.sleep(1)
+        timeout -= 1
+        if timeout < 0:
+            raise TimeoutError("Timeout while waiting for transcript to be ended")
 
     if resp.json()["status"] != "ended":
-        raise TimeoutError("Timeout while waiting for transcript to be ended")
+        raise TimeoutError("Transcript processing failed")
 
     # stop websocket task
     websocket_task.cancel()
@@ -310,9 +313,12 @@ async def test_transcript_rtc_and_websocket_and_fr(
         if resp.json()["status"] == "ended":
             break
         await asyncio.sleep(1)
+        timeout -= 1
+        if timeout < 0:
+            raise TimeoutError("Timeout while waiting for transcript to be ended")
 
     if resp.json()["status"] != "ended":
-        raise TimeoutError("Timeout while waiting for transcript to be ended")
+        raise TimeoutError("Transcript processing failed")
 
     await asyncio.sleep(2)
 
