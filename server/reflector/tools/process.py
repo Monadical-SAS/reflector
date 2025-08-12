@@ -1,5 +1,4 @@
 """
-@vibe-generated
 Process audio file with diarization support
 ===========================================
 
@@ -226,6 +225,52 @@ async def process_audio_file_with_diarization(
     logger.info("All done!")
 
 
+async def process_file_pipeline(
+    filename: str,
+    event_callback,
+    source_language="en",
+    target_language="en",
+    enable_diarization=True,
+):
+    """Process audio/video file using the optimized file pipeline"""
+    try:
+        from reflector.db import database
+        from reflector.db.transcripts import SourceKind, transcripts_controller
+        from reflector.pipelines.main_file_pipeline import PipelineMainFile
+
+        await database.connect()
+        try:
+            # Create a temporary transcript for processing
+            transcript = await transcripts_controller.add(
+                "",
+                source_kind=SourceKind.FILE,
+                source_language=source_language,
+                target_language=target_language,
+            )
+
+            # Process the file
+            pipeline = PipelineMainFile(transcript_id=transcript.id)
+            await pipeline.process_file(Path(filename))
+
+            logger.info("File pipeline processing complete")
+
+        finally:
+            await database.disconnect()
+    except ImportError as e:
+        logger.error(f"File pipeline not available: {e}")
+        logger.info("Falling back to stream pipeline")
+        # Fall back to stream pipeline
+        await process_audio_file_with_diarization(
+            filename,
+            event_callback,
+            only_transcript=False,
+            source_language=source_language,
+            target_language=target_language,
+            enable_diarization=enable_diarization,
+            diarization_backend="modal",
+        )
+
+
 if __name__ == "__main__":
     import argparse
     import os
@@ -234,6 +279,11 @@ if __name__ == "__main__":
         description="Process audio files with optional speaker diarization"
     )
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Use streaming pipeline (original frame-based processing)",
+    )
     parser.add_argument(
         "--only-transcript",
         "-t",
@@ -298,17 +348,30 @@ if __name__ == "__main__":
             output_fd.write("\n")
             output_fd.flush()
 
-    asyncio.run(
-        process_audio_file_with_diarization(
-            args.source,
-            event_callback,
-            only_transcript=args.only_transcript,
-            source_language=args.source_language,
-            target_language=args.target_language,
-            enable_diarization=args.enable_diarization,
-            diarization_backend=args.diarization_backend,
+    if args.stream:
+        # Use original streaming pipeline
+        asyncio.run(
+            process_audio_file_with_diarization(
+                args.source,
+                event_callback,
+                only_transcript=args.only_transcript,
+                source_language=args.source_language,
+                target_language=args.target_language,
+                enable_diarization=args.enable_diarization,
+                diarization_backend=args.diarization_backend,
+            )
         )
-    )
+    else:
+        # Use optimized file pipeline (default)
+        asyncio.run(
+            process_file_pipeline(
+                args.source,
+                event_callback,
+                source_language=args.source_language,
+                target_language=args.target_language,
+                enable_diarization=args.enable_diarization,
+            )
+        )
 
     if output_fd:
         output_fd.close()

@@ -1,6 +1,7 @@
 from reflector.processors.base import Processor
 from reflector.processors.types import (
     AudioDiarizationInput,
+    DiarizationSegment,
     TitleSummary,
     Word,
 )
@@ -37,7 +38,7 @@ class AudioDiarizationProcessor(Processor):
     async def _diarize(self, data: AudioDiarizationInput):
         raise NotImplementedError
 
-    def assign_speaker(self, words: list[Word], diarization: list[dict]):
+    def assign_speaker(self, words: list[Word], diarization: list[DiarizationSegment]):
         self._diarization_remove_overlap(diarization)
         self._diarization_remove_segment_without_words(words, diarization)
         self._diarization_merge_same_speaker(words, diarization)
@@ -61,7 +62,7 @@ class AudioDiarizationProcessor(Processor):
             return False
         return True
 
-    def _diarization_remove_overlap(self, diarization: list[dict]):
+    def _diarization_remove_overlap(self, diarization: list[DiarizationSegment]):
         """
         Remove overlap in diarization results
 
@@ -87,7 +88,7 @@ class AudioDiarizationProcessor(Processor):
                 diarization_idx += 1
 
     def _diarization_remove_segment_without_words(
-        self, words: list[Word], diarization: list[dict]
+        self, words: list[Word], diarization: list[DiarizationSegment]
     ):
         """
         Remove diarization segments without words
@@ -117,7 +118,7 @@ class AudioDiarizationProcessor(Processor):
                 diarization_idx += 1
 
     def _diarization_merge_same_speaker(
-        self, words: list[Word], diarization: list[dict]
+        self, words: list[Word], diarization: list[DiarizationSegment]
     ):
         """
         Merge diarization contigous segments with the same speaker
@@ -135,7 +136,9 @@ class AudioDiarizationProcessor(Processor):
             else:
                 diarization_idx += 1
 
-    def _diarization_assign_speaker(self, words: list[Word], diarization: list[dict]):
+    def _diarization_assign_speaker(
+        self, words: list[Word], diarization: list[DiarizationSegment]
+    ):
         """
         Assign speaker to words based on diarization
 
