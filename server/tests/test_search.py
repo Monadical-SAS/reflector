@@ -64,7 +64,7 @@ async def test_search_input_validation():
 async def test_postgresql_search_with_data():
     """Test full-text search with actual data in PostgreSQL.
 
-    Run with: DATABASE_URL=postgresql://reflector:reflector@localhost:5432/reflector_test uv run pytest tests/test_search.py::test_postgresql_search_with_data -v -p no:env
+    Example how to run: DATABASE_URL=postgresql://reflector:reflector@localhost:5432/reflector_test uv run pytest tests/test_search.py::test_postgresql_search_with_data -v -p no:env
     """
     # Skip if not PostgreSQL
     if not is_postgresql():
