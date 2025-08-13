@@ -9,6 +9,7 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
+
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -68,7 +69,7 @@ async def process_recording(bucket_name: str, object_key: str):
 
     # extract a guid and a datetime from the object key
     room_name = f"/{object_key[:36]}"
-    recorded_at = datetime.fromisoformat(object_key[37:57]).replace(tzinfo=None)
+    recorded_at = datetime.fromisoformat(object_key[37:57])
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     room = await rooms_controller.get_by_id(meeting.room_id)

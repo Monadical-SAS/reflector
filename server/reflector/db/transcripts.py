@@ -11,6 +11,9 @@ import boto3
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from sqlalchemy import Enum
+from sqlalchemy.sql import false, or_
+
 from reflector.db import database, metadata
 from reflector.db.recordings import recordings_controller
 from reflector.logger import logger
@@ -18,8 +21,6 @@ from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
-from sqlalchemy import Enum
-from sqlalchemy.sql import false, or_
 
 
 class SourceKind(enum.StrEnum):
@@ -155,9 +156,7 @@ class Transcript(BaseModel):
     status: str = "idle"
     locked: bool = False
     duration: float = 0
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
     short_summary: str | None = None
     long_summary: str | None = None
