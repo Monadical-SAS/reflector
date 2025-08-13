@@ -23,8 +23,8 @@ export const formatTimeDifference = (seconds: number): string => {
     hours > 0
       ? `${hours < 10 ? "\u00A0" : ""}${hours}h ago`
       : minutes > 0
-      ? `${minutes < 10 ? "\u00A0" : ""}${minutes}m ago`
-      : `<1m ago`;
+        ? `${minutes < 10 ? "\u00A0" : ""}${minutes}m ago`
+        : `<1m ago`;
 
   return timeString;
 };
