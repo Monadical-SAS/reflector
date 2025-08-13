@@ -1,15 +1,14 @@
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 import asyncpg.exceptions
+import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
-
-import reflector.auth as auth
 from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
@@ -159,15 +158,19 @@ async def rooms_create_meeting(
         whereby_meeting = await create_meeting("", end_date=end_date, room=room)
         await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
-        # Now try to save to database
         try:
+
             meeting = await meetings_controller.create(
                 id=whereby_meeting["meetingId"],
                 room_name=whereby_meeting["roomName"],
                 room_url=whereby_meeting["roomUrl"],
                 host_room_url=whereby_meeting["hostRoomUrl"],
-                start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
-                end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+                start_date=datetime.fromisoformat(whereby_meeting["startDate"]).replace(
+                    tzinfo=None
+                ),
+                end_date=datetime.fromisoformat(whereby_meeting["endDate"]).replace(
+                    tzinfo=None
+                ),
                 user_id=user_id,
                 room=room,
             )
