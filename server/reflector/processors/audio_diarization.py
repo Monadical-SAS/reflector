@@ -25,10 +25,10 @@ class AudioDiarizationProcessor(Processor):
 
         # create a view of words based on topics
         # the current algorithm is using words index, we cannot use a generator
-        words = list(AudioDiarizationProcessor.iter_words_from_topics(data.topics))
+        words = list(self.iter_words_from_topics(data.topics))
 
         # assign speaker to words (mutate the words list)
-        AudioDiarizationProcessor.assign_speaker(words, diarization)
+        self.assign_speaker(words, diarization)
 
         # emit them
         for topic in data.topics:
@@ -37,14 +37,12 @@ class AudioDiarizationProcessor(Processor):
     async def _diarize(self, data: AudioDiarizationInput):
         raise NotImplementedError
 
-    @staticmethod
-    def assign_speaker(words: list[Word], diarization: list[dict]):
-        AudioDiarizationProcessor._diarization_remove_overlap(diarization)
-        AudioDiarizationProcessor._diarization_remove_segment_without_words(
-            words, diarization
-        )
-        AudioDiarizationProcessor._diarization_merge_same_speaker(diarization)
-        AudioDiarizationProcessor._diarization_assign_speaker(words, diarization)
+    @classmethod
+    def assign_speaker(cls, words: list[Word], diarization: list[dict]):
+        cls._diarization_remove_overlap(diarization)
+        cls._diarization_remove_segment_without_words(words, diarization)
+        cls._diarization_merge_same_speaker(diarization)
+        cls._diarization_assign_speaker(words, diarization)
 
     @staticmethod
     def iter_words_from_topics(topics: list[TitleSummary]):
@@ -141,8 +139,8 @@ class AudioDiarizationProcessor(Processor):
             else:
                 diarization_idx += 1
 
-    @staticmethod
-    def _diarization_assign_speaker(words: list[Word], diarization: list[dict]):
+    @classmethod
+    def _diarization_assign_speaker(cls, words: list[Word], diarization: list[dict]):
         """
         Assign speaker to words based on diarization
 
@@ -165,10 +163,8 @@ class AudioDiarizationProcessor(Processor):
                     # If it's a continuation, assign with the last speaker
                     is_continuation = False
                     if word_idx > 0 and word_idx < len(words) - 1:
-                        is_continuation = (
-                            AudioDiarizationProcessor.is_word_continuation(
-                                *words[word_idx - 1 : word_idx + 1]
-                            )
+                        is_continuation = cls.is_word_continuation(
+                            *words[word_idx - 1 : word_idx + 1]
                         )
                     if is_continuation:
                         word.speaker = last_speaker
