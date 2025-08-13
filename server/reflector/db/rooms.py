@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
 
@@ -48,7 +48,7 @@ class Room(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     name: str
     user_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     zulip_auto_post: bool = False
     zulip_stream: str = ""
     zulip_topic: str = ""
