@@ -3,7 +3,6 @@ from typing import Literal
 
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
-
 from reflector.db import database, metadata
 from reflector.utils import generate_uuid4
 
@@ -52,6 +51,10 @@ class RecordingController:
         )
         result = await database.fetch_one(query)
         return Recording(**result) if result else None
+
+    async def remove_by_id(self, id: str) -> None:
+        query = recordings.delete().where(recordings.c.id == id)
+        await database.execute(query)
 
 
 recordings_controller = RecordingController()
