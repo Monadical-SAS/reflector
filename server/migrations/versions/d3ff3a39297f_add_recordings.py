@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("bucket_name", sa.String(), nullable=False),
         sa.Column("object_key", sa.String(), nullable=False),
-        sa.Column("recorded_at", sa.DateTime(), nullable=False),
+        sa.Column("recorded_at", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column("status", sa.String(), server_default="pending", nullable=False),
         sa.Column("meeting_id", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),

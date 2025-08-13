@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column("meeting_id", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=True),
         sa.Column("consent_given", sa.Boolean(), nullable=False),
-        sa.Column("consent_timestamp", sa.DateTime(), nullable=False),
+        sa.Column("consent_timestamp", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["meeting_id"], ["meeting.id"]),
     )

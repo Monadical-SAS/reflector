@@ -11,9 +11,6 @@ import boto3
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
-from sqlalchemy import Enum
-from sqlalchemy.sql import false, or_
-
 from reflector.db import database, metadata
 from reflector.db.recordings import recordings_controller
 from reflector.logger import logger
@@ -21,6 +18,8 @@ from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
+from sqlalchemy import Enum
+from sqlalchemy.sql import false, or_
 
 
 class SourceKind(enum.StrEnum):
@@ -37,7 +36,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("status", sqlalchemy.String),
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
     sqlalchemy.Column("duration", sqlalchemy.Float),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime),
+    sqlalchemy.Column("created_at", sqlalchemy.TIMESTAMP(timezone=True)),
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),

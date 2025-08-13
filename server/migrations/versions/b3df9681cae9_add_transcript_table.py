@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(), nullable=True),
         sa.Column("locked", sa.Boolean(), nullable=True),
         sa.Column("duration", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("summary", sa.String(), nullable=True),
         sa.Column("topics", sa.JSON(), nullable=True),
         sa.Column("events", sa.JSON(), nullable=True),

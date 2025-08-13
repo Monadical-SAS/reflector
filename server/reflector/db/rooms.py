@@ -1,14 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
 
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy.sql import false, or_
-
 from reflector.db import database, metadata
 from reflector.utils import generate_uuid4
+from sqlalchemy.sql import false, or_
 
 rooms = sqlalchemy.Table(
     "room",
@@ -16,7 +15,9 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("name", sqlalchemy.String, nullable=False, unique=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
+    sqlalchemy.Column(
+        "created_at", sqlalchemy.TIMESTAMP(timezone=True), nullable=False
+    ),
     sqlalchemy.Column(
         "zulip_auto_post", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
@@ -48,7 +49,7 @@ class Room(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     name: str
     user_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     zulip_auto_post: bool = False
     zulip_stream: str = ""
     zulip_topic: str = ""

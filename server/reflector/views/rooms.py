@@ -1,15 +1,14 @@
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 import asyncpg.exceptions
+import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from pydantic import BaseModel
-
-import reflector.auth as auth
 from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
@@ -150,7 +149,7 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
     meeting = await meetings_controller.get_active(room=room, current_time=current_time)
 
     if meeting is None:

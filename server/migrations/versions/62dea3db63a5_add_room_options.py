@@ -27,8 +27,8 @@ def upgrade() -> None:
         sa.Column("room_url", sa.String(), nullable=True),
         sa.Column("host_room_url", sa.String(), nullable=True),
         sa.Column("viewer_room_url", sa.String(), nullable=True),
-        sa.Column("start_date", sa.DateTime(), nullable=True),
-        sa.Column("end_date", sa.DateTime(), nullable=True),
+        sa.Column("start_date", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("end_date", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("user_id", sa.String(), nullable=True),
         sa.Column("room_id", sa.String(), nullable=True),
         sa.Column(
@@ -51,7 +51,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("user_id", sa.String(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False),
         sa.Column(
             "zulip_auto_post",
             sa.Boolean(),

@@ -4,7 +4,6 @@ from typing import Literal
 import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
 from reflector.utils import generate_uuid4
@@ -16,8 +15,8 @@ meetings = sa.Table(
     sa.Column("room_name", sa.String),
     sa.Column("room_url", sa.String),
     sa.Column("host_room_url", sa.String),
-    sa.Column("start_date", sa.DateTime),
-    sa.Column("end_date", sa.DateTime),
+    sa.Column("start_date", sa.TIMESTAMP(timezone=True)),
+    sa.Column("end_date", sa.TIMESTAMP(timezone=True)),
     sa.Column("user_id", sa.String),
     sa.Column("room_id", sa.String),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
@@ -51,7 +50,7 @@ meeting_consent = sa.Table(
     sa.Column("meeting_id", sa.String, sa.ForeignKey("meeting.id"), nullable=False),
     sa.Column("user_id", sa.String),
     sa.Column("consent_given", sa.Boolean, nullable=False),
-    sa.Column("consent_timestamp", sa.DateTime, nullable=False),
+    sa.Column("consent_timestamp", sa.TIMESTAMP(timezone=True), nullable=False),
 )
 
 

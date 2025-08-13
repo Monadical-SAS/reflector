@@ -1,10 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 
+import reflector.auth as auth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-
-import reflector.auth as auth
 from reflector.db.meetings import (
     MeetingConsent,
     meeting_consent_controller,
@@ -35,7 +34,7 @@ async def meeting_audio_consent(
         meeting_id=meeting_id,
         user_id=user_id,
         consent_given=request.consent_given,
-        consent_timestamp=datetime.utcnow(),
+        consent_timestamp=datetime.now(timezone.utc),
     )
 
     updated_consent = await meeting_consent_controller.upsert(consent)

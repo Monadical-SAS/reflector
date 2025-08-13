@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import List
 
 import av
-
 from reflector.logger import logger
 from reflector.processors import (
     AudioChunkerProcessor,
@@ -155,7 +154,7 @@ async def process_audio_file_with_diarization(
 
                 # For Modal backend, we need to upload the file to S3 first
                 if diarization_backend == "modal":
-                    from datetime import datetime
+                    from datetime import datetime, timezone
 
                     from reflector.storage import get_transcripts_storage
                     from reflector.utils.s3_temp_file import S3TemporaryFile
@@ -163,7 +162,7 @@ async def process_audio_file_with_diarization(
                     storage = get_transcripts_storage()
 
                     # Generate a unique filename in evaluation folder
-                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
                     audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
 
                     # Use context manager for automatic cleanup
