@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 from httpx import AsyncClient
@@ -39,14 +40,18 @@ async def test_transcript_upload_file(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-    # wait the processing to finish
-    while True:
+    # wait the processing to finish (max 10 minutes)
+    timeout_seconds = 600  # 10 minutes
+    start_time = time.monotonic()
+    while (time.monotonic() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
         resp = await ac.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] in ("ended", "error"):
             break
         await asyncio.sleep(1)
+    else:
+        pytest.fail(f"Processing timed out after {timeout_seconds} seconds")
 
     # check the transcript is ended
     transcript = resp.json()

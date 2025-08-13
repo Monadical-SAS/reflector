@@ -40,6 +40,7 @@ dependencies = [
     "llama-index>=0.12.52",
     "llama-index-llms-openai-like>=0.4.0",
     "pytest-env>=1.1.5",
+    "webvtt-py>=0.5.0",
 ]
 
 [dependency-groups]
@@ -91,6 +92,13 @@ DATABASE_URL = "sqlite:///test.sqlite"
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.ruff.lint]
+select = [
+    "I",       # isort - import sorting
+    "F401",    # unused imports
+    "PLC0415", # import-outside-top-level - detect inline imports
+]
 
 [tool.ruff.lint.per-file-ignores]
 "reflector/processors/summary/summary_builder.py" = ["E501"]

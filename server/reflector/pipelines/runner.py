@@ -16,14 +16,17 @@ During its lifecycle, it will emit the following status:
 """
 
 import asyncio
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
 from reflector.logger import logger
 from reflector.processors import Pipeline
 
+PipelineMessage = TypeVar("PipelineMessage")
 
-class PipelineRunner(BaseModel):
+
+class PipelineRunner(BaseModel, Generic[PipelineMessage]):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     status: str = "idle"
@@ -67,7 +70,7 @@ class PipelineRunner(BaseModel):
         coro = self.run()
         asyncio.run(coro)
 
-    async def push(self, data):
+    async def push(self, data: PipelineMessage):
         """
         Push data to the pipeline
         """
@@ -92,7 +95,11 @@ class PipelineRunner(BaseModel):
         pass
 
     async def _add_cmd(
-        self, cmd: str, data, max_retries: int = 3, retry_time_limit: int = 3
+        self,
+        cmd: str,
+        data: PipelineMessage,
+        max_retries: int = 3,
+        retry_time_limit: int = 3,
     ):
         """
         Enqueue a command to be executed in the runner.
@@ -143,7 +150,10 @@ class PipelineRunner(BaseModel):
                 cmd, data = await self._q_cmd.get()
                 func = getattr(self, f"cmd_{cmd.lower()}")
                 if func:
-                    await func(data)
+                    if cmd.upper() == "FLUSH":
+                        await func()
+                    else:
+                        await func(data)
                 else:
                     raise Exception(f"Unknown command {cmd}")
         except Exception:
@@ -152,13 +162,13 @@ class PipelineRunner(BaseModel):
             self._ev_done.set()
             raise
 
-    async def cmd_push(self, data):
+    async def cmd_push(self, data: PipelineMessage):
         if self._is_first_push:
             await self._set_status("push")
             self._is_first_push = False
         await self.pipeline.push(data)
 
-    async def cmd_flush(self, data):
+    async def cmd_flush(self):
         await self._set_status("flush")
         await self.pipeline.flush()
         await self._set_status("ended")

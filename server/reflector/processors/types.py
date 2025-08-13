@@ -2,9 +2,10 @@ import io
 import re
 import tempfile
 from pathlib import Path
+from typing import Annotated
 
 from profanityfilter import ProfanityFilter
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 
 from reflector.redis_cache import redis_cache
 
@@ -48,18 +49,68 @@ class AudioFile(BaseModel):
             self._path.unlink()
 
 
+# non-negative seconds with float part
+Seconds = Annotated[float, Field(ge=0.0, description="Time in seconds with float part")]
+
+
 class Word(BaseModel):
     text: str
-    start: float
-    end: float
+    start: Seconds
+    end: Seconds
     speaker: int = 0
 
 
 class TranscriptSegment(BaseModel):
     text: str
-    start: float
-    end: float
+    start: Seconds
+    end: Seconds
     speaker: int = 0
+
+
+def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
+    # from a list of word, create a list of segments
+    # join the word that are less than 2 seconds apart
+    # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
+    segments = []
+    current_segment = None
+    MAX_SEGMENT_LENGTH = 120
+
+    for word in words:
+        if current_segment is None:
+            current_segment = TranscriptSegment(
+                text=word.text,
+                start=word.start,
+                end=word.end,
+                speaker=word.speaker,
+            )
+            continue
+
+        # If the word is attach to another speaker, push the current segment
+        # and start a new one
+        if word.speaker != current_segment.speaker:
+            segments.append(current_segment)
+            current_segment = TranscriptSegment(
+                text=word.text,
+                start=word.start,
+                end=word.end,
+                speaker=word.speaker,
+            )
+            continue
+
+        # if the word is the end of a sentence, and we have enough content,
+        # add the word to the current segment and push it
+        current_segment.text += word.text
+        current_segment.end = word.end
+
+        have_punc = PUNC_RE.search(word.text)
+        if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
+            segments.append(current_segment)
+            current_segment = None
+
+    if current_segment:
+        segments.append(current_segment)
+
+    return segments
 
 
 class Transcript(BaseModel):
@@ -117,49 +168,7 @@ class Transcript(BaseModel):
         return Transcript(text=self.text, translation=self.translation, words=words)
 
     def as_segments(self) -> list[TranscriptSegment]:
-        # from a list of word, create a list of segments
-        # join the word that are less than 2 seconds apart
-        # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
-        segments = []
-        current_segment = None
-        MAX_SEGMENT_LENGTH = 120
-
-        for word in self.words:
-            if current_segment is None:
-                current_segment = TranscriptSegment(
-                    text=word.text,
-                    start=word.start,
-                    end=word.end,
-                    speaker=word.speaker,
-                )
-                continue
-
-            # If the word is attach to another speaker, push the current segment
-            # and start a new one
-            if word.speaker != current_segment.speaker:
-                segments.append(current_segment)
-                current_segment = TranscriptSegment(
-                    text=word.text,
-                    start=word.start,
-                    end=word.end,
-                    speaker=word.speaker,
-                )
-                continue
-
-            # if the word is the end of a sentence, and we have enough content,
-            # add the word to the current segment and push it
-            current_segment.text += word.text
-            current_segment.end = word.end
-
-            have_punc = PUNC_RE.search(word.text)
-            if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
-                segments.append(current_segment)
-                current_segment = None
-
-        if current_segment:
-            segments.append(current_segment)
-
-        return segments
+        return words_to_segments(self.words)
 
 
 class TitleSummary(BaseModel):
