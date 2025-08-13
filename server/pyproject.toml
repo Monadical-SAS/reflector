@@ -59,6 +59,7 @@ tests = [
     "httpx-ws>=0.4.1",
     "pytest-httpx>=0.23.1",
     "pytest-celery>=0.0.0",
+    "pytest-recording>=0.13.4",
 ]
 aws = ["aioboto3>=11.2.0"]
 evaluation = [
