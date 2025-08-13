@@ -32,7 +32,7 @@ class FileDiarizationModalProcessor(FileDiarizationProcessor):
 
     async def _diarize(self, data: FileDiarizationInput):
         """Get speaker diarization for file"""
-        self.log.info(f"Starting diarization from {data.audio_url}")
+        self.logger.info(f"Starting diarization from {data.audio_url}")
 
         headers = {}
         if self.modal_api_key:

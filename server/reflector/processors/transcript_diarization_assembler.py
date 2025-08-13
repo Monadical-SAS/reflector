@@ -31,7 +31,9 @@ class TranscriptDiarizationAssemblerProcessor(Processor):
     async def _assemble(self, data: TranscriptDiarizationAssemblerInput):
         """Apply diarization to transcript words"""
         if not data.diarization:
-            self.log.info("No diarization data provided, returning original transcript")
+            self.logger.info(
+                "No diarization data provided, returning original transcript"
+            )
             return data.transcript
 
         # Reuse logic from AudioDiarizationProcessor
@@ -39,5 +41,5 @@ class TranscriptDiarizationAssemblerProcessor(Processor):
         words = data.transcript.words
         processor.assign_speaker(words, data.diarization)
 
-        self.log.info(f"Applied diarization to {len(words)} words")
+        self.logger.info(f"Applied diarization to {len(words)} words")
         return data.transcript

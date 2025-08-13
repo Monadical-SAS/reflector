@@ -9,6 +9,7 @@ import modal
 # Constants
 MODEL_NAME = "nvidia/parakeet-tdt-0.6b-v2"
 SUPPORTED_FILE_TYPES = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
+SAMPLERATE = 16000
 
 app = modal.App("reflector-transcriber-parakeet")
 
@@ -49,7 +50,6 @@ image = (
         "numpy<2",
         "librosa==0.10.1",
         "requests",
-        "pydub==0.25.1",
         "silero-vad==5.1.0",
         "torch",
     )
@@ -96,7 +96,7 @@ def download_audio_to_volume(audio_file_url: str) -> tuple[str, str]:
     return unique_filename, audio_suffix
 
 
-def pad_audio_if_needed(audio_array, sample_rate=16000):
+def pad_audio_if_needed(audio_array, sample_rate=SAMPLERATE):
     """Add 0.5 seconds of silence if audio is less than 500ms"""
     import numpy as np
 
@@ -123,8 +123,6 @@ class TranscriberParakeetLive:
     @modal.enter(snap=True)
     def enter(self):
         import nemo.collections.asr as nemo_asr
-        import torch
-        from silero_vad import load_silero_vad
 
         logging.getLogger("nemo_logger").setLevel(logging.CRITICAL)
 
@@ -132,10 +130,6 @@ class TranscriberParakeetLive:
         self.model = nemo_asr.models.ASRModel.from_pretrained(model_name=MODEL_NAME)
         device = next(self.model.parameters()).device
         print(f"Model is on device: {device}")
-
-        torch.set_num_threads(1)
-        self.vad_model = load_silero_vad(onnx=False)
-        print("Silero VAD initialized")
 
     @modal.method()
     def transcribe_segment(
@@ -147,16 +141,11 @@ class TranscriberParakeetLive:
 
         upload_volume.reload()
 
-        # Load audio from volume
         file_path = f"/uploads/{filename}"
-        print(f"Looking for file: {file_path}")
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Load audio using librosa (NeMo's preferred method)
-        audio_array, sample_rate = librosa.load(file_path, sr=16000, mono=True)
-
-        # Pad audio if needed
+        audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
         padded_audio = pad_audio_if_needed(audio_array, sample_rate)
 
         with self.lock:
@@ -204,11 +193,8 @@ class TranscriberParakeetLive:
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"Batch file not found: {file_path}")
 
-            audio_array, sample_rate = librosa.load(file_path, sr=16000, mono=True)
-
-            # Pad audio if needed
+            audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
             padded_audio = pad_audio_if_needed(audio_array, sample_rate)
-
             audio_arrays.append(padded_audio)
 
         with self.lock:
@@ -273,85 +259,90 @@ class TranscriberParakeetFile:
         print("Silero VAD initialized")
 
     @modal.method()
-    def transcribe_segment_with_offset(
+    def transcribe_segment(
         self,
         filename: str,
         language: str,
         timestamp_offset: float = 0.0,
     ):
+        import librosa
         import numpy as np
-        from pydub import AudioSegment
         from silero_vad import VADIterator
 
         def load_and_convert_audio(file_path):
-            if filename.lower().endswith(".mp3"):
-                audio = AudioSegment.from_mp3(file_path)
-            elif filename.lower().endswith(".wav"):
-                audio = AudioSegment.from_wav(file_path)
-            else:
-                audio = AudioSegment.from_file(file_path)
+            audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
+            return audio_array
 
-            audio = audio.set_frame_rate(16000).set_channels(1)
-            audio_array = np.frombuffer(audio.raw_data, dtype=np.int16).astype(
-                np.float32
-            )
-            return audio_array / 32768.0
-
-        def vad_segment_generator(audio_array, max_duration=30.0):
-            vad_iterator = VADIterator(self.vad_model, sampling_rate=16000)
+        def vad_segment_generator(audio_array):
+            """Generate speech segments using VAD with start/end sample indices"""
+            vad_iterator = VADIterator(self.vad_model, sampling_rate=SAMPLERATE)
             window_size = VAD_CONFIG["window_size"]
-
-            current_segment = []
-            current_start = None
-            current_duration = 0.0
-            in_speech = False
+            start = None
 
             for i in range(0, len(audio_array), window_size):
                 chunk = audio_array[i : i + window_size]
                 if len(chunk) < window_size:
-                    chunk = np.pad(chunk, (0, window_size - len(chunk)))
-
-                speech_dict = vad_iterator(chunk, return_seconds=True)
-
-                if speech_dict:
-                    if not in_speech:
-                        current_start = i / 16000.0
-                        in_speech = True
-                    current_segment.extend(chunk)
-                elif in_speech:
-                    segment_duration = len(current_segment) / 16000.0
-                    if segment_duration >= VAD_CONFIG["min_segment_duration"]:
-                        yield (
-                            current_start,
-                            current_start + segment_duration,
-                            np.array(current_segment),
-                        )
-                    current_segment = []
-                    in_speech = False
-                    current_duration = 0.0
-
-                if in_speech:
-                    current_duration = len(current_segment) / 16000.0
-                    if current_duration >= max_duration:
-                        yield (
-                            current_start,
-                            current_start + current_duration,
-                            np.array(current_segment),
-                        )
-                        current_segment = []
-                        current_start = (i + window_size) / 16000.0
-                        current_duration = 0.0
-
-            if current_segment and in_speech:
-                segment_duration = len(current_segment) / 16000.0
-                if segment_duration >= VAD_CONFIG["min_segment_duration"]:
-                    yield (
-                        current_start,
-                        current_start + segment_duration,
-                        np.array(current_segment),
+                    chunk = np.pad(
+                        chunk, (0, window_size - len(chunk)), mode="constant"
                     )
 
+                speech_dict = vad_iterator(chunk)
+                if not speech_dict:
+                    continue
+
+                if "start" in speech_dict:
+                    start = speech_dict["start"]
+                    continue
+
+                if "end" in speech_dict and start is not None:
+                    end = speech_dict["end"]
+                    start_time = start / float(SAMPLERATE)
+                    end_time = end / float(SAMPLERATE)
+
+                    # Extract the actual audio segment
+                    audio_segment = audio_array[start:end]
+
+                    yield (start_time, end_time, audio_segment)
+                    start = None
+
             vad_iterator.reset_states()
+
+        def vad_segment_filter(segments):
+            """Filter VAD segments by duration and chunk large segments"""
+            min_dur = VAD_CONFIG["min_segment_duration"]
+            max_dur = VAD_CONFIG["max_segment_duration"]
+
+            for start_time, end_time, audio_segment in segments:
+                segment_duration = end_time - start_time
+
+                # Skip very small segments
+                if segment_duration < min_dur:
+                    continue
+
+                # If segment is within max duration, yield as-is
+                if segment_duration <= max_dur:
+                    yield (start_time, end_time, audio_segment)
+                    continue
+
+                # Chunk large segments into smaller pieces
+                chunk_samples = int(max_dur * SAMPLERATE)
+                current_start = start_time
+
+                for chunk_offset in range(0, len(audio_segment), chunk_samples):
+                    chunk_audio = audio_segment[
+                        chunk_offset : chunk_offset + chunk_samples
+                    ]
+                    if len(chunk_audio) == 0:
+                        break
+
+                    chunk_duration = len(chunk_audio) / float(SAMPLERATE)
+                    chunk_end = current_start + chunk_duration
+
+                    # Only yield chunks that meet minimum duration
+                    if chunk_duration >= min_dur:
+                        yield (current_start, chunk_end, chunk_audio)
+
+                    current_start = chunk_end
 
         def batch_segments(segments, max_files=10, max_duration=5.0):
             batch = []
@@ -362,7 +353,7 @@ class TranscriberParakeetFile:
 
                 if segment_duration < VAD_CONFIG["silence_padding"]:
                     silence_samples = int(
-                        (VAD_CONFIG["silence_padding"] - segment_duration) * 16000
+                        (VAD_CONFIG["silence_padding"] - segment_duration) * SAMPLERATE
                     )
                     padding = np.zeros(silence_samples, dtype=np.float32)
                     audio_segment = np.concatenate([audio_segment, padding])
@@ -423,17 +414,18 @@ class TranscriberParakeetFile:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         audio_array = load_and_convert_audio(file_path)
-        total_duration = len(audio_array) / 16000.0
+        total_duration = len(audio_array) / float(SAMPLERATE)
         processed_duration = 0.0
 
         all_text_parts = []
         all_words = []
 
-        segments = vad_segment_generator(
-            audio_array, VAD_CONFIG["max_segment_duration"]
-        )
+        raw_segments = vad_segment_generator(audio_array)
+        filtered_segments = vad_segment_filter(raw_segments)
         batches = batch_segments(
-            segments, VAD_CONFIG["batch_max_files"], VAD_CONFIG["batch_max_duration"]
+            filtered_segments,
+            VAD_CONFIG["batch_max_files"],
+            VAD_CONFIG["batch_max_duration"],
         )
 
         batch_index = 0
@@ -457,7 +449,7 @@ class TranscriberParakeetFile:
                 all_text_parts.append(text)
                 all_words.extend(words)
 
-            processed_duration += sum(len(seg[2]) / 16000.0 for seg in batch)
+            processed_duration += sum(len(seg[2]) / float(SAMPLERATE) for seg in batch)
 
         combined_text = " ".join(all_text_parts)
         return {"text": combined_text, "words": all_words}
@@ -515,7 +507,7 @@ def web():
         files: list[UploadFile] | None = None,
         model: str = Form(MODEL_NAME),
         language: str = Form("en"),
-        batch: bool = Form(True),
+        batch: bool = Form(False),
     ):
         # Handle both single file and multiple files
         if not file and not files:
@@ -593,7 +585,7 @@ def web():
         unique_filename, audio_suffix = download_audio_to_volume(audio_file_url)
 
         try:
-            func = transcriber_file.transcribe_segment_with_offset.spawn(
+            func = transcriber_file.transcribe_segment.spawn(
                 filename=unique_filename,
                 language=language,
                 timestamp_offset=timestamp_offset,

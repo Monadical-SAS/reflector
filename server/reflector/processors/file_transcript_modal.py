@@ -39,7 +39,7 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
         """Send full file to Modal for transcription"""
         url = f"{self.transcript_url}/v1/audio/transcriptions-from-url"
 
-        self.log.info(f"Starting file transcription from {data.audio_url}")
+        self.logger.info(f"Starting file transcription from {data.audio_url}")
 
         headers = {}
         if self.modal_api_key:
