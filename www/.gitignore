@@ -44,3 +44,6 @@ config.ts
 
 # openapi logs
 openapi-ts-error-*.log
+
+# pnpm
+.pnpm-store
