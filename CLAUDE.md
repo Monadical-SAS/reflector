@@ -62,7 +62,7 @@ uv run python -m reflector.tools.process path/to/audio.wav
 **Setup:**
 ```bash
 # Install dependencies
-yarn install
+pnpm install
 
 # Copy configuration templates
 cp .env_template .env
@@ -72,19 +72,19 @@ cp config-template.ts config.ts
 **Development:**
 ```bash
 # Start development server
-yarn dev
+pnpm dev
 
 # Generate TypeScript API client from OpenAPI spec
-yarn openapi
+pnpm openapi
 
 # Lint code
-yarn lint
+pnpm lint
 
 # Format code
-yarn format
+pnpm format
 
 # Build for production
-yarn build
+pnpm build
 ```
 
 ### Docker Compose (Full Stack)

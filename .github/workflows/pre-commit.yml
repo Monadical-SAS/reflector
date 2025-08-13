@@ -11,4 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "pnpm"
+          cache-dependency-path: "www/pnpm-lock.yaml"
+      - name: Install dependencies
+        run: cd www && pnpm install --frozen-lockfile
       - uses: pre-commit/action@v3.0.1

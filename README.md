@@ -79,7 +79,7 @@ Start with `cd www`.
 **Installation**
 
 ```bash
-yarn install
+pnpm install
 cp .env_template .env
 cp config-template.ts config.ts
 ```
@@ -89,7 +89,7 @@ Then, fill in the environment variables in `.env` and the configuration in `conf
 **Run in development mode**
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 Then (after completing server setup and starting it) open [http://localhost:3000](http://localhost:3000) to view it in the browser.
@@ -99,7 +99,7 @@ Then (after completing server setup and starting it) open [http://localhost:3000
 To generate the TypeScript files from the openapi.json file, make sure the python server is running, then run:
 
 ```bash
-yarn openapi
+pnpm openapi
 ```
 
 ### Backend
