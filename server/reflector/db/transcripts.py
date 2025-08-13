@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
 
+import boto3
 import sqlalchemy
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
@@ -16,6 +17,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
+from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
 from reflector.processors.types import Word as ProcessorWord
@@ -593,7 +595,47 @@ class TranscriptController:
             return
         if user_id is not None and transcript.user_id != user_id:
             return
+        if transcript.audio_location == "storage" and not transcript.audio_deleted:
+            try:
+                await get_transcripts_storage().delete_file(
+                    transcript.storage_audio_path
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete transcript audio from storage",
+                    error=str(e),
+                    transcript_id=transcript.id,
+                )
         transcript.unlink()
+        if transcript.recording_id:
+            try:
+                recording = await recordings_controller.get_by_id(
+                    transcript.recording_id
+                )
+                if recording:
+                    try:
+                        s3 = boto3.client(
+                            "s3",
+                            region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+                            aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
+                            aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+                        )
+                        s3.delete_object(
+                            Bucket=recording.bucket_name, Key=recording.object_key
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to delete recording object from S3",
+                            error=str(e),
+                            recording_id=transcript.recording_id,
+                        )
+                    await recordings_controller.remove_by_id(transcript.recording_id)
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete recording row",
+                    error=str(e),
+                    recording_id=transcript.recording_id,
+                )
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
         await get_database().execute(query)
 
