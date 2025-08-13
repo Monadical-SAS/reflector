@@ -67,14 +67,14 @@ class TopicCollectorProcessor(Processor):
         return self.topics
 
 
-async def process_audio_file_with_diarization(
+async def process_audio_file(
     filename,
     event_callback,
     only_transcript=False,
     source_language="en",
     target_language="en",
     enable_diarization=True,
-    diarization_backend="modal",
+    diarization_backend="pyannote",
 ):
     # Create temp file for audio if diarization is enabled
     audio_temp_path = None
@@ -98,9 +98,6 @@ async def process_audio_file_with_diarization(
         AudioChunkerProcessor(),
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(),
-    ]
-
-    processors += [
         TranscriptLinerProcessor(),
         TranscriptTranslatorAutoProcessor.as_threaded(),
     ]
@@ -231,6 +228,7 @@ async def process_file_pipeline(
     source_language="en",
     target_language="en",
     enable_diarization=True,
+    diarization_backend="modal",
 ):
     """Process audio/video file using the optimized file pipeline"""
     try:
@@ -260,14 +258,14 @@ async def process_file_pipeline(
         logger.error(f"File pipeline not available: {e}")
         logger.info("Falling back to stream pipeline")
         # Fall back to stream pipeline
-        await process_audio_file_with_diarization(
+        await process_audio_file(
             filename,
             event_callback,
             only_transcript=False,
             source_language=source_language,
             target_language=target_language,
             enable_diarization=enable_diarization,
-            diarization_backend="modal",
+            diarization_backend=diarization_backend,
         )
 
 
@@ -305,16 +303,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--diarization-backend",
-        default="modal",
-        choices=["modal"],
-        help="Diarization backend to use (default: modal)",
+        default="pyannote",
+        choices=["pyannote", "modal"],
+        help="Diarization backend to use (default: pyannote)",
     )
     args = parser.parse_args()
 
-    # Set REDIS_HOST to localhost if not provided
     if "REDIS_HOST" not in os.environ:
         os.environ["REDIS_HOST"] = "localhost"
-        logger.info("REDIS_HOST not set, defaulting to localhost")
 
     output_fd = None
     if args.output:
@@ -370,6 +366,7 @@ if __name__ == "__main__":
                 source_language=args.source_language,
                 target_language=args.target_language,
                 enable_diarization=args.enable_diarization,
+                diarization_backend=args.diarization_backend,
             )
         )
 
