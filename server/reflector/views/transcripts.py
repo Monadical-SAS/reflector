@@ -1,15 +1,29 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import paginate
 from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
 
 import reflector.auth as auth
+from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
+from reflector.db.search import (
+    DEFAULT_SEARCH_LIMIT,
+    SearchLimit,
+    SearchLimitBase,
+    SearchOffset,
+    SearchOffsetBase,
+    SearchParameters,
+    SearchQuery,
+    SearchQueryBase,
+    SearchResult,
+    SearchTotal,
+    search_controller,
+)
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptParticipant,
@@ -100,6 +114,21 @@ class DeletionStatus(BaseModel):
     status: str
 
 
+SearchQueryParam = Annotated[SearchQueryBase, Query(description="Search query text")]
+SearchLimitParam = Annotated[SearchLimitBase, Query(description="Results per page")]
+SearchOffsetParam = Annotated[
+    SearchOffsetBase, Query(description="Number of results to skip")
+]
+
+
+class SearchResponse(BaseModel):
+    results: list[SearchResult]
+    total: SearchTotal
+    query: SearchQuery
+    limit: SearchLimit
+    offset: SearchOffset
+
+
 @router.get("/transcripts", response_model=Page[GetTranscriptMinimal])
 async def transcripts_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
@@ -107,8 +136,6 @@ async def transcripts_list(
     room_id: str | None = None,
     search_term: str | None = None,
 ):
-    from reflector.db import database
-
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -124,6 +151,39 @@ async def transcripts_list(
             order_by="-created_at",
             return_query=True,
         ),
+    )
+
+
+@router.get("/transcripts/search", response_model=SearchResponse)
+async def transcripts_search(
+    q: SearchQueryParam,
+    limit: SearchLimitParam = DEFAULT_SEARCH_LIMIT,
+    offset: SearchOffsetParam = 0,
+    room_id: Optional[str] = None,
+    user: Annotated[
+        Optional[auth.UserInfo], Depends(auth.current_user_optional)
+    ] = None,
+):
+    """
+    Full-text search across transcript titles and content.
+    """
+    if not user and not settings.PUBLIC_MODE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    user_id = user["sub"] if user else None
+
+    search_params = SearchParameters(
+        query_text=q, limit=limit, offset=offset, user_id=user_id, room_id=room_id
+    )
+
+    results, total = await search_controller.search_transcripts(search_params)
+
+    return SearchResponse(
+        results=results,
+        total=total,
+        query=search_params.query_text,
+        limit=search_params.limit,
+        offset=search_params.offset,
     )
 
 
@@ -273,8 +333,8 @@ async def transcript_update(
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
     values = info.dict(exclude_unset=True)
-    await transcripts_controller.update(transcript, values)
-    return transcript
+    updated_transcript = await transcripts_controller.update(transcript, values)
+    return updated_transcript
 
 
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)

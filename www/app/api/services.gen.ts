@@ -20,6 +20,8 @@ import type {
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
   V1TranscriptsCreateResponse,
+  V1TranscriptsSearchData,
+  V1TranscriptsSearchResponse,
   V1TranscriptGetData,
   V1TranscriptGetResponse,
   V1TranscriptUpdateData,
@@ -270,6 +272,35 @@ export class DefaultService {
       url: "/v1/transcripts",
       body: data.requestBody,
       mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Transcripts Search
+   * Full-text search across transcript titles and content.
+   * @param data The data for the request.
+   * @param data.q Search query text
+   * @param data.limit Results per page
+   * @param data.offset Number of results to skip
+   * @param data.roomId
+   * @returns SearchResponse Successful Response
+   * @throws ApiError
+   */
+  public v1TranscriptsSearch(
+    data: V1TranscriptsSearchData,
+  ): CancelablePromise<V1TranscriptsSearchResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/transcripts/search",
+      query: {
+        q: data.q,
+        limit: data.limit,
+        offset: data.offset,
+        room_id: data.roomId,
+      },
       errors: {
         422: "Validation Error",
       },

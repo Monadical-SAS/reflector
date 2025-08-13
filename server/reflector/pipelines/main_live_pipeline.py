@@ -14,12 +14,15 @@ It is directly linked to our data model.
 import asyncio
 import functools
 from contextlib import asynccontextmanager
+from typing import Generic
 
+import av
 import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
 
+from reflector.db import database
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -35,7 +38,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.runner import PipelineRunner
+from reflector.pipelines.runner import PipelineMessage, PipelineRunner
 from reflector.processors import (
     AudioChunkerProcessor,
     AudioDiarizationAutoProcessor,
@@ -69,8 +72,6 @@ def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         async def run_with_db():
-            from reflector.db import database
-
             await database.connect()
             try:
                 return await f(*args, **kwargs)
@@ -144,7 +145,7 @@ class StrValue(BaseModel):
     value: str
 
 
-class PipelineMainBase(PipelineRunner):
+class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]):
     transcript_id: str
     ws_room_id: str | None = None
     ws_manager: WebsocketManager | None = None
@@ -164,7 +165,11 @@ class PipelineMainBase(PipelineRunner):
             raise Exception("Transcript not found")
         return result
 
-    def get_transcript_topics(self, transcript: Transcript) -> list[TranscriptTopic]:
+    @staticmethod
+    def wrap_transcript_topics(
+        topics: list[TranscriptTopic],
+    ) -> list[TitleSummaryWithIdProcessorType]:
+        # transformation to a pipe-supported format
         return [
             TitleSummaryWithIdProcessorType(
                 id=topic.id,
@@ -174,7 +179,7 @@ class PipelineMainBase(PipelineRunner):
                 duration=topic.duration,
                 transcript=TranscriptProcessorType(words=topic.words),
             )
-            for topic in transcript.topics
+            for topic in topics
         ]
 
     @asynccontextmanager
@@ -380,7 +385,7 @@ class PipelineMainLive(PipelineMainBase):
         pipeline_post(transcript_id=self.transcript_id)
 
 
-class PipelineMainDiarization(PipelineMainBase):
+class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
     """
     Diarize the audio and update topics
     """
@@ -404,11 +409,10 @@ class PipelineMainDiarization(PipelineMainBase):
             pipeline.logger.info("Audio is local, skipping diarization")
             return
 
-        topics = self.get_transcript_topics(transcript)
         audio_url = await transcript.get_audio_url()
         audio_diarization_input = AudioDiarizationInput(
             audio_url=audio_url,
-            topics=topics,
+            topics=self.wrap_transcript_topics(transcript.topics),
         )
 
         # as tempting to use pipeline.push, prefer to use the runner
@@ -421,7 +425,7 @@ class PipelineMainDiarization(PipelineMainBase):
         return pipeline
 
 
-class PipelineMainFromTopics(PipelineMainBase):
+class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
     """
     Pseudo class for generating a pipeline from topics
     """
@@ -443,7 +447,7 @@ class PipelineMainFromTopics(PipelineMainBase):
         pipeline.logger.info(f"{self.__class__.__name__} pipeline created")
 
         # push topics
-        topics = self.get_transcript_topics(transcript)
+        topics = PipelineMainBase.wrap_transcript_topics(transcript.topics)
         for topic in topics:
             await self.push(topic)
 
@@ -524,8 +528,6 @@ async def pipeline_convert_to_mp3(transcript: Transcript, logger: Logger):
     # Convert to mp3
     mp3_filename = transcript.audio_mp3_filename
 
-    import av
-
     with av.open(wav_filename.as_posix()) as in_container:
         in_stream = in_container.streams.audio[0]
         with av.open(mp3_filename.as_posix(), "w") as out_container:
@@ -604,7 +606,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                         meeting.id
                     )
     except Exception as e:
-        logger.error(f"Failed to get fetch consent: {e}")
+        logger.error(f"Failed to get fetch consent: {e}", exc_info=e)
         consent_denied = True
 
     if not consent_denied:
@@ -627,7 +629,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete Whereby recording: {e}")
+            logger.error(f"Failed to delete Whereby recording: {e}", exc_info=e)
 
     # non-transactional, files marked for deletion not actually deleted is possible
     await transcripts_controller.update(transcript, {"audio_deleted": True})
@@ -640,7 +642,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted processed audio from storage: {transcript.storage_audio_path}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete processed audio: {e}")
+            logger.error(f"Failed to delete processed audio: {e}", exc_info=e)
 
     # 3. Delete local audio files
     try:
@@ -649,7 +651,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
         if hasattr(transcript, "audio_wav_filename") and transcript.audio_wav_filename:
             transcript.audio_wav_filename.unlink(missing_ok=True)
     except Exception as e:
-        logger.error(f"Failed to delete local audio files: {e}")
+        logger.error(f"Failed to delete local audio files: {e}", exc_info=e)
 
     logger.info("Consent cleanup done")
 
@@ -794,8 +796,6 @@ def pipeline_post(*, transcript_id: str):
 
 @get_transcript
 async def pipeline_process(transcript: Transcript, logger: Logger):
-    import av
-
     try:
         if transcript.audio_location == "storage":
             await transcripts_controller.download_mp3_from_storage(transcript)
