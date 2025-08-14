@@ -22,7 +22,7 @@ from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
 
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -72,6 +72,7 @@ def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         async def run_with_db():
+            database = get_database()
             await database.connect()
             try:
                 return await f(*args, **kwargs)

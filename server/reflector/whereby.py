@@ -23,7 +23,7 @@ async def create_meeting(room_name_prefix: str, end_date: datetime, room: Room):
             "type": room.recording_type,
             "destination": {
                 "provider": "s3",
-                "bucket": settings.AWS_WHEREBY_S3_BUCKET,
+                "bucket": settings.RECORDING_STORAGE_AWS_BUCKET_NAME,
                 "accessKeyId": settings.AWS_WHEREBY_ACCESS_KEY_ID,
                 "accessKeySecret": settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
                 "fileFormat": "mp4",

@@ -23,7 +23,10 @@ def upgrade() -> None:
     with op.batch_alter_table("meeting", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
-                "is_active", sa.Boolean(), server_default=sa.text("1"), nullable=False
+                "is_active",
+                sa.Boolean(),
+                server_default=sa.text("true"),
+                nullable=False,
             )
         )
 

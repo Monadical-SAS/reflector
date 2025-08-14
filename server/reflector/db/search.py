@@ -9,7 +9,7 @@ import sqlalchemy
 import webvtt
 from pydantic import BaseModel, Field, constr, field_serializer
 
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
 
@@ -207,12 +207,12 @@ class SearchController:
             .limit(params.limit)
             .offset(params.offset)
         )
-        rs = await database.fetch_all(query)
+        rs = await get_database().fetch_all(query)
 
         count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
             base_query.alias("search_results")
         )
-        total = await database.fetch_val(count_query)
+        total = await get_database().fetch_val(count_query)
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)

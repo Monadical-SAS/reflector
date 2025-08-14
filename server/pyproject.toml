@@ -57,6 +57,8 @@ tests = [
     "httpx-ws>=0.4.1",
     "pytest-httpx>=0.23.1",
     "pytest-celery>=0.0.0",
+    "pytest-docker>=3.2.3",
+    "asgi-lifespan>=2.1.0",
 ]
 aws = ["aioboto3>=11.2.0"]
 evaluation = [
@@ -86,7 +88,7 @@ source = ["reflector"]
 
 [tool.pytest_env]
 ENVIRONMENT = "pytest"
-DATABASE_URL = "sqlite:///test.sqlite"
+DATABASE_URL = "postgresql://test_user:test_password@localhost:15432/reflector_test"
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"

@@ -2,20 +2,17 @@ import shutil
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
 
 
 @pytest.fixture
-async def fake_transcript(tmpdir):
-    from reflector.app import app
+async def fake_transcript(tmpdir, client):
     from reflector.settings import settings
     from reflector.views.transcripts import transcripts_controller
 
     settings.DATA_DIR = Path(tmpdir)
 
     # create a transcript
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.post("/transcripts", json={"name": "Test audio download"})
+    response = await client.post("/transcripts", json={"name": "Test audio download"})
     assert response.status_code == 200
     tid = response.json()["id"]
 
@@ -39,17 +36,17 @@ async def fake_transcript(tmpdir):
         ["/mp3", "audio/mpeg"],
     ],
 )
-async def test_transcript_audio_download(fake_transcript, url_suffix, content_type):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.get(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
+async def test_transcript_audio_download(
+    fake_transcript, url_suffix, content_type, client
+):
+    response = await client.get(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
     assert response.status_code == 200
     assert response.headers["content-type"] == content_type
 
     # test get 404
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.get(f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}")
+    response = await client.get(
+        f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}"
+    )
     assert response.status_code == 404
 
 
@@ -61,18 +58,16 @@ async def test_transcript_audio_download(fake_transcript, url_suffix, content_ty
     ],
 )
 async def test_transcript_audio_download_head(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.head(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
+    response = await client.head(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
     assert response.status_code == 200
     assert response.headers["content-type"] == content_type
 
     # test head 404
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.head(f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}")
+    response = await client.head(
+        f"/transcripts/{fake_transcript.id}XXX/audio{url_suffix}"
+    )
     assert response.status_code == 404
 
 
@@ -84,12 +79,9 @@ async def test_transcript_audio_download_head(
     ],
 )
 async def test_transcript_audio_download_range(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.get(
+    response = await client.get(
         f"/transcripts/{fake_transcript.id}/audio{url_suffix}",
         headers={"range": "bytes=0-100"},
     )
@@ -107,12 +99,9 @@ async def test_transcript_audio_download_range(
     ],
 )
 async def test_transcript_audio_download_range_with_seek(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.get(
+    response = await client.get(
         f"/transcripts/{fake_transcript.id}/audio{url_suffix}",
         headers={"range": "bytes=100-"},
     )
@@ -122,13 +111,10 @@ async def test_transcript_audio_download_range_with_seek(
 
 
 @pytest.mark.asyncio
-async def test_transcript_delete_with_audio(fake_transcript):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.delete(f"/transcripts/{fake_transcript.id}")
+async def test_transcript_delete_with_audio(fake_transcript, client):
+    response = await client.delete(f"/transcripts/{fake_transcript.id}")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-    response = await ac.get(f"/transcripts/{fake_transcript.id}")
+    response = await client.get(f"/transcripts/{fake_transcript.id}")
     assert response.status_code == 404

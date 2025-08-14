@@ -1,17 +1,63 @@
+import os
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
 
 
+# Pytest-docker configuration
+@pytest.fixture(scope="session")
+def docker_compose_file(pytestconfig):
+    return os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
+
+
+@pytest.fixture(scope="session")
+def postgres_service(docker_ip, docker_services):
+    """Ensure that PostgreSQL service is up and responsive."""
+    port = docker_services.port_for("postgres_test", 5432)
+
+    def is_responsive():
+        try:
+            import psycopg2
+
+            conn = psycopg2.connect(
+                host=docker_ip,
+                port=port,
+                dbname="reflector_test",
+                user="test_user",
+                password="test_password",
+            )
+            conn.close()
+            return True
+        except Exception:
+            return False
+
+    docker_services.wait_until_responsive(timeout=30.0, pause=0.1, check=is_responsive)
+
+    # Return connection parameters
+    return {
+        "host": docker_ip,
+        "port": port,
+        "dbname": "reflector_test",
+        "user": "test_user",
+        "password": "test_password",
+    }
+
+
 @pytest.fixture(scope="function", autouse=True)
 @pytest.mark.asyncio
-async def setup_database():
-    from reflector.db import engine, metadata  # noqa
+async def setup_database(postgres_service):
+    from reflector.db import engine, metadata, get_database  # noqa
 
     metadata.drop_all(bind=engine)
     metadata.create_all(bind=engine)
-    yield
+    database = get_database()
+
+    try:
+        await database.connect()
+        yield
+    finally:
+        await database.disconnect()
 
 
 @pytest.fixture
@@ -44,6 +90,20 @@ def dummy_processors():
             mock_long_summary,
             mock_short_summary,
         )  # noqa
+
+
+@pytest.fixture
+async def whisper_transcript():
+    from reflector.processors.audio_transcript_whisper import (
+        AudioTranscriptWhisperProcessor,
+    )
+
+    with patch(
+        "reflector.processors.audio_transcript_auto"
+        ".AudioTranscriptAutoProcessor.__new__"
+    ) as mock_audio:
+        mock_audio.return_value = AudioTranscriptWhisperProcessor()
+        yield
 
 
 @pytest.fixture
@@ -181,6 +241,16 @@ def celery_includes():
     return ["reflector.pipelines.main_live_pipeline"]
 
 
+@pytest.fixture
+async def client():
+    from httpx import AsyncClient
+
+    from reflector.app import app
+
+    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+        yield ac
+
+
 @pytest.fixture(scope="session")
 def fake_mp3_upload():
     with patch(
@@ -191,13 +261,10 @@ def fake_mp3_upload():
 
 
 @pytest.fixture
-async def fake_transcript_with_topics(tmpdir):
+async def fake_transcript_with_topics(tmpdir, client):
     import shutil
     from pathlib import Path
 
-    from httpx import AsyncClient
-
-    from reflector.app import app
     from reflector.db.transcripts import TranscriptTopic
     from reflector.processors.types import Word
     from reflector.settings import settings
@@ -206,8 +273,7 @@ async def fake_transcript_with_topics(tmpdir):
     settings.DATA_DIR = Path(tmpdir)
 
     # create a transcript
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.post("/transcripts", json={"name": "Test audio download"})
+    response = await client.post("/transcripts", json={"name": "Test audio download"})
     assert response.status_code == 200
     tid = response.json()["id"]
 

@@ -1,16 +1,16 @@
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 import asyncpg.exceptions
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import paginate
+from fastapi_pagination.ext.databases import apaginate
 from pydantic import BaseModel
 
 import reflector.auth as auth
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
@@ -19,6 +19,14 @@ from reflector.whereby import create_meeting, upload_logo
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def parse_datetime_with_timezone(iso_string: str) -> datetime:
+    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
+    dt = datetime.fromisoformat(iso_string)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class Room(BaseModel):
@@ -83,8 +91,8 @@ async def rooms_list(
 
     user_id = user["sub"] if user else None
 
-    return await paginate(
-        database,
+    return await apaginate(
+        get_database(),
         await rooms_controller.get_all(
             user_id=user_id, order_by="-created_at", return_query=True
         ),
@@ -150,7 +158,7 @@ async def rooms_create_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc)
     meeting = await meetings_controller.get_active(room=room, current_time=current_time)
 
     if meeting is None:
@@ -166,8 +174,8 @@ async def rooms_create_meeting(
                 room_name=whereby_meeting["roomName"],
                 room_url=whereby_meeting["roomUrl"],
                 host_room_url=whereby_meeting["hostRoomUrl"],
-                start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
-                end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+                start_date=parse_datetime_with_timezone(whereby_meeting["startDate"]),
+                end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
                 user_id=user_id,
                 room=room,
             )
