@@ -48,7 +48,6 @@ dev = [
     "black>=24.1.1",
     "stamina>=23.1.0",
     "pyinstrument>=4.6.1",
-    "pytest-docker>=3.2.3",
 ]
 tests = [
     "pytest-cov>=4.1.0",

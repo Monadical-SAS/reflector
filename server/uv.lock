@@ -2694,7 +2694,6 @@ aws = [
 dev = [
     { name = "black" },
     { name = "pyinstrument" },
-    { name = "pytest-docker" },
     { name = "stamina" },
 ]
 evaluation = [
@@ -2759,7 +2758,6 @@ aws = [{ name = "aioboto3", specifier = ">=11.2.0" }]
 dev = [
     { name = "black", specifier = ">=24.1.1" },
     { name = "pyinstrument", specifier = ">=4.6.1" },
-    { name = "pytest-docker", specifier = ">=3.2.3" },
     { name = "stamina", specifier = ">=23.1.0" },
 ]
 evaluation = [
