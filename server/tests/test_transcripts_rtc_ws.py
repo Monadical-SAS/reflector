@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 
 import pytest
-from httpx import AsyncClient
 from httpx_ws import aconnect_ws
 from uvicorn import Config, Server
 
@@ -51,7 +50,6 @@ class ThreadedUvicorn:
 
 @pytest.fixture
 async def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
-    from reflector.app import app
     from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
@@ -97,8 +95,7 @@ async def test_transcript_rtc_and_websocket(
 
     # create a transcript
     base_url = f"http://{host}:{port}/v1"
-    ac = AsyncClient(base_url=base_url)
-    response = await ac.post("/transcripts", json={"name": "Test RTC"})
+    response = await client.post("/transcripts", json={"name": "Test RTC"})
     assert response.status_code == 200
     tid = response.json()["id"]
 
@@ -162,7 +159,7 @@ async def test_transcript_rtc_and_websocket(
     timeout = 20
     while True:
         # fetch the transcript and check if it is ended
-        resp = await ac.get(f"/transcripts/{tid}")
+        resp = await client.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] in ("ended", "error"):
             break
@@ -215,7 +212,7 @@ async def test_transcript_rtc_and_websocket(
     ev = events[eventnames.index("WAVEFORM")]
     assert isinstance(ev["data"]["waveform"], list)
     assert len(ev["data"]["waveform"]) >= 250
-    waveform_resp = await ac.get(f"/transcripts/{tid}/audio/waveform")
+    waveform_resp = await client.get(f"/transcripts/{tid}/audio/waveform")
     assert waveform_resp.status_code == 200
     assert waveform_resp.headers["content-type"] == "application/json"
     assert isinstance(waveform_resp.json()["data"], list)
@@ -235,7 +232,7 @@ async def test_transcript_rtc_and_websocket(
     assert "DURATION" in eventnames
 
     # check that audio/mp3 is available
-    audio_resp = await ac.get(f"/transcripts/{tid}/audio/mp3")
+    audio_resp = await client.get(f"/transcripts/{tid}/audio/mp3")
     assert audio_resp.status_code == 200
     assert audio_resp.headers["Content-Type"] == "audio/mpeg"
 
@@ -263,8 +260,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     # create a transcript
     base_url = f"http://{host}:{port}/v1"
-    ac = AsyncClient(base_url=base_url)
-    response = await ac.post(
+    response = await client.post(
         "/transcripts", json={"name": "Test RTC", "target_language": "fr"}
     )
     assert response.status_code == 200
@@ -334,7 +330,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     timeout = 20
     while True:
         # fetch the transcript and check if it is ended
-        resp = await ac.get(f"/transcripts/{tid}")
+        resp = await client.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] == "ended":
             break

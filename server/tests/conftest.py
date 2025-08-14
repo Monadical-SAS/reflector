@@ -241,6 +241,16 @@ def celery_includes():
     return ["reflector.pipelines.main_live_pipeline"]
 
 
+@pytest.fixture
+async def client():
+    from httpx import AsyncClient
+
+    from reflector.app import app
+
+    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
+        yield ac
+
+
 @pytest.fixture(scope="session")
 def fake_mp3_upload():
     with patch(
@@ -251,13 +261,10 @@ def fake_mp3_upload():
 
 
 @pytest.fixture
-async def fake_transcript_with_topics(tmpdir):
+async def fake_transcript_with_topics(tmpdir, client):
     import shutil
     from pathlib import Path
 
-    from httpx import AsyncClient
-
-    from reflector.app import app
     from reflector.db.transcripts import TranscriptTopic
     from reflector.processors.types import Word
     from reflector.settings import settings
@@ -266,8 +273,7 @@ async def fake_transcript_with_topics(tmpdir):
     settings.DATA_DIR = Path(tmpdir)
 
     # create a transcript
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-    response = await ac.post("/transcripts", json={"name": "Test audio download"})
+    response = await client.post("/transcripts", json={"name": "Test audio download"})
     assert response.status_code == 200
     tid = response.json()["id"]
 
