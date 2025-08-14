@@ -15,12 +15,13 @@ from sqlalchemy import Enum
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
-from reflector.db import database, metadata
+from reflector.db import get_database, metadata
+from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.storage import get_transcripts_storage
+from reflector.storage import get_transcripts_storage, get_recordings_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
 
@@ -41,7 +42,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("status", sqlalchemy.String),
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
     sqlalchemy.Column("duration", sqlalchemy.Float),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True)),
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),
@@ -421,7 +422,7 @@ class TranscriptController:
         if return_query:
             return query
 
-        results = await database.fetch_all(query)
+        results = await get_database().fetch_all(query)
         return results
 
     async def get_by_id(self, transcript_id: str, **kwargs) -> Transcript | None:
@@ -431,7 +432,7 @@ class TranscriptController:
         query = transcripts.select().where(transcripts.c.id == transcript_id)
         if "user_id" in kwargs:
             query = query.where(transcripts.c.user_id == kwargs["user_id"])
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
         return Transcript(**result)
@@ -445,7 +446,7 @@ class TranscriptController:
         query = transcripts.select().where(transcripts.c.recording_id == recording_id)
         if "user_id" in kwargs:
             query = query.where(transcripts.c.user_id == kwargs["user_id"])
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
         return Transcript(**result)
@@ -463,7 +464,7 @@ class TranscriptController:
             if order_by.startswith("-"):
                 field = field.desc()
             query = query.order_by(field)
-        results = await database.fetch_all(query)
+        results = await get_database().fetch_all(query)
         return [Transcript(**result) for result in results]
 
     async def get_by_id_for_http(
@@ -481,7 +482,7 @@ class TranscriptController:
         to determine if the user can access the transcript.
         """
         query = transcripts.select().where(transcripts.c.id == transcript_id)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             raise HTTPException(status_code=404, detail="Transcript not found")
 
@@ -534,7 +535,7 @@ class TranscriptController:
             room_id=room_id,
         )
         query = transcripts.insert().values(**transcript.model_dump())
-        await database.execute(query)
+        await get_database().execute(query)
         return transcript
 
     # TODO investigate why mutate= is used. it's used in one place currently, maybe because of ORM field updates.
@@ -553,7 +554,7 @@ class TranscriptController:
             .where(transcripts.c.id == transcript.id)
             .values(**values)
         )
-        await database.execute(query)
+        await get_database().execute(query)
         if mutate:
             for key, value in values.items():
                 setattr(transcript, key, value)
@@ -593,23 +594,55 @@ class TranscriptController:
             return
         if user_id is not None and transcript.user_id != user_id:
             return
+        if transcript.audio_location == "storage" and not transcript.audio_deleted:
+            try:
+                await get_transcripts_storage().delete_file(
+                    transcript.storage_audio_path
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete transcript audio from storage",
+                    error=str(e),
+                    transcript_id=transcript.id,
+                )
         transcript.unlink()
+        if transcript.recording_id:
+            try:
+                recording = await recordings_controller.get_by_id(
+                    transcript.recording_id
+                )
+                if recording:
+                    try:
+                        await get_recordings_storage().delete_file(recording.object_key)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to delete recording object from S3",
+                            error=str(e),
+                            recording_id=transcript.recording_id,
+                        )
+                    await recordings_controller.remove_by_id(transcript.recording_id)
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete recording row",
+                    error=str(e),
+                    recording_id=transcript.recording_id,
+                )
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
-        await database.execute(query)
+        await get_database().execute(query)
 
     async def remove_by_recording_id(self, recording_id: str):
         """
         Remove a transcript by recording_id
         """
         query = transcripts.delete().where(transcripts.c.recording_id == recording_id)
-        await database.execute(query)
+        await get_database().execute(query)
 
     @asynccontextmanager
     async def transaction(self):
         """
         A context manager for database transaction
         """
-        async with database.transaction(isolation="serializable"):
+        async with get_database().transaction(isolation="serializable"):
             yield
 
     async def append_event(

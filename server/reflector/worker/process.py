@@ -21,6 +21,14 @@ from reflector.whereby import get_room_sessions
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
 
+def parse_datetime_with_timezone(iso_string: str) -> datetime:
+    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
+    dt = datetime.fromisoformat(iso_string)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @shared_task
 def process_messages():
     queue_url = settings.AWS_PROCESS_RECORDING_QUEUE_URL
@@ -69,7 +77,7 @@ async def process_recording(bucket_name: str, object_key: str):
 
     # extract a guid and a datetime from the object key
     room_name = f"/{object_key[:36]}"
-    recorded_at = datetime.fromisoformat(object_key[37:57])
+    recorded_at = parse_datetime_with_timezone(object_key[37:57])
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     room = await rooms_controller.get_by_id(meeting.room_id)
@@ -177,7 +185,7 @@ async def reprocess_failed_recordings():
     reprocessed_count = 0
     try:
         paginator = s3.get_paginator("list_objects_v2")
-        bucket_name = settings.AWS_WHEREBY_S3_BUCKET
+        bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
         pages = paginator.paginate(Bucket=bucket_name)
 
         for page in pages:

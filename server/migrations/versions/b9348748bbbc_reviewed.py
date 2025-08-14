@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.add_column(
         "transcript",
         sa.Column(
-            "reviewed", sa.Boolean(), server_default=sa.text("0"), nullable=False
+            "reviewed", sa.Boolean(), server_default=sa.text("false"), nullable=False
         ),
     )
     # ### end Alembic commands ###

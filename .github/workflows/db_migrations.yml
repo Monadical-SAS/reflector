@@ -17,9 +17,39 @@ on:
 jobs:
   test-migrations:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: reflector
+          POSTGRES_PASSWORD: reflector
+          POSTGRES_DB: reflector
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -h 127.0.0.1 -p 5432
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://reflector:reflector@localhost:5432/reflector
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client | cat
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432; then
+              echo "Postgres is ready"
+              break
+            fi
+            echo "Waiting for Postgres... ($i)" && sleep 1
+          done
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3

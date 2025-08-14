@@ -62,6 +62,7 @@ class RedisPubSubManager:
 class WebsocketManager:
     def __init__(self, pubsub_client: RedisPubSubManager = None):
         self.rooms: dict = {}
+        self.tasks: dict = {}
         self.pubsub_client = pubsub_client
 
     async def add_user_to_room(self, room_id: str, websocket: WebSocket) -> None:
@@ -74,13 +75,17 @@ class WebsocketManager:
 
             await self.pubsub_client.connect()
             pubsub_subscriber = await self.pubsub_client.subscribe(room_id)
-            asyncio.create_task(self._pubsub_data_reader(pubsub_subscriber))
+            task = asyncio.create_task(self._pubsub_data_reader(pubsub_subscriber))
+            self.tasks[id(websocket)] = task
 
     async def send_json(self, room_id: str, message: dict) -> None:
         await self.pubsub_client.send_json(room_id, message)
 
     async def remove_user_from_room(self, room_id: str, websocket: WebSocket) -> None:
         self.rooms[room_id].remove(websocket)
+        task = self.tasks.pop(id(websocket), None)
+        if task:
+            task.cancel()
 
         if len(self.rooms[room_id]) == 0:
             del self.rooms[room_id]

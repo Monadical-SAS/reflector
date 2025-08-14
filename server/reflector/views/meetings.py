@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -35,7 +35,7 @@ async def meeting_audio_consent(
         meeting_id=meeting_id,
         user_id=user_id,
         consent_given=request.consent_given,
-        consent_timestamp=datetime.utcnow(),
+        consent_timestamp=datetime.now(timezone.utc),
     )
 
     updated_consent = await meeting_consent_controller.upsert(consent)
