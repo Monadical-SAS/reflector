@@ -22,13 +22,13 @@ async def test_recording_deleted_with_transcript():
         recording_id=recording.id,
     )
 
-    with patch("reflector.db.transcripts.AwsStorage") as MockAwsStorage:
-        aws_instance = MockAwsStorage.return_value
-        aws_instance.delete_file = AsyncMock()
+    with patch("reflector.db.transcripts.get_transcripts_storage") as mock_get_storage:
+        storage_instance = mock_get_storage.return_value
+        storage_instance.delete_file = AsyncMock()
 
         await transcripts_controller.remove_by_id(transcript.id)
 
-        aws_instance.delete_file.assert_awaited_once_with(recording.object_key)
+        storage_instance.delete_file.assert_awaited_once_with(recording.object_key)
 
     assert await recordings_controller.get_by_id(recording.id) is None
     assert await transcripts_controller.get_by_id(transcript.id) is None
