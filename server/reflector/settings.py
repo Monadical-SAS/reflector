@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
+    # Recording storage
+    RECORDING_STORAGE_BACKEND: str | None = None
+
+    # Recording storage configuration for AWS
+    RECORDING_STORAGE_AWS_BUCKET_NAME: str = "recording-bucket"
+    RECORDING_STORAGE_AWS_REGION: str = "us-east-1"
+    RECORDING_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
+    RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+
     # Translate into the target language
     TRANSLATION_BACKEND: str = "passthrough"
     TRANSLATE_URL: str | None = None
@@ -104,7 +113,6 @@ class Settings(BaseSettings):
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: str | None = None
     WHEREBY_WEBHOOK_SECRET: str | None = None
-    AWS_WHEREBY_S3_BUCKET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
