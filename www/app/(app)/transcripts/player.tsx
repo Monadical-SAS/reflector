@@ -136,7 +136,6 @@ export default function Player(props: PlayerProps) {
         content,
         drag: false,
         resize: false,
-        top: 0,
       });
       region.on("click", (e) => {
         e.stopPropagation();

@@ -165,6 +165,8 @@ const TranscriptCreate = () => {
                     options={supportedLanguages}
                     value={targetLanguage}
                     onChange={onLanguageChange}
+                    onBlur={() => {}}
+                    onFocus={() => {}}
                     placeholder="Choose your language"
                   />
                 </Box>
