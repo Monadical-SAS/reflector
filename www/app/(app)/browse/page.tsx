@@ -13,6 +13,7 @@ import SearchBar from "./_components/SearchBar";
 import TranscriptTable from "./_components/TranscriptTable";
 import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
+import { formatLocalDate } from "../../lib/time";
 
 export default function TranscriptBrowser() {
   const [selectedSourceKind, setSelectedSourceKind] =
@@ -25,7 +26,7 @@ export default function TranscriptBrowser() {
     page,
     selectedSourceKind,
     selectedRoomId,
-    searchTerm,
+    searchTerm
   );
   const userName = useSessionUser().name;
   const [deletionLoading, setDeletionLoading] = useState(false);
@@ -50,7 +51,7 @@ export default function TranscriptBrowser() {
 
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,
-    roomId: string,
+    roomId: string
   ) => {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
@@ -96,26 +97,28 @@ export default function TranscriptBrowser() {
 
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
-  const handleDeleteTranscript = (transcriptId) => (e) => {
-    e.stopPropagation();
-    if (api && !deletionLoading) {
-      setDeletionLoading(true);
-      api
-        .v1TranscriptDelete({ transcriptId })
-        .then(() => {
-          refetch();
-          setDeletionLoading(false);
-          onCloseDeletion();
-          setDeletedItemIds((deletedItemIds) => [
-            deletedItemIds,
-            ...transcriptId,
-          ]);
-        })
-        .catch((err) => {
-          setDeletionLoading(false);
-          setError(err, "There was an error deleting the transcript");
-        });
-    }
+  const confirmDeleteTranscript = (transcriptId: string) => {
+    if (!api || deletionLoading) return;
+    setDeletionLoading(true);
+    api
+      .v1TranscriptDelete({ transcriptId })
+      .then(() => {
+        refetch();
+        setDeletionLoading(false);
+        onCloseDeletion();
+        setDeletedItemIds((prev) =>
+          prev ? [...prev, transcriptId] : [transcriptId]
+        );
+      })
+      .catch((err) => {
+        setDeletionLoading(false);
+        setError(err, "There was an error deleting the transcript");
+      });
+  };
+
+  const handleDeleteTranscript = (transcriptId: string) => (e: any) => {
+    e?.stopPropagation?.();
+    setTranscriptToDeleteId(transcriptId);
   };
 
   const handleProcessTranscript = (transcriptId) => (e) => {
@@ -127,7 +130,7 @@ export default function TranscriptBrowser() {
           if (status === "already running") {
             setError(
               new Error("Processing is already running, please wait"),
-              "Processing is already running, please wait",
+              "Processing is already running, please wait"
             );
           }
         })
@@ -136,6 +139,19 @@ export default function TranscriptBrowser() {
         });
     }
   };
+
+  const transcriptToDelete = response?.items?.find(
+    (i) => i.id === transcriptToDeleteId
+  );
+  const dialogTitle = transcriptToDelete?.title || "Unnamed Transcript";
+  const dialogDate = transcriptToDelete?.created_at
+    ? formatLocalDate(transcriptToDelete.created_at)
+    : undefined;
+  const dialogSource = transcriptToDelete
+    ? transcriptToDelete.source_kind === "room"
+      ? transcriptToDelete.room_name || undefined
+      : transcriptToDelete.source_kind
+    : undefined;
 
   return (
     <Flex
@@ -197,8 +213,14 @@ export default function TranscriptBrowser() {
       <DeleteTranscriptDialog
         isOpen={!!transcriptToDeleteId}
         onClose={onCloseDeletion}
-        onConfirm={() => handleDeleteTranscript(transcriptToDeleteId)(null)}
+        onConfirm={() =>
+          transcriptToDeleteId && confirmDeleteTranscript(transcriptToDeleteId)
+        }
         cancelRef={cancelRef}
+        isLoading={deletionLoading}
+        title={dialogTitle}
+        date={dialogDate}
+        source={dialogSource}
       />
     </Flex>
   );

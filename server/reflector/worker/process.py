@@ -185,7 +185,7 @@ async def reprocess_failed_recordings():
     reprocessed_count = 0
     try:
         paginator = s3.get_paginator("list_objects_v2")
-        bucket_name = settings.AWS_WHEREBY_S3_BUCKET
+        bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
         pages = paginator.paginate(Bucket=bucket_name)
 
         for page in pages:

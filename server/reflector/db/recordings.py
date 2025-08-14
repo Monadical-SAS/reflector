@@ -53,5 +53,9 @@ class RecordingController:
         result = await get_database().fetch_one(query)
         return Recording(**result) if result else None
 
+    async def remove_by_id(self, id: str) -> None:
+        query = recordings.delete().where(recordings.c.id == id)
+        await get_database().execute(query)
+
 
 recordings_controller = RecordingController()
