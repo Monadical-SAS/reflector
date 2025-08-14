@@ -22,7 +22,6 @@ from reflector.db.utils import is_postgresql
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
-from reflector.storage.storage_aws import AwsStorage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
 
@@ -614,13 +613,9 @@ class TranscriptController:
                 )
                 if recording:
                     try:
-                        storage = AwsStorage(
-                            aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
-                            aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
-                            aws_bucket_name=recording.bucket_name,
-                            aws_region=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+                        await get_transcripts_storage().delete_file(
+                            recording.object_key
                         )
-                        await storage.delete_file(recording.object_key)
                     except Exception as e:
                         logger.warning(
                             "Failed to delete recording object from S3",
