@@ -6,11 +6,11 @@ from typing import Annotated, Literal, Optional
 import asyncpg.exceptions
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import paginate
+from fastapi_pagination.ext.databases import apaginate
 from pydantic import BaseModel
 
 import reflector.auth as auth
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
@@ -91,8 +91,8 @@ async def rooms_list(
 
     user_id = user["sub"] if user else None
 
-    return await paginate(
-        database,
+    return await apaginate(
+        get_database(),
         await rooms_controller.get_all(
             user_id=user_id, order_by="-created_at", return_query=True
         ),

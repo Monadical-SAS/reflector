@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from reflector.db import database, metadata
+from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
 from reflector.utils import generate_uuid4
 
@@ -117,7 +117,7 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
         )
         query = meetings.insert().values(**meeting.model_dump())
-        await database.execute(query)
+        await get_database().execute(query)
         return meeting
 
     async def get_all_active(self) -> list[Meeting]:
@@ -125,7 +125,7 @@ class MeetingController:
         Get active meetings.
         """
         query = meetings.select().where(meetings.c.is_active)
-        return await database.fetch_all(query)
+        return await get_database().fetch_all(query)
 
     async def get_by_room_name(
         self,
@@ -135,7 +135,7 @@ class MeetingController:
         Get a meeting by room name.
         """
         query = meetings.select().where(meetings.c.room_name == room_name)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
 
@@ -157,7 +157,7 @@ class MeetingController:
             )
             .order_by(end_date.desc())
         )
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
 
@@ -168,7 +168,7 @@ class MeetingController:
         Get a meeting by id
         """
         query = meetings.select().where(meetings.c.id == meeting_id)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
         return Meeting(**result)
@@ -180,7 +180,7 @@ class MeetingController:
         If not found, it will raise a 404 error.
         """
         query = meetings.select().where(meetings.c.id == meeting_id)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             raise HTTPException(status_code=404, detail="Meeting not found")
 
@@ -192,7 +192,7 @@ class MeetingController:
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
-        await database.execute(query)
+        await get_database().execute(query)
 
 
 class MeetingConsentController:
@@ -200,7 +200,7 @@ class MeetingConsentController:
         query = meeting_consent.select().where(
             meeting_consent.c.meeting_id == meeting_id
         )
-        results = await database.fetch_all(query)
+        results = await get_database().fetch_all(query)
         return [MeetingConsent(**result) for result in results]
 
     async def get_by_meeting_and_user(
@@ -211,7 +211,7 @@ class MeetingConsentController:
             meeting_consent.c.meeting_id == meeting_id,
             meeting_consent.c.user_id == user_id,
         )
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if result is None:
             return None
         return MeetingConsent(**result) if result else None
@@ -233,14 +233,14 @@ class MeetingConsentController:
                         consent_timestamp=consent.consent_timestamp,
                     )
                 )
-                await database.execute(query)
+                await get_database().execute(query)
 
                 existing.consent_given = consent.consent_given
                 existing.consent_timestamp = consent.consent_timestamp
                 return existing
 
         query = meeting_consent.insert().values(**consent.model_dump())
-        await database.execute(query)
+        await get_database().execute(query)
         return consent
 
     async def has_any_denial(self, meeting_id: str) -> bool:
@@ -249,7 +249,7 @@ class MeetingConsentController:
             meeting_consent.c.meeting_id == meeting_id,
             meeting_consent.c.consent_given.is_(False),
         )
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         return result is not None
 
 

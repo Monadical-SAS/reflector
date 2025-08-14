@@ -3,12 +3,12 @@ from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import paginate
+from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
 from pydantic import BaseModel, Field, field_serializer
 
 import reflector.auth as auth
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.search import (
@@ -141,8 +141,8 @@ async def transcripts_list(
 
     user_id = user["sub"] if user else None
 
-    return await paginate(
-        database,
+    return await apaginate(
+        get_database(),
         await transcripts_controller.get_all(
             user_id=user_id,
             source_kind=SourceKind(source_kind) if source_kind else None,

@@ -4,7 +4,7 @@ from typing import Literal
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
 
-from reflector.db import database, metadata
+from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
 
 recordings = sa.Table(
@@ -37,12 +37,12 @@ class Recording(BaseModel):
 class RecordingController:
     async def create(self, recording: Recording):
         query = recordings.insert().values(**recording.model_dump())
-        await database.execute(query)
+        await get_database().execute(query)
         return recording
 
     async def get_by_id(self, id: str) -> Recording:
         query = recordings.select().where(recordings.c.id == id)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         return Recording(**result) if result else None
 
     async def get_by_object_key(self, bucket_name: str, object_key: str) -> Recording:
@@ -50,7 +50,7 @@ class RecordingController:
             recordings.c.bucket_name == bucket_name,
             recordings.c.object_key == object_key,
         )
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         return Recording(**result) if result else None
 
 

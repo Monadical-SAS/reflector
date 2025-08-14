@@ -59,6 +59,7 @@ tests = [
     "pytest-httpx>=0.23.1",
     "pytest-celery>=0.0.0",
     "pytest-docker>=3.2.3",
+    "asgi-lifespan>=2.1.0",
 ]
 aws = ["aioboto3>=11.2.0"]
 evaluation = [

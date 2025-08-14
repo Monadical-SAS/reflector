@@ -1,7 +1,9 @@
 """Database utility functions."""
 
-from reflector.db import database
+from reflector.db import get_database
 
 
 def is_postgresql() -> bool:
-    return database.url.scheme and database.url.scheme.startswith('postgresql')
+    return get_database().url.scheme and get_database().url.scheme.startswith(
+        "postgresql"
+    )

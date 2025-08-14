@@ -2,7 +2,7 @@
 
 import pytest
 
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptController,
@@ -26,7 +26,7 @@ class TestWebVTTAutoUpdate:
         )
 
         try:
-            result = await database.fetch_one(
+            result = await get_database().fetch_one(
                 transcripts.select().where(transcripts.c.id == transcript.id)
             )
 
@@ -58,7 +58,7 @@ class TestWebVTTAutoUpdate:
 
             await controller.upsert_topic(transcript, topic)
 
-            result = await database.fetch_one(
+            result = await get_database().fetch_one(
                 transcripts.select().where(transcripts.c.id == transcript.id)
             )
 
@@ -99,7 +99,7 @@ class TestWebVTTAutoUpdate:
             await controller.update(transcript, {"topics": topics_data})
 
             # Fetch from DB
-            result = await database.fetch_one(
+            result = await get_database().fetch_one(
                 transcripts.select().where(transcripts.c.id == transcript.id)
             )
 
@@ -141,7 +141,7 @@ class TestWebVTTAutoUpdate:
             await controller.update(transcript, values)
 
             # Fetch from DB
-            result = await database.fetch_one(
+            result = await get_database().fetch_one(
                 transcripts.select().where(transcripts.c.id == transcript.id)
             )
 
@@ -216,7 +216,7 @@ class TestWebVTTAutoUpdate:
             await controller.update(transcript, values)
 
             # Fetch from DB
-            result = await database.fetch_one(
+            result = await get_database().fetch_one(
                 transcripts.select().where(transcripts.c.id == transcript.id)
             )
 

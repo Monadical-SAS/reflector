@@ -47,10 +47,11 @@ def postgres_service(docker_ip, docker_services):
 @pytest.fixture(scope="function", autouse=True)
 @pytest.mark.asyncio
 async def setup_database(postgres_service):
-    from reflector.db import engine, metadata, database  # noqa
+    from reflector.db import engine, metadata, get_database  # noqa
 
     metadata.drop_all(bind=engine)
     metadata.create_all(bind=engine)
+    database = get_database()
 
     try:
         await database.connect()
@@ -89,6 +90,20 @@ def dummy_processors():
             mock_long_summary,
             mock_short_summary,
         )  # noqa
+
+
+@pytest.fixture
+async def whisper_transcript():
+    from reflector.processors.audio_transcript_whisper import (
+        AudioTranscriptWhisperProcessor,
+    )
+
+    with patch(
+        "reflector.processors.audio_transcript_auto"
+        ".AudioTranscriptAutoProcessor.__new__"
+    ) as mock_audio:
+        mock_audio.return_value = AudioTranscriptWhisperProcessor()
+        yield
 
 
 @pytest.fixture

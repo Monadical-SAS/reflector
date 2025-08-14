@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from reflector.db import database
+from reflector.db import get_database
 from reflector.db.search import SearchParameters, search_controller
 from reflector.db.transcripts import transcripts
 
@@ -54,7 +54,9 @@ async def test_postgresql_search_with_data():
     test_id = "test-search-e2e-7f3a9b2c"
 
     try:
-        await database.execute(transcripts.delete().where(transcripts.c.id == test_id))
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
 
         test_data = {
             "id": test_id,
@@ -90,7 +92,7 @@ The search feature should support complex queries with ranking.
 We need to implement PostgreSQL tsvector for better performance.""",
         }
 
-        await database.execute(transcripts.insert().values(**test_data))
+        await get_database().execute(transcripts.insert().values(**test_data))
 
         # Test 1: Search for a word in title
         params = SearchParameters(query_text="planning")
@@ -136,5 +138,7 @@ We need to implement PostgreSQL tsvector for better performance.""",
         assert found, "Should find test transcript by exact phrase"
 
     finally:
-        await database.execute(transcripts.delete().where(transcripts.c.id == test_id))
-        await database.disconnect()
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
+        await get_database().disconnect()
