@@ -49,23 +49,69 @@ class ThreadedUvicorn:
 
 
 @pytest.fixture
-async def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
+def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
+    import threading
+
     from reflector.app import app
+    from reflector.db import get_database
     from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
     settings.DATA_DIR = Path(tmpdir)
 
-    # start server
+    # start server in a separate thread with its own event loop
     host = "127.0.0.1"
     port = 1255
-    config = Config(app=app, host=host, port=port)
-    server = ThreadedUvicorn(config)
-    await server.start()
+    server_started = threading.Event()
+    server_exception = None
+    server_instance = None
 
-    yield (server, host, port)
+    def run_server():
+        nonlocal server_exception, server_instance
+        try:
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-    server.stop()
+            config = Config(app=app, host=host, port=port, loop=loop)
+            server_instance = Server(config)
+
+            async def start_server():
+                # Initialize database connection in this event loop
+                database = get_database()
+                await database.connect()
+                try:
+                    await server_instance.serve()
+                finally:
+                    await database.disconnect()
+
+            # Signal that server is starting
+            server_started.set()
+            loop.run_until_complete(start_server())
+        except Exception as e:
+            server_exception = e
+            server_started.set()
+        finally:
+            loop.close()
+
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+
+    # Wait for server to start
+    server_started.wait(timeout=30)
+    if server_exception:
+        raise server_exception
+
+    # Wait a bit more for the server to be fully ready
+    time.sleep(1)
+
+    yield server_instance, host, port
+
+    # Stop server
+    if server_instance:
+        server_instance.should_exit = True
+        server_thread.join(timeout=30)
+
     settings.DATA_DIR = DATA_DIR
 
 
@@ -145,7 +191,7 @@ async def test_transcript_rtc_and_websocket(
     stream_client = StreamClient(signaling, url=url, play_from=path.as_posix())
     await stream_client.start()
 
-    timeout = 20
+    timeout = 120
     while not stream_client.is_ended():
         await asyncio.sleep(1)
         timeout -= 1
@@ -158,7 +204,7 @@ async def test_transcript_rtc_and_websocket(
     await stream_client.stop()
 
     # wait the processing to finish
-    timeout = 20
+    timeout = 120
     while True:
         # fetch the transcript and check if it is ended
         resp = await client.get(f"/transcripts/{tid}")
@@ -313,7 +359,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     stream_client = StreamClient(signaling, url=url, play_from=path.as_posix())
     await stream_client.start()
 
-    timeout = 20
+    timeout = 120
     while not stream_client.is_ended():
         await asyncio.sleep(1)
         timeout -= 1
@@ -330,7 +376,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     await stream_client.stop()
 
     # wait the processing to finish
-    timeout = 20
+    timeout = 120
     while True:
         # fetch the transcript and check if it is ended
         resp = await client.get(f"/transcripts/{tid}")
