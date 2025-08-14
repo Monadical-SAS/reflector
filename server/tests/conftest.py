@@ -1,20 +1,69 @@
 import os
+import subprocess
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
 
 
-# Pytest-docker configuration
+# Pytest-docker configuration with cleanup
 @pytest.fixture(scope="session")
 def docker_compose_file(pytestconfig):
     return os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
 
 
 @pytest.fixture(scope="session")
+def docker_compose_project_name():
+    """Use a consistent project name to avoid creating new networks each run."""
+    return "reflector_test"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_docker_resources():
+    """Clean up Docker test resources before and after test session."""
+
+    def cleanup():
+        # Stop and remove any existing test containers
+        # This will also remove the reflector_test network if it exists
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-p",
+                "reflector_test",
+                "down",
+                "-v",
+                "--remove-orphans",
+            ],
+            capture_output=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        )
+        # Clean up any unused networks (includes orphaned pytest networks)
+        # This is safe - only removes networks with no attached containers
+        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+
+    # Clean before tests
+    cleanup()
+
+    yield
+
+    # Clean after tests
+    cleanup()
+
+
+@pytest.fixture(scope="session")
 def postgres_service(docker_ip, docker_services):
     """Ensure that PostgreSQL service is up and responsive."""
-    port = docker_services.port_for("postgres_test", 5432)
+    try:
+        port = docker_services.port_for("postgres_test", 5432)
+    except Exception as e:
+        # If Docker services fail to start, clean up and retry
+        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+        subprocess.run(
+            ["docker", "compose", "-p", "reflector_test", "down", "-v"],
+            capture_output=True,
+        )
+        raise pytest.skip(f"Docker services failed to start: {e}")
 
     def is_responsive():
         try:
