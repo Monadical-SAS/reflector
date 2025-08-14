@@ -14,6 +14,7 @@ async def test_transcript_upload_file(
     dummy_processors,
     dummy_diarization,
     dummy_storage,
+    client,
 ):
     # create a transcript
     response = await client.post("/transcripts", json={"name": "test"})

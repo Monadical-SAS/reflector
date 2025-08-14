@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture
-async def fake_transcript(tmpdir):
+async def fake_transcript(tmpdir, client):
     from reflector.settings import settings
     from reflector.views.transcripts import transcripts_controller
 
@@ -36,7 +36,9 @@ async def fake_transcript(tmpdir):
         ["/mp3", "audio/mpeg"],
     ],
 )
-async def test_transcript_audio_download(fake_transcript, url_suffix, content_type):
+async def test_transcript_audio_download(
+    fake_transcript, url_suffix, content_type, client
+):
     response = await client.get(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
     assert response.status_code == 200
     assert response.headers["content-type"] == content_type
@@ -56,7 +58,7 @@ async def test_transcript_audio_download(fake_transcript, url_suffix, content_ty
     ],
 )
 async def test_transcript_audio_download_head(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
     response = await client.head(f"/transcripts/{fake_transcript.id}/audio{url_suffix}")
     assert response.status_code == 200
@@ -77,7 +79,7 @@ async def test_transcript_audio_download_head(
     ],
 )
 async def test_transcript_audio_download_range(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
     response = await client.get(
         f"/transcripts/{fake_transcript.id}/audio{url_suffix}",
@@ -97,7 +99,7 @@ async def test_transcript_audio_download_range(
     ],
 )
 async def test_transcript_audio_download_range_with_seek(
-    fake_transcript, url_suffix, content_type
+    fake_transcript, url_suffix, content_type, client
 ):
     response = await client.get(
         f"/transcripts/{fake_transcript.id}/audio{url_suffix}",
@@ -109,7 +111,7 @@ async def test_transcript_audio_download_range_with_seek(
 
 
 @pytest.mark.asyncio
-async def test_transcript_delete_with_audio(fake_transcript):
+async def test_transcript_delete_with_audio(fake_transcript, client):
     response = await client.delete(f"/transcripts/{fake_transcript.id}")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"

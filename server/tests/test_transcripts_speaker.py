@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_transcript_reassign_speaker(fake_transcript_with_topics):
+async def test_transcript_reassign_speaker(fake_transcript_with_topics, client):
     transcript_id = fake_transcript_with_topics.id
 
     # check the transcript exists
@@ -114,7 +114,7 @@ async def test_transcript_reassign_speaker(fake_transcript_with_topics):
 
 
 @pytest.mark.asyncio
-async def test_transcript_merge_speaker(fake_transcript_with_topics):
+async def test_transcript_merge_speaker(fake_transcript_with_topics, client):
     transcript_id = fake_transcript_with_topics.id
 
     # check the transcript exists
@@ -180,7 +180,9 @@ async def test_transcript_merge_speaker(fake_transcript_with_topics):
 
 
 @pytest.mark.asyncio
-async def test_transcript_reassign_with_participant(fake_transcript_with_topics):
+async def test_transcript_reassign_with_participant(
+    fake_transcript_with_topics, client
+):
     transcript_id = fake_transcript_with_topics.id
 
     # check the transcript exists

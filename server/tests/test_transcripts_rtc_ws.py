@@ -50,6 +50,7 @@ class ThreadedUvicorn:
 
 @pytest.fixture
 async def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
+    from reflector.app import app
     from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
@@ -87,6 +88,7 @@ async def test_transcript_rtc_and_websocket(
     dummy_storage,
     fake_mp3_upload,
     appserver,
+    client,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
@@ -140,11 +142,11 @@ async def test_transcript_rtc_and_websocket(
 
     url = f"{base_url}/transcripts/{tid}/record/webrtc"
     path = Path(__file__).parent / "records" / "test_short.wav"
-    client = StreamClient(signaling, url=url, play_from=path.as_posix())
-    await client.start()
+    stream_client = StreamClient(signaling, url=url, play_from=path.as_posix())
+    await stream_client.start()
 
     timeout = 20
-    while not client.is_ended():
+    while not stream_client.is_ended():
         await asyncio.sleep(1)
         timeout -= 1
         if timeout < 0:
@@ -152,8 +154,8 @@ async def test_transcript_rtc_and_websocket(
 
     # XXX aiortc is long to close the connection
     # instead of waiting a long time, we just send a STOP
-    client.channel.send(json.dumps({"cmd": "STOP"}))
-    await client.stop()
+    stream_client.channel.send(json.dumps({"cmd": "STOP"}))
+    await stream_client.stop()
 
     # wait the processing to finish
     timeout = 20
@@ -251,6 +253,7 @@ async def test_transcript_rtc_and_websocket_and_fr(
     dummy_storage,
     fake_mp3_upload,
     appserver,
+    client,
 ):
     # goal: start the server, exchange RTC, receive websocket events
     # because of that, we need to start the server in a thread
@@ -307,11 +310,11 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     url = f"{base_url}/transcripts/{tid}/record/webrtc"
     path = Path(__file__).parent / "records" / "test_short.wav"
-    client = StreamClient(signaling, url=url, play_from=path.as_posix())
-    await client.start()
+    stream_client = StreamClient(signaling, url=url, play_from=path.as_posix())
+    await stream_client.start()
 
     timeout = 20
-    while not client.is_ended():
+    while not stream_client.is_ended():
         await asyncio.sleep(1)
         timeout -= 1
         if timeout < 0:
@@ -319,12 +322,12 @@ async def test_transcript_rtc_and_websocket_and_fr(
 
     # XXX aiortc is long to close the connection
     # instead of waiting a long time, we just send a STOP
-    client.channel.send(json.dumps({"cmd": "STOP"}))
+    stream_client.channel.send(json.dumps({"cmd": "STOP"}))
 
     # wait the processing to finish
     await asyncio.sleep(2)
 
-    await client.stop()
+    await stream_client.stop()
 
     # wait the processing to finish
     timeout = 20
