@@ -22,7 +22,7 @@ async def test_recording_deleted_with_transcript():
         recording_id=recording.id,
     )
 
-    with patch("reflector.db.transcripts.get_transcripts_storage") as mock_get_storage:
+    with patch("reflector.db.transcripts.get_recordings_storage") as mock_get_storage:
         storage_instance = mock_get_storage.return_value
         storage_instance.delete_file = AsyncMock()
 
