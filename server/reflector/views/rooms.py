@@ -21,6 +21,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def parse_datetime_with_timezone(iso_string: str) -> datetime:
+    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
+    dt = datetime.fromisoformat(iso_string)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 class Room(BaseModel):
     id: str
     name: str
@@ -166,8 +174,8 @@ async def rooms_create_meeting(
                 room_name=whereby_meeting["roomName"],
                 room_url=whereby_meeting["roomUrl"],
                 host_room_url=whereby_meeting["hostRoomUrl"],
-                start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
-                end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+                start_date=parse_datetime_with_timezone(whereby_meeting["startDate"]),
+                end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
                 user_id=user_id,
                 room=room,
             )

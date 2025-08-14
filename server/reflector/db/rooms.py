@@ -16,7 +16,7 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("name", sqlalchemy.String, nullable=False, unique=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=False),
     sqlalchemy.Column(
         "zulip_auto_post", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),

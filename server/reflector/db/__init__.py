@@ -14,8 +14,8 @@ import reflector.db.rooms  # noqa
 import reflector.db.transcripts  # noqa
 
 kwargs = {}
-if "sqlite" in settings.DATABASE_URL:
-    kwargs["connect_args"] = {"check_same_thread": False}
+if "postgres" not in settings.DATABASE_URL:
+    raise Exception("Only postgres database is supported in reflector")
 engine = sqlalchemy.create_engine(settings.DATABASE_URL, **kwargs)
 
 

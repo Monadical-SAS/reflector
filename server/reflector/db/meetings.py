@@ -16,8 +16,8 @@ meetings = sa.Table(
     sa.Column("room_name", sa.String),
     sa.Column("room_url", sa.String),
     sa.Column("host_room_url", sa.String),
-    sa.Column("start_date", sa.DateTime),
-    sa.Column("end_date", sa.DateTime),
+    sa.Column("start_date", sa.DateTime(timezone=True)),
+    sa.Column("end_date", sa.DateTime(timezone=True)),
     sa.Column("user_id", sa.String),
     sa.Column("room_id", sa.String),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
@@ -42,6 +42,12 @@ meetings = sa.Table(
         server_default=sa.true(),
     ),
     sa.Index("idx_meeting_room_id", "room_id"),
+    sa.Index(
+        "idx_one_active_meeting_per_room",
+        "room_id",
+        unique=True,
+        postgresql_where=sa.text("is_active = true"),
+    ),
 )
 
 meeting_consent = sa.Table(
@@ -51,7 +57,7 @@ meeting_consent = sa.Table(
     sa.Column("meeting_id", sa.String, sa.ForeignKey("meeting.id"), nullable=False),
     sa.Column("user_id", sa.String),
     sa.Column("consent_given", sa.Boolean, nullable=False),
-    sa.Column("consent_timestamp", sa.DateTime, nullable=False),
+    sa.Column("consent_timestamp", sa.DateTime(timezone=True), nullable=False),
 )
 
 

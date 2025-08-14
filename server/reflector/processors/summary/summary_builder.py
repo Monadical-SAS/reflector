@@ -6,7 +6,7 @@ This script is used to generate a summary of a meeting notes transcript.
 
 import asyncio
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from textwrap import dedent
 from typing import Type, TypeVar
@@ -474,7 +474,7 @@ if __name__ == "__main__":
 
         if args.save:
             # write the summary to a file, on the format summary-<iso date>.md
-            filename = f"summary-{datetime.now().isoformat()}.md"
+            filename = f"summary-{datetime.now(timezone.utc).isoformat()}.md"
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(sm.as_markdown())
 

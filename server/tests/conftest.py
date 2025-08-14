@@ -1,17 +1,62 @@
+import os
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
 
 
+# Pytest-docker configuration
+@pytest.fixture(scope="session")
+def docker_compose_file(pytestconfig):
+    return os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
+
+
+@pytest.fixture(scope="session")
+def postgres_service(docker_ip, docker_services):
+    """Ensure that PostgreSQL service is up and responsive."""
+    port = docker_services.port_for("postgres_test", 5432)
+
+    def is_responsive():
+        try:
+            import psycopg2
+
+            conn = psycopg2.connect(
+                host=docker_ip,
+                port=port,
+                dbname="reflector_test",
+                user="test_user",
+                password="test_password",
+            )
+            conn.close()
+            return True
+        except Exception:
+            return False
+
+    docker_services.wait_until_responsive(timeout=30.0, pause=0.1, check=is_responsive)
+
+    # Return connection parameters
+    return {
+        "host": docker_ip,
+        "port": port,
+        "dbname": "reflector_test",
+        "user": "test_user",
+        "password": "test_password",
+    }
+
+
 @pytest.fixture(scope="function", autouse=True)
 @pytest.mark.asyncio
-async def setup_database():
-    from reflector.db import engine, metadata  # noqa
+async def setup_database(postgres_service):
+    from reflector.db import engine, metadata, database  # noqa
 
     metadata.drop_all(bind=engine)
     metadata.create_all(bind=engine)
-    yield
+
+    try:
+        await database.connect()
+        yield
+    finally:
+        await database.disconnect()
 
 
 @pytest.fixture

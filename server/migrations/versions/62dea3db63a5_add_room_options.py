@@ -32,7 +32,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=True),
         sa.Column("room_id", sa.String(), nullable=True),
         sa.Column(
-            "is_locked", sa.Boolean(), server_default=sa.text("0"), nullable=False
+            "is_locked", sa.Boolean(), server_default=sa.text("false"), nullable=False
         ),
         sa.Column("room_mode", sa.String(), server_default="normal", nullable=False),
         sa.Column(
@@ -53,12 +53,15 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column(
-            "zulip_auto_post", sa.Boolean(), server_default=sa.text("0"), nullable=False
+            "zulip_auto_post",
+            sa.Boolean(),
+            server_default=sa.text("false"),
+            nullable=False,
         ),
         sa.Column("zulip_stream", sa.String(), nullable=True),
         sa.Column("zulip_topic", sa.String(), nullable=True),
         sa.Column(
-            "is_locked", sa.Boolean(), server_default=sa.text("0"), nullable=False
+            "is_locked", sa.Boolean(), server_default=sa.text("false"), nullable=False
         ),
         sa.Column("room_mode", sa.String(), server_default="normal", nullable=False),
         sa.Column(

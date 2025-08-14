@@ -13,7 +13,7 @@ recordings = sa.Table(
     sa.Column("id", sa.String, primary_key=True),
     sa.Column("bucket_name", sa.String, nullable=False),
     sa.Column("object_key", sa.String, nullable=False),
-    sa.Column("recorded_at", sa.DateTime, nullable=False),
+    sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
     sa.Column(
         "status",
         sa.String,

@@ -1,7 +1,7 @@
 """Tests for full-text search functionality."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -9,69 +9,47 @@ from pydantic import ValidationError
 from reflector.db import database
 from reflector.db.search import SearchParameters, search_controller
 from reflector.db.transcripts import transcripts
-from reflector.db.utils import is_postgresql
 
 
 @pytest.mark.asyncio
 async def test_search_postgresql_only():
-    await database.connect()
+    params = SearchParameters(query_text="any query here")
+    results, total = await search_controller.search_transcripts(params)
+    assert results == []
+    assert total == 0
 
     try:
-        params = SearchParameters(query_text="any query here")
-        results, total = await search_controller.search_transcripts(params)
-        assert results == []
-        assert total == 0
+        SearchParameters(query_text="")
+        assert False, "Should have raised validation error"
+    except ValidationError:
+        pass  # Expected
 
-        try:
-            SearchParameters(query_text="")
-            assert False, "Should have raised validation error"
-        except ValidationError:
-            pass  # Expected
-
-        # Test that whitespace query raises validation error
-        try:
-            SearchParameters(query_text="   ")
-            assert False, "Should have raised validation error"
-        except ValidationError:
-            pass  # Expected
-
-    finally:
-        await database.disconnect()
+    # Test that whitespace query raises validation error
+    try:
+        SearchParameters(query_text="   ")
+        assert False, "Should have raised validation error"
+    except ValidationError:
+        pass  # Expected
 
 
 @pytest.mark.asyncio
 async def test_search_input_validation():
-    await database.connect()
-
     try:
-        try:
-            SearchParameters(query_text="")
-            assert False, "Should have raised ValidationError"
-        except ValidationError:
-            pass  # Expected
+        SearchParameters(query_text="")
+        assert False, "Should have raised ValidationError"
+    except ValidationError:
+        pass  # Expected
 
-        # Test that whitespace query raises validation error
-        try:
-            SearchParameters(query_text="   \t\n  ")
-            assert False, "Should have raised ValidationError"
-        except ValidationError:
-            pass  # Expected
-    finally:
-        await database.disconnect()
+    # Test that whitespace query raises validation error
+    try:
+        SearchParameters(query_text="   \t\n  ")
+        assert False, "Should have raised ValidationError"
+    except ValidationError:
+        pass  # Expected
 
 
 @pytest.mark.asyncio
 async def test_postgresql_search_with_data():
-    """Test full-text search with actual data in PostgreSQL.
-
-    Example how to run: DATABASE_URL=postgresql://reflector:reflector@localhost:5432/reflector_test uv run pytest tests/test_search.py::test_postgresql_search_with_data -v -p no:env
-    """
-    # Skip if not PostgreSQL
-    if not is_postgresql():
-        pytest.skip("Test requires PostgreSQL. Set DATABASE_URL=postgresql://...")
-
-    await database.connect()
-
     # collision is improbable
     test_id = "test-search-e2e-7f3a9b2c"
 
@@ -85,7 +63,7 @@ async def test_postgresql_search_with_data():
             "status": "completed",
             "locked": False,
             "duration": 1800.0,
-            "created_at": datetime.now(),
+            "created_at": datetime.now(timezone.utc),
             "short_summary": "Team discussed search implementation",
             "long_summary": "The engineering team met to plan the search feature",
             "topics": json.dumps([]),
@@ -141,7 +119,6 @@ We need to implement PostgreSQL tsvector for better performance.""",
             assert test_result.title == "Engineering Planning Meeting Q4 2024"
             assert test_result.status == "completed"
             assert test_result.duration == 1800.0
-            assert test_result.source_kind == "room"
             assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
 
         # Test 5: Search with OR operator

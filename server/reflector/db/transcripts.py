@@ -41,7 +41,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("status", sqlalchemy.String),
     sqlalchemy.Column("locked", sqlalchemy.Boolean),
     sqlalchemy.Column("duration", sqlalchemy.Float),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True)),
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),
