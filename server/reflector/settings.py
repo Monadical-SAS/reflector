@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = False
 
     # Database
-    DATABASE_URL: str = "sqlite:///./reflector.sqlite3"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://reflector:reflector@localhost:5432/reflector"
+    )
 
     # local data directory
     DATA_DIR: str = "./data"

@@ -2,7 +2,6 @@ import asyncio
 import time
 
 import pytest
-from httpx import AsyncClient
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -15,19 +14,16 @@ async def test_transcript_upload_file(
     dummy_processors,
     dummy_diarization,
     dummy_storage,
+    client,
 ):
-    from reflector.app import app
-
-    ac = AsyncClient(app=app, base_url="http://test/v1")
-
     # create a transcript
-    response = await ac.post("/transcripts", json={"name": "test"})
+    response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["status"] == "idle"
     tid = response.json()["id"]
 
     # upload mp3
-    response = await ac.post(
+    response = await client.post(
         f"/transcripts/{tid}/record/upload?chunk_number=0&total_chunks=1",
         files={
             "chunk": (
@@ -45,7 +41,7 @@ async def test_transcript_upload_file(
     start_time = time.monotonic()
     while (time.monotonic() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
-        resp = await ac.get(f"/transcripts/{tid}")
+        resp = await client.get(f"/transcripts/{tid}")
         assert resp.status_code == 200
         if resp.json()["status"] in ("ended", "error"):
             break
@@ -60,7 +56,7 @@ async def test_transcript_upload_file(
     assert transcript["title"] == "Llm Title"
 
     # check topics and transcript
-    response = await ac.get(f"/transcripts/{tid}/topics")
+    response = await client.get(f"/transcripts/{tid}/topics")
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert "want to share" in response.json()[0]["transcript"]
