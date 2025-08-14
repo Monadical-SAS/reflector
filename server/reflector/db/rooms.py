@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
 
@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.sql import false, or_
 
-from reflector.db import database, metadata
+from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
 
 rooms = sqlalchemy.Table(
@@ -16,7 +16,7 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
     sqlalchemy.Column("name", sqlalchemy.String, nullable=False, unique=True),
     sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=False),
     sqlalchemy.Column(
         "zulip_auto_post", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
@@ -48,7 +48,7 @@ class Room(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     name: str
     user_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     zulip_auto_post: bool = False
     zulip_stream: str = ""
     zulip_topic: str = ""
@@ -92,7 +92,7 @@ class RoomController:
         if return_query:
             return query
 
-        results = await database.fetch_all(query)
+        results = await get_database().fetch_all(query)
         return results
 
     async def add(
@@ -125,7 +125,7 @@ class RoomController:
         )
         query = rooms.insert().values(**room.model_dump())
         try:
-            await database.execute(query)
+            await get_database().execute(query)
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
         return room
@@ -136,7 +136,7 @@ class RoomController:
         """
         query = rooms.update().where(rooms.c.id == room.id).values(**values)
         try:
-            await database.execute(query)
+            await get_database().execute(query)
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
 
@@ -151,7 +151,7 @@ class RoomController:
         query = rooms.select().where(rooms.c.id == room_id)
         if "user_id" in kwargs:
             query = query.where(rooms.c.user_id == kwargs["user_id"])
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
         return Room(**result)
@@ -163,7 +163,7 @@ class RoomController:
         query = rooms.select().where(rooms.c.name == room_name)
         if "user_id" in kwargs:
             query = query.where(rooms.c.user_id == kwargs["user_id"])
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             return None
         return Room(**result)
@@ -175,7 +175,7 @@ class RoomController:
         If not found, it will raise a 404 error.
         """
         query = rooms.select().where(rooms.c.id == meeting_id)
-        result = await database.fetch_one(query)
+        result = await get_database().fetch_one(query)
         if not result:
             raise HTTPException(status_code=404, detail="Room not found")
 
@@ -197,7 +197,7 @@ class RoomController:
         if user_id is not None and room.user_id != user_id:
             return
         query = rooms.delete().where(rooms.c.id == room_id)
-        await database.execute(query)
+        await get_database().execute(query)
 
 
 rooms_controller = RoomController()

@@ -9,8 +9,9 @@ async def export_db(filename: str) -> None:
     filename = pathlib.Path(filename).resolve()
     settings.DATABASE_URL = f"sqlite:///{filename}"
 
-    from reflector.db import database, transcripts
+    from reflector.db import get_database, transcripts
 
+    database = get_database()
     await database.connect()
     transcripts = await database.fetch_all(transcripts.select())
     await database.disconnect()
