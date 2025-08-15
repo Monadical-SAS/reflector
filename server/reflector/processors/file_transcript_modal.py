@@ -32,7 +32,7 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
                 "TRANSCRIPT_URL required to use FileTranscriptModalProcessor"
             )
         self.transcript_url = settings.TRANSCRIPT_URL
-        self.timeout = settings.TRANSCRIPT_TIMEOUT
+        self.file_timeout = settings.TRANSCRIPT_FILE_TIMEOUT
         self.modal_api_key = modal_api_key
 
     async def _transcript(self, data: FileTranscriptInput):
@@ -45,7 +45,7 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
         if self.modal_api_key:
             headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
-        async with httpx.AsyncClient(timeout=600) as client:
+        async with httpx.AsyncClient(timeout=self.file_timeout) as client:
             response = await client.post(
                 url,
                 headers=headers,

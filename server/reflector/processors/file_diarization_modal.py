@@ -28,6 +28,7 @@ class FileDiarizationModalProcessor(FileDiarizationProcessor):
                 "DIARIZATION_URL required to use FileDiarizationModalProcessor"
             )
         self.diarization_url = settings.DIARIZATION_URL + "/diarize"
+        self.file_timeout = settings.DIARIZATION_FILE_TIMEOUT
         self.modal_api_key = modal_api_key
 
     async def _diarize(self, data: FileDiarizationInput):
@@ -38,7 +39,7 @@ class FileDiarizationModalProcessor(FileDiarizationProcessor):
         if self.modal_api_key:
             headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
-        async with httpx.AsyncClient(timeout=600) as client:
+        async with httpx.AsyncClient(timeout=self.file_timeout) as client:
             response = await client.post(
                 self.diarization_url,
                 headers=headers,
