@@ -10,6 +10,7 @@ def settings_configuration():
     # theses settings are linked to monadical for pytest-recording
     # if a fork is done, they have to provide their own url when cassettes needs to be updated
     # modal api keys has to be defined by the user
+    from reflector.settings import settings
 
     settings.TRANSCRIPT_BACKEND = "modal"
     settings.TRANSCRIPT_URL = (
