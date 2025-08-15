@@ -8,6 +8,7 @@ async def test_basic_process(
     dummy_llm,
     dummy_processors,
     enable_diarization,
+    dummy_diarization,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
@@ -52,6 +53,9 @@ async def test_basic_process(
     # The final processors (Topic, Title, Summary) should be called once at the end
     assert marks["TranscriptLinerProcessor"] > 0
     assert marks["TranscriptTranslatorPassthroughProcessor"] > 0
-    assert marks["TranscriptTopicDetectorProcessor"] == 1  # Called once at end
-    assert marks["TranscriptFinalSummaryProcessor"] == 1  # Called once at end
-    assert marks["TranscriptFinalTitleProcessor"] == 1  # Called once at end
+    assert marks["TranscriptTopicDetectorProcessor"] == 1
+    assert marks["TranscriptFinalSummaryProcessor"] == 1
+    assert marks["TranscriptFinalTitleProcessor"] == 1
+
+    if enable_diarization:
+        assert marks["TestAudioDiarizationProcessor"] == 1
