@@ -1,21 +1,16 @@
 #syntax=docker/dockerfile:1.4
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Install dependencies based on the preferred package manager
-COPY --link package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
-
+COPY --link package.json pnpm-lock.yaml* ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -29,7 +24,7 @@ COPY --link  . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-RUN yarn build
+RUN pnpm build
 # RUN npm run build
 
 # Production image, copy all the files and run next
@@ -41,8 +36,8 @@ ENV NODE_ENV production
 # ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN \
-  addgroup --system --gid 1001 nodejs; \
-  adduser --system --uid 1001 nextjs
+    addgroup --system --gid 1001 nodejs; \
+    adduser --system --uid 1001 nextjs
 
 COPY --from=builder --link /app/public ./public
 

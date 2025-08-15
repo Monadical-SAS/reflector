@@ -50,7 +50,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
     filter: streamItemsFilter,
     set: streamItemsSet,
   } = useListCollection({
-    items: [],
+    initialItems: [] as { label: string; value: string }[],
     filter: contains,
   });
 
@@ -59,7 +59,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
     filter: topicItemsFilter,
     set: topicItemsSet,
   } = useListCollection({
-    items: [],
+    initialItems: [] as { label: string; value: string }[],
     filter: contains,
   });
 
