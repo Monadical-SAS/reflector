@@ -1,6 +1,5 @@
 import enum
 import json
-import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
@@ -19,13 +18,12 @@ from reflector.db import get_database, metadata
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
+from reflector.logger import logger
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
 from reflector.storage import get_recordings_storage, get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
-
-logger = logging.getLogger(__name__)
 
 
 class SourceKind(enum.StrEnum):
@@ -602,7 +600,7 @@ class TranscriptController:
             except Exception as e:
                 logger.warning(
                     "Failed to delete transcript audio from storage",
-                    error=str(e),
+                    exc_info=e,
                     transcript_id=transcript.id,
                 )
         transcript.unlink()
@@ -617,14 +615,14 @@ class TranscriptController:
                     except Exception as e:
                         logger.warning(
                             "Failed to delete recording object from S3",
-                            error=str(e),
+                            exc_info=e,
                             recording_id=transcript.recording_id,
                         )
                     await recordings_controller.remove_by_id(transcript.recording_id)
             except Exception as e:
                 logger.warning(
                     "Failed to delete recording row",
-                    error=str(e),
+                    exc_info=e,
                     recording_id=transcript.recording_id,
                 )
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
