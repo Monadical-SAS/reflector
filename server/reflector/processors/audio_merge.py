@@ -1,8 +1,11 @@
 import io
+import wave
 from time import monotonic_ns
 from uuid import uuid4
 
 import av
+import torch
+import torchaudio.functional
 
 from reflector.processors.base import Processor
 from reflector.processors.types import AudioFile
@@ -30,6 +33,11 @@ class AudioMergeProcessor(Processor):
         original_sample_rate = frame.sample_rate
         original_sample_width = frame.format.bytes
 
+        # determine if we need processing
+        needs_processing = self.downsample_to_16k_mono and (
+            original_sample_rate != 16000 or original_channels != 1
+        )
+
         # determine output parameters
         if self.downsample_to_16k_mono:
             output_sample_rate = 16000
@@ -44,38 +52,51 @@ class AudioMergeProcessor(Processor):
         uu = uuid4().hex
         fd = io.BytesIO()
 
-        out_container = av.open(fd, "w", format="wav")
-        out_stream = out_container.add_stream("pcm_s16le", rate=output_sample_rate)
-
-        if self.downsample_to_16k_mono:
-            # Configure resampler for downsampling to mono 16kHz
-            out_stream.layout = "mono"
-
-        if self.downsample_to_16k_mono:
-            # Create a resampler for downsampling to mono 16kHz
-            resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
-
+        if needs_processing:
+            # Process with torchaudio and write WAV directly
+            all_audio_data = []
             for frame in data:
-                # Resample and convert to mono
-                resampled_frames = resampler.resample(frame)
-                for resampled_frame in resampled_frames:
-                    for packet in out_stream.encode(resampled_frame):
-                        out_container.mux(packet)
+                audio_tensor = torch.from_numpy(frame.to_ndarray()).float()
 
-            # Flush the resampler
-            final_frames = resampler.resample(None)
-            for final_frame in final_frames:
-                for packet in out_stream.encode(final_frame):
-                    out_container.mux(packet)
+                # Convert to mono if needed
+                if audio_tensor.dim() == 2:
+                    audio_tensor = audio_tensor.mean(dim=0, keepdim=True)
+                elif audio_tensor.dim() == 1:
+                    audio_tensor = audio_tensor.unsqueeze(0)
+
+                all_audio_data.append(audio_tensor)
+
+            # Concatenate and resample if needed
+            full_audio = torch.cat(all_audio_data, dim=1)
+            if original_sample_rate != 16000:
+                full_audio = torchaudio.functional.resample(
+                    full_audio, original_sample_rate, 16000
+                )
+
+            # Convert to int16 and write WAV directly
+            audio_int16 = (full_audio * 32767).clamp(-32768, 32767).to(torch.int16)
+            audio_bytes = audio_int16.numpy().tobytes()
+
+            # Write WAV header directly
+            with wave.open(fd, "wb") as wav_file:
+                wav_file.setnchannels(1)  # mono
+                wav_file.setsampwidth(2)  # 16-bit
+                wav_file.setframerate(16000)
+                wav_file.writeframes(audio_bytes)
         else:
-            # Use original frames
+            # Use PyAV for original frames (no processing needed)
+            out_container = av.open(fd, "w", format="wav")
+            out_stream = out_container.add_stream("pcm_s16le", rate=output_sample_rate)
+            out_stream.layout = "mono" if output_channels == 1 else frame.layout
+
             for frame in data:
                 for packet in out_stream.encode(frame):
                     out_container.mux(packet)
 
-        for packet in out_stream.encode(None):
-            out_container.mux(packet)
-        out_container.close()
+            for packet in out_stream.encode(None):
+                out_container.mux(packet)
+            out_container.close()
+
         fd.seek(0)
 
         # emit audio file
@@ -85,7 +106,9 @@ class AudioMergeProcessor(Processor):
             sample_rate=output_sample_rate,
             channels=output_channels,
             sample_width=output_sample_width,
-            timestamp=data[0].pts * data[0].time_base,
+            timestamp=data[0].pts * data[0].time_base
+            if data[0].pts and data[0].time_base
+            else 0,
         )
 
         await self.emit(audiofile)
