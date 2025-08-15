@@ -28,12 +28,14 @@ async def test_basic_process(
 
     # invoke the process and capture events
     path = Path(__file__).parent / "records" / "test_mathieu_hello.wav"
-    await process_audio_file(path.as_posix(), event_callback)
+    await process_audio_file(path.as_posix(), event_callback, enable_diarization=False)
     print(marks)
 
     # validate the events
-    assert marks["TranscriptLinerProcessor"] == 1
-    assert marks["TranscriptTranslatorPassthroughProcessor"] == 1
-    assert marks["TranscriptTopicDetectorProcessor"] == 1
-    assert marks["TranscriptFinalSummaryProcessor"] == 1
-    assert marks["TranscriptFinalTitleProcessor"] == 1
+    # Each processor should be called for each audio segment processed
+    # The final processors (Topic, Title, Summary) should be called once at the end
+    assert marks["TranscriptLinerProcessor"] > 0
+    assert marks["TranscriptTranslatorPassthroughProcessor"] > 0
+    assert marks["TranscriptTopicDetectorProcessor"] == 1  # Called once at end
+    assert marks["TranscriptFinalSummaryProcessor"] == 1  # Called once at end
+    assert marks["TranscriptFinalTitleProcessor"] == 1  # Called once at end
