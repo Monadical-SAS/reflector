@@ -252,7 +252,7 @@ class AudioChunkerProcessor(Processor):
             return resampled.astype(np.float32)
 
         except Exception as e:
-            print(f"Resampling error: {e}")
+            self.logger.error("Resampling error", exc_info=e)
             # Fallback: simple decimation/repetition
             if from_sr > to_sr:
                 # Downsample by taking every nth sample
