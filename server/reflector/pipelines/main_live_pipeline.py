@@ -376,6 +376,7 @@ class PipelineMainLive(PipelineMainBase):
         pipeline.set_pref("audio:target_language", transcript.target_language)
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info("Pipeline main live created")
+        pipeline.describe()
 
         return pipeline
 
