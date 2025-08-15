@@ -283,7 +283,7 @@ class PipelineMainFile(PipelineMainBase):
             topics.append(topic)
             return await self.on_topic(topic)
 
-        topic_detector = TranscriptTopicDetectorProcessor(callback=self.on_topic)
+        topic_detector = TranscriptTopicDetectorProcessor(callback=on_topic)
         topic_detector.pipeline = EmptyPipeline()
 
         for i in range(0, len(transcript.words), chunk_size):
