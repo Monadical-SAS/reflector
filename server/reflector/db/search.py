@@ -189,6 +189,7 @@ class SearchController:
                 transcripts.c.room_id,
                 transcripts.c.source_kind,
                 transcripts.c.webvtt,
+                transcripts.c.long_summary,
                 sqlalchemy.func.ts_rank(
                     transcripts.c.search_vector_en,
                     search_query,
@@ -217,12 +218,25 @@ class SearchController:
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
             webvtt: str | None = r_dict.pop("webvtt", None)
+            long_summary: str | None = r_dict.pop("long_summary", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
             snippets = []
-            if webvtt:
+
+            # First try to get snippets from long_summary if available
+            if long_summary:
+                snippets = cls._generate_snippets(
+                    long_summary, params.query_text, max_snippets=2
+                )
+
+            # Then add snippets from webvtt content if we need more
+            if webvtt and len(snippets) < DEFAULT_MAX_SNIPPETS:
                 plain_text = cls._extract_webvtt_text(webvtt)
-                snippets = cls._generate_snippets(plain_text, params.query_text)
+                remaining_snippets = DEFAULT_MAX_SNIPPETS - len(snippets)
+                webvtt_snippets = cls._generate_snippets(
+                    plain_text, params.query_text, max_snippets=remaining_snippets
+                )
+                snippets.extend(webvtt_snippets)
 
             return SearchResult(**db_result.model_dump(), search_snippets=snippets)
 

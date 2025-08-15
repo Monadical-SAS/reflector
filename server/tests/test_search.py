@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime, timezone
+from enum import Enum
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -12,10 +13,19 @@ from reflector.db.search import (
     SearchController,
     SearchParameters,
     SearchResult,
-    StatusFilter,
     search_controller,
 )
 from reflector.db.transcripts import SourceKind, transcripts
+
+
+# StatusFilter enum for future implementation
+class StatusFilter(str, Enum):
+    """Filter transcripts by processing status."""
+
+    COMPLETED = "completed"
+    PROCESSING = "processing"
+    FAILED = "failed"
+    PENDING = "pending"
 
 
 @pytest.mark.asyncio
@@ -53,6 +63,64 @@ async def test_search_input_validation():
         assert False, "Should have raised ValidationError"
     except ValidationError:
         pass  # Expected
+
+
+@pytest.mark.asyncio
+async def test_search_with_long_summary():
+    """Test that long_summary content is searchable."""
+    test_id = "test-long-summary-8a9f3c2d"
+
+    try:
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
+
+        test_data = {
+            "id": test_id,
+            "name": "Test Long Summary",
+            "title": "Regular Meeting",
+            "status": "completed",
+            "locked": False,
+            "duration": 1800.0,
+            "created_at": datetime.now(timezone.utc),
+            "short_summary": "Brief overview",
+            "long_summary": "Detailed discussion about quantum computing applications and blockchain technology integration",
+            "topics": json.dumps([]),
+            "events": json.dumps([]),
+            "participants": json.dumps([]),
+            "source_language": "en",
+            "target_language": "en",
+            "reviewed": False,
+            "audio_location": "local",
+            "share_mode": "private",
+            "source_kind": "room",
+            "webvtt": """WEBVTT
+
+00:00:00.000 --> 00:00:10.000
+Basic meeting content without special keywords.""",
+        }
+
+        await get_database().execute(transcripts.insert().values(**test_data))
+
+        # Search for term only in long_summary
+        params = SearchParameters(query_text="quantum computing")
+        results, total = await search_controller.search_transcripts(params)
+
+        assert total >= 1
+        found = any(r.id == test_id for r in results)
+        assert found, "Should find transcript by long_summary content"
+
+        # Verify snippet is from long_summary
+        test_result = next((r for r in results if r.id == test_id), None)
+        assert test_result
+        assert len(test_result.search_snippets) > 0
+        assert "quantum computing" in test_result.search_snippets[0].lower()
+
+    finally:
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
+        await get_database().disconnect()
 
 
 @pytest.mark.asyncio

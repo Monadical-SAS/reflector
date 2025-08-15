@@ -101,7 +101,8 @@ if is_postgresql():
             TSVECTOR,
             sqlalchemy.Computed(
                 "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
-                "setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')",
+                "setweight(to_tsvector('english', coalesce(long_summary, '')), 'B') || "
+                "setweight(to_tsvector('english', coalesce(webvtt, '')), 'C')",
                 persisted=True,
             ),
         )
