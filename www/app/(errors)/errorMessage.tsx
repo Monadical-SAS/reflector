@@ -1,7 +1,7 @@
 "use client";
 import { useError } from "./errorContext";
 import { useEffect, useState } from "react";
-import * as Sentry from "@sentry/react";
+import * as Sentry from "@sentry/nextjs";
 
 const ErrorMessage: React.FC = () => {
   const { error, setError, humanMessage } = useError();
