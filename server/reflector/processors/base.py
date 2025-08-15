@@ -248,23 +248,27 @@ class ThreadedProcessor(Processor):
         self.processor.set_pipeline(pipeline)
 
     async def loop(self):
-        while True:
-            data = await self.queue.get()
-            self.m_processor_queue.set(self.queue.qsize())
-            with self.m_processor_queue_in_progress.track_inprogress():
-                try:
-                    if data is None:
-                        await self.processor.flush()
-                        break
+        try:
+            while True:
+                data = await self.queue.get()
+                self.m_processor_queue.set(self.queue.qsize())
+                with self.m_processor_queue_in_progress.track_inprogress():
                     try:
-                        await self.processor.push(data)
-                    except Exception:
-                        self.logger.error(
-                            f"Error in push {self.processor.__class__.__name__}"
-                            ", continue"
-                        )
-                finally:
-                    self.queue.task_done()
+                        if data is None:
+                            await self.processor.flush()
+                            break
+                        try:
+                            await self.processor.push(data)
+                        except Exception:
+                            self.logger.error(
+                                f"Error in push {self.processor.__class__.__name__}"
+                                ", continue"
+                            )
+                    finally:
+                        self.queue.task_done()
+        except Exception as e:
+            logger.error(f"Crash in {self.__class__.__name__}: {e}", exc_info=e)
+            self.queue.task_done()
 
     async def _ensure_task(self):
         if self.task is None:
