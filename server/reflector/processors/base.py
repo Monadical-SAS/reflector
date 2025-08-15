@@ -268,7 +268,6 @@ class ThreadedProcessor(Processor):
                         self.queue.task_done()
         except Exception as e:
             logger.error(f"Crash in {self.__class__.__name__}: {e}", exc_info=e)
-            self.queue.task_done()
 
     async def _ensure_task(self):
         if self.task is None:
