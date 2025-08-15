@@ -19,6 +19,12 @@ from reflector.db.transcripts import (
 )
 from reflector.logger import logger
 from reflector.pipelines.main_live_pipeline import PipelineMainBase, asynctask
+from reflector.processors import (
+    TranscriptFinalSummaryProcessor,
+    TranscriptFinalTitleProcessor,
+    TranscriptTopicDetectorProcessor,
+)
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_diarization import FileDiarizationInput
 from reflector.processors.file_diarization_auto import FileDiarizationAutoProcessor
 from reflector.processors.file_transcript import FileTranscriptInput
@@ -29,13 +35,25 @@ from reflector.processors.transcript_diarization_assembler import (
 )
 from reflector.processors.types import (
     DiarizationSegment,
-    TitleSummaryWithId,
+    TitleSummary,
 )
 from reflector.processors.types import (
     Transcript as TranscriptType,
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+
+
+class EmptyPipeline:
+    """Mock pipeline for processors that need a pipeline reference"""
+
+    logger = logger
+
+    def get_pref(self, k, d=None):
+        return d
+
+    async def emit(self, event):
+        pass
 
 
 class PipelineMainFile(PipelineMainBase):
@@ -149,7 +167,7 @@ class PipelineMainFile(PipelineMainBase):
         transcript_result = results[0]
         diarization_result = results[1]
 
-        # Handle errors
+        # Handle errors - raise any exception that occurred
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 task_names = ["transcription", "diarization", "waveform"]
@@ -157,8 +175,7 @@ class PipelineMainFile(PipelineMainBase):
                     f"Error in {task_names[i]}: {result}",
                     transcript_id=self.transcript_id,
                 )
-                if i < 2:  # Critical for transcription/diarization
-                    raise result
+                raise result
 
         # Phase 2: Assemble transcript with diarization
         logger.info(
@@ -170,7 +187,7 @@ class PipelineMainFile(PipelineMainBase):
         )
 
         # Store result for retrieval
-        diarized_transcript = None
+        diarized_transcript: Transcript | None = None
 
         async def capture_result(transcript):
             nonlocal diarized_transcript
@@ -180,36 +197,20 @@ class PipelineMainFile(PipelineMainBase):
         await processor.push(input_data)
         await processor.flush()
 
+        if not diarized_transcript:
+            raise ValueError("No diarized transcript captured")
+
         # Phase 3: Generate topics from diarized transcript
         logger.info("Generating topics", transcript_id=self.transcript_id)
-        try:
-            topics = await asyncio.wait_for(
-                self.detect_topics(diarized_transcript, target_language),
-                timeout=120,  # 2 minute timeout for LLM
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "Topic detection timed out after 2 minutes",
-                transcript_id=self.transcript_id,
-            )
-            topics = self.create_fallback_topics(diarized_transcript)
+        topics = await self.detect_topics(diarized_transcript, target_language)
 
         # Phase 4: Generate title and summaries in parallel
         logger.info("Generating title and summaries", transcript_id=self.transcript_id)
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(
-                    self.generate_title(topics),
-                    self.generate_summaries(topics),
-                    return_exceptions=True,
-                ),
-                timeout=120,  # 2 minute timeout for LLM
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "Title/summary generation timed out after 2 minutes",
-                transcript_id=self.transcript_id,
-            )
+        await asyncio.gather(
+            self.generate_title(topics),
+            self.generate_summaries(topics),
+            return_exceptions=True,
+        )
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
         """Transcribe complete file"""
@@ -217,7 +218,7 @@ class PipelineMainFile(PipelineMainBase):
         input_data = FileTranscriptInput(audio_url=audio_url, language=language)
 
         # Store result for retrieval
-        result = None
+        result: TranscriptType | None = None
 
         async def capture_result(transcript):
             nonlocal result
@@ -226,6 +227,9 @@ class PipelineMainFile(PipelineMainBase):
         processor.on(capture_result)
         await processor.push(input_data)
         await processor.flush()
+
+        if not result:
+            raise ValueError("No transcript captured")
 
         return result
 
@@ -256,8 +260,6 @@ class PipelineMainFile(PipelineMainBase):
 
     async def generate_waveform(self, audio_path: Path):
         """Generate and save waveform"""
-        from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
-
         transcript = await self.get_transcript()
 
         processor = AudioWaveformProcessor(
@@ -266,117 +268,43 @@ class PipelineMainFile(PipelineMainBase):
             on_waveform=self.on_waveform,
         )
 
-        class WaveformPipeline:
-            logger = logger
-
-            def get_pref(self, k, d=None):
-                return d
-
-            async def emit(self, event):
-                pass  # Mock emit for waveform processor
-
-        processor.pipeline = WaveformPipeline()
+        processor.pipeline = EmptyPipeline()
 
         await processor.flush()
 
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str
-    ) -> list[TitleSummaryWithId]:
+    ) -> list[TitleSummary]:
         """Detect topics from complete transcript"""
-        from reflector.processors import TranscriptTopicDetectorProcessor
-
-        topics = []
-        topic_id = 0
         chunk_size = 300
+        topics: list[TitleSummary] = []
 
-        try:
-            topic_detector = TranscriptTopicDetectorProcessor(callback=self.on_topic)
+        async def on_topic(topic: TitleSummary):
+            topics.append(topic)
+            return await self.on_topic(topic)
 
-            class TopicPipeline:
-                logger = logger
-
-                def get_pref(self, k, d=None):
-                    return d
-
-                async def emit(self, event):
-                    pass  # Mock emit for topic detector
-
-            topic_detector.pipeline = TopicPipeline()
-
-            for i in range(0, len(transcript.words), chunk_size):
-                chunk_words = transcript.words[i : i + chunk_size]
-                if not chunk_words:
-                    continue
-
-                chunk_transcript = TranscriptType(
-                    words=chunk_words, translation=transcript.translation
-                )
-
-                await topic_detector.push(chunk_transcript)
-
-            await topic_detector.flush()
-        except Exception as e:
-            logger.error(
-                f"Topic detection failed (may be LLM timeout): {e}",
-                transcript_id=self.transcript_id,
-            )
+        topic_detector = TranscriptTopicDetectorProcessor(callback=self.on_topic)
+        topic_detector.pipeline = EmptyPipeline()
 
         for i in range(0, len(transcript.words), chunk_size):
             chunk_words = transcript.words[i : i + chunk_size]
             if not chunk_words:
                 continue
 
-            topic_id += 1
-            text = " ".join(w.text for w in chunk_words)
-
-            topic = TitleSummaryWithId(
-                id=str(topic_id),
-                title=f"Section {topic_id}",
-                summary=text[:200] + "..." if len(text) > 200 else text,
-                timestamp=chunk_words[0].start,
-                duration=chunk_words[-1].end - chunk_words[0].start,
-                transcript=TranscriptType(words=chunk_words),
+            chunk_transcript = TranscriptType(
+                words=chunk_words, translation=transcript.translation
             )
-            topics.append(topic)
-            await self.on_topic(topic)
 
+            await topic_detector.push(chunk_transcript)
+
+        await topic_detector.flush()
         return topics
 
-    def create_fallback_topics(
-        self, transcript: TranscriptType
-    ) -> list[TitleSummaryWithId]:
-        """Create basic topics when LLM is unavailable"""
-        topics = []
-        chunk_size = 300
-        topic_id = 0
-
-        for i in range(0, len(transcript.words), chunk_size):
-            chunk_words = transcript.words[i : i + chunk_size]
-            if not chunk_words:
-                continue
-
-            topic_id += 1
-            text = " ".join(w.text for w in chunk_words)
-
-            topic = TitleSummaryWithId(
-                id=str(topic_id),
-                title=f"Section {topic_id}",
-                summary=text[:200] + "..." if len(text) > 200 else text,
-                timestamp=chunk_words[0].start,
-                duration=chunk_words[-1].end - chunk_words[0].start,
-                transcript=TranscriptType(words=chunk_words),
-            )
-            topics.append(topic)
-
-        return topics
-
-    async def generate_title(self, topics: list[TitleSummaryWithId]):
+    async def generate_title(self, topics: list[TitleSummary]):
         """Generate title from topics"""
         if not topics:
             logger.warning("No topics for title generation")
             return
-
-        from reflector.processors import TranscriptFinalTitleProcessor
 
         processor = TranscriptFinalTitleProcessor(callback=self.on_title)
         processor.set_pipeline(self)
@@ -386,13 +314,11 @@ class PipelineMainFile(PipelineMainBase):
 
         await processor.flush()
 
-    async def generate_summaries(self, topics: list[TitleSummaryWithId]):
+    async def generate_summaries(self, topics: list[TitleSummary]):
         """Generate long and short summaries from topics"""
         if not topics:
             logger.warning("No topics for summary generation")
             return
-
-        from reflector.processors import TranscriptFinalSummaryProcessor
 
         transcript = await self.get_transcript()
         processor = TranscriptFinalSummaryProcessor(
