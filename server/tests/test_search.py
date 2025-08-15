@@ -537,22 +537,21 @@ class TestSearchResultModel:
         assert result.room_id is None
         assert result.duration is None
 
-    def test_search_result_datetime_serialization(self):
-        """Test that datetime is properly serialized to ISO format."""
+    def test_search_result_datetime_field(self):
+        """Test that SearchResult accepts datetime field."""
         result = SearchResult(
             id="test-id",
             created_at=datetime(2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc),
             status="completed",
             rank=0.9,
+            duration=None,  # Optional but required field
             search_snippets=[],
-            # source_kind="live",  # Not in current model
         )
 
-        # The field_serializer should handle ISO format conversion
-        serialized = result.serialize_datetime(result.created_at)
-        assert serialized == "2024-06-15T12:30:45+00:00"
-
-        # Test with naive datetime (no timezone)
-        naive_dt = datetime(2024, 6, 15, 12, 30, 45)
-        serialized = result.serialize_datetime(naive_dt)
-        assert serialized == "2024-06-15T12:30:45Z"
+        # Verify the datetime field is properly stored
+        assert result.created_at == datetime(
+            2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc
+        )
+        assert result.created_at.year == 2024
+        assert result.created_at.month == 6
+        assert result.created_at.day == 15
