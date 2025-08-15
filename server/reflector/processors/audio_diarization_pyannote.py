@@ -29,19 +29,19 @@ class AudioDiarizationPyannoteProcessor(AudioDiarizationProcessor):
         else:
             self.device = device
 
-        self._pipeline = None
+        self._diarization_pipeline = None
 
     @property
-    def pipeline(self):
+    def diarization_pipeline(self):
         """Lazy load the diarization pipeline"""
-        if self._pipeline is None:
+        if self._diarization_pipeline is None:
             self.logger.info(f"Loading pyannote diarization model: {self.model_name}")
-            self._pipeline = Pipeline.from_pretrained(
+            self._diarization_pipeline = Pipeline.from_pretrained(
                 self.model_name, use_auth_token=self.use_auth_token
             )
-            self._pipeline.to(torch.device(self.device))
+            self._diarization_pipeline.to(torch.device(self.device))
             self.logger.info(f"Diarization model loaded on device: {self.device}")
-        return self._pipeline
+        return self._diarization_pipeline
 
     async def _diarize(self, data: AudioDiarizationInput) -> list[DiarizationSegment]:
         """
@@ -63,7 +63,7 @@ class AudioDiarizationPyannoteProcessor(AudioDiarizationProcessor):
 
             # Perform diarization
             self.logger.info("Running speaker diarization")
-            diarization = self.pipeline(audio_input)
+            diarization = self.diarization_pipeline(audio_input)
 
             # Convert pyannote diarization output to our format
             segments = []
