@@ -27,7 +27,7 @@ jobs:
       - name: Tests
         run: |
           cd server
-          uv run -m pytest -v tests --vcr-record=none
+          uv run -m pytest -v tests
 
   docker:
     runs-on: ubuntu-latest
