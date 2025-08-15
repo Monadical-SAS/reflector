@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     # Diarization: modal backend
     DIARIZATION_MODAL_API_KEY: str | None = None
 
+    # Diarization: local pyannote.audio
+    DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
+
     # Sentry
     SENTRY_DSN: str | None = None
 
