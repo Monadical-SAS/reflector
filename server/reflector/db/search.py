@@ -1,6 +1,5 @@
 """Search functionality for transcripts and other entities."""
 
-import logging
 from datetime import datetime
 from io import StringIO
 from typing import Annotated, Any, Dict
@@ -12,8 +11,7 @@ from pydantic import BaseModel, Field, constr, field_serializer
 from reflector.db import get_database
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
-
-logger = logging.getLogger(__name__)
+from reflector.logger import logger
 
 DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
