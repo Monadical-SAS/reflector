@@ -347,7 +347,7 @@ if __name__ == "__main__":
     if args.stream:
         # Use original streaming pipeline
         asyncio.run(
-            process_audio_file_with_diarization(
+            process_audio_file(
                 args.source,
                 event_callback,
                 only_transcript=args.only_transcript,
