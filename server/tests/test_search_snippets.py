@@ -196,3 +196,45 @@ class TestFullPipeline:
             assert "<v Speaker" not in snippet
             assert "00:00" not in snippet
             assert "-->" not in snippet
+
+
+# Additional tests merged from test_search_enhancements.py
+
+
+class TestSnippetGenerationEnhanced:
+    """Additional snippet generation tests from test_search_enhancements.py."""
+
+    def test_snippet_generation_from_webvtt(self):
+        """Test snippet generation from WebVTT content."""
+        controller = SearchController()
+        webvtt_content = """WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+This is the beginning of the transcript
+
+00:00:05.000 --> 00:00:10.000
+The search term appears here in the middle
+
+00:00:10.000 --> 00:00:15.000
+And this is the end of the content"""
+
+        plain_text = controller._extract_webvtt_text(webvtt_content)
+        snippets = controller._generate_snippets(plain_text, "search term")
+
+        assert len(snippets) > 0
+        assert any("search term" in snippet.lower() for snippet in snippets)
+
+    def test_extract_webvtt_text_with_malformed_variations(self):
+        """Test WebVTT extraction with various malformed content."""
+        controller = SearchController()
+
+        # Test with completely invalid content
+        malformed_vtt = "This is not valid WebVTT content"
+        result = controller._extract_webvtt_text(malformed_vtt)
+        assert result == ""
+
+        # Test with partial WebVTT header
+        partial_vtt = "WEBVTT\nNo timestamps here"
+        result = controller._extract_webvtt_text(partial_vtt)
+        # Should still fail since no valid cues
+        assert result == "" or "No timestamps" not in result
