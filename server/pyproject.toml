@@ -32,7 +32,6 @@ dependencies = [
     "redis>=5.0.1",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.6",
-    "faster-whisper>=0.10.0",
     "transformers>=4.36.2",
     "jsonschema>=4.23.0",
     "openai>=1.59.7",
@@ -71,6 +70,7 @@ evaluation = [
 ]
 local = [
     "pyannote-audio>=3.3.2",
+    "faster-whisper>=0.10.0",
 ]
 
 [tool.uv]

@@ -3239,7 +3239,6 @@ dependencies = [
     { name = "databases", extra = ["aiosqlite", "asyncpg"] },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastapi-pagination" },
-    { name = "faster-whisper" },
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "llama-index" },
@@ -3284,6 +3283,7 @@ evaluation = [
     { name = "tqdm" },
 ]
 local = [
+    { name = "faster-whisper" },
     { name = "pyannote-audio" },
 ]
 tests = [
@@ -3310,7 +3310,6 @@ requires-dist = [
     { name = "databases", extras = ["aiosqlite", "asyncpg"], specifier = ">=0.7.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.100.1" },
     { name = "fastapi-pagination", specifier = ">=0.12.6" },
-    { name = "faster-whisper", specifier = ">=0.10.0" },
     { name = "httpx", specifier = ">=0.24.1" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "llama-index", specifier = ">=0.12.52" },
@@ -3352,7 +3351,10 @@ evaluation = [
     { name = "pydantic", specifier = ">=2.1.1" },
     { name = "tqdm", specifier = ">=4.66.0" },
 ]
-local = [{ name = "pyannote-audio", specifier = ">=3.3.2" }]
+local = [
+    { name = "faster-whisper", specifier = ">=0.10.0" },
+    { name = "pyannote-audio", specifier = ">=3.3.2" },
+]
 tests = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "httpx-ws", specifier = ">=0.4.1" },
