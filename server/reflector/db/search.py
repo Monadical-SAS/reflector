@@ -67,6 +67,7 @@ class SearchResult(BaseModel):
     title: str | None = None
     user_id: str | None = None
     room_id: str | None = None
+    source_kind: SourceKind
     created_at: datetime
     status: str = Field(..., min_length=1)
     rank: float = Field(..., ge=0, le=1)

@@ -92,7 +92,8 @@ export function useSearchTranscripts(
           rank: 1,
           status: item.status,
           created_at: item.created_at,
-          duration: item.duration ? item.duration / 1000 : 0, // Convert ms to seconds
+          duration: item.duration || 0,
+          source_kind: item.source_kind,
           room_id: item.room_id || undefined,
           user_id: item.user_id || undefined,
         }));

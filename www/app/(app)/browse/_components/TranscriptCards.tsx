@@ -90,14 +90,13 @@ function TranscriptCard({
 
   const relevancePercent = Math.round(result.rank * 100);
   const formattedDuration = result.duration
-    ? formatTimeMs(result.duration * 1000)
+    ? formatTimeMs(result.duration)
     : "N/A";
   const formattedDate = formatLocalDate(result.created_at);
   const source =
-    result.room_id ||
-    ("source_kind" in result
-      ? (result as SearchResult & { source_kind: string }).source_kind
-      : "file");
+    result.source_kind === "room" && result.room_id
+      ? result.room_id
+      : result.source_kind;
 
   const handleExpandClick = (e: React.MouseEvent) => {
     e.preventDefault();
