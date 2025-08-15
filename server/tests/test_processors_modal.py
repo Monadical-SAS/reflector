@@ -1,5 +1,5 @@
 """
-Tests for Modal-based processors using pytest-vcr for HTTP recording/playbook
+Tests for Modal-based processors using pytest-recording for HTTP recording/playbook
 
 Note: theses tests require full modal configuration to be able to record
       vcr cassettes
@@ -31,15 +31,6 @@ from reflector.processors.types import DiarizationSegment, Transcript, Word
 TEST_AUDIO_URL = (
     "https://reflector-github-pytest.s3.us-east-1.amazonaws.com/test_mathieu_hello.mp3"
 )
-
-
-@pytest.fixture(scope="module")
-def vcr_config():
-    """VCR configuration to filter sensitive headers"""
-    return {
-        "filter_headers": [("authorization", "DUMMY_API_KEY")],
-        "record_mode": "once",  # Record once, then replay
-    }
 
 
 @pytest.mark.asyncio
