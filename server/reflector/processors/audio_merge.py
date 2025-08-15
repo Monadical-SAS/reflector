@@ -115,7 +115,7 @@ class AudioMergeProcessor(Processor):
             sample_rate=output_sample_rate,
             channels=output_channels,
             sample_width=output_sample_width,
-            timestamp=0,
+            timestamp=data[0].pts * data[0].time_base,
         )
 
         await self.emit(audiofile)
