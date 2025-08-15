@@ -2,10 +2,12 @@ import pytest
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("enable_diarization", [False, True])
 async def test_basic_process(
     dummy_transcript,
     dummy_llm,
     dummy_processors,
+    enable_diarization,
 ):
     # goal is to start the server, and send rtc audio to it
     # validate the events received
@@ -28,8 +30,22 @@ async def test_basic_process(
 
     # invoke the process and capture events
     path = Path(__file__).parent / "records" / "test_mathieu_hello.wav"
-    await process_audio_file(path.as_posix(), event_callback, enable_diarization=False)
-    print(marks)
+
+    if enable_diarization:
+        # Test with diarization - may fail if pyannote.audio is not installed
+        try:
+            await process_audio_file(
+                path.as_posix(), event_callback, enable_diarization=True
+            )
+        except SystemExit:
+            pytest.skip("pyannote.audio not installed - skipping diarization test")
+    else:
+        # Test without diarization - should always work
+        await process_audio_file(
+            path.as_posix(), event_callback, enable_diarization=False
+        )
+
+    print(f"Diarization: {enable_diarization}, Marks: {marks}")
 
     # validate the events
     # Each processor should be called for each audio segment processed
