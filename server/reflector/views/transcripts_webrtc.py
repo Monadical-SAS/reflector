@@ -26,7 +26,7 @@ async def transcript_record_webrtc(
         raise HTTPException(status_code=400, detail="Transcript is locked")
 
     # create a pipeline runner
-    from reflector.pipelines.main_live_pipeline import PipelineMainLive
+    from reflector.pipelines.main_live_pipeline import PipelineMainLive  # noqa: PLC0415
 
     pipeline_runner = PipelineMainLive(transcript_id=transcript_id)
 

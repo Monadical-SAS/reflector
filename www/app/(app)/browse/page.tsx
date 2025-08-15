@@ -26,7 +26,7 @@ export default function TranscriptBrowser() {
     page,
     selectedSourceKind,
     selectedRoomId,
-    searchTerm
+    searchTerm,
   );
   const userName = useSessionUser().name;
   const [deletionLoading, setDeletionLoading] = useState(false);
@@ -51,7 +51,7 @@ export default function TranscriptBrowser() {
 
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,
-    roomId: string
+    roomId: string,
   ) => {
     setSelectedSourceKind(sourceKind);
     setSelectedRoomId(roomId);
@@ -107,7 +107,7 @@ export default function TranscriptBrowser() {
         setDeletionLoading(false);
         onCloseDeletion();
         setDeletedItemIds((prev) =>
-          prev ? [...prev, transcriptId] : [transcriptId]
+          prev ? [...prev, transcriptId] : [transcriptId],
         );
       })
       .catch((err) => {
@@ -130,7 +130,7 @@ export default function TranscriptBrowser() {
           if (status === "already running") {
             setError(
               new Error("Processing is already running, please wait"),
-              "Processing is already running, please wait"
+              "Processing is already running, please wait",
             );
           }
         })
@@ -141,7 +141,7 @@ export default function TranscriptBrowser() {
   };
 
   const transcriptToDelete = response?.items?.find(
-    (i) => i.id === transcriptToDeleteId
+    (i) => i.id === transcriptToDeleteId,
   );
   const dialogTitle = transcriptToDelete?.title || "Unnamed Transcript";
   const dialogDate = transcriptToDelete?.created_at

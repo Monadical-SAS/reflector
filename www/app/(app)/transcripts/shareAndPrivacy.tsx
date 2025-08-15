@@ -127,7 +127,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                   {isOwner && api && (
                     <Select.Root
                       key={shareMode.value}
-                      value={[shareMode.value]}
+                      value={[shareMode.value || ""]}
                       onValueChange={(e) => updateShareMode(e.value[0])}
                       disabled={shareLoading}
                       collection={shareOptions}
@@ -145,11 +145,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                       <Select.Positioner>
                         <Select.Content>
                           {shareOptions.items.map((option) => (
-                            <Select.Item
-                              key={option.value}
-                              item={option}
-                              label={option.label}
-                            >
+                            <Select.Item key={option.value} item={option}>
                               {option.label}
                               <Select.ItemIndicator />
                             </Select.Item>
