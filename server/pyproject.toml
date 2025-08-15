@@ -79,6 +79,7 @@ default-groups = [
     "tests",
     "aws",
     "evaluation",
+    "local"
 ]
 
 [build-system]
