@@ -19,6 +19,7 @@ DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
 DEFAULT_SNIPPET_MAX_LENGTH = 150
 DEFAULT_MAX_SNIPPETS = 3
+LONG_SUMMARY_MAX_SNIPPETS = 2  # Number of snippets to extract from long_summary
 
 SearchQueryBase = constr(min_length=1, strip_whitespace=True)
 SearchLimitBase = Annotated[int, Field(ge=1, le=100)]
@@ -94,11 +95,19 @@ class SearchController:
             buffer = StringIO(webvtt_content)
             vtt = webvtt.read_buffer(buffer)
             return " ".join(caption.text for caption in vtt if caption.text)
-        except (webvtt.errors.MalformedFileError, UnicodeDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse WebVTT content: {e}", exc_info=e)
+        except webvtt.errors.MalformedFileError as e:
+            logger.debug(f"Malformed WebVTT content: {e}")
+            return ""
+        except (UnicodeDecodeError, ValueError) as e:
+            logger.warning(f"Failed to decode WebVTT content: {e}")
             return ""
         except AttributeError as e:
-            logger.warning(f"WebVTT parsing error - unexpected format: {e}", exc_info=e)
+            logger.error(
+                f"WebVTT parsing error - unexpected format: {e}", exc_info=True
+            )
+            return ""
+        except Exception as e:
+            logger.error(f"Unexpected error parsing WebVTT: {e}", exc_info=True)
             return ""
 
     @staticmethod
@@ -226,7 +235,9 @@ class SearchController:
             # First try to get snippets from long_summary if available
             if long_summary:
                 snippets = cls._generate_snippets(
-                    long_summary, params.query_text, max_snippets=2
+                    long_summary,
+                    params.query_text,
+                    max_snippets=LONG_SUMMARY_MAX_SNIPPETS,
                 )
 
             # Then add snippets from webvtt content if we need more
