@@ -73,9 +73,8 @@ export function useSearchTranscripts(
 
       const [_, searchQuery, pageNum, filterKey] = key.split(":");
 
-      // Always use search endpoint, with empty query for browsing
       const response = await api.v1TranscriptsSearch({
-        q: searchQuery || "", // Empty string for browsing all transcripts
+        q: searchQuery || "",
         limit: pageSize,
         offset: parseInt(pageNum) * pageSize,
         roomId: filters.roomIds?.[0],

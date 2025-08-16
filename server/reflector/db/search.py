@@ -1,5 +1,6 @@
 """Search functionality for transcripts and other entities."""
 
+import asyncio
 import logging
 from datetime import datetime
 from io import StringIO
@@ -7,7 +8,9 @@ from typing import Annotated, Any, Dict
 
 import sqlalchemy
 import webvtt
-from pydantic import BaseModel, Field, constr, field_serializer
+from fastapi import HTTPException
+from pydantic import BaseModel, Field, ValidationError, constr, field_serializer
+from sqlalchemy.exc import DatabaseError, OperationalError
 
 from reflector.db import get_database
 from reflector.db.rooms import rooms
@@ -20,7 +23,7 @@ DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
 DEFAULT_SNIPPET_MAX_LENGTH = 150
 DEFAULT_MAX_SNIPPETS = 3
-LONG_SUMMARY_MAX_SNIPPETS = 2  # Number of snippets to extract from long_summary
+LONG_SUMMARY_MAX_SNIPPETS = 2
 
 SearchQueryBase = constr(min_length=0, strip_whitespace=True)
 SearchLimitBase = Annotated[int, Field(ge=1, le=100)]
@@ -187,9 +190,7 @@ class SearchController:
             )
             return [], 0
 
-        # Build base query with JOIN for room_name
         if params.query_text:
-            # Full-text search when query is provided
             search_query = sqlalchemy.func.websearch_to_tsquery(
                 "english", params.query_text
             )
@@ -230,7 +231,6 @@ class SearchController:
                 .where(transcripts.c.search_vector_en.op("@@")(search_query))
             )
         else:
-            # Return all transcripts when no query, with default rank
             base_query = sqlalchemy.select(
                 [
                     transcripts.c.id,
@@ -250,9 +250,7 @@ class SearchController:
                         ),
                         else_=rooms.c.name,
                     ).label("room_name"),
-                    sqlalchemy.cast(1.0, sqlalchemy.Float).label(
-                        "rank"
-                    ),  # Default rank for non-search results
+                    sqlalchemy.cast(1.0, sqlalchemy.Float).label("rank"),
                 ]
             ).select_from(
                 transcripts.join(
@@ -269,19 +267,33 @@ class SearchController:
                 transcripts.c.source_kind == params.source_kind
             )
 
-        # Order by rank when searching, by created_at when browsing
         if params.query_text:
             order_by = sqlalchemy.desc(sqlalchemy.text("rank"))
         else:
             order_by = sqlalchemy.desc(transcripts.c.created_at)
 
         query = base_query.order_by(order_by).limit(params.limit).offset(params.offset)
-        rs = await get_database().fetch_all(query)
 
-        count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
-            base_query.alias("search_results")
-        )
-        total = await get_database().fetch_val(count_query)
+        try:
+            rs = await asyncio.wait_for(get_database().fetch_all(query), timeout=10.0)
+
+            count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
+                base_query.alias("search_results")
+            )
+            total = await asyncio.wait_for(
+                get_database().fetch_val(count_query), timeout=5.0
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"Search query timeout for: {params.query_text}")
+            raise HTTPException(status_code=504, detail="Search query timed out")
+        except (DatabaseError, OperationalError) as e:
+            logger.error(f"Database error during search: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=503, detail="Database temporarily unavailable"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected search error: {e}", exc_info=True)
+            raise
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
@@ -320,7 +332,17 @@ class SearchController:
                 **db_result.model_dump(), room_name=room_name, search_snippets=snippets
             )
 
-        results = [_process_result(r) for r in rs]
+        try:
+            results = [_process_result(r) for r in rs]
+        except ValidationError as e:
+            logger.error(f"Invalid search result data: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500, detail="Internal search result data consistency error"
+            )
+        except Exception as e:
+            logger.error(f"Error processing search results: {e}", exc_info=True)
+            raise
+
         return results, total
 
 
