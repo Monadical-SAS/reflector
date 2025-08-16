@@ -181,7 +181,7 @@ export default function TranscriptBrowser() {
     : undefined;
   const dialogSource =
     transcriptToDelete?.source_kind === "room" && transcriptToDelete?.room_id
-      ? transcriptToDelete.room_id
+      ? transcriptToDelete.room_name || transcriptToDelete.room_id
       : transcriptToDelete?.source_kind;
 
   // Calculate pagination values (convert from offset-based to page-based)

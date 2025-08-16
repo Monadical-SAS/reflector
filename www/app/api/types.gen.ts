@@ -209,6 +209,8 @@ export type SearchResult = {
   title?: string | null;
   user_id?: string | null;
   room_id?: string | null;
+  room_name?: string | null;
+  source_kind: SourceKind;
   created_at: string;
   status: string;
   rank: number;

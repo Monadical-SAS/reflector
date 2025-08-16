@@ -10,6 +10,7 @@ import webvtt
 from pydantic import BaseModel, Field, constr, field_serializer
 
 from reflector.db import get_database
+from reflector.db.rooms import rooms
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
 
@@ -67,6 +68,7 @@ class SearchResult(BaseModel):
     title: str | None = None
     user_id: str | None = None
     room_id: str | None = None
+    room_name: str | None = None
     source_kind: SourceKind
     created_at: datetime
     status: str = Field(..., min_length=1)
@@ -188,25 +190,34 @@ class SearchController:
             "english", params.query_text
         )
 
-        base_query = sqlalchemy.select(
-            [
-                transcripts.c.id,
-                transcripts.c.title,
-                transcripts.c.created_at,
-                transcripts.c.duration,
-                transcripts.c.status,
-                transcripts.c.user_id,
-                transcripts.c.room_id,
-                transcripts.c.source_kind,
-                transcripts.c.webvtt,
-                transcripts.c.long_summary,
-                sqlalchemy.func.ts_rank(
-                    transcripts.c.search_vector_en,
-                    search_query,
-                    32,  # normalization flag: rank/(rank+1) for 0-1 range
-                ).label("rank"),
-            ]
-        ).where(transcripts.c.search_vector_en.op("@@")(search_query))
+        base_query = (
+            sqlalchemy.select(
+                [
+                    transcripts.c.id,
+                    transcripts.c.title,
+                    transcripts.c.created_at,
+                    transcripts.c.duration,
+                    transcripts.c.status,
+                    transcripts.c.user_id,
+                    transcripts.c.room_id,
+                    transcripts.c.source_kind,
+                    transcripts.c.webvtt,
+                    transcripts.c.long_summary,
+                    rooms.c.name.label("room_name"),
+                    sqlalchemy.func.ts_rank(
+                        transcripts.c.search_vector_en,
+                        search_query,
+                        32,  # normalization flag: rank/(rank+1) for 0-1 range
+                    ).label("rank"),
+                ]
+            )
+            .select_from(
+                transcripts.join(
+                    rooms, transcripts.c.room_id == rooms.c.id, isouter=True
+                )
+            )
+            .where(transcripts.c.search_vector_en.op("@@")(search_query))
+        )
 
         if params.user_id:
             base_query = base_query.where(transcripts.c.user_id == params.user_id)
@@ -229,6 +240,7 @@ class SearchController:
             r_dict: Dict[str, Any] = dict(r)
             webvtt: str | None = r_dict.pop("webvtt", None)
             long_summary: str | None = r_dict.pop("long_summary", None)
+            room_name: str | None = r_dict.pop("room_name", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
             snippets = []
@@ -250,7 +262,16 @@ class SearchController:
                 )
                 snippets.extend(webvtt_snippets)
 
-            return SearchResult(**db_result.model_dump(), search_snippets=snippets)
+            # If no snippets were generated, provide a fallback message
+            if not snippets:
+                if not webvtt and not long_summary:
+                    snippets = ["No transcript content available"]
+                else:
+                    snippets = ["No matching content found in transcript"]
+
+            return SearchResult(
+                **db_result.model_dump(), room_name=room_name, search_snippets=snippets
+            )
 
         results = [_process_result(r) for r in rs]
         return results, total

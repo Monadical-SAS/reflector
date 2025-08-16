@@ -95,7 +95,7 @@ function TranscriptCard({
   const formattedDate = formatLocalDate(result.created_at);
   const source =
     result.source_kind === "room" && result.room_id
-      ? result.room_id
+      ? result.room_name || result.room_id
       : result.source_kind;
 
   const handleExpandClick = (e: React.MouseEvent) => {

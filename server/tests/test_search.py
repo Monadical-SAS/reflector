@@ -66,6 +66,58 @@ async def test_search_input_validation():
 
 
 @pytest.mark.asyncio
+async def test_empty_transcript_fallback_snippets():
+    """Test that transcripts with no content get fallback snippets."""
+    test_id = "test-empty-9b3f2a8d"
+
+    try:
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
+
+        test_data = {
+            "id": test_id,
+            "name": "Empty Transcript",
+            "title": "Empty Meeting",
+            "status": "completed",
+            "locked": False,
+            "duration": 0.0,
+            "created_at": datetime.now(timezone.utc),
+            "short_summary": None,
+            "long_summary": None,
+            "topics": json.dumps([]),
+            "events": json.dumps([]),
+            "participants": json.dumps([]),
+            "source_language": "en",
+            "target_language": "en",
+            "reviewed": False,
+            "audio_location": "local",
+            "share_mode": "private",
+            "source_kind": "room",
+            "webvtt": None,  # Empty content
+        }
+
+        await get_database().execute(transcripts.insert().values(**test_data))
+
+        # Search should return the transcript with fallback snippet
+        params = SearchParameters(query_text="empty")
+        results, total = await search_controller.search_transcripts(params)
+
+        # Should find the transcript by title
+        assert total >= 1
+        found = next((r for r in results if r.id == test_id), None)
+        assert found is not None, "Should find transcript even with no content"
+        assert len(found.search_snippets) > 0
+        assert found.search_snippets[0] == "No transcript content available"
+
+    finally:
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id == test_id)
+        )
+        await get_database().disconnect()
+
+
+@pytest.mark.asyncio
 async def test_search_with_long_summary():
     """Test that long_summary content is searchable."""
     test_id = "test-long-summary-8a9f3c2d"
@@ -300,22 +352,6 @@ class TestSearchParameters:
         # assert params.date_from is None
         # assert params.date_to is None
 
-    @pytest.mark.skip(reason="Status filters not yet implemented in SearchParameters")
-    def test_multiple_status_filters(self):
-        """Test SearchParameters with multiple status filters."""
-        # This test is for future functionality
-        pass
-        # When implemented:
-        # params = SearchParameters(
-        #     query_text="test",
-        #     status=[
-        #         StatusFilter.COMPLETED,
-        #         StatusFilter.PROCESSING,
-        #         StatusFilter.FAILED,
-        #     ],
-        # )
-        # assert len(params.status) == 3
-
 
 class TestSearchControllerFilters:
     """Test SearchController functionality with various filters."""
@@ -341,13 +377,6 @@ class TestSearchControllerFilters:
             # Verify the query was called
             mock_db.return_value.fetch_all.assert_called_once()
 
-    @pytest.mark.skip(reason="Date range filters not yet implemented")
-    @pytest.mark.asyncio
-    async def test_search_with_date_range_filters(self):
-        """Test search filtering by date range."""
-        # This test is for future functionality
-        pass
-
     @pytest.mark.asyncio
     async def test_search_with_single_room_id(self):
         """Test search filtering by single room ID (currently supported)."""
@@ -369,13 +398,6 @@ class TestSearchControllerFilters:
             assert results == []
             assert total == 0
             mock_db.return_value.fetch_all.assert_called_once()
-
-    @pytest.mark.skip(reason="Status filters not yet implemented")
-    @pytest.mark.asyncio
-    async def test_search_with_status_filters(self):
-        """Test search filtering by multiple status values."""
-        # This test is for future functionality
-        pass
 
     @pytest.mark.asyncio
     async def test_search_result_includes_available_fields(self, mock_db_result):
@@ -494,6 +516,7 @@ class TestSearchResultModel:
             title="Test Title",
             user_id="user-123",
             room_id="room-456",
+            source_kind=SourceKind.ROOM,
             created_at=datetime(2024, 6, 15, tzinfo=timezone.utc),
             status="completed",
             rank=0.85,
@@ -518,6 +541,7 @@ class TestSearchResultModel:
         """Test SearchResult model with optional fields as None."""
         result = SearchResult(
             id="test-id",
+            source_kind=SourceKind.FILE,
             created_at=datetime.now(timezone.utc),
             status="processing",
             rank=0.5,
@@ -541,6 +565,7 @@ class TestSearchResultModel:
         """Test that SearchResult accepts datetime field."""
         result = SearchResult(
             id="test-id",
+            source_kind=SourceKind.LIVE,
             created_at=datetime(2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc),
             status="completed",
             rank=0.9,

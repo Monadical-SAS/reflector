@@ -95,6 +95,7 @@ export function useSearchTranscripts(
           duration: item.duration || 0,
           source_kind: item.source_kind,
           room_id: item.room_id || undefined,
+          room_name: item.room_name || undefined,
           user_id: item.user_id || undefined,
         }));
 
