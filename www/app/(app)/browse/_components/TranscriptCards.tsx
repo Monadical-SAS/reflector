@@ -137,7 +137,7 @@ function TranscriptCard({
               <Text fontWeight="medium" color="gray.500">
                 Source:
               </Text>
-              <Text>{source === "room" ? result.room_id : source}</Text>
+              <Text>{source}</Text>
             </Flex>
             <Text display={{ base: "none", md: "block" }} color="gray.400">
               •

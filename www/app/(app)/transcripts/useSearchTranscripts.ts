@@ -73,41 +73,9 @@ export function useSearchTranscripts(
 
       const [_, searchQuery, pageNum, filterKey] = key.split(":");
 
-      if (!searchQuery || searchQuery.trim() === "") {
-        // If no search query, fetch regular transcript list
-        const response = await api.v1TranscriptsList({
-          page: parseInt(pageNum) + 1, // API uses 1-based pagination
-          size: pageSize,
-          roomId: filters.roomIds?.[0] || null,
-          sourceKind: filters.sourceKind || null,
-          searchTerm: null,
-        });
-
-        // Convert to SearchResult format
-        const results: SearchResult[] = response.items.map((item) => ({
-          id: item.id,
-          title: item.title || "Unnamed Transcript",
-          transcript_text: "",
-          search_snippets: [],
-          rank: 1,
-          status: item.status,
-          created_at: item.created_at,
-          duration: item.duration || 0,
-          source_kind: item.source_kind,
-          room_id: item.room_id || undefined,
-          room_name: item.room_name || undefined,
-          user_id: item.user_id || undefined,
-        }));
-
-        return {
-          results,
-          total: response.total,
-        };
-      }
-
-      // Perform search with available filters
+      // Always use search endpoint, with empty query for browsing
       const response = await api.v1TranscriptsSearch({
-        q: searchQuery,
+        q: searchQuery || "", // Empty string for browsing all transcripts
         limit: pageSize,
         offset: parseInt(pageNum) * pageSize,
         roomId: filters.roomIds?.[0] || undefined, // Pass room filter to search API

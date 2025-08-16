@@ -22,7 +22,7 @@ DEFAULT_SNIPPET_MAX_LENGTH = 150
 DEFAULT_MAX_SNIPPETS = 3
 LONG_SUMMARY_MAX_SNIPPETS = 2  # Number of snippets to extract from long_summary
 
-SearchQueryBase = constr(min_length=1, strip_whitespace=True)
+SearchQueryBase = constr(min_length=0, strip_whitespace=True)
 SearchLimitBase = Annotated[int, Field(ge=1, le=100)]
 SearchOffsetBase = Annotated[int, Field(ge=0)]
 SearchTotalBase = Annotated[int, Field(ge=0)]
@@ -186,12 +186,51 @@ class SearchController:
             )
             return [], 0
 
-        search_query = sqlalchemy.func.websearch_to_tsquery(
-            "english", params.query_text
-        )
+        # Build base query with JOIN for room_name
+        if params.query_text:
+            # Full-text search when query is provided
+            search_query = sqlalchemy.func.websearch_to_tsquery(
+                "english", params.query_text
+            )
 
-        base_query = (
-            sqlalchemy.select(
+            base_query = (
+                sqlalchemy.select(
+                    [
+                        transcripts.c.id,
+                        transcripts.c.title,
+                        transcripts.c.created_at,
+                        transcripts.c.duration,
+                        transcripts.c.status,
+                        transcripts.c.user_id,
+                        transcripts.c.room_id,
+                        transcripts.c.source_kind,
+                        transcripts.c.webvtt,
+                        transcripts.c.long_summary,
+                        sqlalchemy.case(
+                            (
+                                transcripts.c.room_id.isnot(None)
+                                & rooms.c.id.is_(None),
+                                "Deleted Room",
+                            ),
+                            else_=rooms.c.name,
+                        ).label("room_name"),
+                        sqlalchemy.func.ts_rank(
+                            transcripts.c.search_vector_en,
+                            search_query,
+                            32,  # normalization flag: rank/(rank+1) for 0-1 range
+                        ).label("rank"),
+                    ]
+                )
+                .select_from(
+                    transcripts.join(
+                        rooms, transcripts.c.room_id == rooms.c.id, isouter=True
+                    )
+                )
+                .where(transcripts.c.search_vector_en.op("@@")(search_query))
+            )
+        else:
+            # Return all transcripts when no query, with default rank
+            base_query = sqlalchemy.select(
                 [
                     transcripts.c.id,
                     transcripts.c.title,
@@ -203,32 +242,35 @@ class SearchController:
                     transcripts.c.source_kind,
                     transcripts.c.webvtt,
                     transcripts.c.long_summary,
-                    rooms.c.name.label("room_name"),
-                    sqlalchemy.func.ts_rank(
-                        transcripts.c.search_vector_en,
-                        search_query,
-                        32,  # normalization flag: rank/(rank+1) for 0-1 range
-                    ).label("rank"),
+                    sqlalchemy.case(
+                        (
+                            transcripts.c.room_id.isnot(None) & rooms.c.id.is_(None),
+                            "Deleted Room",
+                        ),
+                        else_=rooms.c.name,
+                    ).label("room_name"),
+                    sqlalchemy.cast(1.0, sqlalchemy.Float).label(
+                        "rank"
+                    ),  # Default rank for non-search results
                 ]
-            )
-            .select_from(
+            ).select_from(
                 transcripts.join(
                     rooms, transcripts.c.room_id == rooms.c.id, isouter=True
                 )
             )
-            .where(transcripts.c.search_vector_en.op("@@")(search_query))
-        )
 
         if params.user_id:
             base_query = base_query.where(transcripts.c.user_id == params.user_id)
         if params.room_id:
             base_query = base_query.where(transcripts.c.room_id == params.room_id)
 
-        query = (
-            base_query.order_by(sqlalchemy.desc(sqlalchemy.text("rank")))
-            .limit(params.limit)
-            .offset(params.offset)
-        )
+        # Order by rank when searching, by created_at when browsing
+        if params.query_text:
+            order_by = sqlalchemy.desc(sqlalchemy.text("rank"))
+        else:
+            order_by = sqlalchemy.desc(transcripts.c.created_at)
+
+        query = base_query.order_by(order_by).limit(params.limit).offset(params.offset)
         rs = await get_database().fetch_all(query)
 
         count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(

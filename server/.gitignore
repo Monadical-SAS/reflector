@@ -180,10 +180,4 @@ reflector.sqlite3
 data/
 
 dump.rdb
-
-
-# Test files
 reflector.db
-*.jsonl
-diarization_output.jsonl
-docker_diarization_output.jsonl

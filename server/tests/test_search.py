@@ -6,7 +6,6 @@ from enum import Enum
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pydantic import ValidationError
 
 from reflector.db import get_database
 from reflector.db.search import (
@@ -35,34 +34,39 @@ async def test_search_postgresql_only():
     assert results == []
     assert total == 0
 
-    try:
-        SearchParameters(query_text="")
-        assert False, "Should have raised validation error"
-    except ValidationError:
-        pass  # Expected
-
-    # Test that whitespace query raises validation error
-    try:
-        SearchParameters(query_text="   ")
-        assert False, "Should have raised validation error"
-    except ValidationError:
-        pass  # Expected
+    # Empty queries are now allowed (returns all transcripts)
+    params_empty = SearchParameters(query_text="")
+    results_empty, total_empty = await search_controller.search_transcripts(
+        params_empty
+    )
+    assert isinstance(results_empty, list)
+    assert isinstance(total_empty, int)
 
 
 @pytest.mark.asyncio
 async def test_search_input_validation():
-    try:
-        SearchParameters(query_text="")
-        assert False, "Should have raised ValidationError"
-    except ValidationError:
-        pass  # Expected
+    # Empty queries are now valid (returns all transcripts)
+    params = SearchParameters(query_text="")
+    assert params.query_text == ""
 
-    # Test that whitespace query raises validation error
-    try:
-        SearchParameters(query_text="   \t\n  ")
-        assert False, "Should have raised ValidationError"
-    except ValidationError:
-        pass  # Expected
+    # Whitespace gets stripped but empty result is allowed
+    params_whitespace = SearchParameters(query_text="   \t\n  ")
+    assert params_whitespace.query_text == ""
+
+
+@pytest.mark.asyncio
+async def test_search_with_empty_query():
+    """Test that empty query returns all transcripts."""
+    params = SearchParameters(query_text="")
+    results, total = await search_controller.search_transcripts(params)
+
+    # Should return results (not fail)
+    assert isinstance(results, list)
+    assert isinstance(total, int)
+    # Results should be ordered by created_at desc (newest first)
+    if len(results) > 1:
+        for i in range(len(results) - 1):
+            assert results[i].created_at >= results[i + 1].created_at
 
 
 @pytest.mark.asyncio
