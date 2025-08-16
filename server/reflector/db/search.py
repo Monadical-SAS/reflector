@@ -81,6 +81,9 @@ class SearchResult(BaseModel):
     search_snippets: list[str] = Field(
         description="Text snippets around search matches"
     )
+    total_match_count: int = Field(
+        default=0, description="Total number of matches found in the transcript"
+    )
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -123,15 +126,27 @@ class SearchController:
         q: SearchQuery,
         max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
         max_snippets: int = DEFAULT_MAX_SNIPPETS,
-    ) -> list[str]:
-        """Generate multiple snippets around all occurrences of search term."""
+    ) -> tuple[list[str], int]:
+        """Generate multiple snippets around all occurrences of search term.
+        Returns (snippets, total_match_count) tuple."""
         if not text or not q:
-            return []
+            return [], 0
 
         snippets = []
         lower_text = text.lower()
         search_lower = q.lower()
 
+        # First, count all matches
+        total_matches = 0
+        count_pos = 0
+        while True:
+            match_pos = lower_text.find(search_lower, count_pos)
+            if match_pos == -1:
+                break
+            total_matches += 1
+            count_pos = match_pos + 1  # Move by 1 to find overlapping matches
+
+        # Now generate snippets
         last_snippet_end = 0
         start_pos = 0
 
@@ -173,7 +188,7 @@ class SearchController:
             if start_pos >= len(text):
                 break
 
-        return snippets
+        return snippets, total_matches
 
     @classmethod
     async def search_transcripts(
@@ -303,23 +318,27 @@ class SearchController:
             db_result = SearchResultDB.model_validate(r_dict)
 
             snippets = []
+            total_matches = 0
 
             # First try to get snippets from long_summary if available
             if long_summary:
-                snippets = cls._generate_snippets(
+                summary_snippets, summary_matches = cls._generate_snippets(
                     long_summary,
                     params.query_text,
                     max_snippets=LONG_SUMMARY_MAX_SNIPPETS,
                 )
+                snippets = summary_snippets
+                total_matches += summary_matches
 
             # Then add snippets from webvtt content if we need more
             if webvtt and len(snippets) < DEFAULT_MAX_SNIPPETS:
                 plain_text = cls._extract_webvtt_text(webvtt)
                 remaining_snippets = DEFAULT_MAX_SNIPPETS - len(snippets)
-                webvtt_snippets = cls._generate_snippets(
+                webvtt_snippets, webvtt_matches = cls._generate_snippets(
                     plain_text, params.query_text, max_snippets=remaining_snippets
                 )
                 snippets.extend(webvtt_snippets)
+                total_matches += webvtt_matches
 
             # If no snippets were generated, provide a fallback message
             if not snippets:
@@ -329,7 +348,10 @@ class SearchController:
                     snippets = ["No matching content found in transcript"]
 
             return SearchResult(
-                **db_result.model_dump(), room_name=room_name, search_snippets=snippets
+                **db_result.model_dump(),
+                room_name=room_name,
+                search_snippets=snippets,
+                total_match_count=total_matches,
             )
 
         try:

@@ -222,6 +222,10 @@ export type SearchResult = {
    * Text snippets around search matches
    */
   search_snippets: Array<string>;
+  /**
+   * Total number of matches found in the transcript
+   */
+  total_match_count?: number;
 };
 
 export type SourceKind = "room" | "live" | "file";

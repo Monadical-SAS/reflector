@@ -77,7 +77,11 @@ function TranscriptCard({
   const processedSnippets = processSnippets(result.search_snippets || []);
   const mainSnippet = processedSnippets[0];
   const additionalSnippets = processedSnippets.slice(1);
-  const hasAdditionalSnippets = additionalSnippets.length > 0;
+  const totalMatches = result.total_match_count || 0;
+  const snippetsShown = processedSnippets.length;
+  const remainingMatches = totalMatches - snippetsShown;
+  const hasAdditionalSnippets =
+    additionalSnippets.length > 0 || remainingMatches > 0;
   const showSearchFeatures = query && query.length > 0;
 
   // Generate text fragment for deep linking to the first match
@@ -198,11 +202,17 @@ function TranscriptCard({
                         px={2}
                         borderRadius="full"
                       >
-                        {additionalSnippets.length}
+                        {remainingMatches > 0
+                          ? `${additionalSnippets.length + remainingMatches}+`
+                          : additionalSnippets.length}
                       </Badge>
                       <Text fontSize="xs" color="blue.600" fontWeight="medium">
                         more{" "}
-                        {additionalSnippets.length === 1 ? "match" : "matches"}
+                        {additionalSnippets.length + remainingMatches === 1
+                          ? "match"
+                          : "matches"}
+                        {remainingMatches > 0 &&
+                          ` (${additionalSnippets.length} shown)`}
                       </Text>
                     </HStack>
                     <Text fontSize="xs" color="blue.600">
@@ -223,14 +233,6 @@ function TranscriptCard({
                           borderRadius="sm"
                           fontSize="xs"
                         >
-                          <Badge
-                            bg="indigo.100"
-                            color="indigo.800"
-                            fontSize="xs"
-                            mb={1}
-                          >
-                            Match {index + 2}
-                          </Badge>
                           <Text color="gray.700">
                             {highlightText(snippet.text, query)}
                           </Text>

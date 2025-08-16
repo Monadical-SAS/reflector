@@ -18,24 +18,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add composite indexes for search filtering optimization
-    # These indexes improve performance when filtering by multiple columns
-
-    # Index for source_kind + status filtering (common combination)
-    op.create_index(
-        "idx_transcript_source_kind_status",
-        "transcript",
-        ["source_kind", "status"],
-        if_not_exists=True,
-    )
-
-    # Index for status + created_at (for filtering by status with date ranges)
-    op.create_index(
-        "idx_transcript_status_created_at",
-        "transcript",
-        ["status", "created_at"],
-        if_not_exists=True,
-    )
+    # Add indexes for actual search filtering patterns used in frontend
+    # Based on /browse page filters: room_id and source_kind
 
     # Index for room_id + created_at (for room-specific searches with date ordering)
     op.create_index(
@@ -45,21 +29,13 @@ def upgrade() -> None:
         if_not_exists=True,
     )
 
-    # Index for source_kind alone (if not already exists from single column usage)
+    # Index for source_kind alone (actively used filter in frontend)
     op.create_index(
         "idx_transcript_source_kind", "transcript", ["source_kind"], if_not_exists=True
-    )
-
-    # Index for status alone (frequently filtered field)
-    op.create_index(
-        "idx_transcript_status", "transcript", ["status"], if_not_exists=True
     )
 
 
 def downgrade() -> None:
     # Remove the indexes in reverse order
-    op.drop_index("idx_transcript_status", "transcript", if_exists=True)
     op.drop_index("idx_transcript_source_kind", "transcript", if_exists=True)
     op.drop_index("idx_transcript_room_id_created_at", "transcript", if_exists=True)
-    op.drop_index("idx_transcript_status_created_at", "transcript", if_exists=True)
-    op.drop_index("idx_transcript_source_kind_status", "transcript", if_exists=True)

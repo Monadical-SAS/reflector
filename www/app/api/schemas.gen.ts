@@ -1115,6 +1115,12 @@ export const $SearchResult = {
       title: "Search Snippets",
       description: "Text snippets around search matches",
     },
+    total_match_count: {
+      type: "integer",
+      title: "Total Match Count",
+      description: "Total number of matches found in the transcript",
+      default: 0,
+    },
   },
   type: "object",
   required: [
