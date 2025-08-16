@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from io import StringIO
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any, Dict, Iterator, NamedTuple
 
 import sqlalchemy
 import webvtt
@@ -38,6 +38,15 @@ SearchOffset = Annotated[
 SearchTotal = Annotated[
     SearchTotalBase, Field(description="Total number of search results")
 ]
+
+
+# Snippet generation types
+class SnippetCandidate(NamedTuple):
+    """Represents a candidate snippet with its position."""
+
+    text: str
+    start: int
+    end: int
 
 
 class SearchParameters(BaseModel):
@@ -92,33 +101,120 @@ class SearchResult(BaseModel):
         return dt.isoformat()
 
 
+# Pure functions for text processing
+def extract_webvtt_text(webvtt_content: str) -> str:
+    """Extract plain text from WebVTT content using webvtt library."""
+    if not webvtt_content:
+        return ""
+
+    try:
+        buffer = StringIO(webvtt_content)
+        vtt = webvtt.read_buffer(buffer)
+        return " ".join(caption.text for caption in vtt if caption.text)
+    except webvtt.errors.MalformedFileError as e:
+        logger.debug(f"Malformed WebVTT content: {e}")
+        return ""
+    except (UnicodeDecodeError, ValueError) as e:
+        logger.warning(f"Failed to decode WebVTT content: {e}")
+        return ""
+    except AttributeError as e:
+        logger.error(f"WebVTT parsing error - unexpected format: {e}", exc_info=True)
+        return ""
+    except Exception as e:
+        logger.error(f"Unexpected error parsing WebVTT: {e}", exc_info=True)
+        return ""
+
+
+def find_all_matches(text: str, query: str) -> Iterator[int]:
+    """Generate all match positions for a query in text."""
+    if not text or not query:
+        return
+
+    text_lower = text.lower()
+    query_lower = query.lower()
+    start = 0
+
+    while (pos := text_lower.find(query_lower, start)) != -1:
+        yield pos
+        start = pos + len(query_lower)
+
+
+def count_matches(text: str, query: str) -> int:
+    """Count total number of matches for a query in text."""
+    if not text or not query:
+        return 0
+    return sum(1 for _ in find_all_matches(text, query))
+
+
+def create_snippet(
+    text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
+) -> SnippetCandidate:
+    """Pure function to create a snippet from a match position."""
+    snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
+    snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
+
+    snippet_text = text[snippet_start:snippet_end]
+
+    # Add ellipsis if truncated
+    if snippet_start > 0:
+        snippet_text = "..." + snippet_text
+    if snippet_end < len(text):
+        snippet_text = snippet_text + "..."
+
+    return SnippetCandidate(
+        text=snippet_text.strip(), start=snippet_start, end=snippet_end
+    )
+
+
+def filter_non_overlapping_snippets(
+    candidates: Iterator[SnippetCandidate],
+) -> Iterator[str]:
+    """Filter out overlapping snippets and return only text."""
+    last_end = 0
+    for candidate in candidates:
+        if candidate.start >= last_end and candidate.text:
+            yield candidate.text
+            last_end = candidate.end
+
+
+def generate_snippets(
+    text: str,
+    query: str,
+    max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
+    max_snippets: int = DEFAULT_MAX_SNIPPETS,
+) -> list[str]:
+    """Generate snippets using functional approach."""
+    if not text or not query:
+        return []
+
+    # Create snippet candidates from all matches
+    candidates = (
+        create_snippet(text, pos, max_length) for pos in find_all_matches(text, query)
+    )
+
+    # Filter non-overlapping and collect limited count
+    filtered = filter_non_overlapping_snippets(candidates)
+    snippets = []
+    for snippet in filtered:
+        if len(snippets) >= max_snippets:
+            break
+        snippets.append(snippet)
+
+    # Fallback to first word search if no full matches
+    if not snippets and " " in query:
+        first_word = query.split()[0]
+        return generate_snippets(text, first_word, max_length, max_snippets)
+
+    return snippets
+
+
 class SearchController:
     """Controller for search operations across different entities."""
 
     @staticmethod
     def _extract_webvtt_text(webvtt_content: str) -> str:
-        """Extract plain text from WebVTT content using webvtt library."""
-        if not webvtt_content:
-            return ""
-
-        try:
-            buffer = StringIO(webvtt_content)
-            vtt = webvtt.read_buffer(buffer)
-            return " ".join(caption.text for caption in vtt if caption.text)
-        except webvtt.errors.MalformedFileError as e:
-            logger.debug(f"Malformed WebVTT content: {e}")
-            return ""
-        except (UnicodeDecodeError, ValueError) as e:
-            logger.warning(f"Failed to decode WebVTT content: {e}")
-            return ""
-        except AttributeError as e:
-            logger.error(
-                f"WebVTT parsing error - unexpected format: {e}", exc_info=True
-            )
-            return ""
-        except Exception as e:
-            logger.error(f"Unexpected error parsing WebVTT: {e}", exc_info=True)
-            return ""
+        """Extract plain text from WebVTT content."""
+        return extract_webvtt_text(webvtt_content)
 
     @staticmethod
     def _generate_snippets(
@@ -126,69 +222,9 @@ class SearchController:
         q: SearchQuery,
         max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
         max_snippets: int = DEFAULT_MAX_SNIPPETS,
-    ) -> tuple[list[str], int]:
-        """Generate multiple snippets around all occurrences of search term.
-        Returns (snippets, total_match_count) tuple."""
-        if not text or not q:
-            return [], 0
-
-        snippets = []
-        lower_text = text.lower()
-        search_lower = q.lower()
-
-        # First, count all matches
-        total_matches = 0
-        count_pos = 0
-        while True:
-            match_pos = lower_text.find(search_lower, count_pos)
-            if match_pos == -1:
-                break
-            total_matches += 1
-            count_pos = match_pos + 1  # Move by 1 to find overlapping matches
-
-        # Now generate snippets
-        last_snippet_end = 0
-        start_pos = 0
-
-        while len(snippets) < max_snippets:
-            match_pos = lower_text.find(search_lower, start_pos)
-
-            if match_pos == -1:
-                if not snippets and search_lower.split():
-                    first_word = search_lower.split()[0]
-                    match_pos = lower_text.find(first_word, start_pos)
-                    if match_pos == -1:
-                        break
-                else:
-                    break
-
-            snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
-            snippet_end = min(
-                len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH
-            )
-
-            if snippet_start < last_snippet_end:
-                start_pos = match_pos + len(search_lower)
-                continue
-
-            snippet = text[snippet_start:snippet_end]
-
-            if snippet_start > 0:
-                snippet = "..." + snippet
-            if snippet_end < len(text):
-                snippet = snippet + "..."
-
-            snippet = snippet.strip()
-
-            if snippet:
-                snippets.append(snippet)
-                last_snippet_end = snippet_end
-
-            start_pos = match_pos + len(search_lower)
-            if start_pos >= len(text):
-                break
-
-        return snippets, total_matches
+    ) -> list[str]:
+        """Generate snippets around search matches."""
+        return generate_snippets(text, q, max_length, max_snippets)
 
     @classmethod
     async def search_transcripts(
@@ -298,17 +334,19 @@ class SearchController:
             total = await asyncio.wait_for(
                 get_database().fetch_val(count_query), timeout=5.0
             )
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             logger.error(f"Search query timeout for: {params.query_text}")
-            raise HTTPException(status_code=504, detail="Search query timed out")
+            raise HTTPException(status_code=504, detail="Search query timed out") from e
         except (DatabaseError, OperationalError) as e:
             logger.error(f"Database error during search: {e}", exc_info=True)
             raise HTTPException(
                 status_code=503, detail="Database temporarily unavailable"
-            )
+            ) from e
         except Exception as e:
             logger.error(f"Unexpected search error: {e}", exc_info=True)
-            raise
+            raise HTTPException(
+                status_code=500, detail="Internal server error during search"
+            ) from e
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
@@ -318,27 +356,11 @@ class SearchController:
             db_result = SearchResultDB.model_validate(r_dict)
 
             snippets = []
-            total_matches = 0
 
-            # First try to get snippets from long_summary if available
-            if long_summary:
-                summary_snippets, summary_matches = cls._generate_snippets(
-                    long_summary,
-                    params.query_text,
-                    max_snippets=LONG_SUMMARY_MAX_SNIPPETS,
-                )
-                snippets = summary_snippets
-                total_matches += summary_matches
-
-            # Then add snippets from webvtt content if we need more
-            if webvtt and len(snippets) < DEFAULT_MAX_SNIPPETS:
-                plain_text = cls._extract_webvtt_text(webvtt)
-                remaining_snippets = DEFAULT_MAX_SNIPPETS - len(snippets)
-                webvtt_snippets, webvtt_matches = cls._generate_snippets(
-                    plain_text, params.query_text, max_snippets=remaining_snippets
-                )
-                snippets.extend(webvtt_snippets)
-                total_matches += webvtt_matches
+            # Combine snippets from both sources
+            snippets, total_match_count = combine_snippet_sources(
+                long_summary, webvtt, params.query_text, DEFAULT_MAX_SNIPPETS
+            )
 
             # If no snippets were generated, provide a fallback message
             if not snippets:
@@ -346,12 +368,13 @@ class SearchController:
                     snippets = ["No transcript content available"]
                 else:
                     snippets = ["No matching content found in transcript"]
+                total_match_count = 0
 
             return SearchResult(
                 **db_result.model_dump(),
                 room_name=room_name,
                 search_snippets=snippets,
-                total_match_count=total_matches,
+                total_match_count=total_match_count,
             )
 
         try:
@@ -366,6 +389,66 @@ class SearchController:
             raise
 
         return results, total
+
+
+# Helper functions for snippet generation
+def generate_webvtt_snippets(
+    webvtt_content: str, query: str, max_snippets: int = DEFAULT_MAX_SNIPPETS
+) -> list[str]:
+    """Generate snippets from WebVTT content."""
+    if not webvtt_content:
+        return []
+    plain_text = extract_webvtt_text(webvtt_content)
+    return generate_snippets(plain_text, query, max_snippets=max_snippets)
+
+
+def generate_summary_snippets(
+    summary: str, query: str, max_snippets: int = LONG_SUMMARY_MAX_SNIPPETS
+) -> list[str]:
+    """Generate snippets from summary text."""
+    if not summary:
+        return []
+    return generate_snippets(summary, query, max_snippets=max_snippets)
+
+
+def combine_snippet_sources(
+    summary: str | None,
+    webvtt: str | None,
+    query: str,
+    max_total: int = DEFAULT_MAX_SNIPPETS,
+) -> tuple[list[str], int]:
+    """Combine snippets from multiple sources and return total match count.
+
+    Returns (snippets, total_match_count) tuple.
+    """
+    # Count matches from both sources and sum them
+    # This gives the true total count across all available content
+    webvtt_matches = 0
+    summary_matches = 0
+
+    if webvtt:
+        webvtt_text = extract_webvtt_text(webvtt)
+        webvtt_matches = count_matches(webvtt_text, query)
+
+    if summary:
+        summary_matches = count_matches(summary, query)
+
+    # Sum matches from both sources for total count
+    total_matches = webvtt_matches + summary_matches
+
+    # Get snippets from summary first (higher priority)
+    summary_snippets = generate_summary_snippets(summary, query) if summary else []
+
+    if len(summary_snippets) >= max_total:
+        return summary_snippets[:max_total], total_matches
+
+    # Add WebVTT snippets if we need more
+    remaining = max_total - len(summary_snippets)
+    webvtt_snippets = (
+        generate_webvtt_snippets(webvtt, query, remaining) if webvtt else []
+    )
+
+    return summary_snippets + webvtt_snippets, total_matches
 
 
 search_controller = SearchController()

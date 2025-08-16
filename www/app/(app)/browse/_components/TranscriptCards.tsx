@@ -80,8 +80,7 @@ function TranscriptCard({
   const totalMatches = result.total_match_count || 0;
   const snippetsShown = processedSnippets.length;
   const remainingMatches = totalMatches - snippetsShown;
-  const hasAdditionalSnippets =
-    additionalSnippets.length > 0 || remainingMatches > 0;
+  const hasAdditionalSnippets = additionalSnippets.length > 0;
   const showSearchFeatures = query && query.length > 0;
 
   // Generate text fragment for deep linking to the first match
