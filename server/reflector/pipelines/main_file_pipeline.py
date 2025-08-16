@@ -7,10 +7,10 @@ Uses parallel processing for transcription, diarization, and waveform generation
 """
 
 import asyncio
-import tempfile
 from pathlib import Path
 
 import av
+import structlog
 from celery import shared_task
 
 from reflector.db.transcripts import (
@@ -20,6 +20,7 @@ from reflector.db.transcripts import (
 from reflector.logger import logger
 from reflector.pipelines.main_live_pipeline import PipelineMainBase, asynctask
 from reflector.processors import (
+    AudioFileWriterProcessor,
     TranscriptFinalSummaryProcessor,
     TranscriptFinalTitleProcessor,
     TranscriptTopicDetectorProcessor,
@@ -45,9 +46,10 @@ from reflector.storage import get_transcripts_storage
 
 
 class EmptyPipeline:
-    """Mock pipeline for processors that need a pipeline reference"""
+    """Empty pipeline for processors that need a pipeline reference"""
 
-    logger = logger
+    def __init__(self, logger: structlog.BoundLogger):
+        self.logger = logger
 
     def get_pref(self, k, d=None):
         return d
@@ -62,17 +64,34 @@ class PipelineMainFile(PipelineMainBase):
     Processes complete audio/video files with parallel execution.
     """
 
+    logger: structlog.BoundLogger = None
+    empty_pipeline = None
+
+    def __init__(self, transcript_id: str):
+        super().__init__(transcript_id=transcript_id)
+        self.logger = logger.bind(transcript_id=self.transcript_id)
+        self.empty_pipeline = EmptyPipeline(logger=self.logger)
+
+    def _handle_gather_exceptions(self, results: list, operation: str) -> None:
+        """Handle exceptions from asyncio.gather with return_exceptions=True"""
+        for i, result in enumerate(results):
+            if not isinstance(result, Exception):
+                continue
+            self.logger.error(
+                f"Error in {operation} (task {i}): {result}",
+                transcript_id=self.transcript_id,
+                exc_info=result,
+            )
+
     async def process_file(self, file_path: Path):
         """Main entry point for file processing"""
-        self.prepare()
-        log = logger.bind(transcript_id=self.transcript_id)
-        log.info(f"Starting file pipeline for {file_path}")
+        self.logger.info(f"Starting file pipeline for {file_path}")
 
         # Get transcript for configuration
         transcript = await self.get_transcript()
 
-        # Extract audio if needed
-        audio_path = await self.extract_audio(file_path)
+        # Extract audio and write to transcript location
+        audio_path = await self.extract_and_write_audio(file_path, transcript)
 
         # Upload for processing
         audio_url = await self.upload_audio(audio_path, transcript)
@@ -85,43 +104,43 @@ class PipelineMainFile(PipelineMainBase):
             transcript.target_language,
         )
 
-        log.info("File pipeline complete")
+        self.logger.info("File pipeline complete")
 
-    async def extract_audio(self, file_path: Path) -> Path:
-        """Extract audio from video if needed"""
-        logger.info(f"Checking file type: {file_path}")
+    async def extract_and_write_audio(
+        self, file_path: Path, transcript: Transcript
+    ) -> Path:
+        """Extract audio from video if needed and write to transcript location as MP3"""
+        self.logger.info(f"Processing audio file: {file_path}")
 
-        # Check if it's already audio
+        # Check if it's already audio-only
         container = av.open(str(file_path))
         has_video = len(container.streams.video) > 0
         container.close()
 
-        if not has_video:
-            logger.info("File is already audio")
-            return file_path
+        # Use AudioFileWriterProcessor to write MP3 to transcript location
+        mp3_writer = AudioFileWriterProcessor(
+            path=transcript.audio_mp3_filename,
+            on_duration=self.on_duration,
+        )
 
-        # Extract audio to temp file
-        logger.info("Extracting audio from video")
-        temp_audio = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-        temp_audio_path = Path(temp_audio.name)
-        temp_audio.close()
-
+        # Process audio frames and write to transcript location
         input_container = av.open(str(file_path))
-        output_container = av.open(str(temp_audio_path), "w")
-
-        audio_stream = output_container.add_stream("mp3")
-
         for frame in input_container.decode(audio=0):
-            for packet in audio_stream.encode(frame):
-                output_container.mux(packet)
+            await mp3_writer.push(frame)
 
-        for packet in audio_stream.encode():
-            output_container.mux(packet)
-
+        await mp3_writer.flush()
         input_container.close()
-        output_container.close()
 
-        return temp_audio_path
+        if has_video:
+            self.logger.info(
+                f"Extracted audio from video and saved to {transcript.audio_mp3_filename}"
+            )
+        else:
+            self.logger.info(
+                f"Converted audio file and saved to {transcript.audio_mp3_filename}"
+            )
+
+        return transcript.audio_mp3_filename
 
     async def upload_audio(self, audio_path: Path, transcript: Transcript) -> str:
         """Upload audio to storage for processing"""
@@ -132,7 +151,7 @@ class PipelineMainFile(PipelineMainBase):
                 "Storage backend required for file processing. Configure TRANSCRIPT_STORAGE_* settings."
             )
 
-        logger.info("Uploading audio to storage")
+        self.logger.info("Uploading audio to storage")
 
         with open(audio_path, "rb") as f:
             audio_data = f.read()
@@ -142,7 +161,7 @@ class PipelineMainFile(PipelineMainBase):
 
         audio_url = await storage.get_file_url(storage_path)
 
-        logger.info(f"Audio uploaded to {audio_url}")
+        self.logger.info(f"Audio uploaded to {audio_url}")
         return audio_url
 
     async def run_parallel_processing(
@@ -153,7 +172,9 @@ class PipelineMainFile(PipelineMainBase):
         target_language: str,
     ):
         """Coordinate parallel processing of transcription, diarization, and waveform"""
-        logger.info("Starting parallel processing", transcript_id=self.transcript_id)
+        self.logger.info(
+            "Starting parallel processing", transcript_id=self.transcript_id
+        )
 
         # Phase 1: Parallel processing of independent tasks
         transcription_task = self.transcribe_file(audio_url, source_language)
@@ -168,17 +189,13 @@ class PipelineMainFile(PipelineMainBase):
         diarization_result = results[1]
 
         # Handle errors - raise any exception that occurred
-        for i, result in enumerate(results):
+        self._handle_gather_exceptions(results, "parallel processing")
+        for result in results:
             if isinstance(result, Exception):
-                task_names = ["transcription", "diarization", "waveform"]
-                logger.error(
-                    f"Error in {task_names[i]}: {result}",
-                    transcript_id=self.transcript_id,
-                )
                 raise result
 
         # Phase 2: Assemble transcript with diarization
-        logger.info(
+        self.logger.info(
             "Assembling transcript with diarization", transcript_id=self.transcript_id
         )
         processor = TranscriptDiarizationAssemblerProcessor()
@@ -201,16 +218,20 @@ class PipelineMainFile(PipelineMainBase):
             raise ValueError("No diarized transcript captured")
 
         # Phase 3: Generate topics from diarized transcript
-        logger.info("Generating topics", transcript_id=self.transcript_id)
+        self.logger.info("Generating topics", transcript_id=self.transcript_id)
         topics = await self.detect_topics(diarized_transcript, target_language)
 
         # Phase 4: Generate title and summaries in parallel
-        logger.info("Generating title and summaries", transcript_id=self.transcript_id)
-        await asyncio.gather(
+        self.logger.info(
+            "Generating title and summaries", transcript_id=self.transcript_id
+        )
+        results = await asyncio.gather(
             self.generate_title(topics),
             self.generate_summaries(topics),
             return_exceptions=True,
         )
+
+        self._handle_gather_exceptions(results, "title and summary generation")
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
         """Transcribe complete file"""
@@ -236,7 +257,7 @@ class PipelineMainFile(PipelineMainBase):
     async def diarize_file(self, audio_url: str) -> list[DiarizationSegment] | None:
         """Get diarization for file"""
         if not settings.DIARIZATION_BACKEND:
-            logger.info("Diarization disabled")
+            self.logger.info("Diarization disabled")
             return None
 
         processor = FileDiarizationAutoProcessor()
@@ -255,7 +276,7 @@ class PipelineMainFile(PipelineMainBase):
             await processor.flush()
             return result
         except Exception as e:
-            logger.error(f"Diarization failed: {e}")
+            self.logger.error(f"Diarization failed: {e}")
             return None
 
     async def generate_waveform(self, audio_path: Path):
@@ -267,8 +288,7 @@ class PipelineMainFile(PipelineMainBase):
             waveform_path=transcript.audio_waveform_filename,
             on_waveform=self.on_waveform,
         )
-
-        processor.pipeline = EmptyPipeline()
+        processor.set_pipeline(self.empty_pipeline)
 
         await processor.flush()
 
@@ -284,7 +304,7 @@ class PipelineMainFile(PipelineMainBase):
             return await self.on_topic(topic)
 
         topic_detector = TranscriptTopicDetectorProcessor(callback=on_topic)
-        topic_detector.pipeline = EmptyPipeline()
+        topic_detector.set_pipeline(self.empty_pipeline)
 
         for i in range(0, len(transcript.words), chunk_size):
             chunk_words = transcript.words[i : i + chunk_size]
@@ -303,11 +323,11 @@ class PipelineMainFile(PipelineMainBase):
     async def generate_title(self, topics: list[TitleSummary]):
         """Generate title from topics"""
         if not topics:
-            logger.warning("No topics for title generation")
+            self.logger.warning("No topics for title generation")
             return
 
         processor = TranscriptFinalTitleProcessor(callback=self.on_title)
-        processor.set_pipeline(self)
+        processor.set_pipeline(self.empty_pipeline)
 
         for topic in topics:
             await processor.push(topic)
@@ -317,7 +337,7 @@ class PipelineMainFile(PipelineMainBase):
     async def generate_summaries(self, topics: list[TitleSummary]):
         """Generate long and short summaries from topics"""
         if not topics:
-            logger.warning("No topics for summary generation")
+            self.logger.warning("No topics for summary generation")
             return
 
         transcript = await self.get_transcript()
@@ -326,7 +346,7 @@ class PipelineMainFile(PipelineMainBase):
             callback=self.on_long_summary,
             on_short_summary=self.on_short_summary,
         )
-        processor.set_pipeline(self)
+        processor.set_pipeline(self.empty_pipeline)
 
         for topic in topics:
             await processor.push(topic)
