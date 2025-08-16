@@ -45,6 +45,7 @@ class SearchParameters(BaseModel):
     offset: SearchOffset = 0
     user_id: str | None = None
     room_id: str | None = None
+    source_kind: SourceKind | None = None
 
 
 class SearchResultDB(BaseModel):
@@ -263,6 +264,10 @@ class SearchController:
             base_query = base_query.where(transcripts.c.user_id == params.user_id)
         if params.room_id:
             base_query = base_query.where(transcripts.c.room_id == params.room_id)
+        if params.source_kind:
+            base_query = base_query.where(
+                transcripts.c.source_kind == params.source_kind
+            )
 
         # Order by rank when searching, by created_at when browsing
         if params.query_text:

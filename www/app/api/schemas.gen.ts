@@ -1002,7 +1002,7 @@ export const $SearchResponse = {
     },
     query: {
       type: "string",
-      minLength: 1,
+      minLength: 0,
       title: "Query",
       description: "Search query text",
     },

@@ -31,13 +31,11 @@ interface TranscriptCardsProps {
 
 interface ProcessedSnippet {
   text: string;
-  rank?: number;
 }
 
 function processSnippets(snippets: string[]): ProcessedSnippet[] {
-  return snippets.map((text, index) => ({
+  return snippets.map((text) => ({
     text,
-    rank: 1 - index * 0.1,
   }));
 }
 
@@ -88,7 +86,6 @@ function TranscriptCard({
       ? generateTextFragment(mainSnippet.text, query)
       : "";
 
-  const relevancePercent = Math.round(result.rank * 100);
   const formattedDuration = result.duration
     ? formatTimeMs(result.duration)
     : "N/A";
@@ -158,39 +155,6 @@ function TranscriptCard({
               <Text>{formattedDuration}</Text>
             </Flex>
           </Flex>
-
-          {/* Relevance score - only when searching and on desktop */}
-          {showSearchFeatures && (
-            <Box display={{ base: "none", md: "block" }}>
-              <HStack gap={2} mt={2}>
-                <Text fontSize="xs" color="gray.500">
-                  Relevance:
-                </Text>
-                <Box
-                  width="60px"
-                  bg="gray.200"
-                  height="4px"
-                  borderRadius="full"
-                >
-                  <Box
-                    bg={
-                      relevancePercent >= 70
-                        ? "green.500"
-                        : relevancePercent >= 40
-                        ? "yellow.500"
-                        : "gray.500"
-                    }
-                    height="100%"
-                    width={`${relevancePercent}%`}
-                    borderRadius="full"
-                  />
-                </Box>
-                <Text fontSize="xs" color="gray.600" fontWeight="medium">
-                  {relevancePercent}%
-                </Text>
-              </HStack>
-            </Box>
-          )}
 
           {/* Search Results Section - only show when searching */}
           {showSearchFeatures && (

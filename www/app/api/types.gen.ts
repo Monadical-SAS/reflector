@@ -409,6 +409,7 @@ export type V1TranscriptsSearchData = {
    */
   q: string;
   roomId?: string | null;
+  sourceKind?: SourceKind | null;
 };
 
 export type V1TranscriptsSearchResponse = SearchResponse;

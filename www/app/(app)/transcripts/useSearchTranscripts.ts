@@ -78,7 +78,8 @@ export function useSearchTranscripts(
         q: searchQuery || "", // Empty string for browsing all transcripts
         limit: pageSize,
         offset: parseInt(pageNum) * pageSize,
-        roomId: filters.roomIds?.[0] || undefined, // Pass room filter to search API
+        roomId: filters.roomIds?.[0],
+        sourceKind: filters.sourceKind || undefined,
       });
 
       return {
