@@ -108,6 +108,8 @@ class MeetingController:
         end_date: datetime,
         user_id: str,
         room: Room,
+        calendar_event_id: str | None = None,
+        calendar_metadata: dict[str, Any] | None = None,
     ):
         """
         Create a new meeting
@@ -125,6 +127,8 @@ class MeetingController:
             room_mode=room.room_mode,
             recording_type=room.recording_type,
             recording_trigger=room.recording_trigger,
+            calendar_event_id=calendar_event_id,
+            calendar_metadata=calendar_metadata,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
@@ -199,6 +203,15 @@ class MeetingController:
             meeting.host_room_url = ""
 
         return meeting
+
+    async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
+        query = meetings.select().where(
+            meetings.c.calendar_event_id == calendar_event_id
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
+        return Meeting(**result)
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
