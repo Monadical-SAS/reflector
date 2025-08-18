@@ -3,21 +3,13 @@ import os
 import sys
 import threading
 import uuid
+from typing import Mapping, NewType
 
 import modal
 
-# Constants
 MODEL_NAME = "nvidia/parakeet-tdt-0.6b-v2"
-SUPPORTED_FILE_TYPES = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
+SUPPORTED_FILE_EXTENSIONS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
 SAMPLERATE = 16000
-
-app = modal.App("reflector-transcriber-parakeet")
-
-# Volume for caching model weights
-model_cache = modal.Volume.from_name("parakeet-model-cache", create_if_missing=True)
-# Volume for temporary file uploads
-upload_volume = modal.Volume.from_name("parakeet-uploads", create_if_missing=True)
-
 VAD_CONFIG = {
     "max_segment_duration": 30.0,
     "batch_max_files": 10,
@@ -26,6 +18,16 @@ VAD_CONFIG = {
     "silence_padding": 0.5,
     "window_size": 512,
 }
+
+ParakeetUniqFilename = NewType("ParakeetUniqFilename", str)
+AudioFileExtension = NewType("AudioFileExtension", str)
+
+app = modal.App("reflector-transcriber-parakeet")
+
+# Volume for caching model weights
+model_cache = modal.Volume.from_name("parakeet-model-cache", create_if_missing=True)
+# Volume for temporary file uploads
+upload_volume = modal.Volume.from_name("parakeet-uploads", create_if_missing=True)
 
 image = (
     modal.Image.from_registry(
@@ -57,24 +59,29 @@ image = (
 )
 
 
-def detect_audio_format(url: str, headers: dict) -> str:
-    url_lower = url.lower()
-    for ext in SUPPORTED_FILE_TYPES:
-        if url_lower.endswith(f".{ext}"):
-            return ext
+def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
+    for ext in SUPPORTED_FILE_EXTENSIONS:
+        if url.lower().endswith(f".{ext}"):
+            return AudioFileExtension(ext)
 
     content_type = headers.get("content-type", "").lower()
     if "audio/mpeg" in content_type or "audio/mp3" in content_type:
-        return "mp3"
+        return AudioFileExtension("mp3")
     if "audio/wav" in content_type:
-        return "wav"
+        return AudioFileExtension("wav")
     if "audio/mp4" in content_type:
-        return "mp4"
+        return AudioFileExtension("mp4")
 
-    return "mp3"
+    # No supported format detected, raise an exception
+    raise ValueError(
+        f"Unsupported audio format for URL: {url}. "
+        f"Supported extensions: {', '.join(SUPPORTED_FILE_EXTENSIONS)}"
+    )
 
 
-def download_audio_to_volume(audio_file_url: str) -> tuple[str, str]:
+def download_audio_to_volume(
+    audio_file_url: str,
+) -> tuple[ParakeetUniqFilename, AudioFileExtension]:
     import requests
     from fastapi import HTTPException
 
@@ -86,7 +93,7 @@ def download_audio_to_volume(audio_file_url: str) -> tuple[str, str]:
     response.raise_for_status()
 
     audio_suffix = detect_audio_format(audio_file_url, response.headers)
-    unique_filename = f"{uuid.uuid4()}.{audio_suffix}"
+    unique_filename = ParakeetUniqFilename(f"{uuid.uuid4()}.{audio_suffix}")
     file_path = f"/uploads/{unique_filename}"
 
     with open(file_path, "wb") as f:
@@ -96,7 +103,7 @@ def download_audio_to_volume(audio_file_url: str) -> tuple[str, str]:
     return unique_filename, audio_suffix
 
 
-def pad_audio_if_needed(audio_array, sample_rate=SAMPLERATE):
+def pad_audio(audio_array, sample_rate=SAMPLERATE):
     """Add 0.5 seconds of silence if audio is less than 500ms"""
     import numpy as np
 
@@ -108,7 +115,6 @@ def pad_audio_if_needed(audio_array, sample_rate=SAMPLERATE):
     return audio_array
 
 
-# A10G class for live transcription
 @app.cls(
     gpu="A10G",
     timeout=600,
@@ -146,30 +152,20 @@ class TranscriberParakeetLive:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
-        padded_audio = pad_audio_if_needed(audio_array, sample_rate)
+        padded_audio = pad_audio(audio_array, sample_rate)
 
         with self.lock:
             with NoStdStreams():
-                output = self.model.transcribe([padded_audio], timestamps=True)
+                (output,) = self.model.transcribe([padded_audio], timestamps=True)
 
-        text = output[0].text.strip()
-        words = []
-
-        # Extract word timestamps (no adjustment needed since padding is after audio)
-        if not (
-            hasattr(output[0], "timestamp")
-            and output[0].timestamp
-            and "word" in output[0].timestamp
-        ):
-            return {"text": text, "words": words}
-
+        text = output.text.strip()
         words = [
             {
                 "word": word_info["word"],
                 "start": round(word_info["start"], 2),
                 "end": round(word_info["end"], 2),
             }
-            for word_info in output[0].timestamp["word"]
+            for word_info in output.timestamp["word"]
         ]
 
         return {"text": text, "words": words}
@@ -194,7 +190,7 @@ class TranscriberParakeetLive:
                 raise FileNotFoundError(f"Batch file not found: {file_path}")
 
             audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
-            padded_audio = pad_audio_if_needed(audio_array, sample_rate)
+            padded_audio = pad_audio(audio_array, sample_rate)
             audio_arrays.append(padded_audio)
 
         with self.lock:
@@ -206,20 +202,14 @@ class TranscriberParakeetLive:
             text = output.text.strip()
             words = []
 
-            # Extract word timestamps (no adjustment needed since padding is after audio)
-            if (
-                hasattr(output, "timestamp")
-                and output.timestamp
-                and "word" in output.timestamp
-            ):
-                words = [
-                    {
-                        "word": word_info["word"],
-                        "start": round(word_info["start"], 2),
-                        "end": round(word_info["end"], 2),
-                    }
-                    for word_info in output.timestamp["word"]
-                ]
+            words = [
+                {
+                    "word": word_info["word"],
+                    "start": round(word_info["start"], 2),
+                    "end": round(word_info["end"], 2),
+                }
+                for word_info in output.timestamp["word"]
+            ]
 
             results.append(
                 {
