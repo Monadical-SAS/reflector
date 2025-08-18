@@ -43,6 +43,11 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    ics_url: Optional[str] = None
+    ics_fetch_interval: int = 300
+    ics_enabled: bool = False
+    ics_last_sync: Optional[datetime] = None
+    ics_last_etag: Optional[str] = None
 
 
 class RoomDetails(Room):
@@ -72,20 +77,26 @@ class CreateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
+    ics_url: Optional[str] = None
+    ics_fetch_interval: int = 300
+    ics_enabled: bool = False
 
 
 class UpdateRoom(BaseModel):
-    name: str
-    zulip_auto_post: bool
-    zulip_stream: str
-    zulip_topic: str
-    is_locked: bool
-    room_mode: str
-    recording_type: str
-    recording_trigger: str
-    is_shared: bool
-    webhook_url: str
-    webhook_secret: str
+    name: Optional[str] = None
+    zulip_auto_post: Optional[bool] = None
+    zulip_stream: Optional[str] = None
+    zulip_topic: Optional[str] = None
+    is_locked: Optional[bool] = None
+    room_mode: Optional[str] = None
+    recording_type: Optional[str] = None
+    recording_trigger: Optional[str] = None
+    is_shared: Optional[bool] = None
+    webhook_url: Optional[str] = None
+    webhook_secret: Optional[str] = None
+    ics_url: Optional[str] = None
+    ics_fetch_interval: Optional[int] = None
+    ics_enabled: Optional[bool] = None
 
 
 class DeletionStatus(BaseModel):
@@ -149,6 +160,9 @@ async def rooms_create(
         is_shared=room.is_shared,
         webhook_url=room.webhook_url,
         webhook_secret=room.webhook_secret,
+        ics_url=room.ics_url,
+        ics_fetch_interval=room.ics_fetch_interval,
+        ics_enabled=room.ics_enabled,
     )
 
 
@@ -263,3 +277,155 @@ async def rooms_test_webhook(
 
     result = await test_webhook(room_id)
     return WebhookTestResult(**result)
+
+
+class ICSStatus(BaseModel):
+    status: str
+    last_sync: Optional[datetime] = None
+    next_sync: Optional[datetime] = None
+    last_etag: Optional[str] = None
+    events_count: int = 0
+
+
+class ICSSyncResult(BaseModel):
+    status: str
+    hash: Optional[str] = None
+    events_found: int = 0
+    events_created: int = 0
+    events_updated: int = 0
+    events_deleted: int = 0
+    error: Optional[str] = None
+
+
+@router.post("/rooms/{room_name}/ics/sync", response_model=ICSSyncResult)
+async def rooms_sync_ics(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    if user_id != room.user_id:
+        raise HTTPException(
+            status_code=403, detail="Only room owner can trigger ICS sync"
+        )
+
+    if not room.ics_enabled or not room.ics_url:
+        raise HTTPException(status_code=400, detail="ICS not configured for this room")
+
+    from reflector.services.ics_sync import ics_sync_service
+
+    result = await ics_sync_service.sync_room_calendar(room)
+
+    if result["status"] == "error":
+        raise HTTPException(
+            status_code=500, detail=result.get("error", "Unknown error")
+        )
+
+    return ICSSyncResult(**result)
+
+
+@router.get("/rooms/{room_name}/ics/status", response_model=ICSStatus)
+async def rooms_ics_status(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    if user_id != room.user_id:
+        raise HTTPException(
+            status_code=403, detail="Only room owner can view ICS status"
+        )
+
+    next_sync = None
+    if room.ics_enabled and room.ics_last_sync:
+        next_sync = room.ics_last_sync + timedelta(seconds=room.ics_fetch_interval)
+
+    from reflector.db.calendar_events import calendar_events_controller
+
+    events = await calendar_events_controller.get_by_room(
+        room.id, include_deleted=False
+    )
+
+    return ICSStatus(
+        status="enabled" if room.ics_enabled else "disabled",
+        last_sync=room.ics_last_sync,
+        next_sync=next_sync,
+        last_etag=room.ics_last_etag,
+        events_count=len(events),
+    )
+
+
+class CalendarEventResponse(BaseModel):
+    id: str
+    room_id: str
+    ics_uid: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_time: datetime
+    end_time: datetime
+    attendees: Optional[list[dict]] = None
+    location: Optional[str] = None
+    last_synced: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+@router.get("/rooms/{room_name}/meetings", response_model=list[CalendarEventResponse])
+async def rooms_list_meetings(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    from reflector.db.calendar_events import calendar_events_controller
+
+    events = await calendar_events_controller.get_by_room(
+        room.id, include_deleted=False
+    )
+
+    if user_id != room.user_id:
+        for event in events:
+            event.description = None
+            event.attendees = None
+
+    return events
+
+
+@router.get(
+    "/rooms/{room_name}/meetings/upcoming", response_model=list[CalendarEventResponse]
+)
+async def rooms_list_upcoming_meetings(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    minutes_ahead: int = 30,
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    from reflector.db.calendar_events import calendar_events_controller
+
+    events = await calendar_events_controller.get_upcoming(
+        room.id, minutes_ahead=minutes_ahead
+    )
+
+    if user_id != room.user_id:
+        for event in events:
+            event.description = None
+            event.attendees = None
+
+    return events
