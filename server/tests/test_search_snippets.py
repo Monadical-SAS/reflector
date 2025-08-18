@@ -307,8 +307,8 @@ class TestPureFunctions:
         candidates = [
             SnippetCandidate(_text="First snippet", start=0, _original_text_length=100),
             SnippetCandidate(
-                _text="Overlapping", start=15, _original_text_length=100
-            ),  # Overlaps with first
+                _text="Overlapping", start=10, _original_text_length=100
+            ),  # Overlaps with first (10 < 13)
             SnippetCandidate(
                 _text="Third snippet", start=40, _original_text_length=100
             ),  # Non-overlapping

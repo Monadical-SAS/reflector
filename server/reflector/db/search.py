@@ -45,9 +45,9 @@ SearchTotal = Annotated[
 class SnippetCandidate:
     """Represents a candidate snippet with its position."""
 
-    _text: str  # Raw text without ellipses
+    _text: str
     start: int
-    _original_text_length: int  # Length of original text for ellipsis calculation
+    _original_text_length: int
 
     @property
     def end(self) -> int:
