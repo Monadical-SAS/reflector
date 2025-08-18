@@ -43,7 +43,15 @@ rooms = sqlalchemy.Table(
     ),
     sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("ics_url", sqlalchemy.Text),
+    sqlalchemy.Column("ics_fetch_interval", sqlalchemy.Integer, server_default="300"),
+    sqlalchemy.Column(
+        "ics_enabled", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
+    sqlalchemy.Column("ics_last_sync", sqlalchemy.DateTime(timezone=True)),
+    sqlalchemy.Column("ics_last_etag", sqlalchemy.Text),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
+    sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
 )
 
 
@@ -64,6 +72,11 @@ class Room(BaseModel):
     is_shared: bool = False
     webhook_url: str | None = None
     webhook_secret: str | None = None
+    ics_url: str | None = None
+    ics_fetch_interval: int = 300
+    ics_enabled: bool = False
+    ics_last_sync: datetime | None = None
+    ics_last_etag: str | None = None
 
 
 class RoomController:
@@ -114,6 +127,9 @@ class RoomController:
         is_shared: bool,
         webhook_url: str = "",
         webhook_secret: str = "",
+        ics_url: str | None = None,
+        ics_fetch_interval: int = 300,
+        ics_enabled: bool = False,
     ):
         """
         Add a new room
@@ -134,6 +150,9 @@ class RoomController:
             is_shared=is_shared,
             webhook_url=webhook_url,
             webhook_secret=webhook_secret,
+            ics_url=ics_url,
+            ics_fetch_interval=ics_fetch_interval,
+            ics_enabled=ics_enabled,
         )
         query = rooms.insert().values(**room.model_dump())
         try:
