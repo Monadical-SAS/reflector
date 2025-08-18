@@ -370,29 +370,23 @@ class TranscriberParakeetFile:
             batch_index,
             total_batches,
         ):
+            """Yield transcribed text and word timings from model output, adjusting timestamps to absolute positions."""
             for i, (output, (start_time, end_time, _)) in enumerate(
                 zip(results, segments_info)
             ):
                 text = output.text.strip()
-                words = []
-
-                if (
-                    hasattr(output, "timestamp")
-                    and output.timestamp
-                    and "word" in output.timestamp
-                ):
-                    words = [
-                        {
-                            "word": word_info["word"],
-                            "start": round(
-                                word_info["start"] + start_time + timestamp_offset, 2
-                            ),
-                            "end": round(
-                                word_info["end"] + start_time + timestamp_offset, 2
-                            ),
-                        }
-                        for word_info in output.timestamp["word"]
-                    ]
+                words = [
+                    {
+                        "word": word_info["word"],
+                        "start": round(
+                            word_info["start"] + start_time + timestamp_offset, 2
+                        ),
+                        "end": round(
+                            word_info["end"] + start_time + timestamp_offset, 2
+                        ),
+                    }
+                    for word_info in output.timestamp["word"]
+                ]
 
                 yield text, words
 
