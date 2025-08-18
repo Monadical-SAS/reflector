@@ -176,8 +176,9 @@ artefacts/
 audio_*.wav
 
 # ignore local database
-reflector.sqlite3
+*.sqlite3
+*.db
 data/
 
 dump.rdb
-reflector.db
+

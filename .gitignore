@@ -13,5 +13,9 @@ restart-dev.sh
 data/
 www/REFACTOR.md
 www/reload-frontend
-server/test.sqlite
 CLAUDE.local.md
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3

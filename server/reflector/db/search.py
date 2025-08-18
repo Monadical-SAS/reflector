@@ -2,9 +2,10 @@
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
-from typing import Annotated, Any, Dict, Iterator, NamedTuple
+from typing import Annotated, Any, Dict, Iterator
 
 import sqlalchemy
 import webvtt
@@ -40,13 +41,27 @@ SearchTotal = Annotated[
 ]
 
 
-# Snippet generation types
-class SnippetCandidate(NamedTuple):
+@dataclass(frozen=True)
+class SnippetCandidate:
     """Represents a candidate snippet with its position."""
 
-    text: str
+    _text: str  # Raw text without ellipses
     start: int
-    end: int
+    _original_text_length: int  # Length of original text for ellipsis calculation
+
+    @property
+    def end(self) -> int:
+        """Calculate end position from start and raw text length."""
+        return self.start + len(self._text)
+
+    def text(self) -> str:
+        """Get display text with ellipses added if needed."""
+        result = self._text.strip()
+        if self.start > 0:
+            result = "..." + result
+        if self.end < self._original_text_length:
+            result = result + "..."
+        return result
 
 
 class SearchParameters(BaseModel):
@@ -149,31 +164,26 @@ def count_matches(text: str, query: str) -> int:
 def create_snippet(
     text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
 ) -> SnippetCandidate:
-    """Pure function to create a snippet from a match position."""
+    """Create a snippet from a match position."""
     snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
     snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
 
     snippet_text = text[snippet_start:snippet_end]
 
-    # Add ellipsis if truncated
-    if snippet_start > 0:
-        snippet_text = "..." + snippet_text
-    if snippet_end < len(text):
-        snippet_text = snippet_text + "..."
-
     return SnippetCandidate(
-        text=snippet_text.strip(), start=snippet_start, end=snippet_end
+        _text=snippet_text, start=snippet_start, _original_text_length=len(text)
     )
 
 
 def filter_non_overlapping_snippets(
     candidates: Iterator[SnippetCandidate],
 ) -> Iterator[str]:
-    """Filter out overlapping snippets and return only text."""
+    """Filter out overlapping snippets and return only display text."""
     last_end = 0
     for candidate in candidates:
-        if candidate.start >= last_end and candidate.text:
-            yield candidate.text
+        display_text = candidate.text()
+        if candidate.start >= last_end and display_text:
+            yield display_text
             last_end = candidate.end
 
 

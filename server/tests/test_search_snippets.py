@@ -280,38 +280,50 @@ class TestPureFunctions:
 
         # Test basic snippet creation
         snippet = create_snippet(text, 35, max_length=150)
-        assert "Python" in snippet.text
+        assert "Python" in snippet.text()
         assert snippet.start >= 0
         assert snippet.end <= len(text)
         assert isinstance(snippet, SnippetCandidate)
 
         # Test snippet properties are valid
-        assert len(snippet.text) > 0
+        assert len(snippet.text()) > 0
         assert snippet.start <= snippet.end
 
         # Test with a position that would require ellipsis
         long_text = "A" * 200  # Very long text
         snippet = create_snippet(long_text, 100, max_length=50)
-        assert snippet.text.startswith("...")
-        assert snippet.text.endswith("...")
+        assert snippet.text().startswith("...")
+        assert snippet.text().endswith("...")
 
         # Test basic bounds checking
         snippet = create_snippet("short text", 0, max_length=100)
         assert snippet.start == 0
-        assert "short text" in snippet.text
+        assert "short text" in snippet.text()
 
     def test_filter_non_overlapping_snippets(self):
         """Test filtering overlapping snippets."""
-        # Create some snippet candidates
+        # Create some snippet candidates representing extracts from a 100-char text
+        # Note: When start > 0 or end < original_text_length, ellipses will be added
         candidates = [
-            SnippetCandidate("First snippet", 0, 20),
-            SnippetCandidate("Overlapping", 15, 35),  # Overlaps with first
-            SnippetCandidate("Third snippet", 40, 60),  # Non-overlapping
-            SnippetCandidate("Fourth snippet", 65, 85),  # Non-overlapping
+            SnippetCandidate(_text="First snippet", start=0, _original_text_length=100),
+            SnippetCandidate(
+                _text="Overlapping", start=15, _original_text_length=100
+            ),  # Overlaps with first
+            SnippetCandidate(
+                _text="Third snippet", start=40, _original_text_length=100
+            ),  # Non-overlapping
+            SnippetCandidate(
+                _text="Fourth snippet", start=65, _original_text_length=100
+            ),  # Non-overlapping
         ]
 
         filtered = list(filter_non_overlapping_snippets(iter(candidates)))
-        assert filtered == ["First snippet", "Third snippet", "Fourth snippet"]
+        # The text() method adds ellipses based on position
+        assert filtered == [
+            "First snippet...",
+            "...Third snippet...",
+            "...Fourth snippet...",
+        ]
 
         # Test with no candidates
         filtered = list(filter_non_overlapping_snippets(iter([])))
