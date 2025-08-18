@@ -20,6 +20,7 @@ else:
             "reflector.worker.healthcheck",
             "reflector.worker.process",
             "reflector.worker.cleanup",
+            "reflector.worker.ics_sync",
         ]
     )
 
@@ -36,6 +37,14 @@ else:
         "reprocess_failed_recordings": {
             "task": "reflector.worker.process.reprocess_failed_recordings",
             "schedule": crontab(hour=5, minute=0),  # Midnight EST
+        },
+        "sync_all_ics_calendars": {
+            "task": "reflector.worker.ics_sync.sync_all_ics_calendars",
+            "schedule": 60.0,  # Run every minute to check which rooms need sync
+        },
+        "pre_create_upcoming_meetings": {
+            "task": "reflector.worker.ics_sync.pre_create_upcoming_meetings",
+            "schedule": 30.0,  # Run every 30 seconds to pre-create meetings
         },
     }
 
