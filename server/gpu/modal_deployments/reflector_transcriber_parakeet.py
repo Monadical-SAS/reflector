@@ -72,7 +72,6 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtens
     if "audio/mp4" in content_type:
         return AudioFileExtension("mp4")
 
-    # No supported format detected, raise an exception
     raise ValueError(
         f"Unsupported audio format for URL: {url}. "
         f"Supported extensions: {', '.join(SUPPORTED_FILE_EXTENSIONS)}"
