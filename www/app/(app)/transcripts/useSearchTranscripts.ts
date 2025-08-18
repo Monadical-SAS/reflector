@@ -81,7 +81,6 @@ const searchReducer = (
   }
 };
 
-// Pure function for creating cache key
 const createCacheKey = (
   query: string,
   page: number,
@@ -91,7 +90,6 @@ const createCacheKey = (
   return `search:${query}:${page}:${filterKey}`;
 };
 
-// Pure function for parsing API response
 const parseSearchResponse = (response: V1TranscriptsSearchResponse | null) => ({
   results: response?.results || [],
   total: response?.total || 0,

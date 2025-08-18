@@ -1,7 +1,6 @@
 """Unit tests for search snippet generation."""
 
 from reflector.db.search import (
-    SearchController,
     SnippetCandidate,
     combine_snippet_sources,
     create_snippet,
@@ -27,7 +26,7 @@ class TestExtractWebVTT:
 00:00:10.000 --> 00:00:20.000
 <v Speaker1>Indeed it is a test of WebVTT parsing.
 """
-        result = SearchController._extract_webvtt_text(webvtt)
+        result = extract_webvtt_text(webvtt)
         assert "Hello world, this is a test" in result
         assert "Indeed it is a test" in result
         assert "<v Speaker" not in result
@@ -36,12 +35,12 @@ class TestExtractWebVTT:
 
     def test_extract_empty_webvtt(self):
         """Test empty WebVTT returns empty string."""
-        assert SearchController._extract_webvtt_text("") == ""
-        assert SearchController._extract_webvtt_text(None) == ""
+        assert extract_webvtt_text("") == ""
+        assert extract_webvtt_text(None) == ""
 
     def test_extract_malformed_webvtt(self):
         """Test malformed WebVTT returns empty string."""
-        result = SearchController._extract_webvtt_text("Not a valid WebVTT")
+        result = extract_webvtt_text("Not a valid WebVTT")
         assert result == ""
 
 
@@ -62,7 +61,7 @@ class TestGenerateSnippets:
             + "The Python community is very supportive."
         )
 
-        snippets = SearchController._generate_snippets(text, "Python")
+        snippets = generate_snippets(text, "Python")
         # With enough separation, we should get multiple snippets
         assert len(snippets) >= 2  # At least 2 distinct snippets
 
@@ -73,7 +72,7 @@ class TestGenerateSnippets:
     def test_single_match(self):
         """Test single occurrence returns one snippet."""
         text = "This document discusses artificial intelligence and its applications."
-        snippets = SearchController._generate_snippets(text, "artificial intelligence")
+        snippets = generate_snippets(text, "artificial intelligence")
 
         assert len(snippets) == 1
         assert "artificial intelligence" in snippets[0].lower()
@@ -81,7 +80,7 @@ class TestGenerateSnippets:
     def test_no_matches(self):
         """Test no matches returns empty list."""
         text = "This is some random text without the search term."
-        snippets = SearchController._generate_snippets(text, "machine learning")
+        snippets = generate_snippets(text, "machine learning")
 
         assert snippets == []
 
@@ -96,7 +95,7 @@ class TestGenerateSnippets:
             + "Finally, machine learning will shape our future."
         )
 
-        snippets = SearchController._generate_snippets(text, "machine learning")
+        snippets = generate_snippets(text, "machine learning")
 
         # Should find at least 2 (might be 3 if text is long enough)
         assert len(snippets) >= 2
@@ -106,7 +105,7 @@ class TestGenerateSnippets:
     def test_partial_match_fallback(self):
         """Test fallback to first word when exact phrase not found."""
         text = "We use machine intelligence for processing."
-        snippets = SearchController._generate_snippets(text, "machine learning")
+        snippets = generate_snippets(text, "machine learning")
 
         # Should fall back to finding "machine"
         assert len(snippets) == 1
@@ -116,7 +115,7 @@ class TestGenerateSnippets:
         """Test ellipsis added for truncated snippets."""
         # Long text where match is in the middle
         text = "a " * 100 + "TARGET_WORD special content here" + " b" * 100
-        snippets = SearchController._generate_snippets(text, "TARGET_WORD")
+        snippets = generate_snippets(text, "TARGET_WORD")
 
         assert len(snippets) == 1
         assert "..." in snippets[0]  # Should have ellipsis
@@ -125,7 +124,7 @@ class TestGenerateSnippets:
     def test_overlapping_snippets_deduplicated(self):
         """Test overlapping matches don't create duplicate snippets."""
         text = "test test test word" * 10  # Repeated pattern
-        snippets = SearchController._generate_snippets(text, "test")
+        snippets = generate_snippets(text, "test")
 
         # Should get unique snippets, not duplicates
         assert len(snippets) <= 3
@@ -133,9 +132,9 @@ class TestGenerateSnippets:
 
     def test_empty_inputs(self):
         """Test empty text or search term returns empty list."""
-        assert SearchController._generate_snippets("", "search") == []
-        assert SearchController._generate_snippets("text", "") == []
-        assert SearchController._generate_snippets("", "") == []
+        assert generate_snippets("", "search") == []
+        assert generate_snippets("text", "") == []
+        assert generate_snippets("", "") == []
 
     def test_max_snippets_limit(self):
         """Test respects max_snippets parameter."""
@@ -144,19 +143,19 @@ class TestGenerateSnippets:
         text = ("Python is amazing" + separator) * 10  # 10 occurrences
 
         # Test with different limits
-        snippets_1 = SearchController._generate_snippets(text, "Python", max_snippets=1)
+        snippets_1 = generate_snippets(text, "Python", max_snippets=1)
         assert len(snippets_1) == 1
 
-        snippets_2 = SearchController._generate_snippets(text, "Python", max_snippets=2)
+        snippets_2 = generate_snippets(text, "Python", max_snippets=2)
         assert len(snippets_2) == 2
 
-        snippets_5 = SearchController._generate_snippets(text, "Python", max_snippets=5)
+        snippets_5 = generate_snippets(text, "Python", max_snippets=5)
         assert len(snippets_5) == 5  # Should get exactly 5 with enough separation
 
     def test_snippet_length(self):
         """Test snippet length is reasonable."""
         text = "word " * 200  # Long text
-        snippets = SearchController._generate_snippets(text, "word")
+        snippets = generate_snippets(text, "word")
 
         for snippet in snippets:
             # Default max_length is 150 + some context
@@ -194,8 +193,8 @@ class TestFullPipeline:
         )
 
         # Extract and generate snippets
-        plain_text = SearchController._extract_webvtt_text(webvtt)
-        snippets = SearchController._generate_snippets(plain_text, "machine learning")
+        plain_text = extract_webvtt_text(webvtt)
+        snippets = generate_snippets(plain_text, "machine learning")
 
         # Should find at least 2 snippets (text might still be close together)
         assert len(snippets) >= 1  # At minimum one snippet containing matches
@@ -217,7 +216,6 @@ class TestSnippetGenerationEnhanced:
 
     def test_snippet_generation_from_webvtt(self):
         """Test snippet generation from WebVTT content."""
-        controller = SearchController()
         webvtt_content = """WEBVTT
 
 00:00:00.000 --> 00:00:05.000
@@ -229,24 +227,22 @@ The search term appears here in the middle
 00:00:10.000 --> 00:00:15.000
 And this is the end of the content"""
 
-        plain_text = controller._extract_webvtt_text(webvtt_content)
-        snippets = controller._generate_snippets(plain_text, "search term")
+        plain_text = extract_webvtt_text(webvtt_content)
+        snippets = generate_snippets(plain_text, "search term")
 
         assert len(snippets) > 0
         assert any("search term" in snippet.lower() for snippet in snippets)
 
     def test_extract_webvtt_text_with_malformed_variations(self):
         """Test WebVTT extraction with various malformed content."""
-        controller = SearchController()
-
         # Test with completely invalid content
         malformed_vtt = "This is not valid WebVTT content"
-        result = controller._extract_webvtt_text(malformed_vtt)
+        result = extract_webvtt_text(malformed_vtt)
         assert result == ""
 
         # Test with partial WebVTT header
         partial_vtt = "WEBVTT\nNo timestamps here"
-        result = controller._extract_webvtt_text(partial_vtt)
+        result = extract_webvtt_text(partial_vtt)
         # Should still fail since no valid cues
         assert result == "" or "No timestamps" not in result
 

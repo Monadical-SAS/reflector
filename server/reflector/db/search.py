@@ -1,16 +1,18 @@
 """Search functionality for transcripts and other entities."""
 
 import asyncio
+import itertools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
-from typing import Annotated, Any, Dict, Iterator
+from typing import Annotated, Any, Dict, Iterator, cast
 
 import sqlalchemy
 import webvtt
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, ValidationError, constr, field_serializer
+from pydantic.v1 import NonNegativeInt
 from sqlalchemy.exc import DatabaseError, OperationalError
 
 from reflector.db import get_database
@@ -46,11 +48,11 @@ class SnippetCandidate:
     """Represents a candidate snippet with its position."""
 
     _text: str
-    start: int
+    start: NonNegativeInt
     _original_text_length: int
 
     @property
-    def end(self) -> int:
+    def end(self) -> NonNegativeInt:
         """Calculate end position from start and raw text length."""
         return self.start + len(self._text)
 
@@ -116,7 +118,6 @@ class SearchResult(BaseModel):
         return dt.isoformat()
 
 
-# Pure functions for text processing
 def extract_webvtt_text(webvtt_content: str) -> str:
     """Extract plain text from WebVTT content using webvtt library."""
     if not webvtt_content:
@@ -142,7 +143,11 @@ def extract_webvtt_text(webvtt_content: str) -> str:
 
 def find_all_matches(text: str, query: str) -> Iterator[int]:
     """Generate all match positions for a query in text."""
-    if not text or not query:
+    if not text:
+        logger.warning("Empty text for search query in find_all_matches")
+        return
+    if not query:
+        logger.warning("Empty query for search text in find_all_matches")
         return
 
     text_lower = text.lower()
@@ -154,18 +159,23 @@ def find_all_matches(text: str, query: str) -> Iterator[int]:
         start = pos + len(query_lower)
 
 
-def count_matches(text: str, query: str) -> int:
+def count_matches(text: str, query: str) -> NonNegativeInt:
     """Count total number of matches for a query in text."""
-    if not text or not query:
-        return 0
-    return sum(1 for _ in find_all_matches(text, query))
+    ZERO = cast(NonNegativeInt, 0)
+    if not text:
+        logger.warning("Empty text for search query in count_matches")
+        return ZERO
+    if not query:
+        logger.warning("Empty query for search text in count_matches")
+        return ZERO
+    return cast(NonNegativeInt, sum(1 for _ in find_all_matches(text, query)))
 
 
 def create_snippet(
     text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
 ) -> SnippetCandidate:
     """Create a snippet from a match position."""
-    snippet_start = max(0, match_pos - SNIPPET_CONTEXT_LENGTH)
+    snippet_start = cast(NonNegativeInt, max(0, match_pos - SNIPPET_CONTEXT_LENGTH))
     snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
 
     snippet_text = text[snippet_start:snippet_end]
@@ -182,6 +192,8 @@ def filter_non_overlapping_snippets(
     last_end = 0
     for candidate in candidates:
         display_text = candidate.text()
+        # it means that next overlapping snippets simply don't get included
+        # it's fine as simplistic logic and users probably won't care much because they already have their search results just fin
         if candidate.start >= last_end and display_text:
             yield display_text
             last_end = candidate.end
@@ -193,24 +205,17 @@ def generate_snippets(
     max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
     max_snippets: int = DEFAULT_MAX_SNIPPETS,
 ) -> list[str]:
-    """Generate snippets using functional approach."""
     if not text or not query:
         return []
 
-    # Create snippet candidates from all matches
     candidates = (
         create_snippet(text, pos, max_length) for pos in find_all_matches(text, query)
     )
-
-    # Filter non-overlapping and collect limited count
     filtered = filter_non_overlapping_snippets(candidates)
-    snippets = []
-    for snippet in filtered:
-        if len(snippets) >= max_snippets:
-            break
-        snippets.append(snippet)
+    snippets = list(itertools.islice(filtered, max_snippets))
 
     # Fallback to first word search if no full matches
+    # it's another assumption: proper snippet logic generation is quite complicated and tied to db logic, so simplification is used here
     if not snippets and " " in query:
         first_word = query.split()[0]
         return generate_snippets(text, first_word, max_length, max_snippets)
@@ -220,21 +225,6 @@ def generate_snippets(
 
 class SearchController:
     """Controller for search operations across different entities."""
-
-    @staticmethod
-    def _extract_webvtt_text(webvtt_content: str) -> str:
-        """Extract plain text from WebVTT content."""
-        return extract_webvtt_text(webvtt_content)
-
-    @staticmethod
-    def _generate_snippets(
-        text: str,
-        q: SearchQuery,
-        max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
-        max_snippets: int = DEFAULT_MAX_SNIPPETS,
-    ) -> list[str]:
-        """Generate snippets around search matches."""
-        return generate_snippets(text, q, max_length, max_snippets)
 
     @classmethod
     async def search_transcripts(
