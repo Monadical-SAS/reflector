@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
@@ -41,13 +42,14 @@ meetings = sa.Table(
         nullable=False,
         server_default=sa.true(),
     ),
-    sa.Index("idx_meeting_room_id", "room_id"),
-    sa.Index(
-        "idx_one_active_meeting_per_room",
-        "room_id",
-        unique=True,
-        postgresql_where=sa.text("is_active = true"),
+    sa.Column(
+        "calendar_event_id",
+        sa.String,
+        sa.ForeignKey("calendar_event.id", ondelete="SET NULL"),
     ),
+    sa.Column("calendar_metadata", JSONB),
+    sa.Index("idx_meeting_room_id", "room_id"),
+    sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
 
 meeting_consent = sa.Table(
@@ -85,6 +87,9 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
+    is_active: bool = True
+    calendar_event_id: str | None = None
+    calendar_metadata: dict[str, Any] | None = None
 
 
 class MeetingController:
