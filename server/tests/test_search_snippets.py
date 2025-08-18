@@ -36,7 +36,6 @@ class TestExtractWebVTT:
     def test_extract_empty_webvtt(self):
         """Test empty WebVTT returns empty string."""
         assert extract_webvtt_text("") == ""
-        assert extract_webvtt_text(None) == ""
 
     def test_extract_malformed_webvtt(self):
         """Test malformed WebVTT returns empty string."""

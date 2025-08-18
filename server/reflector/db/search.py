@@ -12,7 +12,7 @@ import sqlalchemy
 import webvtt
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, ValidationError, constr, field_serializer
-from pydantic.v1 import NonNegativeInt
+from pydantic.v1 import NonNegativeFloat, NonNegativeInt
 from sqlalchemy.exc import DatabaseError, OperationalError
 
 from reflector.db import get_database
@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
-DEFAULT_SNIPPET_MAX_LENGTH = 150
-DEFAULT_MAX_SNIPPETS = 3
+DEFAULT_SNIPPET_MAX_LENGTH = cast(NonNegativeInt, 150)
+DEFAULT_MAX_SNIPPETS = cast(NonNegativeInt, 3)
 LONG_SUMMARY_MAX_SNIPPETS = 2
 
 SearchQueryBase = constr(min_length=0, strip_whitespace=True)
@@ -41,6 +41,20 @@ SearchOffset = Annotated[
 SearchTotal = Annotated[
     SearchTotalBase, Field(description="Total number of search results")
 ]
+
+WEBVTT_SPEC_HEADER = "WEBVTT\n\n"
+
+WebVTTContent = Annotated[
+    str,
+    Field(min_length=len(WEBVTT_SPEC_HEADER), description="WebVTT content"),
+]
+
+
+def parse_webvtt(raw_content: str) -> WebVTTContent:
+    """Parse WebVTT content and return it as a string."""
+    if not raw_content.startswith(WEBVTT_SPEC_HEADER):
+        raise ValueError(f"Invalid WebVTT content, no header {WEBVTT_SPEC_HEADER}")
+    return raw_content
 
 
 @dataclass(frozen=True)
@@ -103,11 +117,11 @@ class SearchResult(BaseModel):
     created_at: datetime
     status: str = Field(..., min_length=1)
     rank: float = Field(..., ge=0, le=1)
-    duration: float | None = Field(..., ge=0, description="Duration in seconds")
+    duration: NonNegativeFloat | None = Field(..., description="Duration in seconds")
     search_snippets: list[str] = Field(
         description="Text snippets around search matches"
     )
-    total_match_count: int = Field(
+    total_match_count: NonNegativeInt = Field(
         default=0, description="Total number of matches found in the transcript"
     )
 
@@ -118,17 +132,14 @@ class SearchResult(BaseModel):
         return dt.isoformat()
 
 
-def extract_webvtt_text(webvtt_content: str) -> str:
+def extract_webvtt_text(webvtt_content: WebVTTContent) -> str:
     """Extract plain text from WebVTT content using webvtt library."""
-    if not webvtt_content:
-        return ""
-
     try:
         buffer = StringIO(webvtt_content)
         vtt = webvtt.read_buffer(buffer)
         return " ".join(caption.text for caption in vtt if caption.text)
     except webvtt.errors.MalformedFileError as e:
-        logger.debug(f"Malformed WebVTT content: {e}")
+        logger.warning(f"Malformed WebVTT content: {e}")
         return ""
     except (UnicodeDecodeError, ValueError) as e:
         logger.warning(f"Failed to decode WebVTT content: {e}")
@@ -202,10 +213,11 @@ def filter_non_overlapping_snippets(
 def generate_snippets(
     text: str,
     query: str,
-    max_length: int = DEFAULT_SNIPPET_MAX_LENGTH,
-    max_snippets: int = DEFAULT_MAX_SNIPPETS,
+    max_length: NonNegativeInt = DEFAULT_SNIPPET_MAX_LENGTH,
+    max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
 ) -> list[str]:
     if not text or not query:
+        logger.warning("Empty text or query for generate_snippets")
         return []
 
     candidates = (
@@ -350,25 +362,18 @@ class SearchController:
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
-            webvtt: str | None = r_dict.pop("webvtt", None)
+            webvtt_raw: str | None = r_dict.pop("webvtt", None)
+            if webvtt_raw:
+                webvtt = parse_webvtt(webvtt_raw)
+            else:
+                webvtt = None
             long_summary: str | None = r_dict.pop("long_summary", None)
             room_name: str | None = r_dict.pop("room_name", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
-            snippets = []
-
-            # Combine snippets from both sources
             snippets, total_match_count = combine_snippet_sources(
                 long_summary, webvtt, params.query_text, DEFAULT_MAX_SNIPPETS
             )
-
-            # If no snippets were generated, provide a fallback message
-            if not snippets:
-                if not webvtt and not long_summary:
-                    snippets = ["No transcript content available"]
-                else:
-                    snippets = ["No matching content found in transcript"]
-                total_match_count = 0
 
             return SearchResult(
                 **db_result.model_dump(),
@@ -391,38 +396,35 @@ class SearchController:
         return results, total
 
 
-# Helper functions for snippet generation
 def generate_webvtt_snippets(
-    webvtt_content: str, query: str, max_snippets: int = DEFAULT_MAX_SNIPPETS
+    webvtt_content: WebVTTContent,
+    query: str,
+    max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
 ) -> list[str]:
     """Generate snippets from WebVTT content."""
-    if not webvtt_content:
-        return []
     plain_text = extract_webvtt_text(webvtt_content)
     return generate_snippets(plain_text, query, max_snippets=max_snippets)
 
 
 def generate_summary_snippets(
-    summary: str, query: str, max_snippets: int = LONG_SUMMARY_MAX_SNIPPETS
+    summary: str, query: str, max_snippets: NonNegativeInt = LONG_SUMMARY_MAX_SNIPPETS
 ) -> list[str]:
     """Generate snippets from summary text."""
-    if not summary:
-        return []
     return generate_snippets(summary, query, max_snippets=max_snippets)
 
 
 def combine_snippet_sources(
     summary: str | None,
-    webvtt: str | None,
+    webvtt: WebVTTContent | None,
     query: str,
-    max_total: int = DEFAULT_MAX_SNIPPETS,
-) -> tuple[list[str], int]:
+    max_total: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
+) -> tuple[list[str], NonNegativeInt]:
     """Combine snippets from multiple sources and return total match count.
 
     Returns (snippets, total_match_count) tuple.
+
+    snippets can be empty for real in case of e.g. title match
     """
-    # Count matches from both sources and sum them
-    # This gives the true total count across all available content
     webvtt_matches = 0
     summary_matches = 0
 
@@ -433,16 +435,13 @@ def combine_snippet_sources(
     if summary:
         summary_matches = count_matches(summary, query)
 
-    # Sum matches from both sources for total count
-    total_matches = webvtt_matches + summary_matches
+    total_matches = cast(NonNegativeInt, webvtt_matches + summary_matches)
 
-    # Get snippets from summary first (higher priority)
     summary_snippets = generate_summary_snippets(summary, query) if summary else []
 
     if len(summary_snippets) >= max_total:
         return summary_snippets[:max_total], total_matches
 
-    # Add WebVTT snippets if we need more
     remaining = max_total - len(summary_snippets)
     webvtt_snippets = (
         generate_webvtt_snippets(webvtt, query, remaining) if webvtt else []
