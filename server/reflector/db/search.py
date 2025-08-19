@@ -338,13 +338,16 @@ class SearchController:
         query = base_query.order_by(order_by).limit(params.limit).offset(params.offset)
 
         try:
+            # any more than 10 seconds for search seems unreasonable
             rs = await asyncio.wait_for(get_database().fetch_all(query), timeout=10.0)
 
             count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
                 base_query.alias("search_results")
             )
             total = await asyncio.wait_for(
-                get_database().fetch_val(count_query), timeout=5.0
+                # any more than 5 seconds for count seems unreasonable
+                get_database().fetch_val(count_query),
+                timeout=5.0,
             )
         except asyncio.TimeoutError as e:
             logger.error(f"Search query timeout for: {params.query_text}")
@@ -402,8 +405,9 @@ def generate_webvtt_snippets(
     max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
 ) -> list[str]:
     """Generate snippets from WebVTT content."""
-    plain_text = extract_webvtt_text(webvtt_content)
-    return generate_snippets(plain_text, query, max_snippets=max_snippets)
+    return generate_snippets(
+        extract_webvtt_text(webvtt_content), query, max_snippets=max_snippets
+    )
 
 
 def generate_summary_snippets(

@@ -70,8 +70,8 @@ async def test_search_with_empty_query():
 
 
 @pytest.mark.asyncio
-async def test_empty_transcript_fallback_snippets():
-    """Test that transcripts with no content get fallback snippets."""
+async def test_empty_transcript_title_only_match():
+    """Test that transcripts with title-only matches return empty snippets."""
     test_id = "test-empty-9b3f2a8d"
 
     try:
@@ -103,16 +103,18 @@ async def test_empty_transcript_fallback_snippets():
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Search should return the transcript with fallback snippet
+        # Search should return the transcript (title matches "empty")
         params = SearchParameters(query_text="empty")
         results, total = await search_controller.search_transcripts(params)
 
         # Should find the transcript by title
         assert total >= 1
         found = next((r for r in results if r.id == test_id), None)
-        assert found is not None, "Should find transcript even with no content"
-        assert len(found.search_snippets) > 0
-        assert found.search_snippets[0] == "No transcript content available"
+        assert found is not None, "Should find transcript by title match"
+        # With no content and only title match, snippets should be empty
+        assert found.search_snippets == []
+        # But match count should be 0 since no content matches
+        assert found.total_match_count == 0
 
     finally:
         await get_database().execute(
