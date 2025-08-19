@@ -11,8 +11,15 @@ from typing import Annotated, Any, Dict, Iterator, cast
 import sqlalchemy
 import webvtt
 from fastapi import HTTPException
-from pydantic import BaseModel, Field, ValidationError, constr, field_serializer
-from pydantic.v1 import NonNegativeFloat, NonNegativeInt
+from pydantic import (
+    BaseModel,
+    Field,
+    NonNegativeFloat,
+    NonNegativeInt,
+    ValidationError,
+    constr,
+    field_serializer,
+)
 from sqlalchemy.exc import DatabaseError, OperationalError
 
 from reflector.db import get_database
