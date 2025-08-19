@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
-from typing import Annotated, Any, Dict, Iterator, cast
+from typing import Annotated, Any, Dict, Iterator
 
 import sqlalchemy
 import webvtt
@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
-DEFAULT_SNIPPET_MAX_LENGTH = cast(NonNegativeInt, 150)
-DEFAULT_MAX_SNIPPETS = cast(NonNegativeInt, 3)
+DEFAULT_SNIPPET_MAX_LENGTH = NonNegativeInt(150)
+DEFAULT_MAX_SNIPPETS = NonNegativeInt(3)
 LONG_SUMMARY_MAX_SNIPPETS = 2
 
 SearchQueryBase = constr(min_length=0, strip_whitespace=True)
@@ -171,29 +171,32 @@ def find_all_matches(text: str, query: str) -> Iterator[int]:
     text_lower = text.lower()
     query_lower = query.lower()
     start = 0
-
+    prev_start = start
     while (pos := text_lower.find(query_lower, start)) != -1:
         yield pos
         start = pos + len(query_lower)
+        if start <= prev_start:
+            raise ValueError("panic! find_all_matches is not incremental")
+        prev_start = start
 
 
 def count_matches(text: str, query: str) -> NonNegativeInt:
     """Count total number of matches for a query in text."""
-    ZERO = cast(NonNegativeInt, 0)
+    ZERO = NonNegativeInt(0)
     if not text:
         logger.warning("Empty text for search query in count_matches")
         return ZERO
     if not query:
         logger.warning("Empty query for search text in count_matches")
         return ZERO
-    return cast(NonNegativeInt, sum(1 for _ in find_all_matches(text, query)))
+    return NonNegativeInt(sum(1 for _ in find_all_matches(text, query)))
 
 
 def create_snippet(
     text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
 ) -> SnippetCandidate:
     """Create a snippet from a match position."""
-    snippet_start = cast(NonNegativeInt, max(0, match_pos - SNIPPET_CONTEXT_LENGTH))
+    snippet_start = NonNegativeInt(max(0, match_pos - SNIPPET_CONTEXT_LENGTH))
     snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
 
     snippet_text = text[snippet_start:snippet_end]
@@ -446,7 +449,7 @@ def combine_snippet_sources(
     if summary:
         summary_matches = count_matches(summary, query)
 
-    total_matches = cast(NonNegativeInt, webvtt_matches + summary_matches)
+    total_matches = NonNegativeInt(webvtt_matches + summary_matches)
 
     summary_snippets = generate_summary_snippets(summary, query) if summary else []
 
