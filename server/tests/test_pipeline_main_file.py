@@ -361,7 +361,7 @@ async def test_pipeline_main_file_process(
         mock_av.side_effect = [mock_container, mock_decode_container]
 
         # Run the pipeline
-        await pipeline.process_file(upload_path)
+        await pipeline.process(upload_path)
 
     # Verify audio extraction and writing
     assert mock_audio_file_writer.push.called
@@ -452,7 +452,7 @@ async def test_pipeline_main_file_with_video(
         mock_av.side_effect = [mock_container, mock_decode_container]
 
         # Run the pipeline
-        await pipeline.process_file(upload_path)
+        await pipeline.process(upload_path)
 
     # Verify audio extraction from video
     assert mock_audio_file_writer.push.called
@@ -517,7 +517,7 @@ async def test_pipeline_main_file_no_diarization(
             mock_av.side_effect = [mock_container, mock_decode_container]
 
             # Run the pipeline
-            await pipeline.process_file(upload_path)
+            await pipeline.process(upload_path)
 
         # Verify the pipeline completed without diarization
         assert mock_storage._put_file.called
@@ -577,7 +577,7 @@ async def test_task_pipeline_file_process(
         from reflector.pipelines.main_file_pipeline import PipelineMainFile
 
         pipeline = PipelineMainFile(transcript_id=mock_transcript_in_db.id)
-        await pipeline.process_file(upload_path)
+        await pipeline.process(upload_path)
 
     # Verify the pipeline was executed through the task
     assert mock_audio_file_writer.push.called
@@ -621,7 +621,7 @@ async def test_pipeline_file_process_no_audio_file(
     from reflector.pipelines.main_file_pipeline import PipelineMainFile
 
     # Don't create any audio files in the data path
-    # The pipeline's process_file should handle missing files gracefully
+    # The pipeline's process should handle missing files gracefully
 
     pipeline = PipelineMainFile(transcript_id=mock_transcript_in_db.id)
 
@@ -630,4 +630,4 @@ async def test_pipeline_file_process_no_audio_file(
 
     # This should fail when trying to open the file with av
     with pytest.raises(Exception):
-        await pipeline.process_file(non_existent_path)
+        await pipeline.process(non_existent_path)

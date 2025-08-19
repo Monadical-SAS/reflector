@@ -100,6 +100,9 @@ DATABASE_URL = "postgresql://test_user:test_password@localhost:15432/reflector_t
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "gpu_modal: mark test to run only with GPU Modal endpoints (deselect with '-m \"not gpu_modal\"')",
+]
 
 [tool.ruff.lint]
 select = [

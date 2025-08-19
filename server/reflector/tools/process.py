@@ -248,7 +248,7 @@ async def process_file_pipeline(
 
             # Process the file
             pipeline = PipelineMainFile(transcript_id=transcript.id)
-            await pipeline.process_file(Path(filename))
+            await pipeline.process(Path(filename))
 
             logger.info("File pipeline processing complete")
 

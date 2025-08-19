@@ -222,6 +222,7 @@ class AudioChunkerProcessor(Processor):
 
             # Ensure float32 format
             if combined_audio.dtype == np.int16:
+                # Normalize int16 audio to float32 in range [-1.0, 1.0]
                 combined_audio = combined_audio.astype(np.float32) / 32768.0
             elif combined_audio.dtype != np.float32:
                 combined_audio = combined_audio.astype(np.float32)

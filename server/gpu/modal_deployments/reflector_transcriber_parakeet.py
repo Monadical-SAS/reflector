@@ -10,6 +10,8 @@ import modal
 MODEL_NAME = "nvidia/parakeet-tdt-0.6b-v2"
 SUPPORTED_FILE_EXTENSIONS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
 SAMPLERATE = 16000
+UPLOADS_PATH = "/uploads"
+CACHE_PATH = "/cache"
 VAD_CONFIG = {
     "max_segment_duration": 30.0,
     "batch_max_files": 10,
@@ -93,7 +95,7 @@ def download_audio_to_volume(
 
     audio_suffix = detect_audio_format(audio_file_url, response.headers)
     unique_filename = ParakeetUniqFilename(f"{uuid.uuid4()}.{audio_suffix}")
-    file_path = f"/uploads/{unique_filename}"
+    file_path = f"{UPLOADS_PATH}/{unique_filename}"
 
     with open(file_path, "wb") as f:
         f.write(response.content)
@@ -102,8 +104,15 @@ def download_audio_to_volume(
     return unique_filename, audio_suffix
 
 
-def pad_audio(audio_array, sample_rate=SAMPLERATE):
-    """Add 0.5 seconds of silence if audio is less than 500ms"""
+def pad_audio(audio_array, sample_rate: int = SAMPLERATE):
+    """Add 0.5 seconds of silence if audio is less than 500ms.
+
+    This is a workaround for a Parakeet bug where very short audio (<500ms) causes:
+    ValueError: `char_offsets`: [] and `processed_tokens`: [157, 834, 834, 841]
+    have to be of the same length
+
+    See: https://github.com/NVIDIA/NeMo/issues/8451
+    """
     import numpy as np
 
     audio_duration = len(audio_array) / sample_rate
@@ -119,7 +128,7 @@ def pad_audio(audio_array, sample_rate=SAMPLERATE):
     timeout=600,
     scaledown_window=300,
     image=image,
-    volumes={"/cache": model_cache, "/uploads": upload_volume},
+    volumes={CACHE_PATH: model_cache, UPLOADS_PATH: upload_volume},
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )
@@ -140,13 +149,12 @@ class TranscriberParakeetLive:
     def transcribe_segment(
         self,
         filename: str,
-        language: str,
     ):
         import librosa
 
         upload_volume.reload()
 
-        file_path = f"/uploads/{filename}"
+        file_path = f"{UPLOADS_PATH}/{filename}"
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -173,7 +181,6 @@ class TranscriberParakeetLive:
     def transcribe_batch(
         self,
         filenames: list[str],
-        language: str,
     ):
         import librosa
 
@@ -184,7 +191,7 @@ class TranscriberParakeetLive:
 
         # Load all audio files with padding
         for filename in filenames:
-            file_path = f"/uploads/{filename}"
+            file_path = f"{UPLOADS_PATH}/{filename}"
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"Batch file not found: {file_path}")
 
@@ -199,7 +206,6 @@ class TranscriberParakeetLive:
         # Process results for each file
         for i, (filename, output) in enumerate(zip(filenames, outputs)):
             text = output.text.strip()
-            words = []
 
             words = [
                 {
@@ -226,7 +232,7 @@ class TranscriberParakeetLive:
     gpu="L40S",
     timeout=900,
     image=image,
-    volumes={"/cache": model_cache, "/uploads": upload_volume},
+    volumes={CACHE_PATH: model_cache, UPLOADS_PATH: upload_volume},
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},
 )
@@ -251,7 +257,6 @@ class TranscriberParakeetFile:
     def transcribe_segment(
         self,
         filename: str,
-        language: str,
         timestamp_offset: float = 0.0,
     ):
         import librosa
@@ -392,7 +397,7 @@ class TranscriberParakeetFile:
 
         upload_volume.reload()
 
-        file_path = f"/uploads/{filename}"
+        file_path = f"{UPLOADS_PATH}/{filename}"
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -444,7 +449,7 @@ class TranscriberParakeetFile:
     secrets=[
         modal.Secret.from_name("reflector-gpu"),
     ],
-    volumes={"/cache": model_cache, "/uploads": upload_volume},
+    volumes={CACHE_PATH: model_cache, UPLOADS_PATH: upload_volume},
     image=image,
 )
 @modal.concurrent(max_inputs=40)
@@ -492,6 +497,12 @@ def web():
         language: str = Form("en"),
         batch: bool = Form(False),
     ):
+        # Parakeet only supports English
+        if language != "en":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Parakeet model only supports English. Got language='{language}'",
+            )
         # Handle both single file and multiple files
         if not file and not files:
             raise HTTPException(
@@ -508,11 +519,11 @@ def web():
         uploaded_filenames = []
         for upload_file in upload_files:
             audio_suffix = upload_file.filename.split(".")[-1]
-            assert audio_suffix in SUPPORTED_FILE_TYPES
+            assert audio_suffix in SUPPORTED_FILE_EXTENSIONS
 
             # Generate unique filename
             unique_filename = f"{uuid.uuid4()}.{audio_suffix}"
-            file_path = f"/uploads/{unique_filename}"
+            file_path = f"{UPLOADS_PATH}/{unique_filename}"
 
             print(f"Writing file to: {file_path}")
             with open(file_path, "wb") as f:
@@ -524,22 +535,20 @@ def web():
         upload_volume.commit()
 
         try:
-            # Use A10G live transcriber for small files
+            # Use A10G live transcriber for per-file transcription
             if batch and len(upload_files) > 1:
                 # Use batch transcription
                 func = transcriber_live.transcribe_batch.spawn(
                     filenames=uploaded_filenames,
-                    language=language,
                 )
                 results = func.get()
                 return {"results": results}
 
-            # Single file transcription
+            # Per-file transcription
             results = []
             for filename in uploaded_filenames:
                 func = transcriber_live.transcribe_segment.spawn(
                     filename=filename,
-                    language=language,
                 )
                 result = func.get()
                 result["filename"] = filename
@@ -550,7 +559,7 @@ def web():
         finally:
             for filename in uploaded_filenames:
                 try:
-                    file_path = f"/uploads/{filename}"
+                    file_path = f"{UPLOADS_PATH}/{filename}"
                     print(f"Deleting file: {file_path}")
                     os.remove(file_path)
                 except Exception as e:
@@ -560,24 +569,31 @@ def web():
 
     @app.post("/v1/audio/transcriptions-from-url", dependencies=[Depends(apikey_auth)])
     def transcribe_from_url(
-        audio_file_url: str = Body(...),
+        audio_file_url: str = Body(
+            ..., description="URL of the audio file to transcribe"
+        ),
         model: str = Body(MODEL_NAME),
-        language: str = Body("en"),
+        language: str = Body("en", description="Language code (only 'en' supported)"),
         timestamp_offset: float = Body(0.0),
     ):
+        # Parakeet only supports English
+        if language != "en":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Parakeet model only supports English. Got language='{language}'",
+            )
         unique_filename, audio_suffix = download_audio_to_volume(audio_file_url)
 
         try:
             func = transcriber_file.transcribe_segment.spawn(
                 filename=unique_filename,
-                language=language,
                 timestamp_offset=timestamp_offset,
             )
             result = func.get()
             return result
         finally:
             try:
-                file_path = f"/uploads/{unique_filename}"
+                file_path = f"{UPLOADS_PATH}/{unique_filename}"
                 print(f"Deleting file: {file_path}")
                 os.remove(file_path)
                 upload_volume.commit()

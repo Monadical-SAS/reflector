@@ -83,11 +83,10 @@ class PipelineMainFile(PipelineMainBase):
                 exc_info=result,
             )
 
-    async def process_file(self, file_path: Path):
+    async def process(self, file_path: Path):
         """Main entry point for file processing"""
         self.logger.info(f"Starting file pipeline for {file_path}")
 
-        # Get transcript for configuration
         transcript = await self.get_transcript()
 
         # Extract audio and write to transcript location
@@ -373,4 +372,4 @@ async def task_pipeline_file_process(*, transcript_id: str):
 
     # Run file pipeline
     pipeline = PipelineMainFile(transcript_id=transcript_id)
-    await pipeline.process_file(audio_file)
+    await pipeline.process(audio_file)

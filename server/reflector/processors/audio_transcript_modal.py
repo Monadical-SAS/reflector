@@ -40,7 +40,8 @@ class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
         self.batch_enabled = batch_enabled
         self.pending_files: List[AudioFile] = []  # Files waiting to be processed
 
-    def _calculate_duration(self, audio_file: AudioFile) -> float:
+    @classmethod
+    def _calculate_duration(cls, audio_file: AudioFile) -> float:
         """Calculate audio duration in seconds from AudioFile metadata"""
         # Duration = total_samples / sample_rate
         # We need to estimate total samples from the file data
