@@ -184,20 +184,43 @@ ICS calendar URLs are attached to rooms (not users) to enable automatic meeting 
    - Simple HTTP fetching without unnecessary validation
    - Proper TypedDict typing for event data structures
    - Supports any standard ICS format
-4. ⚠️ API endpoints for ICS configuration (partial)
+   - Event matching on full room URL only
+4. ✅ API endpoints for ICS configuration
    - Room model updated to support ICS fields via existing PATCH endpoint
-   - Dedicated ICS endpoints still pending
-5. ⚠️ Celery background tasks for periodic sync (pending)
+   - POST /v1/rooms/{room_name}/ics/sync - Trigger manual sync (owner only)
+   - GET /v1/rooms/{room_name}/ics/status - Get sync status (owner only)
+   - GET /v1/rooms/{room_name}/meetings - List meetings with privacy controls
+   - GET /v1/rooms/{room_name}/meetings/upcoming - List upcoming meetings
+5. ✅ Celery background tasks for periodic sync
+   - sync_room_ics - Sync individual room calendar
+   - sync_all_ics_calendars - Check all rooms and queue sync based on fetch intervals
+   - pre_create_upcoming_meetings - Pre-create Whereby meetings 1 minute before start
+   - Tasks scheduled in beat schedule (every minute for checking, respects individual intervals)
 6. ✅ Tests written and passing
    - 6 tests for Room ICS fields
    - 7 tests for CalendarEvent model
-   - All 13 tests passing
+   - 7 tests for ICS sync service
+   - 11 tests for API endpoints
+   - 6 tests for background tasks
+   - All 31 ICS-related tests passing
 
-### Phase 2: Meeting Management (Week 2)
-1. Update meeting lifecycle logic
-2. Support multiple active meetings
-3. Implement grace period logic
-4. Link meetings to calendar events
+### Phase 2: Meeting Management (Week 2) ✅ COMPLETED (2025-08-19)
+1. ✅ Updated meeting lifecycle logic with grace period support
+   - 15-minute grace period after last participant leaves
+   - Automatic reactivation when participants rejoin
+   - Force close calendar meetings 30 minutes after scheduled end
+2. ✅ Support multiple active meetings per room
+   - Removed unique constraint on active meetings
+   - Added get_all_active_for_room() method
+   - Added get_active_by_calendar_event() method
+3. ✅ Implemented grace period logic
+   - Added last_participant_left_at and grace_period_minutes fields
+   - Process meetings task handles grace period checking
+   - Whereby webhooks clear grace period on participant join
+4. ✅ Link meetings to calendar events
+   - Pre-created meetings properly linked via calendar_event_id
+   - Calendar metadata stored with meeting
+   - API endpoints for listing and joining specific meetings
 
 ### Phase 3: Frontend Meeting Selection (Week 3)
 1. Build meeting selection page
@@ -232,6 +255,25 @@ ICS calendar URLs are attached to rooms (not users) to enable automatic meeting 
 9. **Configurable fetch interval** - Balance between freshness and server load
 10. **ICS over CalDAV** - Simpler implementation, wider compatibility, no complex auth
 
+## Phase 2 Implementation Files
+
+### Database Migrations
+- `/server/migrations/versions/6025e9b2bef2_remove_one_active_meeting_per_room_.py` - Remove unique constraint
+- `/server/migrations/versions/d4a1c446458c_add_grace_period_fields_to_meeting.py` - Add grace period fields
+
+### Updated Models
+- `/server/reflector/db/meetings.py` - Added grace period fields and new query methods
+
+### Updated Services
+- `/server/reflector/worker/process.py` - Enhanced with grace period logic and multiple meeting support
+
+### Updated API
+- `/server/reflector/views/rooms.py` - Added endpoints for listing active meetings and joining specific meetings
+- `/server/reflector/views/whereby.py` - Clear grace period on participant join
+
+### Tests
+- `/server/tests/test_multiple_active_meetings.py` - Comprehensive tests for Phase 2 features (5 tests)
+
 ## Phase 1 Implementation Files Created
 
 ### Database Models
@@ -240,11 +282,21 @@ ICS calendar URLs are attached to rooms (not users) to enable automatic meeting 
 - `/server/reflector/db/meetings.py` - Updated with calendar_event_id and calendar_metadata (JSONB)
 
 ### Services
-- `/server/reflector/services/ics_sync.py` - ICS fetching with TypedDict for proper typing
+- `/server/reflector/services/ics_sync.py` - ICS fetching and parsing with TypedDict for proper typing
+
+### API Endpoints
+- `/server/reflector/views/rooms.py` - Added ICS management endpoints with privacy controls
+
+### Background Tasks
+- `/server/reflector/worker/ics_sync.py` - Celery tasks for automatic periodic sync
+- `/server/reflector/worker/app.py` - Updated beat schedule for ICS tasks
 
 ### Tests
 - `/server/tests/test_room_ics.py` - Room model ICS fields tests (6 tests)
 - `/server/tests/test_calendar_event.py` - CalendarEvent model tests (7 tests)
+- `/server/tests/test_ics_sync.py` - ICS sync service tests (7 tests)
+- `/server/tests/test_room_ics_api.py` - API endpoint tests (11 tests)
+- `/server/tests/test_ics_background_tasks.py` - Background task tests (6 tests)
 
 ### Key Design Decisions
 - No encryption needed - ICS URLs are read-only access
@@ -252,6 +304,8 @@ ICS calendar URLs are attached to rooms (not users) to enable automatic meeting 
 - Proper TypedDict typing for event data structures
 - Removed unnecessary URL validation and webcal handling
 - calendar_metadata in meetings stores flexible calendar data (organizer, recurrence, etc)
+- Background tasks query all rooms directly to avoid filtering issues
+- Sync intervals respected per-room configuration
 
 ## Implementation Approach
 

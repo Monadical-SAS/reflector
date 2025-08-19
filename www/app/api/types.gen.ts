@@ -9,6 +9,23 @@ export type Body_transcript_record_upload_v1_transcripts__transcript_id__record_
     chunk: Blob | File;
   };
 
+export type CalendarEventResponse = {
+  id: string;
+  room_id: string;
+  ics_uid: string;
+  title?: string | null;
+  description?: string | null;
+  start_time: string;
+  end_time: string;
+  attendees?: Array<{
+    [key: string]: unknown;
+  }> | null;
+  location?: string | null;
+  last_synced: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CreateParticipant = {
   speaker?: number | null;
   name: string;
@@ -24,6 +41,9 @@ export type CreateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  ics_url?: string | null;
+  ics_fetch_interval?: number;
+  ics_enabled?: boolean;
 };
 
 export type CreateTranscript = {
@@ -123,6 +143,24 @@ export type HTTPValidationError = {
   detail?: Array<ValidationError>;
 };
 
+export type ICSStatus = {
+  status: string;
+  last_sync?: string | null;
+  next_sync?: string | null;
+  last_etag?: string | null;
+  events_count?: number;
+};
+
+export type ICSSyncResult = {
+  status: string;
+  hash?: string | null;
+  events_found?: number;
+  events_created?: number;
+  events_updated?: number;
+  events_deleted?: number;
+  error?: string | null;
+};
+
 export type Meeting = {
   id: string;
   room_name: string;
@@ -174,6 +212,11 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  ics_url?: string | null;
+  ics_fetch_interval?: number;
+  ics_enabled?: boolean;
+  ics_last_sync?: string | null;
+  ics_last_etag?: string | null;
 };
 
 export type RtcOffer = {
@@ -266,15 +309,18 @@ export type UpdateParticipant = {
 };
 
 export type UpdateRoom = {
-  name: string;
-  zulip_auto_post: boolean;
-  zulip_stream: string;
-  zulip_topic: string;
-  is_locked: boolean;
-  room_mode: string;
-  recording_type: string;
-  recording_trigger: string;
-  is_shared: boolean;
+  name?: string | null;
+  zulip_auto_post?: boolean | null;
+  zulip_stream?: string | null;
+  zulip_topic?: string | null;
+  is_locked?: boolean | null;
+  room_mode?: string | null;
+  recording_type?: string | null;
+  recording_trigger?: string | null;
+  is_shared?: boolean | null;
+  ics_url?: string | null;
+  ics_fetch_interval?: number | null;
+  ics_enabled?: boolean | null;
 };
 
 export type UpdateTranscript = {
@@ -370,6 +416,44 @@ export type V1RoomsCreateMeetingData = {
 };
 
 export type V1RoomsCreateMeetingResponse = Meeting;
+
+export type V1RoomsSyncIcsData = {
+  roomName: string;
+};
+
+export type V1RoomsSyncIcsResponse = ICSSyncResult;
+
+export type V1RoomsIcsStatusData = {
+  roomName: string;
+};
+
+export type V1RoomsIcsStatusResponse = ICSStatus;
+
+export type V1RoomsListMeetingsData = {
+  roomName: string;
+};
+
+export type V1RoomsListMeetingsResponse = Array<CalendarEventResponse>;
+
+export type V1RoomsListUpcomingMeetingsData = {
+  minutesAhead?: number;
+  roomName: string;
+};
+
+export type V1RoomsListUpcomingMeetingsResponse = Array<CalendarEventResponse>;
+
+export type V1RoomsListActiveMeetingsData = {
+  roomName: string;
+};
+
+export type V1RoomsListActiveMeetingsResponse = Array<Meeting>;
+
+export type V1RoomsJoinMeetingData = {
+  meetingId: string;
+  roomName: string;
+};
+
+export type V1RoomsJoinMeetingResponse = Meeting;
 
 export type V1TranscriptsListData = {
   /**
@@ -658,6 +742,96 @@ export type $OpenApiTs = {
   "/v1/rooms/{room_name}/meeting": {
     post: {
       req: V1RoomsCreateMeetingData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Meeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/ics/sync": {
+    post: {
+      req: V1RoomsSyncIcsData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: ICSSyncResult;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/ics/status": {
+    get: {
+      req: V1RoomsIcsStatusData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: ICSStatus;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meetings": {
+    get: {
+      req: V1RoomsListMeetingsData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Array<CalendarEventResponse>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meetings/upcoming": {
+    get: {
+      req: V1RoomsListUpcomingMeetingsData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Array<CalendarEventResponse>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meetings/active": {
+    get: {
+      req: V1RoomsListActiveMeetingsData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: Array<Meeting>;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/join": {
+    post: {
+      req: V1RoomsJoinMeetingData;
       res: {
         /**
          * Successful Response

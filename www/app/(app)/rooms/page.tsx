@@ -19,6 +19,7 @@ import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { ApiError, Room } from "../../api";
 import { RoomList } from "./_components/RoomList";
+import ICSSettings from "./_components/ICSSettings";
 
 interface SelectOption {
   label: string;
@@ -54,6 +55,9 @@ const roomInitialState = {
   recordingType: "cloud",
   recordingTrigger: "automatic-2nd-participant",
   isShared: false,
+  icsUrl: "",
+  icsEnabled: false,
+  icsFetchInterval: 5,
 };
 
 export default function RoomsList() {
@@ -170,6 +174,9 @@ export default function RoomsList() {
         recording_type: room.recordingType,
         recording_trigger: room.recordingTrigger,
         is_shared: room.isShared,
+        ics_url: room.icsUrl,
+        ics_enabled: room.icsEnabled,
+        ics_fetch_interval: room.icsFetchInterval,
       };
 
       if (isEditing) {
@@ -215,6 +222,9 @@ export default function RoomsList() {
       recordingType: roomData.recording_type,
       recordingTrigger: roomData.recording_trigger,
       isShared: roomData.is_shared,
+      icsUrl: roomData.ics_url || "",
+      icsEnabled: roomData.ics_enabled || false,
+      icsFetchInterval: roomData.ics_fetch_interval || 5,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -553,6 +563,32 @@ export default function RoomsList() {
                   <Checkbox.Label>Shared room</Checkbox.Label>
                 </Checkbox.Root>
               </Field.Root>
+
+              <ICSSettings
+                roomId={editRoomId}
+                roomName={room.name}
+                icsUrl={room.icsUrl}
+                icsEnabled={room.icsEnabled}
+                icsFetchInterval={room.icsFetchInterval}
+                onChange={(settings) => {
+                  setRoom({
+                    ...room,
+                    icsUrl:
+                      settings.ics_url !== undefined
+                        ? settings.ics_url
+                        : room.icsUrl,
+                    icsEnabled:
+                      settings.ics_enabled !== undefined
+                        ? settings.ics_enabled
+                        : room.icsEnabled,
+                    icsFetchInterval:
+                      settings.ics_fetch_interval !== undefined
+                        ? settings.ics_fetch_interval
+                        : room.icsFetchInterval,
+                  });
+                }}
+                isOwner={true}
+              />
             </Dialog.Body>
             <Dialog.Footer>
               <Button variant="ghost" onClick={onClose}>
