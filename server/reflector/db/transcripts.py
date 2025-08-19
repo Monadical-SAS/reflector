@@ -90,6 +90,8 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
     sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_room_id", "room_id"),
+    sqlalchemy.Index("idx_transcript_source_kind", "source_kind"),
+    sqlalchemy.Index("idx_transcript_room_id_created_at", "room_id", "created_at"),
 )
 
 # Add PostgreSQL-specific full-text search column
