@@ -2,14 +2,8 @@
 
 from reflector.db.search import (
     SnippetCandidate,
-    combine_snippet_sources,
-    create_snippet,
-    extract_webvtt_text,
-    filter_non_overlapping_snippets,
-    find_all_matches,
-    generate_snippets,
-    generate_summary_snippets,
-    generate_webvtt_snippets,
+    SnippetGenerator,
+    WebVTTProcessor,
 )
 
 
@@ -26,7 +20,7 @@ class TestExtractWebVTT:
 00:00:10.000 --> 00:00:20.000
 <v Speaker1>Indeed it is a test of WebVTT parsing.
 """
-        result = extract_webvtt_text(webvtt)
+        result = WebVTTProcessor.extract_text(webvtt)
         assert "Hello world, this is a test" in result
         assert "Indeed it is a test" in result
         assert "<v Speaker" not in result
@@ -35,11 +29,11 @@ class TestExtractWebVTT:
 
     def test_extract_empty_webvtt(self):
         """Test empty WebVTT returns empty string."""
-        assert extract_webvtt_text("") == ""
+        assert WebVTTProcessor.extract_text("") == ""
 
     def test_extract_malformed_webvtt(self):
         """Test malformed WebVTT returns empty string."""
-        result = extract_webvtt_text("Not a valid WebVTT")
+        result = WebVTTProcessor.extract_text("Not a valid WebVTT")
         assert result == ""
 
 
@@ -60,7 +54,7 @@ class TestGenerateSnippets:
             + "The Python community is very supportive."
         )
 
-        snippets = generate_snippets(text, "Python")
+        snippets = SnippetGenerator.generate(text, "Python")
         # With enough separation, we should get multiple snippets
         assert len(snippets) >= 2  # At least 2 distinct snippets
 
@@ -71,7 +65,7 @@ class TestGenerateSnippets:
     def test_single_match(self):
         """Test single occurrence returns one snippet."""
         text = "This document discusses artificial intelligence and its applications."
-        snippets = generate_snippets(text, "artificial intelligence")
+        snippets = SnippetGenerator.generate(text, "artificial intelligence")
 
         assert len(snippets) == 1
         assert "artificial intelligence" in snippets[0].lower()
@@ -79,7 +73,7 @@ class TestGenerateSnippets:
     def test_no_matches(self):
         """Test no matches returns empty list."""
         text = "This is some random text without the search term."
-        snippets = generate_snippets(text, "machine learning")
+        snippets = SnippetGenerator.generate(text, "machine learning")
 
         assert snippets == []
 
@@ -94,7 +88,7 @@ class TestGenerateSnippets:
             + "Finally, machine learning will shape our future."
         )
 
-        snippets = generate_snippets(text, "machine learning")
+        snippets = SnippetGenerator.generate(text, "machine learning")
 
         # Should find at least 2 (might be 3 if text is long enough)
         assert len(snippets) >= 2
@@ -104,7 +98,7 @@ class TestGenerateSnippets:
     def test_partial_match_fallback(self):
         """Test fallback to first word when exact phrase not found."""
         text = "We use machine intelligence for processing."
-        snippets = generate_snippets(text, "machine learning")
+        snippets = SnippetGenerator.generate(text, "machine learning")
 
         # Should fall back to finding "machine"
         assert len(snippets) == 1
@@ -114,7 +108,7 @@ class TestGenerateSnippets:
         """Test ellipsis added for truncated snippets."""
         # Long text where match is in the middle
         text = "a " * 100 + "TARGET_WORD special content here" + " b" * 100
-        snippets = generate_snippets(text, "TARGET_WORD")
+        snippets = SnippetGenerator.generate(text, "TARGET_WORD")
 
         assert len(snippets) == 1
         assert "..." in snippets[0]  # Should have ellipsis
@@ -123,7 +117,7 @@ class TestGenerateSnippets:
     def test_overlapping_snippets_deduplicated(self):
         """Test overlapping matches don't create duplicate snippets."""
         text = "test test test word" * 10  # Repeated pattern
-        snippets = generate_snippets(text, "test")
+        snippets = SnippetGenerator.generate(text, "test")
 
         # Should get unique snippets, not duplicates
         assert len(snippets) <= 3
@@ -131,9 +125,9 @@ class TestGenerateSnippets:
 
     def test_empty_inputs(self):
         """Test empty text or search term returns empty list."""
-        assert generate_snippets("", "search") == []
-        assert generate_snippets("text", "") == []
-        assert generate_snippets("", "") == []
+        assert SnippetGenerator.generate("", "search") == []
+        assert SnippetGenerator.generate("text", "") == []
+        assert SnippetGenerator.generate("", "") == []
 
     def test_max_snippets_limit(self):
         """Test respects max_snippets parameter."""
@@ -142,19 +136,19 @@ class TestGenerateSnippets:
         text = ("Python is amazing" + separator) * 10  # 10 occurrences
 
         # Test with different limits
-        snippets_1 = generate_snippets(text, "Python", max_snippets=1)
+        snippets_1 = SnippetGenerator.generate(text, "Python", max_snippets=1)
         assert len(snippets_1) == 1
 
-        snippets_2 = generate_snippets(text, "Python", max_snippets=2)
+        snippets_2 = SnippetGenerator.generate(text, "Python", max_snippets=2)
         assert len(snippets_2) == 2
 
-        snippets_5 = generate_snippets(text, "Python", max_snippets=5)
+        snippets_5 = SnippetGenerator.generate(text, "Python", max_snippets=5)
         assert len(snippets_5) == 5  # Should get exactly 5 with enough separation
 
     def test_snippet_length(self):
         """Test snippet length is reasonable."""
         text = "word " * 200  # Long text
-        snippets = generate_snippets(text, "word")
+        snippets = SnippetGenerator.generate(text, "word")
 
         for snippet in snippets:
             # Default max_length is 150 + some context
@@ -192,8 +186,8 @@ class TestFullPipeline:
         )
 
         # Extract and generate snippets
-        plain_text = extract_webvtt_text(webvtt)
-        snippets = generate_snippets(plain_text, "machine learning")
+        plain_text = WebVTTProcessor.extract_text(webvtt)
+        snippets = SnippetGenerator.generate(plain_text, "machine learning")
 
         # Should find at least 2 snippets (text might still be close together)
         assert len(snippets) >= 1  # At minimum one snippet containing matches
@@ -226,8 +220,8 @@ The search term appears here in the middle
 00:00:10.000 --> 00:00:15.000
 And this is the end of the content"""
 
-        plain_text = extract_webvtt_text(webvtt_content)
-        snippets = generate_snippets(plain_text, "search term")
+        plain_text = WebVTTProcessor.extract_text(webvtt_content)
+        snippets = SnippetGenerator.generate(plain_text, "search term")
 
         assert len(snippets) > 0
         assert any("search term" in snippet.lower() for snippet in snippets)
@@ -236,12 +230,12 @@ And this is the end of the content"""
         """Test WebVTT extraction with various malformed content."""
         # Test with completely invalid content
         malformed_vtt = "This is not valid WebVTT content"
-        result = extract_webvtt_text(malformed_vtt)
+        result = WebVTTProcessor.extract_text(malformed_vtt)
         assert result == ""
 
         # Test with partial WebVTT header
         partial_vtt = "WEBVTT\nNo timestamps here"
-        result = extract_webvtt_text(partial_vtt)
+        result = WebVTTProcessor.extract_text(partial_vtt)
         # Should still fail since no valid cues
         assert result == "" or "No timestamps" not in result
 
@@ -252,21 +246,21 @@ class TestPureFunctions:
     def test_find_all_matches(self):
         """Test finding all match positions in text."""
         text = "Python is great. Python is powerful. I love Python."
-        matches = list(find_all_matches(text, "Python"))
+        matches = list(SnippetGenerator.find_all_matches(text, "Python"))
         assert matches == [0, 17, 44]
 
         # Test case insensitive matching
-        matches = list(find_all_matches(text, "python"))
+        matches = list(SnippetGenerator.find_all_matches(text, "python"))
         assert matches == [0, 17, 44]
 
         # Test no matches
-        matches = list(find_all_matches(text, "Ruby"))
+        matches = list(SnippetGenerator.find_all_matches(text, "Ruby"))
         assert matches == []
 
         # Test empty inputs
-        matches = list(find_all_matches("", "test"))
+        matches = list(SnippetGenerator.find_all_matches("", "test"))
         assert matches == []
-        matches = list(find_all_matches("test", ""))
+        matches = list(SnippetGenerator.find_all_matches("test", ""))
         assert matches == []
 
     def test_create_snippet(self):
@@ -274,7 +268,7 @@ class TestPureFunctions:
         text = "This is a long text with the word Python in the middle and more text after."
 
         # Test basic snippet creation
-        snippet = create_snippet(text, 35, max_length=150)
+        snippet = SnippetGenerator.create_snippet(text, 35, max_length=150)
         assert "Python" in snippet.text()
         assert snippet.start >= 0
         assert snippet.end <= len(text)
@@ -286,16 +280,16 @@ class TestPureFunctions:
 
         # Test with a position that would require ellipsis
         long_text = "A" * 200  # Very long text
-        snippet = create_snippet(long_text, 100, max_length=50)
+        snippet = SnippetGenerator.create_snippet(long_text, 100, max_length=50)
         assert snippet.text().startswith("...")
         assert snippet.text().endswith("...")
 
         # Test basic bounds checking
-        snippet = create_snippet("short text", 0, max_length=100)
+        snippet = SnippetGenerator.create_snippet("short text", 0, max_length=100)
         assert snippet.start == 0
         assert "short text" in snippet.text()
 
-    def test_filter_non_overlapping_snippets(self):
+    def test_filter_non_overlapping(self):
         """Test filtering overlapping snippets."""
         # Create some snippet candidates representing extracts from a 100-char text
         # Note: When start > 0 or end < original_text_length, ellipses will be added
@@ -312,7 +306,7 @@ class TestPureFunctions:
             ),  # Non-overlapping
         ]
 
-        filtered = list(filter_non_overlapping_snippets(iter(candidates)))
+        filtered = list(SnippetGenerator.filter_non_overlapping(iter(candidates)))
         # The text() method adds ellipses based on position
         assert filtered == [
             "First snippet...",
@@ -321,24 +315,26 @@ class TestPureFunctions:
         ]
 
         # Test with no candidates
-        filtered = list(filter_non_overlapping_snippets(iter([])))
+        filtered = list(SnippetGenerator.filter_non_overlapping(iter([])))
         assert filtered == []
 
-    def test_generate_snippets_integration(self):
-        """Test the main generate_snippets function."""
+    def test_generate_integration(self):
+        """Test the main SnippetGenerator.generate function."""
         text = "Machine learning is amazing. Machine learning transforms data. Learn machine learning today."
 
         # Test basic snippet generation
-        snippets = generate_snippets(text, "machine learning")
+        snippets = SnippetGenerator.generate(text, "machine learning")
         assert len(snippets) <= 3  # Default max
         assert all("machine learning" in s.lower() for s in snippets)
 
         # Test max snippets limit
-        snippets = generate_snippets(text, "machine learning", max_snippets=2)
+        snippets = SnippetGenerator.generate(text, "machine learning", max_snippets=2)
         assert len(snippets) <= 2
 
         # Test fallback to first word
-        snippets = generate_snippets(text, "machine vision")  # "vision" not found
+        snippets = SnippetGenerator.generate(
+            text, "machine vision"
+        )  # "vision" not found
         assert len(snippets) > 0  # Should find "machine"
         assert any("machine" in s.lower() for s in snippets)
 
@@ -352,13 +348,13 @@ Hello world
 00:00:02.000 --> 00:00:04.000
 This is a test"""
 
-        result = extract_webvtt_text(webvtt)
+        result = WebVTTProcessor.extract_text(webvtt)
         assert "Hello world" in result
         assert "This is a test" in result
 
         # Test empty input
-        assert extract_webvtt_text("") == ""
-        assert extract_webvtt_text(None) == ""
+        assert WebVTTProcessor.extract_text("") == ""
+        assert WebVTTProcessor.extract_text(None) == ""
 
     def test_generate_webvtt_snippets(self):
         """Test generating snippets from WebVTT content."""
@@ -370,28 +366,28 @@ Python programming is great
 00:00:02.000 --> 00:00:04.000
 Learn Python today"""
 
-        snippets = generate_webvtt_snippets(webvtt, "Python")
+        snippets = WebVTTProcessor.generate_snippets(webvtt, "Python")
         assert len(snippets) > 0
         assert any("Python" in s for s in snippets)
 
         # Test empty WebVTT
-        snippets = generate_webvtt_snippets("", "Python")
+        snippets = WebVTTProcessor.generate_snippets("", "Python")
         assert snippets == []
 
-    def test_generate_summary_snippets(self):
+    def test_from_summary(self):
         """Test generating snippets from summary text."""
         summary = "This meeting discussed Python development and machine learning applications."
 
-        snippets = generate_summary_snippets(summary, "Python")
+        snippets = SnippetGenerator.from_summary(summary, "Python")
         assert len(snippets) > 0
         assert any("Python" in s for s in snippets)
 
         # Test with max limit (should use LONG_SUMMARY_MAX_SNIPPETS)
         long_summary = "Python " * 20  # Many occurrences
-        snippets = generate_summary_snippets(long_summary, "Python")
+        snippets = SnippetGenerator.from_summary(long_summary, "Python")
         assert len(snippets) <= 2  # LONG_SUMMARY_MAX_SNIPPETS
 
-    def test_combine_snippet_sources(self):
+    def test_combine_sources(self):
         """Test combining snippets from multiple sources."""
         summary = "Python is a great programming language."
         webvtt = """WEBVTT
@@ -403,7 +399,7 @@ Learn Python programming
 Python is powerful"""
 
         # Test combining both sources
-        snippets, total_count = combine_snippet_sources(
+        snippets, total_count = SnippetGenerator.combine_sources(
             summary, webvtt, "Python", max_total=3
         )
         assert len(snippets) <= 3
@@ -411,7 +407,7 @@ Python is powerful"""
         assert total_count > 0
 
         # Test summary-only
-        snippets, total_count = combine_snippet_sources(
+        snippets, total_count = SnippetGenerator.combine_sources(
             summary, None, "Python", max_total=3
         )
         assert len(snippets) > 0
@@ -419,7 +415,7 @@ Python is powerful"""
         assert total_count == 1  # "Python" appears once in summary
 
         # Test webvtt-only
-        snippets, total_count = combine_snippet_sources(
+        snippets, total_count = SnippetGenerator.combine_sources(
             None, webvtt, "Python", max_total=3
         )
         assert len(snippets) > 0
@@ -427,7 +423,7 @@ Python is powerful"""
 
         # Test priority (summary first)
         long_summary = "Python " * 10  # Should fill quota from summary
-        snippets, total_count = combine_snippet_sources(
+        snippets, total_count = SnippetGenerator.combine_sources(
             long_summary, webvtt, "Python", max_total=2
         )
         assert len(snippets) == 2  # Should be filled from summary
@@ -448,25 +444,25 @@ Big data processing
 data visualization and data storage"""  # 3 matches
 
         # Test that matches are summed correctly
-        snippets, total_count = combine_snippet_sources(
+        snippets, total_count = SnippetGenerator.combine_sources(
             summary, webvtt, "data", max_total=3
         )
         assert total_count == 6  # 3 (summary) + 3 (webvtt) = 6
         assert len(snippets) <= 3  # Snippets should still be limited
 
         # Test individual sources for verification
-        summary_snippets, summary_count = combine_snippet_sources(
+        summary_snippets, summary_count = SnippetGenerator.combine_sources(
             summary, None, "data", max_total=3
         )
         assert summary_count == 3
 
-        webvtt_snippets, webvtt_count = combine_snippet_sources(
+        webvtt_snippets, webvtt_count = SnippetGenerator.combine_sources(
             None, webvtt, "data", max_total=3
         )
         assert webvtt_count == 3
 
         # Test empty/None sources
-        snippets_empty, count_empty = combine_snippet_sources(
+        snippets_empty, count_empty = SnippetGenerator.combine_sources(
             None, None, "data", max_total=3
         )
         assert snippets_empty == []
@@ -476,16 +472,16 @@ data visualization and data storage"""  # 3 matches
         """Test edge cases for the pure functions."""
         # Test with special characters
         text = "Test with special: @#$%^&*() characters"
-        snippets = generate_snippets(text, "@#$%")
+        snippets = SnippetGenerator.generate(text, "@#$%")
         assert len(snippets) > 0
 
         # Test with very long query
         long_query = "a" * 100
-        snippets = generate_snippets("Some text", long_query)
+        snippets = SnippetGenerator.generate("Some text", long_query)
         assert snippets == []  # No match
 
         # Test with unicode
         text = "Unicode test: café, naïve, 日本語"
-        snippets = generate_snippets(text, "café")
+        snippets = SnippetGenerator.generate(text, "café")
         assert len(snippets) > 0
         assert "café" in snippets[0]

@@ -57,11 +57,50 @@ WebVTTContent = Annotated[
 ]
 
 
-def parse_webvtt(raw_content: str) -> WebVTTContent:
-    """Parse WebVTT content and return it as a string."""
-    if not raw_content.startswith(WEBVTT_SPEC_HEADER):
-        raise ValueError(f"Invalid WebVTT content, no header {WEBVTT_SPEC_HEADER}")
-    return raw_content
+class WebVTTProcessor:
+    """Stateless processor for WebVTT content operations."""
+
+    @staticmethod
+    def parse(raw_content: str) -> WebVTTContent:
+        """Parse WebVTT content and return it as a string."""
+        if not raw_content.startswith(WEBVTT_SPEC_HEADER):
+            raise ValueError(f"Invalid WebVTT content, no header {WEBVTT_SPEC_HEADER}")
+        return raw_content
+
+    @staticmethod
+    def extract_text(webvtt_content: WebVTTContent) -> str:
+        """Extract plain text from WebVTT content using webvtt library."""
+        try:
+            buffer = StringIO(webvtt_content)
+            vtt = webvtt.read_buffer(buffer)
+            return " ".join(caption.text for caption in vtt if caption.text)
+        except webvtt.errors.MalformedFileError as e:
+            logger.warning(f"Malformed WebVTT content: {e}")
+            return ""
+        except (UnicodeDecodeError, ValueError) as e:
+            logger.warning(f"Failed to decode WebVTT content: {e}")
+            return ""
+        except AttributeError as e:
+            logger.error(
+                f"WebVTT parsing error - unexpected format: {e}", exc_info=True
+            )
+            return ""
+        except Exception as e:
+            logger.error(f"Unexpected error parsing WebVTT: {e}", exc_info=True)
+            return ""
+
+    @staticmethod
+    def generate_snippets(
+        webvtt_content: WebVTTContent,
+        query: str,
+        max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
+    ) -> list[str]:
+        """Generate snippets from WebVTT content."""
+        return SnippetGenerator.generate(
+            WebVTTProcessor.extract_text(webvtt_content),
+            query,
+            max_snippets=max_snippets,
+        )
 
 
 @dataclass(frozen=True)
@@ -139,110 +178,148 @@ class SearchResult(BaseModel):
         return dt.isoformat()
 
 
-def extract_webvtt_text(webvtt_content: WebVTTContent) -> str:
-    """Extract plain text from WebVTT content using webvtt library."""
-    try:
-        buffer = StringIO(webvtt_content)
-        vtt = webvtt.read_buffer(buffer)
-        return " ".join(caption.text for caption in vtt if caption.text)
-    except webvtt.errors.MalformedFileError as e:
-        logger.warning(f"Malformed WebVTT content: {e}")
-        return ""
-    except (UnicodeDecodeError, ValueError) as e:
-        logger.warning(f"Failed to decode WebVTT content: {e}")
-        return ""
-    except AttributeError as e:
-        logger.error(f"WebVTT parsing error - unexpected format: {e}", exc_info=True)
-        return ""
-    except Exception as e:
-        logger.error(f"Unexpected error parsing WebVTT: {e}", exc_info=True)
-        return ""
+class SnippetGenerator:
+    """Stateless generator for text snippets and match operations."""
 
+    @staticmethod
+    def find_all_matches(text: str, query: str) -> Iterator[int]:
+        """Generate all match positions for a query in text."""
+        if not text:
+            logger.warning("Empty text for search query in find_all_matches")
+            return
+        if not query:
+            logger.warning("Empty query for search text in find_all_matches")
+            return
 
-def find_all_matches(text: str, query: str) -> Iterator[int]:
-    """Generate all match positions for a query in text."""
-    if not text:
-        logger.warning("Empty text for search query in find_all_matches")
-        return
-    if not query:
-        logger.warning("Empty query for search text in find_all_matches")
-        return
-
-    text_lower = text.lower()
-    query_lower = query.lower()
-    start = 0
-    prev_start = start
-    while (pos := text_lower.find(query_lower, start)) != -1:
-        yield pos
-        start = pos + len(query_lower)
-        if start <= prev_start:
-            raise ValueError("panic! find_all_matches is not incremental")
+        text_lower = text.lower()
+        query_lower = query.lower()
+        start = 0
         prev_start = start
+        while (pos := text_lower.find(query_lower, start)) != -1:
+            yield pos
+            start = pos + len(query_lower)
+            if start <= prev_start:
+                raise ValueError("panic! find_all_matches is not incremental")
+            prev_start = start
 
+    @staticmethod
+    def count_matches(text: str, query: str) -> NonNegativeInt:
+        """Count total number of matches for a query in text."""
+        ZERO = NonNegativeInt(0)
+        if not text:
+            logger.warning("Empty text for search query in count_matches")
+            return ZERO
+        if not query:
+            logger.warning("Empty query for search text in count_matches")
+            return ZERO
+        return NonNegativeInt(
+            sum(1 for _ in SnippetGenerator.find_all_matches(text, query))
+        )
 
-def count_matches(text: str, query: str) -> NonNegativeInt:
-    """Count total number of matches for a query in text."""
-    ZERO = NonNegativeInt(0)
-    if not text:
-        logger.warning("Empty text for search query in count_matches")
-        return ZERO
-    if not query:
-        logger.warning("Empty query for search text in count_matches")
-        return ZERO
-    return NonNegativeInt(sum(1 for _ in find_all_matches(text, query)))
+    @staticmethod
+    def create_snippet(
+        text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
+    ) -> SnippetCandidate:
+        """Create a snippet from a match position."""
+        snippet_start = NonNegativeInt(max(0, match_pos - SNIPPET_CONTEXT_LENGTH))
+        snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
 
+        snippet_text = text[snippet_start:snippet_end]
 
-def create_snippet(
-    text: str, match_pos: int, max_length: int = DEFAULT_SNIPPET_MAX_LENGTH
-) -> SnippetCandidate:
-    """Create a snippet from a match position."""
-    snippet_start = NonNegativeInt(max(0, match_pos - SNIPPET_CONTEXT_LENGTH))
-    snippet_end = min(len(text), match_pos + max_length - SNIPPET_CONTEXT_LENGTH)
+        return SnippetCandidate(
+            _text=snippet_text, start=snippet_start, _original_text_length=len(text)
+        )
 
-    snippet_text = text[snippet_start:snippet_end]
+    @staticmethod
+    def filter_non_overlapping(
+        candidates: Iterator[SnippetCandidate],
+    ) -> Iterator[str]:
+        """Filter out overlapping snippets and return only display text."""
+        last_end = 0
+        for candidate in candidates:
+            display_text = candidate.text()
+            # it means that next overlapping snippets simply don't get included
+            # it's fine as simplistic logic and users probably won't care much because they already have their search results just fin
+            if candidate.start >= last_end and display_text:
+                yield display_text
+                last_end = candidate.end
 
-    return SnippetCandidate(
-        _text=snippet_text, start=snippet_start, _original_text_length=len(text)
-    )
+    @staticmethod
+    def generate(
+        text: str,
+        query: str,
+        max_length: NonNegativeInt = DEFAULT_SNIPPET_MAX_LENGTH,
+        max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
+    ) -> list[str]:
+        """Generate snippets from text."""
+        if not text or not query:
+            logger.warning("Empty text or query for generate_snippets")
+            return []
 
+        candidates = (
+            SnippetGenerator.create_snippet(text, pos, max_length)
+            for pos in SnippetGenerator.find_all_matches(text, query)
+        )
+        filtered = SnippetGenerator.filter_non_overlapping(candidates)
+        snippets = list(itertools.islice(filtered, max_snippets))
 
-def filter_non_overlapping_snippets(
-    candidates: Iterator[SnippetCandidate],
-) -> Iterator[str]:
-    """Filter out overlapping snippets and return only display text."""
-    last_end = 0
-    for candidate in candidates:
-        display_text = candidate.text()
-        # it means that next overlapping snippets simply don't get included
-        # it's fine as simplistic logic and users probably won't care much because they already have their search results just fin
-        if candidate.start >= last_end and display_text:
-            yield display_text
-            last_end = candidate.end
+        # Fallback to first word search if no full matches
+        # it's another assumption: proper snippet logic generation is quite complicated and tied to db logic, so simplification is used here
+        if not snippets and " " in query:
+            first_word = query.split()[0]
+            return SnippetGenerator.generate(text, first_word, max_length, max_snippets)
 
+        return snippets
 
-def generate_snippets(
-    text: str,
-    query: str,
-    max_length: NonNegativeInt = DEFAULT_SNIPPET_MAX_LENGTH,
-    max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
-) -> list[str]:
-    if not text or not query:
-        logger.warning("Empty text or query for generate_snippets")
-        return []
+    @staticmethod
+    def from_summary(
+        summary: str,
+        query: str,
+        max_snippets: NonNegativeInt = LONG_SUMMARY_MAX_SNIPPETS,
+    ) -> list[str]:
+        """Generate snippets from summary text."""
+        return SnippetGenerator.generate(summary, query, max_snippets=max_snippets)
 
-    candidates = (
-        create_snippet(text, pos, max_length) for pos in find_all_matches(text, query)
-    )
-    filtered = filter_non_overlapping_snippets(candidates)
-    snippets = list(itertools.islice(filtered, max_snippets))
+    @staticmethod
+    def combine_sources(
+        summary: str | None,
+        webvtt: WebVTTContent | None,
+        query: str,
+        max_total: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
+    ) -> tuple[list[str], NonNegativeInt]:
+        """Combine snippets from multiple sources and return total match count.
 
-    # Fallback to first word search if no full matches
-    # it's another assumption: proper snippet logic generation is quite complicated and tied to db logic, so simplification is used here
-    if not snippets and " " in query:
-        first_word = query.split()[0]
-        return generate_snippets(text, first_word, max_length, max_snippets)
+        Returns (snippets, total_match_count) tuple.
 
-    return snippets
+        snippets can be empty for real in case of e.g. title match
+        """
+        webvtt_matches = 0
+        summary_matches = 0
+
+        if webvtt:
+            webvtt_text = WebVTTProcessor.extract_text(webvtt)
+            webvtt_matches = SnippetGenerator.count_matches(webvtt_text, query)
+
+        if summary:
+            summary_matches = SnippetGenerator.count_matches(summary, query)
+
+        total_matches = NonNegativeInt(webvtt_matches + summary_matches)
+
+        summary_snippets = (
+            SnippetGenerator.from_summary(summary, query) if summary else []
+        )
+
+        if len(summary_snippets) >= max_total:
+            return summary_snippets[:max_total], total_matches
+
+        remaining = max_total - len(summary_snippets)
+        webvtt_snippets = (
+            WebVTTProcessor.generate_snippets(webvtt, query, remaining)
+            if webvtt
+            else []
+        )
+
+        return summary_snippets + webvtt_snippets, total_matches
 
 
 class SearchController:
@@ -263,72 +340,46 @@ class SearchController:
             )
             return [], 0
 
+        base_columns = [
+            transcripts.c.id,
+            transcripts.c.title,
+            transcripts.c.created_at,
+            transcripts.c.duration,
+            transcripts.c.status,
+            transcripts.c.user_id,
+            transcripts.c.room_id,
+            transcripts.c.source_kind,
+            transcripts.c.webvtt,
+            transcripts.c.long_summary,
+            sqlalchemy.case(
+                (
+                    transcripts.c.room_id.isnot(None) & rooms.c.id.is_(None),
+                    "Deleted Room",
+                ),
+                else_=rooms.c.name,
+            ).label("room_name"),
+        ]
+
         if params.query_text:
             search_query = sqlalchemy.func.websearch_to_tsquery(
                 "english", params.query_text
             )
-
-            base_query = (
-                sqlalchemy.select(
-                    [
-                        transcripts.c.id,
-                        transcripts.c.title,
-                        transcripts.c.created_at,
-                        transcripts.c.duration,
-                        transcripts.c.status,
-                        transcripts.c.user_id,
-                        transcripts.c.room_id,
-                        transcripts.c.source_kind,
-                        transcripts.c.webvtt,
-                        transcripts.c.long_summary,
-                        sqlalchemy.case(
-                            (
-                                transcripts.c.room_id.isnot(None)
-                                & rooms.c.id.is_(None),
-                                "Deleted Room",
-                            ),
-                            else_=rooms.c.name,
-                        ).label("room_name"),
-                        sqlalchemy.func.ts_rank(
-                            transcripts.c.search_vector_en,
-                            search_query,
-                            32,  # normalization flag: rank/(rank+1) for 0-1 range
-                        ).label("rank"),
-                    ]
-                )
-                .select_from(
-                    transcripts.join(
-                        rooms, transcripts.c.room_id == rooms.c.id, isouter=True
-                    )
-                )
-                .where(transcripts.c.search_vector_en.op("@@")(search_query))
-            )
+            rank_column = sqlalchemy.func.ts_rank(
+                transcripts.c.search_vector_en,
+                search_query,
+                32,  # normalization flag: rank/(rank+1) for 0-1 range
+            ).label("rank")
         else:
-            base_query = sqlalchemy.select(
-                [
-                    transcripts.c.id,
-                    transcripts.c.title,
-                    transcripts.c.created_at,
-                    transcripts.c.duration,
-                    transcripts.c.status,
-                    transcripts.c.user_id,
-                    transcripts.c.room_id,
-                    transcripts.c.source_kind,
-                    transcripts.c.webvtt,
-                    transcripts.c.long_summary,
-                    sqlalchemy.case(
-                        (
-                            transcripts.c.room_id.isnot(None) & rooms.c.id.is_(None),
-                            "Deleted Room",
-                        ),
-                        else_=rooms.c.name,
-                    ).label("room_name"),
-                    sqlalchemy.cast(1.0, sqlalchemy.Float).label("rank"),
-                ]
-            ).select_from(
-                transcripts.join(
-                    rooms, transcripts.c.room_id == rooms.c.id, isouter=True
-                )
+            rank_column = sqlalchemy.cast(1.0, sqlalchemy.Float).label("rank")
+
+        columns = base_columns + [rank_column]
+        base_query = sqlalchemy.select(columns).select_from(
+            transcripts.join(rooms, transcripts.c.room_id == rooms.c.id, isouter=True)
+        )
+
+        if params.query_text:
+            base_query = base_query.where(
+                transcripts.c.search_vector_en.op("@@")(search_query)
             )
 
         if params.user_id:
@@ -377,14 +428,14 @@ class SearchController:
             r_dict: Dict[str, Any] = dict(r)
             webvtt_raw: str | None = r_dict.pop("webvtt", None)
             if webvtt_raw:
-                webvtt = parse_webvtt(webvtt_raw)
+                webvtt = WebVTTProcessor.parse(webvtt_raw)
             else:
                 webvtt = None
             long_summary: str | None = r_dict.pop("long_summary", None)
             room_name: str | None = r_dict.pop("room_name", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
-            snippets, total_match_count = combine_snippet_sources(
+            snippets, total_match_count = SnippetGenerator.combine_sources(
                 long_summary, webvtt, params.query_text, DEFAULT_MAX_SNIPPETS
             )
 
@@ -409,59 +460,6 @@ class SearchController:
         return results, total
 
 
-def generate_webvtt_snippets(
-    webvtt_content: WebVTTContent,
-    query: str,
-    max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
-) -> list[str]:
-    """Generate snippets from WebVTT content."""
-    return generate_snippets(
-        extract_webvtt_text(webvtt_content), query, max_snippets=max_snippets
-    )
-
-
-def generate_summary_snippets(
-    summary: str, query: str, max_snippets: NonNegativeInt = LONG_SUMMARY_MAX_SNIPPETS
-) -> list[str]:
-    """Generate snippets from summary text."""
-    return generate_snippets(summary, query, max_snippets=max_snippets)
-
-
-def combine_snippet_sources(
-    summary: str | None,
-    webvtt: WebVTTContent | None,
-    query: str,
-    max_total: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
-) -> tuple[list[str], NonNegativeInt]:
-    """Combine snippets from multiple sources and return total match count.
-
-    Returns (snippets, total_match_count) tuple.
-
-    snippets can be empty for real in case of e.g. title match
-    """
-    webvtt_matches = 0
-    summary_matches = 0
-
-    if webvtt:
-        webvtt_text = extract_webvtt_text(webvtt)
-        webvtt_matches = count_matches(webvtt_text, query)
-
-    if summary:
-        summary_matches = count_matches(summary, query)
-
-    total_matches = NonNegativeInt(webvtt_matches + summary_matches)
-
-    summary_snippets = generate_summary_snippets(summary, query) if summary else []
-
-    if len(summary_snippets) >= max_total:
-        return summary_snippets[:max_total], total_matches
-
-    remaining = max_total - len(summary_snippets)
-    webvtt_snippets = (
-        generate_webvtt_snippets(webvtt, query, remaining) if webvtt else []
-    )
-
-    return summary_snippets + webvtt_snippets, total_matches
-
-
 search_controller = SearchController()
+webvtt_processor = WebVTTProcessor()
+snippet_generator = SnippetGenerator()

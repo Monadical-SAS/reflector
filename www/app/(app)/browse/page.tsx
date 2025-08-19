@@ -10,7 +10,6 @@ import {
   Stack,
   Input,
   Button,
-  IconButton,
 } from "@chakra-ui/react";
 import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
 import { LuX } from "react-icons/lu";
@@ -81,15 +80,8 @@ export default function TranscriptBrowser() {
     results,
     totalCount,
     isLoading,
-    isValidating,
-    error,
-    hasMore,
     page: internalPage,
-    query,
     setPage: setInternalPage,
-    setQuery,
-    setFilters,
-    clearSearch,
   } = useSearchTranscripts(
     urlQuery, // Use URL query, not input value
     {
@@ -97,7 +89,6 @@ export default function TranscriptBrowser() {
       sourceKind: selectedSourceKind,
     },
     {
-      debounceMs: 0, // No debounce for button search
       pageSize: 20,
     },
   );

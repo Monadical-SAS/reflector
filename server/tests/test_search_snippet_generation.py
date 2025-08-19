@@ -3,7 +3,7 @@ Test snippet generation behavior for multi-word queries.
 This test documents the current (simplistic) behavior as a safety net.
 """
 
-from reflector.db.search import SearchController
+from reflector.db.search import SnippetGenerator
 
 
 class TestSnippetGeneration:
@@ -24,18 +24,16 @@ class TestSnippetGeneration:
         The user jordan collaboration was successful.
         Another user named Bob joins the discussion."""
 
-        controller = SearchController()
-
         # Test 1: Single word "user" returns multiple snippets
-        user_snippets = controller._generate_snippets(sample_text, "user")
+        user_snippets = SnippetGenerator.generate(sample_text, "user")
         assert len(user_snippets) == 2, "Should find 2 snippets for 'user'"
 
         # Test 2: Single word "jordan" returns snippet(s)
-        jordan_snippets = controller._generate_snippets(sample_text, "jordan")
+        jordan_snippets = SnippetGenerator.generate(sample_text, "jordan")
         assert len(jordan_snippets) >= 1, "Should find at least 1 snippet for 'jordan'"
 
         # Test 3: Multi-word "user jordan" returns only 1 snippet (the exact phrase match)
-        multi_word_snippets = controller._generate_snippets(sample_text, "user jordan")
+        multi_word_snippets = SnippetGenerator.generate(sample_text, "user jordan")
         assert len(multi_word_snippets) == 1, (
             "Should return exactly 1 snippet for 'user jordan' "
             "(only the exact phrase match, not individual word occurrences)"
@@ -68,10 +66,8 @@ class TestSnippetGeneration:
         sample_text = """User Alice is here. Bob and jordan are talking.
         Later jordan mentions something. The user is happy."""
 
-        controller = SearchController()
-
         # Search for "user jordan" - no exact phrase match exists
-        snippets = controller._generate_snippets(sample_text, "user jordan")
+        snippets = SnippetGenerator.generate(sample_text, "user jordan")
 
         # Should fall back to first word "user"
         assert (
@@ -87,17 +83,15 @@ class TestSnippetGeneration:
     def test_exact_phrase_at_text_boundaries(self):
         """Test snippet generation when exact phrase appears at text boundaries."""
 
-        controller = SearchController()
-
         # Exact phrase at the beginning
         text_start = "user jordan started the meeting. Other content here."
-        snippets = controller._generate_snippets(text_start, "user jordan")
+        snippets = SnippetGenerator.generate(text_start, "user jordan")
         assert len(snippets) == 1
         assert "user jordan" in snippets[0].lower()
 
         # Exact phrase at the end
         text_end = "Other content here. The meeting ended with user jordan"
-        snippets = controller._generate_snippets(text_end, "user jordan")
+        snippets = SnippetGenerator.generate(text_end, "user jordan")
         assert len(snippets) == 1
         assert "user jordan" in snippets[0].lower()
 
@@ -107,8 +101,7 @@ class TestSnippetGeneration:
         # Text with many occurrences of "user"
         text_many = "user " * 20  # 20 occurrences
 
-        controller = SearchController()
-        snippets = controller._generate_snippets(text_many, "user", max_snippets=3)
+        snippets = SnippetGenerator.generate(text_many, "user", max_snippets=3)
 
         # Should return at most 3 snippets (DEFAULT_MAX_SNIPPETS)
         assert len(snippets) <= 3, "Should respect max_snippets limit"
@@ -130,11 +123,9 @@ class TestSnippetGeneration:
         The user jordan collaboration was successful.
         Another user named Bob joins the discussion."""
 
-        controller = SearchController()
-
         # Search for the two-word query
         search_query = "user jordan"
-        snippets = controller._generate_snippets(sample_text, search_query)
+        snippets = SnippetGenerator.generate(sample_text, search_query)
 
         # Verify only 1 snippet is returned (ignoring separate occurrences)
         assert len(snippets) == 1, (
@@ -166,7 +157,7 @@ class TestSnippetGeneration:
         Beta testing started yesterday.
         The alpha beta integration is complete."""
 
-        snippets_2 = controller._generate_snippets(text_2, "alpha beta")
+        snippets_2 = SnippetGenerator.generate(text_2, "alpha beta")
         assert len(snippets_2) == 1, "Should return 1 snippet for exact phrase match"
         assert "alpha beta" in snippets_2[0].lower(), "Should contain exact phrase"
         assert (
