@@ -24,10 +24,13 @@ import { notFound } from "next/navigation";
 import { useRecordingConsent } from "../recordingConsentContext";
 import { useMeetingAudioConsent } from "../lib/apiHooks";
 import type { components } from "../reflector-api";
+import useApi from "../lib/useApi";
+import { FaBars, FaInfoCircle } from "react-icons/fa6";
+import MeetingInfo from "./MeetingInfo";
+import { useAuth } from "../lib/AuthProvider";
 
 type Meeting = components["schemas"]["Meeting"];
-import { FaBars } from "react-icons/fa6";
-import { useAuth } from "../lib/AuthProvider";
+type Room = components["schemas"]["Room"];
 
 export type RoomDetails = {
   params: {
@@ -263,6 +266,9 @@ export default function Room(details: RoomDetails) {
   const status = useAuth().status;
   const isAuthenticated = status === "authenticated";
   const isLoading = status === "loading" || meeting.loading;
+  const [showMeetingInfo, setShowMeetingInfo] = useState(false);
+  const [room, setRoom] = useState<Room | null>(null);
+  const api = useApi();
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
@@ -275,6 +281,15 @@ export default function Room(details: RoomDetails) {
   const handleLeave = useCallback(() => {
     router.push("/browse");
   }, [router]);
+
+  // Fetch room details
+  useEffect(() => {
+    if (!api || !roomName) return;
+
+    api.v1RoomsRetrieve({ roomName }).then(setRoom).catch(console.error);
+  }, [api, roomName]);
+
+  const isOwner = session?.user?.id === room?.user_id;
 
   useEffect(() => {
     if (
@@ -326,6 +341,25 @@ export default function Room(details: RoomDetails) {
               meetingId={meetingId}
               wherebyRef={wherebyRef}
             />
+          )}
+          {meeting?.response && (
+            <>
+              <Button
+                position="absolute"
+                top="56px"
+                right={showMeetingInfo ? "320px" : "8px"}
+                zIndex={1000}
+                colorPalette="blue"
+                size="sm"
+                onClick={() => setShowMeetingInfo(!showMeetingInfo)}
+                leftIcon={<Icon as={FaInfoCircle} />}
+              >
+                Meeting Info
+              </Button>
+              {showMeetingInfo && (
+                <MeetingInfo meeting={meeting.response} isOwner={isOwner} />
+              )}
+            </>
           )}
         </>
       )}
