@@ -375,3 +375,65 @@ async def rooms_list_upcoming_meetings(
             event.attendees = None
 
     return events
+
+
+@router.get("/rooms/{room_name}/meetings/active", response_model=list[Meeting])
+async def rooms_list_active_meetings(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """List all active meetings for a room (supports multiple active meetings)"""
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    current_time = datetime.now(timezone.utc)
+    meetings = await meetings_controller.get_all_active_for_room(
+        room=room, current_time=current_time
+    )
+
+    # Hide host URLs from non-owners
+    if user_id != room.user_id:
+        for meeting in meetings:
+            meeting.host_room_url = ""
+
+    return meetings
+
+
+@router.post("/rooms/{room_name}/meetings/{meeting_id}/join", response_model=Meeting)
+async def rooms_join_meeting(
+    room_name: str,
+    meeting_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """Join a specific meeting by ID"""
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    meeting = await meetings_controller.get_by_id(meeting_id)
+
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    if meeting.room_id != room.id:
+        raise HTTPException(
+            status_code=403, detail="Meeting does not belong to this room"
+        )
+
+    if not meeting.is_active:
+        raise HTTPException(status_code=400, detail="Meeting is not active")
+
+    current_time = datetime.now(timezone.utc)
+    if meeting.end_date <= current_time:
+        raise HTTPException(status_code=400, detail="Meeting has ended")
+
+    # Hide host URL from non-owners
+    if user_id != room.user_id:
+        meeting.host_room_url = ""
+
+    return meeting

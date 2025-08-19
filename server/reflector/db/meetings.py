@@ -48,6 +48,8 @@ meetings = sa.Table(
         sa.ForeignKey("calendar_event.id", ondelete="SET NULL"),
     ),
     sa.Column("calendar_metadata", JSONB),
+    sa.Column("last_participant_left_at", sa.DateTime(timezone=True)),
+    sa.Column("grace_period_minutes", sa.Integer, server_default=sa.text("15")),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -90,6 +92,8 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    last_participant_left_at: datetime | None = None
+    grace_period_minutes: int = 15
 
 
 class MeetingController:
@@ -153,6 +157,7 @@ class MeetingController:
     async def get_active(self, room: Room, current_time: datetime) -> Meeting:
         """
         Get latest active meeting for a room.
+        For backward compatibility, returns the most recent active meeting.
         """
         end_date = getattr(meetings.c, "end_date")
         query = (
@@ -170,6 +175,47 @@ class MeetingController:
         if not result:
             return None
 
+        return Meeting(**result)
+
+    async def get_all_active_for_room(
+        self, room: Room, current_time: datetime
+    ) -> list[Meeting]:
+        """
+        Get all active meetings for a room.
+        This supports multiple concurrent meetings per room.
+        """
+        end_date = getattr(meetings.c, "end_date")
+        query = (
+            meetings.select()
+            .where(
+                sa.and_(
+                    meetings.c.room_id == room.id,
+                    meetings.c.end_date > current_time,
+                    meetings.c.is_active,
+                )
+            )
+            .order_by(end_date.desc())
+        )
+        results = await get_database().fetch_all(query)
+        return [Meeting(**result) for result in results]
+
+    async def get_active_by_calendar_event(
+        self, room: Room, calendar_event_id: str, current_time: datetime
+    ) -> Meeting | None:
+        """
+        Get active meeting for a specific calendar event.
+        """
+        query = meetings.select().where(
+            sa.and_(
+                meetings.c.room_id == room.id,
+                meetings.c.calendar_event_id == calendar_event_id,
+                meetings.c.end_date > current_time,
+                meetings.c.is_active,
+            )
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
         return Meeting(**result)
 
     async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
