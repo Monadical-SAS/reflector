@@ -26,7 +26,6 @@ interface UseSearchTranscriptsReturn {
   setPage: (page: number) => void;
 }
 
-// Create a stable key from filters for useEffect dependencies
 function hashEffectFilters(filters: SearchFilters): string {
   return JSON.stringify(filters);
 }
@@ -41,7 +40,6 @@ export function useSearchTranscripts(
   const api = useApi();
   const abortControllerRef = useRef<AbortController>();
 
-  // Page state - the only state we actually manage internally
   const [page, setPage] = useState(0);
 
   const [data, setData] = useState<{ results: SearchResult[]; total: number }>({
@@ -51,7 +49,6 @@ export function useSearchTranscripts(
   const [error, setError] = useState<any>();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Reset page when query or filters change
   const filterHash = hashEffectFilters(filters);
   useEffect(() => {
     setPage(0);
