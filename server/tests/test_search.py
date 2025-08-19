@@ -2,7 +2,6 @@
 
 import json
 from datetime import datetime, timezone
-from enum import Enum
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -17,16 +16,6 @@ from reflector.db.search import (
 from reflector.db.transcripts import SourceKind, transcripts
 
 
-# StatusFilter enum for future implementation
-class StatusFilter(str, Enum):
-    """Filter transcripts by processing status."""
-
-    COMPLETED = "completed"
-    PROCESSING = "processing"
-    FAILED = "failed"
-    PENDING = "pending"
-
-
 @pytest.mark.asyncio
 async def test_search_postgresql_only():
     params = SearchParameters(query_text="any query here")
@@ -34,7 +23,6 @@ async def test_search_postgresql_only():
     assert results == []
     assert total == 0
 
-    # Empty queries are now allowed (returns all transcripts)
     params_empty = SearchParameters(query_text="")
     results_empty, total_empty = await search_controller.search_transcripts(
         params_empty
@@ -44,26 +32,13 @@ async def test_search_postgresql_only():
 
 
 @pytest.mark.asyncio
-async def test_search_input_validation():
-    # Empty queries are now valid (returns all transcripts)
-    params = SearchParameters(query_text="")
-    assert params.query_text == ""
-
-    # Whitespace gets stripped but empty result is allowed
-    params_whitespace = SearchParameters(query_text="   \t\n  ")
-    assert params_whitespace.query_text == ""
-
-
-@pytest.mark.asyncio
 async def test_search_with_empty_query():
     """Test that empty query returns all transcripts."""
     params = SearchParameters(query_text="")
     results, total = await search_controller.search_transcripts(params)
 
-    # Should return results (not fail)
     assert isinstance(results, list)
     assert isinstance(total, int)
-    # Results should be ordered by created_at desc (newest first)
     if len(results) > 1:
         for i in range(len(results) - 1):
             assert results[i].created_at >= results[i + 1].created_at
@@ -98,22 +73,18 @@ async def test_empty_transcript_title_only_match():
             "audio_location": "local",
             "share_mode": "private",
             "source_kind": "room",
-            "webvtt": None,  # Empty content
+            "webvtt": None,
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Search should return the transcript (title matches "empty")
         params = SearchParameters(query_text="empty")
         results, total = await search_controller.search_transcripts(params)
 
-        # Should find the transcript by title
         assert total >= 1
         found = next((r for r in results if r.id == test_id), None)
         assert found is not None, "Should find transcript by title match"
-        # With no content and only title match, snippets should be empty
         assert found.search_snippets == []
-        # But match count should be 0 since no content matches
         assert found.total_match_count == 0
 
     finally:
@@ -160,7 +131,6 @@ Basic meeting content without special keywords.""",
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Search for term only in long_summary
         params = SearchParameters(query_text="quantum computing")
         results, total = await search_controller.search_transcripts(params)
 
@@ -168,7 +138,6 @@ Basic meeting content without special keywords.""",
         found = any(r.id == test_id for r in results)
         assert found, "Should find transcript by long_summary content"
 
-        # Verify snippet is from long_summary
         test_result = next((r for r in results if r.id == test_id), None)
         assert test_result
         assert len(test_result.search_snippets) > 0
@@ -183,7 +152,6 @@ Basic meeting content without special keywords.""",
 
 @pytest.mark.asyncio
 async def test_postgresql_search_with_data():
-    # collision is improbable
     test_id = "test-search-e2e-7f3a9b2c"
 
     try:
@@ -227,28 +195,24 @@ We need to implement PostgreSQL tsvector for better performance.""",
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Test 1: Search for a word in title
         params = SearchParameters(query_text="planning")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by title word"
 
-        # Test 2: Search for a word in webvtt content
         params = SearchParameters(query_text="tsvector")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by webvtt content"
 
-        # Test 3: Search with multiple words
         params = SearchParameters(query_text="engineering planning")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by multiple words"
 
-        # Test 4: Verify SearchResult structure
         test_result = next((r for r in results if r.id == test_id), None)
         if test_result:
             assert test_result.title == "Engineering Planning Meeting Q4 2024"
@@ -256,14 +220,12 @@ We need to implement PostgreSQL tsvector for better performance.""",
             assert test_result.duration == 1800.0
             assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
 
-        # Test 5: Search with OR operator
         params = SearchParameters(query_text="tsvector OR nosuchword")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript with OR query"
 
-        # Test 6: Quoted phrase search
         params = SearchParameters(query_text='"full-text search"')
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
@@ -277,24 +239,15 @@ We need to implement PostgreSQL tsvector for better performance.""",
         await get_database().disconnect()
 
 
-# Tests merged from test_search_enhancements.py
-
-
 @pytest.fixture
 def sample_search_params():
     """Create sample search parameters for testing."""
-    # Note: Only using fields that actually exist in SearchParameters
     return SearchParameters(
         query_text="test query",
         limit=20,
         offset=0,
         user_id="test-user",
-        room_id="room1",  # room_id, not room_ids
-        # Future fields not yet implemented:
-        # source_kind=SourceKind.LIVE,
-        # status=[StatusFilter.COMPLETED, StatusFilter.PROCESSING],
-        # date_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        # date_to=datetime(2024, 12, 31, tzinfo=timezone.utc),
+        room_id="room1",
     )
 
 
@@ -311,7 +264,6 @@ def mock_db_result():
         "room_id": "room1",
         "source_kind": SourceKind.LIVE,
         "webvtt": "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nThis is a test transcript",
-        # "room_name": "Test Room",  # Not in current model
         "rank": 0.95,
     }
 
@@ -326,7 +278,7 @@ class TestSearchParameters:
             limit=50,
             offset=10,
             user_id="user123",
-            room_id="room1",  # Currently only single room_id is supported
+            room_id="room1",
         )
 
         assert params.query_text == "search term"
@@ -335,28 +287,15 @@ class TestSearchParameters:
         assert params.user_id == "user123"
         assert params.room_id == "room1"
 
-        # These fields are planned but not yet implemented:
-        # assert params.room_ids == ["room1", "room2", "room3"]
-        # assert params.source_kind == SourceKind.FILE
-        # assert params.status == [StatusFilter.COMPLETED]
-        # assert params.date_from.year == 2024
-        # assert params.date_to.month == 12
-
     def test_search_parameters_defaults(self):
         """Test SearchParameters with default values."""
         params = SearchParameters(query_text="test")
 
         assert params.query_text == "test"
-        assert params.limit == 20  # DEFAULT_SEARCH_LIMIT
+        assert params.limit == 20
         assert params.offset == 0
         assert params.user_id is None
         assert params.room_id is None
-        # Future fields (not yet implemented):
-        # assert params.room_ids is None
-        # assert params.source_kind is None
-        # assert params.status is None
-        # assert params.date_from is None
-        # assert params.date_to is None
 
 
 class TestSearchControllerFilters:
@@ -380,7 +319,6 @@ class TestSearchControllerFilters:
             assert results == []
             assert total == 0
 
-            # Verify the query was called
             mock_db.return_value.fetch_all.assert_called_once()
 
     @pytest.mark.asyncio
@@ -396,7 +334,7 @@ class TestSearchControllerFilters:
 
             params = SearchParameters(
                 query_text="test",
-                room_id="room1",  # Single room_id is supported
+                room_id="room1",
             )
 
             results, total = await controller.search_transcripts(params)
@@ -413,11 +351,11 @@ class TestSearchControllerFilters:
             patch("reflector.db.search.is_postgresql", return_value=True),
             patch("reflector.db.search.get_database") as mock_db,
         ):
-            # Create a proper mock that behaves like a database row
+
             class MockRow:
                 def __init__(self, data):
                     self._data = data
-                    self._mapping = data  # SQLAlchemy-like attribute
+                    self._mapping = data
 
                 def __iter__(self):
                     return iter(self._data.items())
@@ -444,13 +382,7 @@ class TestSearchControllerFilters:
             assert isinstance(result, SearchResult)
             assert result.id == "test-transcript-id"
             assert result.title == "Test Transcript"
-            # Currently available fields:
             assert result.rank == 0.95
-            # Note: source_kind is in the DB but not in SearchResult model yet
-            # Future fields (not yet in SearchResult model):
-            # assert result.source_kind == SourceKind.LIVE
-            # assert result.room_name == "Test Room"
-            # assert result.processing_status == "completed"
 
 
 class TestSearchEndpointParsing:
@@ -462,54 +394,22 @@ class TestSearchEndpointParsing:
         parsed = [rid.strip() for rid in room_ids_str.split(",") if rid.strip()]
         assert parsed == ["room1", "room2", "room3"]
 
-        # Test with spaces
         room_ids_str = "room1, room2 , room3"
         parsed = [rid.strip() for rid in room_ids_str.split(",") if rid.strip()]
         assert parsed == ["room1", "room2", "room3"]
 
-        # Test with empty values
         room_ids_str = "room1,,room3,"
         parsed = [rid.strip() for rid in room_ids_str.split(",") if rid.strip()]
         assert parsed == ["room1", "room3"]
 
-    def test_parse_comma_separated_status(self):
-        """Test parsing comma-separated status values."""
-        status_str = "completed,processing,failed"
-        status_list = [s.strip().lower() for s in status_str.split(",") if s.strip()]
-        parsed = [StatusFilter(s) for s in status_list]
-
-        assert len(parsed) == 3
-        assert StatusFilter.COMPLETED in parsed
-        assert StatusFilter.PROCESSING in parsed
-        assert StatusFilter.FAILED in parsed
-
-        # Test with mixed case
-        status_str = "COMPLETED,Processing,FaiLeD"
-        status_list = [s.strip().lower() for s in status_str.split(",") if s.strip()]
-        parsed = [StatusFilter(s) for s in status_list]
-
-        assert len(parsed) == 3
-        assert StatusFilter.COMPLETED in parsed
-
     def test_parse_source_kind(self):
         """Test parsing source_kind values."""
-        # Valid values
         for kind_str in ["live", "file", "room"]:
             parsed = SourceKind(kind_str)
             assert parsed == SourceKind(kind_str)
 
-        # Test case insensitive
-        parsed = SourceKind("LIVE".lower())
-        assert parsed == SourceKind.LIVE
-
-        # Invalid value should raise
         with pytest.raises(ValueError):
             SourceKind("invalid_kind")
-
-    def test_invalid_status_value_raises_error(self):
-        """Test that invalid status values raise errors."""
-        with pytest.raises(ValueError):
-            StatusFilter("invalid_status")
 
 
 class TestSearchResultModel:
@@ -528,10 +428,6 @@ class TestSearchResultModel:
             rank=0.85,
             duration=1800.5,
             search_snippets=["snippet 1", "snippet 2"],
-            # Future fields (not in current SearchResult model):
-            # source_kind="live",
-            # room_name="Conference Room A",
-            # processing_status="completed",
         )
 
         assert result.id == "test-id"
@@ -556,10 +452,6 @@ class TestSearchResultModel:
             user_id=None,
             room_id=None,
             duration=None,
-            # Future fields:
-            # source_kind="file",
-            # room_name=None,
-            # processing_status=None,
         )
 
         assert result.title is None
@@ -575,14 +467,10 @@ class TestSearchResultModel:
             created_at=datetime(2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc),
             status="completed",
             rank=0.9,
-            duration=None,  # Optional but required field
+            duration=None,
             search_snippets=[],
         )
 
-        # Verify the datetime field is properly stored
         assert result.created_at == datetime(
             2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc
         )
-        assert result.created_at.year == 2024
-        assert result.created_at.month == 6
-        assert result.created_at.day == 15

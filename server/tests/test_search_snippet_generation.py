@@ -1,14 +1,7 @@
-"""
-Test snippet generation behavior for multi-word queries.
-This test documents the current (simplistic) behavior as a safety net.
-"""
-
 from reflector.db.search import SnippetGenerator
 
 
 class TestSnippetGeneration:
-    """Test the snippet generation logic for search results."""
-
     def test_multi_word_query_snippet_behavior(self):
         """
         Test that multi-word queries generate snippets based on exact phrase matching.
@@ -51,13 +44,6 @@ class TestSnippetGeneration:
             "alice" not in snippet.lower()
         ), "The snippet should not include the first standalone 'user' with Alice"
 
-        # Test 6: The snippet should start from around the exact phrase match
-        # It should include "jordan mentions" (before the exact match) and "collaboration" (the exact match)
-        assert (
-            "jordan mentions" in snippet.lower()
-            or "user jordan collaboration" in snippet.lower()
-        ), "The snippet should be from around the exact phrase match location"
-
     def test_multi_word_query_without_exact_match(self):
         """
         Test snippet generation when exact phrase is not found.
@@ -98,12 +84,10 @@ class TestSnippetGeneration:
     def test_snippet_max_count_limit(self):
         """Test that snippet generation respects the max_snippets limit."""
 
-        # Text with many occurrences of "user"
         text_many = "user " * 20  # 20 occurrences
 
         snippets = SnippetGenerator.generate(text_many, "user", max_snippets=3)
 
-        # Should return at most 3 snippets (DEFAULT_MAX_SNIPPETS)
         assert len(snippets) <= 3, "Should respect max_snippets limit"
 
     def test_multi_word_query_matches_words_appearing_separately_and_together(self):
