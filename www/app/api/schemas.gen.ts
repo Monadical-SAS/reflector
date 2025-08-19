@@ -30,6 +30,108 @@ export const $Body_transcript_record_upload_v1_transcripts__transcript_id__recor
       "Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post",
   } as const;
 
+export const $CalendarEventResponse = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    room_id: {
+      type: "string",
+      title: "Room Id",
+    },
+    ics_uid: {
+      type: "string",
+      title: "Ics Uid",
+    },
+    title: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Title",
+    },
+    description: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Description",
+    },
+    start_time: {
+      type: "string",
+      format: "date-time",
+      title: "Start Time",
+    },
+    end_time: {
+      type: "string",
+      format: "date-time",
+      title: "End Time",
+    },
+    attendees: {
+      anyOf: [
+        {
+          items: {
+            additionalProperties: true,
+            type: "object",
+          },
+          type: "array",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Attendees",
+    },
+    location: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Location",
+    },
+    last_synced: {
+      type: "string",
+      format: "date-time",
+      title: "Last Synced",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    updated_at: {
+      type: "string",
+      format: "date-time",
+      title: "Updated At",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "room_id",
+    "ics_uid",
+    "start_time",
+    "end_time",
+    "last_synced",
+    "created_at",
+    "updated_at",
+  ],
+  title: "CalendarEventResponse",
+} as const;
+
 export const $CreateParticipant = {
   properties: {
     speaker: {
@@ -90,6 +192,27 @@ export const $CreateRoom = {
     is_shared: {
       type: "boolean",
       title: "Is Shared",
+    },
+    ics_url: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Url",
+    },
+    ics_fetch_interval: {
+      type: "integer",
+      title: "Ics Fetch Interval",
+      default: 300,
+    },
+    ics_enabled: {
+      type: "boolean",
+      title: "Ics Enabled",
+      default: false,
     },
   },
   type: "object",
@@ -687,6 +810,112 @@ export const $HTTPValidationError = {
   title: "HTTPValidationError",
 } as const;
 
+export const $ICSStatus = {
+  properties: {
+    status: {
+      type: "string",
+      title: "Status",
+    },
+    last_sync: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date-time",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Last Sync",
+    },
+    next_sync: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date-time",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Next Sync",
+    },
+    last_etag: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Last Etag",
+    },
+    events_count: {
+      type: "integer",
+      title: "Events Count",
+      default: 0,
+    },
+  },
+  type: "object",
+  required: ["status"],
+  title: "ICSStatus",
+} as const;
+
+export const $ICSSyncResult = {
+  properties: {
+    status: {
+      type: "string",
+      title: "Status",
+    },
+    hash: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Hash",
+    },
+    events_found: {
+      type: "integer",
+      title: "Events Found",
+      default: 0,
+    },
+    events_created: {
+      type: "integer",
+      title: "Events Created",
+      default: 0,
+    },
+    events_updated: {
+      type: "integer",
+      title: "Events Updated",
+      default: 0,
+    },
+    events_deleted: {
+      type: "integer",
+      title: "Events Deleted",
+      default: 0,
+    },
+    error: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Error",
+    },
+  },
+  type: "object",
+  required: ["status"],
+  title: "ICSSyncResult",
+} as const;
+
 export const $Meeting = {
   properties: {
     id: {
@@ -949,6 +1178,50 @@ export const $Room = {
     is_shared: {
       type: "boolean",
       title: "Is Shared",
+    },
+    ics_url: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Url",
+    },
+    ics_fetch_interval: {
+      type: "integer",
+      title: "Ics Fetch Interval",
+      default: 300,
+    },
+    ics_enabled: {
+      type: "boolean",
+      title: "Ics Enabled",
+      default: false,
+    },
+    ics_last_sync: {
+      anyOf: [
+        {
+          type: "string",
+          format: "date-time",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Last Sync",
+    },
+    ics_last_etag: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Last Etag",
     },
   },
   type: "object",
@@ -1294,54 +1567,139 @@ export const $UpdateParticipant = {
 export const $UpdateRoom = {
   properties: {
     name: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Name",
     },
     zulip_auto_post: {
-      type: "boolean",
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Zulip Auto Post",
     },
     zulip_stream: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Zulip Stream",
     },
     zulip_topic: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Zulip Topic",
     },
     is_locked: {
-      type: "boolean",
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Is Locked",
     },
     room_mode: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Room Mode",
     },
     recording_type: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Recording Type",
     },
     recording_trigger: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Recording Trigger",
     },
     is_shared: {
-      type: "boolean",
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Is Shared",
+    },
+    ics_url: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Url",
+    },
+    ics_fetch_interval: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Fetch Interval",
+    },
+    ics_enabled: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Ics Enabled",
     },
   },
   type: "object",
-  required: [
-    "name",
-    "zulip_auto_post",
-    "zulip_stream",
-    "zulip_topic",
-    "is_locked",
-    "room_mode",
-    "recording_type",
-    "recording_trigger",
-    "is_shared",
-  ],
   title: "UpdateRoom",
 } as const;
 
