@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, useReducer } from "react";
-import useSWR from "swr";
 import {
   SearchResult,
   SourceKind,
@@ -81,15 +80,6 @@ const searchReducer = (
   }
 };
 
-const createCacheKey = (
-  query: string,
-  page: number,
-  filters: SearchFilters,
-): string => {
-  const filterKey = encodeURIComponent(JSON.stringify(filters));
-  return `search:${query}:${page}:${filterKey}`;
-};
-
 const parseSearchResponse = (response: V1TranscriptsSearchResponse | null) => ({
   results: response?.results || [],
   total: response?.total || 0,
@@ -113,6 +103,7 @@ export function useSearchTranscripts(
 
   const api = useApi();
   const debounceTimerRef = useRef<NodeJS.Timeout>();
+  const abortControllerRef = useRef<AbortController>();
 
   // Use reducer for immutable state management
   const [state, dispatch] = useReducer(searchReducer, {
@@ -122,7 +113,16 @@ export function useSearchTranscripts(
     page: 0,
   });
 
-  // Debounce query changes - pure effect
+  // Search results state
+  const [data, setData] = useState<{ results: SearchResult[]; total: number }>({
+    results: [],
+    total: 0,
+  });
+  const [error, setError] = useState<any>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+
+  // Debounce query changes
   useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -145,51 +145,81 @@ export function useSearchTranscripts(
     };
   }, [state.query, debounceMs]);
 
-  // Pure fetcher function
-  const fetcher = useCallback(
-    async (key: string) => {
-      if (!api) return parseSearchResponse(null);
+  // Perform search when debounced query, page, or filters change
+  useEffect(() => {
+    if (!api) {
+      setData({ results: [], total: 0 });
+      setError(undefined);
+      setIsLoading(false);
+      setIsValidating(false);
+      return;
+    }
 
-      const [_, searchQuery, pageNum, filterKey] = key.split(":");
-      const parsedFilters: SearchFilters = JSON.parse(
-        decodeURIComponent(filterKey || "%7B%7D"),
-      );
+    // Cancel any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
-      // Validate filters before sending
-      if (
-        parsedFilters.startDate &&
-        !validateISODate(parsedFilters.startDate)
-      ) {
-        console.warn(`Invalid start date format: ${parsedFilters.startDate}`);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    const performSearch = async () => {
+      setIsLoading(true);
+      setIsValidating(true);
+
+      try {
+        // Validate filters before sending
+        if (
+          state.filters.startDate &&
+          !validateISODate(state.filters.startDate)
+        ) {
+          console.warn(`Invalid start date format: ${state.filters.startDate}`);
+        }
+        if (state.filters.endDate && !validateISODate(state.filters.endDate)) {
+          console.warn(`Invalid end date format: ${state.filters.endDate}`);
+        }
+
+        const response = await api.v1TranscriptsSearch({
+          q: state.debouncedQuery || "",
+          limit: pageSize,
+          offset: state.page * pageSize,
+          roomId: state.filters.roomIds?.[0],
+          sourceKind: state.filters.sourceKind || undefined,
+        });
+
+        // Check if request was aborted
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        const parsedData = parseSearchResponse(response);
+        setData(parsedData);
+        setError(undefined);
+      } catch (err: any) {
+        // Check if request was aborted
+        if (abortController.signal.aborted || err.name === "AbortError") {
+          return;
+        }
+
+        setError(err);
+        // Clear data on error
+        setData({ results: [], total: 0 });
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+          setIsValidating(false);
+        }
       }
-      if (parsedFilters.endDate && !validateISODate(parsedFilters.endDate)) {
-        console.warn(`Invalid end date format: ${parsedFilters.endDate}`);
-      }
+    };
 
-      const response = await api.v1TranscriptsSearch({
-        q: searchQuery || "",
-        limit: pageSize,
-        offset: parseInt(pageNum) * pageSize,
-        roomId: parsedFilters.roomIds?.[0],
-        sourceKind: parsedFilters.sourceKind || undefined,
-      });
+    performSearch();
 
-      return parseSearchResponse(response);
-    },
-    [api, pageSize],
-  );
+    return () => {
+      abortController.abort();
+    };
+  }, [api, state.debouncedQuery, state.page, state.filters, pageSize]);
 
-  // Use SWR for data fetching with pure key generation
-  const swrKey = api
-    ? createCacheKey(state.debouncedQuery, state.page, state.filters)
-    : null;
-
-  const { data, error, isLoading, isValidating } = useSWR(swrKey, fetcher, {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-  });
-
-  // Action dispatchers - pure functions
+  // Action dispatchers
   const setQuery = useCallback((newQuery: string) => {
     dispatch({ type: "SET_QUERY", payload: newQuery });
   }, []);
@@ -210,14 +240,12 @@ export function useSearchTranscripts(
     dispatch({ type: "CLEAR_SEARCH" });
   }, []);
 
-  // Computed values using pure functions
-  const results = data?.results || [];
-  const totalCount = data?.total || 0;
-  const hasMore = (state.page + 1) * pageSize < totalCount;
+  // Computed values
+  const hasMore = (state.page + 1) * pageSize < data.total;
 
   return {
-    results,
-    totalCount,
+    results: data.results,
+    totalCount: data.total,
     isLoading,
     isValidating,
     error,
