@@ -16,9 +16,8 @@ import { formatTimeMs, formatLocalDate } from "../../../lib/time";
 import TranscriptStatusIcon from "./TranscriptStatusIcon";
 import TranscriptActionsMenu from "./TranscriptActionsMenu";
 import {
-  highlightText as highlightTextUtil,
+  highlightMatches,
   generateTextFragment,
-  renderHighlightedText,
 } from "../../../lib/textHighlight";
 
 interface TranscriptCardsProps {
@@ -43,22 +42,52 @@ function processSnippets(snippets: string[]): ProcessedSnippet[] {
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query) return text;
 
-  const highlighted = highlightTextUtil(text, query);
+  const matches = highlightMatches(text, query);
 
-  // Convert <mark> tags to React components with Chakra UI styling
-  const parts = highlighted.text.split(/(<mark>.*?<\/mark>)/g);
+  if (matches.length === 0) return text;
 
-  return parts.map((part, index) => {
-    if (part.startsWith("<mark>")) {
-      const content = part.replace(/<\/?mark>/g, "");
-      return (
-        <Text as="mark" key={index} bg="yellow.200" px={0.5} display="inline">
-          {content}
-        </Text>
+  // Sort matches by index to process them in order
+  const sortedMatches = [...matches].sort((a, b) => a.index - b.index);
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  sortedMatches.forEach((match, i) => {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(
+        <Text as="span" key={`text-${i}`} display="inline">
+          {text.slice(lastIndex, match.index)}
+        </Text>,
       );
     }
-    return part;
+
+    // Add the highlighted match
+    parts.push(
+      <Text
+        as="mark"
+        key={`match-${i}`}
+        bg="yellow.200"
+        px={0.5}
+        display="inline"
+      >
+        {match.match}
+      </Text>,
+    );
+
+    lastIndex = match.index + match.match.length;
   });
+
+  // Add remaining text after last match
+  if (lastIndex < text.length) {
+    parts.push(
+      <Text as="span" key={`text-end`} display="inline">
+        {text.slice(lastIndex)}
+      </Text>,
+    );
+  }
+
+  return parts;
 }
 
 function TranscriptCard({

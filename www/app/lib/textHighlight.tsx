@@ -17,38 +17,55 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * Highlights all occurrences of query words in text
- * For multi-word queries, highlights each word individually (not as a phrase)
- *
- * @param text - The text to highlight in
- * @param query - The search query (can be multiple words)
- * @returns Object with highlighted text and array of matched strings
- */
-export function highlightText(text: string, query: string): HighlightResult {
+export const highlightMatches = (
+  text: string,
+  query: string,
+): { match: string; index: number }[] => {
   if (!query || !text) {
-    return { text, matches: [] };
+    return [];
   }
 
-  const matches: string[] = [];
-  let highlightedText = text;
-
-  // Split query into individual words
   const queryWords = query.trim().split(/\s+/);
 
-  // Create a regex that matches any of the query words
-  const regexPattern = queryWords.map((word) => escapeRegex(word)).join("|");
+  const regex = new RegExp(
+    `(${queryWords.map((word) => escapeRegex(word)).join("|")})`,
+    "gi",
+  );
 
-  const regex = new RegExp(`(${regexPattern})`, "gi");
+  return Array.from(text.matchAll(regex)).map((result) => ({
+    match: result[0],
+    index: result.index!,
+  }));
+};
 
-  // Replace all matches with marked version and collect matches
-  highlightedText = text.replace(regex, (match) => {
-    matches.push(match);
-    return `<mark>${match}</mark>`;
-  });
+export const highlightText = (text: string, query: string): HighlightResult => {
+  const matches = highlightMatches(text, query);
 
-  return { text: highlightedText, matches };
-}
+  let highlightedText = text;
+  let offset = 0;
+
+  const sortedMatches = [...matches].sort((a, b) => a.index - b.index);
+
+  for (const match of sortedMatches) {
+    const startTag = "<mark>";
+    const endTag = "</mark>";
+    const adjustedIndex = match.index + offset;
+
+    highlightedText =
+      highlightedText.slice(0, adjustedIndex) +
+      startTag +
+      match.match +
+      endTag +
+      highlightedText.slice(adjustedIndex + match.match.length);
+
+    offset += startTag.length + endTag.length;
+  }
+
+  return {
+    text: highlightedText,
+    matches: matches.map((m) => m.match),
+  };
+};
 
 /**
  * Finds the first highlighted match in the text
@@ -155,33 +172,4 @@ export function generateTextFragment(text: string, query: string): string {
   const encoded = encodeURIComponent(firstMatch);
 
   return `#:~:text=${encoded}`;
-}
-
-/**
- * React component helper: Converts highlighted text with <mark> tags to React nodes
- * This is used to render the highlighted text in React components
- */
-export function renderHighlightedText(
-  highlightedText: string,
-): React.ReactNode {
-  if (!highlightedText.includes("<mark>")) {
-    return highlightedText;
-  }
-
-  const parts = highlightedText.split(/(<mark>.*?<\/mark>)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith("<mark>")) {
-      const content = part.replace(/<\/?mark>/g, "");
-      return (
-        <mark
-          key={index}
-          style={{ backgroundColor: "#fef3c7", padding: "0 2px" }}
-        >
-          {content}
-        </mark>
-      );
-    }
-    return part;
-  });
 }
