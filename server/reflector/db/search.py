@@ -1,6 +1,5 @@
 """Search functionality for transcripts and other entities."""
 
-import asyncio
 import itertools
 import logging
 from dataclasses import dataclass
@@ -20,7 +19,6 @@ from pydantic import (
     constr,
     field_serializer,
 )
-from sqlalchemy.exc import DatabaseError, OperationalError
 
 from reflector.db import get_database
 from reflector.db.rooms import rooms
@@ -398,31 +396,12 @@ class SearchController:
 
         query = base_query.order_by(order_by).limit(params.limit).offset(params.offset)
 
-        try:
-            # any more than 10 seconds for search seems unreasonable
-            rs = await asyncio.wait_for(get_database().fetch_all(query), timeout=10.0)
+        rs = await get_database().fetch_all(query)
 
-            count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
-                base_query.alias("search_results")
-            )
-            total = await asyncio.wait_for(
-                # any more than 5 seconds for count seems unreasonable
-                get_database().fetch_val(count_query),
-                timeout=5.0,
-            )
-        except asyncio.TimeoutError as e:
-            logger.error(f"Search query timeout for: {params.query_text}")
-            raise HTTPException(status_code=504, detail="Search query timed out") from e
-        except (DatabaseError, OperationalError) as e:
-            logger.error(f"Database error during search: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=503, detail="Database temporarily unavailable"
-            ) from e
-        except Exception as e:
-            logger.error(f"Unexpected search error: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=500, detail="Internal server error during search"
-            ) from e
+        count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
+            base_query.alias("search_results")
+        )
+        total = await get_database().fetch_val(count_query)
 
         def _process_result(r) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
