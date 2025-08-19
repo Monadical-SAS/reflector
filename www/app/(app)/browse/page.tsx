@@ -11,6 +11,7 @@ import {
   Input,
   Button,
 } from "@chakra-ui/react";
+import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
 import { useSearchTranscripts } from "../transcripts/useSearchTranscripts";
 import useSessionUser from "../../lib/useSessionUser";
 import { Room, SourceKind, SearchResult } from "../../api";
@@ -22,18 +23,58 @@ import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
 
+// Custom parser for SourceKind
+const parseAsSourceKind = parseAsString.withDefault("").withOptions({
+  shallow: false,
+});
+
+// Validate SourceKind value
+const validateSourceKind = (value: string): SourceKind | null => {
+  if (value === "room" || value === "live" || value === "file") {
+    return value as SourceKind;
+  }
+  return null;
+};
+
 export default function TranscriptBrowser() {
-  // State for filters
-  const [selectedSourceKind, setSelectedSourceKind] =
-    useState<SourceKind | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState("");
+  // URL state management with nuqs
+  // Query - only appears in URL after search is executed
+  const [urlQuery, setUrlQuery] = useQueryState(
+    "q",
+    parseAsString.withDefault("").withOptions({ shallow: false }),
+  );
+
+  // Filters - immediately synced to URL
+  const [urlSourceKind, setUrlSourceKind] = useQueryState(
+    "source",
+    parseAsSourceKind,
+  );
+  const [urlRoomId, setUrlRoomId] = useQueryState(
+    "room",
+    parseAsString.withDefault("").withOptions({ shallow: false }),
+  );
+
+  // Pagination - 1-based in URL, 0-based internally
+  const [urlPage, setUrlPage] = useQueryState(
+    "page",
+    parseAsInteger.withDefault(1).withOptions({ shallow: false }),
+  );
+
+  // Local state for input field (separate from URL query)
+  const [searchInputValue, setSearchInputValue] = useState("");
+
+  // Rooms list
   const [rooms, setRooms] = useState<Room[]>([]);
 
-  // Search input state
-  const [searchInputValue, setSearchInputValue] = useState("");
+  // Search timing
   const [searchStartTime, setSearchStartTime] = useState<number | undefined>();
 
-  // Use the new search hook
+  // Convert URL values to appropriate types
+  const selectedSourceKind = validateSourceKind(urlSourceKind);
+  const selectedRoomId = urlRoomId;
+  const page = Math.max(0, (urlPage || 1) - 1); // Convert 1-based URL to 0-based internal
+
+  // Use the search hook with URL state
   const {
     results,
     totalCount,
@@ -41,14 +82,14 @@ export default function TranscriptBrowser() {
     isValidating,
     error,
     hasMore,
-    page,
+    page: internalPage,
     query,
-    setPage,
+    setPage: setInternalPage,
     setQuery,
     setFilters,
     clearSearch,
   } = useSearchTranscripts(
-    "",
+    urlQuery, // Use URL query, not input value
     {
       roomIds: selectedRoomId ? [selectedRoomId] : undefined,
       sourceKind: selectedSourceKind,
@@ -80,6 +121,16 @@ export default function TranscriptBrowser() {
     }
   }, [isLoading]);
 
+  // Sync input value with URL query on mount and when URL query changes
+  useEffect(() => {
+    setSearchInputValue(urlQuery);
+  }, [urlQuery]);
+
+  // Sync internal page state with URL page
+  useEffect(() => {
+    setInternalPage(page);
+  }, [page, setInternalPage]);
+
   // Fetch rooms on mount
   useEffect(() => {
     if (!api) return;
@@ -89,30 +140,39 @@ export default function TranscriptBrowser() {
       .catch((err) => setError(err, "There was an error fetching the rooms"));
   }, [api, setError]);
 
-  // Handle filter changes
+  // Handle filter changes - update URL immediately
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,
     roomId: string,
   ) => {
-    setSelectedSourceKind(sourceKind);
-    setSelectedRoomId(roomId);
-    setFilters({
-      roomIds: roomId ? [roomId] : undefined,
-      sourceKind: sourceKind,
-    });
-    setPage(0);
-    // Clear search when filters change to show filtered results
-    if (searchInputValue) {
+    // Update URL state
+    setUrlSourceKind(sourceKind || "");
+    setUrlRoomId(roomId);
+    setUrlPage(1); // Reset to page 1
+
+    // If user has a search active, keep it
+    // Otherwise clear the input field to match
+    if (!urlQuery && searchInputValue) {
       setSearchInputValue("");
-      setQuery("");
+    }
+
+    setSearchStartTime(undefined);
+  };
+
+  // Handle search button click - update URL
+  const handleSearch = () => {
+    if (searchInputValue !== urlQuery) {
+      setUrlQuery(searchInputValue);
+      setUrlPage(1); // Reset to page 1
+      setSearchStartTime(undefined);
     }
   };
 
-  // Handle search button click
-  const handleSearch = () => {
-    setQuery(searchInputValue);
-    // Keep filters active during search
-    setPage(0);
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearchInputValue("");
+    setUrlQuery("");
+    setUrlPage(1);
     setSearchStartTime(undefined);
   };
 
@@ -121,6 +181,11 @@ export default function TranscriptBrowser() {
     if (event.key === "Enter") {
       handleSearch();
     }
+  };
+
+  // Handle page change - update URL
+  const handlePageChange = (newPage: number) => {
+    setUrlPage(newPage); // This is 1-based
   };
 
   // Delete transcript handlers
@@ -184,12 +249,12 @@ export default function TranscriptBrowser() {
       ? transcriptToDelete.room_name || transcriptToDelete.room_id
       : transcriptToDelete?.source_kind;
 
-  // Calculate pagination values (convert from offset-based to page-based)
+  // Calculate pagination values
   const pageSize = 20;
-  const currentPage = Math.floor((page * pageSize) / pageSize) + 1;
+  const currentPage = urlPage || 1; // 1-based for display
 
   // Initial loading state - show spinner only on first load without query
-  if (!query && isLoading && results.length === 0) {
+  if (!urlQuery && isLoading && results.length === 0) {
     return (
       <Flex
         flexDir="column"
@@ -249,10 +314,15 @@ export default function TranscriptBrowser() {
               <Button ml={2} onClick={handleSearch}>
                 Search
               </Button>
+              {urlQuery && (
+                <Button ml={2} variant="ghost" onClick={handleClearSearch}>
+                  Clear
+                </Button>
+              )}
             </Flex>
 
             {/* Show active filters */}
-            {(selectedSourceKind || selectedRoomId) && (
+            {(selectedSourceKind || selectedRoomId || urlQuery) && (
               <Flex gap={2} flexWrap="wrap" align="center">
                 <Text fontSize="sm" color="gray.600">
                   Active filters:
@@ -273,7 +343,7 @@ export default function TranscriptBrowser() {
                       : `Source: ${selectedSourceKind}`}
                   </Box>
                 )}
-                {query && (
+                {urlQuery && (
                   <Box
                     px={2}
                     py={1}
@@ -281,7 +351,7 @@ export default function TranscriptBrowser() {
                     borderRadius="md"
                     fontSize="xs"
                   >
-                    Search: "{query}"
+                    Search: "{urlQuery}"
                   </Box>
                 )}
               </Flex>
@@ -291,7 +361,7 @@ export default function TranscriptBrowser() {
           {/* Pagination at the top - matching old style */}
           <Pagination
             page={currentPage}
-            setPage={(newPage) => setPage(newPage - 1)}
+            setPage={handlePageChange}
             total={totalCount}
             size={pageSize}
           />
@@ -299,7 +369,7 @@ export default function TranscriptBrowser() {
           {/* Results Display - Always Cards */}
           <TranscriptCards
             results={results}
-            query={query}
+            query={urlQuery}
             isLoading={isLoading}
             onDelete={handleDeleteTranscript}
             onReprocess={handleProcessTranscript}
@@ -314,10 +384,10 @@ export default function TranscriptBrowser() {
               py={8}
             >
               <Text textAlign="center">
-                {query
-                  ? `No results found for "${query}". Try adjusting your search terms.`
+                {urlQuery
+                  ? `No results found for "${urlQuery}". Try adjusting your search terms.`
                   : "No transcripts found, but you can "}
-                {!query && (
+                {!urlQuery && (
                   <>
                     <Link href="/transcripts/new" color="blue.500">
                       record a meeting

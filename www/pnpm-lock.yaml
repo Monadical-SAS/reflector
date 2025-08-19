@@ -67,6 +67,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      nuqs:
+        specifier: ^2.4.3
+        version: 2.4.3(next@14.2.31(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.90.0))(react@18.3.1)
       postcss:
         specifier: 8.4.31
         version: 8.4.31
@@ -103,9 +106,6 @@ importers:
       simple-peer:
         specifier: ^9.11.1
         version: 9.11.1
-      swr:
-        specifier: ^2.3.6
-        version: 2.3.6(react@18.3.1)
       tailwindcss:
         specifier: ^3.3.2
         version: 3.4.17(ts-node@10.9.1(@types/node@16.18.11)(typescript@5.9.2))
@@ -5439,6 +5439,12 @@ packages:
       }
     engines: { node: ">= 8" }
 
+  mitt@3.0.1:
+    resolution:
+      {
+        integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==,
+      }
+
   mkdirp@0.5.6:
     resolution:
       {
@@ -5662,6 +5668,27 @@ packages:
         integrity: sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw==,
       }
     deprecated: This package is no longer supported.
+
+  nuqs@2.4.3:
+    resolution:
+      {
+        integrity: sha512-BgtlYpvRwLYiJuWzxt34q2bXu/AIS66sLU1QePIMr2LWkb+XH0vKXdbLSgn9t6p7QKzwI7f38rX3Wl9llTXQ8Q==,
+      }
+    peerDependencies:
+      "@remix-run/react": ">=2"
+      next: ">=14.2.0"
+      react: ">=18.2.0 || ^19.0.0-0"
+      react-router: ^6 || ^7
+      react-router-dom: ^6 || ^7
+    peerDependenciesMeta:
+      "@remix-run/react":
+        optional: true
+      next:
+        optional: true
+      react-router:
+        optional: true
+      react-router-dom:
+        optional: true
 
   nypm@0.5.4:
     resolution:
@@ -6977,14 +7004,6 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  swr@2.3.6:
-    resolution:
-      {
-        integrity: sha512-wfHRmHWk/isGNMwlLGlZX5Gzz/uTgo0o2IRuTMcf4CPuPFJZlq0rDaKUx+ozB5nBOReNV1kiOyzMfj+MBMikLw==,
-      }
-    peerDependencies:
-      react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   tailwindcss@3.4.17:
     resolution:
       {
@@ -7398,14 +7417,6 @@ packages:
     peerDependenciesMeta:
       "@types/react":
         optional: true
-
-  use-sync-external-store@1.5.0:
-    resolution:
-      {
-        integrity: sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==,
-      }
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   util-deprecate@1.0.2:
     resolution:
@@ -11572,6 +11583,8 @@ snapshots:
       minipass: 3.3.6
       yallist: 4.0.0
 
+  mitt@3.0.1: {}
+
   mkdirp@0.5.6:
     dependencies:
       minimist: 1.2.8
@@ -11692,6 +11705,13 @@ snapshots:
       console-control-strings: 1.1.0
       gauge: 3.0.2
       set-blocking: 2.0.0
+
+  nuqs@2.4.3(next@14.2.31(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.90.0))(react@18.3.1):
+    dependencies:
+      mitt: 3.0.1
+      react: 18.3.1
+    optionalDependencies:
+      next: 14.2.31(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.90.0)
 
   nypm@0.5.4:
     dependencies:
@@ -12498,12 +12518,6 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swr@2.3.6(react@18.3.1):
-    dependencies:
-      dequal: 2.0.3
-      react: 18.3.1
-      use-sync-external-store: 1.5.0(react@18.3.1)
-
   tailwindcss@3.4.17(ts-node@10.9.1(@types/node@16.18.11)(typescript@5.9.2)):
     dependencies:
       "@alloc/quick-lru": 5.2.0
@@ -12822,10 +12836,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       "@types/react": 18.2.20
-
-  use-sync-external-store@1.5.0(react@18.3.1):
-    dependencies:
-      react: 18.3.1
 
   util-deprecate@1.0.2: {}
 

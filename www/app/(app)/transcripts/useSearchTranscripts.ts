@@ -108,7 +108,7 @@ export function useSearchTranscripts(
   // Use reducer for immutable state management
   const [state, dispatch] = useReducer(searchReducer, {
     query: initialQuery,
-    debouncedQuery: "", // Start with empty to ensure initial effect triggers
+    debouncedQuery: initialQuery, // Start with initial query
     filters: initialFilters,
     page: 0,
   });
@@ -121,6 +121,16 @@ export function useSearchTranscripts(
   const [error, setError] = useState<any>();
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+
+  // Update internal state when props change
+  useEffect(() => {
+    dispatch({ type: "SET_QUERY", payload: initialQuery });
+    dispatch({ type: "SET_DEBOUNCED_QUERY", payload: initialQuery });
+  }, [initialQuery]);
+
+  useEffect(() => {
+    dispatch({ type: "SET_FILTERS", payload: initialFilters });
+  }, [JSON.stringify(initialFilters)]); // Use JSON.stringify for deep comparison
 
   // Debounce query changes
   useEffect(() => {

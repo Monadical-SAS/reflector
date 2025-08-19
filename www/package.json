@@ -31,6 +31,7 @@
     "next": "^14.2.30",
     "next-auth": "^4.24.7",
     "next-themes": "^0.4.6",
+    "nuqs": "^2.4.3",
     "postcss": "8.4.31",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
@@ -43,7 +44,6 @@
     "redlock": "^5.0.0-beta.2",
     "sass": "^1.63.6",
     "simple-peer": "^9.11.1",
-    "swr": "^2.3.6",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
     "wavesurfer.js": "^7.4.2"

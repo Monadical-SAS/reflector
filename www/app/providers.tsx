@@ -5,14 +5,17 @@ import system from "./styles/theme";
 
 import { WherebyProvider } from "@whereby.com/browser-sdk/react";
 import { Toaster } from "./components/ui/toaster";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ChakraProvider value={system}>
-      <WherebyProvider>
-        {children}
-        <Toaster />
-      </WherebyProvider>
-    </ChakraProvider>
+    <NuqsAdapter>
+      <ChakraProvider value={system}>
+        <WherebyProvider>
+          {children}
+          <Toaster />
+        </WherebyProvider>
+      </ChakraProvider>
+    </NuqsAdapter>
   );
 }
