@@ -10,8 +10,10 @@ import {
   Stack,
   Input,
   Button,
+  IconButton,
 } from "@chakra-ui/react";
 import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
+import { LuX } from "react-icons/lu";
 import { useSearchTranscripts } from "../transcripts/useSearchTranscripts";
 import useSessionUser from "../../lib/useSessionUser";
 import { Room, SourceKind, SearchResult } from "../../api";
@@ -328,31 +330,64 @@ export default function TranscriptBrowser() {
                   Active filters:
                 </Text>
                 {selectedSourceKind && (
-                  <Box
+                  <Flex
+                    align="center"
                     px={2}
                     py={1}
                     bg="blue.100"
                     borderRadius="md"
                     fontSize="xs"
+                    gap={1}
                   >
-                    {selectedSourceKind === "room" && selectedRoomId
-                      ? `Room: ${
-                          rooms.find((r) => r.id === selectedRoomId)?.name ||
-                          selectedRoomId
-                        }`
-                      : `Source: ${selectedSourceKind}`}
-                  </Box>
+                    <Text>
+                      {selectedSourceKind === "room" && selectedRoomId
+                        ? `Room: ${
+                            rooms.find((r) => r.id === selectedRoomId)?.name ||
+                            selectedRoomId
+                          }`
+                        : `Source: ${selectedSourceKind}`}
+                    </Text>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      minW="auto"
+                      h="auto"
+                      p="1px"
+                      onClick={() => {
+                        setUrlSourceKind("");
+                        setUrlRoomId("");
+                      }}
+                      _hover={{ bg: "blue.200" }}
+                      aria-label="Clear filter"
+                    >
+                      <LuX size={14} />
+                    </Button>
+                  </Flex>
                 )}
                 {urlQuery && (
-                  <Box
+                  <Flex
+                    align="center"
                     px={2}
                     py={1}
                     bg="green.100"
                     borderRadius="md"
                     fontSize="xs"
+                    gap={1}
                   >
-                    Search: "{urlQuery}"
-                  </Box>
+                    <Text>Search: "{urlQuery}"</Text>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      minW="auto"
+                      h="auto"
+                      p="1px"
+                      onClick={handleClearSearch}
+                      _hover={{ bg: "green.200" }}
+                      aria-label="Clear search"
+                    >
+                      <LuX size={14} />
+                    </Button>
+                  </Flex>
                 )}
               </Flex>
             )}
