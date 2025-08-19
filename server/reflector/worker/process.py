@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote
 
 import av
@@ -146,24 +146,76 @@ async def process_recording(bucket_name: str, object_key: str):
 @shared_task
 @asynctask
 async def process_meetings():
+    """
+    Checks which meetings are still active and deactivates those that have ended.
+    Supports multiple active meetings per room and grace period logic.
+    """
     logger.info("Processing meetings")
     meetings = await meetings_controller.get_all_active()
+    current_time = datetime.now(timezone.utc)
+
     for meeting in meetings:
-        is_active = False
+        should_deactivate = False
         end_date = meeting.end_date
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
-        if end_date > datetime.now(timezone.utc):
+
+        # Check if meeting has passed its scheduled end time
+        if end_date <= current_time:
+            # For calendar meetings, force close 30 minutes after scheduled end
+            if meeting.calendar_event_id:
+                if current_time > end_date + timedelta(minutes=30):
+                    should_deactivate = True
+                    logger.info(
+                        "Meeting %s forced closed 30 min after calendar end", meeting.id
+                    )
+            else:
+                # Unscheduled meetings follow normal closure rules
+                should_deactivate = True
+
+        # Check Whereby room sessions only if not already deactivating
+        if not should_deactivate and end_date > current_time:
             response = await get_room_sessions(meeting.room_name)
             room_sessions = response.get("results", [])
-            is_active = not room_sessions or any(
+            has_active_sessions = room_sessions and any(
                 rs["endedAt"] is None for rs in room_sessions
             )
-        if not is_active:
+
+            if not has_active_sessions:
+                # No active sessions - check grace period
+                if meeting.num_clients == 0:
+                    if meeting.last_participant_left_at:
+                        # Check if grace period has expired
+                        grace_period = timedelta(minutes=meeting.grace_period_minutes)
+                        if (
+                            current_time
+                            > meeting.last_participant_left_at + grace_period
+                        ):
+                            should_deactivate = True
+                            logger.info("Meeting %s grace period expired", meeting.id)
+                    else:
+                        # First time all participants left, record the time
+                        await meetings_controller.update_meeting(
+                            meeting.id, last_participant_left_at=current_time
+                        )
+                        logger.info(
+                            "Meeting %s marked empty at %s", meeting.id, current_time
+                        )
+            else:
+                # Has active sessions - clear grace period if set
+                if meeting.last_participant_left_at:
+                    await meetings_controller.update_meeting(
+                        meeting.id, last_participant_left_at=None
+                    )
+                    logger.info(
+                        "Meeting %s reactivated - participant rejoined", meeting.id
+                    )
+
+        if should_deactivate:
             await meetings_controller.update_meeting(meeting.id, is_active=False)
             logger.info("Meeting %s is deactivated", meeting.id)
 
-    logger.info("Processed meetings")
+    logger.info("Processed %d meetings", len(meetings))
 
 
 @shared_task
