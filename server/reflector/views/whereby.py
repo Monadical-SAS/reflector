@@ -68,8 +68,13 @@ async def whereby_webhook(event: WherebyWebhookEvent, request: Request):
         raise HTTPException(status_code=404, detail="Meeting not found")
 
     if event.type in ["room.client.joined", "room.client.left"]:
-        await meetings_controller.update_meeting(
-            meeting.id, num_clients=event.data["numClients"]
-        )
+        update_data = {"num_clients": event.data["numClients"]}
+
+        # Clear grace period if participant joined
+        if event.type == "room.client.joined" and event.data["numClients"] > 0:
+            if meeting.last_participant_left_at:
+                update_data["last_participant_left_at"] = None
+
+        await meetings_controller.update_meeting(meeting.id, **update_data)
 
     return {"status": "ok"}
