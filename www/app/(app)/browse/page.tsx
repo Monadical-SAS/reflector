@@ -58,6 +58,7 @@ export default function TranscriptBrowser() {
   );
 
   // to keep the search input controllable + more fine grained control (urlSearchQuery is updated on submits)
+  // you also may notice that it's not prefilled from url - that's ok, users may not want it, especially mobile users
   const [searchInputValue, setSearchInputValue] = useState("");
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
@@ -134,13 +135,6 @@ export default function TranscriptBrowser() {
     await setUrlSearchQuery(
       (d.get(SEARCH_FORM_QUERY_INPUT_NAME) as string) || "",
     );
-  };
-
-  const handleSearch = (searchInputValue: string) => {
-    if (searchInputValue !== urlSearchQuery) {
-      setUrlSearchQuery(searchInputValue);
-      setPage(1);
-    }
   };
 
   const handleClearSearch = () => {
@@ -268,7 +262,7 @@ export default function TranscriptBrowser() {
                     name={SEARCH_FORM_QUERY_INPUT_NAME}
                     pr={urlSearchQuery ? "2.5rem" : undefined}
                   />
-                  {urlSearchQuery && (
+                  {searchInputValue && (
                     <IconButton
                       aria-label="Clear search"
                       size="sm"
