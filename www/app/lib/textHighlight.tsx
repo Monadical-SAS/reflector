@@ -156,13 +156,13 @@ export function generateTextFragment(
   text: string,
   query: string,
 ): {
-  k: "#:~:text";
+  k: ":~:text";
   v: string;
 } | null {
   const firstMatch = findFirstHighlight(text, query);
   if (!firstMatch) return null;
   return {
-    k: "#:~:text",
+    k: ":~:text",
     v: firstMatch,
   };
 }
