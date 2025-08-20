@@ -125,7 +125,6 @@ export default function TranscriptBrowser() {
     sourceKind: SourceKind | null,
     roomId: string,
   ) => {
-    // Update URL state
     setUrlSourceKind(sourceKind);
     setUrlRoomId(roomId);
     setPage(1);
@@ -160,7 +159,6 @@ export default function TranscriptBrowser() {
       .then(() => {
         setDeletionLoading(false);
         onCloseDeletion();
-        // Refresh search results
         window.location.reload();
       })
       .catch((err) => {
