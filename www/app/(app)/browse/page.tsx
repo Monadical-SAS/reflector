@@ -39,6 +39,18 @@ import { RECORD_A_MEETING_URL } from "../../api/urls";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 
+const usePrefetchRooms = (setRooms: (rooms: Room[]) => void): void => {
+  const { setError } = useError();
+  const api = useApi();
+  useEffect(() => {
+    if (!api) return;
+    api
+      .v1RoomsList({ page: 1 })
+      .then((rooms) => setRooms(rooms.items))
+      .catch((err) => setError(err, "There was an error fetching the rooms"));
+  }, [api, setError]);
+};
+
 export default function TranscriptBrowser() {
   const [urlSearchQuery, setUrlSearchQuery] = useQueryState(
     "q",
@@ -86,7 +98,7 @@ export default function TranscriptBrowser() {
     totalCount: totalResults,
     isLoading,
   } = useSearchTranscripts(
-    urlSearchQuery, // Use URL query, not input value
+    urlSearchQuery,
     {
       roomIds: urlRoomId ? [urlRoomId] : null,
       sourceKind: urlSourceKind,
@@ -107,14 +119,7 @@ export default function TranscriptBrowser() {
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
     React.useState<string>();
 
-  // Fetch rooms on mount
-  useEffect(() => {
-    if (!api) return;
-    api
-      .v1RoomsList({ page: 1 })
-      .then((rooms) => setRooms(rooms.items))
-      .catch((err) => setError(err, "There was an error fetching the rooms"));
-  }, [api, setError]);
+  usePrefetchRooms(setRooms);
 
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,

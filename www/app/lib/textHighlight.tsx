@@ -162,7 +162,7 @@ export function generateTextFragment(
   const firstMatch = findFirstHighlight(text, query);
   if (!firstMatch) return null;
   return {
-    k: ":~:text",
+    k: "#:~:text",
     v: firstMatch,
   };
 }
