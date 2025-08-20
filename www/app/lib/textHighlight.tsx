@@ -152,24 +152,17 @@ export function findFirstHighlight(text: string, query: string): string | null {
   return consecutiveMatch;
 }
 
-/**
- * Generates a Chrome Text Fragment URL hash for deep linking to specific text
- * Uses the first highlight from the search query
- *
- * @param text - The text to search in (can be a snippet)
- * @param query - The search query
- * @returns URL fragment like "#:~:text=..." or empty string if no match
- */
-export function generateTextFragment(text: string, query: string): string {
+export function generateTextFragment(
+  text: string,
+  query: string,
+): {
+  k: "#:~:text";
+  v: string;
+} | null {
   const firstMatch = findFirstHighlight(text, query);
-
-  if (!firstMatch) {
-    return "";
-  }
-
-  // URL encode the match for use in the fragment
-  // Note: encodeURIComponent encodes spaces as %20, which is what we want
-  const encoded = encodeURIComponent(firstMatch);
-
-  return `#:~:text=${encoded}`;
+  if (!firstMatch) return null;
+  return {
+    k: ":~:text",
+    v: firstMatch,
+  };
 }

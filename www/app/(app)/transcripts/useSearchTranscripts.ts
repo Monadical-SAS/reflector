@@ -1,7 +1,8 @@
 // this hook is not great, we want to substitute it with a proper state management solution that is also not re-invention
 
 import { useEffect, useRef, useState } from "react";
-import { SearchResult, SourceKind } from "../../api";
+import { parseSearchResult, SearchResult } from "../../api/types";
+import { SourceKind } from "../../api";
 import useApi from "../../lib/useApi";
 
 interface SearchFilters {
@@ -82,7 +83,10 @@ export function useSearchTranscripts(
         });
 
         if (abortController.signal.aborted) return;
-        setData(response);
+        setData({
+          ...response,
+          results: response.results.map(parseSearchResult),
+        });
         setError(undefined);
       } catch (err: unknown) {
         if ((err as Error).name === "AbortError") {

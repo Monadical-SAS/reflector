@@ -11,7 +11,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { SearchResult } from "../../../api";
+import { SearchResult } from "../../../api/types";
 import { formatTimeMs, formatLocalDate } from "../../../lib/time";
 import TranscriptStatusIcon from "./TranscriptStatusIcon";
 import TranscriptActionsMenu from "./TranscriptActionsMenu";
@@ -38,7 +38,6 @@ function processSnippets(snippets: string[]): ProcessedSnippet[] {
   }));
 }
 
-// Use the new highlighting utility that highlights individual words
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query) return text;
 
@@ -90,6 +89,21 @@ function highlightText(text: string, query: string): React.ReactNode {
   return parts;
 }
 
+const transcriptHref = (
+  transcriptId: string,
+  mainSnippet: Pick<ProcessedSnippet, "text">,
+  query: string,
+): `/transcripts/${string}` => {
+  const urlTextFragment = mainSnippet
+    ? generateTextFragment(mainSnippet.text, query)
+    : null;
+  const urlTextFragmentWithHash = urlTextFragment
+    ? `#${urlTextFragment.k}=${encodeURIComponent(urlTextFragment.v)}`
+    : "";
+  return `/transcripts/${transcriptId}${urlTextFragmentWithHash}`;
+};
+
+// note that it's strongly tied to search logic - in case you want to use it independently, refactor
 function TranscriptCard({
   result,
   query,
@@ -110,20 +124,14 @@ function TranscriptCard({
   const snippetsShown = processedSnippets.length;
   const remainingMatches = totalMatches - snippetsShown;
   const hasAdditionalSnippets = additionalSnippets.length > 0;
-  const showSearchFeatures = query && query.length > 0;
-
-  // Generate text fragment for deep linking to the first match
-  const textFragment =
-    showSearchFeatures && mainSnippet
-      ? generateTextFragment(mainSnippet.text, query)
-      : "";
+  const resultTitle = result.title || "Unnamed Transcript";
 
   const formattedDuration = result.duration
     ? formatTimeMs(result.duration)
     : "N/A";
   const formattedDate = formatLocalDate(result.created_at);
   const source =
-    result.source_kind === "room" && result.room_id
+    result.source_kind === "room"
       ? result.room_name || result.room_id
       : result.source_kind;
 
@@ -143,14 +151,12 @@ function TranscriptCard({
           {/* Title with highlighting and text fragment for deep linking */}
           <Link
             as={NextLink}
-            href={`/transcripts/${result.id}${textFragment}`}
+            href={transcriptHref(result.id, mainSnippet, query)}
             fontWeight="600"
             display="block"
             mb={2}
           >
-            {showSearchFeatures
-              ? highlightText(result.title || "Unnamed Transcript", query)
-              : result.title || "Unnamed Transcript"}
+            {highlightText(resultTitle, query)}
           </Link>
 
           {/* Metadata - Horizontal on desktop, vertical on mobile */}
@@ -189,26 +195,23 @@ function TranscriptCard({
           </Flex>
 
           {/* Search Results Section - only show when searching */}
-          {showSearchFeatures && (
+          {mainSnippet && (
             <>
               {/* Main Snippet */}
-              {mainSnippet && (
-                <Box
-                  mt={3}
-                  p={2}
-                  bg="gray.50"
-                  borderLeft="2px solid"
-                  borderLeftColor="blue.400"
-                  borderRadius="sm"
-                  fontSize="xs"
-                >
-                  <Text color="gray.700">
-                    {highlightText(mainSnippet.text, query)}
-                  </Text>
-                </Box>
-              )}
+              <Box
+                mt={3}
+                p={2}
+                bg="gray.50"
+                borderLeft="2px solid"
+                borderLeftColor="blue.400"
+                borderRadius="sm"
+                fontSize="xs"
+              >
+                <Text color="gray.700">
+                  {highlightText(mainSnippet.text, query)}
+                </Text>
+              </Box>
 
-              {/* Additional Snippets Indicator */}
               {hasAdditionalSnippets && (
                 <>
                   <Flex

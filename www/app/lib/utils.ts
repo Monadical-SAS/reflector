@@ -136,3 +136,10 @@ export function extractDomain(url) {
     return null;
   }
 }
+
+export function assertExists<T>(value: T | null | undefined, err?: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(`Assertion failed: ${err ?? "value is null or undefined"}`);
+  }
+  return value;
+}

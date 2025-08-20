@@ -1117,6 +1117,7 @@ export const $SearchResult = {
     },
     total_match_count: {
       type: "integer",
+      minimum: 0,
       title: "Total Match Count",
       description: "Total number of matches found in the transcript",
       default: 0,

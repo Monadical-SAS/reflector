@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, FormEventHandler } from "react";
 import {
   Flex,
   Spinner,
@@ -11,87 +11,74 @@ import {
   Input,
   Button,
 } from "@chakra-ui/react";
-import { useQueryState, parseAsString, parseAsInteger } from "nuqs";
+import {
+  useQueryState,
+  parseAsString,
+  parseAsInteger,
+  parseAsStringEnum,
+  parseAsStringLiteral,
+} from "nuqs";
 import { LuX } from "react-icons/lu";
 import { useSearchTranscripts } from "../transcripts/useSearchTranscripts";
 import useSessionUser from "../../lib/useSessionUser";
-import { Room, SourceKind, SearchResult } from "../../api";
+import { Room, SourceKind, SearchResult, $SourceKind } from "../../api";
 import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import FilterSidebar from "./_components/FilterSidebar";
-import Pagination from "./_components/Pagination";
+import Pagination, {
+  totalPages as getTotalPages,
+} from "./_components/Pagination";
 import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
+import { RECORD_A_MEETING_URL } from "../../api/urls";
 
-// Custom parser for SourceKind
-const parseAsSourceKind = parseAsString.withDefault("").withOptions({
-  shallow: false,
-});
-
-// Validate SourceKind value
-const validateSourceKind = (value: string): SourceKind | null => {
-  if (value === "room" || value === "live" || value === "file") {
-    return value as SourceKind;
-  }
-  return null;
-};
+const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 
 export default function TranscriptBrowser() {
-  // URL state management with nuqs
-  // Query - only appears in URL after search is executed
-  const [urlQuery, setUrlQuery] = useQueryState(
+  const [urlSearchQuery, setUrlSearchQuery] = useQueryState(
     "q",
     parseAsString.withDefault("").withOptions({ shallow: false }),
   );
 
-  // Filters - immediately synced to URL
+  // to keep the search input controllable + more fine grained control (urlSearchQuery is updated on submits)
+  const [searchInputValue, setSearchInputValue] = useState("");
+
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
     "source",
-    parseAsSourceKind,
+    parseAsStringLiteral($SourceKind.enum).withOptions({
+      shallow: false,
+    }),
   );
   const [urlRoomId, setUrlRoomId] = useQueryState(
     "room",
     parseAsString.withDefault("").withOptions({ shallow: false }),
   );
 
-  // Pagination - 1-based in URL, 0-based internally
-  const [urlPage, setUrlPage] = useQueryState(
+  const [page, setPage] = useQueryState(
     "page",
     parseAsInteger.withDefault(1).withOptions({ shallow: false }),
   );
 
-  // Local state for input field (separate from URL query)
-  const [searchInputValue, setSearchInputValue] = useState("");
-
-  // Rooms list
   const [rooms, setRooms] = useState<Room[]>([]);
 
-  // Search timing
-  const [searchStartTime, setSearchStartTime] = useState<number | undefined>();
-
-  // Convert URL values to appropriate types
-  const selectedSourceKind = validateSourceKind(urlSourceKind);
-  const selectedRoomId = urlRoomId;
-  const page = Math.max(0, (urlPage || 1) - 1); // Convert 1-based URL to 0-based internal
-
-  // Use the search hook with URL state
+  const pageSize = 20;
   const {
     results,
-    totalCount,
+    totalCount: totalResults,
     isLoading,
-    page: internalPage,
-    setPage: setInternalPage,
   } = useSearchTranscripts(
-    urlQuery, // Use URL query, not input value
+    urlSearchQuery, // Use URL query, not input value
     {
-      roomIds: selectedRoomId ? [selectedRoomId] : undefined,
-      sourceKind: selectedSourceKind,
+      roomIds: urlRoomId ? [urlRoomId] : undefined,
+      sourceKind: urlSourceKind,
     },
     {
-      pageSize: 20,
+      pageSize,
     },
   );
+
+  const totalPages = getTotalPages(totalResults, pageSize);
 
   const userName = useSessionUser().name;
   const [deletionLoading, setDeletionLoading] = useState(false);
@@ -100,29 +87,6 @@ export default function TranscriptBrowser() {
   const cancelRef = React.useRef(null);
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
     React.useState<string>();
-
-  // Calculate search time
-  const searchTime =
-    searchStartTime && !isLoading ? Date.now() - searchStartTime : undefined;
-
-  // Track search start time when loading starts
-  useEffect(() => {
-    if (isLoading && !searchStartTime) {
-      setSearchStartTime(Date.now());
-    } else if (!isLoading && searchStartTime) {
-      // Keep the time until next search
-    }
-  }, [isLoading]);
-
-  // Sync input value with URL query on mount and when URL query changes
-  useEffect(() => {
-    setSearchInputValue(urlQuery);
-  }, [urlQuery]);
-
-  // Sync internal page state with URL page
-  useEffect(() => {
-    setInternalPage(page);
-  }, [page, setInternalPage]);
 
   // Fetch rooms on mount
   useEffect(() => {
@@ -133,55 +97,35 @@ export default function TranscriptBrowser() {
       .catch((err) => setError(err, "There was an error fetching the rooms"));
   }, [api, setError]);
 
-  // Handle filter changes - update URL immediately
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,
     roomId: string,
   ) => {
     // Update URL state
-    setUrlSourceKind(sourceKind || "");
+    setUrlSourceKind(sourceKind);
     setUrlRoomId(roomId);
-    setUrlPage(1); // Reset to page 1
-
-    // If user has a search active, keep it
-    // Otherwise clear the input field to match
-    if (!urlQuery && searchInputValue) {
-      setSearchInputValue("");
-    }
-
-    setSearchStartTime(undefined);
+    setPage(1);
   };
 
-  // Handle search button click - update URL
-  const handleSearch = () => {
-    if (searchInputValue !== urlQuery) {
-      setUrlQuery(searchInputValue);
-      setUrlPage(1); // Reset to page 1
-      setSearchStartTime(undefined);
+  const handleSearchQuerySubmit = async (d: FormData) => {
+    await setUrlSearchQuery(
+      (d.get(SEARCH_FORM_QUERY_INPUT_NAME) as string) || "",
+    );
+  };
+
+  const handleSearch = (searchInputValue: string) => {
+    if (searchInputValue !== urlSearchQuery) {
+      setUrlSearchQuery(searchInputValue);
+      setPage(1);
     }
   };
 
-  // Handle clear search
   const handleClearSearch = () => {
     setSearchInputValue("");
-    setUrlQuery("");
-    setUrlPage(1);
-    setSearchStartTime(undefined);
+    setUrlSearchQuery("");
+    setPage(1);
   };
 
-  // Handle search on Enter key
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
-  };
-
-  // Handle page change - update URL
-  const handlePageChange = (newPage: number) => {
-    setUrlPage(newPage); // This is 1-based
-  };
-
-  // Delete transcript handlers
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
   const confirmDeleteTranscript = (transcriptId: string) => {
@@ -242,12 +186,7 @@ export default function TranscriptBrowser() {
       ? transcriptToDelete.room_name || transcriptToDelete.room_id
       : transcriptToDelete?.source_kind;
 
-  // Calculate pagination values
-  const pageSize = 20;
-  const currentPage = urlPage || 1; // 1-based for display
-
-  // Initial loading state - show spinner only on first load without query
-  if (!urlQuery && isLoading && results.length === 0) {
+  if (isLoading && results.length === 0) {
     return (
       <Flex
         flexDir="column"
@@ -282,8 +221,8 @@ export default function TranscriptBrowser() {
       <Flex flexDir={{ base: "column", md: "row" }}>
         <FilterSidebar
           rooms={rooms}
-          selectedSourceKind={selectedSourceKind}
-          selectedRoomId={selectedRoomId}
+          selectedSourceKind={urlSourceKind}
+          selectedRoomId={urlRoomId}
           onFilterChange={handleFilterTranscripts}
         />
 
@@ -295,32 +234,32 @@ export default function TranscriptBrowser() {
           gap={4}
           px={{ base: 0, md: 4 }}
         >
-          {/* Search Bar - matching old style */}
           <Stack gap={2}>
-            <Flex alignItems="center">
-              <Input
-                placeholder="Search transcriptions..."
-                value={searchInputValue}
-                onChange={(e) => setSearchInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              <Button ml={2} onClick={handleSearch}>
-                Search
-              </Button>
-              {urlQuery && (
-                <Button ml={2} variant="ghost" onClick={handleClearSearch}>
-                  Clear
+            <form action={handleSearchQuerySubmit}>
+              <Flex alignItems="center">
+                <Input
+                  placeholder="Search transcriptions..."
+                  value={searchInputValue}
+                  onChange={(e) => setSearchInputValue(e.target.value)}
+                  name={SEARCH_FORM_QUERY_INPUT_NAME}
+                />
+                <Button ml={2} type="submit">
+                  Search
                 </Button>
-              )}
-            </Flex>
+                {urlSearchQuery && (
+                  <Button ml={2} variant="ghost" onClick={handleClearSearch}>
+                    Clear
+                  </Button>
+                )}
+              </Flex>
+            </form>
 
-            {/* Show active filters */}
-            {(selectedSourceKind || selectedRoomId || urlQuery) && (
+            {(urlSourceKind || urlRoomId) && (
               <Flex gap={2} flexWrap="wrap" align="center">
                 <Text fontSize="sm" color="gray.600">
                   Active filters:
                 </Text>
-                {selectedSourceKind && (
+                {urlSourceKind && (
                   <Flex
                     align="center"
                     px={2}
@@ -331,12 +270,12 @@ export default function TranscriptBrowser() {
                     gap={1}
                   >
                     <Text>
-                      {selectedSourceKind === "room" && selectedRoomId
+                      {urlRoomId
                         ? `Room: ${
-                            rooms.find((r) => r.id === selectedRoomId)?.name ||
-                            selectedRoomId
+                            rooms.find((r) => r.id === urlRoomId)?.name ||
+                            urlRoomId
                           }`
-                        : `Source: ${selectedSourceKind}`}
+                        : `Source: ${urlSourceKind}`}
                     </Text>
                     <Button
                       size="xs"
@@ -345,36 +284,12 @@ export default function TranscriptBrowser() {
                       h="auto"
                       p="1px"
                       onClick={() => {
-                        setUrlSourceKind("");
-                        setUrlRoomId("");
+                        setUrlSourceKind(null);
+                        // TODO questionable
+                        setUrlRoomId(null);
                       }}
                       _hover={{ bg: "blue.200" }}
                       aria-label="Clear filter"
-                    >
-                      <LuX size={14} />
-                    </Button>
-                  </Flex>
-                )}
-                {urlQuery && (
-                  <Flex
-                    align="center"
-                    px={2}
-                    py={1}
-                    bg="green.100"
-                    borderRadius="md"
-                    fontSize="xs"
-                    gap={1}
-                  >
-                    <Text>Search: "{urlQuery}"</Text>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      minW="auto"
-                      h="auto"
-                      p="1px"
-                      onClick={handleClearSearch}
-                      _hover={{ bg: "green.200" }}
-                      aria-label="Clear search"
                     >
                       <LuX size={14} />
                     </Button>
@@ -384,18 +299,19 @@ export default function TranscriptBrowser() {
             )}
           </Stack>
 
-          {/* Pagination at the top - matching old style */}
-          <Pagination
-            page={currentPage}
-            setPage={handlePageChange}
-            total={totalCount}
-            size={pageSize}
-          />
+          {totalPages > 1 ? (
+            <Pagination
+              page={page}
+              setPage={setPage}
+              total={totalPages}
+              size={pageSize}
+            />
+          ) : null}
 
           {/* Results Display - Always Cards */}
           <TranscriptCards
             results={results}
-            query={urlQuery}
+            query={urlSearchQuery}
             isLoading={isLoading}
             onDelete={handleDeleteTranscript}
             onReprocess={handleProcessTranscript}
@@ -410,12 +326,12 @@ export default function TranscriptBrowser() {
               py={8}
             >
               <Text textAlign="center">
-                {urlQuery
-                  ? `No results found for "${urlQuery}". Try adjusting your search terms.`
+                {urlSearchQuery
+                  ? `No results found for "${urlSearchQuery}". Try adjusting your search terms.`
                   : "No transcripts found, but you can "}
-                {!urlQuery && (
+                {!urlSearchQuery && (
                   <>
-                    <Link href="/transcripts/new" color="blue.500">
+                    <Link href={RECORD_A_MEETING_URL} color="blue.500">
                       record a meeting
                     </Link>
                     {" to get started."}
