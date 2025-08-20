@@ -335,7 +335,7 @@ export default function TranscriptBrowser() {
             <Pagination
               page={page}
               setPage={setPage}
-              total={totalPages}
+              total={totalResults}
               size={pageSize}
             />
           ) : null}
