@@ -4,6 +4,7 @@ import sys
 import threading
 import uuid
 from typing import Mapping, NewType
+from urllib.parse import urlparse
 
 import modal
 
@@ -62,8 +63,11 @@ image = (
 
 
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
+    parsed_url = urlparse(url)
+    url_path = parsed_url.path
+
     for ext in SUPPORTED_FILE_EXTENSIONS:
-        if url.lower().endswith(f".{ext}"):
+        if url_path.lower().endswith(f".{ext}"):
             return AudioFileExtension(ext)
 
     content_type = headers.get("content-type", "").lower()

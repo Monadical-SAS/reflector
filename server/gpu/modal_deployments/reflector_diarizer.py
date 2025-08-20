@@ -6,6 +6,7 @@ Reflector GPU backend - diarizer
 import os
 import uuid
 from typing import Mapping, NewType
+from urllib.parse import urlparse
 
 import modal
 
@@ -24,12 +25,14 @@ upload_volume = modal.Volume.from_name("diarizer-uploads", create_if_missing=Tru
 
 
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
+    parsed_url = urlparse(url)
+    url_path = parsed_url.path
+
     for ext in SUPPORTED_FILE_EXTENSIONS:
-        if url.lower().endswith(f".{ext}"):
+        if url_path.lower().endswith(f".{ext}"):
             return AudioFileExtension(ext)
 
     content_type = headers.get("content-type", "").lower()
-    print(content_type)
     if "audio/mpeg" in content_type or "audio/mp3" in content_type:
         return AudioFileExtension("mp3")
     if "audio/wav" in content_type:
