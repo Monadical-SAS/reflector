@@ -24,8 +24,8 @@ interface TranscriptCardsProps {
   results: SearchResult[];
   query: string;
   isLoading?: boolean;
-  onDelete: (transcriptId: string) => (e: any) => void;
-  onReprocess: (transcriptId: string) => (e: any) => void;
+  onDelete: (transcriptId: string) => void;
+  onReprocess: (transcriptId: string) => void;
 }
 
 function highlightText(text: string, query: string): React.ReactNode {
@@ -102,8 +102,8 @@ function TranscriptCard({
 }: {
   result: SearchResult;
   query: string;
-  onDelete: (transcriptId: string) => (e: any) => void;
-  onReprocess: (transcriptId: string) => (e: any) => void;
+  onDelete: (transcriptId: string) => void;
+  onReprocess: (transcriptId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 

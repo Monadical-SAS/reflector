@@ -170,28 +170,29 @@ export default function TranscriptBrowser() {
       setTranscriptToDeleteId(transcriptId);
     };
 
-  const handleProcessTranscript =
-    (transcriptId: string) => (e: React.MouseEvent) => {
-      if (api) {
-        api
-          .v1TranscriptProcess({ transcriptId })
-          .then((result) => {
-            const status =
-              result && typeof result === "object" && "status" in result
-                ? (result as { status: string }).status
-                : undefined;
-            if (status === "already running") {
-              setError(
-                new Error("Processing is already running, please wait"),
-                "Processing is already running, please wait",
-              );
-            }
-          })
-          .catch((err) => {
-            setError(err, "There was an error processing the transcript");
-          });
-      }
-    };
+  const handleProcessTranscript = (transcriptId: string) => {
+    if (!api) {
+      console.error("API not available on handleProcessTranscript");
+      return;
+    }
+    api
+      .v1TranscriptProcess({ transcriptId })
+      .then((result) => {
+        const status =
+          result && typeof result === "object" && "status" in result
+            ? (result as { status: string }).status
+            : undefined;
+        if (status === "already running") {
+          setError(
+            new Error("Processing is already running, please wait"),
+            "Processing is already running, please wait",
+          );
+        }
+      })
+      .catch((err) => {
+        setError(err, "There was an error processing the transcript");
+      });
+  };
 
   const transcriptToDelete = results?.find(
     (i) => i.id === transcriptToDeleteId,
