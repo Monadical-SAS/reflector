@@ -4,27 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { parseSearchResult, SearchResult } from "../../api/types";
 import { SourceKind } from "../../api";
 import useApi from "../../lib/useApi";
+import {
+  PaginationPage,
+  paginationPageTo0Based,
+} from "../browse/_components/Pagination";
 
 interface SearchFilters {
-  roomIds?: readonly string[];
-  sourceKind?: SourceKind | null;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
+  roomIds: readonly string[] | null;
+  sourceKind: SourceKind | null;
 }
 
-interface UseSearchTranscriptsOptions {
-  pageSize?: number;
-}
+const EMPTY_SEARCH_FILTERS: SearchFilters = {
+  roomIds: null,
+  sourceKind: null,
+};
+
+type UseSearchTranscriptsOptions = {
+  pageSize: number;
+  page: PaginationPage;
+};
 
 interface UseSearchTranscriptsReturn {
   results: SearchResult[];
   totalCount: number;
   isLoading: boolean;
   error: unknown;
-  hasMore: boolean;
-  page: number;
-  setPage: (page: number) => void;
 }
 
 function hashEffectFilters(filters: SearchFilters): string {
@@ -33,15 +37,16 @@ function hashEffectFilters(filters: SearchFilters): string {
 
 export function useSearchTranscripts(
   query: string = "",
-  filters: SearchFilters = {},
-  options: UseSearchTranscriptsOptions = {},
+  filters: SearchFilters = EMPTY_SEARCH_FILTERS,
+  options: UseSearchTranscriptsOptions = {
+    pageSize: 20,
+    page: PaginationPage(1),
+  },
 ): UseSearchTranscriptsReturn {
-  const { pageSize = 20 } = options;
+  const { pageSize, page } = options;
 
   const api = useApi();
   const abortControllerRef = useRef<AbortController>();
-
-  const [page, setPage] = useState(0);
 
   const [data, setData] = useState<{ results: SearchResult[]; total: number }>({
     results: [],
@@ -51,9 +56,6 @@ export function useSearchTranscripts(
   const [isLoading, setIsLoading] = useState(false);
 
   const filterHash = hashEffectFilters(filters);
-  useEffect(() => {
-    setPage(0);
-  }, [query, filterHash]);
 
   useEffect(() => {
     if (!api) {
@@ -77,7 +79,7 @@ export function useSearchTranscripts(
         const response = await api.v1TranscriptsSearch({
           q: query || "",
           limit: pageSize,
-          offset: page * pageSize,
+          offset: paginationPageTo0Based(page) * pageSize,
           roomId: filters.roomIds?.[0],
           sourceKind: filters.sourceKind || undefined,
         });
@@ -112,15 +114,10 @@ export function useSearchTranscripts(
     };
   }, [api, query, page, filterHash, pageSize]);
 
-  const hasMore = (page + 1) * pageSize < data.total;
-
   return {
     results: data.results,
     totalCount: data.total,
     isLoading,
     error,
-    hasMore,
-    page,
-    setPage,
   };
 }

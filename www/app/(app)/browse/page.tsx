@@ -26,6 +26,9 @@ import useApi from "../../lib/useApi";
 import { useError } from "../../(errors)/errorContext";
 import FilterSidebar from "./_components/FilterSidebar";
 import Pagination, {
+  FIRST_PAGE,
+  PaginationPage,
+  parsePaginationPage,
   totalPages as getTotalPages,
 } from "./_components/Pagination";
 import TranscriptCards from "./_components/TranscriptCards";
@@ -55,10 +58,24 @@ export default function TranscriptBrowser() {
     parseAsString.withDefault("").withOptions({ shallow: false }),
   );
 
-  const [page, setPage] = useQueryState(
+  const [urlPage, setPage] = useQueryState(
     "page",
     parseAsInteger.withDefault(1).withOptions({ shallow: false }),
   );
+
+  const [page, _setSafePage] = useState(FIRST_PAGE);
+
+  // safety net
+  useEffect(() => {
+    const maybePage = parsePaginationPage(urlPage);
+    if ("error" in maybePage) {
+      setPage(FIRST_PAGE).then(() => {
+        /*may be called n times we dont care*/
+      });
+      return;
+    }
+    _setSafePage(maybePage.value);
+  }, [urlPage]);
 
   const [rooms, setRooms] = useState<Room[]>([]);
 
@@ -70,11 +87,12 @@ export default function TranscriptBrowser() {
   } = useSearchTranscripts(
     urlSearchQuery, // Use URL query, not input value
     {
-      roomIds: urlRoomId ? [urlRoomId] : undefined,
+      roomIds: urlRoomId ? [urlRoomId] : null,
       sourceKind: urlSourceKind,
     },
     {
       pageSize,
+      page,
     },
   );
 
@@ -308,7 +326,6 @@ export default function TranscriptBrowser() {
             />
           ) : null}
 
-          {/* Results Display - Always Cards */}
           <TranscriptCards
             results={results}
             query={urlSearchQuery}
@@ -317,7 +334,6 @@ export default function TranscriptBrowser() {
             onReprocess={handleProcessTranscript}
           />
 
-          {/* Show no results message when needed */}
           {!isLoading && results.length === 0 && (
             <Flex
               flexDir="column"
@@ -343,7 +359,6 @@ export default function TranscriptBrowser() {
         </Flex>
       </Flex>
 
-      {/* Delete Dialog */}
       <DeleteTranscriptDialog
         isOpen={!!transcriptToDeleteId}
         onClose={onCloseDeletion}
