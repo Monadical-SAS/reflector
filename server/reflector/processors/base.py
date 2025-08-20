@@ -173,6 +173,7 @@ class Processor(Emitter):
         except Exception:
             self.m_processor_failure.inc()
             self.logger.exception("Error in push")
+            raise
 
     async def flush(self):
         """
