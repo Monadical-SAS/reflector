@@ -28,16 +28,6 @@ interface TranscriptCardsProps {
   onReprocess: (transcriptId: string) => (e: any) => void;
 }
 
-interface ProcessedSnippet {
-  text: string;
-}
-
-function processSnippets(snippets: string[]): ProcessedSnippet[] {
-  return snippets.map((text) => ({
-    text,
-  }));
-}
-
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query) return text;
 
@@ -91,11 +81,11 @@ function highlightText(text: string, query: string): React.ReactNode {
 
 const transcriptHref = (
   transcriptId: string,
-  mainSnippet: Pick<ProcessedSnippet, "text">,
+  mainSnippet: string,
   query: string,
 ): `/transcripts/${string}` => {
   const urlTextFragment = mainSnippet
-    ? generateTextFragment(mainSnippet.text, query)
+    ? generateTextFragment(mainSnippet, query)
     : null;
   const urlTextFragmentWithHash = urlTextFragment
     ? `#${urlTextFragment.k}=${encodeURIComponent(urlTextFragment.v)}`
@@ -117,11 +107,10 @@ function TranscriptCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const processedSnippets = processSnippets(result.search_snippets || []);
-  const mainSnippet = processedSnippets[0];
-  const additionalSnippets = processedSnippets.slice(1);
+  const mainSnippet = result.search_snippets[0];
+  const additionalSnippets = result.search_snippets.slice(1);
   const totalMatches = result.total_match_count || 0;
-  const snippetsShown = processedSnippets.length;
+  const snippetsShown = result.search_snippets.length;
   const remainingMatches = totalMatches - snippetsShown;
   const hasAdditionalSnippets = additionalSnippets.length > 0;
   const resultTitle = result.title || "Unnamed Transcript";
@@ -208,7 +197,7 @@ function TranscriptCard({
                 fontSize="xs"
               >
                 <Text color="gray.700">
-                  {highlightText(mainSnippet.text, query)}
+                  {highlightText(mainSnippet, query)}
                 </Text>
               </Box>
 
@@ -265,7 +254,7 @@ function TranscriptCard({
                           fontSize="xs"
                         >
                           <Text color="gray.700">
-                            {highlightText(snippet.text, query)}
+                            {highlightText(snippet, query)}
                           </Text>
                         </Box>
                       ))}
