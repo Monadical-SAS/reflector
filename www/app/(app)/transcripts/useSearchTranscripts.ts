@@ -1,8 +1,7 @@
 // this hook is not great, we want to substitute it with a proper state management solution that is also not re-invention
 
 import { useEffect, useRef, useState } from "react";
-import { parseSearchResult, SearchResult } from "../../api/types";
-import { SourceKind } from "../../api";
+import { SearchResult, SourceKind } from "../../api";
 import useApi from "../../lib/useApi";
 import {
   PaginationPage,
@@ -29,6 +28,7 @@ interface UseSearchTranscriptsReturn {
   totalCount: number;
   isLoading: boolean;
   error: unknown;
+  reload: () => void;
 }
 
 function hashEffectFilters(filters: SearchFilters): string {
@@ -44,6 +44,8 @@ export function useSearchTranscripts(
   },
 ): UseSearchTranscriptsReturn {
   const { pageSize, page } = options;
+
+  const [reloadCount, setReloadCount] = useState(0);
 
   const api = useApi();
   const abortControllerRef = useRef<AbortController>();
@@ -85,10 +87,7 @@ export function useSearchTranscripts(
         });
 
         if (abortController.signal.aborted) return;
-        setData({
-          ...response,
-          results: response.results.map(parseSearchResult),
-        });
+        setData(response);
         setError(undefined);
       } catch (err: unknown) {
         if ((err as Error).name === "AbortError") {
@@ -112,12 +111,13 @@ export function useSearchTranscripts(
     return () => {
       abortController.abort();
     };
-  }, [api, query, page, filterHash, pageSize]);
+  }, [api, query, page, filterHash, pageSize, reloadCount]);
 
   return {
     results: data.results,
     totalCount: data.total,
     isLoading,
     error,
+    reload: () => setReloadCount(reloadCount + 1),
   };
 }

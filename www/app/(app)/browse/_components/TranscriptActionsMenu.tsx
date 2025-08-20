@@ -28,7 +28,13 @@ export default function TranscriptActionsMenu({
           >
             <LuRotateCw /> Reprocess
           </Menu.Item>
-          <Menu.Item value="delete" onClick={() => onDelete(transcriptId)}>
+          <Menu.Item
+            value="delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(transcriptId);
+            }}
+          >
             <LuTrash /> Delete
           </Menu.Item>
         </Menu.Content>

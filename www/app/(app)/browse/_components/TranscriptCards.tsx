@@ -11,7 +11,6 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { SearchResult } from "../../../api/types";
 import { formatTimeMs, formatLocalDate } from "../../../lib/time";
 import TranscriptStatusIcon from "./TranscriptStatusIcon";
 import TranscriptActionsMenu from "./TranscriptActionsMenu";
@@ -19,6 +18,7 @@ import {
   highlightMatches,
   generateTextFragment,
 } from "../../../lib/textHighlight";
+import { SearchResult } from "../../../api";
 
 interface TranscriptCardsProps {
   results: SearchResult[];

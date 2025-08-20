@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, FormEventHandler } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Flex,
   Spinner,
@@ -16,7 +16,6 @@ import {
   useQueryState,
   parseAsString,
   parseAsInteger,
-  parseAsStringEnum,
   parseAsStringLiteral,
 } from "nuqs";
 import { LuX } from "react-icons/lu";
@@ -51,15 +50,161 @@ const usePrefetchRooms = (setRooms: (rooms: Room[]) => void): void => {
   }, [api, setError]);
 };
 
+const SearchForm: React.FC<{
+  setPage: (page: PaginationPage) => void;
+  sourceKind: SourceKind | null;
+  roomId: string | null;
+  setSourceKind: (sourceKind: SourceKind | null) => void;
+  setRoomId: (roomId: string | null) => void;
+  rooms: Room[];
+  searchQuery: string | null;
+  setSearchQuery: (query: string | null) => void;
+}> = ({
+  setPage,
+  sourceKind,
+  roomId,
+  setRoomId,
+  setSourceKind,
+  rooms,
+  searchQuery,
+  setSearchQuery,
+}) => {
+  // to keep the search input controllable + more fine grained control (urlSearchQuery is updated on submits)
+  const [searchInputValue, setSearchInputValue] = useState(searchQuery || "");
+  const handleSearchQuerySubmit = async (d: FormData) => {
+    await setSearchQuery((d.get(SEARCH_FORM_QUERY_INPUT_NAME) as string) || "");
+  };
+
+  const handleClearSearch = () => {
+    setSearchInputValue("");
+    setSearchQuery(null);
+    setPage(FIRST_PAGE);
+  };
+  return (
+    <Stack gap={2}>
+      <form action={handleSearchQuerySubmit}>
+        <Flex alignItems="center">
+          <Box position="relative" flex="1">
+            <Input
+              placeholder="Search transcriptions..."
+              value={searchInputValue}
+              onChange={(e) => setSearchInputValue(e.target.value)}
+              name={SEARCH_FORM_QUERY_INPUT_NAME}
+              pr={searchQuery ? "2.5rem" : undefined}
+            />
+            {searchQuery && (
+              <IconButton
+                aria-label="Clear search"
+                size="sm"
+                variant="ghost"
+                onClick={handleClearSearch}
+                position="absolute"
+                right="0.25rem"
+                top="50%"
+                transform="translateY(-50%)"
+                _hover={{ bg: "gray.100" }}
+              >
+                <LuX />
+              </IconButton>
+            )}
+          </Box>
+          <Button ml={2} type="submit">
+            Search
+          </Button>
+        </Flex>
+      </form>
+      <UnderSearchFormFilterIndicators
+        sourceKind={sourceKind}
+        roomId={roomId}
+        setSourceKind={setSourceKind}
+        setRoomId={setRoomId}
+        rooms={rooms}
+      />
+    </Stack>
+  );
+};
+
+const UnderSearchFormFilterIndicators: React.FC<{
+  sourceKind: SourceKind | null;
+  roomId: string | null;
+  setSourceKind: (sourceKind: SourceKind | null) => void;
+  setRoomId: (roomId: string | null) => void;
+  rooms: Room[];
+}> = ({ sourceKind, roomId, setRoomId, setSourceKind, rooms }) => {
+  return (
+    <>
+      {(sourceKind || roomId) && (
+        <Flex gap={2} flexWrap="wrap" align="center">
+          <Text fontSize="sm" color="gray.600">
+            Active filters:
+          </Text>
+          {sourceKind && (
+            <Flex
+              align="center"
+              px={2}
+              py={1}
+              bg="blue.100"
+              borderRadius="md"
+              fontSize="xs"
+              gap={1}
+            >
+              <Text>
+                {roomId
+                  ? `Room: ${
+                      rooms.find((r) => r.id === roomId)?.name || roomId
+                    }`
+                  : `Source: ${sourceKind}`}
+              </Text>
+              <Button
+                size="xs"
+                variant="ghost"
+                minW="auto"
+                h="auto"
+                p="1px"
+                onClick={() => {
+                  setSourceKind(null);
+                  // TODO questionable
+                  setRoomId(null);
+                }}
+                _hover={{ bg: "blue.200" }}
+                aria-label="Clear filter"
+              >
+                <LuX size={14} />
+              </Button>
+            </Flex>
+          )}
+        </Flex>
+      )}
+    </>
+  );
+};
+
+const EmptyResult: React.FC<{
+  searchQuery: string;
+}> = ({ searchQuery }) => {
+  return (
+    <Flex flexDir="column" alignItems="center" justifyContent="center" py={8}>
+      <Text textAlign="center">
+        {searchQuery
+          ? `No results found for "${searchQuery}". Try adjusting your search terms.`
+          : "No transcripts found, but you can "}
+        {!searchQuery && (
+          <>
+            <Link href={RECORD_A_MEETING_URL} color="blue.500">
+              record a meeting
+            </Link>
+            {" to get started."}
+          </>
+        )}
+      </Text>
+    </Flex>
+  );
+};
+
 export default function TranscriptBrowser() {
   const [urlSearchQuery, setUrlSearchQuery] = useQueryState(
     "q",
     parseAsString.withDefault("").withOptions({ shallow: false }),
-  );
-
-  // to keep the search input controllable + more fine grained control (urlSearchQuery is updated on submits)
-  const [searchInputValue, setSearchInputValue] = useState(
-    urlSearchQuery || "",
   );
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
@@ -99,6 +244,7 @@ export default function TranscriptBrowser() {
     results,
     totalCount: totalResults,
     isLoading,
+    reload,
   } = useSearchTranscripts(
     urlSearchQuery,
     {
@@ -132,18 +278,6 @@ export default function TranscriptBrowser() {
     setPage(1);
   };
 
-  const handleSearchQuerySubmit = async (d: FormData) => {
-    await setUrlSearchQuery(
-      (d.get(SEARCH_FORM_QUERY_INPUT_NAME) as string) || "",
-    );
-  };
-
-  const handleClearSearch = () => {
-    setSearchInputValue("");
-    setUrlSearchQuery("");
-    setPage(1);
-  };
-
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
   const confirmDeleteTranscript = (transcriptId: string) => {
@@ -154,19 +288,13 @@ export default function TranscriptBrowser() {
       .then(() => {
         setDeletionLoading(false);
         onCloseDeletion();
-        window.location.reload();
+        reload();
       })
       .catch((err) => {
         setDeletionLoading(false);
         setError(err, "There was an error deleting the transcript");
       });
   };
-
-  const handleDeleteTranscript =
-    (transcriptId: string) => (e: React.MouseEvent) => {
-      e?.stopPropagation?.();
-      setTranscriptToDeleteId(transcriptId);
-    };
 
   const handleProcessTranscript = (transcriptId: string) => {
     if (!api) {
@@ -252,83 +380,16 @@ export default function TranscriptBrowser() {
           gap={4}
           px={{ base: 0, md: 4 }}
         >
-          <Stack gap={2}>
-            <form action={handleSearchQuerySubmit}>
-              <Flex alignItems="center">
-                <Box position="relative" flex="1">
-                  <Input
-                    placeholder="Search transcriptions..."
-                    value={searchInputValue}
-                    onChange={(e) => setSearchInputValue(e.target.value)}
-                    name={SEARCH_FORM_QUERY_INPUT_NAME}
-                    pr={urlSearchQuery ? "2.5rem" : undefined}
-                  />
-                  {urlSearchQuery && (
-                    <IconButton
-                      aria-label="Clear search"
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleClearSearch}
-                      position="absolute"
-                      right="0.25rem"
-                      top="50%"
-                      transform="translateY(-50%)"
-                      _hover={{ bg: "gray.100" }}
-                    >
-                      <LuX />
-                    </IconButton>
-                  )}
-                </Box>
-                <Button ml={2} type="submit">
-                  Search
-                </Button>
-              </Flex>
-            </form>
-
-            {(urlSourceKind || urlRoomId) && (
-              <Flex gap={2} flexWrap="wrap" align="center">
-                <Text fontSize="sm" color="gray.600">
-                  Active filters:
-                </Text>
-                {urlSourceKind && (
-                  <Flex
-                    align="center"
-                    px={2}
-                    py={1}
-                    bg="blue.100"
-                    borderRadius="md"
-                    fontSize="xs"
-                    gap={1}
-                  >
-                    <Text>
-                      {urlRoomId
-                        ? `Room: ${
-                            rooms.find((r) => r.id === urlRoomId)?.name ||
-                            urlRoomId
-                          }`
-                        : `Source: ${urlSourceKind}`}
-                    </Text>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      minW="auto"
-                      h="auto"
-                      p="1px"
-                      onClick={() => {
-                        setUrlSourceKind(null);
-                        // TODO questionable
-                        setUrlRoomId(null);
-                      }}
-                      _hover={{ bg: "blue.200" }}
-                      aria-label="Clear filter"
-                    >
-                      <LuX size={14} />
-                    </Button>
-                  </Flex>
-                )}
-              </Flex>
-            )}
-          </Stack>
+          <SearchForm
+            setPage={setPage}
+            sourceKind={urlSourceKind}
+            roomId={urlRoomId}
+            searchQuery={urlSearchQuery}
+            setSearchQuery={setUrlSearchQuery}
+            setSourceKind={setUrlSourceKind}
+            setRoomId={setUrlRoomId}
+            rooms={rooms}
+          />
 
           {totalPages > 1 ? (
             <Pagination
@@ -343,31 +404,12 @@ export default function TranscriptBrowser() {
             results={results}
             query={urlSearchQuery}
             isLoading={isLoading}
-            onDelete={handleDeleteTranscript}
+            onDelete={setTranscriptToDeleteId}
             onReprocess={handleProcessTranscript}
           />
 
           {!isLoading && results.length === 0 && (
-            <Flex
-              flexDir="column"
-              alignItems="center"
-              justifyContent="center"
-              py={8}
-            >
-              <Text textAlign="center">
-                {urlSearchQuery
-                  ? `No results found for "${urlSearchQuery}". Try adjusting your search terms.`
-                  : "No transcripts found, but you can "}
-                {!urlSearchQuery && (
-                  <>
-                    <Link href={RECORD_A_MEETING_URL} color="blue.500">
-                      record a meeting
-                    </Link>
-                    {" to get started."}
-                  </>
-                )}
-              </Text>
-            </Flex>
+            <EmptyResult searchQuery={urlSearchQuery} />
           )}
         </Flex>
       </Flex>
