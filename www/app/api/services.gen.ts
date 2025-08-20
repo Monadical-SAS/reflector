@@ -16,6 +16,18 @@ import type {
   V1RoomsDeleteResponse,
   V1RoomsCreateMeetingData,
   V1RoomsCreateMeetingResponse,
+  V1RoomsSyncIcsData,
+  V1RoomsSyncIcsResponse,
+  V1RoomsIcsStatusData,
+  V1RoomsIcsStatusResponse,
+  V1RoomsListMeetingsData,
+  V1RoomsListMeetingsResponse,
+  V1RoomsListUpcomingMeetingsData,
+  V1RoomsListUpcomingMeetingsResponse,
+  V1RoomsListActiveMeetingsData,
+  V1RoomsListActiveMeetingsResponse,
+  V1RoomsJoinMeetingData,
+  V1RoomsJoinMeetingResponse,
   V1TranscriptsListData,
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
@@ -220,6 +232,146 @@ export class DefaultService {
       url: "/v1/rooms/{room_name}/meeting",
       path: {
         room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Sync Ics
+   * @param data The data for the request.
+   * @param data.roomName
+   * @returns ICSSyncResult Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsSyncIcs(
+    data: V1RoomsSyncIcsData,
+  ): CancelablePromise<V1RoomsSyncIcsResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_name}/ics/sync",
+      path: {
+        room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Ics Status
+   * @param data The data for the request.
+   * @param data.roomName
+   * @returns ICSStatus Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsIcsStatus(
+    data: V1RoomsIcsStatusData,
+  ): CancelablePromise<V1RoomsIcsStatusResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_name}/ics/status",
+      path: {
+        room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms List Meetings
+   * @param data The data for the request.
+   * @param data.roomName
+   * @returns CalendarEventResponse Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsListMeetings(
+    data: V1RoomsListMeetingsData,
+  ): CancelablePromise<V1RoomsListMeetingsResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_name}/meetings",
+      path: {
+        room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms List Upcoming Meetings
+   * @param data The data for the request.
+   * @param data.roomName
+   * @param data.minutesAhead
+   * @returns CalendarEventResponse Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsListUpcomingMeetings(
+    data: V1RoomsListUpcomingMeetingsData,
+  ): CancelablePromise<V1RoomsListUpcomingMeetingsResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_name}/meetings/upcoming",
+      path: {
+        room_name: data.roomName,
+      },
+      query: {
+        minutes_ahead: data.minutesAhead,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms List Active Meetings
+   * List all active meetings for a room (supports multiple active meetings)
+   * @param data The data for the request.
+   * @param data.roomName
+   * @returns Meeting Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsListActiveMeetings(
+    data: V1RoomsListActiveMeetingsData,
+  ): CancelablePromise<V1RoomsListActiveMeetingsResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_name}/meetings/active",
+      path: {
+        room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Join Meeting
+   * Join a specific meeting by ID
+   * @param data The data for the request.
+   * @param data.roomName
+   * @param data.meetingId
+   * @returns Meeting Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsJoinMeeting(
+    data: V1RoomsJoinMeetingData,
+  ): CancelablePromise<V1RoomsJoinMeetingResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_name}/meetings/{meeting_id}/join",
+      path: {
+        room_name: data.roomName,
+        meeting_id: data.meetingId,
       },
       errors: {
         422: "Validation Error",

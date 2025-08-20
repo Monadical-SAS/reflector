@@ -40,7 +40,15 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
+    sqlalchemy.Column("ics_url", sqlalchemy.Text),
+    sqlalchemy.Column("ics_fetch_interval", sqlalchemy.Integer, server_default="300"),
+    sqlalchemy.Column(
+        "ics_enabled", sqlalchemy.Boolean, nullable=False, server_default=false()
+    ),
+    sqlalchemy.Column("ics_last_sync", sqlalchemy.DateTime(timezone=True)),
+    sqlalchemy.Column("ics_last_etag", sqlalchemy.Text),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
+    sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
 )
 
 
@@ -59,6 +67,11 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
+    ics_url: str | None = None
+    ics_fetch_interval: int = 300
+    ics_enabled: bool = False
+    ics_last_sync: datetime | None = None
+    ics_last_etag: str | None = None
 
 
 class RoomController:
@@ -107,6 +120,9 @@ class RoomController:
         recording_type: str,
         recording_trigger: str,
         is_shared: bool,
+        ics_url: str | None = None,
+        ics_fetch_interval: int = 300,
+        ics_enabled: bool = False,
     ):
         """
         Add a new room
@@ -122,6 +138,9 @@ class RoomController:
             recording_type=recording_type,
             recording_trigger=recording_trigger,
             is_shared=is_shared,
+            ics_url=ics_url,
+            ics_fetch_interval=ics_fetch_interval,
+            ics_enabled=ics_enabled,
         )
         query = rooms.insert().values(**room.model_dump())
         try:
