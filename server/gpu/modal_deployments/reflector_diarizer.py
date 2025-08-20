@@ -137,7 +137,7 @@ diarizer_image = (
 
 
 @app.cls(
-    gpu="A100-40GB",
+    gpu="A100",
     timeout=60 * 30,
     image=diarizer_image,
     volumes={UPLOADS_PATH: upload_volume},
