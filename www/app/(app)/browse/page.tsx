@@ -10,6 +10,7 @@ import {
   Stack,
   Input,
   Button,
+  IconButton,
 } from "@chakra-ui/react";
 import {
   useQueryState,
@@ -255,20 +256,33 @@ export default function TranscriptBrowser() {
           <Stack gap={2}>
             <form action={handleSearchQuerySubmit}>
               <Flex alignItems="center">
-                <Input
-                  placeholder="Search transcriptions..."
-                  value={searchInputValue}
-                  onChange={(e) => setSearchInputValue(e.target.value)}
-                  name={SEARCH_FORM_QUERY_INPUT_NAME}
-                />
+                <Box position="relative" flex="1">
+                  <Input
+                    placeholder="Search transcriptions..."
+                    value={searchInputValue}
+                    onChange={(e) => setSearchInputValue(e.target.value)}
+                    name={SEARCH_FORM_QUERY_INPUT_NAME}
+                    pr={urlSearchQuery ? "2.5rem" : undefined}
+                  />
+                  {urlSearchQuery && (
+                    <IconButton
+                      aria-label="Clear search"
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleClearSearch}
+                      position="absolute"
+                      right="0.25rem"
+                      top="50%"
+                      transform="translateY(-50%)"
+                      _hover={{ bg: "gray.100" }}
+                    >
+                      <LuX />
+                    </IconButton>
+                  )}
+                </Box>
                 <Button ml={2} type="submit">
                   Search
                 </Button>
-                {urlSearchQuery && (
-                  <Button ml={2} variant="ghost" onClick={handleClearSearch}>
-                    Clear
-                  </Button>
-                )}
               </Flex>
             </form>
 
