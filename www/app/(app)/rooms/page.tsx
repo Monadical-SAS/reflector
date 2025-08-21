@@ -19,6 +19,7 @@ import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { ApiError, Room } from "../../api";
 import { RoomList } from "./_components/RoomList";
+import { PaginationPage } from "../browse/_components/Pagination";
 
 interface SelectOption {
   label: string;
@@ -75,8 +76,9 @@ export default function RoomsList() {
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState("");
   const api = useApi();
+  // TODO seems to be no setPage calls
   const [page, setPage] = useState<number>(1);
-  const { loading, response, refetch } = useRoomList(page);
+  const { loading, response, refetch } = useRoomList(PaginationPage(page));
   const [streams, setStreams] = useState<Stream[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [nameError, setNameError] = useState("");

@@ -160,6 +160,7 @@ async def transcripts_search(
     limit: SearchLimitParam = DEFAULT_SEARCH_LIMIT,
     offset: SearchOffsetParam = 0,
     room_id: Optional[str] = None,
+    source_kind: Optional[SourceKind] = None,
     user: Annotated[
         Optional[auth.UserInfo], Depends(auth.current_user_optional)
     ] = None,
@@ -173,7 +174,12 @@ async def transcripts_search(
     user_id = user["sub"] if user else None
 
     search_params = SearchParameters(
-        query_text=q, limit=limit, offset=offset, user_id=user_id, room_id=room_id
+        query_text=q,
+        limit=limit,
+        offset=offset,
+        user_id=user_id,
+        room_id=room_id,
+        source_kind=source_kind,
     )
 
     results, total = await search_controller.search_transcripts(search_params)

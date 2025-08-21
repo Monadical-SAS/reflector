@@ -1002,7 +1002,7 @@ export const $SearchResponse = {
     },
     query: {
       type: "string",
-      minLength: 1,
+      minLength: 0,
       title: "Query",
       description: "Search query text",
     },
@@ -1065,6 +1065,20 @@ export const $SearchResult = {
       ],
       title: "Room Id",
     },
+    room_name: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Room Name",
+    },
+    source_kind: {
+      $ref: "#/components/schemas/SourceKind",
+    },
     created_at: {
       type: "string",
       title: "Created At",
@@ -1101,10 +1115,18 @@ export const $SearchResult = {
       title: "Search Snippets",
       description: "Text snippets around search matches",
     },
+    total_match_count: {
+      type: "integer",
+      minimum: 0,
+      title: "Total Match Count",
+      description: "Total number of matches found in the transcript",
+      default: 0,
+    },
   },
   type: "object",
   required: [
     "id",
+    "source_kind",
     "created_at",
     "status",
     "rank",

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
 import { Page_Room_ } from "../../api";
+import { PaginationPage } from "../browse/_components/Pagination";
 
 type RoomList = {
   response: Page_Room_ | null;
@@ -11,7 +12,7 @@ type RoomList = {
 };
 
 //always protected
-const useRoomList = (page: number): RoomList => {
+const useRoomList = (page: PaginationPage): RoomList => {
   const [response, setResponse] = useState<Page_Room_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
