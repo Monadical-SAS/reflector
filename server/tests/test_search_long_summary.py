@@ -54,12 +54,13 @@ The robotics project is making good progress.
 
 00:00:20.000 --> 00:00:30.000
 We need to consider various implementation approaches.""",
+            "user_id": "test-user-priority",
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
         # Search for "robotics" which appears in both long_summary and webvtt
-        params = SearchParameters(query_text="robotics")
+        params = SearchParameters(query_text="robotics", user_id="test-user-priority")
         results, total = await search_controller.search_transcripts(params)
 
         assert total >= 1
@@ -131,12 +132,13 @@ Team meeting about general project updates.
 
 00:00:10.000 --> 00:00:20.000
 Discussion of timeline and deliverables.""",
+            "user_id": "test-user-long",
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
         # Search for terms only in long_summary
-        params = SearchParameters(query_text="cryptocurrency")
+        params = SearchParameters(query_text="cryptocurrency", user_id="test-user-long")
         results, total = await search_controller.search_transcripts(params)
 
         found = any(r.id == test_id for r in results)
@@ -151,7 +153,7 @@ Discussion of timeline and deliverables.""",
         assert "cryptocurrency" in snippet, "Snippet should contain the search term"
 
         # Search for "yield farming" - a more specific term
-        params2 = SearchParameters(query_text="yield farming")
+        params2 = SearchParameters(query_text="yield farming", user_id="test-user-long")
         results2, total2 = await search_controller.search_transcripts(params2)
 
         found2 = any(r.id == test_id for r in results2)
