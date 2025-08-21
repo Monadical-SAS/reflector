@@ -13,8 +13,8 @@ ENV PATH="/root/.local/bin/:$PATH"
 # install application dependencies
 RUN mkdir -p /app
 WORKDIR /app
-COPY pyproject.toml uv.lock /app/
-RUN touch README.md && env uv sync --compile-bytecode --locked
+COPY pyproject.toml uv.lock README.md /app/
+RUN uv sync --compile-bytecode --locked
 
 # pre-download nltk packages
 RUN uv run python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
