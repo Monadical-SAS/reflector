@@ -45,7 +45,7 @@ SearchTotal = Annotated[
     SearchTotalBase, Field(description="Total number of search results")
 ]
 
-WEBVTT_SPEC_HEADER = "WEBVTT\n\n"
+WEBVTT_SPEC_HEADER = "WEBVTT"
 
 WebVTTContent = Annotated[
     str,
