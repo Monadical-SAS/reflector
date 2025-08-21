@@ -1,6 +1,7 @@
 from reflector.processors.base import Processor
 from reflector.processors.types import (
     AudioDiarizationInput,
+    DiarizationSegment,
     TitleSummary,
     Word,
 )
@@ -38,7 +39,7 @@ class AudioDiarizationProcessor(Processor):
         raise NotImplementedError
 
     @classmethod
-    def assign_speaker(cls, words: list[Word], diarization: list[dict]):
+    def assign_speaker(cls, words: list[Word], diarization: list[DiarizationSegment]):
         cls._diarization_remove_overlap(diarization)
         cls._diarization_remove_segment_without_words(words, diarization)
         cls._diarization_merge_same_speaker(diarization)
@@ -65,7 +66,7 @@ class AudioDiarizationProcessor(Processor):
         return True
 
     @staticmethod
-    def _diarization_remove_overlap(diarization: list[dict]):
+    def _diarization_remove_overlap(diarization: list[DiarizationSegment]):
         """
         Remove overlap in diarization results
 
@@ -92,7 +93,7 @@ class AudioDiarizationProcessor(Processor):
 
     @staticmethod
     def _diarization_remove_segment_without_words(
-        words: list[Word], diarization: list[dict]
+        words: list[Word], diarization: list[DiarizationSegment]
     ):
         """
         Remove diarization segments without words
@@ -122,7 +123,7 @@ class AudioDiarizationProcessor(Processor):
                 diarization_idx += 1
 
     @staticmethod
-    def _diarization_merge_same_speaker(diarization: list[dict]):
+    def _diarization_merge_same_speaker(diarization: list[DiarizationSegment]):
         """
         Merge diarization contigous segments with the same speaker
 
@@ -140,7 +141,9 @@ class AudioDiarizationProcessor(Processor):
                 diarization_idx += 1
 
     @classmethod
-    def _diarization_assign_speaker(cls, words: list[Word], diarization: list[dict]):
+    def _diarization_assign_speaker(
+        cls, words: list[Word], diarization: list[DiarizationSegment]
+    ):
         """
         Assign speaker to words based on diarization
 
@@ -148,7 +151,7 @@ class AudioDiarizationProcessor(Processor):
         """
 
         word_idx = 0
-        last_speaker = None
+        last_speaker = 0
         for d in diarization:
             start = d["start"]
             end = d["end"]

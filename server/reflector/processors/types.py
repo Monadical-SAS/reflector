@@ -2,12 +2,21 @@ import io
 import re
 import tempfile
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 from profanityfilter import ProfanityFilter
 from pydantic import BaseModel, Field, PrivateAttr
 
 from reflector.redis_cache import redis_cache
+
+
+class DiarizationSegment(TypedDict):
+    """Type definition for diarization segment containing speaker information"""
+
+    start: float
+    end: float
+    speaker: int
+
 
 PUNC_RE = re.compile(r"[.;:?!…]")
 

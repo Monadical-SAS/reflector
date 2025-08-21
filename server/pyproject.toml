@@ -32,7 +32,6 @@ dependencies = [
     "redis>=5.0.1",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.6",
-    "faster-whisper>=0.10.0",
     "transformers>=4.36.2",
     "jsonschema>=4.23.0",
     "openai>=1.59.7",
@@ -41,6 +40,7 @@ dependencies = [
     "llama-index-llms-openai-like>=0.4.0",
     "pytest-env>=1.1.5",
     "webvtt-py>=0.5.0",
+    "silero-vad>=5.1.2",
 ]
 
 [dependency-groups]
@@ -57,6 +57,7 @@ tests = [
     "httpx-ws>=0.4.1",
     "pytest-httpx>=0.23.1",
     "pytest-celery>=0.0.0",
+    "pytest-recording>=0.13.4",
     "pytest-docker>=3.2.3",
     "asgi-lifespan>=2.1.0",
 ]
@@ -67,6 +68,10 @@ evaluation = [
     "tqdm>=4.66.0",
     "pydantic>=2.1.1",
 ]
+local = [
+    "pyannote-audio>=3.3.2",
+    "faster-whisper>=0.10.0",
+]
 
 [tool.uv]
 default-groups = [
@@ -74,6 +79,7 @@ default-groups = [
     "tests",
     "aws",
     "evaluation",
+    "local"
 ]
 
 [build-system]
@@ -94,6 +100,9 @@ DATABASE_URL = "postgresql://test_user:test_password@localhost:15432/reflector_t
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "gpu_modal: mark test to run only with GPU Modal endpoints (deselect with '-m \"not gpu_modal\"')",
+]
 
 [tool.ruff.lint]
 select = [
