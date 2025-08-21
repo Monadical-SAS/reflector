@@ -3,7 +3,7 @@
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import List, Optional, TypedDict
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -18,18 +18,60 @@ from reflector.db.search import (
 )
 from reflector.db.transcripts import SourceKind, transcripts
 
-# Constants
+
+class RoomTestData(TypedDict):
+    """Type definition for room test data."""
+
+    id: str
+    name: str
+    user_id: str
+    is_shared: bool
+    created_at: datetime
+
+
+class TranscriptTestData(TypedDict, total=False):
+    """Type definition for transcript test data."""
+
+    # Required fields
+    id: str
+    name: str
+    title: str
+    status: str
+    created_at: datetime
+    duration: float
+    source_kind: SourceKind
+    topics: str
+    events: str
+    participants: str
+    webvtt: Optional[str]
+
+    # Optional fields
+    room_id: Optional[str]
+    user_id: Optional[str]
+    locked: bool
+    short_summary: Optional[str]
+    long_summary: Optional[str]
+    source_language: str
+    target_language: str
+    reviewed: bool
+    audio_location: str
+    share_mode: str
+
+
+# Test constants
 DEFAULT_DURATION = 1800.0
 SHORT_DURATION = 600.0
 LONG_DURATION = 2400.0
 DEFAULT_WEBVTT = "WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nTest content"
+RANK_MIN = 0.0
+RANK_MAX = 1.0
 
 
 @pytest.fixture
 async def db_cleanup():
     """Fixture to track and cleanup database entities after test."""
-    transcript_ids = []
-    room_ids = []
+    transcript_ids: List[str] = []
+    room_ids: List[str] = []
 
     class Tracker:
         def add_transcript(self, id: str) -> None:
@@ -44,8 +86,7 @@ async def db_cleanup():
         def add_rooms(self, ids: List[str]) -> None:
             room_ids.extend(ids)
 
-    tracker = Tracker()
-    yield tracker
+    yield Tracker()
 
     # Cleanup after test
     if transcript_ids:
@@ -58,15 +99,15 @@ async def db_cleanup():
 
 def create_test_room_data(
     room_id: str, name: str, user_id: str, is_shared: bool
-) -> Dict[str, Any]:
+) -> RoomTestData:
     """Helper to create consistent room test data."""
-    return {
-        "id": room_id,
-        "name": name,
-        "user_id": user_id,
-        "is_shared": is_shared,
-        "created_at": datetime.now(timezone.utc),
-    }
+    return RoomTestData(
+        id=room_id,
+        name=name,
+        user_id=user_id,
+        is_shared=is_shared,
+        created_at=datetime.now(timezone.utc),
+    )
 
 
 def create_test_transcript_data(
@@ -78,26 +119,26 @@ def create_test_transcript_data(
     webvtt: str = DEFAULT_WEBVTT,
     duration: float = DEFAULT_DURATION,
     source_kind: Optional[SourceKind] = None,
-) -> Dict[str, Any]:
+) -> TranscriptTestData:
     """Helper to create consistent transcript test data."""
     if source_kind is None:
         source_kind = SourceKind.ROOM if room_id else SourceKind.FILE
 
-    return {
-        "id": transcript_id,
-        "name": name,
-        "title": title,
-        "status": "completed",
-        "room_id": room_id,
-        "user_id": user_id,
-        "created_at": datetime.now(timezone.utc),
-        "duration": duration,
-        "source_kind": source_kind,
-        "topics": json.dumps([]),
-        "events": json.dumps([]),
-        "participants": json.dumps([]),
-        "webvtt": webvtt,
-    }
+    return TranscriptTestData(
+        id=transcript_id,
+        name=name,
+        title=title,
+        status="completed",
+        room_id=room_id,
+        user_id=user_id,
+        created_at=datetime.now(timezone.utc),
+        duration=duration,
+        source_kind=source_kind,
+        topics=json.dumps([]),
+        events=json.dumps([]),
+        participants=json.dumps([]),
+        webvtt=webvtt,
+    )
 
 
 @pytest.mark.asyncio
@@ -219,7 +260,9 @@ Basic meeting content without special keywords.""",
 
     test_result = next((r for r in results if r.id == test_id), None)
     assert test_result
-    assert len(test_result.search_snippets) > 0
+    assert (
+        len(test_result.search_snippets) > 0
+    ), f"Expected snippets for 'quantum computing', got {test_result.search_snippets}"
     assert "quantum computing" in test_result.search_snippets[0].lower()
 
 
@@ -316,7 +359,9 @@ Welcome to our engineering planning meeting for Q4 2024.""",
     assert test_result.title == "Engineering Planning Meeting Q4 2024"
     assert test_result.status == "completed"
     assert test_result.duration == DEFAULT_DURATION
-    assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
+    assert (
+        RANK_MIN <= test_result.rank <= RANK_MAX
+    ), f"Rank should be normalized to {RANK_MIN}-{RANK_MAX}"
 
 
 @pytest.mark.asyncio
@@ -346,6 +391,44 @@ We need to implement PostgreSQL tsvector for better performance.""",
     assert (
         len(matching) == 1
     ), f"Expected exactly 1 match for OR query, got {len(matching)}"
+
+
+@pytest.mark.parametrize(
+    "query,operator_type",
+    [
+        ("tsvector OR nosuchword", "OR"),
+        ("tsvector AND PostgreSQL", "AND"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_search_boolean_operators(db_cleanup, query, operator_type):
+    """Test search using boolean operators."""
+    test_id = f"test-{operator_type.lower()}-operator-{uuid.uuid4()}"
+    test_user = f"test-user-{operator_type.lower()}-{uuid.uuid4()}"
+    db_cleanup.add_transcript(test_id)
+
+    test_data = create_test_transcript_data(
+        test_id,
+        f"Test {operator_type} Operator",
+        "Database Performance",
+        user_id=test_user,
+        webvtt="""WEBVTT
+
+00:00:00.000 --> 00:00:10.000
+We need to implement PostgreSQL tsvector for better performance.""",
+    )
+    await get_database().execute(transcripts.insert().values(**test_data))
+
+    params = SearchParameters(query_text=query, user_id=test_user)
+    results, total = await search_controller.search_transcripts(params)
+
+    assert (
+        total >= 1
+    ), f"Expected at least 1 result for {operator_type} query, got {total}"
+    matching = [r for r in results if r.id == test_id]
+    assert (
+        len(matching) == 1
+    ), f"Expected exactly 1 match for {operator_type} query, got {len(matching)}"
 
 
 @pytest.mark.asyncio
@@ -878,7 +961,7 @@ We need to consider various implementation approaches.""",
         "advanced robotics" in first_snippet or "autonomous" in first_snippet
     ), f"First snippet should be from long_summary with detailed content. Got: {snippets[0]}"
 
-    assert len(snippets) <= 3, "Should respect max snippets limit"
+    assert len(snippets) <= 3, "Should respect max snippets limit of 3"
 
     for snippet in snippets:
         assert (
@@ -935,7 +1018,9 @@ Discussion of timeline and deliverables.""",
         len(matching) == 1
     ), f"Expected exactly 1 match for cryptocurrency search, got {len(matching)}"
     test_result = matching[0]
-    assert len(test_result.search_snippets) > 0
+    assert (
+        len(test_result.search_snippets) > 0
+    ), f"Expected snippets for 'cryptocurrency', got {test_result.search_snippets}"
 
     snippet = test_result.search_snippets[0].lower()
     assert "cryptocurrency" in snippet, "Snippet should contain the search term"
