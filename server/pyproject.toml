@@ -74,6 +74,7 @@ local = [
 silero-vad = [
     "silero-vad>=5.1.2",
     "torch>=2.8.0",
+    "torchaudio>=2.8.0",
 ]
 
 [tool.uv]
@@ -93,6 +94,9 @@ explicit = true
 
 [tool.uv.sources]
 torch = [
+  { index = "pytorch-cpu" },
+]
+torchaudio = [
   { index = "pytorch-cpu" },
 ]
 
