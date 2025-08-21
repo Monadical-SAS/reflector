@@ -27,4 +27,15 @@ COPY migrations /app/migrations
 COPY reflector /app/reflector
 WORKDIR /app
 
+# Create symlink for libgomp if it doesn't exist (for ARM64 compatibility)
+RUN if [ "$(uname -m)" = "aarch64" ] && [ ! -f /usr/lib/libgomp.so.1 ]; then \
+    LIBGOMP_PATH=$(find /app/.venv/lib -path "*/torch.libs/libgomp*.so.*" 2>/dev/null | head -n1); \
+    if [ -n "$LIBGOMP_PATH" ]; then \
+    ln -sf "$LIBGOMP_PATH" /usr/lib/libgomp.so.1; \
+    fi \
+    fi
+
+# Pre-check just to make sure the image will not fail
+RUN uv run python -c "import silero_vad.model"
+
 CMD ["./runserver.sh"]
