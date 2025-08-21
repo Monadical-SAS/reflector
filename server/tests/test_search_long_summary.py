@@ -1,6 +1,7 @@
 """Tests for long_summary in search functionality."""
 
 import json
+import uuid
 from datetime import datetime, timezone
 
 import pytest
@@ -13,15 +14,10 @@ from reflector.db.transcripts import transcripts
 @pytest.mark.asyncio
 async def test_long_summary_snippet_prioritization():
     """Test that snippets from long_summary are prioritized over webvtt content."""
-    test_id = "test-snippet-priority-3f9a2b8c"
-    test_user = "test-user-priority"
+    test_id = f"test-snippet-priority-{uuid.uuid4()}"
+    test_user = f"test-user-priority-{uuid.uuid4()}"
 
     try:
-        # Clean up any existing test data
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
-        )
-
         test_data = {
             "id": test_id,
             "name": "Test Snippet Priority",
@@ -60,7 +56,6 @@ We need to consider various implementation approaches.""",
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Search for "robotics" which appears in both long_summary and webvtt
         params = SearchParameters(query_text="robotics", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
@@ -71,16 +66,13 @@ We need to consider various implementation approaches.""",
         snippets = test_result.search_snippets
         assert len(snippets) > 0, "Should have at least one snippet"
 
-        # The first snippets should be from long_summary (more detailed content)
         first_snippet = snippets[0].lower()
         assert (
             "advanced robotics" in first_snippet or "autonomous" in first_snippet
         ), f"First snippet should be from long_summary with detailed content. Got: {snippets[0]}"
 
-        # With max 3 snippets, we should get both from long_summary and webvtt
         assert len(snippets) <= 3, "Should respect max snippets limit"
 
-        # All snippets should contain the search term
         for snippet in snippets:
             assert (
                 "robotics" in snippet.lower()
@@ -90,20 +82,15 @@ We need to consider various implementation approaches.""",
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_id)
         )
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_long_summary_only_search():
     """Test searching for content that only exists in long_summary."""
-    test_id = "test-long-only-8b3c9f2a"
-    test_user = "test-user-longonly"
+    test_id = f"test-long-only-{uuid.uuid4()}"
+    test_user = f"test-user-longonly-{uuid.uuid4()}"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
-        )
-
         test_data = {
             "id": test_id,
             "name": "Test Long Only",
@@ -139,7 +126,6 @@ Discussion of timeline and deliverables.""",
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        # Search for terms only in long_summary
         params = SearchParameters(query_text="cryptocurrency", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
@@ -150,11 +136,9 @@ Discussion of timeline and deliverables.""",
         assert test_result
         assert len(test_result.search_snippets) > 0
 
-        # Verify the snippet is about cryptocurrency
         snippet = test_result.search_snippets[0].lower()
         assert "cryptocurrency" in snippet, "Snippet should contain the search term"
 
-        # Search for "yield farming" - a more specific term
         params2 = SearchParameters(query_text="yield farming", user_id=test_user)
         results2, total2 = await search_controller.search_transcripts(params2)
 
@@ -165,4 +149,3 @@ Discussion of timeline and deliverables.""",
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_id)
         )
-        await get_database().disconnect()

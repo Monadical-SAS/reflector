@@ -1,6 +1,7 @@
 """Tests for full-text search functionality."""
 
 import json
+import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
@@ -15,6 +16,43 @@ from reflector.db.search import (
     search_controller,
 )
 from reflector.db.transcripts import SourceKind, transcripts
+
+
+def create_test_room_data(room_id: str, name: str, user_id: str, is_shared: bool):
+    """Helper to create consistent room test data."""
+    return {
+        "id": room_id,
+        "name": name,
+        "user_id": user_id,
+        "is_shared": is_shared,
+        "created_at": datetime.now(timezone.utc),
+    }
+
+
+def create_test_transcript_data(
+    transcript_id: str,
+    name: str,
+    title: str,
+    user_id: str = None,
+    room_id: str = None,
+    webvtt: str = "WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nTest content",
+):
+    """Helper to create consistent transcript test data."""
+    return {
+        "id": transcript_id,
+        "name": name,
+        "title": title,
+        "status": "completed",
+        "room_id": room_id,
+        "user_id": user_id,
+        "created_at": datetime.now(timezone.utc),
+        "duration": 1800.0,
+        "source_kind": "room" if room_id else "file",
+        "topics": json.dumps([]),
+        "events": json.dumps([]),
+        "participants": json.dumps([]),
+        "webvtt": webvtt,
+    }
 
 
 @pytest.mark.asyncio
@@ -48,8 +86,8 @@ async def test_search_with_empty_query():
 @pytest.mark.asyncio
 async def test_empty_transcript_title_only_match():
     """Test that transcripts with title-only matches return empty snippets."""
-    test_id = "test-empty-9b3f2a8d"
-    test_user = "test-user-empty"
+    test_id = f"test-empty-{uuid.uuid4()}"
+    test_user = f"test-user-empty-{uuid.uuid4()}"
 
     try:
         await get_database().execute(
@@ -94,14 +132,13 @@ async def test_empty_transcript_title_only_match():
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_id)
         )
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_search_with_long_summary():
     """Test that long_summary content is searchable."""
-    test_id = "test-long-summary-8a9f3c2d"
-    test_user = "test-user-summary"
+    test_id = f"test-long-summary-{uuid.uuid4()}"
+    test_user = f"test-user-summary-{uuid.uuid4()}"
 
     try:
         await get_database().execute(
@@ -152,13 +189,12 @@ Basic meeting content without special keywords.""",
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_id)
         )
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_postgresql_search_with_data():
-    test_id = "test-search-e2e-7f3a9b2c"
-    test_user = "test-user-pg"
+    test_id = f"test-search-e2e-{uuid.uuid4()}"
+    test_user = f"test-user-pg-{uuid.uuid4()}"
 
     try:
         await get_database().execute(
@@ -245,7 +281,6 @@ We need to implement PostgreSQL tsvector for better performance.""",
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_id)
         )
-        await get_database().disconnect()
 
 
 @pytest.fixture
@@ -488,100 +523,66 @@ class TestSearchResultModel:
 @pytest.mark.asyncio
 async def test_search_shared_room_visible_to_anonymous():
     """Test that transcripts in shared rooms are searchable without user_id."""
-    test_room_id = "shared-room-test-1"
-    test_transcript_id = "shared-transcript-1"
+    test_room_id = f"shared-room-test-{uuid.uuid4()}"
+    test_transcript_id = f"shared-transcript-{uuid.uuid4()}"
     owner_user = "room-owner"
 
     try:
-        await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_transcript_id)
+        room_data = create_test_room_data(
+            test_room_id, "Shared Test Room", owner_user, is_shared=True
         )
+        await get_database().execute(rooms.insert().values(**room_data))
 
-        await get_database().execute(
-            rooms.insert().values(
-                id=test_room_id,
-                name="Shared Test Room",
-                user_id=owner_user,
-                is_shared=True,
-                created_at=datetime.now(timezone.utc),
-            )
+        transcript_data = create_test_transcript_data(
+            test_transcript_id,
+            "Shared Room Transcript",
+            "Public Meeting",
+            user_id=owner_user,
+            room_id=test_room_id,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nShared content",
         )
-
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_transcript_id,
-                name="Shared Room Transcript",
-                title="Public Meeting",
-                status="completed",
-                room_id=test_room_id,
-                user_id=owner_user,
-                created_at=datetime.now(timezone.utc),
-                duration=1800.0,
-                source_kind="room",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nShared content",
-            )
-        )
+        await get_database().execute(transcripts.insert().values(**transcript_data))
 
         params = SearchParameters(query_text="public")
         results, total = await search_controller.search_transcripts(params)
 
-        assert total >= 1
-        found = any(r.id == test_transcript_id for r in results)
-        assert found, "Should find transcript in shared room without user_id"
+        matching_results = [r for r in results if r.id == test_transcript_id]
+        assert (
+            len(matching_results) == 1
+        ), f"Expected exactly 1 result, got {len(matching_results)}"
+        assert total >= 1, f"Total count should be at least 1, got {total}"
 
     finally:
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_transcript_id)
         )
         await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_search_private_room_requires_user_match():
     """Test that transcripts in private rooms require matching user_id."""
-    test_room_id = "private-room-test-1"
-    test_transcript_id = "private-transcript-1"
+    test_room_id = f"private-room-test-{uuid.uuid4()}"
+    test_transcript_id = f"private-transcript-{uuid.uuid4()}"
     owner_user = "user1"
     other_user = "user2"
 
     try:
-        await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_transcript_id)
+        room_data = create_test_room_data(
+            test_room_id, "Private Test Room", owner_user, is_shared=False
         )
+        await get_database().execute(rooms.insert().values(**room_data))
 
-        await get_database().execute(
-            rooms.insert().values(
-                id=test_room_id,
-                name="Private Test Room",
-                user_id=owner_user,
-                is_shared=False,
-                created_at=datetime.now(timezone.utc),
-            )
+        transcript_data = create_test_transcript_data(
+            test_transcript_id,
+            "Private Room Transcript",
+            "Confidential Meeting",
+            user_id=owner_user,
+            room_id=test_room_id,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nConfidential content",
         )
-
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_transcript_id,
-                name="Private Room Transcript",
-                title="Confidential Meeting",
-                status="completed",
-                room_id=test_room_id,
-                user_id=owner_user,
-                created_at=datetime.now(timezone.utc),
-                duration=900.0,
-                source_kind="room",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nConfidential content",
-            )
-        )
+        transcript_data["duration"] = 900.0
+        await get_database().execute(transcripts.insert().values(**transcript_data))
 
         params_other = SearchParameters(query_text="confidential", user_id=other_user)
         results, total = await search_controller.search_transcripts(params_other)
@@ -600,38 +601,26 @@ async def test_search_private_room_requires_user_match():
             transcripts.delete().where(transcripts.c.id == test_transcript_id)
         )
         await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_search_no_room_requires_user_id():
     """Test that transcripts without rooms are only visible to their owner."""
-    test_transcript_id = "no-room-transcript-1"
+    test_transcript_id = f"no-room-transcript-{uuid.uuid4()}"
     owner_user = "file-uploader"
     other_user = "another-user"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_transcript_id)
+        transcript_data = create_test_transcript_data(
+            test_transcript_id,
+            "Uploaded File",
+            "Direct Upload",
+            user_id=owner_user,
+            room_id=None,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nUploaded content",
         )
-
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_transcript_id,
-                name="Uploaded File",
-                title="Direct Upload",
-                status="completed",
-                room_id=None,
-                user_id=owner_user,
-                created_at=datetime.now(timezone.utc),
-                duration=600.0,
-                source_kind="file",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nUploaded content",
-            )
-        )
+        transcript_data["duration"] = 600.0
+        await get_database().execute(transcripts.insert().values(**transcript_data))
 
         params_anon = SearchParameters(query_text="upload")
         results, total = await search_controller.search_transcripts(params_anon)
@@ -652,81 +641,52 @@ async def test_search_no_room_requires_user_id():
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_transcript_id)
         )
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_search_returns_mixed_visibility():
     """Test that search correctly returns both owned and shared transcripts."""
-    test_private_id = "mixed-private-1"
-    test_shared_id = "mixed-shared-1"
-    test_private_room = "mixed-private-room-1"
-    test_shared_room = "mixed-shared-room-1"
+    test_private_id = f"mixed-private-{uuid.uuid4()}"
+    test_shared_id = f"mixed-shared-{uuid.uuid4()}"
+    test_private_room = f"mixed-private-room-{uuid.uuid4()}"
+    test_shared_room = f"mixed-shared-room-{uuid.uuid4()}"
     user1 = "mixed-user-1"
     user2 = "mixed-user-2"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(
-                transcripts.c.id.in_([test_private_id, test_shared_id])
-            )
+        private_room_data = create_test_room_data(
+            test_private_room, "User1 Private Room", user1, is_shared=False
         )
+        await get_database().execute(rooms.insert().values(**private_room_data))
+
+        shared_room_data = create_test_room_data(
+            test_shared_room, "User2 Shared Room", user2, is_shared=True
+        )
+        await get_database().execute(rooms.insert().values(**shared_room_data))
+
+        private_transcript_data = create_test_transcript_data(
+            test_private_id,
+            "User1 Private Transcript",
+            "Strategy Discussion",
+            user_id=user1,
+            room_id=test_private_room,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nStrategy planning",
+        )
+        private_transcript_data["duration"] = 1200.0
         await get_database().execute(
-            rooms.delete().where(rooms.c.id.in_([test_private_room, test_shared_room]))
+            transcripts.insert().values(**private_transcript_data)
         )
 
-        await get_database().execute(
-            rooms.insert().values(
-                id=test_private_room,
-                name="User1 Private Room",
-                user_id=user1,
-                is_shared=False,
-                created_at=datetime.now(timezone.utc),
-            )
+        shared_transcript_data = create_test_transcript_data(
+            test_shared_id,
+            "User2 Shared Transcript",
+            "Strategy Workshop",
+            user_id=user2,
+            room_id=test_shared_room,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nStrategy workshop",
         )
         await get_database().execute(
-            rooms.insert().values(
-                id=test_shared_room,
-                name="User2 Shared Room",
-                user_id=user2,
-                is_shared=True,
-                created_at=datetime.now(timezone.utc),
-            )
-        )
-
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_private_id,
-                name="User1 Private Transcript",
-                title="Strategy Discussion",
-                status="completed",
-                room_id=test_private_room,
-                user_id=user1,
-                created_at=datetime.now(timezone.utc),
-                duration=1200.0,
-                source_kind="room",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nStrategy planning",
-            )
-        )
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_shared_id,
-                name="User2 Shared Transcript",
-                title="Strategy Workshop",
-                status="completed",
-                room_id=test_shared_room,
-                user_id=user2,
-                created_at=datetime.now(timezone.utc),
-                duration=1800.0,
-                source_kind="room",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nStrategy workshop",
-            )
+            transcripts.insert().values(**shared_transcript_data)
         )
 
         params = SearchParameters(query_text="strategy", user_id=user1)
@@ -737,7 +697,10 @@ async def test_search_returns_mixed_visibility():
             test_private_id in result_ids
         ), "Should find user's own private transcript"
         assert test_shared_id in result_ids, "Should find shared room transcript"
-        assert total >= 2
+        assert (
+            len(result_ids) >= 2
+        ), f"Should find at least 2 transcripts, got {len(result_ids)}"
+        assert total >= 2, f"Total count should be at least 2, got {total}"
 
     finally:
         await get_database().execute(
@@ -748,60 +711,44 @@ async def test_search_returns_mixed_visibility():
         await get_database().execute(
             rooms.delete().where(rooms.c.id.in_([test_private_room, test_shared_room]))
         )
-        await get_database().disconnect()
 
 
 @pytest.mark.asyncio
 async def test_search_shared_room_cross_user_visibility():
     """Test that shared room transcripts are visible to all authenticated users."""
-    test_room_id = "cross-user-shared-room-1"
-    test_transcript_id = "cross-user-transcript-1"
+    test_room_id = f"cross-user-shared-room-{uuid.uuid4()}"
+    test_transcript_id = f"cross-user-transcript-{uuid.uuid4()}"
     creator_user = "creator-user"
     viewer_user = "viewer-user"
 
     try:
-        await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_transcript_id)
+        room_data = create_test_room_data(
+            test_room_id, "Cross-User Shared Room", creator_user, is_shared=True
         )
+        await get_database().execute(rooms.insert().values(**room_data))
 
-        await get_database().execute(
-            rooms.insert().values(
-                id=test_room_id,
-                name="Cross-User Shared Room",
-                user_id=creator_user,
-                is_shared=True,
-                created_at=datetime.now(timezone.utc),
-            )
+        transcript_data = create_test_transcript_data(
+            test_transcript_id,
+            "Cross-User Transcript",
+            "Collaborative Session",
+            user_id=creator_user,
+            room_id=test_room_id,
+            webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nCollaborative work",
         )
-
-        await get_database().execute(
-            transcripts.insert().values(
-                id=test_transcript_id,
-                name="Cross-User Transcript",
-                title="Collaborative Session",
-                status="completed",
-                room_id=test_room_id,
-                user_id=creator_user,
-                created_at=datetime.now(timezone.utc),
-                duration=2400.0,
-                source_kind="room",
-                topics=json.dumps([]),
-                events=json.dumps([]),
-                participants=json.dumps([]),
-                webvtt="WEBVTT\n\n00:00:00.000 --> 00:00:10.000\nCollaborative work",
-            )
-        )
+        transcript_data["duration"] = 2400.0
+        await get_database().execute(transcripts.insert().values(**transcript_data))
 
         params = SearchParameters(query_text="collaborative", user_id=viewer_user)
         results, total = await search_controller.search_transcripts(params)
 
-        found = any(r.id == test_transcript_id for r in results)
-        assert found, "Should find shared room transcript even with different user_id"
+        matching_results = [r for r in results if r.id == test_transcript_id]
+        assert (
+            len(matching_results) == 1
+        ), f"Expected exactly 1 matching result, got {len(matching_results)}"
+        assert total >= 1, f"Total count should be at least 1, got {total}"
 
     finally:
         await get_database().execute(
             transcripts.delete().where(transcripts.c.id == test_transcript_id)
         )
         await get_database().execute(rooms.delete().where(rooms.c.id == test_room_id))
-        await get_database().disconnect()
