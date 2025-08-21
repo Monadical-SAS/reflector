@@ -11,6 +11,7 @@ import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
 import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
 import { LuScreenShare, LuMic, LuPlay, LuCircleStop } from "react-icons/lu";
+import { RECORD_A_MEETING_URL } from "../../api/urls";
 
 type RecorderProps = {
   transcriptId: string;
@@ -46,7 +47,7 @@ export default function Recorder(props: RecorderProps) {
           location.href = "";
           break;
         case ",":
-          location.href = "/transcripts/new";
+          location.href = RECORD_A_MEETING_URL;
           break;
         case "!":
           if (record.isRecording()) return;

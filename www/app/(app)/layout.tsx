@@ -5,6 +5,7 @@ import Image from "next/image";
 import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
+import { RECORD_A_MEETING_URL } from "../api/urls";
 
 export default async function AppLayout({
   children,
@@ -53,7 +54,7 @@ export default async function AppLayout({
           {/* Text link on the right */}
           <Link
             as={NextLink}
-            href="/transcripts/new"
+            href={RECORD_A_MEETING_URL}
             className="font-light px-2"
           >
             Create

@@ -4,8 +4,8 @@ import { LuMenu, LuTrash, LuRotateCw } from "react-icons/lu";
 
 interface TranscriptActionsMenuProps {
   transcriptId: string;
-  onDelete: (transcriptId: string) => (e: any) => void;
-  onReprocess: (transcriptId: string) => (e: any) => void;
+  onDelete: (transcriptId: string) => void;
+  onReprocess: (transcriptId: string) => void;
 }
 
 export default function TranscriptActionsMenu({
@@ -24,11 +24,17 @@ export default function TranscriptActionsMenu({
         <Menu.Content>
           <Menu.Item
             value="reprocess"
-            onClick={(e) => onReprocess(transcriptId)(e)}
+            onClick={() => onReprocess(transcriptId)}
           >
             <LuRotateCw /> Reprocess
           </Menu.Item>
-          <Menu.Item value="delete" onClick={(e) => onDelete(transcriptId)(e)}>
+          <Menu.Item
+            value="delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(transcriptId);
+            }}
+          >
             <LuTrash /> Delete
           </Menu.Item>
         </Menu.Content>

@@ -286,6 +286,7 @@ export class DefaultService {
    * @param data.limit Results per page
    * @param data.offset Number of results to skip
    * @param data.roomId
+   * @param data.sourceKind
    * @returns SearchResponse Successful Response
    * @throws ApiError
    */
@@ -300,6 +301,7 @@ export class DefaultService {
         limit: data.limit,
         offset: data.offset,
         room_id: data.roomId,
+        source_kind: data.sourceKind,
       },
       errors: {
         422: "Validation Error",
