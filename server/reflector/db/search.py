@@ -379,7 +379,13 @@ class SearchController:
             )
 
         if params.user_id:
-            base_query = base_query.where(transcripts.c.user_id == params.user_id)
+            base_query = base_query.where(
+                sqlalchemy.or_(
+                    transcripts.c.user_id == params.user_id, rooms.c.is_shared
+                )
+            )
+        else:
+            base_query = base_query.where(rooms.c.is_shared)
         if params.room_id:
             base_query = base_query.where(transcripts.c.room_id == params.room_id)
         if params.source_kind:
