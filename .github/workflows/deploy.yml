@@ -53,6 +53,7 @@ jobs:
           tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest-${{ matrix.arch }}
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          github-token: ${{ secrets.GHA_CACHE_TOKEN }}
           provenance: false
 
   create-manifest:

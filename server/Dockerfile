@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1
 
 # builder install base dependencies
 WORKDIR /tmp
@@ -13,8 +14,8 @@ ENV PATH="/root/.local/bin/:$PATH"
 # install application dependencies
 RUN mkdir -p /app
 WORKDIR /app
-COPY pyproject.toml uv.lock /app/
-RUN touch README.md && env uv sync --compile-bytecode --locked
+COPY pyproject.toml uv.lock README.md /app/
+RUN uv sync --compile-bytecode --locked
 
 # pre-download nltk packages
 RUN uv run python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
