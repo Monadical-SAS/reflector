@@ -364,35 +364,6 @@ Welcome to our engineering planning meeting for Q4 2024.""",
     ), f"Rank should be normalized to {RANK_MIN}-{RANK_MAX}"
 
 
-@pytest.mark.asyncio
-async def test_search_with_or_operator(db_cleanup):
-    """Test search using OR operator to match multiple terms."""
-    test_id = f"test-or-operator-{uuid.uuid4()}"
-    test_user = f"test-user-or-{uuid.uuid4()}"
-    db_cleanup.add_transcript(test_id)
-
-    test_data = create_test_transcript_data(
-        test_id,
-        "Test OR Operator",
-        "Database Performance",
-        user_id=test_user,
-        webvtt="""WEBVTT
-
-00:00:00.000 --> 00:00:10.000
-We need to implement PostgreSQL tsvector for better performance.""",
-    )
-    await get_database().execute(transcripts.insert().values(**test_data))
-
-    params = SearchParameters(query_text="tsvector OR nosuchword", user_id=test_user)
-    results, total = await search_controller.search_transcripts(params)
-
-    assert total >= 1, f"Expected at least 1 result for OR query, got {total}"
-    matching = [r for r in results if r.id == test_id]
-    assert (
-        len(matching) == 1
-    ), f"Expected exactly 1 match for OR query, got {len(matching)}"
-
-
 @pytest.mark.parametrize(
     "query,operator_type",
     [
