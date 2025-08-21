@@ -40,7 +40,6 @@ dependencies = [
     "llama-index-llms-openai-like>=0.4.0",
     "pytest-env>=1.1.5",
     "webvtt-py>=0.5.0",
-    "silero-vad>=5.1.2",
 ]
 
 [dependency-groups]
@@ -72,6 +71,11 @@ local = [
     "pyannote-audio>=3.3.2",
     "faster-whisper>=0.10.0",
 ]
+silero-vad = [
+    "silero-vad>=5.1.2",
+    "torch>=2.8.0",
+    "torchaudio>=2.8.0",
+]
 
 [tool.uv]
 default-groups = [
@@ -79,7 +83,21 @@ default-groups = [
     "tests",
     "aws",
     "evaluation",
-    "local"
+    "local",
+    "silero-vad"
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu" },
+]
+torchaudio = [
+  { index = "pytorch-cpu" },
 ]
 
 [build-system]
