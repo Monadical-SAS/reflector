@@ -74,11 +74,12 @@ async def test_empty_transcript_title_only_match():
             "share_mode": "private",
             "source_kind": "room",
             "webvtt": None,
+            "user_id": "test-user-1",
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        params = SearchParameters(query_text="empty")
+        params = SearchParameters(query_text="empty", user_id="test-user-1")
         results, total = await search_controller.search_transcripts(params)
 
         assert total >= 1
@@ -127,11 +128,12 @@ async def test_search_with_long_summary():
 
 00:00:00.000 --> 00:00:10.000
 Basic meeting content without special keywords.""",
+            "user_id": "test-user-2",
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        params = SearchParameters(query_text="quantum computing")
+        params = SearchParameters(query_text="quantum computing", user_id="test-user-2")
         results, total = await search_controller.search_transcripts(params)
 
         assert total >= 1
@@ -191,23 +193,26 @@ The search feature should support complex queries with ranking.
 
 00:00:30.000 --> 00:00:40.000
 We need to implement PostgreSQL tsvector for better performance.""",
+            "user_id": "test-user-3",
         }
 
         await get_database().execute(transcripts.insert().values(**test_data))
 
-        params = SearchParameters(query_text="planning")
+        params = SearchParameters(query_text="planning", user_id="test-user-3")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by title word"
 
-        params = SearchParameters(query_text="tsvector")
+        params = SearchParameters(query_text="tsvector", user_id="test-user-3")
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by webvtt content"
 
-        params = SearchParameters(query_text="engineering planning")
+        params = SearchParameters(
+            query_text="engineering planning", user_id="test-user-3"
+        )
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
@@ -220,13 +225,17 @@ We need to implement PostgreSQL tsvector for better performance.""",
             assert test_result.duration == 1800.0
             assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
 
-        params = SearchParameters(query_text="tsvector OR nosuchword")
+        params = SearchParameters(
+            query_text="tsvector OR nosuchword", user_id="test-user-3"
+        )
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript with OR query"
 
-        params = SearchParameters(query_text='"full-text search"')
+        params = SearchParameters(
+            query_text='"full-text search"', user_id="test-user-3"
+        )
         results, total = await search_controller.search_transcripts(params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
