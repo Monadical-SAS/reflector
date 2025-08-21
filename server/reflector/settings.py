@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
+    TRANSCRIPT_FILE_TIMEOUT: int = 600
 
     # Audio Transcription: modal backend
     TRANSCRIPT_MODAL_API_KEY: str | None = None
@@ -66,9 +67,13 @@ class Settings(BaseSettings):
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
+    DIARIZATION_FILE_TIMEOUT: int = 600
 
     # Diarization: modal backend
     DIARIZATION_MODAL_API_KEY: str | None = None
+
+    # Diarization: local pyannote.audio
+    DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None

@@ -11,6 +11,13 @@ from .base import (  # noqa: F401
     Processor,
     ThreadedProcessor,
 )
+from .file_diarization import FileDiarizationProcessor  # noqa: F401
+from .file_diarization_auto import FileDiarizationAutoProcessor  # noqa: F401
+from .file_transcript import FileTranscriptProcessor  # noqa: F401
+from .file_transcript_auto import FileTranscriptAutoProcessor  # noqa: F401
+from .transcript_diarization_assembler import (
+    TranscriptDiarizationAssemblerProcessor,  # noqa: F401
+)
 from .transcript_final_summary import TranscriptFinalSummaryProcessor  # noqa: F401
 from .transcript_final_title import TranscriptFinalTitleProcessor  # noqa: F401
 from .transcript_liner import TranscriptLinerProcessor  # noqa: F401

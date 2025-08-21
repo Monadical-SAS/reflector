@@ -18,22 +18,14 @@ During its lifecycle, it will emit the following status:
 import asyncio
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
-
 from reflector.logger import logger
 from reflector.processors import Pipeline
 
 PipelineMessage = TypeVar("PipelineMessage")
 
 
-class PipelineRunner(BaseModel, Generic[PipelineMessage]):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    status: str = "idle"
-    pipeline: Pipeline | None = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class PipelineRunner(Generic[PipelineMessage]):
+    def __init__(self):
         self._task = None
         self._q_cmd = asyncio.Queue(maxsize=4096)
         self._ev_done = asyncio.Event()
@@ -42,6 +34,8 @@ class PipelineRunner(BaseModel, Generic[PipelineMessage]):
             runner=id(self),
             runner_cls=self.__class__.__name__,
         )
+        self.status = "idle"
+        self.pipeline: Pipeline | None = None
 
     async def create(self) -> Pipeline:
         """

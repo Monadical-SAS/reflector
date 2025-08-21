@@ -4,14 +4,80 @@ Reflector GPU backend - diarizer
 """
 
 import os
+import uuid
+from typing import Mapping, NewType
+from urllib.parse import urlparse
 
-import modal.gpu
-from modal import App, Image, Secret, asgi_app, enter, method
-from pydantic import BaseModel
+import modal
 
 PYANNOTE_MODEL_NAME: str = "pyannote/speaker-diarization-3.1"
 MODEL_DIR = "/root/diarization_models"
-app = App(name="reflector-diarizer")
+UPLOADS_PATH = "/uploads"
+SUPPORTED_FILE_EXTENSIONS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
+
+DiarizerUniqFilename = NewType("DiarizerUniqFilename", str)
+AudioFileExtension = NewType("AudioFileExtension", str)
+
+app = modal.App(name="reflector-diarizer")
+
+# Volume for temporary file uploads
+upload_volume = modal.Volume.from_name("diarizer-uploads", create_if_missing=True)
+
+
+def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
+    parsed_url = urlparse(url)
+    url_path = parsed_url.path
+
+    for ext in SUPPORTED_FILE_EXTENSIONS:
+        if url_path.lower().endswith(f".{ext}"):
+            return AudioFileExtension(ext)
+
+    content_type = headers.get("content-type", "").lower()
+    if "audio/mpeg" in content_type or "audio/mp3" in content_type:
+        return AudioFileExtension("mp3")
+    if "audio/wav" in content_type:
+        return AudioFileExtension("wav")
+    if "audio/mp4" in content_type:
+        return AudioFileExtension("mp4")
+
+    raise ValueError(
+        f"Unsupported audio format for URL: {url}. "
+        f"Supported extensions: {', '.join(SUPPORTED_FILE_EXTENSIONS)}"
+    )
+
+
+def download_audio_to_volume(
+    audio_file_url: str,
+) -> tuple[DiarizerUniqFilename, AudioFileExtension]:
+    import requests
+    from fastapi import HTTPException
+
+    print(f"Checking audio file at: {audio_file_url}")
+    response = requests.head(audio_file_url, allow_redirects=True)
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    print(f"Downloading audio file from: {audio_file_url}")
+    response = requests.get(audio_file_url, allow_redirects=True)
+
+    if response.status_code != 200:
+        print(f"Download failed with status {response.status_code}: {response.text}")
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Failed to download audio file: {response.status_code}",
+        )
+
+    audio_suffix = detect_audio_format(audio_file_url, response.headers)
+    unique_filename = DiarizerUniqFilename(f"{uuid.uuid4()}.{audio_suffix}")
+    file_path = f"{UPLOADS_PATH}/{unique_filename}"
+
+    print(f"Writing file to: {file_path} (size: {len(response.content)} bytes)")
+    with open(file_path, "wb") as f:
+        f.write(response.content)
+
+    upload_volume.commit()
+    print(f"File saved as: {unique_filename}")
+    return unique_filename, audio_suffix
 
 
 def migrate_cache_llm():
@@ -39,7 +105,7 @@ def download_pyannote_audio():
 
 
 diarizer_image = (
-    Image.debian_slim(python_version="3.10.8")
+    modal.Image.debian_slim(python_version="3.10.8")
     .pip_install(
         "pyannote.audio==3.1.0",
         "requests",
@@ -55,7 +121,8 @@ diarizer_image = (
         "hf-transfer",
     )
     .run_function(
-        download_pyannote_audio, secrets=[Secret.from_name("my-huggingface-secret")]
+        download_pyannote_audio,
+        secrets=[modal.Secret.from_name("hf_token")],
     )
     .run_function(migrate_cache_llm)
     .env(
@@ -70,53 +137,60 @@ diarizer_image = (
 
 
 @app.cls(
-    gpu=modal.gpu.A100(size="40GB"),
+    gpu="A100",
     timeout=60 * 30,
-    scaledown_window=60,
-    allow_concurrent_inputs=1,
     image=diarizer_image,
+    volumes={UPLOADS_PATH: upload_volume},
+    enable_memory_snapshot=True,
+    experimental_options={"enable_gpu_snapshot": True},
+    secrets=[
+        modal.Secret.from_name("hf_token"),
+    ],
 )
+@modal.concurrent(max_inputs=1)
 class Diarizer:
-    @enter()
+    @modal.enter(snap=True)
     def enter(self):
         import torch
         from pyannote.audio import Pipeline
 
         self.use_gpu = torch.cuda.is_available()
         self.device = "cuda" if self.use_gpu else "cpu"
+        print(f"Using device: {self.device}")
         self.diarization_pipeline = Pipeline.from_pretrained(
-            PYANNOTE_MODEL_NAME, cache_dir=MODEL_DIR
+            PYANNOTE_MODEL_NAME,
+            cache_dir=MODEL_DIR,
+            use_auth_token=os.environ["HF_TOKEN"],
         )
         self.diarization_pipeline.to(torch.device(self.device))
 
-    @method()
-    def diarize(self, audio_data: str, audio_suffix: str, timestamp: float):
-        import tempfile
-
+    @modal.method()
+    def diarize(self, filename: str, timestamp: float = 0.0):
         import torchaudio
 
-        with tempfile.NamedTemporaryFile("wb+", suffix=f".{audio_suffix}") as fp:
-            fp.write(audio_data)
+        upload_volume.reload()
 
-            print("Diarizing audio")
-            waveform, sample_rate = torchaudio.load(fp.name)
-            diarization = self.diarization_pipeline(
-                {"waveform": waveform, "sample_rate": sample_rate}
+        file_path = f"{UPLOADS_PATH}/{filename}"
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        print(f"Diarizing audio from: {file_path}")
+        waveform, sample_rate = torchaudio.load(file_path)
+        diarization = self.diarization_pipeline(
+            {"waveform": waveform, "sample_rate": sample_rate}
+        )
+
+        words = []
+        for diarization_segment, _, speaker in diarization.itertracks(yield_label=True):
+            words.append(
+                {
+                    "start": round(timestamp + diarization_segment.start, 3),
+                    "end": round(timestamp + diarization_segment.end, 3),
+                    "speaker": int(speaker[-2:]),
+                }
             )
-
-            words = []
-            for diarization_segment, _, speaker in diarization.itertracks(
-                yield_label=True
-            ):
-                words.append(
-                    {
-                        "start": round(timestamp + diarization_segment.start, 3),
-                        "end": round(timestamp + diarization_segment.end, 3),
-                        "speaker": int(speaker[-2:]),
-                    }
-                )
-            print("Diarization complete")
-            return {"diarization": words}
+        print("Diarization complete")
+        return {"diarization": words}
 
 
 # -------------------------------------------------------------------
@@ -127,17 +201,18 @@ class Diarizer:
 @app.function(
     timeout=60 * 10,
     scaledown_window=60 * 3,
-    allow_concurrent_inputs=40,
     secrets=[
-        Secret.from_name("reflector-gpu"),
+        modal.Secret.from_name("reflector-gpu"),
     ],
+    volumes={UPLOADS_PATH: upload_volume},
     image=diarizer_image,
 )
-@asgi_app()
+@modal.concurrent(max_inputs=40)
+@modal.asgi_app()
 def web():
-    import requests
     from fastapi import Depends, FastAPI, HTTPException, status
     from fastapi.security import OAuth2PasswordBearer
+    from pydantic import BaseModel
 
     diarizerstub = Diarizer()
 
@@ -153,35 +228,26 @@ def web():
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    def validate_audio_file(audio_file_url: str):
-        # Check if the audio file exists
-        response = requests.head(audio_file_url, allow_redirects=True)
-        if response.status_code == 404:
-            raise HTTPException(
-                status_code=response.status_code,
-                detail="The audio file does not exist.",
-            )
-
     class DiarizationResponse(BaseModel):
         result: dict
 
-    @app.post(
-        "/diarize", dependencies=[Depends(apikey_auth), Depends(validate_audio_file)]
-    )
-    def diarize(
-        audio_file_url: str, timestamp: float = 0.0
-    ) -> HTTPException | DiarizationResponse:
-        # Currently the uploaded files are in mp3 format
-        audio_suffix = "mp3"
+    @app.post("/diarize", dependencies=[Depends(apikey_auth)])
+    def diarize(audio_file_url: str, timestamp: float = 0.0) -> DiarizationResponse:
+        unique_filename, audio_suffix = download_audio_to_volume(audio_file_url)
 
-        print("Downloading audio file")
-        response = requests.get(audio_file_url, allow_redirects=True)
-        print("Audio file downloaded successfully")
-
-        func = diarizerstub.diarize.spawn(
-            audio_data=response.content, audio_suffix=audio_suffix, timestamp=timestamp
-        )
-        result = func.get()
-        return result
+        try:
+            func = diarizerstub.diarize.spawn(
+                filename=unique_filename, timestamp=timestamp
+            )
+            result = func.get()
+            return result
+        finally:
+            try:
+                file_path = f"{UPLOADS_PATH}/{unique_filename}"
+                print(f"Deleting file: {file_path}")
+                os.remove(file_path)
+                upload_volume.commit()
+            except Exception as e:
+                print(f"Error cleaning up {unique_filename}: {e}")
 
     return app

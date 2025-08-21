@@ -147,15 +147,18 @@ class StrValue(BaseModel):
 
 
 class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]):
-    transcript_id: str
-    ws_room_id: str | None = None
-    ws_manager: WebsocketManager | None = None
-
-    def prepare(self):
-        # prepare websocket
+    def __init__(self, transcript_id: str):
+        super().__init__()
         self._lock = asyncio.Lock()
+        self.transcript_id = transcript_id
         self.ws_room_id = f"ts:{self.transcript_id}"
-        self.ws_manager = get_ws_manager()
+        self._ws_manager = None
+
+    @property
+    def ws_manager(self) -> WebsocketManager:
+        if self._ws_manager is None:
+            self._ws_manager = get_ws_manager()
+        return self._ws_manager
 
     async def get_transcript(self) -> Transcript:
         # fetch the transcript
@@ -355,7 +358,6 @@ class PipelineMainLive(PipelineMainBase):
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
-        self.prepare()
         transcript = await self.get_transcript()
 
         processors = [
@@ -376,6 +378,7 @@ class PipelineMainLive(PipelineMainBase):
         pipeline.set_pref("audio:target_language", transcript.target_language)
         pipeline.logger.bind(transcript_id=transcript.id)
         pipeline.logger.info("Pipeline main live created")
+        pipeline.describe()
 
         return pipeline
 
@@ -394,7 +397,6 @@ class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
-        self.prepare()
         pipeline = Pipeline(
             AudioDiarizationAutoProcessor(callback=self.on_topic),
         )
@@ -435,8 +437,6 @@ class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
         raise NotImplementedError
 
     async def create(self) -> Pipeline:
-        self.prepare()
-
         # get transcript
         self._transcript = transcript = await self.get_transcript()
 
