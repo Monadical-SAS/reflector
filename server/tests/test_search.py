@@ -18,6 +18,31 @@ from reflector.db.search import (
 from reflector.db.transcripts import SourceKind, transcripts
 
 
+@pytest.fixture
+async def db_cleanup():
+    """Fixture to track and cleanup database entities after test."""
+    transcript_ids = []
+    room_ids = []
+
+    class Tracker:
+        def add_transcript(self, id):
+            transcript_ids.append(id)
+
+        def add_room(self, id):
+            room_ids.append(id)
+
+    tracker = Tracker()
+    yield tracker
+
+    # Cleanup after test
+    if transcript_ids:
+        await get_database().execute(
+            transcripts.delete().where(transcripts.c.id.in_(transcript_ids))
+        )
+    if room_ids:
+        await get_database().execute(rooms.delete().where(rooms.c.id.in_(room_ids)))
+
+
 def create_test_room_data(room_id: str, name: str, user_id: str, is_shared: bool):
     """Helper to create consistent room test data."""
     return {
@@ -90,10 +115,6 @@ async def test_empty_transcript_title_only_match():
     test_user = f"test-user-empty-{uuid.uuid4()}"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
-        )
-
         test_data = {
             "id": test_id,
             "name": "Empty Transcript",
@@ -122,9 +143,12 @@ async def test_empty_transcript_title_only_match():
         params = SearchParameters(query_text="empty", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
-        assert total >= 1
-        found = next((r for r in results if r.id == test_id), None)
-        assert found is not None, "Should find transcript by title match"
+        matching = [r for r in results if r.id == test_id]
+        assert (
+            len(matching) == 1
+        ), f"Expected exactly 1 match for title search, got {len(matching)}"
+        assert total >= 1, f"Total should be at least 1, got {total}"
+        found = matching[0]
         assert found.search_snippets == []
         assert found.total_match_count == 0
 
@@ -141,10 +165,6 @@ async def test_search_with_long_summary():
     test_user = f"test-user-summary-{uuid.uuid4()}"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
-        )
-
         test_data = {
             "id": test_id,
             "name": "Test Long Summary",
@@ -176,9 +196,11 @@ Basic meeting content without special keywords.""",
         params = SearchParameters(query_text="quantum computing", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
-        assert total >= 1
-        found = any(r.id == test_id for r in results)
-        assert found, "Should find transcript by long_summary content"
+        matching = [r for r in results if r.id == test_id]
+        assert (
+            len(matching) == 1
+        ), f"Expected exactly 1 match for long_summary search, got {len(matching)}"
+        assert total >= 1, f"Total should be at least 1, got {total}"
 
         test_result = next((r for r in results if r.id == test_id), None)
         assert test_result
@@ -197,10 +219,6 @@ async def test_postgresql_search_with_data():
     test_user = f"test-user-pg-{uuid.uuid4()}"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
-        )
-
         test_data = {
             "id": test_id,
             "name": "Test Search Transcript",
@@ -644,14 +662,15 @@ async def test_search_no_room_requires_user_id():
 
 
 @pytest.mark.asyncio
-async def test_search_returns_mixed_visibility():
-    """Test that search correctly returns both owned and shared transcripts."""
-    test_private_id = f"mixed-private-{uuid.uuid4()}"
-    test_shared_id = f"mixed-shared-{uuid.uuid4()}"
-    test_private_room = f"mixed-private-room-{uuid.uuid4()}"
-    test_shared_room = f"mixed-shared-room-{uuid.uuid4()}"
-    user1 = "mixed-user-1"
-    user2 = "mixed-user-2"
+async def test_user_sees_own_private_and_others_shared():
+    """Test that users see their own private transcripts plus all shared transcripts."""
+    # Setup: Create unique IDs for test isolation
+    test_private_id = f"private-{uuid.uuid4()}"
+    test_shared_id = f"shared-{uuid.uuid4()}"
+    test_private_room = f"private-room-{uuid.uuid4()}"
+    test_shared_room = f"shared-room-{uuid.uuid4()}"
+    user1 = f"user1-{uuid.uuid4()}"
+    user2 = f"user2-{uuid.uuid4()}"
 
     try:
         private_room_data = create_test_room_data(
@@ -802,9 +821,11 @@ We need to consider various implementation approaches.""",
         params = SearchParameters(query_text="robotics", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
-        assert total >= 1
-        test_result = next((r for r in results if r.id == test_id), None)
-        assert test_result, "Should find the test transcript"
+        matching = [r for r in results if r.id == test_id]
+        assert (
+            len(matching) == 1
+        ), f"Expected exactly 1 match for robotics search, got {len(matching)}"
+        test_result = matching[0]
 
         snippets = test_result.search_snippets
         assert len(snippets) > 0, "Should have at least one snippet"
@@ -872,11 +893,11 @@ Discussion of timeline and deliverables.""",
         params = SearchParameters(query_text="cryptocurrency", user_id=test_user)
         results, total = await search_controller.search_transcripts(params)
 
-        found = any(r.id == test_id for r in results)
-        assert found, "Should find transcript by long_summary-only content"
-
-        test_result = next((r for r in results if r.id == test_id), None)
-        assert test_result
+        matching = [r for r in results if r.id == test_id]
+        assert (
+            len(matching) == 1
+        ), f"Expected exactly 1 match for cryptocurrency search, got {len(matching)}"
+        test_result = matching[0]
         assert len(test_result.search_snippets) > 0
 
         snippet = test_result.search_snippets[0].lower()
@@ -885,8 +906,10 @@ Discussion of timeline and deliverables.""",
         params2 = SearchParameters(query_text="yield farming", user_id=test_user)
         results2, total2 = await search_controller.search_transcripts(params2)
 
-        found2 = any(r.id == test_id for r in results2)
-        assert found2, "Should find transcript by specific long_summary phrase"
+        matching2 = [r for r in results2 if r.id == test_id]
+        assert (
+            len(matching2) == 1
+        ), f"Expected exactly 1 match for 'yield farming', got {len(matching2)}"
 
     finally:
         await get_database().execute(
