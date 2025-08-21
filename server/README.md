@@ -40,3 +40,5 @@ uv run python -c "from reflector.pipelines.main_live_pipeline import task_pipeli
 ```bash
 uv run python -c "from reflector.pipelines.main_live_pipeline import pipeline_post; pipeline_post(transcript_id='TRANSCRIPT_ID')"
 ```
+
+.
