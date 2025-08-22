@@ -36,7 +36,7 @@ Reflector is an AI-powered audio transcription and meeting analysis platform tha
 
 ## What is Reflector?
 
-Reflector is a web application that utilizes AI to process audio content, providing:
+Reflector is a web application that utilizes local models to process audio content, providing:
 
 - **Real-time Transcription**: Convert speech to text using [Whisper](https://github.com/openai/whisper) (multi-language) or [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) (English) models
 - **Speaker Diarization**: Identify and label different speakers using [Pyannote](https://github.com/pyannote/pyannote-audio) 3.1
