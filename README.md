@@ -89,6 +89,8 @@ Note: We currently do not have instructions for Windows users.
 
 ## Installation
 
+*Note: we're working toward better installation, theses instructions are not accurate for now*
+
 ### Frontend
 
 Start with `cd www`.
