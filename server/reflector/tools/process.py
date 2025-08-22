@@ -232,10 +232,11 @@ async def process_file_pipeline(
 ):
     """Process audio/video file using the optimized file pipeline"""
     try:
-        from reflector.db import database
+        from reflector.db import get_database
         from reflector.db.transcripts import SourceKind, transcripts_controller
         from reflector.pipelines.main_file_pipeline import PipelineMainFile
 
+        database = get_database()
         await database.connect()
         try:
             # Create a temporary transcript for processing
