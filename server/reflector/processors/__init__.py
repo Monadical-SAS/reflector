@@ -1,5 +1,7 @@
 from .audio_chunker import AudioChunkerProcessor  # noqa: F401
+from .audio_chunker_auto import AudioChunkerAutoProcessor  # noqa: F401
 from .audio_diarization_auto import AudioDiarizationAutoProcessor  # noqa: F401
+from .audio_downscale import AudioDownscaleProcessor  # noqa: F401
 from .audio_file_writer import AudioFileWriterProcessor  # noqa: F401
 from .audio_merge import AudioMergeProcessor  # noqa: F401
 from .audio_transcript import AudioTranscriptProcessor  # noqa: F401

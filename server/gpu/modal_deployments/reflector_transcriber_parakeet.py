@@ -172,7 +172,7 @@ class TranscriberParakeetLive:
         text = output.text.strip()
         words = [
             {
-                "word": word_info["word"],
+                "word": word_info["word"] + " ",
                 "start": round(word_info["start"], 2),
                 "end": round(word_info["end"], 2),
             }
@@ -213,7 +213,7 @@ class TranscriberParakeetLive:
 
             words = [
                 {
-                    "word": word_info["word"],
+                    "word": word_info["word"] + " ",
                     "start": round(word_info["start"], 2),
                     "end": round(word_info["end"], 2),
                 }
@@ -386,7 +386,7 @@ class TranscriberParakeetFile:
                 text = output.text.strip()
                 words = [
                     {
-                        "word": word_info["word"],
+                        "word": word_info["word"] + " ",
                         "start": round(
                             word_info["start"] + start_time + timestamp_offset, 2
                         ),

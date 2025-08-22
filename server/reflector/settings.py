@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # local data directory
     DATA_DIR: str = "./data"
 
+    # Audio Chunking
+    # backends: silero, frames
+    AUDIO_CHUNKER_BACKEND: str = "frames"
+
     # Audio Transcription
     # backends: whisper, modal
     TRANSCRIPT_BACKEND: str = "whisper"

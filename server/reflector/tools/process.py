@@ -16,7 +16,8 @@ import av
 
 from reflector.logger import logger
 from reflector.processors import (
-    AudioChunkerProcessor,
+    AudioChunkerAutoProcessor,
+    AudioDownscaleProcessor,
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
@@ -95,7 +96,8 @@ async def process_audio_file(
 
     # Add the rest of the processors
     processors += [
-        AudioChunkerProcessor(),
+        AudioDownscaleProcessor(),
+        AudioChunkerAutoProcessor(),
         AudioMergeProcessor(),
         AudioTranscriptAutoProcessor.as_threaded(),
         TranscriptLinerProcessor(),
@@ -322,7 +324,8 @@ if __name__ == "__main__":
 
         # Ignore internal processors
         if processor in (
-            "AudioChunkerProcessor",
+            "AudioDownscaleProcessor",
+            "AudioChunkerAutoProcessor",
             "AudioMergeProcessor",
             "AudioFileWriterProcessor",
             "TopicCollectorProcessor",

@@ -40,8 +40,9 @@ from reflector.db.transcripts import (
 from reflector.logger import logger
 from reflector.pipelines.runner import PipelineMessage, PipelineRunner
 from reflector.processors import (
-    AudioChunkerProcessor,
+    AudioChunkerAutoProcessor,
     AudioDiarizationAutoProcessor,
+    AudioDownscaleProcessor,
     AudioFileWriterProcessor,
     AudioMergeProcessor,
     AudioTranscriptAutoProcessor,
@@ -365,7 +366,8 @@ class PipelineMainLive(PipelineMainBase):
                 path=transcript.audio_wav_filename,
                 on_duration=self.on_duration,
             ),
-            AudioChunkerProcessor(),
+            AudioDownscaleProcessor(),
+            AudioChunkerAutoProcessor(),
             AudioMergeProcessor(),
             AudioTranscriptAutoProcessor.as_threaded(),
             TranscriptLinerProcessor(),
