@@ -9,8 +9,6 @@ Reflector is an AI-powered audio transcription and meeting analysis platform tha
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 </div>
 </div>
-
-## Screenshots
 <table>
   <tr>
     <td>
@@ -36,15 +34,27 @@ Reflector is an AI-powered audio transcription and meeting analysis platform tha
   </tr>
 </table>
 
+## What is Reflector?
+
+Reflector is a web application that utilizes AI to process audio content, providing:
+
+- **Real-time Transcription**: Convert speech to text using [Whisper](https://github.com/openai/whisper) (multi-language) or [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) (English) models
+- **Speaker Diarization**: Identify and label different speakers using [Pyannote](https://github.com/pyannote/pyannote-audio) 3.1
+- **Live Translation**: Translate audio content in real-time to many languages with [Facebook Seamless-M4T](https://github.com/facebookresearch/seamless_communication)
+- **Topic Detection & Summarization**: Extract key topics and generate concise summaries using LLMs
+- **Meeting Recording**: Create permanent records of meetings with searchable transcripts
+
+Currently we provide [modal.com](https://modal.com/) gpu template to deploy.
+
 ## Background
 
 The project architecture consists of three primary components:
 
-- **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 - **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations. Most reliable option is Modal deployment
+- **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
+- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
 
-It also uses authentik for authentication if activated, and Vercel for deployment and configuration of the front-end.
+It also uses authentik for authentication if activated.
 
 ## Contribution Guidelines
 
