@@ -53,7 +53,7 @@ async def run_single_processor(args):
     async def event_callback(event: PipelineEvent):
         processor = event.processor
         # ignore some processor
-        if processor in ("AudioChunkerProcessor", "AudioMergeProcessor"):
+        if processor in ("AudioChunkerAutoProcessor", "AudioMergeProcessor"):
             return
         print(f"Event: {event}")
         if output_fd:
