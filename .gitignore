@@ -15,3 +15,5 @@ www/REFACTOR.md
 www/reload-frontend
 server/test.sqlite
 CLAUDE.local.md
+www/.env.development
+www/.env.production
