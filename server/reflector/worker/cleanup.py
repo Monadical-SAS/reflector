@@ -5,7 +5,7 @@ import structlog
 from celery import shared_task
 
 from reflector.db import get_database
-from reflector.db.meetings import meetings, meeting_consent
+from reflector.db.meetings import meeting_consent, meetings
 from reflector.db.recordings import recordings
 from reflector.db.transcripts import transcripts, transcripts_controller
 from reflector.settings import settings
@@ -29,29 +29,30 @@ async def _cleanup_old_public_data():
     if not settings.PUBLIC_MODE:
         logger.info("Skipping cleanup - not a public instance")
         return
-    
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=settings.PUBLIC_DATA_RETENTION_DAYS)
+
+    cutoff_date = datetime.now(timezone.utc) - timedelta(
+        days=settings.PUBLIC_DATA_RETENTION_DAYS
+    )
     logger.info(
         "Starting cleanup of old public data",
         cutoff_date=cutoff_date.isoformat(),
     )
-    
+
     stats = {
         "transcripts_deleted": 0,
         "meetings_deleted": 0,
         "recordings_deleted": 0,
-        "errors": []
+        "errors": [],
     }
-    
+
     try:
         query = transcripts.select().where(
-            (transcripts.c.created_at < cutoff_date) &
-            (transcripts.c.user_id.is_(None))
+            (transcripts.c.created_at < cutoff_date) & (transcripts.c.user_id.is_(None))
         )
         old_transcripts = await get_database().fetch_all(query)
-        
+
         logger.info(f"Found {len(old_transcripts)} old transcripts to delete")
-        
+
         for transcript_data in old_transcripts:
             transcript_id = transcript_data["id"]
             try:
@@ -66,15 +67,14 @@ async def _cleanup_old_public_data():
                 error_msg = f"Failed to delete transcript {transcript_id}: {str(e)}"
                 logger.error(error_msg, exc_info=e)
                 stats["errors"].append(error_msg)
-        
+
         query = meetings.select().where(
-            (meetings.c.start_date < cutoff_date) &
-            (meetings.c.user_id.is_(None))
+            (meetings.c.start_date < cutoff_date) & (meetings.c.user_id.is_(None))
         )
         old_meetings = await get_database().fetch_all(query)
-        
+
         logger.info(f"Found {len(old_meetings)} old meetings to delete")
-        
+
         for meeting_data in old_meetings:
             meeting_id = meeting_data["id"]
             try:
@@ -83,7 +83,7 @@ async def _cleanup_old_public_data():
                         meeting_consent.c.meeting_id == meeting_id
                     )
                 )
-                
+
                 await get_database().execute(
                     meetings.delete().where(meetings.c.id == meeting_id)
                 )
@@ -97,25 +97,20 @@ async def _cleanup_old_public_data():
                 error_msg = f"Failed to delete meeting {meeting_id}: {str(e)}"
                 logger.error(error_msg, exc_info=e)
                 stats["errors"].append(error_msg)
-        
-        query = transcripts.select().where(
-            transcripts.c.recording_id.isnot(None)
-        )
+
+        query = transcripts.select().where(transcripts.c.recording_id.isnot(None))
         transcript_recordings = await get_database().fetch_all(query)
         referenced_recording_ids = {t["recording_id"] for t in transcript_recordings}
-        
-        query = recordings.select().where(
-            recordings.c.recorded_at < cutoff_date
-        )
+
+        query = recordings.select().where(recordings.c.recorded_at < cutoff_date)
         all_old_recordings = await get_database().fetch_all(query)
-        
+
         orphaned_recordings = [
-            r for r in all_old_recordings 
-            if r["id"] not in referenced_recording_ids
+            r for r in all_old_recordings if r["id"] not in referenced_recording_ids
         ]
-        
+
         logger.info(f"Found {len(orphaned_recordings)} orphaned recordings to delete")
-        
+
         for recording_data in orphaned_recordings:
             recording_id = recording_data["id"]
             try:
@@ -132,11 +127,11 @@ async def _cleanup_old_public_data():
                 error_msg = f"Failed to delete recording {recording_id}: {str(e)}"
                 logger.error(error_msg, exc_info=e)
                 stats["errors"].append(error_msg)
-        
+
     except Exception as e:
         logger.error("Cleanup task failed", exc_info=e)
         stats["errors"].append(f"Fatal error: {str(e)}")
-    
+
     logger.info(
         "Cleanup completed",
         transcripts_deleted=stats["transcripts_deleted"],
@@ -144,11 +139,11 @@ async def _cleanup_old_public_data():
         recordings_deleted=stats["recordings_deleted"],
         errors_count=len(stats["errors"]),
     )
-    
+
     if stats["errors"]:
         logger.warning(
             "Cleanup completed with errors",
             errors=stats["errors"][:10],
         )
-    
+
     return stats

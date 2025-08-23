@@ -24,7 +24,7 @@ When data reaches the retention period, the following items are automatically re
 2. **Meetings** from anonymous users:
    - Meeting records
    - Meeting consent records
-   
+
 3. **Recordings**:
    - Orphaned recordings not referenced by any transcript
    - Associated cloud storage objects
@@ -100,6 +100,6 @@ grep "Starting cleanup of old public data" celery.log
 
 Task statistics are logged after each run:
 - Number of transcripts deleted
-- Number of meetings deleted  
+- Number of meetings deleted
 - Number of orphaned recordings deleted
 - Any errors encountered
