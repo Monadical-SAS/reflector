@@ -149,6 +149,21 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
         deleted_count = 0
         for recording_data in orphaned_recordings:
             try:
+                # Delete from storage first
+                from reflector.storage import get_recordings_storage
+
+                try:
+                    await get_recordings_storage().delete_file(
+                        recording_data["object_key"]
+                    )
+                except Exception as storage_error:
+                    logger.warning(
+                        "Failed to delete recording from storage",
+                        id=recording_data["id"],
+                        object_key=recording_data["object_key"],
+                        error=str(storage_error),
+                    )
+
                 await get_database().execute(
                     recordings.delete().where(recordings.c.id == recording_data["id"])
                 )
