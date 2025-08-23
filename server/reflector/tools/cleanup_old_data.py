@@ -15,18 +15,12 @@ from reflector.db.meetings import meeting_consent, meetings
 from reflector.db.recordings import recordings
 from reflector.db.transcripts import transcripts, transcripts_controller
 from reflector.settings import settings
+from reflector.storage import get_recordings_storage
 
 logger = structlog.get_logger(__name__)
 
 
 async def cleanup_old_data(days: int = 7, dry_run: bool = False):
-    """
-    Clean up old transcripts and meetings.
-
-    Args:
-        days: Number of days to keep data (default: 7)
-        dry_run: If True, only show what would be deleted without actually deleting
-    """
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     logger.info(
@@ -51,15 +45,13 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
     logger.info(f"Found {len(old_transcripts)} old anonymous transcripts")
 
     if dry_run:
-        for t in old_transcripts[:10]:
+        for t in old_transcripts:
             logger.info(
                 "Would delete transcript",
                 id=t["id"],
                 name=t["name"],
                 created_at=t["created_at"].isoformat(),
             )
-        if len(old_transcripts) > 10:
-            logger.info(f"... and {len(old_transcripts) - 10} more transcripts")
     else:
         deleted_count = 0
         for transcript_data in old_transcripts:
@@ -78,7 +70,7 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
                         id=transcript_data["id"],
                         error=str(e),
                     )
-                    raise  # This will trigger transaction rollback
+                    raise
         logger.info(f"Deleted {deleted_count} transcripts")
 
     query = meetings.select().where(
@@ -89,15 +81,13 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
     logger.info(f"Found {len(old_meetings)} old anonymous meetings")
 
     if dry_run:
-        for m in old_meetings[:10]:
+        for m in old_meetings:
             logger.info(
                 "Would delete meeting",
                 id=m["id"],
                 room_name=m["room_name"],
                 start_date=m["start_date"].isoformat(),
             )
-        if len(old_meetings) > 10:
-            logger.info(f"... and {len(old_meetings) - 10} more meetings")
     else:
         deleted_count = 0
         for meeting_data in old_meetings:
@@ -138,22 +128,17 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
     logger.info(f"Found {len(orphaned_recordings)} orphaned recordings")
 
     if dry_run:
-        for r in orphaned_recordings[:10]:
+        for r in orphaned_recordings:
             logger.info(
                 "Would delete recording",
                 id=r["id"],
                 object_key=r["object_key"],
                 recorded_at=r["recorded_at"].isoformat(),
             )
-        if len(orphaned_recordings) > 10:
-            logger.info(f"... and {len(orphaned_recordings) - 10} more recordings")
     else:
         deleted_count = 0
         for recording_data in orphaned_recordings:
             try:
-                # Delete from storage first
-                from reflector.storage import get_recordings_storage
-
                 try:
                     await get_recordings_storage().delete_file(
                         recording_data["object_key"]
