@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.worker.cleanup import _cleanup_old_public_data
