@@ -90,9 +90,8 @@ class Settings(BaseSettings):
     AUTH_JWT_PUBLIC_KEY: str | None = "authentik.monadical.com_public.pem"
     AUTH_JWT_AUDIENCE: str | None = None
 
-    # API public mode
-    # if set, all anonymous record will be public
     PUBLIC_MODE: bool = False
+    PUBLIC_DATA_RETENTION_DAYS: int = 7
 
     # Min transcript length to generate topic + summary
     MIN_TRANSCRIPT_LENGTH: int = 750

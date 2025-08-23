@@ -19,6 +19,7 @@ else:
             "reflector.pipelines.main_live_pipeline",
             "reflector.worker.healthcheck",
             "reflector.worker.process",
+            "reflector.worker.cleanup",
         ]
     )
 
@@ -37,6 +38,16 @@ else:
             "schedule": crontab(hour=5, minute=0),  # Midnight EST
         },
     }
+    
+    if settings.PUBLIC_MODE:
+        app.conf.beat_schedule["cleanup_old_public_data"] = {
+            "task": "reflector.worker.cleanup.cleanup_old_public_data",
+            "schedule": crontab(hour=3, minute=0),
+        }
+        logger.info(
+            "Public mode cleanup enabled",
+            retention_days=settings.PUBLIC_DATA_RETENTION_DAYS,
+        )
 
     if settings.HEALTHCHECK_URL:
         app.conf.beat_schedule["healthcheck_ping"] = {
