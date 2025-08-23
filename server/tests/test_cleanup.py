@@ -92,42 +92,38 @@ async def test_cleanup_old_public_data_deletes_old_meetings():
     """Test that old anonymous meetings are deleted."""
     from reflector.db import get_database
     from reflector.db.meetings import meetings
-    from reflector.db.rooms import Room, rooms_controller
-
-    # Create a room first
-    room = await rooms_controller.create(
-        Room(
-            name="Test Room",
-            description="Test",
-            is_public=True,
-        )
-    )
 
     old_date = datetime.now(timezone.utc) - timedelta(days=8)
     new_date = datetime.now(timezone.utc) - timedelta(days=2)
 
-    # Create old anonymous meeting (should be deleted)
-    old_meeting = await meetings_controller.create(
-        id="old-meeting-id",
-        room_name="Old Meeting",
-        room_url="https://example.com/old",
-        host_room_url="https://example.com/old-host",
-        start_date=old_date,
-        end_date=old_date + timedelta(hours=1),
-        user_id=None,  # Anonymous
-        room=room,
+    # Create old anonymous meeting directly (should be deleted)
+    old_meeting_id = "old-meeting-id"
+    await get_database().execute(
+        meetings.insert().values(
+            id=old_meeting_id,
+            room_name="Old Meeting",
+            room_url="https://example.com/old",
+            host_room_url="https://example.com/old-host",
+            start_date=old_date,
+            end_date=old_date + timedelta(hours=1),
+            user_id=None,  # Anonymous
+            room_id=None,
+        )
     )
 
-    # Create new anonymous meeting (should NOT be deleted)
-    new_meeting = await meetings_controller.create(
-        id="new-meeting-id",
-        room_name="New Meeting",
-        room_url="https://example.com/new",
-        host_room_url="https://example.com/new-host",
-        start_date=new_date,
-        end_date=new_date + timedelta(hours=1),
-        user_id=None,  # Anonymous
-        room=room,
+    # Create new anonymous meeting directly (should NOT be deleted)
+    new_meeting_id = "new-meeting-id"
+    await get_database().execute(
+        meetings.insert().values(
+            id=new_meeting_id,
+            room_name="New Meeting",
+            room_url="https://example.com/new",
+            host_room_url="https://example.com/new-host",
+            start_date=new_date,
+            end_date=new_date + timedelta(hours=1),
+            user_id=None,  # Anonymous
+            room_id=None,
+        )
     )
 
     with patch("reflector.worker.cleanup.settings") as mock_settings:
@@ -141,12 +137,12 @@ async def test_cleanup_old_public_data_deletes_old_meetings():
     assert result["errors"] == []
 
     # Verify old meeting was deleted
-    query = meetings.select().where(meetings.c.id == old_meeting.id)
+    query = meetings.select().where(meetings.c.id == old_meeting_id)
     old_meeting_result = await get_database().fetch_one(query)
     assert old_meeting_result is None
 
     # Verify new meeting still exists
-    query = meetings.select().where(meetings.c.id == new_meeting.id)
+    query = meetings.select().where(meetings.c.id == new_meeting_id)
     new_meeting_result = await get_database().fetch_one(query)
     assert new_meeting_result is not None
 
