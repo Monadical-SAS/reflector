@@ -63,20 +63,22 @@ async def cleanup_old_data(days: int = 7, dry_run: bool = False):
     else:
         deleted_count = 0
         for transcript_data in old_transcripts:
-            try:
-                await transcripts_controller.remove_by_id(transcript_data["id"])
-                deleted_count += 1
-                logger.info(
-                    "Deleted transcript",
-                    id=transcript_data["id"],
-                    name=transcript_data["name"],
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to delete transcript",
-                    id=transcript_data["id"],
-                    error=str(e),
-                )
+            async with get_database().transaction():
+                try:
+                    await transcripts_controller.remove_by_id(transcript_data["id"])
+                    deleted_count += 1
+                    logger.info(
+                        "Deleted transcript",
+                        id=transcript_data["id"],
+                        name=transcript_data["name"],
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Failed to delete transcript",
+                        id=transcript_data["id"],
+                        error=str(e),
+                    )
+                    raise  # This will trigger transaction rollback
         logger.info(f"Deleted {deleted_count} transcripts")
 
     query = meetings.select().where(
