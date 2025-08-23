@@ -231,12 +231,14 @@ async def process_file_pipeline(
     target_language="en",
     enable_diarization=True,
     diarization_backend="modal",
+    output_fd=None,
 ):
     """Process audio/video file using the optimized file pipeline"""
     try:
         from reflector.db import get_database
         from reflector.db.transcripts import SourceKind, transcripts_controller
-        from reflector.pipelines.main_file_pipeline import PipelineMainFile
+        from reflector.pipelines.main_live_pipeline import PipelineMainLive
+        import av
 
         database = get_database()
         await database.connect()
@@ -249,11 +251,93 @@ async def process_file_pipeline(
                 target_language=target_language,
             )
 
-            # Process the file
-            pipeline = PipelineMainFile(transcript_id=transcript.id)
-            await pipeline.process(Path(filename))
+            # Copy file to transcript data path as upload.* to match UI flow
+            from shutil import copy
+            extension = Path(filename).suffix[1:]  # Remove the dot
+            
+            # Ensure data directory exists
+            transcript.data_path.mkdir(parents=True, exist_ok=True)
+            
+            upload_path = transcript.data_path / f"upload.{extension}"
+            copy(filename, upload_path)
+            
+            # Update status to uploaded
+            await transcripts_controller.update(transcript, {"status": "uploaded"})
+
+            # Process the file using PipelineMainLive (same as UI)
+            pipeline = PipelineMainLive(transcript_id=transcript.id)
+            pipeline.start()
+            
+            # Open and push audio to pipeline
+            container = av.open(str(upload_path))
+            try:
+                logger.info("Start pushing audio into the pipeline")
+                for frame in container.decode(audio=0):
+                    await pipeline.push(frame)
+            finally:
+                logger.info("Flushing the pipeline")
+                await pipeline.flush()
+                container.close()
+                
+            logger.info("Waiting for the pipeline to end")
+            await pipeline.join()
 
             logger.info("File pipeline processing complete")
+            
+            # Output events (to match stream pipeline behavior)
+            # Get final transcript with all events
+            final_transcript = await transcripts_controller.get_by_id(transcript.id)
+            if not final_transcript.events:
+                logger.error("CRITICAL ERROR: No events were generated during processing")
+                raise RuntimeError("Processing failed: No events were captured")
+            
+            # Define processors to ignore (same as original stream pipeline)
+            # These would be the uppercase event names if they were stored
+            IGNORED_PROCESSORS = {
+                "AUDIO_DOWNSCALE",
+                "AUDIO_CHUNKER", 
+                "AUDIO_MERGE",
+                "AUDIO_FILE_WRITER",
+                "TOPIC_COLLECTOR",
+                "BROADCAST",
+            }
+            
+            for event_data in final_transcript.events:
+                # event_data is a TranscriptEvent object with 'event' and 'data' attributes
+                processor = event_data.event if hasattr(event_data, 'event') else "Unknown"
+                data = event_data.data if hasattr(event_data, 'data') else {}
+                
+                # Skip ignored processors (matching original behavior)
+                if processor in IGNORED_PROCESSORS:
+                    continue
+                
+                # Log to stdout (matching original format)
+                # For database events, show what kind of data it contains
+                if processor == "TRANSCRIPT" and isinstance(data, dict) and "text" in data:
+                    logger.info(f"Event: {processor} - text: {data['text'][:50]}...")
+                elif processor == "TOPIC" and isinstance(data, dict):
+                    word_count = len(data.get("words", []))
+                    logger.info(f"Event: {processor} - {word_count} words")
+                elif processor == "STATUS" and isinstance(data, dict) and "value" in data:
+                    logger.info(f"Event: {processor} - {data['value']}")
+                elif processor == "DURATION" and isinstance(data, dict) and "duration" in data:
+                    logger.info(f"Event: {processor} - {data['duration']}ms")
+                elif processor == "WAVEFORM" and isinstance(data, dict) and "waveform" in data:
+                    logger.info(f"Event: {processor} - {len(data['waveform'])} samples")
+                else:
+                    # Fallback for unknown event types
+                    logger.info(f"Event: {processor}")
+                
+                # Write to output file if specified
+                if output_fd:
+                    event = PipelineEvent(
+                        processor=processor,
+                        uid=transcript.id,
+                        data=data
+                    )
+                    output_fd.write(event.model_dump_json())
+                    output_fd.write("\n")
+                    output_fd.flush()
 
         finally:
             await database.disconnect()
@@ -371,6 +455,7 @@ if __name__ == "__main__":
                 target_language=args.target_language,
                 enable_diarization=args.enable_diarization,
                 diarization_backend=args.diarization_backend,
+                output_fd=output_fd,
             )
         )
 
