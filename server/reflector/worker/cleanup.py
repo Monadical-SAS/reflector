@@ -16,7 +16,7 @@ logger = structlog.get_logger(__name__)
 @shared_task(
     name="reflector.worker.cleanup.cleanup_old_public_data",
     autoretry_for=(Exception,),
-    retry_kwargs={'max_retries': 3, 'countdown': 300},
+    retry_kwargs={"max_retries": 3, "countdown": 300},
 )
 def cleanup_old_public_data():
     """
