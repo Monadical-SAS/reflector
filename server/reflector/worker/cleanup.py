@@ -13,11 +13,16 @@ from reflector.settings import settings
 logger = structlog.get_logger(__name__)
 
 
-@shared_task(name="reflector.worker.cleanup.cleanup_old_public_data")
+@shared_task(
+    name="reflector.worker.cleanup.cleanup_old_public_data",
+    autoretry_for=(Exception,),
+    retry_kwargs={'max_retries': 3, 'countdown': 300},
+)
 def cleanup_old_public_data():
     """
     Clean up old transcripts and meetings from public instances.
     Deletes data older than PUBLIC_DATA_RETENTION_DAYS for anonymous users.
+    Will retry up to 3 times with 5-minute intervals on failure.
     """
     asyncio.run(_cleanup_old_public_data())
 
