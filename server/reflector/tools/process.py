@@ -4,17 +4,13 @@ Process audio file with diarization support
 
 import asyncio
 import argparse
-import os
 import time
 from pathlib import Path
 
-import av
 from reflector.logger import logger
 from reflector.db import get_database
 from reflector.db.transcripts import SourceKind, transcripts_controller
-from reflector.pipelines.main_live_pipeline import PipelineMainLive, task_pipeline_diarization, pipeline_process, pipeline_post
-from reflector.processors import PipelineEvent
-from reflector.views.transcripts import CreateTranscript
+from reflector.pipelines.main_live_pipeline import pipeline_process, pipeline_post
 from reflector.db.transcripts import TranscriptTopic
 import shutil
 import json
@@ -25,7 +21,6 @@ def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
     """Convert TranscriptTopic objects to JSON-serializable dicts"""
     serialized = []
     for topic in topics:
-        # Use Pydantic's model_dump to convert to dict
         topic_dict = topic.model_dump()
         serialized.append(topic_dict)
     return serialized
@@ -52,6 +47,7 @@ async def process_audio_file(source_path: str, source_language: str, target_lang
 
         transcript = await transcripts_controller.add(
             file_path.name,
+            # note that the real file upload has SourceKind: LIVE for the reason of it's an error
             source_kind=SourceKind.FILE,
             source_language=source_language,
             target_language=target_language,
@@ -72,7 +68,6 @@ async def process_audio_file(source_path: str, source_language: str, target_lang
         # undocumented convention - we have to set status to "uploaded" for some reason
         await transcripts_controller.update(transcript, {"status": "uploaded"})
         
-        # Process the file (await instead of .delay() for synchronous execution)
         print(f"Processing {file_path.name}...", file=sys.stderr)
         await pipeline_process(transcript_id=transcript.id)
         print(f"Processing complete for transcript {transcript.id}", file=sys.stderr)
@@ -94,15 +89,12 @@ async def process_audio_file(source_path: str, source_language: str, target_lang
 
         assert post_final_transcript.status == "ended"
         
-        # Get all topics/events from the database
         topics = post_final_transcript.topics
         if not topics:
             raise RuntimeError(f"No topics found for transcript {transcript.id} after processing")
         
-        # Serialize topics to JSON-compatible format
         serialized_topics = serialize_topics(topics)
         
-        # Output results
         if output_path:
             # Write to JSON file
             with open(output_path, 'w') as f:
