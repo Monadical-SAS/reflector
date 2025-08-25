@@ -192,13 +192,7 @@ async def transcripts_search(
         offset=search_params.offset,
     )
 
-
-@router.post("/transcripts", response_model=GetTranscript)
-async def transcripts_create(
-    info: CreateTranscript,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-):
-    user_id = user["sub"] if user else None
+async def create_empty_transcript(info: CreateTranscript, user_id: str | None):
     return await transcripts_controller.add(
         info.name,
         source_kind=SourceKind.FILE,
@@ -206,6 +200,15 @@ async def transcripts_create(
         target_language=info.target_language,
         user_id=user_id,
     )
+
+@router.post("/transcripts", response_model=GetTranscript)
+async def transcripts_create(
+    info: CreateTranscript,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    return await create_empty_transcript(info, user_id)
+
 
 
 # ==============================================================
