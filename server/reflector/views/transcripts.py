@@ -192,6 +192,7 @@ async def transcripts_search(
         offset=search_params.offset,
     )
 
+
 @router.post("/transcripts", response_model=GetTranscript)
 async def transcripts_create(
     info: CreateTranscript,
@@ -205,7 +206,6 @@ async def transcripts_create(
         target_language=info.target_language,
         user_id=user_id,
     )
-
 
 
 # ==============================================================
