@@ -67,293 +67,343 @@ class TopicCollectorProcessor(Processor):
     def get_topics(self) -> List[TitleSummaryWithId]:
         return self.topics
 
-
-async def process_audio_file(
-    filename,
-    event_callback,
-    only_transcript=False,
-    source_language="en",
-    target_language="en",
-    enable_diarization=True,
-    diarization_backend="pyannote",
-):
-    # Create temp file for audio if diarization is enabled
-    audio_temp_path = None
-    if enable_diarization:
-        audio_temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        audio_temp_path = audio_temp_file.name
-        audio_temp_file.close()
-
-    # Create processor for collecting topics
-    topic_collector = TopicCollectorProcessor()
-
-    # Build pipeline for audio processing
-    processors = []
-
-    # Add audio file writer at the beginning if diarization is enabled
-    if enable_diarization:
-        processors.append(AudioFileWriterProcessor(audio_temp_path))
-
-    # Add the rest of the processors
-    processors += [
-        AudioDownscaleProcessor(),
-        AudioChunkerAutoProcessor(),
-        AudioMergeProcessor(),
-        AudioTranscriptAutoProcessor.as_threaded(),
-        TranscriptLinerProcessor(),
-        TranscriptTranslatorAutoProcessor.as_threaded(),
-    ]
-
-    if not only_transcript:
-        processors += [
-            TranscriptTopicDetectorProcessor.as_threaded(),
-            # Collect topics for diarization
-            topic_collector,
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(),
-                    TranscriptFinalSummaryProcessor.as_threaded(),
-                ],
-            ),
-        ]
-
-    # Create main pipeline
-    pipeline = Pipeline(*processors)
-    pipeline.set_pref("audio:source_language", source_language)
-    pipeline.set_pref("audio:target_language", target_language)
-    pipeline.describe()
-    pipeline.on(event_callback)
-
-    # Start processing audio
-    logger.info(f"Opening {filename}")
-    container = av.open(filename)
-    try:
-        logger.info("Start pushing audio into the pipeline")
-        for frame in container.decode(audio=0):
-            await pipeline.push(frame)
-    finally:
-        logger.info("Flushing the pipeline")
-        await pipeline.flush()
-
-    # Run diarization if enabled and we have topics
-    if enable_diarization and not only_transcript and audio_temp_path:
-        topics = topic_collector.get_topics()
-
-        if topics:
-            logger.info(f"Starting diarization with {len(topics)} topics")
-
-            try:
-                from reflector.processors import AudioDiarizationAutoProcessor
-
-                diarization_processor = AudioDiarizationAutoProcessor(
-                    name=diarization_backend
-                )
-
-                diarization_processor.set_pipeline(pipeline)
-
-                # For Modal backend, we need to upload the file to S3 first
-                if diarization_backend == "modal":
-                    from datetime import datetime
-
-                    from reflector.storage import get_transcripts_storage
-                    from reflector.utils.s3_temp_file import S3TemporaryFile
-
-                    storage = get_transcripts_storage()
-
-                    # Generate a unique filename in evaluation folder
-                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                    audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
-
-                    # Use context manager for automatic cleanup
-                    async with S3TemporaryFile(storage, audio_filename) as s3_file:
-                        # Read and upload the audio file
-                        with open(audio_temp_path, "rb") as f:
-                            audio_data = f.read()
-
-                        audio_url = await s3_file.upload(audio_data)
-                        logger.info(f"Uploaded audio to S3: {audio_filename}")
-
-                        # Create diarization input with S3 URL
-                        diarization_input = AudioDiarizationInput(
-                            audio_url=audio_url, topics=topics
-                        )
-
-                        # Run diarization
-                        await diarization_processor.push(diarization_input)
-                        await diarization_processor.flush()
-
-                        logger.info("Diarization complete")
-                        # File will be automatically cleaned up when exiting the context
-                else:
-                    # For local backend, use local file path
-                    audio_url = audio_temp_path
-
-                    # Create diarization input
-                    diarization_input = AudioDiarizationInput(
-                        audio_url=audio_url, topics=topics
-                    )
-
-                    # Run diarization
-                    await diarization_processor.push(diarization_input)
-                    await diarization_processor.flush()
-
-                    logger.info("Diarization complete")
-
-            except ImportError as e:
-                logger.error(f"Failed to import diarization dependencies: {e}")
-                logger.error(
-                    "Install with: uv pip install pyannote.audio torch torchaudio"
-                )
-                logger.error(
-                    "And set HF_TOKEN environment variable for pyannote models"
-                )
-                raise SystemExit(1)
-            except Exception as e:
-                logger.error(f"Diarization failed: {e}")
-                raise SystemExit(1)
-        else:
-            logger.warning("Skipping diarization: no topics available")
-
-    # Clean up temp file
-    if audio_temp_path:
-        try:
-            Path(audio_temp_path).unlink()
-        except Exception as e:
-            logger.warning(f"Failed to clean up temp file {audio_temp_path}: {e}")
-
-    logger.info("All done!")
-
+from reflector.db import get_database
+from reflector.db.transcripts import SourceKind, transcripts_controller
+from reflector.pipelines.main_live_pipeline import PipelineMainLive
+import av
 
 async def process_file_pipeline(
     filename: str,
     event_callback,
     source_language="en",
     target_language="en",
-    enable_diarization=True,
-    diarization_backend="modal",
     output_fd=None,
 ):
     """Process audio/video file using the optimized file pipeline"""
+
+
+    database = get_database()
+    await database.connect()
     try:
-        from reflector.db import get_database
-        from reflector.db.transcripts import SourceKind, transcripts_controller
-        from reflector.pipelines.main_live_pipeline import PipelineMainLive
-        import av
+        # Create a temporary transcript for processing
+        transcript = await transcripts_controller.add(
+            "",
+            source_kind=SourceKind.FILE,
+            source_language=source_language,
+            target_language=target_language,
+        )
 
-        database = get_database()
-        await database.connect()
+        # Copy file to transcript data path as upload.* to match UI flow
+        from shutil import copy
+        extension = Path(filename).suffix[1:]  # Remove the dot
+
+        # Ensure data directory exists
+        transcript.data_path.mkdir(parents=True, exist_ok=True)
+
+        upload_path = transcript.data_path / f"upload.{extension}"
+        copy(filename, upload_path)
+
+        # Update status to uploaded
+        await transcripts_controller.update(transcript, {"status": "uploaded"})
+
+        class PipelineMainLiveWithEvents(PipelineMainLive):
+            def __init__(self, *args, event_callback=None, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.event_callback = event_callback
+
+            async def create(self):
+                pipeline = await super().create()
+                if self.event_callback:
+                    pipeline.on(self.event_callback)
+                return pipeline
+
+            async def on_ended(self):
+                # Call parent's on_ended which triggers pipeline_post
+                await super().on_ended()
+
+        pipeline = PipelineMainLiveWithEvents(
+            transcript_id=transcript.id,
+            event_callback=event_callback
+        )
+        pipeline.start()
+
+        # Open and push audio to pipeline
+        container = av.open(str(upload_path))
         try:
-            # Create a temporary transcript for processing
-            transcript = await transcripts_controller.add(
-                "",
-                source_kind=SourceKind.FILE,
-                source_language=source_language,
-                target_language=target_language,
-            )
+            logger.info("Start pushing audio into the pipeline")
+            for frame in container.decode(audio=0):
+                await pipeline.push(frame)
+        finally:
+            logger.info("Flushing the pipeline")
+            await pipeline.flush()
+            container.close()
 
-            # Copy file to transcript data path as upload.* to match UI flow
-            from shutil import copy
-            extension = Path(filename).suffix[1:]  # Remove the dot
-            
-            # Ensure data directory exists
-            transcript.data_path.mkdir(parents=True, exist_ok=True)
-            
-            upload_path = transcript.data_path / f"upload.{extension}"
-            copy(filename, upload_path)
-            
-            # Update status to uploaded
-            await transcripts_controller.update(transcript, {"status": "uploaded"})
+        logger.info("Waiting for the pipeline to end")
+        # The issue is that pipeline.join() hangs because the runner loop is waiting for commands
+        # We need to give it time to process the flush and set _ev_done
+        # Then we can check if the pipeline has ended
+        max_wait = 60
+        waited = 0
+        while waited < max_wait:
+            await asyncio.sleep(1)
+            waited += 1
+            # Check if pipeline runner has ended
+            if hasattr(pipeline, '_ev_done') and pipeline._ev_done.is_set():
+                logger.info("Pipeline ended")
+                break
+            if hasattr(pipeline, 'status') and pipeline.status == 'ended':
+                logger.info("Pipeline ended")
+                break
+            if waited % 10 == 0:
+                logger.info(f"Waiting for pipeline to end... ({waited}s)")
+        else:
+            logger.warning(f"Pipeline did not end cleanly after {max_wait}s")
 
-            # Process the file using PipelineMainLive (same as UI)
-            pipeline = PipelineMainLive(transcript_id=transcript.id)
-            pipeline.start()
-            
-            # Open and push audio to pipeline
-            container = av.open(str(upload_path))
-            try:
-                logger.info("Start pushing audio into the pipeline")
-                for frame in container.decode(audio=0):
-                    await pipeline.push(frame)
-            finally:
-                logger.info("Flushing the pipeline")
-                await pipeline.flush()
-                container.close()
-                
-            logger.info("Waiting for the pipeline to end")
-            await pipeline.join()
+        # Manually trigger on_ended to start post-processing
+        if hasattr(pipeline, 'on_ended'):
+            logger.info("Triggering post-processing")
+            await pipeline.on_ended()
 
-            logger.info("File pipeline processing complete")
+        # Wait intelligently for processing to complete
+        logger.info("Waiting for diarization and post-processing to complete...")
+
+        async def wait_for_processing_complete(transcript_id: str, max_wait: int = 180):
+            """Wait for transcript processing (including diarization) to complete."""
+            poll_intervals = [2] * 10 + [5] * 10 + [10] * 11  # 2s×10, 5s×10, 10s×11 = 180s total
+            total_waited = 0
             
-            # Output events (to match stream pipeline behavior)
-            # Get final transcript with all events
-            final_transcript = await transcripts_controller.get_by_id(transcript.id)
-            if not final_transcript.events:
-                logger.error("CRITICAL ERROR: No events were generated during processing")
-                raise RuntimeError("Processing failed: No events were captured")
-            
-            # Define processors to ignore (same as original stream pipeline)
-            # These would be the uppercase event names if they were stored
-            IGNORED_PROCESSORS = {
-                "AUDIO_DOWNSCALE",
-                "AUDIO_CHUNKER", 
-                "AUDIO_MERGE",
-                "AUDIO_FILE_WRITER",
-                "TOPIC_COLLECTOR",
-                "BROADCAST",
-            }
-            
-            for event_data in final_transcript.events:
-                # event_data is a TranscriptEvent object with 'event' and 'data' attributes
-                processor = event_data.event if hasattr(event_data, 'event') else "Unknown"
-                data = event_data.data if hasattr(event_data, 'data') else {}
+            # Track progress metrics
+            previous_topics = 0
+            previous_words = 0
+            previous_speakers = 0
+            stalled_checks = 0
+            max_stalled_checks = 10  # Fail after 10 consecutive checks with no progress (more tolerant)
+
+            for interval in poll_intervals:
+                await asyncio.sleep(interval)
+                total_waited += interval
+
+                transcript = await transcripts_controller.get_by_id(transcript_id)
+
+                # Check for error status
+                if transcript.status == "error":
+                    logger.error(f"Processing failed after {total_waited}s")
+                    return False
+
+                # Count current metrics for progress tracking
+                current_topics = len(transcript.topics) if transcript.topics else 0
+                current_words = 0
+                speakers = set()
+                topics_with_speaker_0 = 0
                 
-                # Skip ignored processors (matching original behavior)
-                if processor in IGNORED_PROCESSORS:
-                    continue
+                if transcript.topics:
+                    for topic in transcript.topics:
+                        topic_speakers = set()
+                        if hasattr(topic, 'words') and topic.words:
+                            current_words += len(topic.words)
+                            for word in topic.words:
+                                if hasattr(word, 'speaker'):
+                                    speaker = word.speaker
+                                    speakers.add(speaker)
+                                    topic_speakers.add(speaker)
+                        
+                        # Count topics that only have speaker 0
+                        if topic_speakers == {0}:
+                            topics_with_speaker_0 += 1
                 
-                # Log to stdout (matching original format)
-                # For database events, show what kind of data it contains
-                if processor == "TRANSCRIPT" and isinstance(data, dict) and "text" in data:
-                    logger.info(f"Event: {processor} - text: {data['text'][:50]}...")
-                elif processor == "TOPIC" and isinstance(data, dict):
-                    word_count = len(data.get("words", []))
-                    logger.info(f"Event: {processor} - {word_count} words")
-                elif processor == "STATUS" and isinstance(data, dict) and "value" in data:
-                    logger.info(f"Event: {processor} - {data['value']}")
-                elif processor == "DURATION" and isinstance(data, dict) and "duration" in data:
-                    logger.info(f"Event: {processor} - {data['duration']}ms")
-                elif processor == "WAVEFORM" and isinstance(data, dict) and "waveform" in data:
-                    logger.info(f"Event: {processor} - {len(data['waveform'])} samples")
+                real_speakers = [s for s in speakers if s != 0]
+                current_speakers = len(real_speakers)
+                
+                # Check for progress (any metric changing means progress)
+                has_progress = (
+                    current_topics > previous_topics or
+                    current_words > previous_words or
+                    current_speakers > previous_speakers
+                )
+                
+                # Only check for stalls after initial activity (at least some content exists)
+                # and only while status is "processing" and after reasonable time has passed
+                if not has_progress and transcript.status == "processing" and current_topics > 0 and total_waited >= 60:
+                    # No progress detected while still processing
+                    stalled_checks += 1
+                    if stalled_checks >= max_stalled_checks:
+                        logger.error(
+                            f"Processing stalled after {total_waited}s - no progress for {stalled_checks} checks. "
+                            f"Topics: {current_topics}, Words: {current_words}, Speakers: {current_speakers}"
+                        )
+                        return False
+                    elif total_waited % 10 == 0:
+                        logger.warning(f"No progress detected, stall check {stalled_checks}/{max_stalled_checks}")
                 else:
-                    # Fallback for unknown event types
-                    logger.info(f"Event: {processor}")
+                    # Progress detected, status changed, or still initializing - reset stall counter
+                    if has_progress and (previous_topics > 0 or current_topics > 0):
+                        logger.debug(f"Progress detected: topics {previous_topics}->{current_topics}, "
+                                   f"words {previous_words}->{current_words}, "
+                                   f"speakers {previous_speakers}->{current_speakers}")
+                    if stalled_checks > 0:
+                        stalled_checks = 0
+                        logger.debug("Stall counter reset")
                 
-                # Write to output file if specified
-                if output_fd:
+                # Update previous values for next iteration
+                previous_topics = current_topics
+                previous_words = current_words
+                previous_speakers = current_speakers
+                
+                # Check if processing is complete
+                if transcript.status == "ended":
+                    logger.info(f"Processing complete after {total_waited}s")
+                    return True
+                
+                # Log progress every 10 seconds
+                if total_waited % 10 == 0:
+                    logger.info(
+                        f"Waiting... ({total_waited}s, status: {transcript.status}, "
+                        f"speakers: {current_speakers}, topics: {current_topics}, "
+                        f"words: {current_words}, undiarized: {topics_with_speaker_0}, "
+                        f"stalled_checks: {stalled_checks}/{max_stalled_checks})"
+                    )
+
+            logger.warning(f"Processing timeout after {total_waited}s")
+            return True  # Return True to continue with what we have
+
+        success = await wait_for_processing_complete(transcript.id)
+        if not success:
+            logger.error("Post-processing did not complete successfully")
+            # Continue anyway to output what we have
+
+        # Check if we need to re-run diarization for topics that were created late
+        logger.info("Checking if all topics are diarized...")
+        check_transcript = await transcripts_controller.get_by_id(transcript.id)
+        
+        if check_transcript.topics:
+            undiarized_topics = 0
+            for topic in check_transcript.topics:
+                topic_speakers = set()
+                if hasattr(topic, 'words') and topic.words:
+                    for word in topic.words:
+                        if hasattr(word, 'speaker'):
+                            topic_speakers.add(word.speaker)
+                if topic_speakers == {0}:
+                    undiarized_topics += 1
+            
+            if undiarized_topics > 0:
+                logger.info(f"Found {undiarized_topics} undiarized topics, triggering diarization again...")
+                
+                # Debug: Print full topics JSON
+                import json
+                topics_json = []
+                for topic in check_transcript.topics:
+                    topic_dict = {
+                        'id': topic.id if hasattr(topic, 'id') else None,
+                        'title': topic.title,
+                        'summary': topic.summary,
+                        'timestamp': topic.timestamp,
+                        'transcript': topic.transcript,
+                        'words': [
+                            {
+                                'text': w.text,
+                                'start': w.start,
+                                'end': w.end,
+                                'speaker': w.speaker if hasattr(w, 'speaker') else None
+                            } for w in topic.words
+                        ] if hasattr(topic, 'words') and topic.words else []
+                    }
+                    topics_json.append(topic_dict)
+                
+                logger.info(f"TOPICS JSON: {json.dumps(topics_json, indent=2)}")
+                
+                # Import and trigger diarization task directly
+                from reflector.pipelines.main_live_pipeline import task_pipeline_diarization
+                result = task_pipeline_diarization.delay(transcript_id=transcript.id)
+                logger.info(f"Re-diarization task started: {result.id}")
+                
+                # Wait for re-diarization to complete
+                logger.info("Waiting for re-diarization to complete...")
+                for i in range(15):  # Wait up to 75 seconds
+                    await asyncio.sleep(5)
+                    check_transcript = await transcripts_controller.get_by_id(transcript.id)
+                    
+                    # Check if diarization improved
+                    new_undiarized = 0
+                    for topic in check_transcript.topics:
+                        topic_speakers = set()
+                        if hasattr(topic, 'words') and topic.words:
+                            for word in topic.words:
+                                if hasattr(word, 'speaker'):
+                                    topic_speakers.add(word.speaker)
+                        if topic_speakers == {0}:
+                            new_undiarized += 1
+                    
+                    if new_undiarized < undiarized_topics:
+                        logger.info(f"Re-diarization progressing: {undiarized_topics} -> {new_undiarized} undiarized topics")
+                        undiarized_topics = new_undiarized
+                        if new_undiarized == 0:
+                            logger.info("All topics now diarized!")
+                            break
+                    
+                    if (i + 1) % 3 == 0:
+                        logger.info(f"Still waiting for re-diarization... ({(i + 1) * 5}s)")
+                else:
+                    if undiarized_topics > 0:
+                        logger.warning(f"Re-diarization timeout, {undiarized_topics} topics remain undiarized")
+
+        # Fetch updated transcript with diarized results
+        logger.info(f"Fetching diarized results from database transcript.id: {transcript.id}")
+        final_transcript = await transcripts_controller.get_by_id(transcript.id)
+
+        if output_fd:
+            # Write diarized topics from database
+            if final_transcript.topics:
+                logger.info(f"Writing {len(final_transcript.topics)} diarized topics to output")
+                for topic in final_transcript.topics:
+                    # Convert topic to the expected format
+                    topic_data = {
+                        "title": topic.title,
+                        "summary": topic.summary,
+                        "timestamp": topic.timestamp,
+                        "transcript": {
+                            "text": topic.transcript,
+                            "words": [
+                                {
+                                    "text": word.text,
+                                    "start": word.start,
+                                    "end": word.end,
+                                    "speaker": word.speaker if hasattr(word, 'speaker') else 0
+                                }
+                                for word in topic.words
+                            ] if hasattr(topic, 'words') and topic.words else []
+                        }
+                    }
+                    
                     event = PipelineEvent(
-                        processor=processor,
+                        processor="AudioDiarizationAutoProcessor",
                         uid=transcript.id,
-                        data=data
+                        data=topic_data
                     )
                     output_fd.write(event.model_dump_json())
                     output_fd.write("\n")
                     output_fd.flush()
 
-        finally:
-            await database.disconnect()
-    except ImportError as e:
-        logger.error(f"File pipeline not available: {e}")
-        logger.info("Falling back to stream pipeline")
-        # Fall back to stream pipeline
-        await process_audio_file(
-            filename,
-            event_callback,
-            only_transcript=False,
-            source_language=source_language,
-            target_language=target_language,
-            enable_diarization=enable_diarization,
-            diarization_backend=diarization_backend,
-        )
+                # Log speaker stats
+                all_speakers = set()
+                for topic in final_transcript.topics:
+                    if hasattr(topic, 'transcript') and hasattr(topic.transcript, 'words'):
+                        for word in topic.transcript.words:
+                            if hasattr(word, 'speaker'):
+                                all_speakers.add(word.speaker)
+                # Filter out speaker 0 which indicates non-diarized content
+                real_speakers = [s for s in all_speakers if s != 0]
+                if real_speakers:
+                    logger.info(f"Found {len(real_speakers)} unique speakers: {sorted(real_speakers)}")
+                else:
+                    logger.warning("Diarization may not have completed properly - only speaker 0 found")
+                if 0 in all_speakers and real_speakers:
+                    logger.info("Note: Some segments have speaker 0 (not diarized)")
+
+        logger.info("File pipeline processing complete")
+
+    finally:
+        await database.disconnect()
 
 
 if __name__ == "__main__":
@@ -383,12 +433,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--output", "-o", help="Output file (output.jsonl)")
     parser.add_argument(
-        "--enable-diarization",
-        "-d",
-        action="store_true",
-        help="Enable speaker diarization",
-    )
-    parser.add_argument(
         "--diarization-backend",
         default="pyannote",
         choices=["pyannote", "modal"],
@@ -411,6 +455,7 @@ if __name__ == "__main__":
         if processor in (
             "AudioDownscaleProcessor",
             "AudioChunkerAutoProcessor",
+            "AudioChunkerFramesProcessor",
             "AudioMergeProcessor",
             "AudioFileWriterProcessor",
             "TopicCollectorProcessor",
@@ -418,46 +463,22 @@ if __name__ == "__main__":
         ):
             return
 
-        # If diarization is enabled, skip the original topic events from the pipeline
-        # The diarization processor will emit the same topics but with speaker info
-        if processor == "TranscriptTopicDetectorProcessor" and args.enable_diarization:
-            return
-
         # Log all events
         logger.info(f"Event: {processor} - {type(data).__name__}")
 
-        # Write to output
-        if output_fd:
-            output_fd.write(event.model_dump_json())
-            output_fd.write("\n")
-            output_fd.flush()
+        # Don't write real-time events to output since we'll write diarized events later
+        # This prevents duplicate events with different speaker IDs
 
-    if args.stream:
-        # Use original streaming pipeline
-        asyncio.run(
-            process_audio_file(
-                args.source,
-                event_callback,
-                only_transcript=args.only_transcript,
-                source_language=args.source_language,
-                target_language=args.target_language,
-                enable_diarization=args.enable_diarization,
-                diarization_backend=args.diarization_backend,
-            )
+    asyncio.run(
+        process_file_pipeline(
+            args.source,
+            event_callback,
+            source_language=args.source_language,
+            target_language=args.target_language,
+            output_fd=output_fd,
         )
-    else:
-        # Use optimized file pipeline (default)
-        asyncio.run(
-            process_file_pipeline(
-                args.source,
-                event_callback,
-                source_language=args.source_language,
-                target_language=args.target_language,
-                enable_diarization=args.enable_diarization,
-                diarization_backend=args.diarization_backend,
-                output_fd=output_fd,
-            )
-        )
+    )
+
 
     if output_fd:
         output_fd.close()
