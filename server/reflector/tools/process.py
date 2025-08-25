@@ -14,7 +14,7 @@ from reflector.db import get_database
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_live_pipeline import PipelineMainLive, task_pipeline_diarization, pipeline_process, pipeline_post
 from reflector.processors import PipelineEvent
-from reflector.views.transcripts import create_empty_transcript, CreateTranscript
+from reflector.views.transcripts import CreateTranscript
 from reflector.db.transcripts import TranscriptTopic
 import shutil
 import json
@@ -50,15 +50,12 @@ async def process_audio_file(source_path: str, source_language: str, target_lang
         
         file_path = Path(source_path)
 
-        # Add transcript to database
-        info = CreateTranscript(
+        transcript = await transcripts_controller.add(
+            file_path.name,
+            source_kind=SourceKind.FILE,
             source_language=source_language,
             target_language=target_language,
-            name=file_path.name
-        )
-        transcript = await create_empty_transcript(
-            info,
-            user_id,
+            user_id=user_id,
         )
         
         logger.info(f"Created empty transcript {transcript.id} for file {file_path.name} because technically we need an empty transcript before we start transcript")
