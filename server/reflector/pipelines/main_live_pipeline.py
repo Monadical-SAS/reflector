@@ -794,7 +794,7 @@ def pipeline_post(*, transcript_id: str):
         chain_final_summaries,
     ) | task_pipeline_post_to_zulip.si(transcript_id=transcript_id)
 
-    chain.delay()
+    return chain.delay()
 
 
 @get_transcript

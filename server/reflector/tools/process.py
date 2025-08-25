@@ -1,295 +1,131 @@
 """
 Process audio file with diarization support
-===========================================
-
-Extended version of process.py that includes speaker diarization.
-This tool processes audio files locally without requiring the full server infrastructure.
 """
 
+import argparse
 import asyncio
-import tempfile
-import uuid
+import json
+import shutil
+import sys
+import time
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
-import av
-
+from reflector.db.transcripts import SourceKind, TranscriptTopic, transcripts_controller
 from reflector.logger import logger
-from reflector.processors import (
-    AudioChunkerAutoProcessor,
-    AudioDownscaleProcessor,
-    AudioFileWriterProcessor,
-    AudioMergeProcessor,
-    AudioTranscriptAutoProcessor,
-    Pipeline,
-    PipelineEvent,
-    TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
-    TranscriptLinerProcessor,
-    TranscriptTopicDetectorProcessor,
-    TranscriptTranslatorAutoProcessor,
-)
-from reflector.processors.base import BroadcastProcessor, Processor
-from reflector.processors.types import (
-    AudioDiarizationInput,
-    TitleSummary,
-    TitleSummaryWithId,
-)
+from reflector.pipelines.main_live_pipeline import pipeline_post, pipeline_process
 
 
-class TopicCollectorProcessor(Processor):
-    """Collect topics for diarization"""
+def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
+    """Convert TranscriptTopic objects to JSON-serializable dicts"""
+    serialized = []
+    for topic in topics:
+        topic_dict = topic.model_dump()
+        serialized.append(topic_dict)
+    return serialized
 
-    INPUT_TYPE = TitleSummary
-    OUTPUT_TYPE = TitleSummary
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.topics: List[TitleSummaryWithId] = []
-        self._topic_id = 0
+def debug_print_speakers(serialized_topics: List[Dict[str, Any]]) -> None:
+    """Print debug info about speakers found in topics"""
+    all_speakers = set()
+    for topic_dict in serialized_topics:
+        for word in topic_dict.get("words", []):
+            all_speakers.add(word.get("speaker", 0))
 
-    async def _push(self, data: TitleSummary):
-        # Convert to TitleSummaryWithId and collect
-        self._topic_id += 1
-        topic_with_id = TitleSummaryWithId(
-            id=str(self._topic_id),
-            title=data.title,
-            summary=data.summary,
-            timestamp=data.timestamp,
-            duration=data.duration,
-            transcript=data.transcript,
-        )
-        self.topics.append(topic_with_id)
-
-        # Pass through the original topic
-        await self.emit(data)
-
-    def get_topics(self) -> List[TitleSummaryWithId]:
-        return self.topics
+    print(
+        f"Found {len(serialized_topics)} topics with speakers: {all_speakers}",
+        file=sys.stderr,
+    )
 
 
 async def process_audio_file(
-    filename,
-    event_callback,
-    only_transcript=False,
-    source_language="en",
-    target_language="en",
-    enable_diarization=True,
-    diarization_backend="pyannote",
+    source_path: str,
+    source_language: str,
+    target_language: str,
+    output_path: str = None,
 ):
-    # Create temp file for audio if diarization is enabled
-    audio_temp_path = None
-    if enable_diarization:
-        audio_temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        audio_temp_path = audio_temp_file.name
-        audio_temp_file.close()
+    """Process audio file with transcription and diarization"""
 
-    # Create processor for collecting topics
-    topic_collector = TopicCollectorProcessor()
+    user_id = None
 
-    # Build pipeline for audio processing
-    processors = []
+    file_path = Path(source_path)
 
-    # Add audio file writer at the beginning if diarization is enabled
-    if enable_diarization:
-        processors.append(AudioFileWriterProcessor(audio_temp_path))
+    transcript = await transcripts_controller.add(
+        file_path.name,
+        # note that the real file upload has SourceKind: LIVE for the reason of it's an error
+        source_kind=SourceKind.FILE,
+        source_language=source_language,
+        target_language=target_language,
+        user_id=user_id,
+    )
 
-    # Add the rest of the processors
-    processors += [
-        AudioDownscaleProcessor(),
-        AudioChunkerAutoProcessor(),
-        AudioMergeProcessor(),
-        AudioTranscriptAutoProcessor.as_threaded(),
-        TranscriptLinerProcessor(),
-        TranscriptTranslatorAutoProcessor.as_threaded(),
-    ]
+    logger.info(
+        f"Created empty transcript {transcript.id} for file {file_path.name} because technically we need an empty transcript before we start transcript"
+    )
 
-    if not only_transcript:
-        processors += [
-            TranscriptTopicDetectorProcessor.as_threaded(),
-            # Collect topics for diarization
-            topic_collector,
-            BroadcastProcessor(
-                processors=[
-                    TranscriptFinalTitleProcessor.as_threaded(),
-                    TranscriptFinalSummaryProcessor.as_threaded(),
-                ],
-            ),
-        ]
+    # Copy the source file to transcript's data_path as upload.{extension}
+    # This is a hardcoded undocumented convention - pipelines expect files as upload.*
 
-    # Create main pipeline
-    pipeline = Pipeline(*processors)
-    pipeline.set_pref("audio:source_language", source_language)
-    pipeline.set_pref("audio:target_language", target_language)
-    pipeline.describe()
-    pipeline.on(event_callback)
+    extension = file_path.suffix
+    upload_path = transcript.data_path / f"upload{extension}"
+    upload_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_path, upload_path)
+    logger.info(f"Copied {source_path} to {upload_path}")
 
-    # Start processing audio
-    logger.info(f"Opening {filename}")
-    container = av.open(filename)
-    try:
-        logger.info("Start pushing audio into the pipeline")
-        for frame in container.decode(audio=0):
-            await pipeline.push(frame)
-    finally:
-        logger.info("Flushing the pipeline")
-        await pipeline.flush()
+    # undocumented convention - we have to set status to "uploaded" for some reason
+    await transcripts_controller.update(transcript, {"status": "uploaded"})
 
-    # Run diarization if enabled and we have topics
-    if enable_diarization and not only_transcript and audio_temp_path:
-        topics = topic_collector.get_topics()
+    print(f"Processing {file_path.name}...", file=sys.stderr)
+    await pipeline_process(transcript_id=transcript.id)
+    print(f"Processing complete for transcript {transcript.id}", file=sys.stderr)
 
-        if topics:
-            logger.info(f"Starting diarization with {len(topics)} topics")
+    pre_final_transcript = await transcripts_controller.get_by_id(transcript.id)
 
-            try:
-                from reflector.processors import AudioDiarizationAutoProcessor
+    # assert documented behaviour: after process, the pipeline isn't ended. this is the reason of calling pipeline_post
+    assert pre_final_transcript.status != "ended"
 
-                diarization_processor = AudioDiarizationAutoProcessor(
-                    name=diarization_backend
-                )
+    # at this point, diarization is running but we have no access to it. run diarization in parallel - one will hopefully win after polling
+    result = pipeline_post(transcript_id=transcript.id)
 
-                diarization_processor.set_pipeline(pipeline)
+    # result.ready() blocks even without await; it mutates result also
+    while not result.ready():
+        print(f"Status: {result.state}")
+        time.sleep(2)
 
-                # For Modal backend, we need to upload the file to S3 first
-                if diarization_backend == "modal":
-                    from datetime import datetime
+    post_final_transcript = await transcripts_controller.get_by_id(transcript.id)
 
-                    from reflector.storage import get_transcripts_storage
-                    from reflector.utils.s3_temp_file import S3TemporaryFile
+    assert post_final_transcript.status == "ended"
 
-                    storage = get_transcripts_storage()
-
-                    # Generate a unique filename in evaluation folder
-                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                    audio_filename = f"evaluation/diarization_temp/{timestamp}_{uuid.uuid4().hex}.wav"
-
-                    # Use context manager for automatic cleanup
-                    async with S3TemporaryFile(storage, audio_filename) as s3_file:
-                        # Read and upload the audio file
-                        with open(audio_temp_path, "rb") as f:
-                            audio_data = f.read()
-
-                        audio_url = await s3_file.upload(audio_data)
-                        logger.info(f"Uploaded audio to S3: {audio_filename}")
-
-                        # Create diarization input with S3 URL
-                        diarization_input = AudioDiarizationInput(
-                            audio_url=audio_url, topics=topics
-                        )
-
-                        # Run diarization
-                        await diarization_processor.push(diarization_input)
-                        await diarization_processor.flush()
-
-                        logger.info("Diarization complete")
-                        # File will be automatically cleaned up when exiting the context
-                else:
-                    # For local backend, use local file path
-                    audio_url = audio_temp_path
-
-                    # Create diarization input
-                    diarization_input = AudioDiarizationInput(
-                        audio_url=audio_url, topics=topics
-                    )
-
-                    # Run diarization
-                    await diarization_processor.push(diarization_input)
-                    await diarization_processor.flush()
-
-                    logger.info("Diarization complete")
-
-            except ImportError as e:
-                logger.error(f"Failed to import diarization dependencies: {e}")
-                logger.error(
-                    "Install with: uv pip install pyannote.audio torch torchaudio"
-                )
-                logger.error(
-                    "And set HF_TOKEN environment variable for pyannote models"
-                )
-                raise SystemExit(1)
-            except Exception as e:
-                logger.error(f"Diarization failed: {e}")
-                raise SystemExit(1)
-        else:
-            logger.warning("Skipping diarization: no topics available")
-
-    # Clean up temp file
-    if audio_temp_path:
-        try:
-            Path(audio_temp_path).unlink()
-        except Exception as e:
-            logger.warning(f"Failed to clean up temp file {audio_temp_path}: {e}")
-
-    logger.info("All done!")
-
-
-async def process_file_pipeline(
-    filename: str,
-    event_callback,
-    source_language="en",
-    target_language="en",
-    enable_diarization=True,
-    diarization_backend="modal",
-):
-    """Process audio/video file using the optimized file pipeline"""
-    try:
-        from reflector.db import database
-        from reflector.db.transcripts import SourceKind, transcripts_controller
-        from reflector.pipelines.main_file_pipeline import PipelineMainFile
-
-        await database.connect()
-        try:
-            # Create a temporary transcript for processing
-            transcript = await transcripts_controller.add(
-                "",
-                source_kind=SourceKind.FILE,
-                source_language=source_language,
-                target_language=target_language,
-            )
-
-            # Process the file
-            pipeline = PipelineMainFile(transcript_id=transcript.id)
-            await pipeline.process(Path(filename))
-
-            logger.info("File pipeline processing complete")
-
-        finally:
-            await database.disconnect()
-    except ImportError as e:
-        logger.error(f"File pipeline not available: {e}")
-        logger.info("Falling back to stream pipeline")
-        # Fall back to stream pipeline
-        await process_audio_file(
-            filename,
-            event_callback,
-            only_transcript=False,
-            source_language=source_language,
-            target_language=target_language,
-            enable_diarization=enable_diarization,
-            diarization_backend=diarization_backend,
+    topics = post_final_transcript.topics
+    if not topics:
+        raise RuntimeError(
+            f"No topics found for transcript {transcript.id} after processing"
         )
+
+    serialized_topics = serialize_topics(topics)
+
+    if output_path:
+        # Write to JSON file
+        with open(output_path, "w") as f:
+            for topic_dict in serialized_topics:
+                json.dump(topic_dict, f)
+                f.write("\n")
+        print(f"Results written to {output_path}", file=sys.stderr)
+    else:
+        # Write to stdout as JSONL
+        for topic_dict in serialized_topics:
+            print(json.dumps(topic_dict))
+
+    debug_print_speakers(serialized_topics)
+
+    return transcript
 
 
 if __name__ == "__main__":
-    import argparse
-    import os
-
     parser = argparse.ArgumentParser(
-        description="Process audio files with optional speaker diarization"
+        description="Process audio files with speaker diarization"
     )
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
-    parser.add_argument(
-        "--stream",
-        action="store_true",
-        help="Use streaming pipeline (original frame-based processing)",
-    )
-    parser.add_argument(
-        "--only-transcript",
-        "-t",
-        action="store_true",
-        help="Only generate transcript without topics/summaries",
-    )
     parser.add_argument(
         "--source-language", default="en", help="Source language code (default: en)"
     )
@@ -297,82 +133,10 @@ if __name__ == "__main__":
         "--target-language", default="en", help="Target language code (default: en)"
     )
     parser.add_argument("--output", "-o", help="Output file (output.jsonl)")
-    parser.add_argument(
-        "--enable-diarization",
-        "-d",
-        action="store_true",
-        help="Enable speaker diarization",
-    )
-    parser.add_argument(
-        "--diarization-backend",
-        default="pyannote",
-        choices=["pyannote", "modal"],
-        help="Diarization backend to use (default: pyannote)",
-    )
     args = parser.parse_args()
 
-    if "REDIS_HOST" not in os.environ:
-        os.environ["REDIS_HOST"] = "localhost"
-
-    output_fd = None
-    if args.output:
-        output_fd = open(args.output, "w")
-
-    async def event_callback(event: PipelineEvent):
-        processor = event.processor
-        data = event.data
-
-        # Ignore internal processors
-        if processor in (
-            "AudioDownscaleProcessor",
-            "AudioChunkerAutoProcessor",
-            "AudioMergeProcessor",
-            "AudioFileWriterProcessor",
-            "TopicCollectorProcessor",
-            "BroadcastProcessor",
-        ):
-            return
-
-        # If diarization is enabled, skip the original topic events from the pipeline
-        # The diarization processor will emit the same topics but with speaker info
-        if processor == "TranscriptTopicDetectorProcessor" and args.enable_diarization:
-            return
-
-        # Log all events
-        logger.info(f"Event: {processor} - {type(data).__name__}")
-
-        # Write to output
-        if output_fd:
-            output_fd.write(event.model_dump_json())
-            output_fd.write("\n")
-            output_fd.flush()
-
-    if args.stream:
-        # Use original streaming pipeline
-        asyncio.run(
-            process_audio_file(
-                args.source,
-                event_callback,
-                only_transcript=args.only_transcript,
-                source_language=args.source_language,
-                target_language=args.target_language,
-                enable_diarization=args.enable_diarization,
-                diarization_backend=args.diarization_backend,
-            )
+    asyncio.run(
+        process_audio_file(
+            args.source, args.source_language, args.target_language, args.output
         )
-    else:
-        # Use optimized file pipeline (default)
-        asyncio.run(
-            process_file_pipeline(
-                args.source,
-                event_callback,
-                source_language=args.source_language,
-                target_language=args.target_language,
-                enable_diarization=args.enable_diarization,
-                diarization_backend=args.diarization_backend,
-            )
-        )
-
-    if output_fd:
-        output_fd.close()
-        logger.info(f"Output written to {args.output}")
+    )
