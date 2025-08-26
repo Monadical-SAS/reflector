@@ -24,6 +24,7 @@ logger = structlog.get_logger(__name__)
 
 class CleanupStats(TypedDict):
     """Statistics for cleanup operation."""
+
     transcripts_deleted: int
     meetings_deleted: int
     recordings_deleted: int
@@ -146,10 +147,10 @@ def log_cleanup_results(stats: CleanupStats):
 async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
     """
     Main cleanup logic for old public data.
-    
+
     Args:
         days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
-    
+
     Returns:
         CleanupStats or None if skipped
     """
