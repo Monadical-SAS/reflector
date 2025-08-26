@@ -13,12 +13,13 @@ import av
 import structlog
 from celery import shared_task
 
+from reflector.asynctask import asynctask
 from reflector.db.transcripts import (
     Transcript,
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.main_live_pipeline import PipelineMainBase, asynctask
+from reflector.pipelines.main_live_pipeline import PipelineMainBase
 from reflector.processors import (
     AudioFileWriterProcessor,
     TranscriptFinalSummaryProcessor,

@@ -7,7 +7,6 @@ Uses the same implementation as the Celery worker task.
 import argparse
 import asyncio
 import sys
-from unittest.mock import patch
 
 import structlog
 
@@ -18,12 +17,6 @@ logger = structlog.get_logger(__name__)
 
 
 async def cleanup_old_data(days: int = 7):
-    """
-    Run cleanup with a custom retention period.
-    
-    Args:
-        days: Number of days to keep data (default: 7)
-    """
     logger.info(
         "Starting manual cleanup",
         retention_days=days,
@@ -31,17 +24,13 @@ async def cleanup_old_data(days: int = 7):
     )
 
     if not settings.PUBLIC_MODE:
-        logger.warning(
+        logger.critical(
             "WARNING: PUBLIC_MODE is False. "
-            "This tool is intended for public instances. "
-            "Proceeding anyway - be careful!"
+            "This tool is intended for public instances only."
         )
+        return
 
-    # Temporarily override the retention days setting
-    with patch.object(settings, "PUBLIC_DATA_RETENTION_DAYS", days):
-        # Temporarily enable PUBLIC_MODE if not set
-        with patch.object(settings, "PUBLIC_MODE", True):
-            result = await _cleanup_old_public_data()
+    result = await _cleanup_old_public_data(days=days)
 
     if result:
         logger.info(
@@ -52,7 +41,9 @@ async def cleanup_old_data(days: int = 7):
             errors_count=len(result.get("errors", [])),
         )
         if result.get("errors"):
-            logger.warning("Errors encountered during cleanup:", errors=result["errors"][:10])
+            logger.warning(
+                "Errors encountered during cleanup:", errors=result["errors"][:10]
+            )
     else:
         logger.info("Cleanup skipped or completed without results")
 

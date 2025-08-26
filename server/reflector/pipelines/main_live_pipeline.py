@@ -22,7 +22,7 @@ from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
 
-from reflector.db import get_database
+from reflector.asynctask import asynctask
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -67,29 +67,6 @@ from reflector.zulip import (
     send_message_to_zulip,
     update_zulip_message,
 )
-
-
-def asynctask(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        async def run_with_db():
-            database = get_database()
-            await database.connect()
-            try:
-                return await f(*args, **kwargs)
-            finally:
-                await database.disconnect()
-
-        coro = run_with_db()
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop and loop.is_running():
-            return loop.run_until_complete(coro)
-        return asyncio.run(coro)
-
-    return wrapper
 
 
 def broadcast_to_sockets(func):
