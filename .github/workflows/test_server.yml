@@ -5,12 +5,17 @@ on:
     paths:
       - "server/**"
   push:
+    branches:
+      - main
     paths:
       - "server/**"
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ubuntu-latest-${{ github.ref }}
+      cancel-in-progress: true
     services:
       redis:
         image: redis:6
@@ -30,6 +35,9 @@ jobs:
 
   docker-amd64:
     runs-on: linux-amd64
+    concurrency:
+      group: docker-amd64-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -45,6 +53,9 @@ jobs:
 
   docker-arm64:
     runs-on: linux-arm64
+    concurrency:
+      group: docker-amd64-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx

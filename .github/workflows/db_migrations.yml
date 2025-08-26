@@ -17,6 +17,9 @@ on:
 jobs:
   test-migrations:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ubuntu-latest-${{ github.ref }}
+      cancel-in-progress: true
     services:
       postgres:
         image: postgres:17
