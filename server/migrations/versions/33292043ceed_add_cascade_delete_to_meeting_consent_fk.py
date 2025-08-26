@@ -1,7 +1,7 @@
 """add cascade delete to meeting consent fk
 
 Revision ID: 33292043ceed
-Revises: b5e7b4e94672
+Revises: 0ab2d7ffaa16
 Create Date: 2025-08-26 12:13:18.740722
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "33292043ceed"
-down_revision: Union[str, None] = "b5e7b4e94672"
+down_revision: Union[str, None] = "0ab2d7ffaa16"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
