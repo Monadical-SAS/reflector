@@ -60,15 +60,14 @@ uv run celery -A reflector.worker.app beat
 For testing or manual intervention, use the cleanup tool:
 
 ```bash
-# Dry run - show what would be deleted
-uv run python -m reflector.tools.cleanup_old_data --dry-run
-
-# Delete data older than 7 days
+# Delete data older than 7 days (default)
 uv run python -m reflector.tools.cleanup_old_data
 
 # Delete data older than 30 days
 uv run python -m reflector.tools.cleanup_old_data --days 30
 ```
+
+Note: The manual tool uses the same implementation as the Celery worker task to ensure consistency.
 
 ## Important Notes
 
