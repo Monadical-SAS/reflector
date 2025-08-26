@@ -245,3 +245,67 @@ async def test_cleanup_deletes_orphaned_recordings():
 
     # Verify referenced recording still exists
     assert await recordings_controller.get_by_id(referenced_recording.id) is not None
+
+
+@pytest.mark.asyncio
+async def test_meeting_consent_cascade_delete():
+    """Test that meeting_consent records are automatically deleted when meeting is deleted."""
+    from reflector.db import get_database
+    from reflector.db.meetings import meetings, meeting_consent, meeting_consent_controller
+    
+    # Create a meeting
+    meeting_id = "test-cascade-meeting"
+    await get_database().execute(
+        meetings.insert().values(
+            id=meeting_id,
+            room_name="Test Meeting for CASCADE",
+            room_url="https://example.com/cascade-test",
+            host_room_url="https://example.com/cascade-test-host",
+            start_date=datetime.now(timezone.utc),
+            end_date=datetime.now(timezone.utc) + timedelta(hours=1),
+            user_id="test-user",
+            room_id=None,
+        )
+    )
+    
+    # Create consent records for this meeting
+    consent1_id = "consent-1"
+    consent2_id = "consent-2"
+    
+    await get_database().execute(
+        meeting_consent.insert().values(
+            id=consent1_id,
+            meeting_id=meeting_id,
+            user_id="user1",
+            consent_given=True,
+            consent_timestamp=datetime.now(timezone.utc),
+        )
+    )
+    
+    await get_database().execute(
+        meeting_consent.insert().values(
+            id=consent2_id,
+            meeting_id=meeting_id,
+            user_id="user2",
+            consent_given=False,
+            consent_timestamp=datetime.now(timezone.utc),
+        )
+    )
+    
+    # Verify consent records exist
+    consents = await meeting_consent_controller.get_by_meeting_id(meeting_id)
+    assert len(consents) == 2
+    
+    # Delete the meeting
+    await get_database().execute(
+        meetings.delete().where(meetings.c.id == meeting_id)
+    )
+    
+    # Verify meeting is deleted
+    query = meetings.select().where(meetings.c.id == meeting_id)
+    result = await get_database().fetch_one(query)
+    assert result is None
+    
+    # Verify consent records are automatically deleted (CASCADE DELETE)
+    consents_after = await meeting_consent_controller.get_by_meeting_id(meeting_id)
+    assert len(consents_after) == 0

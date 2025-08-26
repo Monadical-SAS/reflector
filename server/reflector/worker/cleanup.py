@@ -13,7 +13,7 @@ from celery import shared_task
 
 from reflector.asynctask import asynctask
 from reflector.db import get_database
-from reflector.db.meetings import meeting_consent, meetings
+from reflector.db.meetings import meetings
 from reflector.db.recordings import recordings
 from reflector.db.transcripts import transcripts, transcripts_controller
 from reflector.settings import settings
@@ -67,12 +67,6 @@ async def cleanup_old_meetings(cutoff_date: datetime, stats: CleanupStats):
     for meeting_data in old_meetings:
         meeting_id = meeting_data["id"]
         try:
-            await get_database().execute(
-                meeting_consent.delete().where(
-                    meeting_consent.c.meeting_id == meeting_id
-                )
-            )
-
             await get_database().execute(
                 meetings.delete().where(meetings.c.id == meeting_id)
             )
