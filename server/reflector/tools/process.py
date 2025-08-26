@@ -9,11 +9,17 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from reflector.db.transcripts import SourceKind, TranscriptTopic, transcripts_controller
 from reflector.logger import logger
-from reflector.pipelines.main_live_pipeline import pipeline_post, pipeline_process
+from reflector.pipelines.main_file_pipeline import (
+    task_pipeline_file_process as task_pipeline_file_process,
+)
+from reflector.pipelines.main_live_pipeline import pipeline_post as live_pipeline_post
+from reflector.pipelines.main_live_pipeline import (
+    pipeline_process as live_pipeline_process,
+)
 
 
 def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
@@ -38,16 +44,16 @@ def debug_print_speakers(serialized_topics: List[Dict[str, Any]]) -> None:
     )
 
 
-async def process_audio_file(
+TranscriptId = str
+
+
+# common interface for every flow: it needs an Entry in db with specific ceremony (file path + status + actual file in file system)
+# ideally we want to get rid of it at some point
+async def prepare_entry(
     source_path: str,
     source_language: str,
     target_language: str,
-    output_path: str = None,
-):
-    """Process audio file with transcription and diarization"""
-
-    user_id = None
-
+) -> TranscriptId:
     file_path = Path(source_path)
 
     transcript = await transcripts_controller.add(
@@ -56,7 +62,7 @@ async def process_audio_file(
         source_kind=SourceKind.FILE,
         source_language=source_language,
         target_language=target_language,
-        user_id=user_id,
+        user_id=None,
     )
 
     logger.info(
@@ -75,31 +81,21 @@ async def process_audio_file(
     # undocumented convention - we have to set status to "uploaded" for some reason
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
-    print(f"Processing {file_path.name}...", file=sys.stderr)
-    await pipeline_process(transcript_id=transcript.id)
-    print(f"Processing complete for transcript {transcript.id}", file=sys.stderr)
+    return transcript.id
 
-    pre_final_transcript = await transcripts_controller.get_by_id(transcript.id)
 
-    # assert documented behaviour: after process, the pipeline isn't ended. this is the reason of calling pipeline_post
-    assert pre_final_transcript.status != "ended"
-
-    # at this point, diarization is running but we have no access to it. run diarization in parallel - one will hopefully win after polling
-    result = pipeline_post(transcript_id=transcript.id)
-
-    # result.ready() blocks even without await; it mutates result also
-    while not result.ready():
-        print(f"Status: {result.state}")
-        time.sleep(2)
-
-    post_final_transcript = await transcripts_controller.get_by_id(transcript.id)
+# same, a part of common ceremony with communication through "transcript" table. to be removed
+async def extract_result_from_entry(
+    transcript_id: TranscriptId, output_path: str
+) -> None:
+    post_final_transcript = await transcripts_controller.get_by_id(transcript_id)
 
     assert post_final_transcript.status == "ended"
 
     topics = post_final_transcript.topics
     if not topics:
         raise RuntimeError(
-            f"No topics found for transcript {transcript.id} after processing"
+            f"No topics found for transcript {transcript_id} after processing"
         )
 
     serialized_topics = serialize_topics(topics)
@@ -118,7 +114,82 @@ async def process_audio_file(
 
     debug_print_speakers(serialized_topics)
 
-    return transcript
+
+async def process_live_pipeline(
+    transcript_id: TranscriptId,
+):
+    """Process transcript_id with transcription and diarization"""
+
+    print(f"Processing transcript_id {transcript_id}...", file=sys.stderr)
+    await live_pipeline_process(transcript_id=transcript_id)
+    print(f"Processing complete for transcript {transcript_id}", file=sys.stderr)
+
+    pre_final_transcript = await transcripts_controller.get_by_id(transcript_id)
+
+    # assert documented behaviour: after process, the pipeline isn't ended. this is the reason of calling pipeline_post
+    assert pre_final_transcript.status != "ended"
+
+    # at this point, diarization is running but we have no access to it. run diarization in parallel - one will hopefully win after polling
+    result = live_pipeline_post(transcript_id=transcript_id)
+
+    # result.ready() blocks even without await; it mutates result also
+    while not result.ready():
+        print(f"Status: {result.state}")
+        time.sleep(2)
+
+
+async def process_file_pipeline(
+    transcript_id: TranscriptId,
+):
+    """Process audio/video file using the optimized file pipeline"""
+
+    # task_pipeline_file_process is a Celery task, need to use .delay() for async execution
+    result = task_pipeline_file_process.delay(transcript_id=transcript_id)
+
+    # Wait for the Celery task to complete
+    while not result.ready():
+        print(f"File pipeline status: {result.state}", file=sys.stderr)
+        time.sleep(2)
+
+    logger.info("File pipeline processing complete")
+
+
+async def process(
+    source_path: str,
+    source_language: str,
+    target_language: str,
+    pipeline: Literal["live", "file"],
+    output_path: str = None,
+):
+    from reflector.db import get_database
+
+    database = get_database()
+    # db connect is a part of ceremony
+    await database.connect()
+
+    try:
+        transcript_id = await prepare_entry(
+            source_path,
+            source_language,
+            target_language,
+        )
+
+        # Use a dispatch dictionary for cleaner pipeline selection
+        pipeline_handlers = {
+            "live": process_live_pipeline,
+            "file": process_file_pipeline,
+        }
+
+        handler = pipeline_handlers.get(pipeline)
+        if not handler:
+            raise ValueError(f"Unknown pipeline type: {pipeline}")
+
+        # Already in async context, just await directly
+        await handler(transcript_id)
+
+        await extract_result_from_entry(transcript_id, output_path)
+    finally:
+        await database.disconnect()
 
 
 if __name__ == "__main__":
@@ -126,6 +197,12 @@ if __name__ == "__main__":
         description="Process audio files with speaker diarization"
     )
     parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
+    parser.add_argument(
+        "--pipeline",
+        required=True,
+        choices=["live", "file"],
+        help="Pipeline type to use for processing (live: streaming/incremental, file: batch/parallel)",
+    )
     parser.add_argument(
         "--source-language", default="en", help="Source language code (default: en)"
     )
@@ -136,7 +213,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     asyncio.run(
-        process_audio_file(
-            args.source, args.source_language, args.target_language, args.output
+        process(
+            args.source,
+            args.source_language,
+            args.target_language,
+            args.pipeline,
+            args.output,
         )
     )
