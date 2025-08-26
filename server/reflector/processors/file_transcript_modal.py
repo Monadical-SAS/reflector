@@ -67,6 +67,9 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
             for word_info in result.get("words", [])
         ]
 
+        # words come not in order
+        words.sort(key=lambda w: w.start)
+
         return Transcript(words=words)
 
 

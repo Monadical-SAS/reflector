@@ -90,8 +90,8 @@ async def extract_result_from_entry(
 ) -> None:
     post_final_transcript = await transcripts_controller.get_by_id(transcript_id)
 
-    assert post_final_transcript.status == "ended"
-
+    # assert post_final_transcript.status == "ended"
+    # File pipeline doesn't set status to "ended", only live pipeline does
     topics = post_final_transcript.topics
     if not topics:
         raise RuntimeError(
