@@ -6,6 +6,7 @@ Will retry up to 3 times with 5-minute intervals on failure.
 
 import asyncio
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
 
 import structlog
 from celery import shared_task
@@ -21,7 +22,15 @@ from reflector.storage import get_recordings_storage
 logger = structlog.get_logger(__name__)
 
 
-async def cleanup_old_transcripts(cutoff_date: datetime, stats: dict):
+class CleanupStats(TypedDict):
+    """Statistics for cleanup operation."""
+    transcripts_deleted: int
+    meetings_deleted: int
+    recordings_deleted: int
+    errors: list[str]
+
+
+async def cleanup_old_transcripts(cutoff_date: datetime, stats: CleanupStats):
     """Delete old anonymous transcripts."""
     query = transcripts.select().where(
         (transcripts.c.created_at < cutoff_date) & (transcripts.c.user_id.is_(None))
@@ -46,7 +55,7 @@ async def cleanup_old_transcripts(cutoff_date: datetime, stats: dict):
             stats["errors"].append(error_msg)
 
 
-async def cleanup_old_meetings(cutoff_date: datetime, stats: dict):
+async def cleanup_old_meetings(cutoff_date: datetime, stats: CleanupStats):
     """Delete old anonymous meetings and their consents."""
     query = meetings.select().where(
         (meetings.c.start_date < cutoff_date) & (meetings.c.user_id.is_(None))
@@ -79,7 +88,7 @@ async def cleanup_old_meetings(cutoff_date: datetime, stats: dict):
             stats["errors"].append(error_msg)
 
 
-async def cleanup_orphaned_recordings(cutoff_date: datetime, stats: dict):
+async def cleanup_orphaned_recordings(cutoff_date: datetime, stats: CleanupStats):
     """Delete orphaned recordings that are not referenced by any transcript."""
     query = transcripts.select().where(transcripts.c.recording_id.isnot(None))
     transcript_recordings = await get_database().fetch_all(query)
@@ -99,9 +108,7 @@ async def cleanup_orphaned_recordings(cutoff_date: datetime, stats: dict):
         try:
             # Delete from storage first
             try:
-                await get_recordings_storage().delete_file(
-                    recording_data["object_key"]
-                )
+                await get_recordings_storage().delete_file(recording_data["object_key"])
             except Exception as storage_error:
                 logger.warning(
                     "Failed to delete recording from storage",
@@ -125,7 +132,7 @@ async def cleanup_orphaned_recordings(cutoff_date: datetime, stats: dict):
             stats["errors"].append(error_msg)
 
 
-def log_cleanup_results(stats: dict):
+def log_cleanup_results(stats: CleanupStats):
     """Log the final cleanup results."""
     logger.info(
         "Cleanup completed",
@@ -142,7 +149,7 @@ def log_cleanup_results(stats: dict):
         )
 
 
-async def _cleanup_old_public_data(days: int | None = None):
+async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
     """
     Main cleanup logic for old public data.
     
@@ -150,14 +157,14 @@ async def _cleanup_old_public_data(days: int | None = None):
         days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
     
     Returns:
-        dict: Statistics about the cleanup operation
+        CleanupStats or None if skipped
     """
     if days is None:
         days = settings.PUBLIC_DATA_RETENTION_DAYS
 
     if not settings.PUBLIC_MODE:
         logger.info("Skipping cleanup - not a public instance")
-        return
+        return None
 
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     logger.info(
@@ -165,7 +172,7 @@ async def _cleanup_old_public_data(days: int | None = None):
         cutoff_date=cutoff_date.isoformat(),
     )
 
-    stats = {
+    stats: CleanupStats = {
         "transcripts_deleted": 0,
         "meetings_deleted": 0,
         "recordings_deleted": 0,
@@ -192,7 +199,7 @@ async def _cleanup_old_public_data(days: int | None = None):
 def cleanup_old_public_data(days: int | None = None):
     """
     Celery task to clean up old public data.
-    
+
     Args:
         days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
     """
