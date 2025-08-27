@@ -14,10 +14,7 @@ SAMPLERATE = 16000
 UPLOADS_PATH = "/uploads"
 CACHE_PATH = "/cache"
 VAD_CONFIG = {
-    "max_segment_duration": 30.0,
-    "batch_max_files": 10,
-    "batch_max_duration": 5.0,
-    "min_segment_duration": 0.02,
+    "batch_max_duration": 30.0,
     "silence_padding": 0.5,
     "window_size": 512,
 }
@@ -302,7 +299,7 @@ class TranscriberParakeetFile:
 
             vad_iterator.reset_states()
 
-        def batch_speech_segments(segments, max_duration=5.0):
+        def batch_speech_segments(segments, max_duration: int):
             batch_start_time = None
             batch_end_time = None
 
