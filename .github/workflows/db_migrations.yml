@@ -20,7 +20,7 @@ jobs:
   test-migrations:
     runs-on: ubuntu-latest
     concurrency:
-      group: ubuntu-latest-${{ github.ref }}
+      group: db-ubuntu-latest-${{ github.ref }}
       cancel-in-progress: true
     services:
       postgres:
