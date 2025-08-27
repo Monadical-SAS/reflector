@@ -297,62 +297,51 @@ class TranscriberParakeetFile:
                     start_time = start / float(SAMPLERATE)
                     end_time = end / float(SAMPLERATE)
 
-                    yield (start_time, end_time, audio_array)
+                    yield (start_time, end_time)
                     start = None
 
             vad_iterator.reset_states()
 
-        def batch_segments(segments, audio_array, max_duration=5.0):
-            batch = []
+        def batch_speech_segments(segments, max_duration=5.0):
             batch_start_time = None
             batch_end_time = None
-            
-            for start_time, end_time, _ in segments:
-                if batch_start_time is None:
+
+            for start_time, end_time in segments:
+                if batch_start_time is None or batch_end_time is None:
                     batch_start_time = start_time
                     batch_end_time = end_time
-                    batch.append((start_time, end_time))
                     continue
-                
+
                 total_duration = end_time - batch_start_time
-                
+
                 if total_duration <= max_duration:
                     batch_end_time = end_time
-                    batch.append((start_time, end_time))
                     continue
-                
-                start_sample = int(batch_start_time * SAMPLERATE)
-                end_sample = int(batch_end_time * SAMPLERATE)
+
+                yield (batch_start_time, batch_end_time)
+                batch_start_time = start_time
+                batch_end_time = end_time
+
+            if batch_start_time is None or batch_end_time is None:
+                return
+
+            yield (batch_start_time, batch_end_time)
+
+        def batch_segment_to_audio_segment(segments, audio_array):
+            for start_time, end_time in segments:
+                start_sample = int(start_time * SAMPLERATE)
+                end_sample = int(end_time * SAMPLERATE)
                 audio_segment = audio_array[start_sample:end_sample]
-                
-                if batch_end_time - batch_start_time < VAD_CONFIG["silence_padding"]:
+
+                if end_time - start_time < VAD_CONFIG["silence_padding"]:
                     silence_samples = int(
-                        (VAD_CONFIG["silence_padding"] - (batch_end_time - batch_start_time)) * SAMPLERATE
+                        (VAD_CONFIG["silence_padding"] - (end_time - start_time))
+                        * SAMPLERATE
                     )
                     padding = np.zeros(silence_samples, dtype=np.float32)
                     audio_segment = np.concatenate([audio_segment, padding])
-                
-                yield [(batch_start_time, batch_end_time, audio_segment)]
-                
-                batch_start_time = start_time
-                batch_end_time = end_time
-                batch = [(start_time, end_time)]
-            
-            if not batch:
-                return
-            
-            start_sample = int(batch_start_time * SAMPLERATE)
-            end_sample = int(batch_end_time * SAMPLERATE)
-            audio_segment = audio_array[start_sample:end_sample]
-            
-            if batch_end_time - batch_start_time < VAD_CONFIG["silence_padding"]:
-                silence_samples = int(
-                    (VAD_CONFIG["silence_padding"] - (batch_end_time - batch_start_time)) * SAMPLERATE
-                )
-                padding = np.zeros(silence_samples, dtype=np.float32)
-                audio_segment = np.concatenate([audio_segment, padding])
-            
-            yield [(batch_start_time, batch_end_time, audio_segment)]
+
+                yield start_time, end_time, audio_segment
 
         def transcribe_batch(model, audio_segments):
             with NoStdStreams():
@@ -399,25 +388,25 @@ class TranscriberParakeetFile:
         all_words = []
 
         raw_segments = vad_segment_generator(audio_array)
-        batches = batch_segments(
+        speech_segments = batch_speech_segments(
             raw_segments,
-            audio_array,
             VAD_CONFIG["batch_max_duration"],
         )
+        audio_segments = batch_segment_to_audio_segment(speech_segments, audio_array)
 
         batch_index = 0
         total_batches = max(
             1, int(total_duration / VAD_CONFIG["batch_max_duration"]) + 1
         )
 
-        for batch in batches:
+        for batch in audio_segments:
+            start_time, end_time, audio_segment = batch
             batch_index += 1
-            audio_segments = [seg[2] for seg in batch]
-            results = transcribe_batch(self.model, audio_segments)
+            results = transcribe_batch(self.model, [audio_segment])
 
             for text, words in emit_results(
                 results,
-                batch,
+                [batch],
                 batch_index,
                 total_batches,
             ):
@@ -426,7 +415,7 @@ class TranscriberParakeetFile:
                 all_text_parts.append(text)
                 all_words.extend(words)
 
-            processed_duration += sum(len(seg[2]) / float(SAMPLERATE) for seg in batch)
+            processed_duration += len(audio_segment) / float(SAMPLERATE)
 
         combined_text = " ".join(all_text_parts)
         return {"text": combined_text, "words": all_words}
