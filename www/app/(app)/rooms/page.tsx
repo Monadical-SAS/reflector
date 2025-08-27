@@ -55,6 +55,8 @@ const roomInitialState = {
   recordingType: "cloud",
   recordingTrigger: "automatic-2nd-participant",
   isShared: false,
+  webhookUrl: "",
+  webhookSecret: "",
 };
 
 export default function RoomsList() {
@@ -83,6 +85,8 @@ export default function RoomsList() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
+  const [testingWebhook, setTestingWebhook] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
   interface Stream {
     stream_id: number;
     name: string;
@@ -155,6 +159,38 @@ export default function RoomsList() {
     }, 2000);
   };
 
+  const handleTestWebhook = async () => {
+    if (!room.webhookUrl || !editRoomId) {
+      setWebhookTestResult("Please enter a webhook URL first");
+      return;
+    }
+
+    setTestingWebhook(true);
+    setWebhookTestResult(null);
+
+    try {
+      const response = await api?.v1RoomsTestWebhook({
+        roomId: editRoomId,
+      });
+
+      if (response?.success) {
+        setWebhookTestResult(`✅ Webhook test successful! Status: ${response.status_code}`);
+      } else {
+        setWebhookTestResult(`❌ Webhook test failed: ${response?.error || response?.message}`);
+      }
+    } catch (error) {
+      console.error("Error testing webhook:", error);
+      setWebhookTestResult("❌ Failed to test webhook. Please check your URL.");
+    } finally {
+      setTestingWebhook(false);
+    }
+
+    // Clear result after 5 seconds
+    setTimeout(() => {
+      setWebhookTestResult(null);
+    }, 5000);
+  };
+
   const handleSaveRoom = async () => {
     try {
       if (RESERVED_PATHS.includes(room.name)) {
@@ -172,6 +208,8 @@ export default function RoomsList() {
         recording_type: room.recordingType,
         recording_trigger: room.recordingTrigger,
         is_shared: room.isShared,
+        webhook_url: room.webhookUrl,
+        webhook_secret: room.webhookSecret,
       };
 
       if (isEditing) {
@@ -217,6 +255,8 @@ export default function RoomsList() {
       recordingType: roomData.recording_type,
       recordingTrigger: roomData.recording_trigger,
       isShared: roomData.is_shared,
+      webhookUrl: roomData.webhook_url || "",
+      webhookSecret: roomData.webhook_secret || "",
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -533,6 +573,62 @@ export default function RoomsList() {
                   </Select.Positioner>
                 </Select.Root>
               </Field.Root>
+              
+              {/* Webhook Configuration Section */}
+              <Field.Root mt={8}>
+                <Field.Label>Webhook URL</Field.Label>
+                <Input
+                  name="webhookUrl"
+                  type="url"
+                  placeholder="https://example.com/webhook"
+                  value={room.webhookUrl}
+                  onChange={handleRoomChange}
+                />
+                <Field.HelperText>
+                  Optional: URL to receive notifications when transcripts are ready
+                </Field.HelperText>
+              </Field.Root>
+              
+              {room.webhookUrl && (
+                <>
+                  <Field.Root mt={4}>
+                    <Field.Label>Webhook Secret</Field.Label>
+                    <Input
+                      name="webhookSecret"
+                      value={room.webhookSecret || "Auto-generated on save"}
+                      readOnly
+                      disabled
+                    />
+                    <Field.HelperText>
+                      Used for HMAC signature verification (auto-generated if not provided)
+                    </Field.HelperText>
+                  </Field.Root>
+                  
+                  {isEditing && (
+                    <Flex mt={2} gap={2} alignItems="center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleTestWebhook}
+                        disabled={testingWebhook || !room.webhookUrl}
+                      >
+                        {testingWebhook ? (
+                          <>
+                            <Spinner size="xs" mr={2} />
+                            Testing...
+                          </>
+                        ) : (
+                          "Test Webhook"
+                        )}
+                      </Button>
+                      {webhookTestResult && (
+                        <span style={{ fontSize: "14px" }}>{webhookTestResult}</span>
+                      )}
+                    </Flex>
+                  )}
+                </>
+              )}
+              
               <Field.Root mt={4}>
                 <Checkbox.Root
                   name="isShared"

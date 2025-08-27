@@ -42,6 +42,8 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    webhook_url: str
+    webhook_secret: str
 
 
 class Meeting(BaseModel):
@@ -64,6 +66,8 @@ class CreateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    webhook_url: str = ""
+    webhook_secret: str = ""
 
 
 class UpdateRoom(BaseModel):
@@ -76,10 +80,20 @@ class UpdateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    webhook_url: str = ""
+    webhook_secret: str = ""
 
 
 class DeletionStatus(BaseModel):
     status: str
+
+
+class WebhookTestResult(BaseModel):
+    success: bool
+    message: str = ""
+    error: str = ""
+    status_code: int | None = None
+    response_preview: str | None = None
 
 
 @router.get("/rooms", response_model=Page[Room])
@@ -117,6 +131,8 @@ async def rooms_create(
         recording_type=room.recording_type,
         recording_trigger=room.recording_trigger,
         is_shared=room.is_shared,
+        webhook_url=room.webhook_url,
+        webhook_secret=room.webhook_secret,
     )
 
 
@@ -209,3 +225,29 @@ async def rooms_create_meeting(
         meeting.host_room_url = ""
 
     return meeting
+
+
+@router.post("/rooms/{room_id}/webhook/test", response_model=WebhookTestResult)
+async def rooms_test_webhook(
+    room_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """Test webhook configuration by sending a sample payload."""
+    user_id = user["sub"] if user else None
+    
+    # Get room and verify access
+    room = await rooms_controller.get_by_id(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    # Only room owner can test webhook
+    if user_id and room.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to test this room's webhook")
+    
+    # Import and call test webhook task
+    from reflector.worker.webhook import test_webhook
+    
+    # Run test synchronously to return immediate result
+    result = await test_webhook(room_id)
+    
+    return WebhookTestResult(**result)

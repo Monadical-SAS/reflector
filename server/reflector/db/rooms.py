@@ -40,6 +40,8 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
+    sqlalchemy.Column("webhook_url", sqlalchemy.String),
+    sqlalchemy.Column("webhook_secret", sqlalchemy.String),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -59,6 +61,8 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
+    webhook_url: str = ""
+    webhook_secret: str = ""
 
 
 class RoomController:
@@ -107,10 +111,17 @@ class RoomController:
         recording_type: str,
         recording_trigger: str,
         is_shared: bool,
+        webhook_url: str = "",
+        webhook_secret: str = "",
     ):
         """
         Add a new room
         """
+        # Generate webhook secret if webhook URL is provided but secret is not
+        import secrets
+        if webhook_url and not webhook_secret:
+            webhook_secret = secrets.token_urlsafe(32)
+        
         room = Room(
             name=name,
             user_id=user_id,
@@ -122,6 +133,8 @@ class RoomController:
             recording_type=recording_type,
             recording_trigger=recording_trigger,
             is_shared=is_shared,
+            webhook_url=webhook_url,
+            webhook_secret=webhook_secret,
         )
         query = rooms.insert().values(**room.model_dump())
         try:
