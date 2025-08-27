@@ -186,12 +186,11 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         raise self.retry(exc=e)
 
 
-@shared_task
-@asynctask
-async def test_webhook(room_id: str) -> dict:
+async def test_webhook_async(room_id: str) -> dict:
     """
     Test webhook configuration by sending a sample payload.
     Returns immediately with success/failure status.
+    This is the shared implementation used by both the API endpoint and Celery task.
     """
     try:
         room = await rooms_controller.get_by_id(room_id)
@@ -259,3 +258,13 @@ async def test_webhook(room_id: str) -> dict:
             "success": False,
             "error": f"Unexpected error: {str(e)}",
         }
+
+
+@shared_task
+@asynctask
+async def test_webhook(room_id: str) -> dict:
+    """
+    Celery task wrapper for webhook testing.
+    Calls the shared async implementation.
+    """
+    return await test_webhook_async(room_id)
