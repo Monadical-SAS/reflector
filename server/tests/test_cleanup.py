@@ -92,9 +92,9 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
     from reflector.db import get_database
     from reflector.db.meetings import meetings
     from reflector.db.transcripts import transcripts
-    
+
     old_date = datetime.now(timezone.utc) - timedelta(days=8)
-    
+
     # Create a meeting
     meeting_id = "test-meeting-for-transcript"
     await get_database().execute(
@@ -109,7 +109,7 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
             room_id=None,
         )
     )
-    
+
     # Create a recording
     recording = await recordings_controller.create(
         Recording(
@@ -118,7 +118,7 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
             recorded_at=old_date,
         )
     )
-    
+
     # Create an old transcript with both meeting and recording
     old_transcript = await transcripts_controller.add(
         name="Old Transcript with Meeting and Recording",
@@ -127,40 +127,42 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
         meeting_id=meeting_id,
         recording_id=recording.id,
     )
-    
+
     # Update created_at to be old
     await get_database().execute(
         transcripts.update()
         .where(transcripts.c.id == old_transcript.id)
         .values(created_at=old_date)
     )
-    
+
     with patch("reflector.worker.cleanup.settings") as mock_settings:
         mock_settings.PUBLIC_MODE = True
         mock_settings.PUBLIC_DATA_RETENTION_DAYS = 7
-        
+
         # Mock storage deletion
         with patch("reflector.db.transcripts.get_transcripts_storage") as mock_storage:
             mock_storage.return_value.delete_file = AsyncMock()
-            with patch("reflector.worker.cleanup.get_recordings_storage") as mock_rec_storage:
+            with patch(
+                "reflector.worker.cleanup.get_recordings_storage"
+            ) as mock_rec_storage:
                 mock_rec_storage.return_value.delete_file = AsyncMock()
-                
+
                 result = await cleanup_old_public_data()
-    
+
     # Check results
     assert result["transcripts_deleted"] == 1
     assert result["meetings_deleted"] == 1
     assert result["recordings_deleted"] == 1
     assert result["errors"] == []
-    
+
     # Verify transcript was deleted
     assert await transcripts_controller.get_by_id(old_transcript.id) is None
-    
+
     # Verify meeting was deleted
     query = meetings.select().where(meetings.c.id == meeting_id)
     meeting_result = await get_database().fetch_one(query)
     assert meeting_result is None
-    
+
     # Verify recording was deleted
     assert await recordings_controller.get_by_id(recording.id) is None
 
@@ -217,7 +219,6 @@ async def test_cleanup_handles_errors_gracefully():
     assert result["transcripts_deleted"] == 1
     assert len(result["errors"]) == 1
     assert "Failed to delete transcript" in result["errors"][0]
-
 
 
 @pytest.mark.asyncio
