@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import uuid
-from typing import Generator, Mapping, NewType
+from typing import Any, Generator, Iterable, Mapping, NewType
 from urllib.parse import urlparse
 
 import modal
@@ -340,35 +340,53 @@ class TranscriberParakeetFile:
 
             yield (batch_start_time, batch_end_time)
 
-        def batch_segment_to_audio_segment(segments, audio_array):
+        def pad_segment(segment: tuple[float, float]) -> float:
+            # only pads end_time. always >= input end_time
+            start_time, end_time = segment
+            padding_size_time = 0
+            if end_time - start_time < VAD_CONFIG["silence_padding"]:
+                padding_size_time = VAD_CONFIG["silence_padding"] - (
+                    end_time - start_time
+                )
+
+            assert padding_size_time >= 0, "panic! padding size cannot be negative"
+            return end_time + padding_size_time
+
+        def batch_segment_to_audio_segment(
+            segments: Iterable[tuple[float, float]], audio_array: np.ndarray
+        ) -> Generator[tuple[float, float, np.ndarray], None, None]:
+            """
+            output segments could be padded
+            """
             for start_time, end_time in segments:
                 start_sample = int(start_time * SAMPLERATE)
                 end_sample = int(end_time * SAMPLERATE)
                 audio_segment = audio_array[start_sample:end_sample]
-
-                if end_time - start_time < VAD_CONFIG["silence_padding"]:
-                    silence_samples = int(
-                        (VAD_CONFIG["silence_padding"] - (end_time - start_time))
-                        * SAMPLERATE
+                padded_end_time = pad_segment((start_time, end_time))
+                if padded_end_time > end_time:
+                    padding_size_samples = int(
+                        (padded_end_time - end_time) * SAMPLERATE
                     )
-                    padding = np.zeros(silence_samples, dtype=np.float32)
+                    padding = np.zeros(padding_size_samples, dtype=np.float32)
                     audio_segment = np.concatenate([audio_segment, padding])
-
                 yield start_time, end_time, audio_segment
 
-        def transcribe_batch(model, audio_segments):
+        def transcribe_batch(
+            model: Any, audio_segments: Iterable[np.ndarray]
+        ) -> Iterable[Any]:
+            # output is the same size as audio_segments input
+            # type of the output element is not known
             with NoStdStreams():
                 outputs = model.transcribe(audio_segments, timestamps=True)
             return outputs
 
         def emit_results(
-            results,
-            segments_info,
+            # the first tuple item supposed to have .text and .timestamp elements where .timestamp is a dictionary
+            # second tuple item is metadata which currently is only start_time
+            results: Iterable[tuple[Any, float]],
         ):
             """Yield transcribed text and word timings from model output, adjusting timestamps to absolute positions."""
-            for i, (output, (start_time, end_time, _)) in enumerate(
-                zip(results, segments_info)
-            ):
+            for output, start_time in results:
                 text = output.text.strip()
                 words = [
                     {
@@ -406,13 +424,10 @@ class TranscriberParakeetFile:
         audio_segments = batch_segment_to_audio_segment(speech_segments, audio_array)
 
         for batch in audio_segments:
-            _, _, audio_segment = batch
+            start_time, _end_time_padded, audio_segment = batch
             results = transcribe_batch(self.model, [audio_segment])
 
-            for text, words in emit_results(
-                results,
-                [batch],
-            ):
+            for text, words in emit_results(zip(results, [start_time])):
                 if not text:
                     continue
                 all_text_parts.append(text)
