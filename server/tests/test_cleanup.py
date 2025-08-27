@@ -87,63 +87,82 @@ async def test_cleanup_old_public_data_deletes_old_anonymous_transcripts():
 
 
 @pytest.mark.asyncio
-async def test_cleanup_old_public_data_deletes_old_meetings():
-    """Test that old anonymous meetings are deleted."""
+async def test_cleanup_deletes_associated_meeting_and_recording():
+    """Test that meetings and recordings associated with old transcripts are deleted."""
     from reflector.db import get_database
     from reflector.db.meetings import meetings
-
+    from reflector.db.transcripts import transcripts
+    
     old_date = datetime.now(timezone.utc) - timedelta(days=8)
-    new_date = datetime.now(timezone.utc) - timedelta(days=2)
-
-    # Create old anonymous meeting directly (should be deleted)
-    old_meeting_id = "old-meeting-id"
+    
+    # Create a meeting
+    meeting_id = "test-meeting-for-transcript"
     await get_database().execute(
         meetings.insert().values(
-            id=old_meeting_id,
-            room_name="Old Meeting",
-            room_url="https://example.com/old",
-            host_room_url="https://example.com/old-host",
+            id=meeting_id,
+            room_name="Meeting with Transcript",
+            room_url="https://example.com/meeting",
+            host_room_url="https://example.com/meeting-host",
             start_date=old_date,
             end_date=old_date + timedelta(hours=1),
-            user_id=None,  # Anonymous
+            user_id=None,
             room_id=None,
         )
     )
-
-    # Create new anonymous meeting directly (should NOT be deleted)
-    new_meeting_id = "new-meeting-id"
+    
+    # Create a recording
+    recording = await recordings_controller.create(
+        Recording(
+            bucket_name="test-bucket",
+            object_key="test-recording.mp4",
+            recorded_at=old_date,
+        )
+    )
+    
+    # Create an old transcript with both meeting and recording
+    old_transcript = await transcripts_controller.add(
+        name="Old Transcript with Meeting and Recording",
+        source_kind=SourceKind.ROOM,
+        user_id=None,
+        meeting_id=meeting_id,
+        recording_id=recording.id,
+    )
+    
+    # Update created_at to be old
     await get_database().execute(
-        meetings.insert().values(
-            id=new_meeting_id,
-            room_name="New Meeting",
-            room_url="https://example.com/new",
-            host_room_url="https://example.com/new-host",
-            start_date=new_date,
-            end_date=new_date + timedelta(hours=1),
-            user_id=None,  # Anonymous
-            room_id=None,
-        )
+        transcripts.update()
+        .where(transcripts.c.id == old_transcript.id)
+        .values(created_at=old_date)
     )
-
+    
     with patch("reflector.worker.cleanup.settings") as mock_settings:
         mock_settings.PUBLIC_MODE = True
         mock_settings.PUBLIC_DATA_RETENTION_DAYS = 7
-
-        result = await _cleanup_old_public_data()
-
+        
+        # Mock storage deletion
+        with patch("reflector.db.transcripts.get_transcripts_storage") as mock_storage:
+            mock_storage.return_value.delete_file = AsyncMock()
+            with patch("reflector.worker.cleanup.get_recordings_storage") as mock_rec_storage:
+                mock_rec_storage.return_value.delete_file = AsyncMock()
+                
+                result = await _cleanup_old_public_data()
+    
     # Check results
+    assert result["transcripts_deleted"] == 1
     assert result["meetings_deleted"] == 1
+    assert result["recordings_deleted"] == 1
     assert result["errors"] == []
-
-    # Verify old meeting was deleted
-    query = meetings.select().where(meetings.c.id == old_meeting_id)
-    old_meeting_result = await get_database().fetch_one(query)
-    assert old_meeting_result is None
-
-    # Verify new meeting still exists
-    query = meetings.select().where(meetings.c.id == new_meeting_id)
-    new_meeting_result = await get_database().fetch_one(query)
-    assert new_meeting_result is not None
+    
+    # Verify transcript was deleted
+    assert await transcripts_controller.get_by_id(old_transcript.id) is None
+    
+    # Verify meeting was deleted
+    query = meetings.select().where(meetings.c.id == meeting_id)
+    meeting_result = await get_database().fetch_one(query)
+    assert meeting_result is None
+    
+    # Verify recording was deleted
+    assert await recordings_controller.get_by_id(recording.id) is None
 
 
 @pytest.mark.asyncio
@@ -199,52 +218,6 @@ async def test_cleanup_handles_errors_gracefully():
     assert len(result["errors"]) == 1
     assert "Failed to delete transcript" in result["errors"][0]
 
-
-@pytest.mark.asyncio
-async def test_cleanup_deletes_orphaned_recordings():
-    """Test that orphaned recordings are deleted."""
-    old_date = datetime.now(timezone.utc) - timedelta(days=8)
-
-    # Create an orphaned recording (no transcript references it)
-    orphaned_recording = await recordings_controller.create(
-        Recording(
-            bucket_name="test-bucket",
-            object_key="orphaned.mp4",
-            recorded_at=old_date,
-        )
-    )
-
-    # Create a recording with a transcript (should NOT be deleted)
-    referenced_recording = await recordings_controller.create(
-        Recording(
-            bucket_name="test-bucket",
-            object_key="referenced.mp4",
-            recorded_at=old_date,
-        )
-    )
-
-    # Create transcript that references the second recording
-    transcript = await transcripts_controller.add(
-        name="Transcript with Recording",
-        source_kind=SourceKind.ROOM,
-        recording_id=referenced_recording.id,
-    )
-
-    with patch("reflector.worker.cleanup.settings") as mock_settings:
-        mock_settings.PUBLIC_MODE = True
-        mock_settings.PUBLIC_DATA_RETENTION_DAYS = 7
-
-        result = await _cleanup_old_public_data()
-
-    # Check results
-    assert result["recordings_deleted"] == 1
-    assert result["errors"] == []
-
-    # Verify orphaned recording was deleted
-    assert await recordings_controller.get_by_id(orphaned_recording.id) is None
-
-    # Verify referenced recording still exists
-    assert await recordings_controller.get_by_id(referenced_recording.id) is not None
 
 
 @pytest.mark.asyncio

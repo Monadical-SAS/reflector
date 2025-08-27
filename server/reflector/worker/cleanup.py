@@ -11,6 +11,8 @@ from typing import TypedDict
 import structlog
 from celery import shared_task
 
+from databases import Database
+
 from reflector.asynctask import asynctask
 from reflector.db import get_database
 from reflector.db.meetings import meetings
@@ -31,18 +33,55 @@ class CleanupStats(TypedDict):
     errors: list[str]
 
 
-async def cleanup_old_transcripts(cutoff_date: datetime, stats: CleanupStats):
-    """Delete old anonymous transcripts."""
+async def cleanup_old_transcripts(
+    db: Database, cutoff_date: datetime, stats: CleanupStats
+):
+    """Delete old anonymous transcripts and their associated recordings/meetings."""
     query = transcripts.select().where(
         (transcripts.c.created_at < cutoff_date) & (transcripts.c.user_id.is_(None))
     )
-    old_transcripts = await get_database().fetch_all(query)
+    old_transcripts = await db.fetch_all(query)
 
     logger.info(f"Found {len(old_transcripts)} old transcripts to delete")
 
     for transcript_data in old_transcripts:
         transcript_id = transcript_data["id"]
+        meeting_id = transcript_data["meeting_id"]
+        recording_id = transcript_data["recording_id"]
+        
         try:
+            # Delete associated meeting if it exists
+            if meeting_id:
+                await db.execute(
+                    meetings.delete().where(meetings.c.id == meeting_id)
+                )
+                stats["meetings_deleted"] += 1
+                logger.info("Deleted associated meeting", meeting_id=meeting_id)
+            
+            # Delete associated recording if it exists
+            if recording_id:
+                # Get recording details for storage deletion
+                recording = await db.fetch_one(
+                    recordings.select().where(recordings.c.id == recording_id)
+                )
+                if recording:
+                    try:
+                        await get_recordings_storage().delete_file(recording["object_key"])
+                    except Exception as storage_error:
+                        logger.warning(
+                            "Failed to delete recording from storage",
+                            recording_id=recording_id,
+                            object_key=recording["object_key"],
+                            error=str(storage_error),
+                        )
+                    
+                    await db.execute(
+                        recordings.delete().where(recordings.c.id == recording_id)
+                    )
+                    stats["recordings_deleted"] += 1
+                    logger.info("Deleted associated recording", recording_id=recording_id)
+            
+            # Delete the transcript itself (this also handles transcript storage files)
             await transcripts_controller.remove_by_id(transcript_id)
             stats["transcripts_deleted"] += 1
             logger.info(
@@ -56,75 +95,6 @@ async def cleanup_old_transcripts(cutoff_date: datetime, stats: CleanupStats):
             stats["errors"].append(error_msg)
 
 
-async def cleanup_old_meetings(cutoff_date: datetime, stats: CleanupStats):
-    """Delete old anonymous meetings and their consents."""
-    query = meetings.select().where(
-        (meetings.c.start_date < cutoff_date) & (meetings.c.user_id.is_(None))
-    )
-    old_meetings = await get_database().fetch_all(query)
-
-    logger.info(f"Found {len(old_meetings)} old meetings to delete")
-
-    for meeting_data in old_meetings:
-        meeting_id = meeting_data["id"]
-        try:
-            await get_database().execute(
-                meetings.delete().where(meetings.c.id == meeting_id)
-            )
-            stats["meetings_deleted"] += 1
-            logger.info(
-                "Deleted meeting",
-                meeting_id=meeting_id,
-                start_date=meeting_data["start_date"].isoformat(),
-            )
-        except Exception as e:
-            error_msg = f"Failed to delete meeting {meeting_id}: {str(e)}"
-            logger.error(error_msg, exc_info=e)
-            stats["errors"].append(error_msg)
-
-
-async def cleanup_orphaned_recordings(cutoff_date: datetime, stats: CleanupStats):
-    """Delete orphaned recordings that are not referenced by any transcript."""
-    query = transcripts.select().where(transcripts.c.recording_id.isnot(None))
-    transcript_recordings = await get_database().fetch_all(query)
-    referenced_recording_ids = {t["recording_id"] for t in transcript_recordings}
-
-    query = recordings.select().where(recordings.c.recorded_at < cutoff_date)
-    all_old_recordings = await get_database().fetch_all(query)
-
-    orphaned_recordings = [
-        r for r in all_old_recordings if r["id"] not in referenced_recording_ids
-    ]
-
-    logger.info(f"Found {len(orphaned_recordings)} orphaned recordings to delete")
-
-    for recording_data in orphaned_recordings:
-        recording_id = recording_data["id"]
-        try:
-            # Delete from storage first
-            try:
-                await get_recordings_storage().delete_file(recording_data["object_key"])
-            except Exception as storage_error:
-                logger.warning(
-                    "Failed to delete recording from storage",
-                    recording_id=recording_id,
-                    object_key=recording_data["object_key"],
-                    error=str(storage_error),
-                )
-
-            await get_database().execute(
-                recordings.delete().where(recordings.c.id == recording_id)
-            )
-            stats["recordings_deleted"] += 1
-            logger.info(
-                "Deleted orphaned recording",
-                recording_id=recording_id,
-                recorded_at=recording_data["recorded_at"].isoformat(),
-            )
-        except Exception as e:
-            error_msg = f"Failed to delete recording {recording_id}: {str(e)}"
-            logger.error(error_msg, exc_info=e)
-            stats["errors"].append(error_msg)
 
 
 def log_cleanup_results(stats: CleanupStats):
@@ -147,6 +117,9 @@ def log_cleanup_results(stats: CleanupStats):
 async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
     """
     Main cleanup logic for old public data.
+    
+    Deletes old anonymous transcripts and their associated meetings/recordings.
+    Transcripts are the main entry point - any associated data is also removed.
 
     Args:
         days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
@@ -174,13 +147,11 @@ async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | No
         "errors": [],
     }
 
-    try:
-        await cleanup_old_transcripts(cutoff_date, stats)
-        await cleanup_old_meetings(cutoff_date, stats)
-        await cleanup_orphaned_recordings(cutoff_date, stats)
-    except Exception as e:
-        logger.error("Cleanup task failed", exc_info=e)
-        stats["errors"].append(f"Fatal error: {str(e)}")
+    db = get_database()
+    
+    # Use a single database connection for all operations
+    # Transcripts are the entry point - associated meetings/recordings are deleted together
+    await cleanup_old_transcripts(db, cutoff_date, stats)
 
     log_cleanup_results(stats)
     return stats
