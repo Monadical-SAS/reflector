@@ -174,7 +174,6 @@ async def process(
             target_language,
         )
 
-        # Use a dispatch dictionary for cleaner pipeline selection
         pipeline_handlers = {
             "live": process_live_pipeline,
             "file": process_file_pipeline,
@@ -184,7 +183,6 @@ async def process(
         if not handler:
             raise ValueError(f"Unknown pipeline type: {pipeline}")
 
-        # Already in async context, just await directly
         await handler(transcript_id)
 
         await extract_result_from_entry(transcript_id, output_path)
