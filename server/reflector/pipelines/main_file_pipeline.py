@@ -14,13 +14,13 @@ import structlog
 from celery import shared_task
 
 from reflector.asynctask import asynctask
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     SourceKind,
     Transcript,
     TranscriptStatus,
     transcripts_controller,
 )
-from reflector.db.rooms import rooms_controller
 from reflector.logger import logger
 from reflector.pipelines.main_live_pipeline import (
     PipelineMainBase,
@@ -409,6 +409,7 @@ async def task_pipeline_file_process(*, transcript_id: str):
         room = await rooms_controller.get_by_id(transcript.room_id)
         if room and room.webhook_url:
             from reflector.worker.webhook import send_transcript_webhook
+
             logger.info(
                 "Dispatching webhook task",
                 transcript_id=transcript_id,

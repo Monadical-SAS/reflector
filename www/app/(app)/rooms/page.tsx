@@ -86,7 +86,9 @@ export default function RoomsList() {
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
   const [testingWebhook, setTestingWebhook] = useState(false);
-  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
+  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(
+    null,
+  );
   interface Stream {
     stream_id: number;
     name: string;
@@ -174,9 +176,13 @@ export default function RoomsList() {
       });
 
       if (response?.success) {
-        setWebhookTestResult(`✅ Webhook test successful! Status: ${response.status_code}`);
+        setWebhookTestResult(
+          `✅ Webhook test successful! Status: ${response.status_code}`,
+        );
       } else {
-        setWebhookTestResult(`❌ Webhook test failed: ${response?.error || response?.message}`);
+        setWebhookTestResult(
+          `❌ Webhook test failed: ${response?.error || response?.message}`,
+        );
       }
     } catch (error) {
       console.error("Error testing webhook:", error);
@@ -573,7 +579,7 @@ export default function RoomsList() {
                   </Select.Positioner>
                 </Select.Root>
               </Field.Root>
-              
+
               {/* Webhook Configuration Section */}
               <Field.Root mt={8}>
                 <Field.Label>Webhook URL</Field.Label>
@@ -585,10 +591,11 @@ export default function RoomsList() {
                   onChange={handleRoomChange}
                 />
                 <Field.HelperText>
-                  Optional: URL to receive notifications when transcripts are ready
+                  Optional: URL to receive notifications when transcripts are
+                  ready
                 </Field.HelperText>
               </Field.Root>
-              
+
               {room.webhookUrl && (
                 <>
                   <Field.Root mt={4}>
@@ -600,10 +607,11 @@ export default function RoomsList() {
                       disabled
                     />
                     <Field.HelperText>
-                      Used for HMAC signature verification (auto-generated if not provided)
+                      Used for HMAC signature verification (auto-generated if
+                      not provided)
                     </Field.HelperText>
                   </Field.Root>
-                  
+
                   {isEditing && (
                     <Flex mt={2} gap={2} alignItems="center">
                       <Button
@@ -622,13 +630,15 @@ export default function RoomsList() {
                         )}
                       </Button>
                       {webhookTestResult && (
-                        <span style={{ fontSize: "14px" }}>{webhookTestResult}</span>
+                        <span style={{ fontSize: "14px" }}>
+                          {webhookTestResult}
+                        </span>
                       )}
                     </Flex>
                   )}
                 </>
               )}
-              
+
               <Field.Root mt={4}>
                 <Checkbox.Root
                   name="isShared"

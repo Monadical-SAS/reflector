@@ -18,7 +18,7 @@ This implementation adds webhook functionality to Reflector rooms, allowing exte
   - Max 100 retries, starting at 1 minute intervals
   - Generates HMAC signature for request verification
   - Includes full transcript data, diarized text, topics, and summaries
-  
+
 - **`test_webhook`**: Test endpoint for validating webhook configuration
   - Sends a sample payload to verify connectivity
   - Returns immediate success/failure status
@@ -103,13 +103,13 @@ This implementation adds webhook functionality to Reflector rooms, allowing exte
    ```python
    import hmac
    import hashlib
-   
+
    def verify_webhook_signature(payload: bytes, signature_header: str, secret: str) -> bool:
        # Parse header: "t=1234567890,v1=abc123..."
        parts = dict(part.split('=') for part in signature_header.split(','))
        timestamp = parts['t']
        signature = parts['v1']
-       
+
        # Recreate signature
        signed_payload = f"{timestamp}.{payload.decode('utf-8')}"
        expected_sig = hmac.new(
@@ -117,7 +117,7 @@ This implementation adds webhook functionality to Reflector rooms, allowing exte
            signed_payload.encode('utf-8'),
            hashlib.sha256
        ).hexdigest()
-       
+
        return hmac.compare_digest(expected_sig, signature)
    ```
 

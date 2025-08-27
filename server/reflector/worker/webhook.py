@@ -40,7 +40,7 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
 async def send_transcript_webhook(self, transcript_id: str, room_id: str):
     """
     Send webhook notification when transcript is ready.
-    
+
     Retries with exponential backoff for up to 24 hours:
     - Initial retry: 1 minute
     - Backoff factor: 2x
@@ -52,42 +52,44 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         room_id=room_id,
         retry_count=self.request.retries,
     )
-    
+
     try:
         # Fetch transcript and room
         transcript = await transcripts_controller.get_by_id(transcript_id)
         if not transcript:
             log.error("Transcript not found, skipping webhook")
             return
-        
+
         room = await rooms_controller.get_by_id(room_id)
         if not room:
             log.error("Room not found, skipping webhook")
             return
-        
+
         # Check if webhook is configured
         if not room.webhook_url:
             log.info("No webhook URL configured for room, skipping")
             return
-        
+
         # Generate WebVTT content from topics
         webvtt_content = ""
         topics_data = []
-        
+
         if transcript.topics:
             webvtt_content = topics_to_webvtt(transcript.topics)
-            
+
             # Build topics data with diarized content per topic
             for topic in transcript.topics:
                 topic_webvtt = topics_to_webvtt([topic]) if topic.words else ""
-                topics_data.append({
-                    "title": topic.title,
-                    "summary": topic.summary,
-                    "timestamp": topic.timestamp,
-                    "duration": topic.duration,
-                    "diarized_content": topic_webvtt,
-                })
-        
+                topics_data.append(
+                    {
+                        "title": topic.title,
+                        "summary": topic.summary,
+                        "timestamp": topic.timestamp,
+                        "duration": topic.duration,
+                        "diarized_content": topic_webvtt,
+                    }
+                )
+
         # Build webhook payload
         payload_data = {
             "event": "transcript.completed",
@@ -115,11 +117,11 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 "name": room.name,
             },
         }
-        
+
         # Convert to JSON
         payload_json = json.dumps(payload_data, separators=(",", ":"))
         payload_bytes = payload_json.encode("utf-8")
-        
+
         # Generate signature if secret is configured
         headers = {
             "Content-Type": "application/json",
@@ -127,14 +129,14 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
             "X-Webhook-Event": "transcript.completed",
             "X-Webhook-Retry": str(self.request.retries),
         }
-        
+
         if room.webhook_secret:
             timestamp = str(int(datetime.now(timezone.utc).timestamp()))
             signature = generate_webhook_signature(
                 payload_bytes, room.webhook_secret, timestamp
             )
             headers["X-Webhook-Signature"] = f"t={timestamp},v1={signature}"
-        
+
         # Send webhook with timeout
         async with httpx.AsyncClient(timeout=30.0) as client:
             log.info(
@@ -142,41 +144,41 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 url=room.webhook_url,
                 payload_size=len(payload_bytes),
             )
-            
+
             response = await client.post(
                 room.webhook_url,
                 content=payload_bytes,
                 headers=headers,
             )
-            
+
             response.raise_for_status()
-            
+
             log.info(
                 "Webhook sent successfully",
                 status_code=response.status_code,
                 response_size=len(response.content),
             )
-            
+
     except httpx.HTTPStatusError as e:
         log.error(
             "Webhook failed with HTTP error",
             status_code=e.response.status_code,
             response_text=e.response.text[:500],  # First 500 chars
         )
-        
+
         # Don't retry on client errors (4xx)
         if 400 <= e.response.status_code < 500:
             log.error("Client error, not retrying")
             return
-        
+
         # Retry on server errors (5xx)
         raise self.retry(exc=e)
-        
+
     except (httpx.ConnectError, httpx.TimeoutException) as e:
         log.error("Webhook failed with connection error", error=str(e))
         # Retry on network errors
         raise self.retry(exc=e)
-        
+
     except Exception as e:
         log.exception("Unexpected error in webhook task", error=str(e))
         # Retry on unexpected errors
@@ -194,10 +196,10 @@ async def test_webhook(room_id: str) -> dict:
         room = await rooms_controller.get_by_id(room_id)
         if not room:
             return {"success": False, "error": "Room not found"}
-        
+
         if not room.webhook_url:
             return {"success": False, "error": "No webhook URL configured"}
-        
+
         # Build test payload
         payload_data = {
             "event": "test",
@@ -208,24 +210,24 @@ async def test_webhook(room_id: str) -> dict:
                 "name": room.name,
             },
         }
-        
+
         payload_json = json.dumps(payload_data, separators=(",", ":"))
         payload_bytes = payload_json.encode("utf-8")
-        
+
         # Generate headers with signature
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "Reflector-Webhook/1.0",
             "X-Webhook-Event": "test",
         }
-        
+
         if room.webhook_secret:
             timestamp = str(int(datetime.now(timezone.utc).timestamp()))
             signature = generate_webhook_signature(
                 payload_bytes, room.webhook_secret, timestamp
             )
             headers["X-Webhook-Signature"] = f"t={timestamp},v1={signature}"
-        
+
         # Send test webhook with short timeout
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
@@ -233,14 +235,14 @@ async def test_webhook(room_id: str) -> dict:
                 content=payload_bytes,
                 headers=headers,
             )
-            
+
             return {
                 "success": response.is_success,
                 "status_code": response.status_code,
                 "message": f"Webhook test {'successful' if response.is_success else 'failed'}",
                 "response_preview": response.text[:200] if response.text else None,
             }
-            
+
     except httpx.TimeoutException:
         return {
             "success": False,

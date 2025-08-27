@@ -234,20 +234,22 @@ async def rooms_test_webhook(
 ):
     """Test webhook configuration by sending a sample payload."""
     user_id = user["sub"] if user else None
-    
+
     # Get room and verify access
     room = await rooms_controller.get_by_id(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    
+
     # Only room owner can test webhook
     if user_id and room.user_id != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to test this room's webhook")
-    
+        raise HTTPException(
+            status_code=403, detail="Not authorized to test this room's webhook"
+        )
+
     # Import and call test webhook task
     from reflector.worker.webhook import test_webhook
-    
+
     # Run test synchronously to return immediate result
     result = await test_webhook(room_id)
-    
+
     return WebhookTestResult(**result)
