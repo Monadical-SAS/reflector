@@ -297,76 +297,62 @@ class TranscriberParakeetFile:
                     start_time = start / float(SAMPLERATE)
                     end_time = end / float(SAMPLERATE)
 
-                    # Extract the actual audio segment
-                    audio_segment = audio_array[start:end]
-
-                    yield (start_time, end_time, audio_segment)
+                    yield (start_time, end_time, audio_array)
                     start = None
 
             vad_iterator.reset_states()
 
-        def vad_segment_filter(segments):
-            """Filter VAD segments by duration and chunk large segments"""
-            min_dur = VAD_CONFIG["min_segment_duration"]
-            max_dur = VAD_CONFIG["max_segment_duration"]
-
-            for start_time, end_time, audio_segment in segments:
-                segment_duration = end_time - start_time
-
-                # Skip very small segments
-                if segment_duration < min_dur:
-                    continue
-
-                # If segment is within max duration, yield as-is
-                if segment_duration <= max_dur:
-                    yield (start_time, end_time, audio_segment)
-                    continue
-
-                # Chunk large segments into smaller pieces
-                chunk_samples = int(max_dur * SAMPLERATE)
-                current_start = start_time
-
-                for chunk_offset in range(0, len(audio_segment), chunk_samples):
-                    chunk_audio = audio_segment[
-                        chunk_offset : chunk_offset + chunk_samples
-                    ]
-                    if len(chunk_audio) == 0:
-                        break
-
-                    chunk_duration = len(chunk_audio) / float(SAMPLERATE)
-                    chunk_end = current_start + chunk_duration
-
-                    # Only yield chunks that meet minimum duration
-                    if chunk_duration >= min_dur:
-                        yield (current_start, chunk_end, chunk_audio)
-
-                    current_start = chunk_end
-
-        def batch_segments(segments, max_files=10, max_duration=5.0):
+        def batch_segments(segments, audio_array, max_duration=5.0):
             batch = []
-            batch_duration = 0.0
-
-            for start_time, end_time, audio_segment in segments:
-                segment_duration = end_time - start_time
-
-                if segment_duration < VAD_CONFIG["silence_padding"]:
+            batch_start_time = None
+            batch_end_time = None
+            
+            for start_time, end_time, _ in segments:
+                if batch_start_time is None:
+                    batch_start_time = start_time
+                    batch_end_time = end_time
+                    batch.append((start_time, end_time))
+                    continue
+                
+                total_duration = end_time - batch_start_time
+                
+                if total_duration <= max_duration:
+                    batch_end_time = end_time
+                    batch.append((start_time, end_time))
+                    continue
+                
+                start_sample = int(batch_start_time * SAMPLERATE)
+                end_sample = int(batch_end_time * SAMPLERATE)
+                audio_segment = audio_array[start_sample:end_sample]
+                
+                if batch_end_time - batch_start_time < VAD_CONFIG["silence_padding"]:
                     silence_samples = int(
-                        (VAD_CONFIG["silence_padding"] - segment_duration) * SAMPLERATE
+                        (VAD_CONFIG["silence_padding"] - (batch_end_time - batch_start_time)) * SAMPLERATE
                     )
                     padding = np.zeros(silence_samples, dtype=np.float32)
                     audio_segment = np.concatenate([audio_segment, padding])
-                    segment_duration = VAD_CONFIG["silence_padding"]
-
-                batch.append((start_time, end_time, audio_segment))
-                batch_duration += segment_duration
-
-                if len(batch) >= max_files or batch_duration >= max_duration:
-                    yield batch
-                    batch = []
-                    batch_duration = 0.0
-
-            if batch:
-                yield batch
+                
+                yield [(batch_start_time, batch_end_time, audio_segment)]
+                
+                batch_start_time = start_time
+                batch_end_time = end_time
+                batch = [(start_time, end_time)]
+            
+            if not batch:
+                return
+            
+            start_sample = int(batch_start_time * SAMPLERATE)
+            end_sample = int(batch_end_time * SAMPLERATE)
+            audio_segment = audio_array[start_sample:end_sample]
+            
+            if batch_end_time - batch_start_time < VAD_CONFIG["silence_padding"]:
+                silence_samples = int(
+                    (VAD_CONFIG["silence_padding"] - (batch_end_time - batch_start_time)) * SAMPLERATE
+                )
+                padding = np.zeros(silence_samples, dtype=np.float32)
+                audio_segment = np.concatenate([audio_segment, padding])
+            
+            yield [(batch_start_time, batch_end_time, audio_segment)]
 
         def transcribe_batch(model, audio_segments):
             with NoStdStreams():
@@ -413,10 +399,9 @@ class TranscriberParakeetFile:
         all_words = []
 
         raw_segments = vad_segment_generator(audio_array)
-        filtered_segments = vad_segment_filter(raw_segments)
         batches = batch_segments(
-            filtered_segments,
-            VAD_CONFIG["batch_max_files"],
+            raw_segments,
+            audio_array,
             VAD_CONFIG["batch_max_duration"],
         )
 
