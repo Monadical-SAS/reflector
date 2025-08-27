@@ -258,13 +258,3 @@ async def test_webhook_async(room_id: str) -> dict:
             "success": False,
             "error": f"Unexpected error: {str(e)}",
         }
-
-
-@shared_task
-@asynctask
-async def test_webhook(room_id: str) -> dict:
-    """
-    Celery task wrapper for webhook testing.
-    Calls the shared async implementation.
-    """
-    return await test_webhook_async(room_id)
