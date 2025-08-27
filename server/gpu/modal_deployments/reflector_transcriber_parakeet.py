@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import uuid
-from typing import Mapping, NewType
+from typing import Generator, Mapping, NewType
 from urllib.parse import urlparse
 
 import modal
@@ -268,7 +268,9 @@ class TranscriberParakeetFile:
             audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
             return audio_array
 
-        def vad_segment_generator(audio_array):
+        def vad_segment_generator(
+            audio_array,
+        ) -> Generator[tuple[float, float], None, None]:
             """Generate speech segments using VAD with start/end sample indices"""
             vad_iterator = VADIterator(self.vad_model, sampling_rate=SAMPLERATE)
             window_size = VAD_CONFIG["window_size"]
@@ -299,7 +301,21 @@ class TranscriberParakeetFile:
 
             vad_iterator.reset_states()
 
-        def batch_speech_segments(segments, max_duration: int):
+        def batch_speech_segments(
+            segments: Generator[tuple[float, float], None, None], max_duration: int
+        ) -> Generator[tuple[float, float], None, None]:
+            """
+            Input segments:
+              [0-2] [3-5] [6-8] [10-11] [12-15] [17-19] [20-22]
+
+                                  ↓ (max_duration=10)
+
+              Output batches:
+              [0-8]           [10-19]          [20-22]
+
+            Note: silences are kept for better transcription, previous implementation was
+            passing segments separatly, but the output was less accurate.
+            """
             batch_start_time = None
             batch_end_time = None
 
