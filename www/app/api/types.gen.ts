@@ -24,6 +24,8 @@ export type CreateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  webhook_url?: string;
+  webhook_secret?: string;
 };
 
 export type CreateTranscript = {
@@ -174,6 +176,8 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type RtcOffer = {
@@ -281,6 +285,8 @@ export type UpdateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  webhook_url?: string;
+  webhook_secret?: string;
 };
 
 export type UpdateTranscript = {
@@ -305,6 +311,14 @@ export type ValidationError = {
   loc: Array<string | number>;
   msg: string;
   type: string;
+};
+
+export type WebhookTestResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  status_code?: number | null;
+  response_preview?: string | null;
 };
 
 export type WherebyWebhookEvent = {
@@ -376,6 +390,12 @@ export type V1RoomsCreateMeetingData = {
 };
 
 export type V1RoomsCreateMeetingResponse = Meeting;
+
+export type V1RoomsTestWebhookData = {
+  roomId: string;
+};
+
+export type V1RoomsTestWebhookResponse = WebhookTestResult;
 
 export type V1TranscriptsListData = {
   /**
@@ -670,6 +690,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: Meeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_id}/webhook/test": {
+    post: {
+      req: V1RoomsTestWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: WebhookTestResult;
         /**
          * Validation Error
          */

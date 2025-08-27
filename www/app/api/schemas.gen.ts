@@ -91,6 +91,16 @@ export const $CreateRoom = {
       type: "boolean",
       title: "Is Shared",
     },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+      default: "",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+      default: "",
+    },
   },
   type: "object",
   required: [
@@ -950,6 +960,14 @@ export const $Room = {
       type: "boolean",
       title: "Is Shared",
     },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+    },
   },
   type: "object",
   required: [
@@ -965,6 +983,8 @@ export const $Room = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "webhook_url",
+    "webhook_secret",
   ],
   title: "Room",
 } as const;
@@ -1351,6 +1371,16 @@ export const $UpdateRoom = {
       type: "boolean",
       title: "Is Shared",
     },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+      default: "",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+      default: "",
+    },
   },
   type: "object",
   required: [
@@ -1539,6 +1569,50 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $WebhookTestResult = {
+  properties: {
+    success: {
+      type: "boolean",
+      title: "Success",
+    },
+    message: {
+      type: "string",
+      title: "Message",
+      default: "",
+    },
+    error: {
+      type: "string",
+      title: "Error",
+      default: "",
+    },
+    status_code: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Status Code",
+    },
+    response_preview: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Response Preview",
+    },
+  },
+  type: "object",
+  required: ["success"],
+  title: "WebhookTestResult",
 } as const;
 
 export const $WherebyWebhookEvent = {

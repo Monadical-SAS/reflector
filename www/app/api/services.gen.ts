@@ -16,6 +16,8 @@ import type {
   V1RoomsDeleteResponse,
   V1RoomsCreateMeetingData,
   V1RoomsCreateMeetingResponse,
+  V1RoomsTestWebhookData,
+  V1RoomsTestWebhookResponse,
   V1TranscriptsListData,
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
@@ -220,6 +222,29 @@ export class DefaultService {
       url: "/v1/rooms/{room_name}/meeting",
       path: {
         room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Test Webhook
+   * Test webhook configuration by sending a sample payload.
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns WebhookTestResult Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsTestWebhook(
+    data: V1RoomsTestWebhookData,
+  ): CancelablePromise<V1RoomsTestWebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_id}/webhook/test",
+      path: {
+        room_id: data.roomId,
       },
       errors: {
         422: "Validation Error",
