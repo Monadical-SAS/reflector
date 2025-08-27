@@ -41,7 +41,7 @@ else:
 
     if settings.PUBLIC_MODE:
         app.conf.beat_schedule["cleanup_old_public_data"] = {
-            "task": "reflector.worker.cleanup.cleanup_old_public_data",
+            "task": "reflector.worker.cleanup.cleanup_old_public_data_task",
             "schedule": crontab(hour=3, minute=0),
         }
         logger.info(

@@ -5,7 +5,7 @@ import pytest
 
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
-from reflector.worker.cleanup import _cleanup_old_public_data
+from reflector.worker.cleanup import cleanup_old_public_data
 
 
 @pytest.mark.asyncio
@@ -14,7 +14,7 @@ async def test_cleanup_old_public_data_skips_when_not_public():
     with patch("reflector.worker.cleanup.settings") as mock_settings:
         mock_settings.PUBLIC_MODE = False
 
-        result = await _cleanup_old_public_data()
+        result = await cleanup_old_public_data()
 
         # Should return early without doing anything
         assert result is None
@@ -70,7 +70,7 @@ async def test_cleanup_old_public_data_deletes_old_anonymous_transcripts():
         with patch("reflector.db.transcripts.get_transcripts_storage") as mock_storage:
             mock_storage.return_value.delete_file = AsyncMock()
 
-            result = await _cleanup_old_public_data()
+            result = await cleanup_old_public_data()
 
     # Check results
     assert result["transcripts_deleted"] == 1
@@ -145,7 +145,7 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
             with patch("reflector.worker.cleanup.get_recordings_storage") as mock_rec_storage:
                 mock_rec_storage.return_value.delete_file = AsyncMock()
                 
-                result = await _cleanup_old_public_data()
+                result = await cleanup_old_public_data()
     
     # Check results
     assert result["transcripts_deleted"] == 1
@@ -211,7 +211,7 @@ async def test_cleanup_handles_errors_gracefully():
         with patch.object(
             transcripts_controller, "remove_by_id", side_effect=mock_remove_by_id
         ):
-            result = await _cleanup_old_public_data()
+            result = await cleanup_old_public_data()
 
     # Should have one successful deletion and one error
     assert result["transcripts_deleted"] == 1

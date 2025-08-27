@@ -1,7 +1,8 @@
 """
-Clean up old transcripts and meetings from public instances.
-Deletes data older than PUBLIC_DATA_RETENTION_DAYS for anonymous users.
-Will retry up to 3 times with 5-minute intervals on failure.
+Main task for cleanup old public data.
+
+Deletes old anonymous transcripts and their associated meetings/recordings.
+Transcripts are the main entry point - any associated data is also removed.
 """
 
 import asyncio
@@ -10,7 +11,6 @@ from typing import TypedDict
 
 import structlog
 from celery import shared_task
-
 from databases import Database
 
 from reflector.asynctask import asynctask
@@ -48,25 +48,22 @@ async def cleanup_old_transcripts(
         transcript_id = transcript_data["id"]
         meeting_id = transcript_data["meeting_id"]
         recording_id = transcript_data["recording_id"]
-        
+
         try:
-            # Delete associated meeting if it exists
             if meeting_id:
-                await db.execute(
-                    meetings.delete().where(meetings.c.id == meeting_id)
-                )
+                await db.execute(meetings.delete().where(meetings.c.id == meeting_id))
                 stats["meetings_deleted"] += 1
                 logger.info("Deleted associated meeting", meeting_id=meeting_id)
-            
-            # Delete associated recording if it exists
+
             if recording_id:
-                # Get recording details for storage deletion
                 recording = await db.fetch_one(
                     recordings.select().where(recordings.c.id == recording_id)
                 )
                 if recording:
                     try:
-                        await get_recordings_storage().delete_file(recording["object_key"])
+                        await get_recordings_storage().delete_file(
+                            recording["object_key"]
+                        )
                     except Exception as storage_error:
                         logger.warning(
                             "Failed to delete recording from storage",
@@ -74,14 +71,15 @@ async def cleanup_old_transcripts(
                             object_key=recording["object_key"],
                             error=str(storage_error),
                         )
-                    
+
                     await db.execute(
                         recordings.delete().where(recordings.c.id == recording_id)
                     )
                     stats["recordings_deleted"] += 1
-                    logger.info("Deleted associated recording", recording_id=recording_id)
-            
-            # Delete the transcript itself (this also handles transcript storage files)
+                    logger.info(
+                        "Deleted associated recording", recording_id=recording_id
+                    )
+
             await transcripts_controller.remove_by_id(transcript_id)
             stats["transcripts_deleted"] += 1
             logger.info(
@@ -95,10 +93,7 @@ async def cleanup_old_transcripts(
             stats["errors"].append(error_msg)
 
 
-
-
 def log_cleanup_results(stats: CleanupStats):
-    """Log the final cleanup results."""
     logger.info(
         "Cleanup completed",
         transcripts_deleted=stats["transcripts_deleted"],
@@ -114,19 +109,7 @@ def log_cleanup_results(stats: CleanupStats):
         )
 
 
-async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
-    """
-    Main cleanup logic for old public data.
-    
-    Deletes old anonymous transcripts and their associated meetings/recordings.
-    Transcripts are the main entry point - any associated data is also removed.
-
-    Args:
-        days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
-
-    Returns:
-        CleanupStats or None if skipped
-    """
+async def cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
     if days is None:
         days = settings.PUBLIC_DATA_RETENTION_DAYS
 
@@ -148,9 +131,6 @@ async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | No
     }
 
     db = get_database()
-    
-    # Use a single database connection for all operations
-    # Transcripts are the entry point - associated meetings/recordings are deleted together
     await cleanup_old_transcripts(db, cutoff_date, stats)
 
     log_cleanup_results(stats)
@@ -162,11 +142,5 @@ async def _cleanup_old_public_data(days: int | None = None) -> CleanupStats | No
     retry_kwargs={"max_retries": 3, "countdown": 300},
 )
 @asynctask
-def cleanup_old_public_data(days: int | None = None):
-    """
-    Celery task to clean up old public data.
-
-    Args:
-        days: Number of days to keep data. If None, uses PUBLIC_DATA_RETENTION_DAYS setting.
-    """
-    asyncio.run(_cleanup_old_public_data(days=days))
+def cleanup_old_public_data_task(days: int | None = None):
+    asyncio.run(cleanup_old_public_data(days=days))
