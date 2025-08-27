@@ -54,7 +54,7 @@ jobs:
   docker-arm64:
     runs-on: linux-arm64
     concurrency:
-      group: docker-amd64-${{ github.ref }}
+      group: docker-arm64-${{ github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
