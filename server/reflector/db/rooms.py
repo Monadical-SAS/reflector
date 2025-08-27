@@ -147,6 +147,10 @@ class RoomController:
         """
         Update a room fields with key/values in values
         """
+        # Generate webhook secret if webhook URL is provided but secret is empty
+        if values.get("webhook_url") and not values.get("webhook_secret"):
+            values["webhook_secret"] = secrets.token_urlsafe(32)
+
         query = rooms.update().where(rooms.c.id == room.id).values(**values)
         try:
             await get_database().execute(query)

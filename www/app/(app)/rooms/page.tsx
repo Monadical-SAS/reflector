@@ -250,20 +250,42 @@ export default function RoomsList() {
     }
   };
 
-  const handleEditRoom = (roomId, roomData) => {
-    setRoom({
-      name: roomData.name,
-      zulipAutoPost: roomData.zulip_auto_post,
-      zulipStream: roomData.zulip_stream,
-      zulipTopic: roomData.zulip_topic,
-      isLocked: roomData.is_locked,
-      roomMode: roomData.room_mode,
-      recordingType: roomData.recording_type,
-      recordingTrigger: roomData.recording_trigger,
-      isShared: roomData.is_shared,
-      webhookUrl: roomData.webhook_url || "",
-      webhookSecret: roomData.webhook_secret || "",
-    });
+  const handleEditRoom = async (roomId, roomData) => {
+    // Fetch full room details to get webhook fields
+    try {
+      const detailedRoom = await api?.v1RoomsRetrieve({ roomId });
+      if (detailedRoom) {
+        setRoom({
+          name: detailedRoom.name,
+          zulipAutoPost: detailedRoom.zulip_auto_post,
+          zulipStream: detailedRoom.zulip_stream,
+          zulipTopic: detailedRoom.zulip_topic,
+          isLocked: detailedRoom.is_locked,
+          roomMode: detailedRoom.room_mode,
+          recordingType: detailedRoom.recording_type,
+          recordingTrigger: detailedRoom.recording_trigger,
+          isShared: detailedRoom.is_shared,
+          webhookUrl: detailedRoom.webhook_url || "",
+          webhookSecret: detailedRoom.webhook_secret || "",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch room details, using list data:", error);
+      // Fallback to using the data from the list
+      setRoom({
+        name: roomData.name,
+        zulipAutoPost: roomData.zulip_auto_post,
+        zulipStream: roomData.zulip_stream,
+        zulipTopic: roomData.zulip_topic,
+        isLocked: roomData.is_locked,
+        roomMode: roomData.room_mode,
+        recordingType: roomData.recording_type,
+        recordingTrigger: roomData.recording_trigger,
+        isShared: roomData.is_shared,
+        webhookUrl: roomData.webhook_url || "",
+        webhookSecret: roomData.webhook_secret || "",
+      });
+    }
     setEditRoomId(roomId);
     setIsEditing(true);
     setNameError("");
@@ -602,13 +624,13 @@ export default function RoomsList() {
                     <Field.Label>Webhook Secret</Field.Label>
                     <Input
                       name="webhookSecret"
-                      value={room.webhookSecret || "Auto-generated on save"}
-                      readOnly
-                      disabled
+                      value={room.webhookSecret}
+                      onChange={handleRoomChange}
+                      placeholder="Leave empty to auto-generate"
                     />
                     <Field.HelperText>
                       Used for HMAC signature verification (auto-generated if
-                      not provided)
+                      left empty)
                     </Field.HelperText>
                   </Field.Root>
 

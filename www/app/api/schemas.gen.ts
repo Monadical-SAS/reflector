@@ -819,11 +819,11 @@ export const $Page_GetTranscriptMinimal_ = {
   title: "Page[GetTranscriptMinimal]",
 } as const;
 
-export const $Page_Room_ = {
+export const $Page_RoomDetails_ = {
   properties: {
     items: {
       items: {
-        $ref: "#/components/schemas/Room",
+        $ref: "#/components/schemas/RoomDetails",
       },
       type: "array",
       title: "Items",
@@ -879,7 +879,7 @@ export const $Page_Room_ = {
   },
   type: "object",
   required: ["items", "page", "size"],
-  title: "Page[Room]",
+  title: "Page[RoomDetails]",
 } as const;
 
 export const $Participant = {

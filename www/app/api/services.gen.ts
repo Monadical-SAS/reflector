@@ -10,6 +10,8 @@ import type {
   V1RoomsListResponse,
   V1RoomsCreateData,
   V1RoomsCreateResponse,
+  V1RoomsGetData,
+  V1RoomsGetResponse,
   V1RoomsUpdateData,
   V1RoomsUpdateResponse,
   V1RoomsDeleteData,
@@ -120,7 +122,7 @@ export class DefaultService {
    * @param data The data for the request.
    * @param data.page Page number
    * @param data.size Page size
-   * @returns Page_Room_ Successful Response
+   * @returns Page_RoomDetails_ Successful Response
    * @throws ApiError
    */
   public v1RoomsList(
@@ -154,6 +156,28 @@ export class DefaultService {
       url: "/v1/rooms",
       body: data.requestBody,
       mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Get
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns RoomDetails Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsGet(
+    data: V1RoomsGetData,
+  ): CancelablePromise<V1RoomsGetResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_id}",
+      path: {
+        room_id: data.roomId,
+      },
       errors: {
         422: "Validation Error",
       },

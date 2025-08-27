@@ -149,8 +149,8 @@ export type Page_GetTranscriptMinimal_ = {
   pages?: number | null;
 };
 
-export type Page_Room_ = {
-  items: Array<Room>;
+export type Page_RoomDetails_ = {
+  items: Array<RoomDetails>;
   total?: number | null;
   page: number | null;
   size: number | null;
@@ -379,13 +379,19 @@ export type V1RoomsListData = {
   size?: number;
 };
 
-export type V1RoomsListResponse = Page_Room_;
+export type V1RoomsListResponse = Page_RoomDetails_;
 
 export type V1RoomsCreateData = {
   requestBody: CreateRoom;
 };
 
 export type V1RoomsCreateResponse = Room;
+
+export type V1RoomsGetData = {
+  roomId: string;
+};
+
+export type V1RoomsGetResponse = RoomDetails;
 
 export type V1RoomsUpdateData = {
   requestBody: UpdateRoom;
@@ -648,7 +654,7 @@ export type $OpenApiTs = {
         /**
          * Successful Response
          */
-        200: Page_Room_;
+        200: Page_RoomDetails_;
         /**
          * Validation Error
          */
@@ -670,6 +676,19 @@ export type $OpenApiTs = {
     };
   };
   "/v1/rooms/{room_id}": {
+    get: {
+      req: V1RoomsGetData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: RoomDetails;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
     patch: {
       req: V1RoomsUpdateData;
       res: {

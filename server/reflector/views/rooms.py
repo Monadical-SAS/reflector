@@ -100,10 +100,10 @@ class WebhookTestResult(BaseModel):
     response_preview: str | None = None
 
 
-@router.get("/rooms", response_model=Page[Room])
+@router.get("/rooms", response_model=Page[RoomDetails])
 async def rooms_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-) -> list[Room]:
+) -> list[RoomDetails]:
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -115,6 +115,18 @@ async def rooms_list(
             user_id=user_id, order_by="-created_at", return_query=True
         ),
     )
+
+
+@router.get("/rooms/{room_id}", response_model=RoomDetails)
+async def rooms_get(
+    room_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
 
 
 @router.post("/rooms", response_model=Room)
