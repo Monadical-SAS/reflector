@@ -39,15 +39,6 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
 )
 @asynctask
 async def send_transcript_webhook(self, transcript_id: str, room_id: str):
-    """
-    Send webhook notification when transcript is ready.
-
-    Retries with exponential backoff for up to 24 hours:
-    - Initial retry: 1 minute
-    - Backoff factor: 2x
-    - Max retry interval: 1 hour
-    - Total retries: 100 (covers ~24 hours)
-    """
     log = logger.bind(
         transcript_id=transcript_id,
         room_id=room_id,
@@ -88,9 +79,11 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 )
 
         # Build webhook payload
-        # Frontend URL for transcript
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
-
+        participants = [
+            {"id": p.id, "name": p.name, "speaker": p.speaker}
+            for p in (transcript.participants or [])
+        ]
         payload_data = {
             "event": "transcript.completed",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -104,10 +97,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 "long_summary": transcript.long_summary,
                 "webvtt": transcript.webvtt,
                 "topics": topics_data,
-                "participants": [
-                    {"id": p.id, "name": p.name, "speaker": p.speaker}
-                    for p in (transcript.participants or [])
-                ],
+                "participants": participants,
                 "source_language": transcript.source_language,
                 "target_language": transcript.target_language,
                 "status": transcript.status,
@@ -176,13 +166,13 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         raise self.retry(exc=e)
 
     except (httpx.ConnectError, httpx.TimeoutException) as e:
-        log.error("Webhook failed with connection error", error=str(e))
         # Retry on network errors
+        log.error("Webhook failed with connection error", error=str(e))
         raise self.retry(exc=e)
 
     except Exception as e:
-        log.exception("Unexpected error in webhook task", error=str(e))
         # Retry on unexpected errors
+        log.exception("Unexpected error in webhook task", error=str(e))
         raise self.retry(exc=e)
 
 
@@ -200,7 +190,6 @@ async def test_webhook_async(room_id: str) -> dict:
         if not room.webhook_url:
             return {"success": False, "error": "No webhook URL configured"}
 
-        # Build test payload
         payload_data = {
             "event": "test",
             "timestamp": datetime.now(timezone.utc).isoformat(),

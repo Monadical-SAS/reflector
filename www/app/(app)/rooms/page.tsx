@@ -198,6 +198,8 @@ export default function RoomsList() {
           errorMsg += `: ${response.error}`;
         } else if (response?.response_preview) {
           // Try to parse and extract meaningful error from response
+          // Specific to N8N at the moment, as there is no specification for that
+          // We could just display as is, but decided here to dig a little bit more.
           try {
             const preview = JSON.parse(response.response_preview);
             if (preview.message) {
