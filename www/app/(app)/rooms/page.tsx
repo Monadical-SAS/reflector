@@ -11,10 +11,12 @@ import {
   Input,
   Select,
   Spinner,
+  IconButton,
   createListCollection,
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
+import { LuEye, LuEyeOff } from "react-icons/lu";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { ApiError, RoomDetails } from "../../api";
@@ -89,6 +91,7 @@ export default function RoomsList() {
   const [webhookTestResult, setWebhookTestResult] = useState<string | null>(
     null,
   );
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   interface Stream {
     stream_id: number;
     name: string;
@@ -159,6 +162,12 @@ export default function RoomsList() {
     setTimeout(() => {
       setLinkCopied("");
     }, 2000);
+  };
+
+  const handleCloseDialog = () => {
+    setShowWebhookSecret(false);
+    setWebhookTestResult(null);
+    onClose();
   };
 
   const handleTestWebhook = async () => {
@@ -234,7 +243,7 @@ export default function RoomsList() {
       setEditRoomId("");
       setNameError("");
       refetch();
-      onClose();
+      handleCloseDialog();
     } catch (err) {
       if (
         err instanceof ApiError &&
@@ -251,6 +260,10 @@ export default function RoomsList() {
   };
 
   const handleEditRoom = async (roomId, roomData) => {
+    // Reset states
+    setShowWebhookSecret(false);
+    setWebhookTestResult(null);
+
     // Fetch full room details to get webhook fields
     try {
       const detailedRoom = await api?.v1RoomsGet({ roomId });
@@ -355,6 +368,8 @@ export default function RoomsList() {
             setIsEditing(false);
             setRoom(roomInitialState);
             setNameError("");
+            setShowWebhookSecret(false);
+            setWebhookTestResult(null);
             onOpen();
           }}
         >
@@ -364,7 +379,7 @@ export default function RoomsList() {
 
       <Dialog.Root
         open={open}
-        onOpenChange={(e) => (e.open ? onOpen() : onClose())}
+        onOpenChange={(e) => (e.open ? onOpen() : handleCloseDialog())}
         size="lg"
       >
         <Dialog.Backdrop />
@@ -622,12 +637,34 @@ export default function RoomsList() {
                 <>
                   <Field.Root mt={4}>
                     <Field.Label>Webhook Secret</Field.Label>
-                    <Input
-                      name="webhookSecret"
-                      value={room.webhookSecret}
-                      onChange={handleRoomChange}
-                      placeholder="Leave empty to auto-generate"
-                    />
+                    <Flex gap={2}>
+                      <Input
+                        name="webhookSecret"
+                        type={showWebhookSecret ? "text" : "password"}
+                        value={room.webhookSecret}
+                        onChange={handleRoomChange}
+                        placeholder={
+                          isEditing && room.webhookSecret
+                            ? "••••••••"
+                            : "Leave empty to auto-generate"
+                        }
+                        flex="1"
+                      />
+                      {isEditing && room.webhookSecret && (
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          aria-label={
+                            showWebhookSecret ? "Hide secret" : "Show secret"
+                          }
+                          onClick={() =>
+                            setShowWebhookSecret(!showWebhookSecret)
+                          }
+                        >
+                          {showWebhookSecret ? <LuEyeOff /> : <LuEye />}
+                        </IconButton>
+                      )}
+                    </Flex>
                     <Field.HelperText>
                       Used for HMAC signature verification (auto-generated if
                       left empty)
@@ -685,7 +722,7 @@ export default function RoomsList() {
               </Field.Root>
             </Dialog.Body>
             <Dialog.Footer>
-              <Button variant="ghost" onClick={onClose}>
+              <Button variant="ghost" onClick={handleCloseDialog}>
                 Cancel
               </Button>
               <Button
