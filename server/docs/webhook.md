@@ -75,9 +75,8 @@ def verify_webhook_signature(payload: bytes, signature_header: str, secret: str)
 
 ### `transcript.completed` Event
 
-This event includes convenient URLs for accessing the transcript and audio:
+This event includes a convenient URL for accessing the transcript:
 - `frontend_url`: Direct link to view the transcript in the web interface
-- `audio_mp3_url`: Pre-authenticated URL to download the MP3 audio file (valid for 60 minutes)
 
 ```json
 {
@@ -123,8 +122,7 @@ This event includes convenient URLs for accessing the transcript and audio:
     "source_language": "en",
     "target_language": "en",
     "status": "completed",
-    "frontend_url": "https://app.reflector.com/transcripts/abc-123-def-456",
-    "audio_mp3_url": "https://api.reflector.com/v1/transcripts/abc-123-def-456/audio/mp3?token=jwt_token_here"
+    "frontend_url": "https://app.reflector.com/transcripts/abc-123-def-456"
   },
   "room": {
     "id": "room-789",

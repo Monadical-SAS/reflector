@@ -3,7 +3,7 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import httpx
 import structlog
@@ -15,7 +15,6 @@ from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.settings import settings
 from reflector.utils.webvtt import topics_to_webvtt
-from reflector.views.transcripts import DOWNLOAD_EXPIRE_MINUTES, create_access_token
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -89,16 +88,8 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 )
 
         # Build webhook payload
-        # Generate URLs for transcript and audio
         # Frontend URL for transcript
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
-
-        # Audio download URL with token
-        audio_token = create_access_token(
-            data={"sub": room.user_id},
-            expires_delta=timedelta(minutes=DOWNLOAD_EXPIRE_MINUTES),
-        )
-        audio_url = f"{settings.BASE_URL}/v1/transcripts/{transcript.id}/audio/mp3?token={audio_token}"
 
         payload_data = {
             "event": "transcript.completed",
@@ -121,7 +112,6 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 "target_language": transcript.target_language,
                 "status": transcript.status,
                 "frontend_url": frontend_url,
-                "audio_mp3_url": audio_url,
             },
             "room": {
                 "id": room.id,
