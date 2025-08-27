@@ -65,18 +65,14 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
             log.error("Room not found, skipping webhook")
             return
 
-        # Check if webhook is configured
         if not room.webhook_url:
             log.info("No webhook URL configured for room, skipping")
             return
 
         # Generate WebVTT content from topics
-        webvtt_content = ""
         topics_data = []
 
         if transcript.topics:
-            webvtt_content = topics_to_webvtt(transcript.topics)
-
             # Build topics data with diarized content per topic
             for topic in transcript.topics:
                 topic_webvtt = topics_to_webvtt([topic]) if topic.words else ""
@@ -86,7 +82,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                         "summary": topic.summary,
                         "timestamp": topic.timestamp,
                         "duration": topic.duration,
-                        "diarized_content": topic_webvtt,
+                        "webvtt": topic_webvtt,
                     }
                 )
 
@@ -102,7 +98,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
                 "title": transcript.title,
                 "short_summary": transcript.short_summary,
                 "long_summary": transcript.long_summary,
-                "diarized_text": webvtt_content,
+                "webvtt": transcript.webvtt,
                 "topics": topics_data,
                 "participants": [
                     {"id": p.id, "name": p.name, "speaker": p.speaker}

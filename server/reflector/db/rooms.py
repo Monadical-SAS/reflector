@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
@@ -118,8 +119,6 @@ class RoomController:
         Add a new room
         """
         # Generate webhook secret if webhook URL is provided but secret is not
-        import secrets
-
         if webhook_url and not webhook_secret:
             webhook_secret = secrets.token_urlsafe(32)
 

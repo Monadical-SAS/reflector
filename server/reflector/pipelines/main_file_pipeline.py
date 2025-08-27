@@ -50,6 +50,7 @@ from reflector.processors.types import (
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.worker.webhook import send_transcript_webhook
 
 
 class EmptyPipeline:
@@ -408,8 +409,6 @@ async def task_pipeline_file_process(*, transcript_id: str):
     if transcript.source_kind == SourceKind.ROOM and transcript.room_id:
         room = await rooms_controller.get_by_id(transcript.room_id)
         if room and room.webhook_url:
-            from reflector.worker.webhook import send_transcript_webhook
-
             logger.info(
                 "Dispatching webhook task",
                 transcript_id=transcript_id,

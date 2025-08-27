@@ -165,7 +165,7 @@ export class DefaultService {
    * @param data The data for the request.
    * @param data.roomId
    * @param data.requestBody
-   * @returns Room Successful Response
+   * @returns RoomDetails Successful Response
    * @throws ApiError
    */
   public v1RoomsUpdate(

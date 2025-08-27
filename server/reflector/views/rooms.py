@@ -15,6 +15,7 @@ from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
+from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,9 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+
+
+class RoomDetails(Room):
     webhook_url: str
     webhook_secret: str
 
@@ -66,8 +70,8 @@ class CreateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
-    webhook_url: str = ""
-    webhook_secret: str = ""
+    webhook_url: str
+    webhook_secret: str
 
 
 class UpdateRoom(BaseModel):
@@ -80,8 +84,8 @@ class UpdateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
-    webhook_url: str = ""
-    webhook_secret: str = ""
+    webhook_url: str
+    webhook_secret: str
 
 
 class DeletionStatus(BaseModel):
@@ -136,7 +140,7 @@ async def rooms_create(
     )
 
 
-@router.patch("/rooms/{room_id}", response_model=Room)
+@router.patch("/rooms/{room_id}", response_model=RoomDetails)
 async def rooms_update(
     room_id: str,
     info: UpdateRoom,
@@ -246,10 +250,5 @@ async def rooms_test_webhook(
             status_code=403, detail="Not authorized to test this room's webhook"
         )
 
-    # Import and call test webhook task
-    from reflector.worker.webhook import test_webhook
-
-    # Run test synchronously to return immediate result
     result = await test_webhook(room_id)
-
     return WebhookTestResult(**result)

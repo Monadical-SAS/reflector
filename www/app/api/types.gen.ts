@@ -24,8 +24,8 @@ export type CreateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
-  webhook_url?: string;
-  webhook_secret?: string;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type CreateTranscript = {
@@ -176,6 +176,21 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+};
+
+export type RoomDetails = {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+  zulip_auto_post: boolean;
+  zulip_stream: string;
+  zulip_topic: string;
+  is_locked: boolean;
+  room_mode: string;
+  recording_type: string;
+  recording_trigger: string;
+  is_shared: boolean;
   webhook_url: string;
   webhook_secret: string;
 };
@@ -285,8 +300,8 @@ export type UpdateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
-  webhook_url?: string;
-  webhook_secret?: string;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type UpdateTranscript = {
@@ -377,7 +392,7 @@ export type V1RoomsUpdateData = {
   roomId: string;
 };
 
-export type V1RoomsUpdateResponse = Room;
+export type V1RoomsUpdateResponse = RoomDetails;
 
 export type V1RoomsDeleteData = {
   roomId: string;
@@ -661,7 +676,7 @@ export type $OpenApiTs = {
         /**
          * Successful Response
          */
-        200: Room;
+        200: RoomDetails;
         /**
          * Validation Error
          */

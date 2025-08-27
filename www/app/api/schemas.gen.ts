@@ -94,12 +94,10 @@ export const $CreateRoom = {
     webhook_url: {
       type: "string",
       title: "Webhook Url",
-      default: "",
     },
     webhook_secret: {
       type: "string",
       title: "Webhook Secret",
-      default: "",
     },
   },
   type: "object",
@@ -113,6 +111,8 @@ export const $CreateRoom = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "webhook_url",
+    "webhook_secret",
   ],
   title: "CreateRoom",
 } as const;
@@ -960,6 +960,76 @@ export const $Room = {
       type: "boolean",
       title: "Is Shared",
     },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "user_id",
+    "created_at",
+    "zulip_auto_post",
+    "zulip_stream",
+    "zulip_topic",
+    "is_locked",
+    "room_mode",
+    "recording_type",
+    "recording_trigger",
+    "is_shared",
+  ],
+  title: "Room",
+} as const;
+
+export const $RoomDetails = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    user_id: {
+      type: "string",
+      title: "User Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    zulip_auto_post: {
+      type: "boolean",
+      title: "Zulip Auto Post",
+    },
+    zulip_stream: {
+      type: "string",
+      title: "Zulip Stream",
+    },
+    zulip_topic: {
+      type: "string",
+      title: "Zulip Topic",
+    },
+    is_locked: {
+      type: "boolean",
+      title: "Is Locked",
+    },
+    room_mode: {
+      type: "string",
+      title: "Room Mode",
+    },
+    recording_type: {
+      type: "string",
+      title: "Recording Type",
+    },
+    recording_trigger: {
+      type: "string",
+      title: "Recording Trigger",
+    },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
     webhook_url: {
       type: "string",
       title: "Webhook Url",
@@ -986,7 +1056,7 @@ export const $Room = {
     "webhook_url",
     "webhook_secret",
   ],
-  title: "Room",
+  title: "RoomDetails",
 } as const;
 
 export const $RtcOffer = {
@@ -1374,12 +1444,10 @@ export const $UpdateRoom = {
     webhook_url: {
       type: "string",
       title: "Webhook Url",
-      default: "",
     },
     webhook_secret: {
       type: "string",
       title: "Webhook Secret",
-      default: "",
     },
   },
   type: "object",
@@ -1393,6 +1461,8 @@ export const $UpdateRoom = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "webhook_url",
+    "webhook_secret",
   ],
   title: "UpdateRoom",
 } as const;
