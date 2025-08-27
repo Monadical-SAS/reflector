@@ -351,8 +351,6 @@ class TranscriberParakeetFile:
         def emit_results(
             results,
             segments_info,
-            batch_index,
-            total_batches,
         ):
             """Yield transcribed text and word timings from model output, adjusting timestamps to absolute positions."""
             for i, (output, (start_time, end_time, _)) in enumerate(
@@ -394,21 +392,13 @@ class TranscriberParakeetFile:
         )
         audio_segments = batch_segment_to_audio_segment(speech_segments, audio_array)
 
-        batch_index = 0
-        total_batches = max(
-            1, int(total_duration / VAD_CONFIG["batch_max_duration"]) + 1
-        )
-
         for batch in audio_segments:
-            start_time, end_time, audio_segment = batch
-            batch_index += 1
+            _, _, audio_segment = batch
             results = transcribe_batch(self.model, [audio_segment])
 
             for text, words in emit_results(
                 results,
                 [batch],
-                batch_index,
-                total_batches,
             ):
                 if not text:
                     continue
