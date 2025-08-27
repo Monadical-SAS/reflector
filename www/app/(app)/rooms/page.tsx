@@ -17,7 +17,7 @@ import {
 import { useEffect, useState } from "react";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError, Room } from "../../api";
+import { ApiError, RoomDetails } from "../../api";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
 
@@ -253,7 +253,7 @@ export default function RoomsList() {
   const handleEditRoom = async (roomId, roomData) => {
     // Fetch full room details to get webhook fields
     try {
-      const detailedRoom = await api?.v1RoomsRetrieve({ roomId });
+      const detailedRoom = await api?.v1RoomsGet({ roomId });
       if (detailedRoom) {
         setRoom({
           name: detailedRoom.name,
@@ -318,9 +318,9 @@ export default function RoomsList() {
     });
   };
 
-  const myRooms: Room[] =
+  const myRooms: RoomDetails[] =
     response?.items.filter((roomData) => !roomData.is_shared) || [];
-  const sharedRooms: Room[] =
+  const sharedRooms: RoomDetails[] =
     response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)

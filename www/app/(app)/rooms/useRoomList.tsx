@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
-import { Page_Room_ } from "../../api";
+import { Page_RoomDetails_ } from "../../api";
 import { PaginationPage } from "../browse/_components/Pagination";
 
 type RoomList = {
-  response: Page_Room_ | null;
+  response: Page_RoomDetails_ | null;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -13,7 +13,7 @@ type RoomList = {
 
 //always protected
 const useRoomList = (page: PaginationPage): RoomList => {
-  const [response, setResponse] = useState<Page_Room_ | null>(null);
+  const [response, setResponse] = useState<Page_RoomDetails_ | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setErrorState] = useState<Error | null>(null);
   const { setError } = useError();
