@@ -1,43 +1,60 @@
 <div align="center">
+<img width="100" alt="image" src="https://github.com/user-attachments/assets/66fb367b-2c89-4516-9912-f47ac59c6a7f"/>
 
 # Reflector
 
-Reflector Audio Management and Analysis is a cutting-edge web application under development by Monadical. It utilizes AI to record meetings, providing a permanent record with transcripts, translations, and automated summaries.
+Reflector is an AI-powered audio transcription and meeting analysis platform that provides real-time transcription, speaker diarization, translation and summarization for audio content and live meetings. It works 100% with local models (whisper/parakeet, pyannote, seamless-m4t, and your local llm like phi-4).
 
-[![Tests](https://github.com/monadical-sas/reflector/actions/workflows/pytests.yml/badge.svg?branch=main&event=push)](https://github.com/monadical-sas/reflector/actions/workflows/pytests.yml)
+[![Tests](https://github.com/monadical-sas/reflector/actions/workflows/test_server.yml/badge.svg?branch=main&event=push)](https://github.com/monadical-sas/reflector/actions/workflows/test_server.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 </div>
-
-## Screenshots
+</div>
 <table>
   <tr>
     <td>
-      <a href="https://github.com/user-attachments/assets/3a976930-56c1-47ef-8c76-55d3864309e3">
-        <img width="700" alt="image" src="https://github.com/user-attachments/assets/3a976930-56c1-47ef-8c76-55d3864309e3" />
+      <a href="https://github.com/user-attachments/assets/21f5597c-2930-4899-a154-f7bd61a59e97">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/21f5597c-2930-4899-a154-f7bd61a59e97" />
       </a>
     </td>
     <td>
-      <a href="https://github.com/user-attachments/assets/bfe3bde3-08af-4426-a9a1-11ad5cd63b33">
-        <img width="700" alt="image" src="https://github.com/user-attachments/assets/bfe3bde3-08af-4426-a9a1-11ad5cd63b33" />
+      <a href="https://github.com/user-attachments/assets/f6b9399a-5e51-4bae-b807-59128d0a940c">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/f6b9399a-5e51-4bae-b807-59128d0a940c" />
       </a>
     </td>
     <td>
-      <a href="https://github.com/user-attachments/assets/7b60c9d0-efe4-474f-a27b-ea13bd0fabdc">
-        <img width="700" alt="image" src="https://github.com/user-attachments/assets/7b60c9d0-efe4-474f-a27b-ea13bd0fabdc" />
+      <a href="https://github.com/user-attachments/assets/a42ce460-c1fd-4489-a995-270516193897">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/a42ce460-c1fd-4489-a995-270516193897" />
+      </a>
+    </td>
+    <td>
+      <a href="https://github.com/user-attachments/assets/21929f6d-c309-42fe-9c11-f1299e50fbd4">
+        <img width="700" alt="image" src="https://github.com/user-attachments/assets/21929f6d-c309-42fe-9c11-f1299e50fbd4" />
       </a>
     </td>
   </tr>
 </table>
 
+## What is Reflector?
+
+Reflector is a web application that utilizes local models to process audio content, providing:
+
+- **Real-time Transcription**: Convert speech to text using [Whisper](https://github.com/openai/whisper) (multi-language) or [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) (English) models
+- **Speaker Diarization**: Identify and label different speakers using [Pyannote](https://github.com/pyannote/pyannote-audio) 3.1
+- **Live Translation**: Translate audio content in real-time to many languages with [Facebook Seamless-M4T](https://github.com/facebookresearch/seamless_communication)
+- **Topic Detection & Summarization**: Extract key topics and generate concise summaries using LLMs
+- **Meeting Recording**: Create permanent records of meetings with searchable transcripts
+
+Currently we provide [modal.com](https://modal.com/) gpu template to deploy.
+
 ## Background
 
 The project architecture consists of three primary components:
 
-- **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
 - **Back-End**: Python server that offers an API and data persistence, found in `server/`.
-- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations. Most reliable option is Modal deployment
+- **Front-End**: NextJS React project hosted on Vercel, located in `www/`.
+- **GPU implementation**: Providing services such as speech-to-text transcription, topic generation, automated summaries, and translations.
 
-It also uses authentik for authentication if activated, and Vercel for deployment and configuration of the front-end.
+It also uses authentik for authentication if activated.
 
 ## Contribution Guidelines
 
@@ -71,6 +88,8 @@ Note: We currently do not have instructions for Windows users.
 - The input from your local microphone, the browser run meeting should be aggregated into one virtual stream to listen to and the output should be fed back to your specified output devices if everything is configured properly.
 
 ## Installation
+
+*Note: we're working toward better installation, theses instructions are not accurate for now*
 
 ### Frontend
 
