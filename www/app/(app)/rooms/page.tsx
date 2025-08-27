@@ -189,9 +189,29 @@ export default function RoomsList() {
           `✅ Webhook test successful! Status: ${response.status_code}`,
         );
       } else {
-        setWebhookTestResult(
-          `❌ Webhook test failed: ${response?.error || response?.message}`,
-        );
+        // Build error message with status code and details
+        let errorMsg = `❌ Webhook test failed`;
+        if (response?.status_code) {
+          errorMsg += ` (Status: ${response.status_code})`;
+        }
+        if (response?.error) {
+          errorMsg += `: ${response.error}`;
+        } else if (response?.response_preview) {
+          // Try to parse and extract meaningful error from response
+          try {
+            const preview = JSON.parse(response.response_preview);
+            if (preview.message) {
+              errorMsg += `: ${preview.message}`;
+            }
+          } catch {
+            // If not JSON, just show the preview text (truncated)
+            const previewText = response.response_preview.substring(0, 150);
+            errorMsg += `: ${previewText}`;
+          }
+        } else if (response?.message) {
+          errorMsg += `: ${response.message}`;
+        }
+        setWebhookTestResult(errorMsg);
       }
     } catch (error) {
       console.error("Error testing webhook:", error);
@@ -672,28 +692,49 @@ export default function RoomsList() {
                   </Field.Root>
 
                   {isEditing && (
-                    <Flex mt={2} gap={2} alignItems="center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleTestWebhook}
-                        disabled={testingWebhook || !room.webhookUrl}
+                    <>
+                      <Flex
+                        mt={2}
+                        gap={2}
+                        alignItems="flex-start"
+                        direction="column"
                       >
-                        {testingWebhook ? (
-                          <>
-                            <Spinner size="xs" mr={2} />
-                            Testing...
-                          </>
-                        ) : (
-                          "Test Webhook"
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleTestWebhook}
+                          disabled={testingWebhook || !room.webhookUrl}
+                        >
+                          {testingWebhook ? (
+                            <>
+                              <Spinner size="xs" mr={2} />
+                              Testing...
+                            </>
+                          ) : (
+                            "Test Webhook"
+                          )}
+                        </Button>
+                        {webhookTestResult && (
+                          <div
+                            style={{
+                              fontSize: "14px",
+                              wordBreak: "break-word",
+                              maxWidth: "100%",
+                              padding: "8px",
+                              borderRadius: "4px",
+                              backgroundColor: webhookTestResult.startsWith(
+                                "✅",
+                              )
+                                ? "#f0fdf4"
+                                : "#fef2f2",
+                              border: `1px solid ${webhookTestResult.startsWith("✅") ? "#86efac" : "#fca5a5"}`,
+                            }}
+                          >
+                            {webhookTestResult}
+                          </div>
                         )}
-                      </Button>
-                      {webhookTestResult && (
-                        <span style={{ fontSize: "14px" }}>
-                          {webhookTestResult}
-                        </span>
-                      )}
-                    </Flex>
+                      </Flex>
+                    </>
                   )}
                 </>
               )}

@@ -240,7 +240,7 @@ async def test_webhook_async(room_id: str) -> dict:
                 "success": response.is_success,
                 "status_code": response.status_code,
                 "message": f"Webhook test {'successful' if response.is_success else 'failed'}",
-                "response_preview": response.text[:200] if response.text else None,
+                "response_preview": response.text if response.text else None,
             }
 
     except httpx.TimeoutException:
