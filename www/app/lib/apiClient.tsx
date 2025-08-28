@@ -22,16 +22,22 @@ export const client = createClient<paths>({
 // Create the React Query client wrapper
 export const $api = createFetchClient<paths>(client);
 
-// Configure authentication
+// Store the current auth token
+let currentAuthToken: string | null | undefined = null;
+
+// Set up authentication middleware once
+client.use({
+  onRequest({ request }) {
+    if (currentAuthToken) {
+      request.headers.set("Authorization", `Bearer ${currentAuthToken}`);
+    }
+    return request;
+  },
+});
+
+// Configure authentication by updating the token
 export const configureApiAuth = (token: string | null | undefined) => {
-  if (token) {
-    client.use({
-      onRequest({ request }) {
-        request.headers.set("Authorization", `Bearer ${token}`);
-        return request;
-      },
-    });
-  }
+  currentAuthToken = token;
 };
 
 // Export typed hooks for convenience
