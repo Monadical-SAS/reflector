@@ -81,6 +81,7 @@ This event includes a convenient URL for accessing the transcript:
 ```json
 {
   "event": "transcript.completed",
+  "event_id": "transcript.completed-abc-123-def-456",
   "timestamp": "2025-08-27T12:34:56.789012Z",
   "transcript": {
     "id": "abc-123-def-456",
@@ -136,6 +137,7 @@ This event includes a convenient URL for accessing the transcript:
 ```json
 {
   "event": "test",
+  "event_id": "test.2025-08-27T12:34:56.789012Z",
   "timestamp": "2025-08-27T12:34:56.789012Z",
   "message": "This is a test webhook from Reflector",
   "room": {

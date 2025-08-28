@@ -86,6 +86,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         ]
         payload_data = {
             "event": "transcript.completed",
+            "event_id": f"transcript.completed-{transcript.id}",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "transcript": {
                 "id": transcript.id,
@@ -190,9 +191,11 @@ async def test_webhook(room_id: str) -> dict:
         if not room.webhook_url:
             return {"success": False, "error": "No webhook URL configured"}
 
+        now = (datetime.now(timezone.utc).isoformat(),)
         payload_data = {
             "event": "test",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_id": f"test-{now}",
+            "timestamp": now,
             "message": "This is a test webhook from Reflector",
             "room": {
                 "id": room.id,
