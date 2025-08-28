@@ -1,8 +1,6 @@
-// this hook is not great, we want to substitute it with a proper state management solution that is also not re-invention
-
-import { useEffect, useRef, useState } from "react";
+// Wrapper for backward compatibility
 import { SearchResult, SourceKind } from "../../api";
-import useApi from "../../lib/useApi";
+import { useTranscriptsSearch } from "../../lib/api-hooks";
 import {
   PaginationPage,
   paginationPageTo0Based,
@@ -12,11 +10,6 @@ interface SearchFilters {
   roomIds: readonly string[] | null;
   sourceKind: SourceKind | null;
 }
-
-const EMPTY_SEARCH_FILTERS: SearchFilters = {
-  roomIds: null,
-  sourceKind: null,
-};
 
 type UseSearchTranscriptsOptions = {
   pageSize: number;
@@ -31,13 +24,9 @@ interface UseSearchTranscriptsReturn {
   reload: () => void;
 }
 
-function hashEffectFilters(filters: SearchFilters): string {
-  return JSON.stringify(filters);
-}
-
 export function useSearchTranscripts(
   query: string = "",
-  filters: SearchFilters = EMPTY_SEARCH_FILTERS,
+  filters: SearchFilters = { roomIds: null, sourceKind: null },
   options: UseSearchTranscriptsOptions = {
     pageSize: 20,
     page: PaginationPage(1),
@@ -45,79 +34,18 @@ export function useSearchTranscripts(
 ): UseSearchTranscriptsReturn {
   const { pageSize, page } = options;
 
-  const [reloadCount, setReloadCount] = useState(0);
-
-  const api = useApi();
-  const abortControllerRef = useRef<AbortController>();
-
-  const [data, setData] = useState<{ results: SearchResult[]; total: number }>({
-    results: [],
-    total: 0,
+  const { data, isLoading, error, refetch } = useTranscriptsSearch(query, {
+    limit: pageSize,
+    offset: paginationPageTo0Based(page) * pageSize,
+    room_id: filters.roomIds?.[0],
+    source_kind: filters.sourceKind || undefined,
   });
-  const [error, setError] = useState<any>();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const filterHash = hashEffectFilters(filters);
-
-  useEffect(() => {
-    if (!api) {
-      setData({ results: [], total: 0 });
-      setError(undefined);
-      setIsLoading(false);
-      return;
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    const performSearch = async () => {
-      setIsLoading(true);
-
-      try {
-        const response = await api.v1TranscriptsSearch({
-          q: query || "",
-          limit: pageSize,
-          offset: paginationPageTo0Based(page) * pageSize,
-          roomId: filters.roomIds?.[0],
-          sourceKind: filters.sourceKind || undefined,
-        });
-
-        if (abortController.signal.aborted) return;
-        setData(response);
-        setError(undefined);
-      } catch (err: unknown) {
-        if ((err as Error).name === "AbortError") {
-          return;
-        }
-        if (abortController.signal.aborted) {
-          console.error("Aborted search but error", err);
-          return;
-        }
-
-        setError(err);
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    performSearch().then(() => {});
-
-    return () => {
-      abortController.abort();
-    };
-  }, [api, query, page, filterHash, pageSize, reloadCount]);
 
   return {
-    results: data.results,
-    totalCount: data.total,
+    results: data?.results || [],
+    totalCount: data?.total || 0,
     isLoading,
     error,
-    reload: () => setReloadCount(reloadCount + 1),
+    reload: refetch,
   };
 }
