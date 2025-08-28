@@ -18,16 +18,7 @@ When data reaches the retention period, the following items are automatically re
 1. **Transcripts** from anonymous users (where `user_id` is NULL):
    - Database records
    - Local files (audio.wav, audio.mp3, audio.json waveform)
-   - Storage files (S3/cloud storage if configured)
-   - Associated WebVTT captions
-
-2. **Meetings** from anonymous users:
-   - Meeting records
-   - Meeting consent records
-
-3. **Recordings**:
-   - Orphaned recordings not referenced by any transcript
-   - Associated cloud storage objects
+   - Storage files (cloud storage if configured)
 
 ## Automatic Cleanup
 
@@ -71,9 +62,9 @@ Note: The manual tool uses the same implementation as the Celery worker task to 
 
 ## Important Notes
 
-1. **User Data Protection**: Only anonymous data (where `user_id` is NULL) is deleted. Authenticated user data is preserved regardless of age.
+1. **User Data Deletion**: Only anonymous data (where `user_id` is NULL) is deleted. Authenticated user data is preserved.
 
-2. **Storage Cleanup**: The system properly cleans up both local files and cloud storage (S3) when configured.
+2. **Storage Cleanup**: The system properly cleans up both local files and cloud storage when configured.
 
 3. **Error Handling**: If individual deletions fail, the cleanup continues and logs errors. Failed deletions are reported in the task output.
 

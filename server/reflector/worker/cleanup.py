@@ -12,6 +12,7 @@ from typing import TypedDict
 import structlog
 from celery import shared_task
 from databases import Database
+from pydantic.types import PositiveInt
 
 from reflector.asynctask import asynctask
 from reflector.db import get_database
@@ -109,7 +110,9 @@ def log_cleanup_results(stats: CleanupStats):
         )
 
 
-async def cleanup_old_public_data(days: int | None = None) -> CleanupStats | None:
+async def cleanup_old_public_data(
+    days: PositiveInt | None = None,
+) -> CleanupStats | None:
     if days is None:
         days = settings.PUBLIC_DATA_RETENTION_DAYS
 

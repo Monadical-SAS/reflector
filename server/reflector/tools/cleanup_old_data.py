@@ -28,7 +28,7 @@ async def cleanup_old_data(days: int = 7):
             "WARNING: PUBLIC_MODE is False. "
             "This tool is intended for public instances only."
         )
-        return
+        raise Exception("Tool intended for public instances only")
 
     result = await _cleanup_old_public_data(days=days)
 
