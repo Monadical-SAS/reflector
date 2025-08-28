@@ -65,7 +65,17 @@ def cleanup_docker_resources():
         )
         # Clean up any unused networks (includes orphaned pytest networks)
         # This is safe - only removes networks with no attached containers
-        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
 
     # Clean before tests
     cleanup()
@@ -83,7 +93,17 @@ def postgres_service(docker_ip, docker_services):
         port = docker_services.port_for("postgres_test", 5432)
     except Exception as e:
         # If Docker services fail to start, clean up and retry
-        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
         subprocess.run(
             ["docker", "compose", "-p", DOCKER_PROJECT_NAME, "down", "-v"],
             capture_output=True,
