@@ -4,16 +4,26 @@ import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { useQueryClient } from "@tanstack/react-query";
 import type { paths } from "../reflector-api";
+import useSessionStatus from "./useSessionStatus";
 
 // Rooms hooks
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
-  return $api.useQuery("get", "/v1/rooms", {
-    params: {
-      query: { page },
+  return $api.useQuery(
+    "get",
+    "/v1/rooms",
+    {
+      params: {
+        query: { page },
+      },
     },
-  });
+    {
+      // Only fetch when authenticated
+      enabled: isAuthenticated && !isLoading,
+    },
+  );
 }
 
 // Transcripts hooks
@@ -27,18 +37,27 @@ export function useTranscriptsSearch(
   } = {},
 ) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
-  return $api.useQuery("get", "/v1/transcripts/search", {
-    params: {
-      query: {
-        q,
-        limit: options.limit,
-        offset: options.offset,
-        room_id: options.room_id,
-        source_kind: options.source_kind as any,
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/search",
+    {
+      params: {
+        query: {
+          q,
+          limit: options.limit,
+          offset: options.offset,
+          room_id: options.room_id,
+          source_kind: options.source_kind as any,
+        },
       },
     },
-  });
+    {
+      // Only fetch when authenticated
+      enabled: isAuthenticated && !isLoading,
+    },
+  );
 }
 
 export function useTranscriptDelete() {
@@ -72,6 +91,7 @@ export function useTranscriptProcess() {
 
 export function useTranscriptGet(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -84,7 +104,8 @@ export function useTranscriptGet(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      // Only fetch when authenticated and transcriptId is provided
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }
@@ -141,25 +162,32 @@ export function useRoomDelete() {
 // Zulip hooks - NOTE: These endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
-
-  // @ts-ignore - Zulip endpoint not in OpenAPI spec
-  return $api.useQuery("get", "/v1/zulip/get-streams" as any, {});
-}
-
-export function useZulipTopics(streamId: number | null) {
-  const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
     "get",
-    "/v1/zulip/get-topics" as any,
+    "/v1/zulip/streams" as any,
+    {},
     {
-      params: {
-        query: { stream_id: streamId || 0 },
-      },
+      // Only fetch when authenticated
+      enabled: isAuthenticated && !isLoading,
     },
+  );
+}
+
+export function useZulipTopics(streamId: number | null) {
+  const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
+
+  // @ts-ignore - Zulip endpoint not in OpenAPI spec
+  return $api.useQuery(
+    "get",
+    streamId ? (`/v1/zulip/streams/${streamId}/topics` as any) : null,
+    {},
     {
-      enabled: !!streamId,
+      // Only fetch when authenticated and streamId is provided
+      enabled: !!streamId && isAuthenticated && !isLoading,
     },
   );
 }
@@ -233,6 +261,7 @@ export function useTranscriptUploadAudio() {
 // Transcript queries
 export function useTranscriptWaveform(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -243,13 +272,14 @@ export function useTranscriptWaveform(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }
 
 export function useTranscriptMP3(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -260,13 +290,14 @@ export function useTranscriptMP3(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -277,13 +308,14 @@ export function useTranscriptTopics(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }
 
 export function useTranscriptTopicsWithWords(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -294,7 +326,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }
@@ -304,6 +336,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   topicId: string | null,
 ) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -317,7 +350,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
       },
     },
     {
-      enabled: !!transcriptId && !!topicId,
+      enabled: !!transcriptId && !!topicId && isAuthenticated && !isLoading,
     },
   );
 }
@@ -325,6 +358,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
 // Participant operations
 export function useTranscriptParticipants(transcriptId: string | null) {
   const { setError } = useError();
+  const { isAuthenticated, isLoading } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -335,7 +369,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId,
+      enabled: !!transcriptId && isAuthenticated && !isLoading,
     },
   );
 }

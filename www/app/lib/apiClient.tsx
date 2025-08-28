@@ -10,10 +10,10 @@ import {
 } from "@tanstack/react-query";
 import createFetchClient from "openapi-react-query";
 
-// Create the base openapi-fetch client
+// Create the base openapi-fetch client with a default URL
+// The actual URL will be set via middleware in ApiAuthProvider
 export const client = createClient<paths>({
-  // Base URL will be set dynamically via middleware
-  baseUrl: "",
+  baseUrl: "http://127.0.0.1:1250",
   headers: {
     "Content-Type": "application/json",
   },
