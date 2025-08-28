@@ -334,6 +334,26 @@ def celery_includes():
     return ["reflector.pipelines.main_live_pipeline"]
 
 
+@pytest.fixture(scope="session")
+def celery_session_app():
+    """Provide the Celery app for pytest-celery plugin"""
+    from reflector.worker.app import app
+
+    return app
+
+
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    """Disable ping check on Mac environments only"""
+    import platform
+
+    # Only disable ping check on macOS to avoid interfering with Linux CI
+    if platform.system() == "Darwin":
+        return {"perform_ping_check": False}
+    else:
+        return {}
+
+
 @pytest.fixture
 async def client():
     from httpx import AsyncClient
