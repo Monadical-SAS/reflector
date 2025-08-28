@@ -755,16 +755,10 @@ class TranscriptController:
                 raise Exception(f"Transcript {transcript_id} not found")
             if transcript.status == status:
                 return
-            resp = await transcripts_controller.append_event(
+            resp = await self.append_event(
                 transcript=transcript,
                 event="STATUS",
                 data=StrValue(value=status),
-            )
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "status": status,
-                },
             )
             await self.update(transcript, {"status": status})
         return resp
