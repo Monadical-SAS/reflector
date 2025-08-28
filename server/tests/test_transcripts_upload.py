@@ -12,6 +12,7 @@ async def test_transcript_upload_file(
     tmpdir,
     dummy_llm,
     dummy_processors,
+    dummy_transcript,
     dummy_diarization,
     dummy_storage,
     client,
@@ -59,4 +60,4 @@ async def test_transcript_upload_file(
     response = await client.get(f"/transcripts/{tid}/topics")
     assert response.status_code == 200
     assert len(response.json()) == 1
-    assert "want to share" in response.json()[0]["transcript"]
+    assert "Hello world" in response.json()[0]["transcript"]
