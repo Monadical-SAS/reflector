@@ -263,6 +263,21 @@ def celery_includes():
     return ["reflector.pipelines.main_live_pipeline"]
 
 
+@pytest.fixture(scope="session")
+def celery_session_app():
+    """Provide the Celery app for pytest-celery plugin"""
+    from reflector.worker.app import app
+
+    return app
+
+
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    return {
+        "perform_ping_check": False,
+    }
+
+
 @pytest.fixture
 async def client():
     from httpx import AsyncClient
