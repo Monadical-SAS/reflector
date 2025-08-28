@@ -1,8 +1,11 @@
 import os
+import subprocess
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
+
+DOCKER_PROJECT_NAME = "reflector_test"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -31,6 +34,34 @@ def vcr_config():
 @pytest.fixture(scope="session")
 def docker_compose_file(pytestconfig):
     return os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
+
+
+@pytest.fixture(scope="session")
+def docker_compose_project_name():
+    return DOCKER_PROJECT_NAME
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_docker_resources():
+    def cleanup():
+        subprocess.run(
+            [
+                "docker",
+                "compose",
+                "-p",
+                DOCKER_PROJECT_NAME,
+                "down",
+                "-v",
+                "--remove-orphans",
+            ],
+            capture_output=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        )
+        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+
+    cleanup()
+    yield
+    cleanup()
 
 
 @pytest.fixture(scope="session")
@@ -261,6 +292,18 @@ def celery_config():
 @pytest.fixture(scope="session")
 def celery_includes():
     return ["reflector.pipelines.main_live_pipeline"]
+
+
+@pytest.fixture(scope="session")
+def celery_session_app():
+    from reflector.worker.app import app
+
+    return app
+
+
+@pytest.fixture(scope="session")
+def celery_worker_parameters():
+    return {"perform_ping_check": False}
 
 
 @pytest.fixture
