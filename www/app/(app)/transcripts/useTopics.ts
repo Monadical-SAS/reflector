@@ -4,7 +4,7 @@ import { useError } from "../../(errors)/errorContext";
 import { Topic } from "./webSocketTypes";
 import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";
-import { GetTranscriptTopic } from "../../api";
+import { GetTranscriptTopic } from "../../lib/api-types";
 
 type TranscriptTopics = {
   topics: GetTranscriptTopic[] | null;

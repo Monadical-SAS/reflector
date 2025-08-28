@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useError } from "../(errors)/errorContext";
-import { Meeting } from "../api";
+import { Meeting } from "../lib/api-types";
 import { shouldShowError } from "../lib/errorUtils";
 import useApi from "../lib/useApi";
 import { notFound } from "next/navigation";

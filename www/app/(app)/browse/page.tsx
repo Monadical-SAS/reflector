@@ -20,7 +20,12 @@ import {
 } from "nuqs";
 import { LuX } from "react-icons/lu";
 import useSessionUser from "../../lib/useSessionUser";
-import { Room, SourceKind, SearchResult, $SourceKind } from "../../api";
+import {
+  Room,
+  SourceKind,
+  SearchResult,
+  $SourceKind,
+} from "../../lib/api-types";
 import {
   useRoomsList,
   useTranscriptsSearch,
@@ -38,7 +43,7 @@ import Pagination, {
 import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
-import { RECORD_A_MEETING_URL } from "../../api/urls";
+import { RECORD_A_MEETING_URL } from "../../lib/constants";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 

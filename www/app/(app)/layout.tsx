@@ -5,7 +5,7 @@ import Image from "next/image";
 import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
-import { RECORD_A_MEETING_URL } from "../api/urls";
+import { RECORD_A_MEETING_URL } from "../lib/constants";
 
 export default async function AppLayout({
   children,

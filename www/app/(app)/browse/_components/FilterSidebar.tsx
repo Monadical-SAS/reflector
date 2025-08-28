@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Stack, Link, Heading } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { Room, SourceKind } from "../../../api";
+import { Room, SourceKind } from "../../../lib/api-types";
 
 interface FilterSidebarProps {
   rooms: Room[];

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Participant } from "../../api";
+import { Participant } from "../../lib/api-types";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
 import { shouldShowError } from "../../lib/errorUtils";

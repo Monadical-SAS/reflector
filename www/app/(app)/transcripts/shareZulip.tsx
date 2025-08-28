@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { featureEnabled } from "../../domainContext";
-import { GetTranscript, GetTranscriptTopic } from "../../api";
+import { GetTranscript, GetTranscriptTopic } from "../../lib/api-types";
 import {
   BoxProps,
   Button,

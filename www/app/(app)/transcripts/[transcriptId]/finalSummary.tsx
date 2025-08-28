@@ -6,7 +6,7 @@ import {
   GetTranscript,
   GetTranscriptTopic,
   UpdateTranscript,
-} from "../../../api";
+} from "../../../lib/api-types";
 import useApi from "../../../lib/useApi";
 import {
   Flex,

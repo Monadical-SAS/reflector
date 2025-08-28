@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UpdateTranscript } from "../../api";
+import { UpdateTranscript } from "../../lib/api-types";
 import useApi from "../../lib/useApi";
 import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
 import { LuPen } from "react-icons/lu";

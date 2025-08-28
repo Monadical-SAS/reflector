@@ -1,4 +1,4 @@
-import { GetTranscriptTopic } from "../../api";
+import { GetTranscriptTopic } from "../../lib/api-types";
 
 export type Topic = GetTranscriptTopic;
 

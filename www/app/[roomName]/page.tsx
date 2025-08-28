@@ -24,7 +24,7 @@ import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import useApi from "../lib/useApi";
-import { Meeting } from "../api";
+import { Meeting } from "../lib/api-types";
 import { FaBars } from "react-icons/fa6";
 
 export type RoomDetails = {

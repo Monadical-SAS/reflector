@@ -108,3 +108,88 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
   );
 }
+
+// Rooms mutations
+export function useRoomCreate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("post", "/v1/rooms", {
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error creating the room");
+    },
+  });
+}
+
+export function useRoomUpdate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("patch", "/v1/rooms/{room_id}", {
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error updating the room");
+    },
+  });
+}
+
+export function useRoomDelete() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("delete", "/v1/rooms/{room_id}", {
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error deleting the room");
+    },
+  });
+}
+
+// Zulip hooks
+export function useZulipStreams() {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/zulip/get-streams",
+    {},
+    {
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching Zulip streams");
+      },
+    },
+  );
+}
+
+export function useZulipTopics(streamId: number | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/zulip/get-topics",
+    {
+      params: {
+        query: { stream_id: streamId || 0 },
+      },
+    },
+    {
+      enabled: !!streamId,
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching Zulip topics");
+      },
+    },
+  );
+}

@@ -1,5 +1,5 @@
 import { useRoomsList } from "../../lib/api-hooks";
-import { Page_Room_ } from "../../api";
+import { Page_Room_ } from "../../lib/api-types";
 import { PaginationPage } from "../browse/_components/Pagination";
 
 type RoomList = {

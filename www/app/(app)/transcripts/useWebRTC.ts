@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Peer from "simple-peer";
 import { useError } from "../../(errors)/errorContext";
 import useApi from "../../lib/useApi";
-import { RtcOffer } from "../../api";
+import { RtcOffer } from "../../lib/api-types";
 
 const useWebRTC = (
   stream: MediaStream | null,

@@ -18,7 +18,7 @@ import {
   highlightMatches,
   generateTextFragment,
 } from "../../../lib/textHighlight";
-import { SearchResult } from "../../../api";
+import { SearchResult } from "../../../lib/api-types";
 
 interface TranscriptCardsProps {
   results: SearchResult[];

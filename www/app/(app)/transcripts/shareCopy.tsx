@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GetTranscript, GetTranscriptTopic } from "../../api";
+import { GetTranscript, GetTranscriptTopic } from "../../lib/api-types";
 import { Button, BoxProps, Box } from "@chakra-ui/react";
 
 type ShareCopyProps = {

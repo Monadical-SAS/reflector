@@ -17,7 +17,7 @@ import {
 import { useEffect, useState } from "react";
 import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError, Room } from "../../api";
+import { ApiError, Room } from "../../lib/api-types";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
 

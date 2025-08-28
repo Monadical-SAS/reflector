@@ -1,4 +1,4 @@
-import { GetTranscript } from "../../api";
+import { GetTranscript } from "../../lib/api-types";
 import { useTranscriptGet } from "../../lib/api-hooks";
 
 type ErrorTranscript = {

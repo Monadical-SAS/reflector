@@ -1,5 +1,5 @@
 // Wrapper for backward compatibility
-import { SearchResult, SourceKind } from "../../api";
+import { SearchResult, SourceKind } from "../../lib/api-types";
 import { useTranscriptsSearch } from "../../lib/api-hooks";
 import {
   PaginationPage,

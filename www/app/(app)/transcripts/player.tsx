@@ -5,7 +5,7 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 
 import { formatTime, formatTimeMs } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
-import { AudioWaveform } from "../../api";
+import { AudioWaveform } from "../../lib/api-types";
 import { waveSurferStyles } from "../../styles/recorder";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { LuPause, LuPlay } from "react-icons/lu";

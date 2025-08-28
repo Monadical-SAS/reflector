@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
-import { GetTranscript, GetTranscriptTopic, UpdateTranscript } from "../../api";
+import {
+  GetTranscript,
+  GetTranscriptTopic,
+  UpdateTranscript,
+} from "../../lib/api-types";
 import {
   Box,
   Flex,
