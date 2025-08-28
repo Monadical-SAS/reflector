@@ -16,37 +16,46 @@ class AudioMergeProcessor(Processor):
     INPUT_TYPE = list[av.AudioFrame]
     OUTPUT_TYPE = AudioFile
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     async def _push(self, data: list[av.AudioFrame]):
         if not data:
             return
 
         # get audio information from first frame
         frame = data[0]
-        channels = len(frame.layout.channels)
-        sample_rate = frame.sample_rate
-        sample_width = frame.format.bytes
+        output_channels = len(frame.layout.channels)
+        output_sample_rate = frame.sample_rate
+        output_sample_width = frame.format.bytes
 
         # create audio file
         uu = uuid4().hex
         fd = io.BytesIO()
 
+        # Use PyAV to write frames
         out_container = av.open(fd, "w", format="wav")
-        out_stream = out_container.add_stream("pcm_s16le", rate=sample_rate)
+        out_stream = out_container.add_stream("pcm_s16le", rate=output_sample_rate)
+        out_stream.layout = frame.layout.name
+
         for frame in data:
             for packet in out_stream.encode(frame):
                 out_container.mux(packet)
+
+        # Flush the encoder
         for packet in out_stream.encode(None):
             out_container.mux(packet)
         out_container.close()
+
         fd.seek(0)
 
         # emit audio file
         audiofile = AudioFile(
             name=f"{monotonic_ns()}-{uu}.wav",
             fd=fd,
-            sample_rate=sample_rate,
-            channels=channels,
-            sample_width=sample_width,
+            sample_rate=output_sample_rate,
+            channels=output_channels,
+            sample_width=output_sample_width,
             timestamp=data[0].pts * data[0].time_base,
         )
 

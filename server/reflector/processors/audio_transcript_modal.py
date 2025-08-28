@@ -21,7 +21,11 @@ from reflector.settings import settings
 
 
 class AudioTranscriptModalProcessor(AudioTranscriptProcessor):
-    def __init__(self, modal_api_key: str | None = None, **kwargs):
+    def __init__(
+        self,
+        modal_api_key: str | None = None,
+        **kwargs,
+    ):
         super().__init__()
         if not settings.TRANSCRIPT_URL:
             raise Exception(

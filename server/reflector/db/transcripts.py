@@ -1,6 +1,5 @@
 import enum
 import json
-import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
@@ -16,15 +15,15 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
+from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms
 from reflector.db.utils import is_postgresql
+from reflector.logger import logger
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.storage import get_transcripts_storage
+from reflector.storage import get_recordings_storage, get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
-
-logger = logging.getLogger(__name__)
 
 
 class SourceKind(enum.StrEnum):
@@ -89,6 +88,8 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
     sqlalchemy.Index("idx_transcript_user_id_recording_id", "user_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_room_id", "room_id"),
+    sqlalchemy.Index("idx_transcript_source_kind", "source_kind"),
+    sqlalchemy.Index("idx_transcript_room_id_created_at", "room_id", "created_at"),
 )
 
 # Add PostgreSQL-specific full-text search column
@@ -100,7 +101,8 @@ if is_postgresql():
             TSVECTOR,
             sqlalchemy.Computed(
                 "setweight(to_tsvector('english', coalesce(title, '')), 'A') || "
-                "setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')",
+                "setweight(to_tsvector('english', coalesce(long_summary, '')), 'B') || "
+                "setweight(to_tsvector('english', coalesce(webvtt, '')), 'C')",
                 persisted=True,
             ),
         )
@@ -593,7 +595,39 @@ class TranscriptController:
             return
         if user_id is not None and transcript.user_id != user_id:
             return
+        if transcript.audio_location == "storage" and not transcript.audio_deleted:
+            try:
+                await get_transcripts_storage().delete_file(
+                    transcript.storage_audio_path
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete transcript audio from storage",
+                    exc_info=e,
+                    transcript_id=transcript.id,
+                )
         transcript.unlink()
+        if transcript.recording_id:
+            try:
+                recording = await recordings_controller.get_by_id(
+                    transcript.recording_id
+                )
+                if recording:
+                    try:
+                        await get_recordings_storage().delete_file(recording.object_key)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to delete recording object from S3",
+                            exc_info=e,
+                            recording_id=transcript.recording_id,
+                        )
+                    await recordings_controller.remove_by_id(transcript.recording_id)
+            except Exception as e:
+                logger.warning(
+                    "Failed to delete recording row",
+                    exc_info=e,
+                    recording_id=transcript.recording_id,
+                )
         query = transcripts.delete().where(transcripts.c.id == transcript_id)
         await get_database().execute(query)
 

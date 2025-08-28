@@ -209,6 +209,8 @@ export type SearchResult = {
   title?: string | null;
   user_id?: string | null;
   room_id?: string | null;
+  room_name?: string | null;
+  source_kind: SourceKind;
   created_at: string;
   status: string;
   rank: number;
@@ -220,6 +222,10 @@ export type SearchResult = {
    * Text snippets around search matches
    */
   search_snippets: Array<string>;
+  /**
+   * Total number of matches found in the transcript
+   */
+  total_match_count?: number;
 };
 
 export type SourceKind = "room" | "live" | "file";
@@ -407,6 +413,7 @@ export type V1TranscriptsSearchData = {
    */
   q: string;
   roomId?: string | null;
+  sourceKind?: SourceKind | null;
 };
 
 export type V1TranscriptsSearchResponse = SearchResponse;

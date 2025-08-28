@@ -14,7 +14,8 @@ from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
-from reflector.pipelines.main_live_pipeline import asynctask, task_pipeline_process
+from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
+from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
 
@@ -140,7 +141,7 @@ async def process_recording(bucket_name: str, object_key: str):
 
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
-    task_pipeline_process.delay(transcript_id=transcript.id)
+    task_pipeline_file_process.delay(transcript_id=transcript.id)
 
 
 @shared_task
@@ -185,7 +186,7 @@ async def reprocess_failed_recordings():
     reprocessed_count = 0
     try:
         paginator = s3.get_paginator("list_objects_v2")
-        bucket_name = settings.AWS_WHEREBY_S3_BUCKET
+        bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
         pages = paginator.paginate(Bucket=bucket_name)
 
         for page in pages:

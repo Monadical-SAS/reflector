@@ -5,17 +5,16 @@ Revises: 116b2f287eab
 Create Date: 2025-08-11 19:11:01.316947
 
 """
+
 import json
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import text
 
-
 # revision identifiers, used by Alembic.
-revision: str = '8120ebc75366'
-down_revision: Union[str, None] = '116b2f287eab'
+revision: str = "8120ebc75366"
+down_revision: Union[str, None] = "116b2f287eab"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -88,7 +87,7 @@ def upgrade() -> None:
                 # Update the webvtt field
                 connection.execute(
                     text("UPDATE transcript SET webvtt = :webvtt WHERE id = :id"),
-                    {"webvtt": webvtt_content, "id": transcript_id}
+                    {"webvtt": webvtt_content, "id": transcript_id},
                 )
                 updated_count += 1
                 print(f"✓ Updated transcript {transcript_id}")
@@ -104,6 +103,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Clear WebVTT field for all transcripts."""
-    op.execute(
-        text("UPDATE transcript SET webvtt = NULL")
-    )
+    op.execute(text("UPDATE transcript SET webvtt = NULL"))

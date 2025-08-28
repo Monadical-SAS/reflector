@@ -1,6 +1,7 @@
 from reflector.processors.base import Processor
 from reflector.processors.types import (
     AudioDiarizationInput,
+    DiarizationSegment,
     TitleSummary,
     Word,
 )
@@ -37,18 +38,21 @@ class AudioDiarizationProcessor(Processor):
     async def _diarize(self, data: AudioDiarizationInput):
         raise NotImplementedError
 
-    def assign_speaker(self, words: list[Word], diarization: list[dict]):
-        self._diarization_remove_overlap(diarization)
-        self._diarization_remove_segment_without_words(words, diarization)
-        self._diarization_merge_same_speaker(words, diarization)
-        self._diarization_assign_speaker(words, diarization)
+    @classmethod
+    def assign_speaker(cls, words: list[Word], diarization: list[DiarizationSegment]):
+        cls._diarization_remove_overlap(diarization)
+        cls._diarization_remove_segment_without_words(words, diarization)
+        cls._diarization_merge_same_speaker(diarization)
+        cls._diarization_assign_speaker(words, diarization)
 
-    def iter_words_from_topics(self, topics: TitleSummary):
+    @staticmethod
+    def iter_words_from_topics(topics: list[TitleSummary]):
         for topic in topics:
             for word in topic.transcript.words:
                 yield word
 
-    def is_word_continuation(self, word_prev, word):
+    @staticmethod
+    def is_word_continuation(word_prev, word):
         """
         Return True if the word is a continuation of the previous word
         by checking if the previous word is ending with a punctuation
@@ -61,7 +65,8 @@ class AudioDiarizationProcessor(Processor):
             return False
         return True
 
-    def _diarization_remove_overlap(self, diarization: list[dict]):
+    @staticmethod
+    def _diarization_remove_overlap(diarization: list[DiarizationSegment]):
         """
         Remove overlap in diarization results
 
@@ -86,8 +91,9 @@ class AudioDiarizationProcessor(Processor):
             else:
                 diarization_idx += 1
 
+    @staticmethod
     def _diarization_remove_segment_without_words(
-        self, words: list[Word], diarization: list[dict]
+        words: list[Word], diarization: list[DiarizationSegment]
     ):
         """
         Remove diarization segments without words
@@ -116,9 +122,8 @@ class AudioDiarizationProcessor(Processor):
             else:
                 diarization_idx += 1
 
-    def _diarization_merge_same_speaker(
-        self, words: list[Word], diarization: list[dict]
-    ):
+    @staticmethod
+    def _diarization_merge_same_speaker(diarization: list[DiarizationSegment]):
         """
         Merge diarization contigous segments with the same speaker
 
@@ -135,7 +140,10 @@ class AudioDiarizationProcessor(Processor):
             else:
                 diarization_idx += 1
 
-    def _diarization_assign_speaker(self, words: list[Word], diarization: list[dict]):
+    @classmethod
+    def _diarization_assign_speaker(
+        cls, words: list[Word], diarization: list[DiarizationSegment]
+    ):
         """
         Assign speaker to words based on diarization
 
@@ -143,7 +151,7 @@ class AudioDiarizationProcessor(Processor):
         """
 
         word_idx = 0
-        last_speaker = None
+        last_speaker = 0
         for d in diarization:
             start = d["start"]
             end = d["end"]
@@ -158,7 +166,7 @@ class AudioDiarizationProcessor(Processor):
                     # If it's a continuation, assign with the last speaker
                     is_continuation = False
                     if word_idx > 0 and word_idx < len(words) - 1:
-                        is_continuation = self.is_word_continuation(
+                        is_continuation = cls.is_word_continuation(
                             *words[word_idx - 1 : word_idx + 1]
                         )
                     if is_continuation:

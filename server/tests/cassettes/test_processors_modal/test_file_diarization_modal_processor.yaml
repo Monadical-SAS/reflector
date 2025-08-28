@@ -1,0 +1,40 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - DUMMY_API_KEY
+      connection:
+      - keep-alive
+      content-length:
+      - '0'
+      host:
+      - monadical-sas--reflector-diarizer-web.modal.run
+      user-agent:
+      - python-httpx/0.27.2
+    method: POST
+    uri: https://monadical-sas--reflector-diarizer-web.modal.run/diarize?audio_file_url=https%3A%2F%2Freflector-github-pytest.s3.us-east-1.amazonaws.com%2Ftest_mathieu_hello.mp3&timestamp=0
+  response:
+    body:
+      string: '{"diarization":[{"start":0.823,"end":1.91,"speaker":0},{"start":2.572,"end":6.409,"speaker":0},{"start":6.783,"end":10.62,"speaker":0},{"start":11.231,"end":14.168,"speaker":0},{"start":14.796,"end":19.295,"speaker":0}]}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000
+      Content-Length:
+      - '220'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 13 Aug 2025 18:25:34 GMT
+      Modal-Function-Call-Id:
+      - fc-01K2JAVNEP6N7Y1Y7W3T98BCXK
+      Vary:
+      - accept-encoding
+    status:
+      code: 200
+      message: OK
+version: 1

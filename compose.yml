@@ -39,7 +39,7 @@ services:
     image: node:18
     ports:
       - "3000:3000"
-    command: sh -c "yarn install && yarn dev"
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
     restart: unless-stopped
     working_dir: /app
     volumes:

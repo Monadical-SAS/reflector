@@ -19,29 +19,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           working-directory: server
-
       - name: Tests
         run: |
           cd server
           uv run -m pytest -v tests
 
-  docker:
-    runs-on: ubuntu-latest
+  docker-amd64:
+    runs-on: linux-amd64
     steps:
       - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v4
+        uses: docker/setup-buildx-action@v3
+      - name: Build AMD64
+        uses: docker/build-push-action@v6
         with:
           context: server
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+          github-token: ${{ secrets.GHA_CACHE_TOKEN }}
+
+  docker-arm64:
+    runs-on: linux-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build ARM64
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          platforms: linux/arm64
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+          github-token: ${{ secrets.GHA_CACHE_TOKEN }}

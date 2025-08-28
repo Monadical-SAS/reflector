@@ -6,7 +6,7 @@ repos:
       - id: format
         name: run format
         language: system
-        entry: bash -c 'cd www && npx prettier --write .'
+        entry: bash -c 'cd www && pnpm format'
         pass_filenames: false
         files: ^www/
 
@@ -27,3 +27,8 @@ repos:
         files: ^server/
       - id: ruff-format
         files: ^server/
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks

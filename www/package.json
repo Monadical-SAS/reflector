@@ -11,7 +11,7 @@
     "openapi": "openapi-ts"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.22.0",
+    "@chakra-ui/react": "^3.24.2",
     "@emotion/react": "^11.14.0",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
@@ -22,9 +22,8 @@
     "@whereby.com/browser-sdk": "^3.3.4",
     "autoprefixer": "10.4.20",
     "axios": "^1.8.2",
-    "chakra-react-select": "^4.9.1",
-    "eslint": "^9.9.1",
-    "eslint-config-next": "^14.2.7",
+    "eslint": "^9.33.0",
+    "eslint-config-next": "^14.2.31",
     "fontawesome": "^5.6.3",
     "ioredis": "^5.4.1",
     "jest-worker": "^29.6.2",
@@ -32,6 +31,7 @@
     "next": "^14.2.30",
     "next-auth": "^4.24.7",
     "next-themes": "^0.4.6",
+    "nuqs": "^2.4.3",
     "postcss": "8.4.31",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
@@ -44,8 +44,6 @@
     "redlock": "^5.0.0-beta.2",
     "sass": "^1.63.6",
     "simple-peer": "^9.11.1",
-    "superagent": "^8.0.9",
-    "supports-color": "^9.4.0",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6",
     "wavesurfer.js": "^7.4.2"
@@ -59,5 +57,6 @@
     "@types/react": "18.2.20",
     "prettier": "^3.0.0",
     "vercel": "^37.3.0"
-  }
+  },
+  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
 }

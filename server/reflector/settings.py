@@ -21,11 +21,16 @@ class Settings(BaseSettings):
     # local data directory
     DATA_DIR: str = "./data"
 
+    # Audio Chunking
+    # backends: silero, frames
+    AUDIO_CHUNKER_BACKEND: str = "frames"
+
     # Audio Transcription
     # backends: whisper, modal
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
+    TRANSCRIPT_FILE_TIMEOUT: int = 600
 
     # Audio Transcription: modal backend
     TRANSCRIPT_MODAL_API_KEY: str | None = None
@@ -38,6 +43,15 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+
+    # Recording storage
+    RECORDING_STORAGE_BACKEND: str | None = None
+
+    # Recording storage configuration for AWS
+    RECORDING_STORAGE_AWS_BUCKET_NAME: str = "recording-bucket"
+    RECORDING_STORAGE_AWS_REGION: str = "us-east-1"
+    RECORDING_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
+    RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
     # Translate into the target language
     TRANSLATION_BACKEND: str = "passthrough"
@@ -57,9 +71,13 @@ class Settings(BaseSettings):
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
+    DIARIZATION_FILE_TIMEOUT: int = 600
 
     # Diarization: modal backend
     DIARIZATION_MODAL_API_KEY: str | None = None
+
+    # Diarization: local pyannote.audio
+    DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
     # Sentry
     SENTRY_DSN: str | None = None
@@ -104,7 +122,6 @@ class Settings(BaseSettings):
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: str | None = None
     WHEREBY_WEBHOOK_SECRET: str | None = None
-    AWS_WHEREBY_S3_BUCKET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
