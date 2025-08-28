@@ -69,8 +69,7 @@ async def prepare_entry(
         f"Created empty transcript {transcript.id} for file {file_path.name} because technically we need an empty transcript before we start transcript"
     )
 
-    # Copy the source file to transcript's data_path as upload.{extension}
-    # This is a hardcoded undocumented convention - pipelines expect files as upload.*
+    # pipelines expect files as upload.*
 
     extension = file_path.suffix
     upload_path = transcript.data_path / f"upload{extension}"
@@ -78,20 +77,20 @@ async def prepare_entry(
     shutil.copy2(source_path, upload_path)
     logger.info(f"Copied {source_path} to {upload_path}")
 
-    # undocumented convention - we have to set status to "uploaded" for some reason
+    # pipelines expect entity status "uploaded"
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     return transcript.id
 
 
-# same, a part of common ceremony with communication through "transcript" table. to be removed
+# same reason as prepare_entry
 async def extract_result_from_entry(
     transcript_id: TranscriptId, output_path: str
 ) -> None:
     post_final_transcript = await transcripts_controller.get_by_id(transcript_id)
 
     # assert post_final_transcript.status == "ended"
-    # File pipeline doesn't set status to "ended", only live pipeline does
+    # File pipeline doesn't set status to "ended", only live pipeline does https://github.com/Monadical-SAS/reflector/issues/582
     topics = post_final_transcript.topics
     if not topics:
         raise RuntimeError(
