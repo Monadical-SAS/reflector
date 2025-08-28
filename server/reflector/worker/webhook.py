@@ -32,7 +32,7 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
 
 @shared_task(
     bind=True,
-    max_retries=100,
+    max_retries=30,
     default_retry_delay=60,
     retry_backoff=True,
     retry_backoff_max=3600,  # Max 1 hour between retries

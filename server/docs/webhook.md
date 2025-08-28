@@ -156,7 +156,7 @@ Reflector implements an exponential backoff strategy for webhook retries:
 - **Initial retry delay**: 60 seconds after the first failure
 - **Exponential backoff**: Each subsequent retry waits approximately twice as long as the previous one
 - **Maximum retry interval**: 1 hour (backoff is capped at this duration)
-- **Maximum retry attempts**: 100 attempts total
+- **Maximum retry attempts**: 30 attempts total
 - **Total retry duration**: Retries continue for approximately 24 hours
 
 ### How Retries Work
@@ -165,7 +165,7 @@ When a webhook fails, Reflector will:
 1. Wait 60 seconds, then retry (attempt #1)
 2. If it fails again, wait ~2 minutes, then retry (attempt #2)
 3. Continue doubling the wait time up to a maximum of 1 hour between attempts
-4. Keep retrying at 1-hour intervals until successful or 100 attempts are exhausted
+4. Keep retrying at 1-hour intervals until successful or 30 attempts are exhausted
 
 The `X-Webhook-Retry` header indicates the current retry attempt number (0 for the initial attempt, 1 for first retry, etc.), allowing your endpoint to track retry attempts.
 
