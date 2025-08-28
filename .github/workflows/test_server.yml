@@ -14,7 +14,7 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     concurrency:
-      group: ubuntu-latest-${{ github.ref }}
+      group: pytest-${{ github.ref }}
       cancel-in-progress: true
     services:
       redis:
