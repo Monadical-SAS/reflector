@@ -344,14 +344,10 @@ def celery_session_app():
 
 @pytest.fixture(scope="session")
 def celery_worker_parameters():
-    """Disable ping check on Mac environments only"""
-    import platform
-
-    # Only disable ping check on macOS to avoid interfering with Linux CI
-    if platform.system() == "Darwin":
-        return {"perform_ping_check": False}
-    else:
-        return {}
+    """Disable ping check for pytest-celery compatibility"""
+    # The celery.ping task is not available in newer Celery versions (5.x)
+    # This affects both Mac and CI environments with pytest-celery
+    return {"perform_ping_check": False}
 
 
 @pytest.fixture
