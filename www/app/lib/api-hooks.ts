@@ -193,3 +193,322 @@ export function useZulipTopics(streamId: number | null) {
     },
   );
 }
+
+// Transcript mutations
+export function useTranscriptUpdate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("patch", "/v1/transcripts/{transcript_id}", {
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch transcript data
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
+          params: {
+            path: { transcript_id: variables.params.path.transcript_id },
+          },
+        }).queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error updating the transcript");
+    },
+  });
+}
+
+export function useTranscriptPostToZulip() {
+  const { setError } = useError();
+
+  return $api.useMutation("post", "/v1/transcripts/{transcript_id}/zulip", {
+    onError: (error) => {
+      setError(error as Error, "There was an error posting to Zulip");
+    },
+  });
+}
+
+export function useTranscriptUploadAudio() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "post",
+    "/v1/transcripts/{transcript_id}/record/upload",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate transcript to refresh status
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error uploading the audio file");
+      },
+    },
+  );
+}
+
+// Transcript queries
+export function useTranscriptWaveform(transcriptId: string | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/audio/waveform",
+    {
+      params: {
+        path: { transcript_id: transcriptId || "" },
+      },
+    },
+    {
+      enabled: !!transcriptId,
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching the waveform");
+      },
+    },
+  );
+}
+
+export function useTranscriptMP3(transcriptId: string | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/audio/mp3",
+    {
+      params: {
+        path: { transcript_id: transcriptId || "" },
+      },
+    },
+    {
+      enabled: !!transcriptId,
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching the MP3");
+      },
+    },
+  );
+}
+
+export function useTranscriptTopics(transcriptId: string | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/topics",
+    {
+      params: {
+        path: { transcript_id: transcriptId || "" },
+      },
+    },
+    {
+      enabled: !!transcriptId,
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching topics");
+      },
+    },
+  );
+}
+
+export function useTranscriptTopicsWithWords(transcriptId: string | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/topics/with-words",
+    {
+      params: {
+        path: { transcript_id: transcriptId || "" },
+      },
+    },
+    {
+      enabled: !!transcriptId,
+      onError: (error) => {
+        setError(
+          error as Error,
+          "There was an error fetching topics with words",
+        );
+      },
+    },
+  );
+}
+
+// Participant operations
+export function useTranscriptParticipants(transcriptId: string | null) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/participants",
+    {
+      params: {
+        path: { transcript_id: transcriptId || "" },
+      },
+    },
+    {
+      enabled: !!transcriptId,
+      onError: (error) => {
+        setError(error as Error, "There was an error fetching participants");
+      },
+    },
+  );
+}
+
+export function useTranscriptParticipantUpdate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "patch",
+    "/v1/transcripts/{transcript_id}/participants/{participant_id}",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate participants list
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}/participants",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error updating the participant");
+      },
+    },
+  );
+}
+
+export function useTranscriptSpeakerAssign() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "post",
+    "/v1/transcripts/{transcript_id}/speaker/assign",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate transcript and participants
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}/participants",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error assigning the speaker");
+      },
+    },
+  );
+}
+
+export function useTranscriptSpeakerMerge() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "post",
+    "/v1/transcripts/{transcript_id}/speaker/merge",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate transcript and participants
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}/participants",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error merging speakers");
+      },
+    },
+  );
+}
+
+// Meeting operations
+export function useMeetingAudioConsent() {
+  const { setError } = useError();
+
+  return $api.useMutation("post", "/v1/meetings/{meeting_id}/consent", {
+    onError: (error) => {
+      setError(error as Error, "There was an error recording consent");
+    },
+  });
+}
+
+// WebRTC operations
+export function useTranscriptWebRTC() {
+  const { setError } = useError();
+
+  return $api.useMutation(
+    "post",
+    "/v1/transcripts/{transcript_id}/record/webrtc",
+    {
+      onError: (error) => {
+        setError(error as Error, "There was an error with WebRTC connection");
+      },
+    },
+  );
+}
+
+// Transcript creation
+export function useTranscriptCreate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("post", "/v1/transcripts", {
+    onSuccess: () => {
+      // Invalidate transcripts list
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/transcripts/search").queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error creating the transcript");
+    },
+  });
+}

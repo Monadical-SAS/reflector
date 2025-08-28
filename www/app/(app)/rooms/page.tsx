@@ -15,9 +15,15 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
 import { ApiError, Room } from "../../lib/api-types";
+import {
+  useRoomCreate,
+  useRoomUpdate,
+  useRoomDelete,
+  useZulipStreams,
+  useZulipTopics,
+} from "../../lib/api-hooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
 
@@ -75,64 +81,42 @@ export default function RoomsList() {
   const [room, setRoom] = useState(roomInitialState);
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState("");
-  const api = useApi();
   // TODO seems to be no setPage calls
   const [page, setPage] = useState<number>(1);
   const { loading, response, refetch } = useRoomList(PaginationPage(page));
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
-  interface Stream {
-    stream_id: number;
-    name: string;
-  }
+  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
 
+  // React Query hooks
+  const createRoomMutation = useRoomCreate();
+  const updateRoomMutation = useRoomUpdate();
+  const deleteRoomMutation = useRoomDelete();
+  const { data: streams = [] } = useZulipStreams();
+  const { data: topics = [] } = useZulipTopics(selectedStreamId);
   interface Topic {
     name: string;
   }
 
+  // Update selected stream ID when zulip stream changes
   useEffect(() => {
-    const fetchZulipStreams = async () => {
-      if (!api) return;
-
-      try {
-        const response = await api.v1ZulipGetStreams();
-        setStreams(response);
-      } catch (error) {
-        console.error("Error fetching Zulip streams:", error);
+    if (room.zulipStream && streams.length > 0) {
+      const selectedStream = streams.find(
+        (s: any) => s.name === room.zulipStream,
+      );
+      if (selectedStream) {
+        setSelectedStreamId((selectedStream as any).stream_id);
       }
-    };
-
-    if (room.zulipAutoPost) {
-      fetchZulipStreams();
+    } else {
+      setSelectedStreamId(null);
     }
-  }, [room.zulipAutoPost, !api]);
+  }, [room.zulipStream, streams]);
 
-  useEffect(() => {
-    const fetchZulipTopics = async () => {
-      if (!api || !room.zulipStream) return;
-      try {
-        const selectedStream = streams.find((s) => s.name === room.zulipStream);
-        if (selectedStream) {
-          const response = await api.v1ZulipGetTopics({
-            streamId: selectedStream.stream_id,
-          });
-          setTopics(response);
-        }
-      } catch (error) {
-        console.error("Error fetching Zulip topics:", error);
-      }
-    };
-
-    fetchZulipTopics();
-  }, [room.zulipStream, streams, api]);
-
-  const streamOptions: SelectOption[] = streams.map((stream) => {
+  const streamOptions: SelectOption[] = streams.map((stream: any) => {
     return { label: stream.name, value: stream.name };
   });
 
-  const topicOptions: SelectOption[] = topics.map((topic) => ({
+  const topicOptions: SelectOption[] = topics.map((topic: any) => ({
     label: topic.name,
     value: topic.name,
   }));
@@ -175,13 +159,15 @@ export default function RoomsList() {
       };
 
       if (isEditing) {
-        await api?.v1RoomsUpdate({
-          roomId: editRoomId,
-          requestBody: roomData,
+        await updateRoomMutation.mutateAsync({
+          params: {
+            path: { room_id: editRoomId },
+          },
+          body: roomData,
         });
       } else {
-        await api?.v1RoomsCreate({
-          requestBody: roomData,
+        await createRoomMutation.mutateAsync({
+          body: roomData,
         });
       }
 
@@ -226,8 +212,10 @@ export default function RoomsList() {
 
   const handleDeleteRoom = async (roomId: string) => {
     try {
-      await api?.v1RoomsDelete({
-        roomId,
+      await deleteRoomMutation.mutateAsync({
+        params: {
+          path: { room_id: roomId },
+        },
       });
       refetch();
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { UpdateTranscript } from "../../lib/api-types";
-import useApi from "../../lib/useApi";
+import { useTranscriptUpdate } from "../../lib/api-hooks";
 import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
 import { LuPen } from "react-icons/lu";
 
@@ -14,24 +14,27 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
-  const api = useApi();
+  const updateTranscriptMutation = useTranscriptUpdate();
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
-    if (!api) return;
     try {
       const requestBody: UpdateTranscript = {
         title: newTitle,
       };
-      const updatedTranscript = await api?.v1TranscriptUpdate({
-        transcriptId,
-        requestBody,
+      await updateTranscriptMutation.mutateAsync({
+        params: {
+          path: { transcript_id: transcriptId },
+        },
+        body: requestBody,
       });
       if (props.onUpdate) {
         props.onUpdate(newTitle);
       }
-      console.log("Updated transcript:", updatedTranscript);
+      console.log("Updated transcript title:", newTitle);
     } catch (err) {
       console.error("Failed to update transcript:", err);
+      // Revert title on error
+      setDisplayedTitle(preEditTitle);
     }
   };
 
