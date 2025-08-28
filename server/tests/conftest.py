@@ -63,8 +63,8 @@ def cleanup_docker_resources():
             capture_output=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         )
-        # Clean up any unused networks (includes orphaned pytest networks)
-        # This is safe - only removes networks with no attached containers
+        # Clean up ONLY our project's networks and orphaned pytest networks
+        # First clean our specific project networks
         subprocess.run(
             [
                 "docker",
@@ -73,6 +73,18 @@ def cleanup_docker_resources():
                 "-f",
                 "--filter",
                 f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
+        # Then clean any orphaned pytest networks (from interrupted runs with random names)
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                "name=pytest*_default",
             ],
             capture_output=True,
         )
@@ -101,6 +113,17 @@ def postgres_service(docker_ip, docker_services):
                 "-f",
                 "--filter",
                 f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                "name=pytest*_default",
             ],
             capture_output=True,
         )
