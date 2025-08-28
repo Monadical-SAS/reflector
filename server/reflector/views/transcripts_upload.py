@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 import reflector.auth as auth
 from reflector.db.transcripts import transcripts_controller
-from reflector.pipelines.main_live_pipeline import task_pipeline_process
+from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 
 router = APIRouter()
 
@@ -92,6 +92,6 @@ async def transcript_record_upload(
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     # launch a background task to process the file
-    task_pipeline_process.delay(transcript_id=transcript_id)
+    task_pipeline_file_process.delay(transcript_id=transcript_id)
 
     return UploadStatus(status="ok")
