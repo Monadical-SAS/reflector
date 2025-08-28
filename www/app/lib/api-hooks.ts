@@ -9,7 +9,7 @@ import useSessionStatus from "./useSessionStatus";
 // Rooms hooks
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -21,7 +21,8 @@ export function useRoomsList(page: number = 1) {
     },
     {
       // Only fetch when authenticated
-      enabled: isAuthenticated && !isLoading,
+      // Using direct status check to avoid any derived state issues
+      enabled: status === "authenticated",
     },
   );
 }
@@ -37,7 +38,7 @@ export function useTranscriptsSearch(
   } = {},
 ) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -55,7 +56,7 @@ export function useTranscriptsSearch(
     },
     {
       // Only fetch when authenticated
-      enabled: isAuthenticated && !isLoading,
+      enabled: status === "authenticated",
     },
   );
 }
@@ -91,7 +92,7 @@ export function useTranscriptProcess() {
 
 export function useTranscriptGet(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -105,7 +106,7 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
     {
       // Only fetch when authenticated and transcriptId is provided
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
@@ -162,7 +163,7 @@ export function useRoomDelete() {
 // Zulip hooks - NOTE: These endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
@@ -171,14 +172,14 @@ export function useZulipStreams() {
     {},
     {
       // Only fetch when authenticated
-      enabled: isAuthenticated && !isLoading,
+      enabled: status === "authenticated",
     },
   );
 }
 
 export function useZulipTopics(streamId: number | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
@@ -187,7 +188,7 @@ export function useZulipTopics(streamId: number | null) {
     {},
     {
       // Only fetch when authenticated and streamId is provided
-      enabled: !!streamId && isAuthenticated && !isLoading,
+      enabled: !!streamId && status === "authenticated",
     },
   );
 }
@@ -261,7 +262,7 @@ export function useTranscriptUploadAudio() {
 // Transcript queries
 export function useTranscriptWaveform(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -272,14 +273,14 @@ export function useTranscriptWaveform(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
 
 export function useTranscriptMP3(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -290,14 +291,14 @@ export function useTranscriptMP3(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -308,14 +309,14 @@ export function useTranscriptTopics(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
 
 export function useTranscriptTopicsWithWords(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -326,7 +327,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
@@ -336,7 +337,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   topicId: string | null,
 ) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -350,7 +351,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
       },
     },
     {
-      enabled: !!transcriptId && !!topicId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && !!topicId && status === "authenticated",
     },
   );
 }
@@ -358,7 +359,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
 // Participant operations
 export function useTranscriptParticipants(transcriptId: string | null) {
   const { setError } = useError();
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { status } = useSessionStatus();
 
   return $api.useQuery(
     "get",
@@ -369,7 +370,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated && !isLoading,
+      enabled: !!transcriptId && status === "authenticated",
     },
   );
 }
