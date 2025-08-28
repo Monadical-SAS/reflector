@@ -189,7 +189,6 @@ export default function RoomsList() {
           `✅ Webhook test successful! Status: ${response.status_code}`,
         );
       } else {
-        // Build error message with status code and details
         let errorMsg = `❌ Webhook test failed`;
         if (response?.status_code) {
           errorMsg += ` (Status: ${response.status_code})`;

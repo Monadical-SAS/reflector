@@ -15,7 +15,7 @@ from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
-from reflector.worker.webhook import test_webhook_async
+from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -260,5 +260,5 @@ async def rooms_test_webhook(
             status_code=403, detail="Not authorized to test this room's webhook"
         )
 
-    result = await test_webhook_async(room_id)
+    result = await test_webhook(room_id)
     return WebhookTestResult(**result)

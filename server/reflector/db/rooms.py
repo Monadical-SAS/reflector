@@ -118,7 +118,6 @@ class RoomController:
         """
         Add a new room
         """
-        # Generate webhook secret if webhook URL is provided but secret is not
         if webhook_url and not webhook_secret:
             webhook_secret = secrets.token_urlsafe(32)
 
@@ -147,7 +146,6 @@ class RoomController:
         """
         Update a room fields with key/values in values
         """
-        # Generate webhook secret if webhook URL is provided but secret is empty
         if values.get("webhook_url") and not values.get("webhook_secret"):
             values["webhook_secret"] = secrets.token_urlsafe(32)
 

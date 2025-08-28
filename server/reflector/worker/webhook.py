@@ -176,7 +176,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         raise self.retry(exc=e)
 
 
-async def test_webhook_async(room_id: str) -> dict:
+async def test_webhook(room_id: str) -> dict:
     """
     Test webhook configuration by sending a sample payload.
     Returns immediately with success/failure status.
