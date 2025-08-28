@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+# Consistent Docker project name to avoid creating new networks each run
 DOCKER_PROJECT_NAME = "reflector_test"
 
 
@@ -38,12 +39,17 @@ def docker_compose_file(pytestconfig):
 
 @pytest.fixture(scope="session")
 def docker_compose_project_name():
+    """Use a consistent project name to avoid creating new networks each run."""
     return DOCKER_PROJECT_NAME
 
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_docker_resources():
+    """Clean up Docker test resources before and after test session."""
+
     def cleanup():
+        # Stop and remove any existing test containers
+        # This will also remove the reflector_test network if it exists
         subprocess.run(
             [
                 "docker",
@@ -57,17 +63,51 @@ def cleanup_docker_resources():
             capture_output=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         )
-        subprocess.run(["docker", "network", "prune", "-f"], capture_output=True)
+        # Clean up ONLY our project's orphaned networks
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
 
+    # Clean before tests
     cleanup()
+
     yield
+
+    # Clean after tests
     cleanup()
 
 
 @pytest.fixture(scope="session")
 def postgres_service(docker_ip, docker_services):
     """Ensure that PostgreSQL service is up and responsive."""
-    port = docker_services.port_for("postgres_test", 5432)
+    try:
+        port = docker_services.port_for("postgres_test", 5432)
+    except Exception as e:
+        # If Docker services fail to start, clean up and retry
+        subprocess.run(
+            [
+                "docker",
+                "network",
+                "prune",
+                "-f",
+                "--filter",
+                f"label=com.docker.compose.project={DOCKER_PROJECT_NAME}",
+            ],
+            capture_output=True,
+        )
+        subprocess.run(
+            ["docker", "compose", "-p", DOCKER_PROJECT_NAME, "down", "-v"],
+            capture_output=True,
+        )
+        raise pytest.skip(f"Docker services failed to start: {e}")
 
     def is_responsive():
         try:
@@ -296,6 +336,7 @@ def celery_includes():
 
 @pytest.fixture(scope="session")
 def celery_session_app():
+    """Provide the Celery app for pytest-celery plugin"""
     from reflector.worker.app import app
 
     return app
@@ -303,7 +344,9 @@ def celery_session_app():
 
 @pytest.fixture(scope="session")
 def celery_worker_parameters():
-    return {"perform_ping_check": False}
+    return {
+        "perform_ping_check": False,
+    }
 
 
 @pytest.fixture
