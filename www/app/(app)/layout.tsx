@@ -6,7 +6,6 @@ import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
 import { RECORD_A_MEETING_URL } from "../lib/constants";
-import AuthGuard from "./AuthGuard";
 
 export default async function AppLayout({
   children,
@@ -91,7 +90,7 @@ export default async function AppLayout({
         </div>
       </Flex>
 
-      <AuthGuard requireAuth={requireLogin}>{children}</AuthGuard>
+      {children}
     </Container>
   );
 }
