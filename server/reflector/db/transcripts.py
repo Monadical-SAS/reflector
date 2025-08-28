@@ -122,6 +122,15 @@ def generate_transcript_name() -> str:
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
+TranscriptStatus = Literal[
+    "idle", "uploaded", "recording", "processing", "error", "ended"
+]
+
+
+class StrValue(BaseModel):
+    value: str
+
+
 class AudioWaveform(BaseModel):
     data: list[float]
 
@@ -185,7 +194,7 @@ class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
     name: str = Field(default_factory=generate_transcript_name)
-    status: str = "idle"
+    status: TranscriptStatus = "idle"
     duration: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
@@ -731,6 +740,34 @@ class TranscriptController:
         """
         transcript.delete_participant(participant_id)
         await self.update(transcript, {"participants": transcript.participants_dump()})
+
+    async def set_status(
+        self, transcript_id: str, status: TranscriptStatus
+    ) -> TranscriptEvent | None:
+        """
+        Update the status of a transcript
+
+        Will add an event STATUS + update the status field of transcript
+        """
+        async with self.transaction():
+            transcript = await self.get_by_id(transcript_id)
+            if not transcript:
+                raise Exception(f"Transcript {transcript_id} not found")
+            if transcript.status == status:
+                return
+            resp = await transcripts_controller.append_event(
+                transcript=transcript,
+                event="STATUS",
+                data=StrValue(value=status),
+            )
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "status": status,
+                },
+            )
+            await self.update(transcript, {"status": status})
+        return resp
 
 
 transcripts_controller = TranscriptController()
