@@ -18,7 +18,7 @@ import {
   highlightMatches,
   generateTextFragment,
 } from "../../../lib/textHighlight";
-import { SearchResult } from "../../../lib/api-types";
+import { SearchResult, SourceKind } from "../../../lib/api-types";
 
 interface TranscriptCardsProps {
   results: SearchResult[];
@@ -120,7 +120,7 @@ function TranscriptCard({
     : "N/A";
   const formattedDate = formatLocalDate(result.created_at);
   const source =
-    result.source_kind === "room"
+    result.source_kind === ("room" as SourceKind)
       ? result.room_name || result.room_id
       : result.source_kind;
 

@@ -1,6 +1,6 @@
 import useTopics from "../../useTopics";
 import { Dispatch, SetStateAction, useEffect } from "react";
-import { GetTranscriptTopic } from "../../../../api";
+import { GetTranscriptTopic } from "../../../../lib/api-types";
 import {
   BoxProps,
   Box,

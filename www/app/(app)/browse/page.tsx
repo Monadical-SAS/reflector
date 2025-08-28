@@ -204,7 +204,7 @@ export default function TranscriptBrowser() {
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
     "source",
-    parseAsStringLiteral($SourceKind.enum).withOptions({
+    parseAsStringLiteral($SourceKind.values).withOptions({
       shallow: false,
     }),
   );
@@ -302,7 +302,6 @@ export default function TranscriptBrowser() {
         params: {
           path: { transcript_id: transcriptId },
         },
-        body: {},
       },
       {
         onSuccess: (result) => {

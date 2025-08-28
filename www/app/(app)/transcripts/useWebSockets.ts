@@ -3,7 +3,8 @@ import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../../domainContext";
 import { AudioWaveform, GetTranscriptSegmentTopic } from "../../lib/api-types";
-import useApi from "../../lib/useApi";
+import { useQueryClient } from "@tanstack/react-query";
+import { $api } from "../../lib/apiClient";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -34,7 +35,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const { setError } = useError();
 
   const { websocket_url } = useContext(DomainContext);
-  const api = useApi();
+  const queryClient = useQueryClient();
 
   const [accumulatedText, setAccumulatedText] = useState<string>("");
 
@@ -105,6 +106,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+            ],
           },
           {
             id: "2",
@@ -315,9 +323,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       }
     };
 
-    if (!transcriptId || !api) return;
-
-    api?.v1TranscriptGetWebsocketEvents({ transcriptId }).then((result) => {});
+    if (!transcriptId) return;
 
     const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
@@ -361,6 +367,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               return [...prevTopics, topic];
             });
             console.debug("TOPIC event:", message.data);
+            // Invalidate topics query to sync with WebSocket data
+            queryClient.invalidateQueries({
+              queryKey: $api.queryOptions(
+                "get",
+                "/v1/transcripts/{transcript_id}/topics",
+                {
+                  params: { path: { transcript_id: transcriptId } },
+                },
+              ).queryKey,
+            });
             break;
 
           case "FINAL_SHORT_SUMMARY":
@@ -370,6 +386,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           case "FINAL_LONG_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
+              // Invalidate transcript query to sync summary
+              queryClient.invalidateQueries({
+                queryKey: $api.queryOptions(
+                  "get",
+                  "/v1/transcripts/{transcript_id}",
+                  {
+                    params: { path: { transcript_id: transcriptId } },
+                  },
+                ).queryKey,
+              });
             }
             break;
 
@@ -377,6 +403,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             console.debug("FINAL_TITLE event:", message.data);
             if (message.data) {
               setTitle(message.data.title);
+              // Invalidate transcript query to sync title
+              queryClient.invalidateQueries({
+                queryKey: $api.queryOptions(
+                  "get",
+                  "/v1/transcripts/{transcript_id}",
+                  {
+                    params: { path: { transcript_id: transcriptId } },
+                  },
+                ).queryKey,
+              });
             }
             break;
 
@@ -450,7 +486,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, !api]);
+  }, [transcriptId, websocket_url, queryClient]);
 
   return {
     transcriptTextLive,

@@ -1,45 +1,30 @@
-import { useEffect, useState } from "react";
-
-import { useError } from "../../(errors)/errorContext";
 import { CreateTranscript, GetTranscript } from "../../lib/api-types";
-import useApi from "../../lib/useApi";
+import { useTranscriptCreate } from "../../lib/api-hooks";
 
 type UseCreateTranscript = {
   transcript: GetTranscript | null;
   loading: boolean;
   error: Error | null;
-  create: (transcriptCreationDetails: CreateTranscript) => void;
+  create: (transcriptCreationDetails: CreateTranscript) => Promise<void>;
 };
 
 const useCreateTranscript = (): UseCreateTranscript => {
-  const [transcript, setTranscript] = useState<GetTranscript | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setErrorState] = useState<Error | null>(null);
-  const { setError } = useError();
-  const api = useApi();
+  const createMutation = useTranscriptCreate();
 
-  const create = (transcriptCreationDetails: CreateTranscript) => {
-    if (loading || !api) return;
+  const create = async (transcriptCreationDetails: CreateTranscript) => {
+    if (createMutation.isPending) return;
 
-    setLoading(true);
-
-    api
-      .v1TranscriptsCreate({ requestBody: transcriptCreationDetails })
-      .then((transcript) => {
-        setTranscript(transcript);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(
-          err,
-          "There was an issue creating a transcript, please try again.",
-        );
-        setErrorState(err);
-        setLoading(false);
-      });
+    await createMutation.mutateAsync({
+      body: transcriptCreationDetails,
+    });
   };
 
-  return { transcript, loading, error, create };
+  return {
+    transcript: createMutation.data || null,
+    loading: createMutation.isPending,
+    error: createMutation.error as Error | null,
+    create,
+  };
 };
 
 export default useCreateTranscript;

@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
-import useApi from "../lib/useApi";
+import { useMeetingAudioConsent } from "../lib/api-hooks";
 import { Meeting } from "../lib/api-types";
 import { FaBars } from "react-icons/fa6";
 
@@ -76,31 +76,30 @@ const useConsentDialog = (
   wherebyRef: RefObject<HTMLElement> /*accessibility*/,
 ) => {
   const { state: consentState, touch, hasConsent } = useRecordingConsent();
-  const [consentLoading, setConsentLoading] = useState(false);
   // toast would open duplicates, even with using "id=" prop
   const [modalOpen, setModalOpen] = useState(false);
-  const api = useApi();
+  const audioConsentMutation = useMeetingAudioConsent();
 
   const handleConsent = useCallback(
     async (meetingId: string, given: boolean) => {
-      if (!api) return;
-
-      setConsentLoading(true);
-
       try {
-        await api.v1MeetingAudioConsent({
-          meetingId,
-          requestBody: { consent_given: given },
+        await audioConsentMutation.mutateAsync({
+          params: {
+            path: {
+              meeting_id: meetingId,
+            },
+          },
+          body: {
+            consent_given: given,
+          },
         });
 
         touch(meetingId);
       } catch (error) {
         console.error("Error submitting consent:", error);
-      } finally {
-        setConsentLoading(false);
       }
     },
-    [api, touch],
+    [audioConsentMutation, touch],
   );
 
   const showConsentModal = useCallback(() => {
@@ -194,7 +193,12 @@ const useConsentDialog = (
     return cleanup;
   }, [meetingId, handleConsent, wherebyRef, modalOpen]);
 
-  return { showConsentModal, consentState, hasConsent, consentLoading };
+  return {
+    showConsentModal,
+    consentState,
+    hasConsent,
+    consentLoading: audioConsentMutation.isPending,
+  };
 };
 
 function ConsentDialogButton({

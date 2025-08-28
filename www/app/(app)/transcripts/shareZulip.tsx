@@ -17,7 +17,11 @@ import {
   useListCollection,
 } from "@chakra-ui/react";
 import { TbBrandZulip } from "react-icons/tb";
-import useApi from "../../lib/useApi";
+import {
+  useZulipStreams,
+  useZulipTopics,
+  useTranscriptPostToZulip,
+} from "../../lib/api-hooks";
 
 type ShareZulipProps = {
   transcriptResponse: GetTranscript;
@@ -37,97 +41,76 @@ interface Topic {
 export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const [showModal, setShowModal] = useState(false);
   const [stream, setStream] = useState<string | undefined>(undefined);
+  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
   const [topic, setTopic] = useState<string | undefined>(undefined);
   const [includeTopics, setIncludeTopics] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const api = useApi();
+
+  // React Query hooks
+  const { data: streams = [], isLoading: isLoadingStreams } =
+    useZulipStreams() as { data: Stream[]; isLoading: boolean };
+  const { data: topics = [] } = useZulipTopics(selectedStreamId) as {
+    data: Topic[];
+  };
+  const postToZulipMutation = useTranscriptPostToZulip();
+
   const { contains } = useFilter({ sensitivity: "base" });
 
-  const {
-    collection: streamItemsCollection,
-    filter: streamItemsFilter,
-    set: streamItemsSet,
-  } = useListCollection({
-    initialItems: [] as { label: string; value: string }[],
-    filter: contains,
-  });
+  const streamItems = useMemo(() => {
+    return (streams || []).map((stream: Stream) => ({
+      label: stream.name,
+      value: stream.name,
+    }));
+  }, [streams]);
 
-  const {
-    collection: topicItemsCollection,
-    filter: topicItemsFilter,
-    set: topicItemsSet,
-  } = useListCollection({
-    initialItems: [] as { label: string; value: string }[],
-    filter: contains,
-  });
+  const topicItems = useMemo(() => {
+    return (topics || []).map((topic: Topic) => ({
+      label: topic.name,
+      value: topic.name,
+    }));
+  }, [topics]);
 
+  const { collection: streamItemsCollection, filter: streamItemsFilter } =
+    useListCollection({
+      initialItems: streamItems,
+      filter: contains,
+    });
+
+  const { collection: topicItemsCollection, filter: topicItemsFilter } =
+    useListCollection({
+      initialItems: topicItems,
+      filter: contains,
+    });
+
+  // Update selected stream ID when stream changes
   useEffect(() => {
-    const fetchZulipStreams = async () => {
-      if (!api) return;
-
-      try {
-        const response = await api.v1ZulipGetStreams();
-        setStreams(response);
-
-        streamItemsSet(
-          response.map((stream) => ({
-            label: stream.name,
-            value: stream.name,
-          })),
-        );
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching Zulip streams:", error);
-      }
-    };
-
-    fetchZulipStreams();
-  }, [!api]);
-
-  useEffect(() => {
-    const fetchZulipTopics = async () => {
-      if (!api || !stream) return;
-      try {
-        const selectedStream = streams.find((s) => s.name === stream);
-        if (selectedStream) {
-          const response = await api.v1ZulipGetTopics({
-            streamId: selectedStream.stream_id,
-          });
-          setTopics(response);
-          topicItemsSet(
-            response.map((topic) => ({
-              label: topic.name,
-              value: topic.name,
-            })),
-          );
-        } else {
-          topicItemsSet([]);
-        }
-      } catch (error) {
-        console.error("Error fetching Zulip topics:", error);
-      }
-    };
-
-    fetchZulipTopics();
-  }, [stream, streams, api]);
+    if (stream && streams) {
+      const selectedStream = streams.find((s: Stream) => s.name === stream);
+      setSelectedStreamId(selectedStream ? selectedStream.stream_id : null);
+    } else {
+      setSelectedStreamId(null);
+    }
+  }, [stream, streams]);
 
   const handleSendToZulip = async () => {
-    if (!api || !props.transcriptResponse) return;
+    if (!props.transcriptResponse) return;
 
     if (stream && topic) {
       try {
-        await api.v1TranscriptPostToZulip({
-          transcriptId: props.transcriptResponse.id,
-          stream,
-          topic,
-          includeTopics,
+        await postToZulipMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: props.transcriptResponse.id,
+            },
+            query: {
+              stream,
+              topic,
+              include_topics: includeTopics,
+            },
+          },
         });
         setShowModal(false);
       } catch (error) {
-        console.log(error);
+        console.error("Error posting to Zulip:", error);
       }
     }
   };
@@ -155,7 +138,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
-              {isLoading ? (
+              {isLoadingStreams ? (
                 <Flex justify="center" py={8}>
                   <Spinner />
                 </Flex>

@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import useRoomList from "./useRoomList";
-import { ApiError, Room } from "../../lib/api-types";
+import { Room } from "../../lib/api-types";
 import {
   useRoomCreate,
   useRoomUpdate,
@@ -92,8 +92,10 @@ export default function RoomsList() {
   const createRoomMutation = useRoomCreate();
   const updateRoomMutation = useRoomUpdate();
   const deleteRoomMutation = useRoomDelete();
-  const { data: streams = [] } = useZulipStreams();
-  const { data: topics = [] } = useZulipTopics(selectedStreamId);
+  const { data: streams = [] } = useZulipStreams() as { data: any[] };
+  const { data: topics = [] } = useZulipTopics(selectedStreamId) as {
+    data: Topic[];
+  };
   interface Topic {
     name: string;
   }
@@ -177,11 +179,10 @@ export default function RoomsList() {
       setNameError("");
       refetch();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       if (
-        err instanceof ApiError &&
-        err.status === 400 &&
-        (err.body as any).detail == "Room name is not unique"
+        err?.status === 400 &&
+        err?.body?.detail == "Room name is not unique"
       ) {
         setNameError(
           "This room name is already taken. Please choose a different name.",

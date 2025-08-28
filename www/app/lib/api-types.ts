@@ -16,7 +16,6 @@ export type RtcOffer = components["schemas"]["RtcOffer"];
 export type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 export type Page_Room_ = components["schemas"]["Page_Room_"];
-export type ApiError = components["schemas"]["ApiError"];
 export type GetTranscriptTopicWithWordsPerSpeaker =
   components["schemas"]["GetTranscriptTopicWithWordsPerSpeaker"];
 export type GetTranscriptMinimal =
@@ -24,5 +23,5 @@ export type GetTranscriptMinimal =
 
 // Export any enums or constants that were in the old API
 export const $SourceKind = {
-  values: ["SINGLE", "CALL", "WHEREBY", "UPLOAD"] as const,
+  values: ["room", "live", "file"] as const,
 } as const;

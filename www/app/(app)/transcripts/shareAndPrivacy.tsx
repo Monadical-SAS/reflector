@@ -132,7 +132,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                       "This transcript is public. Everyone can access it."}
                   </Text>
 
-                  {isOwner && api && (
+                  {isOwner && (
                     <Select.Root
                       key={shareMode.value}
                       value={[shareMode.value || ""]}

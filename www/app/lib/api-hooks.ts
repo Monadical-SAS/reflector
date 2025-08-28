@@ -9,20 +9,11 @@ import type { paths } from "../reflector-api";
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
 
-  return $api.useQuery(
-    "get",
-    "/v1/rooms",
-    {
-      params: {
-        query: { page },
-      },
+  return $api.useQuery("get", "/v1/rooms", {
+    params: {
+      query: { page },
     },
-    {
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching the rooms");
-      },
-    },
-  );
+  });
 }
 
 // Transcripts hooks
@@ -37,27 +28,17 @@ export function useTranscriptsSearch(
 ) {
   const { setError } = useError();
 
-  return $api.useQuery(
-    "get",
-    "/v1/transcripts/search",
-    {
-      params: {
-        query: {
-          q,
-          limit: options.limit,
-          offset: options.offset,
-          room_id: options.room_id,
-          source_kind: options.source_kind as any,
-        },
+  return $api.useQuery("get", "/v1/transcripts/search", {
+    params: {
+      query: {
+        q,
+        limit: options.limit,
+        offset: options.offset,
+        room_id: options.room_id,
+        source_kind: options.source_kind as any,
       },
     },
-    {
-      onError: (error) => {
-        setError(error as Error, "There was an error searching transcripts");
-      },
-      keepPreviousData: true, // For smooth pagination
-    },
-  );
+  });
 }
 
 export function useTranscriptDelete() {
@@ -68,7 +49,9 @@ export function useTranscriptDelete() {
     onSuccess: () => {
       // Invalidate transcripts queries to refetch
       queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/transcripts/search").queryKey,
+        queryKey: $api.queryOptions("get", "/v1/transcripts/search", {
+          params: { query: { q: "" } },
+        }).queryKey,
       });
     },
     onError: (error) => {
@@ -102,9 +85,6 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(error as Error, "There was an error loading the transcript");
-      },
     },
   );
 }
@@ -158,28 +138,21 @@ export function useRoomDelete() {
   });
 }
 
-// Zulip hooks
+// Zulip hooks - NOTE: These endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
 
-  return $api.useQuery(
-    "get",
-    "/v1/zulip/get-streams",
-    {},
-    {
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching Zulip streams");
-      },
-    },
-  );
+  // @ts-ignore - Zulip endpoint not in OpenAPI spec
+  return $api.useQuery("get", "/v1/zulip/get-streams" as any, {});
 }
 
 export function useZulipTopics(streamId: number | null) {
   const { setError } = useError();
 
+  // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
     "get",
-    "/v1/zulip/get-topics",
+    "/v1/zulip/get-topics" as any,
     {
       params: {
         query: { stream_id: streamId || 0 },
@@ -187,9 +160,6 @@ export function useZulipTopics(streamId: number | null) {
     },
     {
       enabled: !!streamId,
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching Zulip topics");
-      },
     },
   );
 }
@@ -219,11 +189,16 @@ export function useTranscriptUpdate() {
 export function useTranscriptPostToZulip() {
   const { setError } = useError();
 
-  return $api.useMutation("post", "/v1/transcripts/{transcript_id}/zulip", {
-    onError: (error) => {
-      setError(error as Error, "There was an error posting to Zulip");
+  // @ts-ignore - Zulip endpoint not in OpenAPI spec
+  return $api.useMutation(
+    "post",
+    "/v1/transcripts/{transcript_id}/zulip" as any,
+    {
+      onError: (error) => {
+        setError(error as Error, "There was an error posting to Zulip");
+      },
     },
-  });
+  );
 }
 
 export function useTranscriptUploadAudio() {
@@ -269,9 +244,6 @@ export function useTranscriptWaveform(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching the waveform");
-      },
     },
   );
 }
@@ -289,9 +261,6 @@ export function useTranscriptMP3(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching the MP3");
-      },
     },
   );
 }
@@ -309,9 +278,6 @@ export function useTranscriptTopics(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching topics");
-      },
     },
   );
 }
@@ -329,12 +295,29 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(
-          error as Error,
-          "There was an error fetching topics with words",
-        );
+    },
+  );
+}
+
+export function useTranscriptTopicsWithWordsPerSpeaker(
+  transcriptId: string | null,
+  topicId: string | null,
+) {
+  const { setError } = useError();
+
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker",
+    {
+      params: {
+        path: {
+          transcript_id: transcriptId || "",
+          topic_id: topicId || "",
+        },
       },
+    },
+    {
+      enabled: !!transcriptId && !!topicId,
     },
   );
 }
@@ -353,9 +336,6 @@ export function useTranscriptParticipants(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId,
-      onError: (error) => {
-        setError(error as Error, "There was an error fetching participants");
-      },
     },
   );
 }
@@ -389,12 +369,70 @@ export function useTranscriptParticipantUpdate() {
   );
 }
 
-export function useTranscriptSpeakerAssign() {
+export function useTranscriptParticipantCreate() {
   const { setError } = useError();
   const queryClient = useQueryClient();
 
   return $api.useMutation(
     "post",
+    "/v1/transcripts/{transcript_id}/participants",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate participants list
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}/participants",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error creating the participant");
+      },
+    },
+  );
+}
+
+export function useTranscriptParticipantDelete() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "delete",
+    "/v1/transcripts/{transcript_id}/participants/{participant_id}",
+    {
+      onSuccess: (data, variables) => {
+        // Invalidate participants list
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/transcripts/{transcript_id}/participants",
+            {
+              params: {
+                path: { transcript_id: variables.params.path.transcript_id },
+              },
+            },
+          ).queryKey,
+        });
+      },
+      onError: (error) => {
+        setError(error as Error, "There was an error deleting the participant");
+      },
+    },
+  );
+}
+
+export function useTranscriptSpeakerAssign() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation(
+    "patch",
     "/v1/transcripts/{transcript_id}/speaker/assign",
     {
       onSuccess: (data, variables) => {
@@ -434,7 +472,7 @@ export function useTranscriptSpeakerMerge() {
   const queryClient = useQueryClient();
 
   return $api.useMutation(
-    "post",
+    "patch",
     "/v1/transcripts/{transcript_id}/speaker/merge",
     {
       onSuccess: (data, variables) => {
@@ -504,11 +542,31 @@ export function useTranscriptCreate() {
     onSuccess: () => {
       // Invalidate transcripts list
       queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/transcripts/search").queryKey,
+        queryKey: $api.queryOptions("get", "/v1/transcripts/search", {
+          params: { query: { q: "" } },
+        }).queryKey,
       });
     },
     onError: (error) => {
       setError(error as Error, "There was an error creating the transcript");
+    },
+  });
+}
+
+// Rooms meeting operations
+export function useRoomsCreateMeeting() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("post", "/v1/rooms/{room_name}/meeting", {
+    onSuccess: () => {
+      // Invalidate rooms list to refresh meeting data
+      queryClient.invalidateQueries({
+        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+      });
+    },
+    onError: (error) => {
+      setError(error as Error, "There was an error creating the meeting");
     },
   });
 }
