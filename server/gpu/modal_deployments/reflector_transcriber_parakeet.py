@@ -200,6 +200,8 @@ class TranscriberParakeetLive:
         text = output.text.strip()
         words: list[WordTiming] = [
             WordTiming(
+                # XXX the space added here is to match the output of whisper
+                # whisper add space to each words, while parakeet don't
                 word=word_info["word"] + " ",
                 start=round(word_info["start"], 2),
                 end=round(word_info["end"], 2),
