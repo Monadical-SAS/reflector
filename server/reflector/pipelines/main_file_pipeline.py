@@ -7,6 +7,7 @@ Uses parallel processing for transcription, diarization, and waveform generation
 """
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import av
@@ -415,4 +416,6 @@ async def task_pipeline_file_process(*, transcript_id: str):
                 room_id=room.id,
                 webhook_url=room.webhook_url,
             )
-            send_transcript_webhook.delay(transcript_id, room.id)
+            send_transcript_webhook.delay(
+                transcript_id, room.id, event_id=uuid.uuid4().hex
+            )

@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import uuid
 from datetime import datetime, timezone
 
 import httpx
@@ -38,7 +39,12 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
     retry_backoff_max=3600,  # Max 1 hour between retries
 )
 @asynctask
-async def send_transcript_webhook(self, transcript_id: str, room_id: str):
+async def send_transcript_webhook(
+    self,
+    transcript_id: str,
+    room_id: str,
+    event_id: str,
+):
     log = logger.bind(
         transcript_id=transcript_id,
         room_id=room_id,
@@ -86,7 +92,7 @@ async def send_transcript_webhook(self, transcript_id: str, room_id: str):
         ]
         payload_data = {
             "event": "transcript.completed",
-            "event_id": f"transcript.completed-{transcript.id}",
+            "event_id": event_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "transcript": {
                 "id": transcript.id,
@@ -194,7 +200,7 @@ async def test_webhook(room_id: str) -> dict:
         now = (datetime.now(timezone.utc).isoformat(),)
         payload_data = {
             "event": "test",
-            "event_id": f"test-{now}",
+            "event_id": uuid.uuid4().hex,
             "timestamp": now,
             "message": "This is a test webhook from Reflector",
             "room": {
