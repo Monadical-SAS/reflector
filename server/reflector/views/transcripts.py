@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, constr, field_serializer
 
 import reflector.auth as auth
 from reflector.db import get_database
@@ -19,10 +19,10 @@ from reflector.db.search import (
     SearchOffsetBase,
     SearchParameters,
     SearchQuery,
-    SearchQueryBase,
     SearchResult,
     SearchTotal,
     search_controller,
+    search_query_adapter,
 )
 from reflector.db.transcripts import (
     SourceKind,
@@ -114,7 +114,19 @@ class DeletionStatus(BaseModel):
     status: str
 
 
-SearchQueryParam = Annotated[SearchQueryBase, Query(description="Search query text")]
+SearchQueryParamBase = constr(min_length=0, strip_whitespace=True)
+SearchQueryParam = Annotated[
+    SearchQueryParamBase, Query(description="Search query text")
+]
+
+
+# http and api standards accept "q="; we would like to handle it as the absence of query, not as "empty string query"
+def parse_search_query_param(q: SearchQueryParam) -> SearchQuery | None:
+    if q == "":
+        return None
+    return search_query_adapter.validate_python(q)
+
+
 SearchLimitParam = Annotated[SearchLimitBase, Query(description="Results per page")]
 SearchOffsetParam = Annotated[
     SearchOffsetBase, Query(description="Number of results to skip")
@@ -124,7 +136,7 @@ SearchOffsetParam = Annotated[
 class SearchResponse(BaseModel):
     results: list[SearchResult]
     total: SearchTotal
-    query: SearchQuery
+    query: SearchQuery | None = None
     limit: SearchLimit
     offset: SearchOffset
 
@@ -174,7 +186,7 @@ async def transcripts_search(
     user_id = user["sub"] if user else None
 
     search_params = SearchParameters(
-        query_text=q,
+        query_text=parse_search_query_param(q),
         limit=limit,
         offset=offset,
         user_id=user_id,
