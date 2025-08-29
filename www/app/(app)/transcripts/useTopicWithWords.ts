@@ -1,5 +1,5 @@
 import type { components } from "../../reflector-api";
-import { useTranscriptTopicsWithWordsPerSpeaker } from "../../lib/api-hooks";
+import { useTranscriptTopicsWithWordsPerSpeaker } from "../../lib/apiHooks";
 
 type GetTranscriptTopicWithWordsPerSpeaker =
   components["schemas"]["GetTranscriptTopicWithWordsPerSpeaker"];

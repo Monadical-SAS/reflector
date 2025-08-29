@@ -4,7 +4,7 @@ import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
 
 type Meeting = components["schemas"]["Meeting"];
-import { useRoomsCreateMeeting } from "../lib/api-hooks";
+import { useRoomsCreateMeeting } from "../lib/apiHooks";
 import { notFound } from "next/navigation";
 
 type ErrorMeeting = {

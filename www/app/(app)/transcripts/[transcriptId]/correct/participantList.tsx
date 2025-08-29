@@ -9,7 +9,7 @@ import {
   useTranscriptParticipantUpdate,
   useTranscriptParticipantCreate,
   useTranscriptParticipantDelete,
-} from "../../../../lib/api-hooks";
+} from "../../../../lib/apiHooks";
 import { UseParticipants } from "../../useParticipants";
 import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./types";
 import { useError } from "../../../../(errors)/errorContext";

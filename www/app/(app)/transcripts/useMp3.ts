@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { DomainContext } from "../../domainContext";
-import { useTranscriptGet } from "../../lib/api-hooks";
+import { useTranscriptGet } from "../../lib/apiHooks";
 import { useSession } from "next-auth/react";
 
 export type Mp3Response = {

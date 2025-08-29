@@ -9,7 +9,7 @@ import ParticipantList from "./participantList";
 import type { components } from "../../../../reflector-api";
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { SelectedText, selectedTextIsTimeSlice } from "./types";
-import { useTranscriptUpdate } from "../../../../lib/api-hooks";
+import { useTranscriptUpdate } from "../../../../lib/apiHooks";
 import useTranscript from "../../useTranscript";
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";

@@ -2,7 +2,7 @@
 import type { components } from "../../reflector-api";
 type SearchResult = components["schemas"]["SearchResult"];
 type SourceKind = components["schemas"]["SourceKind"];
-import { useTranscriptsSearch } from "../../lib/api-hooks";
+import { useTranscriptsSearch } from "../../lib/apiHooks";
 import {
   PaginationPage,
   paginationPageTo0Based,

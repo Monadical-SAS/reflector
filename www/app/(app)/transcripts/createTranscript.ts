@@ -1,5 +1,5 @@
 import type { components } from "../../reflector-api";
-import { useTranscriptCreate } from "../../lib/api-hooks";
+import { useTranscriptCreate } from "../../lib/apiHooks";
 
 type CreateTranscript = components["schemas"]["CreateTranscript"];
 type GetTranscript = components["schemas"]["GetTranscript"];

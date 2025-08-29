@@ -1,5 +1,5 @@
 import type { components } from "../../reflector-api";
-import { useTranscriptWaveform } from "../../lib/api-hooks";
+import { useTranscriptWaveform } from "../../lib/apiHooks";
 
 type AudioWaveform = components["schemas"]["AudioWaveform"];
 

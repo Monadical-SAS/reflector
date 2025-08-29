@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
 import { useError } from "../../(errors)/errorContext";
-import { useTranscriptWebRTC } from "../../lib/api-hooks";
+import { useTranscriptWebRTC } from "../../lib/apiHooks";
 import type { components } from "../../reflector-api";
 type RtcOffer = components["schemas"]["RtcOffer"];
 

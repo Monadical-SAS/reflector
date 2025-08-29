@@ -23,7 +23,7 @@ import {
   useRoomDelete,
   useZulipStreams,
   useZulipTopics,
-} from "../../lib/api-hooks";
+} from "../../lib/apiHooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
 

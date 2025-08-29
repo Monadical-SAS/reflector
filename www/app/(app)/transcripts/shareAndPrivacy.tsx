@@ -18,7 +18,7 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { LuShare2 } from "react-icons/lu";
-import { useTranscriptUpdate } from "../../lib/api-hooks";
+import { useTranscriptUpdate } from "../../lib/apiHooks";
 import useSessionUser from "../../lib/useSessionUser";
 import { CustomSession } from "../../lib/types";
 import ShareLink from "./shareLink";

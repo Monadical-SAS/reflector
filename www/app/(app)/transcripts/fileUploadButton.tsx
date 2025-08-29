@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTranscriptUploadAudio } from "../../lib/api-hooks";
+import { useTranscriptUploadAudio } from "../../lib/apiHooks";
 import { Button, Spinner } from "@chakra-ui/react";
 import { useError } from "../../(errors)/errorContext";
 

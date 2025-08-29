@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
-import { useMeetingAudioConsent } from "../lib/api-hooks";
+import { useMeetingAudioConsent } from "../lib/apiHooks";
 import type { components } from "../reflector-api";
 
 type Meeting = components["schemas"]["Meeting"];

@@ -24,7 +24,7 @@ import {
   useZulipStreams,
   useZulipTopics,
   useTranscriptPostToZulip,
-} from "../../lib/api-hooks";
+} from "../../lib/apiHooks";
 
 type ShareZulipProps = {
   transcriptResponse: GetTranscript;

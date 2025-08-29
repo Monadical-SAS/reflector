@@ -30,7 +30,7 @@ import {
   useTranscriptsSearch,
   useTranscriptDelete,
   useTranscriptProcess,
-} from "../../lib/api-hooks";
+} from "../../lib/apiHooks";
 import FilterSidebar from "./_components/FilterSidebar";
 import Pagination, {
   FIRST_PAGE,

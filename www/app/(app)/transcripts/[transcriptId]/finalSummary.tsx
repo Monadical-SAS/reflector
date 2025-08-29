@@ -5,7 +5,7 @@ import "../../../styles/markdown.css";
 import type { components } from "../../../reflector-api";
 type GetTranscript = components["schemas"]["GetTranscript"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
-import { useTranscriptUpdate } from "../../../lib/api-hooks";
+import { useTranscriptUpdate } from "../../../lib/apiHooks";
 import {
   Flex,
   Heading,

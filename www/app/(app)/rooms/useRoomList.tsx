@@ -1,4 +1,4 @@
-import { useRoomsList } from "../../lib/api-hooks";
+import { useRoomsList } from "../../lib/apiHooks";
 import type { components } from "../../reflector-api";
 
 type Page_Room_ = components["schemas"]["Page_Room_"];
