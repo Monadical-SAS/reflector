@@ -16,23 +16,21 @@ export const client = createClient<paths>({
   baseUrl: "http://127.0.0.1:1250",
 });
 
-// Create the React Query client wrapper
 export const $api = createFetchClient<paths>(client);
 
-// Store the current auth token and ready state
 let currentAuthToken: string | null | undefined = null;
 let authConfigured = false;
 
-// Export function to check if auth is ready
 export const isAuthConfigured = () => authConfigured;
 
-// Set up authentication middleware once
 client.use({
   onRequest({ request }) {
     if (currentAuthToken) {
       request.headers.set("Authorization", `Bearer ${currentAuthToken}`);
     }
-    // Only set Content-Type if not already set (FormData will set its own boundary)
+    // XXX Only set Content-Type if not already set (FormData will set its own boundary)
+    // This is a work around for uploading file, we're passing a formdata
+    // but the content type was still application/json
     if (
       !request.headers.has("Content-Type") &&
       !(request.body instanceof FormData)
@@ -43,13 +41,11 @@ client.use({
   },
 });
 
-// Configure authentication by updating the token
 export const configureApiAuth = (token: string | null | undefined) => {
   currentAuthToken = token;
   authConfigured = true;
 };
 
-// Export typed hooks for convenience
 export const useApiQuery = $api.useQuery;
 export const useApiMutation = $api.useMutation;
 export const useApiSuspenseQuery = $api.useSuspenseQuery;

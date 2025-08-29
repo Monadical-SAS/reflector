@@ -1,5 +1,7 @@
-import { GetTranscript } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
 import { useTranscriptGet } from "../../lib/api-hooks";
+
+type GetTranscript = components["schemas"]["GetTranscript"];
 
 type ErrorTranscript = {
   error: Error;

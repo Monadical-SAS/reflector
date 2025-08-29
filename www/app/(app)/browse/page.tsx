@@ -20,12 +20,11 @@ import {
 } from "nuqs";
 import { LuX } from "react-icons/lu";
 import useSessionUser from "../../lib/useSessionUser";
-import {
-  Room,
-  SourceKind,
-  SearchResult,
-  $SourceKind,
-} from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+
+type Room = components["schemas"]["Room"];
+type SourceKind = components["schemas"]["SourceKind"];
+type SearchResult = components["schemas"]["SearchResult"];
 import {
   useRoomsList,
   useTranscriptsSearch,
@@ -204,7 +203,7 @@ export default function TranscriptBrowser() {
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
     "source",
-    parseAsStringLiteral($SourceKind.values).withOptions({
+    parseAsStringLiteral(["room", "live", "file"] as const).withOptions({
       shallow: false,
     }),
   );

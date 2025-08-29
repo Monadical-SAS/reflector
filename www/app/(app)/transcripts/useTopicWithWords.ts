@@ -1,5 +1,8 @@
-import { GetTranscriptTopicWithWordsPerSpeaker } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
 import { useTranscriptTopicsWithWordsPerSpeaker } from "../../lib/api-hooks";
+
+type GetTranscriptTopicWithWordsPerSpeaker =
+  components["schemas"]["GetTranscriptTopicWithWordsPerSpeaker"];
 
 type ErrorTopicWithWords = {
   error: Error;

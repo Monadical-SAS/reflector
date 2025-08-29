@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { featureEnabled } from "../../domainContext";
-import { GetTranscript, GetTranscriptTopic } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import {
   BoxProps,
   Button,

@@ -9,7 +9,9 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
-import { Room } from "../../../lib/api-types";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
 
 interface RoomTableProps {

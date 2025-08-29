@@ -1,5 +1,7 @@
 import { useTranscriptTopics } from "../../lib/api-hooks";
-import { GetTranscriptTopic } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 
 type TranscriptTopics = {
   topics: GetTranscriptTopic[] | null;

@@ -1,5 +1,7 @@
 import { Box, Heading, Text, VStack } from "@chakra-ui/react";
-import { Room } from "../../../lib/api-types";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
 import { RoomTable } from "./RoomTable";
 import { RoomCards } from "./RoomCards";
 

@@ -19,7 +19,7 @@ export default function AuthWrapper({
         justifyContent="center"
         h="calc(100vh - 80px)" // Account for header height
       >
-        <Spinner size="xl" color="blue.500" thickness="4px" />
+        <Spinner size="xl" color="blue.500" />
       </Flex>
     );
   }

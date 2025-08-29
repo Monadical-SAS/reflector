@@ -1,5 +1,7 @@
 // Wrapper for backward compatibility
-import { SearchResult, SourceKind } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+type SearchResult = components["schemas"]["SearchResult"];
+type SourceKind = components["schemas"]["SourceKind"];
 import { useTranscriptsSearch } from "../../lib/api-hooks";
 import {
   PaginationPage,

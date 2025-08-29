@@ -24,7 +24,9 @@ import { notFound } from "next/navigation";
 import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import { useMeetingAudioConsent } from "../lib/api-hooks";
-import { Meeting } from "../lib/api-types";
+import type { components } from "../reflector-api";
+
+type Meeting = components["schemas"]["Meeting"];
 import { FaBars } from "react-icons/fa6";
 
 export type RoomDetails = {

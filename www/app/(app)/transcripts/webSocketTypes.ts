@@ -1,4 +1,6 @@
-import { GetTranscriptTopic } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 
 export type Topic = GetTranscriptTopic;
 

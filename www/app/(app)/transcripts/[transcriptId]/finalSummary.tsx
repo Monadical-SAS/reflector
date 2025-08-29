@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import React from "react";
 import Markdown from "react-markdown";
 import "../../../styles/markdown.css";
-import { GetTranscript, GetTranscriptTopic } from "../../../lib/api-types";
+import type { components } from "../../../reflector-api";
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { useTranscriptUpdate } from "../../../lib/api-hooks";
 import {
   Flex,

@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
-import {
-  GetTranscript,
-  GetTranscriptTopic,
-  UpdateTranscript,
-} from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
+type UpdateTranscript = components["schemas"]["UpdateTranscript"];
 import {
   Box,
   Flex,

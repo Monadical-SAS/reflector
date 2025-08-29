@@ -2,7 +2,10 @@ import { useContext, useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
 import { DomainContext } from "../../domainContext";
-import { AudioWaveform, GetTranscriptSegmentTopic } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+type AudioWaveform = components["schemas"]["AudioWaveform"];
+type GetTranscriptSegmentTopic =
+  components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
 import { $api } from "../../lib/apiClient";
 

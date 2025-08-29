@@ -1,7 +1,8 @@
 import { faArrowTurnDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Participant } from "../../../../lib/api-types";
+import type { components } from "../../../../reflector-api";
+type Participant = components["schemas"]["Participant"];
 import {
   useTranscriptSpeakerAssign,
   useTranscriptSpeakerMerge,

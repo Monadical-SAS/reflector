@@ -16,7 +16,7 @@ import {
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import useRoomList from "./useRoomList";
-import { Room } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
 import {
   useRoomCreate,
   useRoomUpdate,
@@ -26,6 +26,8 @@ import {
 } from "../../lib/api-hooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
+
+type Room = components["schemas"]["Room"];
 
 interface SelectOption {
   label: string;

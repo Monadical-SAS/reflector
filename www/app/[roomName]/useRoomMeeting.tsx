@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useError } from "../(errors)/errorContext";
-import { Meeting } from "../lib/api-types";
+import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
+
+type Meeting = components["schemas"]["Meeting"];
 import { useRoomsCreateMeeting } from "../lib/api-hooks";
 import { notFound } from "next/navigation";
 

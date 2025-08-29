@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { UpdateTranscript } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+
+type UpdateTranscript = components["schemas"]["UpdateTranscript"];
 import { useTranscriptUpdate } from "../../lib/api-hooks";
 import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
 import { LuPen } from "react-icons/lu";

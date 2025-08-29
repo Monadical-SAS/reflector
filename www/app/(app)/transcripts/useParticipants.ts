@@ -1,4 +1,5 @@
-import { Participant } from "../../lib/api-types";
+import type { components } from "../../reflector-api";
+type Participant = components["schemas"]["Participant"];
 import { useTranscriptParticipants } from "../../lib/api-hooks";
 
 type ErrorParticipants = {
