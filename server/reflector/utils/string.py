@@ -1,5 +1,3 @@
-"""String utility types and functions for the Reflector application."""
-
 from typing import Annotated
 
 from pydantic import Field, TypeAdapter, constr
