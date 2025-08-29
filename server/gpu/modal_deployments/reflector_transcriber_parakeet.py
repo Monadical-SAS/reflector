@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import uuid
-from typing import Mapping, NewType
+from typing import Generator, Mapping, NamedTuple, NewType, TypedDict
 from urllib.parse import urlparse
 
 import modal
@@ -14,16 +14,44 @@ SAMPLERATE = 16000
 UPLOADS_PATH = "/uploads"
 CACHE_PATH = "/cache"
 VAD_CONFIG = {
-    "max_segment_duration": 30.0,
-    "batch_max_files": 10,
-    "batch_max_duration": 5.0,
-    "min_segment_duration": 0.02,
+    "batch_max_duration": 30.0,
     "silence_padding": 0.5,
     "window_size": 512,
 }
 
 ParakeetUniqFilename = NewType("ParakeetUniqFilename", str)
 AudioFileExtension = NewType("AudioFileExtension", str)
+
+
+class TimeSegment(NamedTuple):
+    """Represents a time segment with start and end times."""
+
+    start: float
+    end: float
+
+
+class AudioSegment(NamedTuple):
+    """Represents an audio segment with timing and audio data."""
+
+    start: float
+    end: float
+    audio: any
+
+
+class TranscriptResult(NamedTuple):
+    """Represents a transcription result with text and word timings."""
+
+    text: str
+    words: list["WordTiming"]
+
+
+class WordTiming(TypedDict):
+    """Represents a word with its timing information."""
+
+    word: str
+    start: float
+    end: float
+
 
 app = modal.App("reflector-transcriber-parakeet")
 
@@ -170,12 +198,14 @@ class TranscriberParakeetLive:
                 (output,) = self.model.transcribe([padded_audio], timestamps=True)
 
         text = output.text.strip()
-        words = [
-            {
-                "word": word_info["word"] + " ",
-                "start": round(word_info["start"], 2),
-                "end": round(word_info["end"], 2),
-            }
+        words: list[WordTiming] = [
+            WordTiming(
+                # XXX the space added here is to match the output of whisper
+                # whisper add space to each words, while parakeet don't
+                word=word_info["word"] + " ",
+                start=round(word_info["start"], 2),
+                end=round(word_info["end"], 2),
+            )
             for word_info in output.timestamp["word"]
         ]
 
@@ -211,12 +241,12 @@ class TranscriberParakeetLive:
         for i, (filename, output) in enumerate(zip(filenames, outputs)):
             text = output.text.strip()
 
-            words = [
-                {
-                    "word": word_info["word"] + " ",
-                    "start": round(word_info["start"], 2),
-                    "end": round(word_info["end"], 2),
-                }
+            words: list[WordTiming] = [
+                WordTiming(
+                    word=word_info["word"] + " ",
+                    start=round(word_info["start"], 2),
+                    end=round(word_info["end"], 2),
+                )
                 for word_info in output.timestamp["word"]
             ]
 
@@ -271,7 +301,9 @@ class TranscriberParakeetFile:
             audio_array, sample_rate = librosa.load(file_path, sr=SAMPLERATE, mono=True)
             return audio_array
 
-        def vad_segment_generator(audio_array):
+        def vad_segment_generator(
+            audio_array,
+        ) -> Generator[TimeSegment, None, None]:
             """Generate speech segments using VAD with start/end sample indices"""
             vad_iterator = VADIterator(self.vad_model, sampling_rate=SAMPLERATE)
             window_size = VAD_CONFIG["window_size"]
@@ -297,107 +329,121 @@ class TranscriberParakeetFile:
                     start_time = start / float(SAMPLERATE)
                     end_time = end / float(SAMPLERATE)
 
-                    # Extract the actual audio segment
-                    audio_segment = audio_array[start:end]
-
-                    yield (start_time, end_time, audio_segment)
+                    yield TimeSegment(start_time, end_time)
                     start = None
 
             vad_iterator.reset_states()
 
-        def vad_segment_filter(segments):
-            """Filter VAD segments by duration and chunk large segments"""
-            min_dur = VAD_CONFIG["min_segment_duration"]
-            max_dur = VAD_CONFIG["max_segment_duration"]
+        def batch_speech_segments(
+            segments: Generator[TimeSegment, None, None], max_duration: int
+        ) -> Generator[TimeSegment, None, None]:
+            """
+            Input segments:
+              [0-2] [3-5] [6-8] [10-11] [12-15] [17-19] [20-22]
 
-            for start_time, end_time, audio_segment in segments:
-                segment_duration = end_time - start_time
+                                  ↓ (max_duration=10)
 
-                # Skip very small segments
-                if segment_duration < min_dur:
+              Output batches:
+              [0-8]           [10-19]          [20-22]
+
+            Note: silences are kept for better transcription, previous implementation was
+            passing segments separatly, but the output was less accurate.
+            """
+            batch_start_time = None
+            batch_end_time = None
+
+            for segment in segments:
+                start_time, end_time = segment.start, segment.end
+                if batch_start_time is None or batch_end_time is None:
+                    batch_start_time = start_time
+                    batch_end_time = end_time
                     continue
 
-                # If segment is within max duration, yield as-is
-                if segment_duration <= max_dur:
-                    yield (start_time, end_time, audio_segment)
+                total_duration = end_time - batch_start_time
+
+                if total_duration <= max_duration:
+                    batch_end_time = end_time
                     continue
 
-                # Chunk large segments into smaller pieces
-                chunk_samples = int(max_dur * SAMPLERATE)
-                current_start = start_time
+                yield TimeSegment(batch_start_time, batch_end_time)
+                batch_start_time = start_time
+                batch_end_time = end_time
 
-                for chunk_offset in range(0, len(audio_segment), chunk_samples):
-                    chunk_audio = audio_segment[
-                        chunk_offset : chunk_offset + chunk_samples
-                    ]
-                    if len(chunk_audio) == 0:
-                        break
+            if batch_start_time is None or batch_end_time is None:
+                return
 
-                    chunk_duration = len(chunk_audio) / float(SAMPLERATE)
-                    chunk_end = current_start + chunk_duration
+            yield TimeSegment(batch_start_time, batch_end_time)
 
-                    # Only yield chunks that meet minimum duration
-                    if chunk_duration >= min_dur:
-                        yield (current_start, chunk_end, chunk_audio)
+        def batch_segment_to_audio_segment(
+            segments: Generator[TimeSegment, None, None],
+            audio_array,
+        ) -> Generator[AudioSegment, None, None]:
+            """Extract audio segments and apply padding for Parakeet compatibility.
 
-                    current_start = chunk_end
+            Uses pad_audio to ensure segments are at least 0.5s long, preventing
+            Parakeet crashes. This padding may cause slight timing overlaps between
+            segments, which are corrected by enforce_word_timing_constraints.
+            """
+            for segment in segments:
+                start_time, end_time = segment.start, segment.end
+                start_sample = int(start_time * SAMPLERATE)
+                end_sample = int(end_time * SAMPLERATE)
+                audio_segment = audio_array[start_sample:end_sample]
 
-        def batch_segments(segments, max_files=10, max_duration=5.0):
-            batch = []
-            batch_duration = 0.0
+                padded_segment = pad_audio(audio_segment, SAMPLERATE)
 
-            for start_time, end_time, audio_segment in segments:
-                segment_duration = end_time - start_time
+                yield AudioSegment(start_time, end_time, padded_segment)
 
-                if segment_duration < VAD_CONFIG["silence_padding"]:
-                    silence_samples = int(
-                        (VAD_CONFIG["silence_padding"] - segment_duration) * SAMPLERATE
-                    )
-                    padding = np.zeros(silence_samples, dtype=np.float32)
-                    audio_segment = np.concatenate([audio_segment, padding])
-                    segment_duration = VAD_CONFIG["silence_padding"]
-
-                batch.append((start_time, end_time, audio_segment))
-                batch_duration += segment_duration
-
-                if len(batch) >= max_files or batch_duration >= max_duration:
-                    yield batch
-                    batch = []
-                    batch_duration = 0.0
-
-            if batch:
-                yield batch
-
-        def transcribe_batch(model, audio_segments):
+        def transcribe_batch(model, audio_segments: list) -> list:
             with NoStdStreams():
                 outputs = model.transcribe(audio_segments, timestamps=True)
             return outputs
 
+        def enforce_word_timing_constraints(
+            words: list[WordTiming],
+        ) -> list[WordTiming]:
+            """Enforce that word end times don't exceed the start time of the next word.
+
+            Due to silence padding added in batch_segment_to_audio_segment for better
+            transcription accuracy, word timings from different segments may overlap.
+            This function ensures there are no overlaps by adjusting end times.
+            """
+            if len(words) <= 1:
+                return words
+
+            enforced_words = []
+            for i, word in enumerate(words):
+                enforced_word = word.copy()
+
+                if i < len(words) - 1:
+                    next_start = words[i + 1]["start"]
+                    if enforced_word["end"] > next_start:
+                        enforced_word["end"] = next_start
+
+                enforced_words.append(enforced_word)
+
+            return enforced_words
+
         def emit_results(
-            results,
-            segments_info,
-            batch_index,
-            total_batches,
-        ):
+            results: list,
+            segments_info: list[AudioSegment],
+        ) -> Generator[TranscriptResult, None, None]:
             """Yield transcribed text and word timings from model output, adjusting timestamps to absolute positions."""
-            for i, (output, (start_time, end_time, _)) in enumerate(
-                zip(results, segments_info)
-            ):
+            for i, (output, segment) in enumerate(zip(results, segments_info)):
+                start_time, end_time = segment.start, segment.end
                 text = output.text.strip()
-                words = [
-                    {
-                        "word": word_info["word"] + " ",
-                        "start": round(
+                words: list[WordTiming] = [
+                    WordTiming(
+                        word=word_info["word"] + " ",
+                        start=round(
                             word_info["start"] + start_time + timestamp_offset, 2
                         ),
-                        "end": round(
-                            word_info["end"] + start_time + timestamp_offset, 2
-                        ),
-                    }
+                        end=round(word_info["end"] + start_time + timestamp_offset, 2),
+                    )
                     for word_info in output.timestamp["word"]
                 ]
 
-                yield text, words
+                yield TranscriptResult(text, words)
 
         upload_volume.reload()
 
@@ -407,41 +453,31 @@ class TranscriberParakeetFile:
 
         audio_array = load_and_convert_audio(file_path)
         total_duration = len(audio_array) / float(SAMPLERATE)
-        processed_duration = 0.0
 
-        all_text_parts = []
-        all_words = []
+        all_text_parts: list[str] = []
+        all_words: list[WordTiming] = []
 
         raw_segments = vad_segment_generator(audio_array)
-        filtered_segments = vad_segment_filter(raw_segments)
-        batches = batch_segments(
-            filtered_segments,
-            VAD_CONFIG["batch_max_files"],
+        speech_segments = batch_speech_segments(
+            raw_segments,
             VAD_CONFIG["batch_max_duration"],
         )
+        audio_segments = batch_segment_to_audio_segment(speech_segments, audio_array)
 
-        batch_index = 0
-        total_batches = max(
-            1, int(total_duration / VAD_CONFIG["batch_max_duration"]) + 1
-        )
+        for batch in audio_segments:
+            audio_segment = batch.audio
+            results = transcribe_batch(self.model, [audio_segment])
 
-        for batch in batches:
-            batch_index += 1
-            audio_segments = [seg[2] for seg in batch]
-            results = transcribe_batch(self.model, audio_segments)
-
-            for text, words in emit_results(
+            for result in emit_results(
                 results,
-                batch,
-                batch_index,
-                total_batches,
+                [batch],
             ):
-                if not text:
+                if not result.text:
                     continue
-                all_text_parts.append(text)
-                all_words.extend(words)
+                all_text_parts.append(result.text)
+                all_words.extend(result.words)
 
-            processed_duration += sum(len(seg[2]) / float(SAMPLERATE) for seg in batch)
+        all_words = enforce_word_timing_constraints(all_words)
 
         combined_text = " ".join(all_text_parts)
         return {"text": combined_text, "words": all_words}

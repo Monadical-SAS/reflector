@@ -16,10 +16,14 @@ from celery import shared_task
 from reflector.asynctask import asynctask
 from reflector.db.transcripts import (
     Transcript,
+    TranscriptStatus,
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.main_live_pipeline import PipelineMainBase
+from reflector.pipelines.main_live_pipeline import (
+    PipelineMainBase,
+    broadcast_to_sockets,
+)
 from reflector.processors import (
     AudioFileWriterProcessor,
     TranscriptFinalSummaryProcessor,
@@ -84,11 +88,26 @@ class PipelineMainFile(PipelineMainBase):
                 exc_info=result,
             )
 
+    @broadcast_to_sockets
+    async def set_status(self, transcript_id: str, status: TranscriptStatus):
+        async with self.lock_transaction():
+            return await transcripts_controller.set_status(transcript_id, status)
+
     async def process(self, file_path: Path):
         """Main entry point for file processing"""
         self.logger.info(f"Starting file pipeline for {file_path}")
 
         transcript = await self.get_transcript()
+
+        # Clear transcript as we're going to regenerate everything
+        async with self.transaction():
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "events": [],
+                    "topics": [],
+                },
+            )
 
         # Extract audio and write to transcript location
         audio_path = await self.extract_and_write_audio(file_path, transcript)
@@ -105,6 +124,8 @@ class PipelineMainFile(PipelineMainBase):
         )
 
         self.logger.info("File pipeline complete")
+
+        await transcripts_controller.set_status(transcript.id, "ended")
 
     async def extract_and_write_audio(
         self, file_path: Path, transcript: Transcript
@@ -363,14 +384,21 @@ async def task_pipeline_file_process(*, transcript_id: str):
     if not transcript:
         raise Exception(f"Transcript {transcript_id} not found")
 
-    # Find the file to process
-    audio_file = next(transcript.data_path.glob("upload.*"), None)
-    if not audio_file:
-        audio_file = next(transcript.data_path.glob("audio.*"), None)
-
-    if not audio_file:
-        raise Exception("No audio file found to process")
-
-    # Run file pipeline
     pipeline = PipelineMainFile(transcript_id=transcript_id)
-    await pipeline.process(audio_file)
+
+    try:
+        await pipeline.set_status(transcript_id, "processing")
+
+        # Find the file to process
+        audio_file = next(transcript.data_path.glob("upload.*"), None)
+        if not audio_file:
+            audio_file = next(transcript.data_path.glob("audio.*"), None)
+
+        if not audio_file:
+            raise Exception("No audio file found to process")
+
+        await pipeline.process(audio_file)
+
+    except Exception:
+        await pipeline.set_status(transcript_id, "error")
+        raise
