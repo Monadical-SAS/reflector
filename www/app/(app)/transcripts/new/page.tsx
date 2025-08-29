@@ -54,20 +54,30 @@ const TranscriptCreate = () => {
   const [loadingUpload, setLoadingUpload] = useState(false);
 
   const getTargetLanguage = () => {
-    if (targetLanguage === "NOTRANSLATION") return;
+    if (targetLanguage === "NOTRANSLATION") return undefined;
     return targetLanguage;
   };
 
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    const targetLang = getTargetLanguage();
+    createTranscript.create({
+      name,
+      source_language: "en",
+      target_language: targetLang || "en",
+    });
   };
 
   const uploadFile = () => {
     if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    const targetLang = getTargetLanguage();
+    createTranscript.create({
+      name,
+      source_language: "en",
+      target_language: targetLang || "en",
+    });
   };
 
   useEffect(() => {
