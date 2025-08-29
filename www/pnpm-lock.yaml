@@ -31,9 +31,6 @@ importers:
       "@vercel/edge-config":
         specifier: ^0.4.1
         version: 0.4.1
-      "@vercel/kv":
-        specifier: ^2.0.0
-        version: 2.0.0
       "@whereby.com/browser-sdk":
         specifier: ^3.3.4
         version: 3.13.1(@types/react@18.2.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -52,9 +49,6 @@ importers:
       fontawesome:
         specifier: ^5.6.3
         version: 5.6.3
-      ioredis:
-        specifier: ^5.4.1
-        version: 5.7.0
       jest-worker:
         specifier: ^29.6.2
         version: 29.7.0
@@ -106,9 +100,6 @@ importers:
       react-select-search:
         specifier: ^4.1.7
         version: 4.1.8(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      redlock:
-        specifier: ^5.0.0-beta.2
-        version: 5.0.0-beta.2
       sass:
         specifier: ^1.63.6
         version: 1.90.0
@@ -563,12 +554,6 @@ packages:
     resolution:
       {
         integrity: sha512-p+Zh1sb6EfrfVaS86jlHGQ9HA66fJhV9x5LiE5vCbZtXEHAuhcmUZUdZ4WrFpUBfNalr2OkAJI5AcKEQF+Lebw==,
-      }
-
-  "@ioredis/commands@1.3.0":
-    resolution:
-      {
-        integrity: sha512-M/T6Zewn7sDaBQEqIZ8Rb+i9y8qfGmq+5SDFSf9sA2lUZTmdDLVdOiQaeDp+Q4wElZ9HG1GAX5KhDaidp6LQsQ==,
       }
 
   "@isaacs/cliui@8.0.2":
@@ -1907,12 +1892,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  "@upstash/redis@1.35.3":
-    resolution:
-      {
-        integrity: sha512-hSjv66NOuahW3MisRGlSgoszU2uONAY2l5Qo3Sae8OT3/Tng9K+2/cBRuyPBX8egwEGcNNCF9+r0V6grNnhL+w==,
-      }
-
   "@vercel/build-utils@8.4.12":
     resolution:
       {
@@ -1968,13 +1947,6 @@ packages:
       {
         integrity: sha512-IPAVaALuGAzt2apvTtBs5tB+8zZRzn/yG3AGp8dFyCsw/v5YOuk0Q5s8Z3fayLvJbFpjrKtqRNDZzVJBBU3MrQ==,
       }
-
-  "@vercel/kv@2.0.0":
-    resolution:
-      {
-        integrity: sha512-zdVrhbzZBYo5d1Hfn4bKtqCeKf0FuzW8rSHauzQVMUgv1+1JOwof2mWcBuI+YMJy8s0G0oqAUfQ7HgUDzb8EbA==,
-      }
-    engines: { node: ">=14.6" }
 
   "@vercel/next@4.3.18":
     resolution:
@@ -3053,13 +3025,6 @@ packages:
       }
     engines: { node: ">=6" }
 
-  cluster-key-slot@1.1.2:
-    resolution:
-      {
-        integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==,
-      }
-    engines: { node: ">=0.10.0" }
-
   code-block-writer@10.1.1:
     resolution:
       {
@@ -3303,13 +3268,6 @@ packages:
       {
         integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==,
       }
-
-  denque@2.1.0:
-    resolution:
-      {
-        integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==,
-      }
-    engines: { node: ">=0.10" }
 
   depd@1.1.2:
     resolution:
@@ -4549,13 +4507,6 @@ packages:
       }
     engines: { node: ">= 0.4" }
 
-  ioredis@5.7.0:
-    resolution:
-      {
-        integrity: sha512-NUcA93i1lukyXU+riqEyPtSEkyFq8tX90uL659J+qpCZ3rEdViB/APC58oAhIh3+bJln2hzdlZbBZsGNrlsR8g==,
-      }
-    engines: { node: ">=12.22.0" }
-
   ip-address@9.0.5:
     resolution:
       {
@@ -5052,18 +5003,6 @@ packages:
       }
     engines: { node: ">=10" }
 
-  lodash.defaults@4.2.0:
-    resolution:
-      {
-        integrity: sha512-qjxPLHd3r5DnsdGacqOMU6pb/avJzdh9tFX2ymgoZE27BmjXrNy/y4LoaiTeAb+O3gL8AfpJGtqfX/ae2leYYQ==,
-      }
-
-  lodash.isarguments@3.1.0:
-    resolution:
-      {
-        integrity: sha512-chi4NHZlZqZD18a0imDHnZPrDeBbTtVN7GXMwuGdRH9qotxAjYs3aVLKc7zNOG9eddR5Ksd8rvFEBc9SsggPpg==,
-      }
-
   lodash.merge@4.6.2:
     resolution:
       {
@@ -5541,12 +5480,6 @@ packages:
         optional: true
       sass:
         optional: true
-
-  node-abort-controller@3.1.1:
-    resolution:
-      {
-        integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==,
-      }
 
   node-addon-api@7.1.1:
     resolution:
@@ -6348,27 +6281,6 @@ packages:
       }
     engines: { node: ">= 14.18.0" }
 
-  redis-errors@1.2.0:
-    resolution:
-      {
-        integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==,
-      }
-    engines: { node: ">=4" }
-
-  redis-parser@3.0.0:
-    resolution:
-      {
-        integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==,
-      }
-    engines: { node: ">=4" }
-
-  redlock@5.0.0-beta.2:
-    resolution:
-      {
-        integrity: sha512-2RDWXg5jgRptDrB1w9O/JgSZC0j7y4SlaXnor93H/UJm/QyDiFgBKNtrh0TI6oCXqYSaSoXxFh6Sd3VtYfhRXw==,
-      }
-    engines: { node: ">=12" }
-
   redux-thunk@3.1.0:
     resolution:
       {
@@ -6749,12 +6661,6 @@ packages:
         integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==,
       }
     engines: { node: ">=6" }
-
-  standard-as-callback@2.1.0:
-    resolution:
-      {
-        integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==,
-      }
 
   stat-mode@0.3.0:
     resolution:
@@ -7245,12 +7151,6 @@ packages:
         integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==,
       }
     engines: { node: ">= 0.4" }
-
-  uncrypto@0.1.3:
-    resolution:
-      {
-        integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==,
-      }
 
   undici-types@7.10.0:
     resolution:
@@ -8011,8 +7911,6 @@ snapshots:
   "@internationalized/number@3.6.3":
     dependencies:
       "@swc/helpers": 0.5.17
-
-  "@ioredis/commands@1.3.0": {}
 
   "@isaacs/cliui@8.0.2":
     dependencies:
@@ -8841,10 +8739,6 @@ snapshots:
   "@unrs/resolver-binding-win32-x64-msvc@1.11.1":
     optional: true
 
-  "@upstash/redis@1.35.3":
-    dependencies:
-      uncrypto: 0.1.3
-
   "@vercel/build-utils@8.4.12": {}
 
   "@vercel/edge-config-fs@0.1.0": {}
@@ -8900,10 +8794,6 @@ snapshots:
     dependencies:
       "@vercel/static-config": 3.0.0
       ts-morph: 12.0.0
-
-  "@vercel/kv@2.0.0":
-    dependencies:
-      "@upstash/redis": 1.35.3
 
   "@vercel/next@4.3.18":
     dependencies:
@@ -9900,8 +9790,6 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  cluster-key-slot@1.1.2: {}
-
   code-block-writer@10.1.1: {}
 
   color-convert@2.0.1:
@@ -10021,8 +9909,6 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   delegates@1.0.0: {}
-
-  denque@2.1.0: {}
 
   depd@1.1.2: {}
 
@@ -10903,20 +10789,6 @@ snapshots:
       hasown: 2.0.2
       side-channel: 1.1.0
 
-  ioredis@5.7.0:
-    dependencies:
-      "@ioredis/commands": 1.3.0
-      cluster-key-slot: 1.1.2
-      debug: 4.4.1(supports-color@9.4.0)
-      denque: 2.1.0
-      lodash.defaults: 4.2.0
-      lodash.isarguments: 3.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-
   ip-address@9.0.5:
     dependencies:
       jsbn: 1.1.0
@@ -11205,10 +11077,6 @@ snapshots:
   locate-path@6.0.0:
     dependencies:
       p-locate: 5.0.0
-
-  lodash.defaults@4.2.0: {}
-
-  lodash.isarguments@3.1.0: {}
 
   lodash.merge@4.6.2: {}
 
@@ -11608,8 +11476,6 @@ snapshots:
     transitivePeerDependencies:
       - "@babel/core"
       - babel-plugin-macros
-
-  node-abort-controller@3.1.1: {}
 
   node-addon-api@7.1.1:
     optional: true
@@ -12057,16 +11923,6 @@ snapshots:
 
   readdirp@4.1.2: {}
 
-  redis-errors@1.2.0: {}
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
-
-  redlock@5.0.0-beta.2:
-    dependencies:
-      node-abort-controller: 3.1.1
-
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
       redux: 5.0.1
@@ -12315,8 +12171,6 @@ snapshots:
   stacktrace-parser@0.1.11:
     dependencies:
       type-fest: 0.7.1
-
-  standard-as-callback@2.1.0: {}
 
   stat-mode@0.3.0: {}
 
@@ -12678,8 +12532,6 @@ snapshots:
       has-bigints: 1.1.0
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
-
-  uncrypto@0.1.3: {}
 
   undici-types@7.10.0: {}
 

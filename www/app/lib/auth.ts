@@ -1,26 +1,19 @@
-// import { kv } from "@vercel/kv";
-import Redlock, { ResourceLockedError } from "redlock";
 import { AuthOptions } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
 import { JWT } from "next-auth/jwt";
 import { JWTWithAccessToken, CustomSession } from "./types";
-import Redis from "ioredis";
 
 const PRETIMEOUT = 60; // seconds before token expires to refresh it
-const DEFAULT_REDIS_KEY_TIMEOUT = 60 * 60 * 24 * 30; // 30 days (refresh token expires in 30 days)
-const kv = new Redis(process.env.KV_URL || "", {
-  tls: {},
-});
-const redlock = new Redlock([kv], {});
 
-redlock.on("error", (error) => {
-  if (error instanceof ResourceLockedError) {
-    return;
-  }
+// Simple in-memory cache for tokens (in production, consider using a proper cache solution)
+const tokenCache = new Map<
+  string,
+  { token: JWTWithAccessToken; timestamp: number }
+>();
+const TOKEN_CACHE_TTL = 60 * 60 * 24 * 30 * 1000; // 30 days in milliseconds
 
-  // Log all other errors.
-  console.error(error);
-});
+// Simple lock mechanism to prevent concurrent token refreshes
+const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -51,12 +44,11 @@ export const authOptions: AuthOptions = {
           accessTokenExpires: expiresAt * 1000,
           refreshToken: account.refresh_token,
         };
-        kv.set(
-          `token:${jwtToken.sub}`,
-          JSON.stringify(jwtToken),
-          "EX",
-          DEFAULT_REDIS_KEY_TIMEOUT,
-        );
+        // Store in memory cache
+        tokenCache.set(`token:${jwtToken.sub}`, {
+          token: jwtToken,
+          timestamp: Date.now(),
+        });
         return jwtToken;
       }
 
@@ -65,7 +57,7 @@ export const authOptions: AuthOptions = {
       }
 
       // access token has expired, try to update it
-      return await redisLockedrefreshAccessToken(token);
+      return await lockedRefreshAccessToken(token);
     },
     async session({ session, token }) {
       const extendedToken = token as JWTWithAccessToken;
@@ -83,32 +75,51 @@ export const authOptions: AuthOptions = {
   },
 };
 
-async function redisLockedrefreshAccessToken(token: JWT) {
-  return await redlock.using(
-    [token.sub as string, "jwt-refresh"],
-    5000,
-    async () => {
-      const redisToken = await kv.get(`token:${token.sub}`);
-      const currentToken = JSON.parse(
-        redisToken as string,
-      ) as JWTWithAccessToken;
+async function lockedRefreshAccessToken(
+  token: JWT,
+): Promise<JWTWithAccessToken> {
+  const lockKey = `${token.sub}-refresh`;
 
-      // if there is multiple requests for the same token, it may already have been refreshed
-      if (Date.now() < currentToken.accessTokenExpires) {
-        return currentToken;
+  // Check if there's already a refresh in progress
+  const existingRefresh = refreshLocks.get(lockKey);
+  if (existingRefresh) {
+    return existingRefresh;
+  }
+
+  // Create a new refresh promise
+  const refreshPromise = (async () => {
+    try {
+      // Check cache for recent token
+      const cached = tokenCache.get(`token:${token.sub}`);
+      if (cached) {
+        // Clean up old cache entries
+        if (Date.now() - cached.timestamp > TOKEN_CACHE_TTL) {
+          tokenCache.delete(`token:${token.sub}`);
+        } else if (Date.now() < cached.token.accessTokenExpires) {
+          // Token is still valid
+          return cached.token;
+        }
       }
 
-      // now really do the request
+      // Refresh the token
+      const currentToken = cached?.token || (token as JWTWithAccessToken);
       const newToken = await refreshAccessToken(currentToken);
-      await kv.set(
-        `token:${currentToken.sub}`,
-        JSON.stringify(newToken),
-        "EX",
-        DEFAULT_REDIS_KEY_TIMEOUT,
-      );
+
+      // Update cache
+      tokenCache.set(`token:${token.sub}`, {
+        token: newToken,
+        timestamp: Date.now(),
+      });
+
       return newToken;
-    },
-  );
+    } finally {
+      // Clean up the lock after a short delay
+      setTimeout(() => refreshLocks.delete(lockKey), 100);
+    }
+  })();
+
+  refreshLocks.set(lockKey, refreshPromise);
+  return refreshPromise;
 }
 
 async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
