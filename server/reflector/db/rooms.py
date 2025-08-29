@@ -41,8 +41,8 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
-    sqlalchemy.Column("webhook_url", sqlalchemy.String),
-    sqlalchemy.Column("webhook_secret", sqlalchemy.String),
+    sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -62,8 +62,8 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
-    webhook_url: str = ""
-    webhook_secret: str = ""
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
 
 
 class RoomController:

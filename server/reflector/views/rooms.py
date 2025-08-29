@@ -46,8 +46,8 @@ class Room(BaseModel):
 
 
 class RoomDetails(Room):
-    webhook_url: str
-    webhook_secret: str
+    webhook_url: str | None
+    webhook_secret: str | None
 
 
 class Meeting(BaseModel):
