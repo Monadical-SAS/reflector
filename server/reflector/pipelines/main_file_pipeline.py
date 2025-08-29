@@ -99,6 +99,16 @@ class PipelineMainFile(PipelineMainBase):
 
         transcript = await self.get_transcript()
 
+        # Clear transcript as we're going to regenerate everything
+        async with self.transaction():
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "events": [],
+                    "topics": [],
+                },
+            )
+
         # Extract audio and write to transcript location
         audio_path = await self.extract_and_write_audio(file_path, transcript)
 

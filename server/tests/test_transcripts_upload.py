@@ -37,7 +37,7 @@ async def test_transcript_upload_file(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-    # wait the processing to finish (max 1 minutes)
+    # wait the processing to finish (max 1 minute)
     timeout_seconds = 60
     start_time = time.monotonic()
     while (time.monotonic() - start_time) < timeout_seconds:
