@@ -13,13 +13,6 @@ interface FilterSidebarProps {
   onFilterChange: (sourceKind: SourceKind | null, roomId: string) => void;
 }
 
-// Type helper for source kind literals
-const SK = {
-  room: "room" as SourceKind,
-  live: "live" as SourceKind,
-  file: "file" as SourceKind,
-};
-
 export default function FilterSidebar({
   rooms,
   selectedSourceKind,
@@ -54,14 +47,14 @@ export default function FilterSidebar({
                 key={room.id}
                 as={NextLink}
                 href="#"
-                onClick={() => onFilterChange(SK.room, room.id)}
+                onClick={() => onFilterChange("room" as SourceKind, room.id)}
                 color={
-                  selectedSourceKind === SK.room && selectedRoomId === room.id
+                  selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "blue.500"
                     : "gray.600"
                 }
                 fontWeight={
-                  selectedSourceKind === SK.room && selectedRoomId === room.id
+                  selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"
                     : "normal"
                 }
@@ -82,14 +75,14 @@ export default function FilterSidebar({
                 key={room.id}
                 as={NextLink}
                 href="#"
-                onClick={() => onFilterChange(SK.room, room.id)}
+                onClick={() => onFilterChange("room" as SourceKind, room.id)}
                 color={
-                  selectedSourceKind === SK.room && selectedRoomId === room.id
+                  selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "blue.500"
                     : "gray.600"
                 }
                 fontWeight={
-                  selectedSourceKind === SK.room && selectedRoomId === room.id
+                  selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "bold"
                     : "normal"
                 }
@@ -105,10 +98,10 @@ export default function FilterSidebar({
         <Link
           as={NextLink}
           href="#"
-          onClick={() => onFilterChange(SK.live, "")}
-          color={selectedSourceKind === SK.live ? "blue.500" : "gray.600"}
+          onClick={() => onFilterChange("live" as SourceKind, "")}
+          color={selectedSourceKind === "live" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
-          fontWeight={selectedSourceKind === SK.live ? "bold" : "normal"}
+          fontWeight={selectedSourceKind === "live" ? "bold" : "normal"}
           fontSize="sm"
         >
           Live Transcripts
@@ -116,10 +109,10 @@ export default function FilterSidebar({
         <Link
           as={NextLink}
           href="#"
-          onClick={() => onFilterChange(SK.file, "")}
-          color={selectedSourceKind === SK.file ? "blue.500" : "gray.600"}
+          onClick={() => onFilterChange("file" as SourceKind, "")}
+          color={selectedSourceKind === "file" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
-          fontWeight={selectedSourceKind === SK.file ? "bold" : "normal"}
+          fontWeight={selectedSourceKind === "file" ? "bold" : "normal"}
           fontSize="sm"
         >
           Uploaded Files
