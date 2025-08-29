@@ -32,6 +32,7 @@ from reflector.db.transcripts import (
     TranscriptFinalLongSummary,
     TranscriptFinalShortSummary,
     TranscriptFinalTitle,
+    TranscriptStatus,
     TranscriptText,
     TranscriptTopic,
     TranscriptWaveform,
@@ -188,8 +189,15 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         ]
 
     @asynccontextmanager
-    async def transaction(self):
+    async def lock_transaction(self):
+        # This lock is to prevent multiple processor starting adding
+        # into event array at the same time
         async with self._lock:
+            yield
+
+    @asynccontextmanager
+    async def transaction(self):
+        async with self.lock_transaction():
             async with transcripts_controller.transaction():
                 yield
 
@@ -198,14 +206,14 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         # if it's the first part, update the status of the transcript
         # but do not set the ended status yet.
         if isinstance(self, PipelineMainLive):
-            status_mapping = {
+            status_mapping: dict[str, TranscriptStatus] = {
                 "started": "recording",
                 "push": "recording",
                 "flush": "processing",
                 "error": "error",
             }
         elif isinstance(self, PipelineMainFinalSummaries):
-            status_mapping = {
+            status_mapping: dict[str, TranscriptStatus] = {
                 "push": "processing",
                 "flush": "processing",
                 "error": "error",
@@ -221,22 +229,8 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
             return
 
         # when the status of the pipeline changes, update the transcript
-        async with self.transaction():
-            transcript = await self.get_transcript()
-            if status == transcript.status:
-                return
-            resp = await transcripts_controller.append_event(
-                transcript=transcript,
-                event="STATUS",
-                data=StrValue(value=status),
-            )
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "status": status,
-                },
-            )
-            return resp
+        async with self._lock:
+            return await transcripts_controller.set_status(self.transcript_id, status)
 
     @broadcast_to_sockets
     async def on_transcript(self, data):
