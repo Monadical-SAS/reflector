@@ -8,12 +8,14 @@ from typing import Annotated, Any, Dict, Iterator
 
 import sqlalchemy
 import webvtt
+from databases.interfaces import Record as DbRecord
 from fastapi import HTTPException
 from pydantic import (
     BaseModel,
     Field,
     NonNegativeFloat,
     NonNegativeInt,
+    TypeAdapter,
     ValidationError,
     constr,
     field_serializer,
@@ -24,6 +26,7 @@ from reflector.db.rooms import rooms
 from reflector.db.transcripts import SourceKind, transcripts
 from reflector.db.utils import is_postgresql
 from reflector.logger import logger
+from reflector.utils.string import NonEmptyString, try_parse_non_empty_string
 
 DEFAULT_SEARCH_LIMIT = 20
 SNIPPET_CONTEXT_LENGTH = 50  # Characters before/after match to include
@@ -31,12 +34,13 @@ DEFAULT_SNIPPET_MAX_LENGTH = NonNegativeInt(150)
 DEFAULT_MAX_SNIPPETS = NonNegativeInt(3)
 LONG_SUMMARY_MAX_SNIPPETS = 2
 
-SearchQueryBase = constr(min_length=0, strip_whitespace=True)
+SearchQueryBase = constr(min_length=1, strip_whitespace=True)
 SearchLimitBase = Annotated[int, Field(ge=1, le=100)]
 SearchOffsetBase = Annotated[int, Field(ge=0)]
 SearchTotalBase = Annotated[int, Field(ge=0)]
 
 SearchQuery = Annotated[SearchQueryBase, Field(description="Search query text")]
+search_query_adapter = TypeAdapter(SearchQuery)
 SearchLimit = Annotated[SearchLimitBase, Field(description="Results per page")]
 SearchOffset = Annotated[
     SearchOffsetBase, Field(description="Number of results to skip")
@@ -88,7 +92,7 @@ class WebVTTProcessor:
     @staticmethod
     def generate_snippets(
         webvtt_content: WebVTTContent,
-        query: str,
+        query: SearchQuery,
         max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
     ) -> list[str]:
         """Generate snippets from WebVTT content."""
@@ -125,7 +129,7 @@ class SnippetCandidate:
 class SearchParameters(BaseModel):
     """Validated search parameters for full-text search."""
 
-    query_text: SearchQuery
+    query_text: SearchQuery | None = None
     limit: SearchLimit = DEFAULT_SEARCH_LIMIT
     offset: SearchOffset = 0
     user_id: str | None = None
@@ -199,15 +203,13 @@ class SnippetGenerator:
             prev_start = start
 
     @staticmethod
-    def count_matches(text: str, query: str) -> NonNegativeInt:
+    def count_matches(text: str, query: SearchQuery) -> NonNegativeInt:
         """Count total number of matches for a query in text."""
         ZERO = NonNegativeInt(0)
         if not text:
             logger.warning("Empty text for search query in count_matches")
             return ZERO
-        if not query:
-            logger.warning("Empty query for search text in count_matches")
-            return ZERO
+        assert query is not None
         return NonNegativeInt(
             sum(1 for _ in SnippetGenerator.find_all_matches(text, query))
         )
@@ -243,13 +245,14 @@ class SnippetGenerator:
     @staticmethod
     def generate(
         text: str,
-        query: str,
+        query: SearchQuery,
         max_length: NonNegativeInt = DEFAULT_SNIPPET_MAX_LENGTH,
         max_snippets: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
     ) -> list[str]:
         """Generate snippets from text."""
-        if not text or not query:
-            logger.warning("Empty text or query for generate_snippets")
+        assert query is not None
+        if not text:
+            logger.warning("Empty text for generate_snippets")
             return []
 
         candidates = (
@@ -270,7 +273,7 @@ class SnippetGenerator:
     @staticmethod
     def from_summary(
         summary: str,
-        query: str,
+        query: SearchQuery,
         max_snippets: NonNegativeInt = LONG_SUMMARY_MAX_SNIPPETS,
     ) -> list[str]:
         """Generate snippets from summary text."""
@@ -278,9 +281,9 @@ class SnippetGenerator:
 
     @staticmethod
     def combine_sources(
-        summary: str | None,
+        summary: NonEmptyString | None,
         webvtt: WebVTTContent | None,
-        query: str,
+        query: SearchQuery,
         max_total: NonNegativeInt = DEFAULT_MAX_SNIPPETS,
     ) -> tuple[list[str], NonNegativeInt]:
         """Combine snippets from multiple sources and return total match count.
@@ -289,6 +292,11 @@ class SnippetGenerator:
 
         snippets can be empty for real in case of e.g. title match
         """
+
+        assert (
+            summary is not None or webvtt is not None
+        ), "At lest one source must be present"
+
         webvtt_matches = 0
         summary_matches = 0
 
@@ -355,8 +363,8 @@ class SearchController:
                 else_=rooms.c.name,
             ).label("room_name"),
         ]
-
-        if params.query_text:
+        search_query = None
+        if params.query_text is not None:
             search_query = sqlalchemy.func.websearch_to_tsquery(
                 "english", params.query_text
             )
@@ -373,7 +381,9 @@ class SearchController:
             transcripts.join(rooms, transcripts.c.room_id == rooms.c.id, isouter=True)
         )
 
-        if params.query_text:
+        if params.query_text is not None:
+            # because already initialized based on params.query_text presence above
+            assert search_query is not None
             base_query = base_query.where(
                 transcripts.c.search_vector_en.op("@@")(search_query)
             )
@@ -393,7 +403,7 @@ class SearchController:
                 transcripts.c.source_kind == params.source_kind
             )
 
-        if params.query_text:
+        if params.query_text is not None:
             order_by = sqlalchemy.desc(sqlalchemy.text("rank"))
         else:
             order_by = sqlalchemy.desc(transcripts.c.created_at)
@@ -407,19 +417,29 @@ class SearchController:
         )
         total = await get_database().fetch_val(count_query)
 
-        def _process_result(r) -> SearchResult:
+        def _process_result(r: DbRecord) -> SearchResult:
             r_dict: Dict[str, Any] = dict(r)
+
             webvtt_raw: str | None = r_dict.pop("webvtt", None)
+            webvtt: WebVTTContent | None
             if webvtt_raw:
                 webvtt = WebVTTProcessor.parse(webvtt_raw)
             else:
                 webvtt = None
-            long_summary: str | None = r_dict.pop("long_summary", None)
+
+            long_summary_r: str | None = r_dict.pop("long_summary", None)
+            long_summary: NonEmptyString = try_parse_non_empty_string(long_summary_r)
             room_name: str | None = r_dict.pop("room_name", None)
             db_result = SearchResultDB.model_validate(r_dict)
 
-            snippets, total_match_count = SnippetGenerator.combine_sources(
-                long_summary, webvtt, params.query_text, DEFAULT_MAX_SNIPPETS
+            at_least_one_source = webvtt is not None or long_summary is not None
+            has_query = params.query_text is not None
+            snippets, total_match_count = (
+                SnippetGenerator.combine_sources(
+                    long_summary, webvtt, params.query_text, DEFAULT_MAX_SNIPPETS
+                )
+                if has_query and at_least_one_source
+                else ([], 0)
             )
 
             return SearchResult(
