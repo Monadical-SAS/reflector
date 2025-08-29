@@ -13,6 +13,7 @@ import av
 import structlog
 from celery import shared_task
 
+from reflector.asynctask import asynctask
 from reflector.db.transcripts import (
     Transcript,
     TranscriptStatus,
@@ -21,7 +22,6 @@ from reflector.db.transcripts import (
 from reflector.logger import logger
 from reflector.pipelines.main_live_pipeline import (
     PipelineMainBase,
-    asynctask,
     broadcast_to_sockets,
 )
 from reflector.processors import (

@@ -54,7 +54,12 @@ meeting_consent = sa.Table(
     "meeting_consent",
     metadata,
     sa.Column("id", sa.String, primary_key=True),
-    sa.Column("meeting_id", sa.String, sa.ForeignKey("meeting.id"), nullable=False),
+    sa.Column(
+        "meeting_id",
+        sa.String,
+        sa.ForeignKey("meeting.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
     sa.Column("user_id", sa.String),
     sa.Column("consent_given", sa.Boolean, nullable=False),
     sa.Column("consent_timestamp", sa.DateTime(timezone=True), nullable=False),
