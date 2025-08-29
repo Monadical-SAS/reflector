@@ -1,5 +1,7 @@
 """Unit tests for search snippet generation."""
 
+import pytest
+
 from reflector.db.search import (
     SnippetCandidate,
     SnippetGenerator,
@@ -512,11 +514,9 @@ data visualization and data storage"""
         )
         assert webvtt_count == 3
 
-        snippets_empty, count_empty = SnippetGenerator.combine_sources(
-            None, None, "data", max_total=3
-        )
-        assert snippets_empty == []
-        assert count_empty == 0
+        # combine_sources requires at least one source to be present
+        with pytest.raises(AssertionError, match="At least one source must be present"):
+            SnippetGenerator.combine_sources(None, None, "data", max_total=3)
 
     def test_edge_cases(self):
         """Test edge cases for the pure functions."""

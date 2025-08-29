@@ -295,7 +295,7 @@ class SnippetGenerator:
 
         assert (
             summary is not None or webvtt is not None
-        ), "At lest one source must be present"
+        ), "At least one source must be present"
 
         webvtt_matches = 0
         summary_matches = 0

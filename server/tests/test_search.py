@@ -23,7 +23,7 @@ async def test_search_postgresql_only():
     assert results == []
     assert total == 0
 
-    params_empty = SearchParameters(query_text="")
+    params_empty = SearchParameters(query_text=None)
     results_empty, total_empty = await search_controller.search_transcripts(
         params_empty
     )
@@ -34,7 +34,7 @@ async def test_search_postgresql_only():
 @pytest.mark.asyncio
 async def test_search_with_empty_query():
     """Test that empty query returns all transcripts."""
-    params = SearchParameters(query_text="")
+    params = SearchParameters(query_text=None)
     results, total = await search_controller.search_transcripts(params)
 
     assert isinstance(results, list)
