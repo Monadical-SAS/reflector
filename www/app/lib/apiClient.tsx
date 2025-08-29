@@ -14,9 +14,6 @@ import createFetchClient from "openapi-react-query";
 // The actual URL will be set via middleware in ApiAuthProvider
 export const client = createClient<paths>({
   baseUrl: "http://127.0.0.1:1250",
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Create the React Query client wrapper
@@ -30,6 +27,13 @@ client.use({
   onRequest({ request }) {
     if (currentAuthToken) {
       request.headers.set("Authorization", `Bearer ${currentAuthToken}`);
+    }
+    // Only set Content-Type if not already set (FormData will set its own boundary)
+    if (
+      !request.headers.has("Content-Type") &&
+      !(request.body instanceof FormData)
+    ) {
+      request.headers.set("Content-Type", "application/json");
     }
     return request;
   },
