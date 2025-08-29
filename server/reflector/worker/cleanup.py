@@ -141,7 +141,7 @@ async def cleanup_old_public_data(
     }
 
     db = get_database()
-    await _cleanup_old_transcripts(db, cutoff_date, stats)
+    await cleanup_old_transcripts(db, cutoff_date, stats)
 
     log_cleanup_results(stats)
     return stats
