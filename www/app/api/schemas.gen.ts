@@ -91,6 +91,14 @@ export const $CreateRoom = {
       type: "boolean",
       title: "Is Shared",
     },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+    },
   },
   type: "object",
   required: [
@@ -103,6 +111,8 @@ export const $CreateRoom = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "webhook_url",
+    "webhook_secret",
   ],
   title: "CreateRoom",
 } as const;
@@ -809,11 +819,11 @@ export const $Page_GetTranscriptMinimal_ = {
   title: "Page[GetTranscriptMinimal]",
 } as const;
 
-export const $Page_Room_ = {
+export const $Page_RoomDetails_ = {
   properties: {
     items: {
       items: {
-        $ref: "#/components/schemas/Room",
+        $ref: "#/components/schemas/RoomDetails",
       },
       type: "array",
       title: "Items",
@@ -869,7 +879,7 @@ export const $Page_Room_ = {
   },
   type: "object",
   required: ["items", "page", "size"],
-  title: "Page[Room]",
+  title: "Page[RoomDetails]",
 } as const;
 
 export const $Participant = {
@@ -967,6 +977,86 @@ export const $Room = {
     "is_shared",
   ],
   title: "Room",
+} as const;
+
+export const $RoomDetails = {
+  properties: {
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    name: {
+      type: "string",
+      title: "Name",
+    },
+    user_id: {
+      type: "string",
+      title: "User Id",
+    },
+    created_at: {
+      type: "string",
+      format: "date-time",
+      title: "Created At",
+    },
+    zulip_auto_post: {
+      type: "boolean",
+      title: "Zulip Auto Post",
+    },
+    zulip_stream: {
+      type: "string",
+      title: "Zulip Stream",
+    },
+    zulip_topic: {
+      type: "string",
+      title: "Zulip Topic",
+    },
+    is_locked: {
+      type: "boolean",
+      title: "Is Locked",
+    },
+    room_mode: {
+      type: "string",
+      title: "Room Mode",
+    },
+    recording_type: {
+      type: "string",
+      title: "Recording Type",
+    },
+    recording_trigger: {
+      type: "string",
+      title: "Recording Trigger",
+    },
+    is_shared: {
+      type: "boolean",
+      title: "Is Shared",
+    },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+    },
+  },
+  type: "object",
+  required: [
+    "id",
+    "name",
+    "user_id",
+    "created_at",
+    "zulip_auto_post",
+    "zulip_stream",
+    "zulip_topic",
+    "is_locked",
+    "room_mode",
+    "recording_type",
+    "recording_trigger",
+    "is_shared",
+    "webhook_url",
+    "webhook_secret",
+  ],
+  title: "RoomDetails",
 } as const;
 
 export const $RtcOffer = {
@@ -1351,6 +1441,14 @@ export const $UpdateRoom = {
       type: "boolean",
       title: "Is Shared",
     },
+    webhook_url: {
+      type: "string",
+      title: "Webhook Url",
+    },
+    webhook_secret: {
+      type: "string",
+      title: "Webhook Secret",
+    },
   },
   type: "object",
   required: [
@@ -1363,6 +1461,8 @@ export const $UpdateRoom = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "webhook_url",
+    "webhook_secret",
   ],
   title: "UpdateRoom",
 } as const;
@@ -1539,6 +1639,50 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $WebhookTestResult = {
+  properties: {
+    success: {
+      type: "boolean",
+      title: "Success",
+    },
+    message: {
+      type: "string",
+      title: "Message",
+      default: "",
+    },
+    error: {
+      type: "string",
+      title: "Error",
+      default: "",
+    },
+    status_code: {
+      anyOf: [
+        {
+          type: "integer",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Status Code",
+    },
+    response_preview: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Response Preview",
+    },
+  },
+  type: "object",
+  required: ["success"],
+  title: "WebhookTestResult",
 } as const;
 
 export const $WherebyWebhookEvent = {

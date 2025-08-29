@@ -10,12 +10,16 @@ import type {
   V1RoomsListResponse,
   V1RoomsCreateData,
   V1RoomsCreateResponse,
+  V1RoomsGetData,
+  V1RoomsGetResponse,
   V1RoomsUpdateData,
   V1RoomsUpdateResponse,
   V1RoomsDeleteData,
   V1RoomsDeleteResponse,
   V1RoomsCreateMeetingData,
   V1RoomsCreateMeetingResponse,
+  V1RoomsTestWebhookData,
+  V1RoomsTestWebhookResponse,
   V1TranscriptsListData,
   V1TranscriptsListResponse,
   V1TranscriptsCreateData,
@@ -118,7 +122,7 @@ export class DefaultService {
    * @param data The data for the request.
    * @param data.page Page number
    * @param data.size Page size
-   * @returns Page_Room_ Successful Response
+   * @returns Page_RoomDetails_ Successful Response
    * @throws ApiError
    */
   public v1RoomsList(
@@ -159,11 +163,33 @@ export class DefaultService {
   }
 
   /**
+   * Rooms Get
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns RoomDetails Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsGet(
+    data: V1RoomsGetData,
+  ): CancelablePromise<V1RoomsGetResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/rooms/{room_id}",
+      path: {
+        room_id: data.roomId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
    * Rooms Update
    * @param data The data for the request.
    * @param data.roomId
    * @param data.requestBody
-   * @returns Room Successful Response
+   * @returns RoomDetails Successful Response
    * @throws ApiError
    */
   public v1RoomsUpdate(
@@ -220,6 +246,29 @@ export class DefaultService {
       url: "/v1/rooms/{room_name}/meeting",
       path: {
         room_name: data.roomName,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Rooms Test Webhook
+   * Test webhook configuration by sending a sample payload.
+   * @param data The data for the request.
+   * @param data.roomId
+   * @returns WebhookTestResult Successful Response
+   * @throws ApiError
+   */
+  public v1RoomsTestWebhook(
+    data: V1RoomsTestWebhookData,
+  ): CancelablePromise<V1RoomsTestWebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/rooms/{room_id}/webhook/test",
+      path: {
+        room_id: data.roomId,
       },
       errors: {
         422: "Validation Error",

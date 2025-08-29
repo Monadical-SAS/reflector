@@ -24,6 +24,8 @@ export type CreateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type CreateTranscript = {
@@ -147,8 +149,8 @@ export type Page_GetTranscriptMinimal_ = {
   pages?: number | null;
 };
 
-export type Page_Room_ = {
-  items: Array<Room>;
+export type Page_RoomDetails_ = {
+  items: Array<RoomDetails>;
   total?: number | null;
   page: number | null;
   size: number | null;
@@ -174,6 +176,23 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+};
+
+export type RoomDetails = {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+  zulip_auto_post: boolean;
+  zulip_stream: string;
+  zulip_topic: string;
+  is_locked: boolean;
+  room_mode: string;
+  recording_type: string;
+  recording_trigger: string;
+  is_shared: boolean;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type RtcOffer = {
@@ -281,6 +300,8 @@ export type UpdateRoom = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  webhook_url: string;
+  webhook_secret: string;
 };
 
 export type UpdateTranscript = {
@@ -305,6 +326,14 @@ export type ValidationError = {
   loc: Array<string | number>;
   msg: string;
   type: string;
+};
+
+export type WebhookTestResult = {
+  success: boolean;
+  message?: string;
+  error?: string;
+  status_code?: number | null;
+  response_preview?: string | null;
 };
 
 export type WherebyWebhookEvent = {
@@ -350,7 +379,7 @@ export type V1RoomsListData = {
   size?: number;
 };
 
-export type V1RoomsListResponse = Page_Room_;
+export type V1RoomsListResponse = Page_RoomDetails_;
 
 export type V1RoomsCreateData = {
   requestBody: CreateRoom;
@@ -358,12 +387,18 @@ export type V1RoomsCreateData = {
 
 export type V1RoomsCreateResponse = Room;
 
+export type V1RoomsGetData = {
+  roomId: string;
+};
+
+export type V1RoomsGetResponse = RoomDetails;
+
 export type V1RoomsUpdateData = {
   requestBody: UpdateRoom;
   roomId: string;
 };
 
-export type V1RoomsUpdateResponse = Room;
+export type V1RoomsUpdateResponse = RoomDetails;
 
 export type V1RoomsDeleteData = {
   roomId: string;
@@ -376,6 +411,12 @@ export type V1RoomsCreateMeetingData = {
 };
 
 export type V1RoomsCreateMeetingResponse = Meeting;
+
+export type V1RoomsTestWebhookData = {
+  roomId: string;
+};
+
+export type V1RoomsTestWebhookResponse = WebhookTestResult;
 
 export type V1TranscriptsListData = {
   /**
@@ -613,7 +654,7 @@ export type $OpenApiTs = {
         /**
          * Successful Response
          */
-        200: Page_Room_;
+        200: Page_RoomDetails_;
         /**
          * Validation Error
          */
@@ -635,13 +676,26 @@ export type $OpenApiTs = {
     };
   };
   "/v1/rooms/{room_id}": {
+    get: {
+      req: V1RoomsGetData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: RoomDetails;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
     patch: {
       req: V1RoomsUpdateData;
       res: {
         /**
          * Successful Response
          */
-        200: Room;
+        200: RoomDetails;
         /**
          * Validation Error
          */
@@ -670,6 +724,21 @@ export type $OpenApiTs = {
          * Successful Response
          */
         200: Meeting;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/rooms/{room_id}/webhook/test": {
+    post: {
+      req: V1RoomsTestWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: WebhookTestResult;
         /**
          * Validation Error
          */

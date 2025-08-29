@@ -15,6 +15,7 @@ from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
+from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ class Room(BaseModel):
     is_shared: bool
 
 
+class RoomDetails(Room):
+    webhook_url: str
+    webhook_secret: str
+
+
 class Meeting(BaseModel):
     id: str
     room_name: str
@@ -64,6 +70,8 @@ class CreateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    webhook_url: str
+    webhook_secret: str
 
 
 class UpdateRoom(BaseModel):
@@ -76,16 +84,26 @@ class UpdateRoom(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    webhook_url: str
+    webhook_secret: str
 
 
 class DeletionStatus(BaseModel):
     status: str
 
 
-@router.get("/rooms", response_model=Page[Room])
+class WebhookTestResult(BaseModel):
+    success: bool
+    message: str = ""
+    error: str = ""
+    status_code: int | None = None
+    response_preview: str | None = None
+
+
+@router.get("/rooms", response_model=Page[RoomDetails])
 async def rooms_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-) -> list[Room]:
+) -> list[RoomDetails]:
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -97,6 +115,18 @@ async def rooms_list(
             user_id=user_id, order_by="-created_at", return_query=True
         ),
     )
+
+
+@router.get("/rooms/{room_id}", response_model=RoomDetails)
+async def rooms_get(
+    room_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    return room
 
 
 @router.post("/rooms", response_model=Room)
@@ -117,10 +147,12 @@ async def rooms_create(
         recording_type=room.recording_type,
         recording_trigger=room.recording_trigger,
         is_shared=room.is_shared,
+        webhook_url=room.webhook_url,
+        webhook_secret=room.webhook_secret,
     )
 
 
-@router.patch("/rooms/{room_id}", response_model=Room)
+@router.patch("/rooms/{room_id}", response_model=RoomDetails)
 async def rooms_update(
     room_id: str,
     info: UpdateRoom,
@@ -209,3 +241,24 @@ async def rooms_create_meeting(
         meeting.host_room_url = ""
 
     return meeting
+
+
+@router.post("/rooms/{room_id}/webhook/test", response_model=WebhookTestResult)
+async def rooms_test_webhook(
+    room_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """Test webhook configuration by sending a sample payload."""
+    user_id = user["sub"] if user else None
+
+    room = await rooms_controller.get_by_id(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    if user_id and room.user_id != user_id:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to test this room's webhook"
+        )
+
+    result = await test_webhook(room_id)
+    return WebhookTestResult(**result)
