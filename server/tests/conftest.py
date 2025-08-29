@@ -179,6 +179,63 @@ async def dummy_diarization():
 
 
 @pytest.fixture
+async def dummy_file_transcript():
+    from reflector.processors.file_transcript import FileTranscriptProcessor
+    from reflector.processors.types import Transcript, Word
+
+    class TestFileTranscriptProcessor(FileTranscriptProcessor):
+        async def _transcript(self, data):
+            return Transcript(
+                text="Hello world. How are you today?",
+                words=[
+                    Word(start=0.0, end=0.5, text="Hello", speaker=0),
+                    Word(start=0.5, end=0.6, text=" ", speaker=0),
+                    Word(start=0.6, end=1.0, text="world", speaker=0),
+                    Word(start=1.0, end=1.1, text=".", speaker=0),
+                    Word(start=1.1, end=1.2, text=" ", speaker=0),
+                    Word(start=1.2, end=1.5, text="How", speaker=0),
+                    Word(start=1.5, end=1.6, text=" ", speaker=0),
+                    Word(start=1.6, end=1.8, text="are", speaker=0),
+                    Word(start=1.8, end=1.9, text=" ", speaker=0),
+                    Word(start=1.9, end=2.1, text="you", speaker=0),
+                    Word(start=2.1, end=2.2, text=" ", speaker=0),
+                    Word(start=2.2, end=2.5, text="today", speaker=0),
+                    Word(start=2.5, end=2.6, text="?", speaker=0),
+                ],
+            )
+
+    with patch(
+        "reflector.processors.file_transcript_auto.FileTranscriptAutoProcessor.__new__"
+    ) as mock_auto:
+        mock_auto.return_value = TestFileTranscriptProcessor()
+        yield
+
+
+@pytest.fixture
+async def dummy_file_diarization():
+    from reflector.processors.file_diarization import (
+        FileDiarizationOutput,
+        FileDiarizationProcessor,
+    )
+    from reflector.processors.types import DiarizationSegment
+
+    class TestFileDiarizationProcessor(FileDiarizationProcessor):
+        async def _diarize(self, data):
+            return FileDiarizationOutput(
+                diarization=[
+                    DiarizationSegment(start=0.0, end=1.1, speaker=0),
+                    DiarizationSegment(start=1.2, end=2.6, speaker=1),
+                ]
+            )
+
+    with patch(
+        "reflector.processors.file_diarization_auto.FileDiarizationAutoProcessor.__new__"
+    ) as mock_auto:
+        mock_auto.return_value = TestFileDiarizationProcessor()
+        yield
+
+
+@pytest.fixture
 async def dummy_transcript_translator():
     from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
 
@@ -260,7 +317,10 @@ def celery_config():
 
 @pytest.fixture(scope="session")
 def celery_includes():
-    return ["reflector.pipelines.main_live_pipeline"]
+    return [
+        "reflector.pipelines.main_live_pipeline",
+        "reflector.pipelines.main_file_pipeline",
+    ]
 
 
 @pytest.fixture
