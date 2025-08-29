@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { paths } from "../reflector-api";
 import useAuthReady from "./useAuthReady";
 
-// Rooms hooks
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
@@ -26,7 +25,6 @@ export function useRoomsList(page: number = 1) {
   );
 }
 
-// Transcripts hooks
 export function useTranscriptsSearch(
   q: string = "",
   options: {
@@ -66,11 +64,8 @@ export function useTranscriptDelete() {
 
   return $api.useMutation("delete", "/v1/transcripts/{transcript_id}", {
     onSuccess: () => {
-      // Invalidate transcripts queries to refetch
       queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/transcripts/search", {
-          params: { query: { q: "" } },
-        }).queryKey,
+        queryKey: ["get", "/v1/transcripts/search"],
       });
     },
     onError: (error) => {
@@ -110,7 +105,6 @@ export function useTranscriptGet(transcriptId: string | null) {
   );
 }
 
-// Rooms mutations
 export function useRoomCreate() {
   const { setError } = useError();
   const queryClient = useQueryClient();
@@ -159,7 +153,7 @@ export function useRoomDelete() {
   });
 }
 
-// Zulip hooks - NOTE: These endpoints are not in the OpenAPI spec yet
+// NOTE: Zulip endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
@@ -192,14 +186,12 @@ export function useZulipTopics(streamId: number | null) {
   );
 }
 
-// Transcript mutations
 export function useTranscriptUpdate() {
   const { setError } = useError();
   const queryClient = useQueryClient();
 
   return $api.useMutation("patch", "/v1/transcripts/{transcript_id}", {
     onSuccess: (data, variables) => {
-      // Invalidate and refetch transcript data
       queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
           params: {
@@ -238,7 +230,6 @@ export function useTranscriptUploadAudio() {
     "/v1/transcripts/{transcript_id}/record/upload",
     {
       onSuccess: (data, variables) => {
-        // Invalidate transcript to refresh status
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -258,7 +249,6 @@ export function useTranscriptUploadAudio() {
   );
 }
 
-// Transcript queries
 export function useTranscriptWaveform(transcriptId: string | null) {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
@@ -355,7 +345,6 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   );
 }
 
-// Participant operations
 export function useTranscriptParticipants(transcriptId: string | null) {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
@@ -383,7 +372,6 @@ export function useTranscriptParticipantUpdate() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        // Invalidate participants list
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -412,7 +400,6 @@ export function useTranscriptParticipantCreate() {
     "/v1/transcripts/{transcript_id}/participants",
     {
       onSuccess: (data, variables) => {
-        // Invalidate participants list
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -441,7 +428,6 @@ export function useTranscriptParticipantDelete() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        // Invalidate participants list
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -470,7 +456,6 @@ export function useTranscriptSpeakerAssign() {
     "/v1/transcripts/{transcript_id}/speaker/assign",
     {
       onSuccess: (data, variables) => {
-        // Invalidate transcript and participants
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -510,7 +495,6 @@ export function useTranscriptSpeakerMerge() {
     "/v1/transcripts/{transcript_id}/speaker/merge",
     {
       onSuccess: (data, variables) => {
-        // Invalidate transcript and participants
         queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
@@ -541,7 +525,6 @@ export function useTranscriptSpeakerMerge() {
   );
 }
 
-// Meeting operations
 export function useMeetingAudioConsent() {
   const { setError } = useError();
 
@@ -552,7 +535,6 @@ export function useMeetingAudioConsent() {
   });
 }
 
-// WebRTC operations
 export function useTranscriptWebRTC() {
   const { setError } = useError();
 
@@ -567,18 +549,14 @@ export function useTranscriptWebRTC() {
   );
 }
 
-// Transcript creation
 export function useTranscriptCreate() {
   const { setError } = useError();
   const queryClient = useQueryClient();
 
   return $api.useMutation("post", "/v1/transcripts", {
     onSuccess: () => {
-      // Invalidate transcripts list
       queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/transcripts/search", {
-          params: { query: { q: "" } },
-        }).queryKey,
+        queryKey: ["get", "/v1/transcripts/search"],
       });
     },
     onError: (error) => {
@@ -587,14 +565,12 @@ export function useTranscriptCreate() {
   });
 }
 
-// Rooms meeting operations
 export function useRoomsCreateMeeting() {
   const { setError } = useError();
   const queryClient = useQueryClient();
 
   return $api.useMutation("post", "/v1/rooms/{room_name}/meeting", {
     onSuccess: () => {
-      // Invalidate rooms list to refresh meeting data
       queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
       });
