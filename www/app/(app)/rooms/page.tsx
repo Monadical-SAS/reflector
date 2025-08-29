@@ -90,7 +90,6 @@ export default function RoomsList() {
   const [linkCopied, setLinkCopied] = useState("");
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
 
-  // React Query hooks
   const createRoomMutation = useRoomCreate();
   const updateRoomMutation = useRoomUpdate();
   const deleteRoomMutation = useRoomDelete();

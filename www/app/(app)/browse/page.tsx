@@ -231,7 +231,6 @@ export default function TranscriptBrowser() {
 
   const pageSize = 20;
 
-  // Use new React Query hooks
   const {
     data: searchData,
     isLoading: searchLoading,
@@ -269,7 +268,6 @@ export default function TranscriptBrowser() {
 
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
-  // Use mutation hooks
   const deleteTranscript = useTranscriptDelete();
   const processTranscript = useTranscriptProcess();
 
