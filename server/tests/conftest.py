@@ -295,9 +295,13 @@ async def dummy_storage():
     with (
         patch("reflector.storage.base.Storage.get_instance") as mock_storage,
         patch("reflector.storage.get_transcripts_storage") as mock_get_transcripts,
+        patch(
+            "reflector.pipelines.main_file_pipeline.get_transcripts_storage"
+        ) as mock_get_transcripts2,
     ):
         mock_storage.return_value = dummy
         mock_get_transcripts.return_value = dummy
+        mock_get_transcripts2.return_value = dummy
         yield
 
 
