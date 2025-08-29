@@ -405,7 +405,7 @@ async def task_pipeline_file_process(*, transcript_id: str):
     except Exception:
         await pipeline.set_status(transcript_id, "error")
         raise
-    
+
     # Trigger webhook if this is a room recording with webhook configured
     if transcript.source_kind == SourceKind.ROOM and transcript.room_id:
         room = await rooms_controller.get_by_id(transcript.room_id)
