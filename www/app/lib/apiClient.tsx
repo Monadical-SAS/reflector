@@ -19,8 +19,12 @@ export const client = createClient<paths>({
 // Create the React Query client wrapper
 export const $api = createFetchClient<paths>(client);
 
-// Store the current auth token
+// Store the current auth token and ready state
 let currentAuthToken: string | null | undefined = null;
+let authConfigured = false;
+
+// Export function to check if auth is ready
+export const isAuthConfigured = () => authConfigured;
 
 // Set up authentication middleware once
 client.use({
@@ -42,6 +46,7 @@ client.use({
 // Configure authentication by updating the token
 export const configureApiAuth = (token: string | null | undefined) => {
   currentAuthToken = token;
+  authConfigured = true;
 };
 
 // Export typed hooks for convenience

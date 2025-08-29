@@ -4,12 +4,12 @@ import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { useQueryClient } from "@tanstack/react-query";
 import type { paths } from "../reflector-api";
-import useSessionStatus from "./useSessionStatus";
+import useAuthReady from "./useAuthReady";
 
 // Rooms hooks
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -20,9 +20,8 @@ export function useRoomsList(page: number = 1) {
       },
     },
     {
-      // Only fetch when authenticated
-      // Using direct status check to avoid any derived state issues
-      enabled: status === "authenticated",
+      // Only fetch when authentication is fully ready (session + token)
+      enabled: isAuthReady,
     },
   );
 }
@@ -38,7 +37,7 @@ export function useTranscriptsSearch(
   } = {},
 ) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -55,8 +54,8 @@ export function useTranscriptsSearch(
       },
     },
     {
-      // Only fetch when authenticated
-      enabled: status === "authenticated",
+      // Only fetch when authentication is fully ready (session + token)
+      enabled: isAuthReady,
     },
   );
 }
@@ -92,7 +91,7 @@ export function useTranscriptProcess() {
 
 export function useTranscriptGet(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -106,7 +105,7 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
     {
       // Only fetch when authenticated and transcriptId is provided
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }
@@ -163,7 +162,7 @@ export function useRoomDelete() {
 // Zulip hooks - NOTE: These endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
@@ -172,14 +171,14 @@ export function useZulipStreams() {
     {},
     {
       // Only fetch when authenticated
-      enabled: status === "authenticated",
+      enabled: isAuthReady,
     },
   );
 }
 
 export function useZulipTopics(streamId: number | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
@@ -188,7 +187,7 @@ export function useZulipTopics(streamId: number | null) {
     {},
     {
       // Only fetch when authenticated and streamId is provided
-      enabled: !!streamId && status === "authenticated",
+      enabled: !!streamId && isAuthReady,
     },
   );
 }
@@ -262,7 +261,7 @@ export function useTranscriptUploadAudio() {
 // Transcript queries
 export function useTranscriptWaveform(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -273,14 +272,14 @@ export function useTranscriptWaveform(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }
 
 export function useTranscriptMP3(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -291,14 +290,14 @@ export function useTranscriptMP3(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -309,14 +308,14 @@ export function useTranscriptTopics(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }
 
 export function useTranscriptTopicsWithWords(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -327,7 +326,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }
@@ -337,7 +336,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   topicId: string | null,
 ) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -351,7 +350,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
       },
     },
     {
-      enabled: !!transcriptId && !!topicId && status === "authenticated",
+      enabled: !!transcriptId && !!topicId && isAuthReady,
     },
   );
 }
@@ -359,7 +358,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
 // Participant operations
 export function useTranscriptParticipants(transcriptId: string | null) {
   const { setError } = useError();
-  const { status } = useSessionStatus();
+  const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -370,7 +369,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && status === "authenticated",
+      enabled: !!transcriptId && isAuthReady,
     },
   );
 }

@@ -86,7 +86,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 useActiveTopic={useActiveTopic}
                 waveform={waveform.waveform}
                 media={mp3.media}
-                mediaDuration={transcript.response.duration}
+                mediaDuration={transcript.response?.duration}
               />
             ) : !mp3.loading && (waveform.error || mp3.error) ? (
               <Box p={4} bg="red.100" borderRadius="md">
@@ -116,7 +116,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <Flex direction="column" gap={0}>
               <Flex alignItems="center" gap={2}>
                 <TranscriptTitle
-                  title={transcript.response.title || "Unnamed Transcript"}
+                  title={transcript.response?.title || "Unnamed Transcript"}
                   transcriptId={transcriptId}
                   onUpdate={(newTitle) => {
                     transcript.reload();

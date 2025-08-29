@@ -5,6 +5,7 @@ import Image from "next/image";
 import About from "../(aboutAndPrivacy)/about";
 import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
+import AuthWrapper from "./AuthWrapper";
 import { RECORD_A_MEETING_URL } from "../lib/constants";
 
 export default async function AppLayout({
@@ -90,7 +91,7 @@ export default async function AppLayout({
         </div>
       </Flex>
 
-      {children}
+      <AuthWrapper>{children}</AuthWrapper>
     </Container>
   );
 }

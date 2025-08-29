@@ -46,6 +46,16 @@ const useTranscript = (
     };
   }
 
+  // Check if data is undefined or null
+  if (!data) {
+    return {
+      response: null,
+      loading: true,
+      error: false,
+      reload: refetch,
+    };
+  }
+
   return {
     response: data as GetTranscript,
     loading: false,
