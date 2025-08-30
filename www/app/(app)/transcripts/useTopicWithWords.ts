@@ -42,14 +42,13 @@ const useTopicWithWords = (
     topicId || null,
   );
 
-  // Type-safe return based on state
   if (error) {
     return {
       error: error as Error,
       loading: false,
       response: null,
       refetch,
-    } as ErrorTopicWithWords & { refetch: () => void };
+    } satisfies ErrorTopicWithWords & { refetch: () => void };
   }
 
   if (loading || !response) {
@@ -58,7 +57,7 @@ const useTopicWithWords = (
       loading: true,
       error: false,
       refetch,
-    } as LoadingTopicWithWords & { refetch: () => void };
+    } satisfies LoadingTopicWithWords & { refetch: () => void };
   }
 
   return {
@@ -66,7 +65,7 @@ const useTopicWithWords = (
     loading: false,
     error: null,
     refetch,
-  } as SuccessTopicWithWords & { refetch: () => void };
+  } satisfies SuccessTopicWithWords & { refetch: () => void };
 };
 
 export default useTopicWithWords;

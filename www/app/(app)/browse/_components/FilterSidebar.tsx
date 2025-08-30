@@ -47,7 +47,7 @@ export default function FilterSidebar({
                 key={room.id}
                 as={NextLink}
                 href="#"
-                onClick={() => onFilterChange("room" as SourceKind, room.id)}
+                onClick={() => onFilterChange("room", room.id)}
                 color={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "blue.500"

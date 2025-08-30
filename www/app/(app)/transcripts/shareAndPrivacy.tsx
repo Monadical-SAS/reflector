@@ -76,7 +76,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
       });
       setShareMode(
         shareOptionsData.find(
-          (option) => option.value === (updatedTranscript as any).share_mode,
+          (option) => option.value === updatedTranscript.share_mode,
         ) || shareOptionsData[0],
       );
     } catch (err) {
