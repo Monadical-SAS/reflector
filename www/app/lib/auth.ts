@@ -38,11 +38,11 @@ export const authOptions: AuthOptions = {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
         const expiresAt = (account.expires_at as number) - PRETIMEOUT;
-        const jwtToken = {
+        const jwtToken: JWTWithAccessToken = {
           ...extendedToken,
-          accessToken: account.access_token,
+          accessToken: account.access_token || "",
           accessTokenExpires: expiresAt * 1000,
-          refreshToken: account.refresh_token,
+          refreshToken: account.refresh_token || "",
         };
         // Store in memory cache
         tokenCache.set(`token:${jwtToken.sub}`, {
