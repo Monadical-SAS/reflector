@@ -3,7 +3,7 @@
 import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { useQueryClient } from "@tanstack/react-query";
-import type { paths } from "../reflector-api";
+import type { components, paths } from "../reflector-api";
 import useAuthReady from "./useAuthReady";
 
 // FIXME: React Query caching issues with cross-tab synchronization
@@ -23,7 +23,6 @@ import useAuthReady from "./useAuthReady";
 const STALE_TIME = 500;
 
 export function useRoomsList(page: number = 1) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -41,16 +40,17 @@ export function useRoomsList(page: number = 1) {
   );
 }
 
+type SourceKind = components["schemas"]["SourceKind"];
+
 export function useTranscriptsSearch(
   q: string = "",
   options: {
     limit?: number;
     offset?: number;
     room_id?: string;
-    source_kind?: string;
+    source_kind?: SourceKind;
   } = {},
 ) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -63,7 +63,7 @@ export function useTranscriptsSearch(
           limit: options.limit,
           offset: options.offset,
           room_id: options.room_id,
-          source_kind: options.source_kind as any,
+          source_kind: options.source_kind,
         },
       },
     },
@@ -101,7 +101,6 @@ export function useTranscriptProcess() {
 }
 
 export function useTranscriptGet(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -170,12 +169,11 @@ export function useRoomDelete() {
 }
 
 export function useZulipStreams() {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
     "get",
-    "/v1/zulip/streams" as any,
+    "/v1/zulip/streams",
     {},
     {
       enabled: isAuthReady,
@@ -185,15 +183,20 @@ export function useZulipStreams() {
 }
 
 export function useZulipTopics(streamId: number | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
-
+  const enabled = !!streamId && isAuthReady;
   return $api.useQuery(
     "get",
-    streamId ? (`/v1/zulip/streams/${streamId}/topics` as any) : null,
-    {},
+    "/v1/zulip/streams/{stream_id}/topics",
     {
-      enabled: !!streamId && isAuthReady,
+      params: {
+        path: {
+          stream_id: enabled ? streamId : 0,
+        },
+      },
+    },
+    {
+      enabled,
       staleTime: STALE_TIME,
     },
   );
@@ -223,15 +226,11 @@ export function useTranscriptPostToZulip() {
   const { setError } = useError();
 
   // @ts-ignore - Zulip endpoint not in OpenAPI spec
-  return $api.useMutation(
-    "post",
-    "/v1/transcripts/{transcript_id}/zulip" as any,
-    {
-      onError: (error) => {
-        setError(error as Error, "There was an error posting to Zulip");
-      },
+  return $api.useMutation("post", "/v1/transcripts/{transcript_id}/zulip", {
+    onError: (error) => {
+      setError(error as Error, "There was an error posting to Zulip");
     },
-  );
+  });
 }
 
 export function useTranscriptUploadAudio() {
@@ -263,7 +262,6 @@ export function useTranscriptUploadAudio() {
 }
 
 export function useTranscriptWaveform(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -282,7 +280,6 @@ export function useTranscriptWaveform(transcriptId: string | null) {
 }
 
 export function useTranscriptMP3(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -301,7 +298,6 @@ export function useTranscriptMP3(transcriptId: string | null) {
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -320,7 +316,6 @@ export function useTranscriptTopics(transcriptId: string | null) {
 }
 
 export function useTranscriptTopicsWithWords(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -342,7 +337,6 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   transcriptId: string | null,
   topicId: string | null,
 ) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(
@@ -364,7 +358,6 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
 }
 
 export function useTranscriptParticipants(transcriptId: string | null) {
-  const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
   return $api.useQuery(

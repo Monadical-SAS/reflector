@@ -41,7 +41,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
       loading: false,
       response: null,
       refetch,
-    } as ErrorParticipants & { refetch: () => void };
+    } satisfies ErrorParticipants & { refetch: () => void };
   }
 
   if (loading || !response) {
@@ -50,7 +50,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
       loading: true,
       error: null,
       refetch,
-    } as LoadingParticipants & { refetch: () => void };
+    } satisfies LoadingParticipants & { refetch: () => void };
   }
 
   return {
@@ -58,7 +58,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
     loading: false,
     error: null,
     refetch,
-  } as SuccessParticipants & { refetch: () => void };
+  } satisfies SuccessParticipants & { refetch: () => void };
 };
 
 export default useParticipants;

@@ -203,7 +203,11 @@ export default function TranscriptBrowser() {
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
     "source",
-    parseAsStringLiteral(["room", "live", "file"] as const).withOptions({
+    parseAsStringLiteral([
+      "room",
+      "live",
+      "file",
+    ] as const satisfies SourceKind[]).withOptions({
       shallow: false,
     }),
   );

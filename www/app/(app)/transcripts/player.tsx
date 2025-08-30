@@ -20,7 +20,7 @@ type PlayerProps = {
   ];
   waveform: AudioWaveform;
   media: HTMLMediaElement;
-  mediaDuration: number;
+  mediaDuration: number | null;
 };
 
 export default function Player(props: PlayerProps) {
@@ -52,7 +52,9 @@ export default function Player(props: PlayerProps) {
         container: waveformRef.current,
         peaks: [props.waveform.data],
         height: "auto",
-        duration: Math.floor(props.mediaDuration / 1000),
+        duration: props.mediaDuration
+          ? Math.floor(props.mediaDuration / 1000)
+          : undefined,
         media: props.media,
 
         ...waveSurferStyles.playerSettings,

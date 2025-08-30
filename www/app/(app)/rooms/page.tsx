@@ -93,33 +93,26 @@ export default function RoomsList() {
   const createRoomMutation = useRoomCreate();
   const updateRoomMutation = useRoomUpdate();
   const deleteRoomMutation = useRoomDelete();
-  const { data: streams = [] } = useZulipStreams() as { data: any[] };
-  const { data: topics = [] } = useZulipTopics(selectedStreamId) as {
-    data: Topic[];
-  };
-  interface Topic {
-    name: string;
-  }
+  const { data: streams = [] } = useZulipStreams();
+  const { data: topics = [] } = useZulipTopics(selectedStreamId);
 
   // Update selected stream ID when zulip stream changes
   useEffect(() => {
     if (room.zulipStream && streams.length > 0) {
-      const selectedStream = streams.find(
-        (s: any) => s.name === room.zulipStream,
-      );
-      if (selectedStream) {
-        setSelectedStreamId((selectedStream as any).stream_id);
+      const selectedStream = streams.find((s) => s.name === room.zulipStream);
+      if (selectedStream !== undefined) {
+        setSelectedStreamId(selectedStream.stream_id);
       }
     } else {
       setSelectedStreamId(null);
     }
   }, [room.zulipStream, streams]);
 
-  const streamOptions: SelectOption[] = streams.map((stream: any) => {
+  const streamOptions: SelectOption[] = streams.map((stream) => {
     return { label: stream.name, value: stream.name };
   });
 
-  const topicOptions: SelectOption[] = topics.map((topic: any) => ({
+  const topicOptions: SelectOption[] = topics.map((topic) => ({
     label: topic.name,
     value: topic.name,
   }));

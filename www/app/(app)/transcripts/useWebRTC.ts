@@ -11,7 +11,7 @@ const useWebRTC = (
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const { setError } = useError();
-  const webRTCMutation = useTranscriptWebRTC();
+  const { mutateAsync: mutateWebRtcTranscriptAsync } = useTranscriptWebRTC();
 
   useEffect(() => {
     if (!stream || !transcriptId) {
@@ -41,7 +41,7 @@ const useWebRTC = (
         };
 
         try {
-          const answer = await webRTCMutation.mutateAsync({
+          const answer = await mutateWebRtcTranscriptAsync({
             params: {
               path: {
                 transcript_id: transcriptId,
@@ -69,7 +69,7 @@ const useWebRTC = (
     return () => {
       p.destroy();
     };
-  }, [stream, transcriptId, webRTCMutation]);
+  }, [stream, transcriptId, mutateWebRtcTranscriptAsync]);
 
   return peer;
 };

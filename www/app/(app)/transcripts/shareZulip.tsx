@@ -15,7 +15,6 @@ import {
   Checkbox,
   Combobox,
   Spinner,
-  Portal,
   useFilter,
   useListCollection,
 } from "@chakra-ui/react";
@@ -37,10 +36,6 @@ interface Stream {
   name: string;
 }
 
-interface Topic {
-  name: string;
-}
-
 export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const [showModal, setShowModal] = useState(false);
   const [stream, setStream] = useState<string | undefined>(undefined);
@@ -49,26 +44,23 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const [includeTopics, setIncludeTopics] = useState(false);
 
   // React Query hooks
-  const { data: streams = [], isLoading: isLoadingStreams } =
-    useZulipStreams() as { data: Stream[]; isLoading: boolean };
-  const { data: topics = [] } = useZulipTopics(selectedStreamId) as {
-    data: Topic[];
-  };
+  const { data: streams = [], isLoading: isLoadingStreams } = useZulipStreams();
+  const { data: topics = [] } = useZulipTopics(selectedStreamId);
   const postToZulipMutation = useTranscriptPostToZulip();
 
   const { contains } = useFilter({ sensitivity: "base" });
 
   const streamItems = useMemo(() => {
-    return (streams || []).map((stream: Stream) => ({
+    return streams.map((stream: Stream) => ({
       label: stream.name,
       value: stream.name,
     }));
   }, [streams]);
 
   const topicItems = useMemo(() => {
-    return (topics || []).map((topic: Topic) => ({
-      label: topic.name,
-      value: topic.name,
+    return topics.map(({ name }) => ({
+      label: name,
+      value: name,
     }));
   }, [topics]);
 

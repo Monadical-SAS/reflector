@@ -59,7 +59,7 @@ const useTranscript = (
   }
 
   return {
-    response: data as GetTranscript,
+    response: data,
     loading: false,
     error: null,
     reload: refetch,

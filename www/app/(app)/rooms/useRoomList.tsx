@@ -11,6 +11,12 @@ type RoomList = {
   refetch: () => void;
 };
 
+type ValidationError = components["schemas"]["ValidationError"];
+
+const formatValidationErrors = (errors: ValidationError[]) => {
+  return errors.map((error) => error.msg).join(", ");
+};
+
 // Wrapper to maintain backward compatibility
 const useRoomList = (page: PaginationPage): RoomList => {
   const { data, isLoading, error, refetch } = useRoomsList(page);
@@ -18,7 +24,11 @@ const useRoomList = (page: PaginationPage): RoomList => {
   return {
     response: data || null,
     loading: isLoading,
-    error: error as Error | null,
+    error: error
+      ? new Error(
+          error.detail ? formatValidationErrors(error.detail) : undefined,
+        )
+      : null,
     refetch,
   };
 };
