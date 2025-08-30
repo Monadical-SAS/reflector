@@ -6,7 +6,7 @@ import { Session } from "next-auth";
 
 export default function useSessionStatus() {
   const { status: naStatus } = useNextAuthSession();
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState<typeof naStatus>("loading");
 
   useEffect(() => {
     if (naStatus !== "loading" && naStatus !== status) {
