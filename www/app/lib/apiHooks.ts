@@ -6,6 +6,22 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { paths } from "../reflector-api";
 import useAuthReady from "./useAuthReady";
 
+// FIXME: React Query caching issues with cross-tab synchronization
+//
+// The default React Query behavior caches data indefinitely until invalidated,
+// which should work well in theory. However, we're experiencing two problems:
+//
+// 1. Navigation between pages doesn't refresh data as expected by users
+// 2. Query invalidation doesn't work properly across browser tabs - changes
+//    made in one tab (like updating room settings or deleting transcripts)
+//    aren't reflected when navigating in another tab without a full page refresh
+//
+// As a temporary workaround, we're setting a short staleTime to force data
+// reloading, similar to our previous implementation. This should be revisited
+// once we can resolve the underlying invalidation and cross-tab sync issues.
+// 500ms is arbitrary.
+const STALE_TIME = 500;
+
 export function useRoomsList(page: number = 1) {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
@@ -19,8 +35,8 @@ export function useRoomsList(page: number = 1) {
       },
     },
     {
-      // Only fetch when authentication is fully ready (session + token)
       enabled: isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -52,8 +68,8 @@ export function useTranscriptsSearch(
       },
     },
     {
-      // Only fetch when authentication is fully ready (session + token)
       enabled: isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -99,8 +115,8 @@ export function useTranscriptGet(transcriptId: string | null) {
       },
     },
     {
-      // Only fetch when authenticated and transcriptId is provided
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -153,19 +169,17 @@ export function useRoomDelete() {
   });
 }
 
-// NOTE: Zulip endpoints are not in the OpenAPI spec yet
 export function useZulipStreams() {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
-  // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
     "get",
     "/v1/zulip/streams" as any,
     {},
     {
-      // Only fetch when authenticated
       enabled: isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -174,14 +188,13 @@ export function useZulipTopics(streamId: number | null) {
   const { setError } = useError();
   const { isAuthReady } = useAuthReady();
 
-  // @ts-ignore - Zulip endpoint not in OpenAPI spec
   return $api.useQuery(
     "get",
     streamId ? (`/v1/zulip/streams/${streamId}/topics` as any) : null,
     {},
     {
-      // Only fetch when authenticated and streamId is provided
       enabled: !!streamId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -263,6 +276,7 @@ export function useTranscriptWaveform(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -281,6 +295,7 @@ export function useTranscriptMP3(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -299,6 +314,7 @@ export function useTranscriptTopics(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -317,6 +333,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -341,6 +358,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
     },
     {
       enabled: !!transcriptId && !!topicId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
@@ -359,6 +377,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthReady,
+      staleTime: STALE_TIME,
     },
   );
 }
