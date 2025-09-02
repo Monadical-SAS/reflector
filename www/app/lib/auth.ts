@@ -1,7 +1,15 @@
 import { AuthOptions } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
 import { JWT } from "next-auth/jwt";
-import { JWTWithAccessToken, CustomSession } from "./types";
+import {
+  JWTWithAccessToken,
+  CustomSession,
+  assertExtendedToken,
+} from "./types";
+import {
+  assertExistsAndNonEmptyString,
+  parseMaybeNonEmptyString,
+} from "./utils";
 
 const PRETIMEOUT = 60; // seconds before token expires to refresh it
 
@@ -15,11 +23,18 @@ const TOKEN_CACHE_TTL = 60 * 60 * 24 * 30 * 1000; // 30 days in milliseconds
 // Simple lock mechanism to prevent concurrent token refreshes
 const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 
+const CLIENT_ID = assertExistsAndNonEmptyString(
+  process.env.AUTHENTIK_CLIENT_ID,
+);
+const CLIENT_SECRET = assertExistsAndNonEmptyString(
+  process.env.AUTHENTIK_CLIENT_SECRET,
+);
+
 export const authOptions: AuthOptions = {
   providers: [
     AuthentikProvider({
-      clientId: process.env.AUTHENTIK_CLIENT_ID as string,
-      clientSecret: process.env.AUTHENTIK_CLIENT_SECRET as string,
+      clientId: CLIENT_ID,
+      clientSecret: CLIENT_SECRET,
       issuer: process.env.AUTHENTIK_ISSUER,
       authorization: {
         params: {
@@ -33,23 +48,28 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, user }) {
-      const extendedToken = token as JWTWithAccessToken;
+      const extendedToken = assertExtendedToken(token);
+      const KEY = `token:${token.sub}`;
       if (account && user) {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
         const expiresAt = (account.expires_at as number) - PRETIMEOUT;
-        const jwtToken: JWTWithAccessToken = {
-          ...extendedToken,
-          accessToken: account.access_token || "",
-          accessTokenExpires: expiresAt * 1000,
-          refreshToken: account.refresh_token || "",
-        };
-        // Store in memory cache
-        tokenCache.set(`token:${jwtToken.sub}`, {
-          token: jwtToken,
-          timestamp: Date.now(),
-        });
-        return jwtToken;
+        if (!account.access_token) {
+          tokenCache.delete(KEY);
+        } else {
+          const jwtToken: JWTWithAccessToken = {
+            ...extendedToken,
+            accessToken: account.access_token,
+            accessTokenExpires: expiresAt * 1000,
+            refreshToken: account.refresh_token || "",
+          };
+          // Store in memory cache
+          tokenCache.set(`token:${jwtToken.sub}`, {
+            token: jwtToken,
+            timestamp: Date.now(),
+          });
+          return jwtToken;
+        }
       }
 
       if (Date.now() < extendedToken.accessTokenExpires) {

@@ -35,7 +35,9 @@ import {
 const TranscriptCreate = () => {
   const isClient = typeof window !== "undefined";
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useSessionStatus();
+  const status = useSessionStatus();
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");

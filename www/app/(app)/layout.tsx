@@ -2,11 +2,9 @@ import { Container, Flex, Link } from "@chakra-ui/react";
 import { getConfig } from "../lib/edgeConfig";
 import NextLink from "next/link";
 import Image from "next/image";
-import About from "../(aboutAndPrivacy)/about";
-import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
 import AuthWrapper from "./AuthWrapper";
-import { RECORD_A_MEETING_URL } from "../lib/constants";
+import { RECORD_A_MEETING_URL } from "../api/urls";
 
 export default async function AppLayout({
   children,

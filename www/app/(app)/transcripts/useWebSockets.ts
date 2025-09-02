@@ -37,7 +37,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [status, setStatus] = useState<Status>({ value: "" });
   const { setError } = useError();
 
-  const { websocket_url } = useContext(DomainContext);
+  const { websocket_url: websocketUrl } = useContext(DomainContext);
   const queryClient = useQueryClient();
 
   const [accumulatedText, setAccumulatedText] = useState<string>("");
@@ -328,7 +328,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId) return;
 
-    const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
+    const url = `${websocketUrl}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -489,7 +489,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, websocket_url, queryClient]);
+  }, [transcriptId, websocketUrl, queryClient]);
 
   return {
     transcriptTextLive,

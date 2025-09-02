@@ -42,7 +42,7 @@ import Pagination, {
 import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
-import { RECORD_A_MEETING_URL } from "../../lib/constants";
+import { RECORD_A_MEETING_URL } from "../../api/urls";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 
@@ -298,24 +298,11 @@ export default function TranscriptBrowser() {
   };
 
   const handleProcessTranscript = (transcriptId: string) => {
-    processTranscript.mutate(
-      {
-        params: {
-          path: { transcript_id: transcriptId },
-        },
+    processTranscript.mutate({
+      params: {
+        path: { transcript_id: transcriptId },
       },
-      {
-        onSuccess: (result) => {
-          const status =
-            result && typeof result === "object" && "status" in result
-              ? (result as { status: string }).status
-              : undefined;
-          if (status === "already running") {
-            // Note: setError is already handled in the hook
-          }
-        },
-      },
-    );
+    });
   };
 
   const transcriptToDelete = results?.find(

@@ -10,13 +10,16 @@ import { isAuthConfigured } from "./apiClient";
  * Prevents race conditions where React Query fires requests before the token is set.
  */
 export default function useAuthReady() {
-  const { status, isAuthenticated } = useSessionStatus();
+  const status = useSessionStatus();
+  const isAuthenticated = status === "authenticated";
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    let ready_ = false;
     // Check if both session is authenticated and token is configured
     const checkAuthReady = () => {
       const ready = isAuthenticated && isAuthConfigured();
+      ready_ = ready;
       setAuthReady(ready);
     };
 
@@ -27,7 +30,14 @@ export default function useAuthReady() {
     const interval = setInterval(checkAuthReady, 100);
 
     // Stop checking after 2 seconds (auth should be ready by then)
-    const timeout = setTimeout(() => clearInterval(interval), 2000);
+    const timeout = setTimeout(() => {
+      if (ready_) {
+        clearInterval(interval);
+        return;
+      } else {
+        console.warn("Auth not ready after 2 seconds");
+      }
+    }, 2000);
 
     return () => {
       clearInterval(interval);

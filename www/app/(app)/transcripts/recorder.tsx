@@ -6,12 +6,11 @@ import RecordPlugin from "../../lib/custom-plugins/record";
 import { formatTime, formatTimeMs } from "../../lib/time";
 import { waveSurferStyles } from "../../styles/recorder";
 import { useError } from "../../(errors)/errorContext";
-import FileUploadButton from "./fileUploadButton";
 import useWebRTC from "./useWebRTC";
 import useAudioDevice from "./useAudioDevice";
 import { Box, Flex, IconButton, Menu, RadioGroup } from "@chakra-ui/react";
 import { LuScreenShare, LuMic, LuPlay, LuCircleStop } from "react-icons/lu";
-import { RECORD_A_MEETING_URL } from "../../lib/constants";
+import { RECORD_A_MEETING_URL } from "../../api/urls";
 
 type RecorderProps = {
   transcriptId: string;

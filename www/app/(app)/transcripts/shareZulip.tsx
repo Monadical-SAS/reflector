@@ -43,7 +43,6 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const [topic, setTopic] = useState<string | undefined>(undefined);
   const [includeTopics, setIncludeTopics] = useState(false);
 
-  // React Query hooks
   const { data: streams = [], isLoading: isLoadingStreams } = useZulipStreams();
   const { data: topics = [] } = useZulipTopics(selectedStreamId);
   const postToZulipMutation = useTranscriptPostToZulip();

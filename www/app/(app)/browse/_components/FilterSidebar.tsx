@@ -98,7 +98,7 @@ export default function FilterSidebar({
         <Link
           as={NextLink}
           href="#"
-          onClick={() => onFilterChange("live" as SourceKind, "")}
+          onClick={() => onFilterChange("live", "")}
           color={selectedSourceKind === "live" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === "live" ? "bold" : "normal"}
@@ -109,7 +109,7 @@ export default function FilterSidebar({
         <Link
           as={NextLink}
           href="#"
-          onClick={() => onFilterChange("file" as SourceKind, "")}
+          onClick={() => onFilterChange("file", "")}
           color={selectedSourceKind === "file" ? "blue.500" : "gray.600"}
           _hover={{ color: "blue.300" }}
           fontWeight={selectedSourceKind === "file" ? "bold" : "normal"}
