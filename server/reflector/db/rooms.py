@@ -43,6 +43,9 @@ rooms = sqlalchemy.Table(
     ),
     sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column(
+        "platform", sqlalchemy.String, nullable=False, server_default="whereby"
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -64,6 +67,7 @@ class Room(BaseModel):
     is_shared: bool = False
     webhook_url: str | None = None
     webhook_secret: str | None = None
+    platform: Literal["whereby", "jitsi"] = "whereby"
 
 
 class RoomController:
@@ -114,6 +118,7 @@ class RoomController:
         is_shared: bool,
         webhook_url: str = "",
         webhook_secret: str = "",
+        platform: str = "whereby",
     ):
         """
         Add a new room
@@ -134,6 +139,7 @@ class RoomController:
             is_shared=is_shared,
             webhook_url=webhook_url,
             webhook_secret=webhook_secret,
+            platform=platform,
         )
         query = rooms.insert().values(**room.model_dump())
         try:

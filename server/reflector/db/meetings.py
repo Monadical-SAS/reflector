@@ -41,6 +41,7 @@ meetings = sa.Table(
         nullable=False,
         server_default=sa.true(),
     ),
+    sa.Column("platform", sa.String, nullable=False, server_default="whereby"),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index(
         "idx_one_active_meeting_per_room",
@@ -90,6 +91,7 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
+    platform: Literal["whereby", "jitsi"] = "whereby"
 
 
 class MeetingController:
@@ -120,6 +122,7 @@ class MeetingController:
             room_mode=room.room_mode,
             recording_type=room.recording_type,
             recording_trigger=room.recording_trigger,
+            platform=room.platform,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
