@@ -1,8 +1,8 @@
-"""Add platform field to rooms and meetings
+"""Add VideoPlatform enum for rooms and meetings
 
-Revision ID: 35e035defa85
+Revision ID: 6e6ea8e607c5
 Revises: 61882a919591
-Create Date: 2025-09-02 16:08:55.205173
+Create Date: 2025-09-02 17:33:21.022214
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "35e035defa85"
+revision: str = "6e6ea8e607c5"
 down_revision: Union[str, None] = "61882a919591"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

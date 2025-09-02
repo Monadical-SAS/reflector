@@ -12,7 +12,7 @@ from pydantic import BaseModel
 import reflector.auth as auth
 from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
-from reflector.db.rooms import rooms_controller
+from reflector.db.rooms import VideoPlatform, rooms_controller
 from reflector.settings import settings
 from reflector.worker.webhook import test_webhook
 
@@ -56,7 +56,7 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
-    platform: str = "whereby"
+    platform: VideoPlatform = VideoPlatform.WHEREBY
 
 
 class RoomDetails(Room):
@@ -86,7 +86,7 @@ class CreateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
-    platform: str = "whereby"
+    platform: VideoPlatform = VideoPlatform.WHEREBY
 
 
 class UpdateRoom(BaseModel):
@@ -101,7 +101,7 @@ class UpdateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
-    platform: str = "whereby"
+    platform: VideoPlatform = VideoPlatform.WHEREBY
 
 
 class DeletionStatus(BaseModel):

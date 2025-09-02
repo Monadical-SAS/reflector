@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timezone
+from enum import StrEnum
 from sqlite3 import IntegrityError
 from typing import Literal
 
@@ -10,6 +11,12 @@ from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
+
+
+class VideoPlatform(StrEnum):
+    WHEREBY = "whereby"
+    JITSI = "jitsi"
+
 
 rooms = sqlalchemy.Table(
     "room",
@@ -67,7 +74,7 @@ class Room(BaseModel):
     is_shared: bool = False
     webhook_url: str | None = None
     webhook_secret: str | None = None
-    platform: Literal["whereby", "jitsi"] = "whereby"
+    platform: VideoPlatform = VideoPlatform.WHEREBY
 
 
 class RoomController:
