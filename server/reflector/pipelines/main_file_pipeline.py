@@ -7,6 +7,7 @@ Uses parallel processing for transcription, diarization, and waveform generation
 """
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import av
@@ -14,7 +15,9 @@ import structlog
 from celery import shared_task
 
 from reflector.asynctask import asynctask
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
+    SourceKind,
     Transcript,
     TranscriptStatus,
     transcripts_controller,
@@ -48,6 +51,7 @@ from reflector.processors.types import (
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.worker.webhook import send_transcript_webhook
 
 
 class EmptyPipeline:
@@ -385,7 +389,6 @@ async def task_pipeline_file_process(*, transcript_id: str):
         raise Exception(f"Transcript {transcript_id} not found")
 
     pipeline = PipelineMainFile(transcript_id=transcript_id)
-
     try:
         await pipeline.set_status(transcript_id, "processing")
 
@@ -402,3 +405,17 @@ async def task_pipeline_file_process(*, transcript_id: str):
     except Exception:
         await pipeline.set_status(transcript_id, "error")
         raise
+
+    # Trigger webhook if this is a room recording with webhook configured
+    if transcript.source_kind == SourceKind.ROOM and transcript.room_id:
+        room = await rooms_controller.get_by_id(transcript.room_id)
+        if room and room.webhook_url:
+            logger.info(
+                "Dispatching webhook task",
+                transcript_id=transcript_id,
+                room_id=room.id,
+                webhook_url=room.webhook_url,
+            )
+            send_transcript_webhook.delay(
+                transcript_id, room.id, event_id=uuid.uuid4().hex
+            )

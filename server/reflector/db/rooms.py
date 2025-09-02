@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
@@ -40,6 +41,8 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
     ),
+    sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -59,6 +62,8 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
 
 
 class RoomController:
@@ -107,10 +112,15 @@ class RoomController:
         recording_type: str,
         recording_trigger: str,
         is_shared: bool,
+        webhook_url: str = "",
+        webhook_secret: str = "",
     ):
         """
         Add a new room
         """
+        if webhook_url and not webhook_secret:
+            webhook_secret = secrets.token_urlsafe(32)
+
         room = Room(
             name=name,
             user_id=user_id,
@@ -122,6 +132,8 @@ class RoomController:
             recording_type=recording_type,
             recording_trigger=recording_trigger,
             is_shared=is_shared,
+            webhook_url=webhook_url,
+            webhook_secret=webhook_secret,
         )
         query = rooms.insert().values(**room.model_dump())
         try:
@@ -134,6 +146,9 @@ class RoomController:
         """
         Update a room fields with key/values in values
         """
+        if values.get("webhook_url") and not values.get("webhook_secret"):
+            values["webhook_secret"] = secrets.token_urlsafe(32)
+
         query = rooms.update().where(rooms.c.id == room.id).values(**values)
         try:
             await get_database().execute(query)
