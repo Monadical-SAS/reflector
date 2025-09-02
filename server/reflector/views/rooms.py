@@ -14,8 +14,21 @@ from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
-from reflector.whereby import create_meeting, upload_logo
 from reflector.worker.webhook import test_webhook
+
+try:
+    from reflector.video_platforms.factory import (
+        create_platform_client,
+        get_platform_for_room,
+    )
+except ImportError:
+    # Fallback for when PyJWT not yet installed
+    def create_platform_client(platform: str):
+        return None
+
+    def get_platform_for_room(room_id: str = None) -> str:
+        return "whereby"
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +56,7 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
+    platform: str = "whereby"
 
 
 class RoomDetails(Room):
@@ -72,6 +86,7 @@ class CreateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
+    platform: str = "whereby"
 
 
 class UpdateRoom(BaseModel):
@@ -86,6 +101,7 @@ class UpdateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
+    platform: str = "whereby"
 
 
 class DeletionStatus(BaseModel):
@@ -149,6 +165,7 @@ async def rooms_create(
         is_shared=room.is_shared,
         webhook_url=room.webhook_url,
         webhook_secret=room.webhook_secret,
+        platform=room.platform,
     )
 
 
@@ -196,18 +213,57 @@ async def rooms_create_meeting(
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
 
-        whereby_meeting = await create_meeting("", end_date=end_date, room=room)
-        await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+        # Use platform abstraction to create meeting
+        platform = getattr(
+            room, "platform", "whereby"
+        )  # Default to whereby for existing rooms
+        client = create_platform_client(platform)
+
+        # Fallback to legacy whereby implementation if client not available
+        if client is None:
+            from reflector.whereby import create_meeting as whereby_create_meeting
+            from reflector.whereby import upload_logo as whereby_upload_logo
+
+            whereby_meeting = await whereby_create_meeting(
+                "", end_date=end_date, room=room
+            )
+            await whereby_upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+
+            meeting_data = {
+                "meeting_id": whereby_meeting["meetingId"],
+                "room_name": whereby_meeting["roomName"],
+                "room_url": whereby_meeting["roomUrl"],
+                "host_room_url": whereby_meeting["hostRoomUrl"],
+                "start_date": parse_datetime_with_timezone(
+                    whereby_meeting["startDate"]
+                ),
+                "end_date": parse_datetime_with_timezone(whereby_meeting["endDate"]),
+            }
+        else:
+            # Use platform client
+            platform_meeting = await client.create_meeting(
+                "", end_date=end_date, room=room
+            )
+            await client.upload_logo(platform_meeting.room_name, "./images/logo.png")
+
+            meeting_data = {
+                "meeting_id": platform_meeting.meeting_id,
+                "room_name": platform_meeting.room_name,
+                "room_url": platform_meeting.room_url,
+                "host_room_url": platform_meeting.host_room_url,
+                "start_date": current_time,  # Platform client provides datetime objects
+                "end_date": end_date,
+            }
 
         # Now try to save to database
         try:
             meeting = await meetings_controller.create(
-                id=whereby_meeting["meetingId"],
-                room_name=whereby_meeting["roomName"],
-                room_url=whereby_meeting["roomUrl"],
-                host_room_url=whereby_meeting["hostRoomUrl"],
-                start_date=parse_datetime_with_timezone(whereby_meeting["startDate"]),
-                end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
+                id=meeting_data["meeting_id"],
+                room_name=meeting_data["room_name"],
+                room_url=meeting_data["room_url"],
+                host_room_url=meeting_data["host_room_url"],
+                start_date=meeting_data["start_date"],
+                end_date=meeting_data["end_date"],
                 user_id=user_id,
                 room=room,
             )
@@ -219,8 +275,8 @@ async def rooms_create_meeting(
                 room.name,
             )
             logger.warning(
-                "Whereby meeting %s was created but not used (resource leak) for room %s",
-                whereby_meeting["meetingId"],
+                "Platform meeting %s was created but not used (resource leak) for room %s",
+                meeting_data["meeting_id"],
                 room.name,
             )
 
