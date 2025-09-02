@@ -66,7 +66,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    /** Rooms Get */
+    get: operations["v1_rooms_get"];
     put?: never;
     post?: never;
     /** Rooms Delete */
@@ -88,6 +89,26 @@ export interface paths {
     put?: never;
     /** Rooms Create Meeting */
     post: operations["v1_rooms_create_meeting"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_id}/webhook/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rooms Test Webhook
+     * @description Test webhook configuration by sending a sample payload.
+     */
+    post: operations["v1_rooms_test_webhook"];
     delete?: never;
     options?: never;
     head?: never;
@@ -511,6 +532,10 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** Webhook Url */
+      webhook_url: string;
+      /** Webhook Secret */
+      webhook_secret: string;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -749,10 +774,10 @@ export interface components {
       /** Pages */
       pages?: number | null;
     };
-    /** Page[Room] */
-    Page_Room_: {
+    /** Page[RoomDetails] */
+    Page_RoomDetails_: {
       /** Items */
-      items: components["schemas"]["Room"][];
+      items: components["schemas"]["RoomDetails"][];
       /** Total */
       total?: number | null;
       /** Page */
@@ -801,6 +826,40 @@ export interface components {
       /** Is Shared */
       is_shared: boolean;
     };
+    /** RoomDetails */
+    RoomDetails: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** User Id */
+      user_id: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Zulip Auto Post */
+      zulip_auto_post: boolean;
+      /** Zulip Stream */
+      zulip_stream: string;
+      /** Zulip Topic */
+      zulip_topic: string;
+      /** Is Locked */
+      is_locked: boolean;
+      /** Room Mode */
+      room_mode: string;
+      /** Recording Type */
+      recording_type: string;
+      /** Recording Trigger */
+      recording_trigger: string;
+      /** Is Shared */
+      is_shared: boolean;
+      /** Webhook Url */
+      webhook_url: string | null;
+      /** Webhook Secret */
+      webhook_secret: string | null;
+    };
     /** RtcOffer */
     RtcOffer: {
       /** Sdp */
@@ -817,11 +876,8 @@ export interface components {
        * @description Total number of search results
        */
       total: number;
-      /**
-       * Query
-       * @description Search query text
-       */
-      query: string;
+      /** Query */
+      query?: string | null;
       /**
        * Limit
        * @description Results per page
@@ -955,6 +1011,10 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** Webhook Url */
+      webhook_url: string;
+      /** Webhook Secret */
+      webhook_secret: string;
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -994,6 +1054,25 @@ export interface components {
       msg: string;
       /** Error Type */
       type: string;
+    };
+    /** WebhookTestResult */
+    WebhookTestResult: {
+      /** Success */
+      success: boolean;
+      /**
+       * Message
+       * @default
+       */
+      message: string;
+      /**
+       * Error
+       * @default
+       */
+      error: string;
+      /** Status Code */
+      status_code?: number | null;
+      /** Response Preview */
+      response_preview?: string | null;
     };
     /** WherebyWebhookEvent */
     WherebyWebhookEvent: {
@@ -1117,7 +1196,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Page_Room_"];
+          "application/json": components["schemas"]["Page_RoomDetails_"];
         };
       };
       /** @description Validation Error */
@@ -1151,6 +1230,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Room"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoomDetails"];
         };
       };
       /** @description Validation Error */
@@ -1216,7 +1326,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Room"];
+          "application/json": components["schemas"]["RoomDetails"];
         };
       };
       /** @description Validation Error */
@@ -1248,6 +1358,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Meeting"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_test_webhook: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["WebhookTestResult"];
         };
       };
       /** @description Validation Error */

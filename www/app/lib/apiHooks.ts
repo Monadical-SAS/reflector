@@ -120,6 +120,34 @@ export function useTranscriptGet(transcriptId: string | null) {
   );
 }
 
+export function useRoomGet(roomId: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_id}",
+    {
+      params: {
+        path: { room_id: roomId || "" },
+      },
+    },
+    {
+      enabled: !!roomId && isAuthenticated,
+      staleTime: STALE_TIME,
+    },
+  );
+}
+
+export function useRoomTestWebhook() {
+  const { setError } = useError();
+
+  return $api.useMutation("post", "/v1/rooms/{room_id}/webhook/test", {
+    onError: (error) => {
+      setError(error as Error, "There was an error testing the webhook");
+    },
+  });
+}
+
 export function useRoomCreate() {
   const { setError } = useError();
   const queryClient = useQueryClient();

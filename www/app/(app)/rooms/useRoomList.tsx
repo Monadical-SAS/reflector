@@ -1,7 +1,7 @@
 import { useRoomsList } from "../../lib/apiHooks";
 import type { components } from "../../reflector-api";
 
-type Page_Room_ = components["schemas"]["Page_Room_"];
+type Page_Room_ = components["schemas"]["Page_RoomDetails_"];
 import { PaginationPage } from "../browse/_components/Pagination";
 
 type RoomList = {

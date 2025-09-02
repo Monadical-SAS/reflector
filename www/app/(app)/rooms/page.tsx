@@ -15,11 +15,9 @@ import {
   createListCollection,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
-import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError, RoomDetails } from "../../api";
 import type { components } from "../../reflector-api";
 import {
   useRoomCreate,
@@ -27,9 +25,12 @@ import {
   useRoomDelete,
   useZulipStreams,
   useZulipTopics,
+  useRoomGet,
+  useRoomTestWebhook,
 } from "../../lib/apiHooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
+import { assertExists } from "../../lib/utils";
 
 type Room = components["schemas"]["Room"];
 
@@ -86,12 +87,10 @@ export default function RoomsList() {
   const recordingTypeCollection = createListCollection({
     items: recordingTypeOptions,
   });
-  const [room, setRoom] = useState(roomInitialState);
+  const [room_, setRoom] = useState(roomInitialState);
   const [isEditing, setIsEditing] = useState(false);
-  const [editRoomId, setEditRoomId] = useState("");
-  // TODO seems to be no setPage calls
-  const [page, setPage] = useState<number>(1);
-  const { loading, response, refetch } = useRoomList(PaginationPage(page));
+  const [editRoomId, setEditRoomId] = useState<string | null>(null);
+  const { loading, response, refetch } = useRoomList(PaginationPage(1));
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
@@ -100,20 +99,44 @@ export default function RoomsList() {
     null,
   );
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
-  interface Stream {
-    stream_id: number;
-    name: string;
-  }
-
-  interface Topic {
-    name: string;
-  }
 
   const createRoomMutation = useRoomCreate();
   const updateRoomMutation = useRoomUpdate();
   const deleteRoomMutation = useRoomDelete();
   const { data: streams = [] } = useZulipStreams();
   const { data: topics = [] } = useZulipTopics(selectedStreamId);
+
+  const {
+    data: detailedEditedRoom,
+    isLoading: isDetailedEditedRoomLoading,
+    error: detailedEditedRoomError,
+  } = useRoomGet(editRoomId);
+
+  // room being edited, as fetched from the server
+  const editedRoom: typeof roomInitialState | null = useMemo(
+    () =>
+      detailedEditedRoom
+        ? {
+            name: detailedEditedRoom.name,
+            zulipAutoPost: detailedEditedRoom.zulip_auto_post,
+            zulipStream: detailedEditedRoom.zulip_stream,
+            zulipTopic: detailedEditedRoom.zulip_topic,
+            isLocked: detailedEditedRoom.is_locked,
+            roomMode: detailedEditedRoom.room_mode,
+            recordingType: detailedEditedRoom.recording_type,
+            recordingTrigger: detailedEditedRoom.recording_trigger,
+            isShared: detailedEditedRoom.is_shared,
+            webhookUrl: detailedEditedRoom.webhook_url || "",
+            webhookSecret: detailedEditedRoom.webhook_secret || "",
+          }
+        : null,
+    [detailedEditedRoom],
+  );
+
+  // here for minimal change in unrelated PR to make it work "backward-compatible" way. TODO make sense of it
+  const room = editedRoom || room_;
+
+  const roomTestWebhookMutation = useRoomTestWebhook();
 
   // Update selected stream ID when zulip stream changes
   useEffect(() => {
@@ -161,8 +184,12 @@ export default function RoomsList() {
   };
 
   const handleTestWebhook = async () => {
-    if (!room.webhookUrl || !editRoomId) {
+    if (!room.webhookUrl) {
       setWebhookTestResult("Please enter a webhook URL first");
+      return;
+    }
+    if (!editRoomId) {
+      console.error("No room ID to test webhook");
       return;
     }
 
@@ -170,22 +197,24 @@ export default function RoomsList() {
     setWebhookTestResult(null);
 
     try {
-      const response = await api?.v1RoomsTestWebhook({
-        roomId: editRoomId,
+      const response = await roomTestWebhookMutation.mutateAsync({
+        params: {
+          path: {
+            room_id: editRoomId,
+          },
+        },
       });
 
-      if (response?.success) {
+      if (response.success) {
         setWebhookTestResult(
           `✅ Webhook test successful! Status: ${response.status_code}`,
         );
       } else {
         let errorMsg = `❌ Webhook test failed`;
-        if (response?.status_code) {
-          errorMsg += ` (Status: ${response.status_code})`;
-        }
-        if (response?.error) {
+        errorMsg += ` (Status: ${response.status_code})`;
+        if (response.error) {
           errorMsg += `: ${response.error}`;
-        } else if (response?.response_preview) {
+        } else if (response.response_preview) {
           // Try to parse and extract meaningful error from response
           // Specific to N8N at the moment, as there is no specification for that
           // We could just display as is, but decided here to dig a little bit more.
@@ -241,7 +270,7 @@ export default function RoomsList() {
       if (isEditing) {
         await updateRoomMutation.mutateAsync({
           params: {
-            path: { room_id: editRoomId },
+            path: { room_id: assertExists(editRoomId) },
           },
           body: roomData,
         });
@@ -272,46 +301,11 @@ export default function RoomsList() {
     }
   };
 
-  const handleEditRoom = async (roomId, roomData) => {
+  const handleEditRoom = async (roomId: string, roomData) => {
     // Reset states
     setShowWebhookSecret(false);
     setWebhookTestResult(null);
 
-    // Fetch full room details to get webhook fields
-    try {
-      const detailedRoom = await api?.v1RoomsGet({ roomId });
-      if (detailedRoom) {
-        setRoom({
-          name: detailedRoom.name,
-          zulipAutoPost: detailedRoom.zulip_auto_post,
-          zulipStream: detailedRoom.zulip_stream,
-          zulipTopic: detailedRoom.zulip_topic,
-          isLocked: detailedRoom.is_locked,
-          roomMode: detailedRoom.room_mode,
-          recordingType: detailedRoom.recording_type,
-          recordingTrigger: detailedRoom.recording_trigger,
-          isShared: detailedRoom.is_shared,
-          webhookUrl: detailedRoom.webhook_url || "",
-          webhookSecret: detailedRoom.webhook_secret || "",
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch room details, using list data:", error);
-      // Fallback to using the data from the list
-      setRoom({
-        name: roomData.name,
-        zulipAutoPost: roomData.zulip_auto_post,
-        zulipStream: roomData.zulip_stream,
-        zulipTopic: roomData.zulip_topic,
-        isLocked: roomData.is_locked,
-        roomMode: roomData.room_mode,
-        recordingType: roomData.recording_type,
-        recordingTrigger: roomData.recording_trigger,
-        isShared: roomData.is_shared,
-        webhookUrl: roomData.webhook_url || "",
-        webhookSecret: roomData.webhook_secret || "",
-      });
-    }
     setEditRoomId(roomId);
     setIsEditing(true);
     setNameError("");
@@ -346,9 +340,9 @@ export default function RoomsList() {
     });
   };
 
-  const myRooms: RoomDetails[] =
+  const myRooms: Room[] =
     response?.items.filter((roomData) => !roomData.is_shared) || [];
-  const sharedRooms: RoomDetails[] =
+  const sharedRooms: Room[] =
     response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)
