@@ -77,25 +77,33 @@ async def jitsi_events_webhook(event: JitsiWebhookEvent, request: Request):
 
     # Handle participant events
     if event.event == "muc-occupant-joined":
-        # Get current participant count and increment
+        # Store event and update participant count
+        await meetings_controller.participant_joined(
+            meeting.id, {"timestamp": event.timestamp, "data": event.data}
+        )
         current_count = getattr(meeting, "num_clients", 0)
         await meetings_controller.update_meeting(
             meeting.id, num_clients=current_count + 1
         )
     elif event.event == "muc-occupant-left":
-        # Get current participant count and decrement (minimum 0)
+        # Store event and update participant count
+        await meetings_controller.participant_left(
+            meeting.id, {"timestamp": event.timestamp, "data": event.data}
+        )
         current_count = getattr(meeting, "num_clients", 0)
         await meetings_controller.update_meeting(
             meeting.id, num_clients=max(0, current_count - 1)
         )
     elif event.event == "jibri-recording-on":
-        # Recording started - could update meeting status if needed
-        # For now, we just acknowledge the event
-        pass
+        # Store recording started event
+        await meetings_controller.recording_started(
+            meeting.id, {"timestamp": event.timestamp, "data": event.data}
+        )
     elif event.event == "jibri-recording-off":
-        # Recording stopped - could trigger processing pipeline
-        # This would be where we initiate transcript processing
-        pass
+        # Store recording stopped event
+        await meetings_controller.recording_stopped(
+            meeting.id, {"timestamp": event.timestamp, "data": event.data}
+        )
 
     return {"status": "ok", "event": event.event, "room": event.room}
 
@@ -119,6 +127,17 @@ async def jibri_recording_complete(event: JibriRecordingEvent, request: Request)
     meeting = await meetings_controller.get_by_room_name(event.room_name)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
+
+    # Store recording completion event
+    await meetings_controller.add_event(
+        meeting.id,
+        "recording_completed",
+        {
+            "recording_file": event.recording_file,
+            "recording_status": event.recording_status,
+            "timestamp": event.timestamp,
+        },
+    )
 
     # TODO: Trigger recording processing pipeline
     # This is where we would:

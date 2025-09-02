@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Literal
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Literal
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -42,6 +42,7 @@ meetings = sa.Table(
         server_default=sa.true(),
     ),
     sa.Column("platform", sa.String, nullable=False, server_default="whereby"),
+    sa.Column("events", sa.JSON, nullable=False, server_default=sa.text("'[]'")),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index(
         "idx_one_active_meeting_per_room",
@@ -92,6 +93,7 @@ class Meeting(BaseModel):
     ] = "automatic-2nd-participant"
     num_clients: int = 0
     platform: VideoPlatform = VideoPlatform.WHEREBY
+    events: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class MeetingController:
@@ -201,6 +203,68 @@ class MeetingController:
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
+
+    async def add_event(
+        self, meeting_id: str, event_type: str, event_data: Dict[str, Any] = None
+    ):
+        """Add an event to a meeting's events list."""
+        if event_data is None:
+            event_data = {}
+
+        event = {
+            "type": event_type,
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "data": event_data,
+        }
+
+        # Get current events
+        query = meetings.select().where(meetings.c.id == meeting_id)
+        result = await get_database().fetch_one(query)
+        if not result:
+            return
+
+        current_events = result["events"] or []
+        current_events.append(event)
+
+        # Update with new events list
+        update_query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(events=current_events)
+        )
+        await get_database().execute(update_query)
+
+    async def participant_joined(
+        self, meeting_id: str, participant_data: Dict[str, Any] = None
+    ):
+        """Record a participant joined event."""
+        await self.add_event(meeting_id, "participant_joined", participant_data)
+
+    async def participant_left(
+        self, meeting_id: str, participant_data: Dict[str, Any] = None
+    ):
+        """Record a participant left event."""
+        await self.add_event(meeting_id, "participant_left", participant_data)
+
+    async def recording_started(
+        self, meeting_id: str, recording_data: Dict[str, Any] = None
+    ):
+        """Record a recording started event."""
+        await self.add_event(meeting_id, "recording_started", recording_data)
+
+    async def recording_stopped(
+        self, meeting_id: str, recording_data: Dict[str, Any] = None
+    ):
+        """Record a recording stopped event."""
+        await self.add_event(meeting_id, "recording_stopped", recording_data)
+
+    async def get_events(self, meeting_id: str) -> List[Dict[str, Any]]:
+        """Get all events for a meeting."""
+        query = meetings.select().where(meetings.c.id == meeting_id)
+        result = await get_database().fetch_one(query)
+        if not result:
+            return []
+        return result["events"] or []
 
 
 class MeetingConsentController:
