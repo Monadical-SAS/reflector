@@ -260,7 +260,9 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useSessionStatus();
+  const status = useSessionStatus();
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading" || meeting.loading;
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url

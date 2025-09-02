@@ -13,6 +13,9 @@ export interface CustomSession extends Session {
   accessToken: string;
   accessTokenExpires: number;
   error?: string;
+  user: Session["user"] & {
+    id: string;
+  };
 }
 
 // assumption that JWT is JWTWithAccessToken - not ideal, TODO find a reason we have to do that
@@ -38,4 +41,26 @@ export const assertExtendedToken = <T>(
     };
   }
   throw new Error("Token is not extended with access token");
+};
+
+export const assertExtendedTokenAndUserId = <U, T extends { user?: U }>(
+  t: T,
+): T & {
+  accessTokenExpires: number;
+  accessToken: string;
+  user: U & {
+    id: string;
+  };
+} => {
+  const extendedToken = assertExtendedToken(t);
+  if (typeof (extendedToken.user as any)?.id === "string") {
+    return t as T & {
+      accessTokenExpires: number;
+      accessToken: string;
+      user: U & {
+        id: string;
+      };
+    };
+  }
+  throw new Error("Token is not extended with user id");
 };

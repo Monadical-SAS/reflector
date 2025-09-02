@@ -83,7 +83,6 @@ export const authOptions: AuthOptions = {
       return await lockedRefreshAccessToken(token);
     },
     async session({ session, token }) {
-      // TODO no as
       const extendedToken = token as JWTWithAccessToken;
       return {
         ...session,
@@ -91,7 +90,7 @@ export const authOptions: AuthOptions = {
         accessTokenExpires: extendedToken.accessTokenExpires,
         error: extendedToken.error,
         user: {
-          id: extendedToken.sub,
+          id: assertExists(extendedToken.sub),
           name: extendedToken.name,
           email: extendedToken.email,
         },

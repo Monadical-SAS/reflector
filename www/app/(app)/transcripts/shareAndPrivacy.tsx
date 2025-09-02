@@ -22,7 +22,7 @@ import { useTranscriptUpdate } from "../../lib/apiHooks";
 import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";
-import useUserId from "../../lib/useUserId";
+import { useAuth } from "../../lib/AuthProvider";
 
 type ShareAndPrivacyProps = {
   finalSummaryRef: any;
@@ -85,7 +85,8 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
     }
   };
 
-  const userId = useUserId();
+  const auth = useAuth();
+  const userId = auth.status === "authenticated" ? auth.user?.id : null;
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));

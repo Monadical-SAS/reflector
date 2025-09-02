@@ -19,7 +19,6 @@ import {
   parseAsStringLiteral,
 } from "nuqs";
 import { LuX } from "react-icons/lu";
-import useSessionUser from "../../lib/useUserId";
 import type { components } from "../../reflector-api";
 
 type Room = components["schemas"]["Room"];

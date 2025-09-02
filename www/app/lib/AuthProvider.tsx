@@ -3,7 +3,11 @@
 import { createContext, useContext, useEffect } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import { configureApiAuth } from "./apiClient";
-import { assertExtendedToken, CustomSession } from "./types";
+import {
+  assertExtendedToken,
+  assertExtendedTokenAndUserId,
+  CustomSession,
+} from "./types";
 
 type AuthContextType =
   | { status: "loading" }
@@ -19,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useNextAuthSession();
-  const customSession = session ? assertExtendedToken(session) : null;
+  const customSession = session ? assertExtendedTokenAndUserId(session) : null;
 
   const contextValue: AuthContextType =
     status === "loading"
