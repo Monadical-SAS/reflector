@@ -31,8 +31,10 @@ def get_available_platforms() -> list[str]:
 # Auto-register built-in platforms
 def _register_builtin_platforms():
     from .jitsi import JitsiClient
+    from .whereby import WherebyClient
 
     register_platform("jitsi", JitsiClient)
+    register_platform("whereby", WherebyClient)
 
 
 _register_builtin_platforms()

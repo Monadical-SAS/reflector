@@ -16,6 +16,7 @@ def get_platform_config(platform: str) -> VideoPlatformConfig:
             api_key=settings.WHEREBY_API_KEY or "",
             webhook_secret=settings.WHEREBY_WEBHOOK_SECRET or "",
             api_url=settings.WHEREBY_API_URL,
+            s3_bucket=settings.RECORDING_STORAGE_AWS_BUCKET_NAME,
             aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
             aws_access_key_secret=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
         )

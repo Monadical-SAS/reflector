@@ -17,7 +17,7 @@ from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.settings import settings
-from reflector.whereby import get_room_sessions
+from reflector.video_platforms.factory import create_platform_client
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -155,11 +155,18 @@ async def process_meetings():
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
         if end_date > datetime.now(timezone.utc):
-            response = await get_room_sessions(meeting.room_name)
-            room_sessions = response.get("results", [])
-            is_active = not room_sessions or any(
-                rs["endedAt"] is None for rs in room_sessions
-            )
+            # Get room sessions using platform client
+            platform = getattr(meeting, "platform", "whereby")
+            client = create_platform_client(platform)
+            if client:
+                response = await client.get_room_sessions(meeting.room_name)
+                room_sessions = response.get("results", [])
+                is_active = not room_sessions or any(
+                    rs["endedAt"] is None for rs in room_sessions
+                )
+            else:
+                # Fallback: assume meeting is still active if we can't check
+                is_active = True
         if not is_active:
             await meetings_controller.update_meeting(meeting.id, is_active=False)
             logger.info("Meeting %s is deactivated", meeting.id)
