@@ -30,8 +30,9 @@ def get_available_platforms() -> list[str]:
 
 # Auto-register built-in platforms
 def _register_builtin_platforms():
-    # Will be populated as we add platforms
-    pass
+    from .jitsi import JitsiClient
+
+    register_platform("jitsi", JitsiClient)
 
 
 _register_builtin_platforms()
