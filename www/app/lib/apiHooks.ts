@@ -23,7 +23,7 @@ import useAuthReady from "./useAuthReady";
 const STALE_TIME = 500;
 
 export function useRoomsList(page: number = 1) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -34,7 +34,7 @@ export function useRoomsList(page: number = 1) {
       },
     },
     {
-      enabled: isAuthReady,
+      enabled: isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
@@ -51,7 +51,7 @@ export function useTranscriptsSearch(
     source_kind?: SourceKind;
   } = {},
 ) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -68,7 +68,7 @@ export function useTranscriptsSearch(
       },
     },
     {
-      enabled: isAuthReady,
+      enabled: isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
@@ -101,7 +101,7 @@ export function useTranscriptProcess() {
 }
 
 export function useTranscriptGet(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -114,7 +114,7 @@ export function useTranscriptGet(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
@@ -169,22 +169,22 @@ export function useRoomDelete() {
 }
 
 export function useZulipStreams() {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
     "/v1/zulip/streams",
     {},
     {
-      enabled: isAuthReady,
+      enabled: isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
 }
 
 export function useZulipTopics(streamId: number | null) {
-  const { isAuthReady } = useAuthReady();
-  const enabled = !!streamId && isAuthReady;
+  const { isAuthenticated } = useAuthReady();
+  const enabled = !!streamId && isAuthenticated;
   return $api.useQuery(
     "get",
     "/v1/zulip/streams/{stream_id}/topics",
@@ -262,7 +262,7 @@ export function useTranscriptUploadAudio() {
 }
 
 export function useTranscriptWaveform(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -273,14 +273,14 @@ export function useTranscriptWaveform(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
 }
 
 export function useTranscriptMP3(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -291,14 +291,14 @@ export function useTranscriptMP3(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -309,14 +309,14 @@ export function useTranscriptTopics(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
 }
 
 export function useTranscriptTopicsWithWords(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -327,7 +327,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
@@ -337,7 +337,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   transcriptId: string | null,
   topicId: string | null,
 ) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -351,14 +351,14 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
       },
     },
     {
-      enabled: !!transcriptId && !!topicId && isAuthReady,
+      enabled: !!transcriptId && !!topicId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );
 }
 
 export function useTranscriptParticipants(transcriptId: string | null) {
-  const { isAuthReady } = useAuthReady();
+  const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
@@ -369,7 +369,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthReady,
+      enabled: !!transcriptId && isAuthenticated,
       staleTime: STALE_TIME,
     },
   );

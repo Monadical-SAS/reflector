@@ -80,17 +80,19 @@ export const authOptions: AuthOptions = {
       return await lockedRefreshAccessToken(token);
     },
     async session({ session, token }) {
+      // TODO no as
       const extendedToken = token as JWTWithAccessToken;
-      const customSession = session as CustomSession;
-      customSession.accessToken = extendedToken.accessToken;
-      customSession.accessTokenExpires = extendedToken.accessTokenExpires;
-      customSession.error = extendedToken.error;
-      customSession.user = {
-        id: extendedToken.sub,
-        name: extendedToken.name,
-        email: extendedToken.email,
-      };
-      return customSession;
+      return {
+        ...session,
+        accessToken: extendedToken.accessToken,
+        accessTokenExpires: extendedToken.accessTokenExpires,
+        error: extendedToken.error,
+        user: {
+          id: extendedToken.sub,
+          name: extendedToken.name,
+          email: extendedToken.email,
+        },
+      } satisfies CustomSession;
     },
   },
 };

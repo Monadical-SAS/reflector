@@ -41,6 +41,7 @@ client.use({
   },
 });
 
+// the function contract: lightweight, idempotent
 export const configureApiAuth = (token: string | null | undefined) => {
   currentAuthToken = token;
   authConfigured = true;

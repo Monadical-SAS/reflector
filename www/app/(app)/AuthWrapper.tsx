@@ -8,10 +8,9 @@ export default function AuthWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthReady, isLoading } = useAuthReady();
+  const { isLoading } = useAuthReady();
 
-  // Show spinner while auth is loading
-  if (isLoading || !isAuthReady) {
+  if (isLoading) {
     return (
       <Flex
         flexDir="column"
