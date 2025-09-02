@@ -1,22 +1,40 @@
 import hmac
-import time
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from typing import Any, Dict, Optional
 
 import jwt
 
-from reflector.db.rooms import Room
+from reflector.db.rooms import Room, VideoPlatform
 from reflector.settings import settings
 from reflector.utils import generate_uuid4
 
 from ..base import MeetingData, VideoPlatformClient
 
 
+class JitsiMeetingData(MeetingData):
+    """Jitsi-specific meeting data with typed extra_data."""
+
+    @property
+    def user_jwt(self) -> str:
+        """JWT token for regular users."""
+        return self.extra_data.get("user_jwt", "")
+
+    @property
+    def host_jwt(self) -> str:
+        """JWT token for moderators."""
+        return self.extra_data.get("host_jwt", "")
+
+    @property
+    def domain(self) -> str:
+        """Jitsi domain."""
+        return self.extra_data.get("domain", "")
+
+
 class JitsiClient(VideoPlatformClient):
     """Jitsi Meet video platform implementation."""
 
-    PLATFORM_NAME = "jitsi"
+    PLATFORM_NAME = VideoPlatform.JITSI
 
     def _generate_jwt(self, room: str, moderator: bool, exp: datetime) -> str:
         """Generate JWT token for Jitsi Meet room access."""
@@ -37,7 +55,6 @@ class JitsiClient(VideoPlatformClient):
                 "features": {
                     "recording": True,
                     "livestreaming": False,
-                    "transcription": True,
                 },
             },
         }
@@ -46,10 +63,10 @@ class JitsiClient(VideoPlatformClient):
 
     async def create_meeting(
         self, room_name_prefix: str, end_date: datetime, room: Room
-    ) -> MeetingData:
+    ) -> JitsiMeetingData:
         """Create a Jitsi Meet room with JWT authentication."""
         # Generate unique room name
-        jitsi_room = f"reflector-{room.name}-{int(time.time())}"
+        jitsi_room = f"reflector-{room.name}-{generate_uuid4()}"
 
         # Generate JWT tokens
         user_jwt = self._generate_jwt(room=jitsi_room, moderator=False, exp=end_date)
@@ -59,7 +76,7 @@ class JitsiClient(VideoPlatformClient):
         room_url = f"https://{settings.JITSI_DOMAIN}/{jitsi_room}?jwt={user_jwt}"
         host_room_url = f"https://{settings.JITSI_DOMAIN}/{jitsi_room}?jwt={host_jwt}"
 
-        return MeetingData(
+        return JitsiMeetingData(
             meeting_id=generate_uuid4(),
             room_name=jitsi_room,
             room_url=room_url,
@@ -79,7 +96,7 @@ class JitsiClient(VideoPlatformClient):
             "sessions": [
                 {
                     "sessionId": generate_uuid4(),
-                    "startTime": datetime.utcnow().isoformat(),
+                    "startTime": datetime.now(tz=timezone.utc).isoformat(),
                     "participants": [],
                     "isActive": True,
                 }

@@ -1,3 +1,3 @@
-from .client import JitsiClient
+from .client import JitsiClient, JitsiMeetingData
 
-__all__ = ["JitsiClient"]
+__all__ = ["JitsiClient", "JitsiMeetingData"]
