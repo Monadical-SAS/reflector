@@ -11,9 +11,9 @@ import {
 import createFetchClient from "openapi-react-query";
 
 // Create the base openapi-fetch client with a default URL
-// The actual URL will be set via middleware in ApiAuthProvider
+// The actual URL will be set via middleware in AuthProvider
 export const client = createClient<paths>({
-  baseUrl: "http://192.0.2.1:1250",
+  baseUrl: "http://127.0.0.1:1250",
 });
 
 export const $api = createFetchClient<paths>(client);

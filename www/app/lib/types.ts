@@ -13,11 +13,6 @@ export interface CustomSession extends Session {
   accessToken: string;
   accessTokenExpires: number;
   error?: string;
-  user: {
-    id?: string;
-    name?: string | null;
-    email?: string | null;
-  };
 }
 
 // assumption that JWT is JWTWithAccessToken - not ideal, TODO find a reason we have to do that

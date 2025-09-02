@@ -7,6 +7,7 @@ import {
   assertExtendedToken,
 } from "./types";
 import {
+  assertExists,
   assertExistsAndNonEmptyString,
   parseMaybeNonEmptyString,
 } from "./utils";
@@ -48,23 +49,24 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, user }) {
-      const extendedToken = assertExtendedToken(token);
       const KEY = `token:${token.sub}`;
+
       if (account && user) {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
-        const expiresAt = (account.expires_at as number) - PRETIMEOUT;
+        const expiresAtS = assertExists(account.expires_at) - PRETIMEOUT;
+        const expiresAtMs = expiresAtS * 1000;
         if (!account.access_token) {
           tokenCache.delete(KEY);
         } else {
           const jwtToken: JWTWithAccessToken = {
-            ...extendedToken,
+            ...token,
             accessToken: account.access_token,
-            accessTokenExpires: expiresAt * 1000,
+            accessTokenExpires: expiresAtMs,
             refreshToken: account.refresh_token || "",
           };
           // Store in memory cache
-          tokenCache.set(`token:${jwtToken.sub}`, {
+          tokenCache.set(KEY, {
             token: jwtToken,
             timestamp: Date.now(),
           });
@@ -72,8 +74,9 @@ export const authOptions: AuthOptions = {
         }
       }
 
-      if (Date.now() < extendedToken.accessTokenExpires) {
-        return token;
+      const currentToken = tokenCache.get(KEY);
+      if (currentToken && Date.now() < currentToken.token.accessTokenExpires) {
+        return currentToken.token;
       }
 
       // access token has expired, try to update it

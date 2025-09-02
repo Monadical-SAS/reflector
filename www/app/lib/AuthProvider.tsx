@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import { configureApiAuth } from "./apiClient";
-import { CustomSession } from "./types";
+import { assertExtendedToken, CustomSession } from "./types";
 
 type AuthContextType =
   | { status: "loading" }
@@ -12,26 +12,24 @@ type AuthContextType =
       status: "authenticated";
       accessToken: string;
       accessTokenExpires: number;
+      user: CustomSession["user"];
     };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useNextAuthSession();
-  const customSession = session as CustomSession;
-
-  if (session) {
-    debugger;
-  }
+  const customSession = session ? assertExtendedToken(session) : null;
 
   const contextValue: AuthContextType =
     status === "loading"
       ? { status: "loading" as const }
-      : customSession?.accessToken
+      : status === "authenticated" && customSession?.accessToken
         ? {
             status: "authenticated" as const,
             accessToken: customSession.accessToken,
             accessTokenExpires: customSession.accessTokenExpires,
+            user: customSession.user,
           }
         : { status: "unauthenticated" as const };
 

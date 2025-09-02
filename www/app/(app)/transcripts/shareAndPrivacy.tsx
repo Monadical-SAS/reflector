@@ -19,11 +19,10 @@ import {
 } from "@chakra-ui/react";
 import { LuShare2 } from "react-icons/lu";
 import { useTranscriptUpdate } from "../../lib/apiHooks";
-import useSessionUser from "../../lib/useSessionUser";
-import { CustomSession } from "../../lib/types";
 import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";
+import useUserId from "../../lib/useUserId";
 
 type ShareAndPrivacyProps = {
   finalSummaryRef: any;
@@ -86,7 +85,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
     }
   };
 
-  const userId = useSessionUser().id;
+  const userId = useUserId();
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));

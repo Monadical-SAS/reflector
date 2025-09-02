@@ -9,15 +9,16 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { CustomSession } from "./types";
+import { assertExtendedToken, CustomSession } from "./types";
 
 export function SessionAutoRefresh({
   children,
   refreshInterval = 20 /* seconds */,
 }) {
   const { data: session, update } = useSession();
-  const customSession = session as CustomSession;
-  const accessTokenExpires = customSession?.accessTokenExpires;
+  const accessTokenExpires = session
+    ? assertExtendedToken(session).accessTokenExpires
+    : null;
 
   useEffect(() => {
     const interval = setInterval(() => {

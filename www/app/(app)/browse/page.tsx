@@ -19,7 +19,7 @@ import {
   parseAsStringLiteral,
 } from "nuqs";
 import { LuX } from "react-icons/lu";
-import useSessionUser from "../../lib/useSessionUser";
+import useSessionUser from "../../lib/useUserId";
 import type { components } from "../../reflector-api";
 
 type Room = components["schemas"]["Room"];
@@ -43,6 +43,7 @@ import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
 import { RECORD_A_MEETING_URL } from "../../api/urls";
+import { useUserName } from "../../lib/useUserName";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 
@@ -255,7 +256,7 @@ export default function TranscriptBrowser() {
 
   const totalPages = getTotalPages(totalResults, pageSize);
 
-  const userName = useSessionUser().name;
+  const userName = useUserName();
   const [deletionLoading, setDeletionLoading] = useState(false);
   const cancelRef = React.useRef(null);
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
