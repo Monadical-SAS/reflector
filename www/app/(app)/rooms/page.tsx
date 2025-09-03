@@ -87,7 +87,6 @@ export default function RoomsList() {
   const recordingTypeCollection = createListCollection({
     items: recordingTypeOptions,
   });
-  const [room_, setRoom] = useState(roomInitialState);
   const [roomInput, setRoomInput] = useState<null | typeof roomInitialState>(
     null,
   );
@@ -136,8 +135,8 @@ export default function RoomsList() {
     [detailedEditedRoom],
   );
 
-  // here for minimal change in unrelated PR to make it work "backward-compatible" way. TODO make sense of it
-  const room = roomInput || editedRoom || room_;
+  // a room input value or a last api room state
+  const room = roomInput || editedRoom || roomInitialState;
 
   const roomTestWebhookMutation = useRoomTestWebhook();
 
@@ -283,7 +282,7 @@ export default function RoomsList() {
         });
       }
 
-      setRoom(roomInitialState);
+      setRoomInput(null);
       setIsEditing(false);
       setEditRoomId("");
       setNameError("");
@@ -378,7 +377,7 @@ export default function RoomsList() {
           colorPalette="primary"
           onClick={() => {
             setIsEditing(false);
-            setRoom(roomInitialState);
+            setRoomInput(null);
             setNameError("");
             setShowWebhookSecret(false);
             setWebhookTestResult(null);
@@ -447,7 +446,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.roomMode]}
                   onValueChange={(e) =>
-                    setRoom({ ...room, roomMode: e.value[0] })
+                    setRoomInput({ ...room, roomMode: e.value[0] })
                   }
                   collection={roomModeCollection}
                 >
@@ -477,7 +476,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.recordingType]}
                   onValueChange={(e) =>
-                    setRoom({
+                    setRoomInput({
                       ...room,
                       recordingType: e.value[0],
                       recordingTrigger:
@@ -512,7 +511,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.recordingTrigger]}
                   onValueChange={(e) =>
-                    setRoom({ ...room, recordingTrigger: e.value[0] })
+                    setRoomInput({ ...room, recordingTrigger: e.value[0] })
                   }
                   collection={recordingTriggerCollection}
                   disabled={room.recordingType !== "cloud"}
@@ -567,7 +566,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={room.zulipStream ? [room.zulipStream] : []}
                   onValueChange={(e) =>
-                    setRoom({
+                    setRoomInput({
                       ...room,
                       zulipStream: e.value[0],
                       zulipTopic: "",
@@ -602,7 +601,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={room.zulipTopic ? [room.zulipTopic] : []}
                   onValueChange={(e) =>
-                    setRoom({ ...room, zulipTopic: e.value[0] })
+                    setRoomInput({ ...room, zulipTopic: e.value[0] })
                   }
                   collection={topicCollection}
                   disabled={!room.zulipAutoPost}
