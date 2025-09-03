@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from reflector.db.rooms import Room
+from reflector.db.rooms import Room, VideoPlatform
 from reflector.video_platforms.base import (
     MeetingData,
     VideoPlatformClient,
@@ -22,6 +22,7 @@ from reflector.video_platforms.registry import (
     get_platform_client,
     register_platform,
 )
+from reflector.video_platforms.whereby import WherebyClient
 
 
 class TestVideoPlatformBase:
@@ -45,12 +46,12 @@ class TestVideoPlatformBase:
             room_name="test-room",
             room_url="https://test.com/room",
             host_room_url="https://test.com/host",
-            platform="jitsi",
+            platform=VideoPlatform.JITSI,
             extra_data={"jwt": "token123"},
         )
         assert meeting_data.meeting_id == "test-123"
         assert meeting_data.room_name == "test-room"
-        assert meeting_data.platform == "jitsi"
+        assert meeting_data.platform == VideoPlatform.JITSI
         assert meeting_data.extra_data["jwt"] == "token123"
 
 
@@ -111,7 +112,7 @@ class TestJitsiClient:
 
         # Verify meeting data structure
         assert meeting_data.meeting_id == "test-uuid-123"
-        assert meeting_data.platform == "jitsi"
+        assert meeting_data.platform == VideoPlatform.JITSI
         assert "reflector-test-room" in meeting_data.room_name
         assert "meet.example.com" in meeting_data.room_url
         assert "jwt=" in meeting_data.room_url
@@ -175,6 +176,151 @@ class TestJitsiClient:
         assert result is False
 
 
+class TestWherebyClient:
+    """Test WherebyClient implementation."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.config = VideoPlatformConfig(
+            api_key="test-whereby-api-key",
+            webhook_secret="test-whereby-webhook-secret",
+            api_url="https://api.whereby.dev",
+            s3_bucket="test-recordings-bucket",
+            aws_access_key_id="test-access-key",
+            aws_access_key_secret="test-access-secret",
+        )
+        self.client = WherebyClient(self.config)
+        self.test_room = Room(
+            id="test-room-id",
+            name="test-room",
+            user_id="test-user",
+            platform=VideoPlatform.WHEREBY,
+        )
+
+    @patch("httpx.AsyncClient")
+    async def test_create_meeting(self, mock_client_class):
+        """Test Whereby meeting creation."""
+        # Mock the HTTP response
+        mock_client = mock_client_class.return_value.__aenter__.return_value
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "meetingId": "whereby-meeting-123",
+            "roomName": "whereby-room-456",
+            "roomUrl": "https://whereby.com/room",
+            "hostRoomUrl": "https://whereby.com/host-room",
+            "startDate": "2025-01-15T10:00:00.000Z",
+            "endDate": "2025-01-15T18:00:00.000Z",
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_client.post.return_value = mock_response
+
+        end_date = datetime.now(timezone.utc) + timedelta(hours=2)
+
+        meeting_data = await self.client.create_meeting(
+            room_name_prefix="test", end_date=end_date, room=self.test_room
+        )
+
+        # Verify meeting data structure
+        assert meeting_data.meeting_id == "whereby-meeting-123"
+        assert meeting_data.room_name == "whereby-room-456"
+        assert meeting_data.platform == VideoPlatform.WHEREBY
+        assert "whereby.com" in meeting_data.room_url
+        assert "whereby.com" in meeting_data.host_room_url
+
+        # Verify HTTP call was made with correct parameters
+        mock_client.post.assert_called_once()
+        call_args = mock_client.post.call_args
+        assert "whereby.dev" in call_args[0][0]  # URL
+        assert "Bearer test-whereby-api-key" in call_args[1]["headers"]["Authorization"]
+
+    @patch("httpx.AsyncClient")
+    async def test_get_room_sessions(self, mock_client_class):
+        """Test Whereby room sessions retrieval."""
+        mock_client = mock_client_class.return_value.__aenter__.return_value
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "sessions": [
+                {
+                    "id": "session-123",
+                    "startTime": "2025-01-15T10:00:00Z",
+                    "participants": [],
+                }
+            ]
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_client.get.return_value = mock_response
+
+        sessions = await self.client.get_room_sessions("test-room")
+
+        assert "sessions" in sessions
+        assert len(sessions["sessions"]) == 1
+        assert sessions["sessions"][0]["id"] == "session-123"
+
+        # Verify HTTP call
+        mock_client.get.assert_called_once()
+
+    async def test_delete_room(self):
+        """Test room deletion (no-op for Whereby)."""
+        result = await self.client.delete_room("test-room")
+        assert result is True
+
+    @patch("httpx.AsyncClient")
+    async def test_upload_logo_success(self, mock_client_class):
+        """Test logo upload success."""
+        mock_client = mock_client_class.return_value.__aenter__.return_value
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_client.put.return_value = mock_response
+
+        # Create a temporary file for testing
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".png", delete=False) as f:
+            f.write("fake logo content")
+            temp_file = f.name
+
+        result = await self.client.upload_logo("test-room", temp_file)
+        assert result is True
+
+        # Verify HTTP call
+        mock_client.put.assert_called_once()
+
+        # Cleanup
+        import os
+
+        os.unlink(temp_file)
+
+    @patch("httpx.AsyncClient")
+    async def test_upload_logo_failure(self, mock_client_class):
+        """Test logo upload handles HTTP errors gracefully."""
+        mock_client = mock_client_class.return_value.__aenter__.return_value
+        mock_client.put.side_effect = Exception("HTTP error")
+
+        result = await self.client.upload_logo("test-room", "logo.png")
+        assert result is False
+
+    def test_verify_webhook_signature_valid(self):
+        """Test Whereby webhook signature verification with valid signature."""
+        body = b'{"event": "test"}'
+        import hmac
+        from hashlib import sha256
+
+        expected_signature = hmac.new(
+            self.config.webhook_secret.encode(), body, sha256
+        ).hexdigest()
+
+        result = self.client.verify_webhook_signature(body, expected_signature)
+        assert result is True
+
+    def test_verify_webhook_signature_invalid(self):
+        """Test Whereby webhook signature verification with invalid signature."""
+        body = b'{"event": "test"}'
+        invalid_signature = "invalid-signature"
+
+        result = self.client.verify_webhook_signature(body, invalid_signature)
+        assert result is False
+
+
 class TestPlatformRegistry:
     """Test platform registry functionality."""
 
@@ -225,6 +371,7 @@ class TestPlatformRegistry:
         """Test that built-in platforms are registered."""
         available = get_available_platforms()
         assert "jitsi" in available
+        assert "whereby" in available
 
 
 class TestPlatformFactory:
@@ -271,6 +418,172 @@ class TestPlatformFactory:
             client = create_platform_client("jitsi")
             assert isinstance(client, JitsiClient)
 
+    def test_create_jitsi_client_typing(self):
+        """Test that create_platform_client returns correctly typed JitsiClient."""
+        with patch(
+            "reflector.video_platforms.factory.get_platform_config"
+        ) as mock_config:
+            mock_config.return_value = VideoPlatformConfig(
+                api_key="",
+                webhook_secret="test-secret",
+                api_url="https://meet.example.com",
+            )
+
+            # The typing overload should ensure this returns JitsiClient
+            client = create_platform_client("jitsi")
+            assert isinstance(client, JitsiClient)
+            # Verify it has Jitsi-specific methods
+            assert hasattr(client, "_generate_jwt")
+
+    def test_create_whereby_client_typing(self):
+        """Test that create_platform_client returns correctly typed WherebyClient."""
+        with patch(
+            "reflector.video_platforms.factory.get_platform_config"
+        ) as mock_config:
+            mock_config.return_value = VideoPlatformConfig(
+                api_key="whereby-key",
+                webhook_secret="whereby-secret",
+                api_url="https://api.whereby.dev",
+            )
+
+            # The typing overload should ensure this returns WherebyClient
+            client = create_platform_client("whereby")
+            assert isinstance(client, WherebyClient)
+            # Verify it has Whereby-specific attributes
+            assert hasattr(client, "headers")
+            assert hasattr(client, "timeout")
+
+
+class TestWebhookEventStorage:
+    """Test webhook event storage functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        from reflector.app import app
+
+        self.client = TestClient(app)
+
+    @patch("reflector.db.meetings.meetings_controller.participant_joined")
+    @patch("reflector.db.meetings.meetings_controller.get_by_room_name")
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=True,
+    )
+    def test_participant_joined_event_storage(
+        self, mock_verify, mock_get, mock_participant_joined
+    ):
+        """Test that participant joined events are stored correctly."""
+        # Mock meeting
+        mock_meeting = Mock()
+        mock_meeting.id = "test-meeting-id"
+        mock_meeting.num_clients = 1
+        mock_get.return_value = mock_meeting
+
+        payload = {
+            "event": "muc-occupant-joined",
+            "room": "test-room",
+            "timestamp": "2025-01-15T10:30:00.000Z",
+            "data": {"user_id": "test-user", "display_name": "John Doe"},
+        }
+
+        response = self.client.post(
+            "/v1/jitsi/events",
+            json=payload,
+            headers={"x-jitsi-signature": "valid-signature"},
+        )
+
+        assert response.status_code == 200
+        # Verify event was stored with correct data
+        mock_participant_joined.assert_called_once_with(
+            "test-meeting-id",
+            {
+                "timestamp": datetime.fromisoformat(
+                    "2025-01-15T10:30:00.000Z".replace("Z", "+00:00")
+                ),
+                "data": {"user_id": "test-user", "display_name": "John Doe"},
+            },
+        )
+
+    @patch("reflector.db.meetings.meetings_controller.recording_started")
+    @patch("reflector.db.meetings.meetings_controller.get_by_room_name")
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=True,
+    )
+    def test_recording_started_event_storage(
+        self, mock_verify, mock_get, mock_recording_started
+    ):
+        """Test that recording started events are stored correctly."""
+        mock_meeting = Mock()
+        mock_meeting.id = "test-meeting-id"
+        mock_meeting.num_clients = 1
+        mock_get.return_value = mock_meeting
+
+        payload = {
+            "event": "jibri-recording-on",
+            "room": "test-room",
+            "timestamp": "2025-01-15T10:32:00.000Z",
+            "data": {"recording_id": "rec-123"},
+        }
+
+        response = self.client.post(
+            "/v1/jitsi/events",
+            json=payload,
+            headers={"x-jitsi-signature": "valid-signature"},
+        )
+
+        assert response.status_code == 200
+        mock_recording_started.assert_called_once_with(
+            "test-meeting-id",
+            {
+                "timestamp": datetime.fromisoformat(
+                    "2025-01-15T10:32:00.000Z".replace("Z", "+00:00")
+                ),
+                "data": {"recording_id": "rec-123"},
+            },
+        )
+
+    @patch("reflector.db.meetings.meetings_controller.add_event")
+    @patch("reflector.db.meetings.meetings_controller.get_by_room_name")
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=True,
+    )
+    def test_recording_complete_event_storage(
+        self, mock_verify, mock_get, mock_add_event
+    ):
+        """Test that recording completion events are stored correctly."""
+        mock_meeting = Mock()
+        mock_meeting.id = "test-meeting-id"
+        mock_meeting.num_clients = 1
+        mock_get.return_value = mock_meeting
+
+        payload = {
+            "room_name": "test-room",
+            "recording_file": "/recordings/test.mp4",
+            "recording_status": "completed",
+            "timestamp": "2025-01-15T11:15:00.000Z",
+        }
+
+        response = self.client.post(
+            "/v1/jibri/recording-complete",
+            json=payload,
+            headers={"x-jitsi-signature": "valid-signature"},
+        )
+
+        assert response.status_code == 200
+        mock_add_event.assert_called_once_with(
+            "test-meeting-id",
+            "recording_completed",
+            {
+                "recording_file": "/recordings/test.mp4",
+                "recording_status": "completed",
+                "timestamp": datetime.fromisoformat(
+                    "2025-01-15T11:15:00.000Z".replace("Z", "+00:00")
+                ),
+            },
+        )
+
 
 class TestWebhookEndpoints:
     """Test Jitsi webhook endpoints."""
@@ -292,10 +605,16 @@ class TestWebhookEndpoints:
         assert "timestamp" in data
         assert "webhook_secret_configured" in data
 
-    @patch("reflector.views.jitsi.verify_jitsi_webhook_signature", return_value=True)
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=True,
+    )
     @patch("reflector.db.meetings.meetings_controller.get_by_room_name")
+    @patch("reflector.db.meetings.meetings_controller.participant_joined")
     @patch("reflector.db.meetings.meetings_controller.update_meeting")
-    async def test_jitsi_events_webhook_join(self, mock_update, mock_get, mock_verify):
+    async def test_jitsi_events_webhook_join(
+        self, mock_update, mock_participant_joined, mock_get, mock_verify
+    ):
         """Test participant join event webhook."""
         # Mock meeting
         mock_meeting = Mock()
@@ -322,7 +641,10 @@ class TestWebhookEndpoints:
         assert data["event"] == "muc-occupant-joined"
         assert data["room"] == "test-room"
 
-    @patch("reflector.views.jitsi.verify_jitsi_webhook_signature", return_value=False)
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=False,
+    )
     async def test_jitsi_events_webhook_invalid_signature(self, mock_verify):
         """Test webhook with invalid signature returns 401."""
         payload = {
@@ -341,7 +663,10 @@ class TestWebhookEndpoints:
         assert response.status_code == 401
         assert "Invalid webhook signature" in response.text
 
-    @patch("reflector.views.jitsi.verify_jitsi_webhook_signature", return_value=True)
+    @patch(
+        "reflector.video_platforms.jitsi.router.verify_jitsi_webhook_signature",
+        return_value=True,
+    )
     @patch(
         "reflector.db.meetings.meetings_controller.get_by_room_name", return_value=None
     )
@@ -397,7 +722,7 @@ class TestRoomsPlatformIntegration:
             recording_type="cloud",
             recording_trigger="automatic-2nd-participant",
             is_shared=False,
-            platform="jitsi",
+            platform=VideoPlatform.JITSI,
         )
         mock_add.return_value = mock_room
 
