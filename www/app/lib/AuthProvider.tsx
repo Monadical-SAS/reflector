@@ -29,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useNextAuthSession();
   const customSession = session ? assertExtendedTokenAndUserId(session) : null;
+  console.log("customSessioncustomSession", customSession);
 
   const contextValue: AuthContextType = {
     ...(status === "loading" && !customSession

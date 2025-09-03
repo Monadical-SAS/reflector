@@ -3,8 +3,14 @@
 import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { useQueryClient } from "@tanstack/react-query";
-import type { components, paths } from "../reflector-api";
+import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
+
+/*
+ * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
+ * this is either a limitation or incorrect usage of Python json schema generator
+ * or, limitation or incorrect usage of .d type generator from json schema
+ * */
 
 const useAuthReady = () => {
   const auth = useAuth();

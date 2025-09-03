@@ -92,7 +92,12 @@ export default function RoomsList() {
   );
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState<string | null>(null);
-  const { loading, response, refetch } = useRoomList(PaginationPage(1));
+  const {
+    loading,
+    response,
+    refetch,
+    error: roomListError,
+  } = useRoomList(PaginationPage(1));
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
   const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
@@ -113,6 +118,8 @@ export default function RoomsList() {
     isLoading: isDetailedEditedRoomLoading,
     error: detailedEditedRoomError,
   } = useRoomGet(editRoomId);
+
+  const error = roomListError || detailedEditedRoomError;
 
   // room being edited, as fetched from the server
   const editedRoom: typeof roomInitialState | null = useMemo(
@@ -358,6 +365,9 @@ export default function RoomsList() {
         <Spinner size="xl" />
       </Flex>
     );
+
+  if (roomListError)
+    return <div>{`${roomListError.name}: ${roomListError.message}`}</div>;
 
   return (
     <Flex
