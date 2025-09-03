@@ -1,6 +1,10 @@
-from typing import Dict, Type
+from typing import TYPE_CHECKING, Dict, Literal, Type, overload
 
 from .base import VideoPlatformClient, VideoPlatformConfig
+
+if TYPE_CHECKING:
+    from .jitsi import JitsiClient
+    from .whereby import WherebyClient
 
 # Registry of available video platforms
 _PLATFORMS: Dict[str, Type[VideoPlatformClient]] = {}
@@ -9,6 +13,18 @@ _PLATFORMS: Dict[str, Type[VideoPlatformClient]] = {}
 def register_platform(name: str, client_class: Type[VideoPlatformClient]):
     """Register a video platform implementation."""
     _PLATFORMS[name.lower()] = client_class
+
+
+@overload
+def get_platform_client(
+    platform: Literal["jitsi"], config: VideoPlatformConfig
+) -> "JitsiClient": ...
+
+
+@overload
+def get_platform_client(
+    platform: Literal["whereby"], config: VideoPlatformConfig
+) -> "WherebyClient": ...
 
 
 def get_platform_client(

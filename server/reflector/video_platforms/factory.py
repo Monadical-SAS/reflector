@@ -1,12 +1,16 @@
 """Factory for creating video platform clients based on configuration."""
 
-from typing import Optional
+from typing import TYPE_CHECKING, Literal, Optional, overload
 
 from reflector.db.rooms import VideoPlatform
 from reflector.settings import settings
 
 from .base import VideoPlatformClient, VideoPlatformConfig
 from .registry import get_platform_client
+
+if TYPE_CHECKING:
+    from .jitsi import JitsiClient
+    from .whereby import WherebyClient
 
 
 def get_platform_config(platform: str) -> VideoPlatformConfig:
@@ -28,6 +32,14 @@ def get_platform_config(platform: str) -> VideoPlatformConfig:
         )
     else:
         raise ValueError(f"Unknown platform: {platform}")
+
+
+@overload
+def create_platform_client(platform: Literal["jitsi"]) -> "JitsiClient": ...
+
+
+@overload
+def create_platform_client(platform: Literal["whereby"]) -> "WherebyClient": ...
 
 
 def create_platform_client(platform: str) -> VideoPlatformClient:

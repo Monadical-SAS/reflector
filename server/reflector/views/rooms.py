@@ -14,21 +14,10 @@ from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import VideoPlatform, rooms_controller
 from reflector.settings import settings
+from reflector.video_platforms.factory import (
+    create_platform_client,
+)
 from reflector.worker.webhook import test_webhook
-
-try:
-    from reflector.video_platforms.factory import (
-        create_platform_client,
-        get_platform_for_room,
-    )
-except ImportError:
-    # Fallback for when PyJWT not yet installed
-    def create_platform_client(platform: str):
-        return None
-
-    def get_platform_for_room(room_id: str = None) -> str:
-        return "whereby"
-
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +75,7 @@ class CreateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
-    platform: VideoPlatform = VideoPlatform.WHEREBY
+    platform: VideoPlatform
 
 
 class UpdateRoom(BaseModel):
@@ -101,7 +90,7 @@ class UpdateRoom(BaseModel):
     is_shared: bool
     webhook_url: str
     webhook_secret: str
-    platform: VideoPlatform = VideoPlatform.WHEREBY
+    platform: VideoPlatform
 
 
 class DeletionStatus(BaseModel):
@@ -214,46 +203,21 @@ async def rooms_create_meeting(
         end_date = current_time + timedelta(hours=8)
 
         # Use platform abstraction to create meeting
-        platform = getattr(
-            room, "platform", "whereby"
-        )  # Default to whereby for existing rooms
+        platform = room.platform
         client = create_platform_client(platform)
 
-        # Fallback to legacy whereby implementation if client not available
-        if client is None:
-            from reflector.whereby import create_meeting as whereby_create_meeting
-            from reflector.whereby import upload_logo as whereby_upload_logo
+        # Use platform client
+        platform_meeting = await client.create_meeting("", end_date=end_date, room=room)
+        await client.upload_logo(platform_meeting.room_name, "./images/logo.png")
 
-            whereby_meeting = await whereby_create_meeting(
-                "", end_date=end_date, room=room
-            )
-            await whereby_upload_logo(whereby_meeting["roomName"], "./images/logo.png")
-
-            meeting_data = {
-                "meeting_id": whereby_meeting["meetingId"],
-                "room_name": whereby_meeting["roomName"],
-                "room_url": whereby_meeting["roomUrl"],
-                "host_room_url": whereby_meeting["hostRoomUrl"],
-                "start_date": parse_datetime_with_timezone(
-                    whereby_meeting["startDate"]
-                ),
-                "end_date": parse_datetime_with_timezone(whereby_meeting["endDate"]),
-            }
-        else:
-            # Use platform client
-            platform_meeting = await client.create_meeting(
-                "", end_date=end_date, room=room
-            )
-            await client.upload_logo(platform_meeting.room_name, "./images/logo.png")
-
-            meeting_data = {
-                "meeting_id": platform_meeting.meeting_id,
-                "room_name": platform_meeting.room_name,
-                "room_url": platform_meeting.room_url,
-                "host_room_url": platform_meeting.host_room_url,
-                "start_date": current_time,  # Platform client provides datetime objects
-                "end_date": end_date,
-            }
+        meeting_data = {
+            "meeting_id": platform_meeting.meeting_id,
+            "room_name": platform_meeting.room_name,
+            "room_url": platform_meeting.room_url,
+            "host_room_url": platform_meeting.host_room_url,
+            "start_date": current_time,  # Platform client provides datetime objects
+            "end_date": end_date,
+        }
 
         # Now try to save to database
         try:
