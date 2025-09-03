@@ -12,7 +12,8 @@ from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
 from reflector.settings import settings
-from reflector.views.jitsi import router as jitsi_router
+from reflector.video_platforms.jitsi import router as jitsi_router
+from reflector.video_platforms.whereby import router as whereby_router
 from reflector.views.meetings import router as meetings_router
 from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router
@@ -27,7 +28,6 @@ from reflector.views.transcripts_upload import router as transcripts_upload_rout
 from reflector.views.transcripts_webrtc import router as transcripts_webrtc_router
 from reflector.views.transcripts_websocket import router as transcripts_websocket_router
 from reflector.views.user import router as user_router
-from reflector.views.whereby import router as whereby_router
 from reflector.views.zulip import router as zulip_router
 
 try:
