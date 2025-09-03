@@ -473,6 +473,11 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           break;
         case 1001: // Navigate away
           break;
+        case 1006: // Closed by client Chrome
+          console.warn(
+            "WebSocket closed by client, likely duplicated connection in react dev mode",
+          );
+          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
@@ -489,7 +494,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, websocketUrl, queryClient]);
+  }, [transcriptId, websocketUrl]);
 
   return {
     transcriptTextLive,
