@@ -19,9 +19,6 @@ export const client = createClient<paths>({
 export const $api = createFetchClient<paths>(client);
 
 let currentAuthToken: string | null | undefined = null;
-let authConfigured = false;
-
-export const isAuthConfigured = () => authConfigured;
 
 client.use({
   onRequest({ request }) {
@@ -44,9 +41,4 @@ client.use({
 // the function contract: lightweight, idempotent
 export const configureApiAuth = (token: string | null | undefined) => {
   currentAuthToken = token;
-  authConfigured = true;
 };
-
-export const useApiQuery = $api.useQuery;
-export const useApiMutation = $api.useMutation;
-export const useApiSuspenseQuery = $api.useSuspenseQuery;

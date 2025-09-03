@@ -5,7 +5,7 @@ import { parseMaybeNonEmptyString } from "./utils";
 export interface JWTWithAccessToken extends JWT {
   accessToken: string;
   accessTokenExpires: number;
-  refreshToken: string;
+  refreshToken?: string;
   error?: string;
 }
 
@@ -64,4 +64,11 @@ export const assertExtendedTokenAndUserId = <U, T extends { user?: U }>(
     };
   }
   throw new Error("Token is not extended with user id");
+};
+
+// best attempt to check the session is valid
+export const assertCustomSession = <S extends Session>(s: S): CustomSession => {
+  const r = assertExtendedTokenAndUserId(s);
+  // no other checks for now
+  return r as CustomSession;
 };

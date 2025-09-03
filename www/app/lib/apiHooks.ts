@@ -49,8 +49,6 @@ export function useTranscriptsSearch(
     source_kind?: SourceKind;
   } = {},
 ) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
     "/v1/transcripts/search",
@@ -66,7 +64,7 @@ export function useTranscriptsSearch(
       },
     },
     {
-      enabled: isAuthenticated,
+      enabled: true, // anonymous enabled
     },
   );
 }

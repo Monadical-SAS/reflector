@@ -26,6 +26,7 @@ const TranscriptCreate = () => {
   const router = useRouter();
   const auth = useAuth();
   const isAuthenticated = auth.status === "authenticated";
+  const isAuthRefreshing = auth.status === "refreshing";
   const isLoading = auth.status === "loading";
   const requireLogin = featureEnabled("requireLogin");
 
@@ -133,7 +134,7 @@ const TranscriptCreate = () => {
           <Center>
             {isLoading ? (
               <Spinner />
-            ) : requireLogin && !isAuthenticated ? (
+            ) : requireLogin && !isAuthenticated && !isAuthRefreshing ? (
               <Button onClick={() => auth.signIn("authentik")}>Log in</Button>
             ) : (
               <Flex

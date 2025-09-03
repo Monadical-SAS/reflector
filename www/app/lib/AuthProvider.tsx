@@ -4,9 +4,10 @@ import { createContext, useContext } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import { signOut, signIn } from "next-auth/react";
 import { configureApiAuth } from "./apiClient";
-import { assertExtendedTokenAndUserId, CustomSession } from "./types";
+import { assertCustomSession, CustomSession } from "./types";
 import { Session } from "next-auth";
 import { SessionAutoRefresh } from "./SessionAutoRefresh";
+import { REFRESH_ACCESS_TOKEN_ERROR } from "./auth";
 
 type AuthContextType = (
   | { status: "loading" }
@@ -28,29 +29,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useNextAuthSession();
-  const customSession = session ? assertExtendedTokenAndUserId(session) : null;
-  console.log("customSessioncustomSession", customSession);
+  const customSession = session ? assertCustomSession(session) : null;
 
   const contextValue: AuthContextType = {
     ...(status === "loading" && !customSession
       ? { status }
       : status === "loading" && customSession
         ? { status: "refreshing" as const }
-        : status === "authenticated" && customSession?.accessToken
-          ? {
-              status,
-              accessToken: customSession.accessToken,
-              accessTokenExpires: customSession.accessTokenExpires,
-              user: customSession.user,
-            }
-          : status === "authenticated" && !customSession?.accessToken
-            ? (() => {
-                console.warn(
-                  "illegal state: authenticated but have no session/or access token. ignoring",
-                );
-                return { status: "unauthenticated" as const };
-              })()
-            : { status: "unauthenticated" as const }),
+        : status === "authenticated" &&
+            customSession?.error === REFRESH_ACCESS_TOKEN_ERROR
+          ? { status: "unauthenticated" }
+          : status === "authenticated" && customSession?.accessToken
+            ? {
+                status,
+                accessToken: customSession.accessToken,
+                accessTokenExpires: customSession.accessTokenExpires,
+                user: customSession.user,
+              }
+            : status === "authenticated" && !customSession?.accessToken
+              ? (() => {
+                  console.warn(
+                    "illegal state: authenticated but have no session/or access token. ignoring",
+                  );
+                  return { status: "unauthenticated" as const };
+                })()
+              : { status: "unauthenticated" as const }),
     update,
     signIn,
     signOut,

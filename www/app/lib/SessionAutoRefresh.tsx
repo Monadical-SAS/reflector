@@ -12,12 +12,12 @@ import { useAuth } from "./AuthProvider";
 
 export function SessionAutoRefresh({
   children,
-  refreshInterval = 20 /* seconds */,
+  refreshInterval = 5 /* seconds */,
 }) {
   const auth = useAuth();
   const accessTokenExpires =
     auth.status === "authenticated" ? auth.accessTokenExpires : null;
-
+  console.log("authauth", auth);
   const refreshIntervalMs = refreshInterval * 1000;
 
   useEffect(() => {
@@ -25,7 +25,13 @@ export function SessionAutoRefresh({
       if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
         if (timeLeft < refreshIntervalMs) {
-          auth.update();
+          auth
+            .update()
+            .then(() => {})
+            .catch((e) => {
+              // note: 401 won't be considered error here
+              console.error("error refreshing auth token", e);
+            });
         }
       }
     }, refreshIntervalMs);
