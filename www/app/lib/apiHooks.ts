@@ -64,7 +64,7 @@ export function useTranscriptsSearch(
       },
     },
     {
-      enabled: true, // anonymous enabled
+      enabled: true,
     },
   );
 }
