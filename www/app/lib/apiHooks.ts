@@ -4,23 +4,16 @@ import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { useQueryClient } from "@tanstack/react-query";
 import type { components, paths } from "../reflector-api";
-import useAuthReady from "./useAuthReady";
+import { useAuth } from "./AuthProvider";
 
-// FIXME: React Query caching issues with cross-tab synchronization
-//
-// The default React Query behavior caches data indefinitely until invalidated,
-// which should work well in theory. However, we're experiencing two problems:
-//
-// 1. Navigation between pages doesn't refresh data as expected by users
-// 2. Query invalidation doesn't work properly across browser tabs - changes
-//    made in one tab (like updating room settings or deleting transcripts)
-//    aren't reflected when navigating in another tab without a full page refresh
-//
-// As a temporary workaround, we're setting a short staleTime to force data
-// reloading, similar to our previous implementation. This should be revisited
-// once we can resolve the underlying invalidation and cross-tab sync issues.
-// 500ms is arbitrary.
-const STALE_TIME = 500;
+const useAuthReady = () => {
+  const auth = useAuth();
+
+  return {
+    isAuthenticated: auth.status === "authenticated",
+    isLoading: auth.status === "loading",
+  };
+};
 
 export function useRoomsList(page: number = 1) {
   const { isAuthenticated } = useAuthReady();
@@ -35,7 +28,6 @@ export function useRoomsList(page: number = 1) {
     },
     {
       enabled: isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -69,7 +61,6 @@ export function useTranscriptsSearch(
     },
     {
       enabled: isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -115,7 +106,6 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -133,7 +123,6 @@ export function useRoomGet(roomId: string | null) {
     },
     {
       enabled: !!roomId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -205,7 +194,6 @@ export function useZulipStreams() {
     {},
     {
       enabled: isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -225,7 +213,6 @@ export function useZulipTopics(streamId: number | null) {
     },
     {
       enabled,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -302,7 +289,6 @@ export function useTranscriptWaveform(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -320,7 +306,6 @@ export function useTranscriptMP3(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -338,7 +323,6 @@ export function useTranscriptTopics(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -356,7 +340,6 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -380,7 +363,6 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
     },
     {
       enabled: !!transcriptId && !!topicId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }
@@ -398,7 +380,6 @@ export function useTranscriptParticipants(transcriptId: string | null) {
     },
     {
       enabled: !!transcriptId && isAuthenticated,
-      staleTime: STALE_TIME,
     },
   );
 }

@@ -1,16 +1,16 @@
 "use client";
 
 import { Flex, Spinner } from "@chakra-ui/react";
-import useAuthReady from "../lib/useAuthReady";
+import { useAuth } from "../lib/AuthProvider";
 
 export default function AuthWrapper({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isLoading } = useAuthReady();
+  const auth = useAuth();
 
-  if (isLoading) {
+  if (auth.status === "loading") {
     return (
       <Flex
         flexDir="column"

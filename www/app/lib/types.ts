@@ -18,7 +18,8 @@ export interface CustomSession extends Session {
   };
 }
 
-// assumption that JWT is JWTWithAccessToken - not ideal, TODO find a reason we have to do that
+// assumption that JWT is JWTWithAccessToken - we set it in jwt callback of auth; typing isn't strong around there
+// but the assumption is crucial to auth working
 export const assertExtendedToken = <T>(
   t: T,
 ): T & {
