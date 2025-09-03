@@ -160,6 +160,6 @@ async def jitsi_health_check():
     return {
         "status": "ok",
         "service": "jitsi-webhooks",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "webhook_secret_configured": bool(settings.JITSI_WEBHOOK_SECRET),
     }
