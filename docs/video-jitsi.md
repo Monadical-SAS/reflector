@@ -194,6 +194,45 @@ Component "conference.meet.example.com" "muc"
         "jibri-recording-on",
         "jibri-recording-off"
     }
+
+#### Webhook Event Payload Examples
+
+**Participant Joined Event:**
+```json
+{
+  "event": "muc-occupant-joined",
+  "room": "reflector-my-room-uuid123",
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "data": {
+    "occupant_id": "participant-456",
+    "nick": "John Doe",
+    "role": "participant",
+    "affiliation": "none"
+  }
+}
+```
+
+**Recording Started Event:**
+```json
+{
+  "event": "jibri-recording-on",
+  "room": "reflector-my-room-uuid123",
+  "timestamp": "2025-01-15T10:32:00.000Z",
+  "data": {
+    "recording_id": "rec-789",
+    "initiator": "moderator-123"
+  }
+}
+```
+
+**Recording Completed Event:**
+```json
+{
+  "room_name": "reflector-my-room-uuid123",
+  "recording_file": "/var/recordings/rec-789.mp4",
+  "recording_status": "completed",
+  "timestamp": "2025-01-15T11:15:00.000Z"
+}
 ```
 
 ### 4. Jibri Recording Setup (Optional)
@@ -359,12 +398,41 @@ Reflector automatically generates JWT tokens with:
 - `"automatic"` - Start immediately
 - `"automatic-2nd-participant"` - Start when 2nd person joins
 
-### Event Tracking
+### Event Tracking and Storage
 
-Automatic participant tracking via webhooks:
-- Join/leave events update participant counts
-- Recording state changes trigger processing
-- Real-time meeting analytics
+Reflector automatically stores all webhook events in the `meetings` table for comprehensive meeting analytics:
+
+**Supported Event Types:**
+- `muc-occupant-joined` - Participant joined the meeting
+- `muc-occupant-left` - Participant left the meeting
+- `jibri-recording-on` - Recording started
+- `jibri-recording-off` - Recording stopped
+- `recording_completed` - Recording file ready for processing
+
+**Event Storage Structure:**
+Each webhook event is stored as a JSON object in the `meetings.events` column:
+```json
+{
+  "type": "muc-occupant-joined",
+  "timestamp": "2025-01-15T10:30:00.123456Z",
+  "data": {
+    "timestamp": "2025-01-15T10:30:00Z",
+    "user_id": "participant-123",
+    "display_name": "John Doe"
+  }
+}
+```
+
+**Querying Stored Events:**
+```sql
+-- Get all events for a meeting
+SELECT events FROM meeting WHERE id = 'meeting-uuid';
+
+-- Count participant joins
+SELECT json_array_length(
+  json_extract(events, '$[*] ? (@.type == "muc-occupant-joined")')
+) as total_joins FROM meeting WHERE id = 'meeting-uuid';
+```
 
 ## Testing and Verification
 
@@ -399,17 +467,49 @@ echo "Test meeting URL: $MEETING"
 
 ### Webhook Testing
 
-Test event webhook manually:
+#### Manual Webhook Event Testing
+
+Test participant join event:
 ```bash
+# Generate proper signature
+PAYLOAD='{"event":"muc-occupant-joined","room":"reflector-test-room-uuid","timestamp":"2025-01-15T10:30:00.000Z","data":{"user_id":"test-user","display_name":"Test User"}}'
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$JITSI_WEBHOOK_SECRET" | cut -d' ' -f2)
+
 curl -X POST "https://your-reflector-domain.com/v1/jitsi/events" \
   -H "Content-Type: application/json" \
-  -H "X-Jitsi-Signature: test-signature" \
-  -d '{
-    "event": "muc-occupant-joined",
-    "room": "test-room-name",
-    "timestamp": "2025-01-15T10:30:00.000Z",
-    "data": {}
-  }'
+  -H "X-Jitsi-Signature: $SIGNATURE" \
+  -d "$PAYLOAD"
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "event": "muc-occupant-joined",
+  "room": "reflector-test-room-uuid"
+}
+```
+
+#### Recording Webhook Testing
+
+Test recording completion event:
+```bash
+PAYLOAD='{"room_name":"reflector-test-room-uuid","recording_file":"/recordings/test.mp4","recording_status":"completed","timestamp":"2025-01-15T10:30:00.000Z"}'
+SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$JITSI_WEBHOOK_SECRET" | cut -d' ' -f2)
+
+curl -X POST "https://your-reflector-domain.com/v1/jibri/recording-complete" \
+  -H "Content-Type: application/json" \
+  -H "X-Jitsi-Signature: $SIGNATURE" \
+  -d "$PAYLOAD"
+```
+
+#### Event Storage Verification
+
+Verify events were stored:
+```bash
+# Check meeting events via API (requires authentication)
+curl -H "Authorization: Bearer $AUTH_TOKEN" \
+  "https://your-reflector-domain.com/v1/meetings/{meeting-id}"
 ```
 
 ## Troubleshooting
@@ -449,6 +549,54 @@ curl -v "https://your-reflector-domain.com/v1/jitsi/health"
 
 # Check Prosody logs
 sudo tail -f /var/log/prosody/prosody.log
+```
+
+#### Webhook Signature Verification Issues
+
+**Symptoms**: HTTP 401 "Invalid webhook signature" errors
+
+**Solutions**:
+1. Verify webhook secret matches between Jitsi and Reflector
+2. Check payload encoding (no extra whitespace)
+3. Ensure proper HMAC-SHA256 signature generation
+
+**Debug signature generation**:
+```bash
+# Test signature manually
+PAYLOAD='{"event":"test","room":"test","timestamp":"2025-01-15T10:30:00.000Z","data":{}}'
+SECRET="your-webhook-secret-here"
+
+# Generate signature (should match X-Jitsi-Signature header)
+echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | cut -d' ' -f2
+
+# Test with curl
+curl -X POST "https://your-reflector-domain.com/v1/jitsi/events" \
+  -H "Content-Type: application/json" \
+  -H "X-Jitsi-Signature: $(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | cut -d' ' -f2)" \
+  -d "$PAYLOAD" -v
+```
+
+#### Event Storage Problems
+
+**Symptoms**: Events received but not stored in database
+
+**Solutions**:
+1. Check database connectivity and permissions
+2. Verify meeting exists before event processing
+3. Review Reflector application logs
+4. Ensure JSON column support in database
+
+**Debug event storage**:
+```bash
+# Check meeting exists
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://your-reflector-domain.com/v1/meetings/{meeting-id}"
+
+# Monitor database queries (if using PostgreSQL)
+sudo -u postgres psql -c "SELECT * FROM pg_stat_activity WHERE query LIKE '%meeting%';"
+
+# Check Reflector logs for event processing
+sudo journalctl -u reflector -f | grep -E "(event|webhook|jitsi)"
 ```
 
 #### Recording Issues
