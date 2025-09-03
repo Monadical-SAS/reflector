@@ -133,6 +133,16 @@ export const $CreateTranscript = {
       title: "Target Language",
       default: "en",
     },
+    source_kind: {
+      anyOf: [
+        {
+          $ref: "#/components/schemas/SourceKind",
+        },
+        {
+          type: "null",
+        },
+      ],
+    },
   },
   type: "object",
   required: ["name"],
@@ -1031,11 +1041,25 @@ export const $RoomDetails = {
       title: "Is Shared",
     },
     webhook_url: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Webhook Url",
     },
     webhook_secret: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Webhook Secret",
     },
   },
@@ -1091,10 +1115,17 @@ export const $SearchResponse = {
       description: "Total number of search results",
     },
     query: {
-      type: "string",
-      minLength: 0,
+      anyOf: [
+        {
+          type: "string",
+          minLength: 1,
+          description: "Search query text",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Query",
-      description: "Search query text",
     },
     limit: {
       type: "integer",
@@ -1111,7 +1142,7 @@ export const $SearchResponse = {
     },
   },
   type: "object",
-  required: ["results", "total", "query", "limit", "offset"],
+  required: ["results", "total", "limit", "offset"],
   title: "SearchResponse",
 } as const;
 

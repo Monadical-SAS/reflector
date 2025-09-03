@@ -32,6 +32,7 @@ export type CreateTranscript = {
   name: string;
   source_language?: string;
   target_language?: string;
+  source_kind?: SourceKind | null;
 };
 
 export type DeletionStatus = {
@@ -191,8 +192,8 @@ export type RoomDetails = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
-  webhook_url: string;
-  webhook_secret: string;
+  webhook_url: string | null;
+  webhook_secret: string | null;
 };
 
 export type RtcOffer = {
@@ -206,10 +207,7 @@ export type SearchResponse = {
    * Total number of search results
    */
   total: number;
-  /**
-   * Search query text
-   */
-  query: string;
+  query?: string | null;
   /**
    * Results per page
    */

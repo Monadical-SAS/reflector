@@ -34,7 +34,7 @@ async def transcript_process(
         )
 
     if task_is_scheduled_or_active(
-        "reflector.pipelines.main_live_pipeline.task_pipeline_process",
+        "reflector.pipelines.main_file_pipeline.task_pipeline_file_process",
         transcript_id=transcript_id,
     ):
         return ProcessStatus(status="already running")
