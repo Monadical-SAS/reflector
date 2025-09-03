@@ -197,6 +197,7 @@ async def rooms_create_meeting(
         end_date = current_time + timedelta(hours=8)
 
         whereby_meeting = await create_meeting("", end_date=end_date, room=room)
+
         await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
         # Now try to save to database

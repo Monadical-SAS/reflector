@@ -88,6 +88,9 @@ export default function RoomsList() {
     items: recordingTypeOptions,
   });
   const [room_, setRoom] = useState(roomInitialState);
+  const [roomInput, setRoomInput] = useState<null | typeof roomInitialState>(
+    null,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editRoomId, setEditRoomId] = useState<string | null>(null);
   const { loading, response, refetch } = useRoomList(PaginationPage(1));
@@ -134,7 +137,7 @@ export default function RoomsList() {
   );
 
   // here for minimal change in unrelated PR to make it work "backward-compatible" way. TODO make sense of it
-  const room = editedRoom || room_;
+  const room = roomInput || editedRoom || room_;
 
   const roomTestWebhookMutation = useRoomTestWebhook();
 
@@ -334,7 +337,7 @@ export default function RoomsList() {
         .toLowerCase();
       setNameError("");
     }
-    setRoom({
+    setRoomInput({
       ...room,
       [name]: type === "checkbox" ? checked : value,
     });
