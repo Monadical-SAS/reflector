@@ -1,10 +1,11 @@
 "use client";
-import { signOut, signIn } from "next-auth/react";
-import useSessionStatus from "../lib/useSessionStatus";
+
 import { Spinner, Link } from "@chakra-ui/react";
+import { useAuth } from "../lib/AuthProvider";
 
 export default function UserInfo() {
-  const status = useSessionStatus();
+  const auth = useAuth();
+  const status = auth.status;
   const isLoading = status === "loading";
   const isAuthenticated = status === "authenticated";
   return isLoading ? (
@@ -13,7 +14,7 @@ export default function UserInfo() {
     <Link
       href="/"
       className="font-light px-2"
-      onClick={() => signIn("authentik")}
+      onClick={() => auth.signIn("authentik")}
     >
       Log in
     </Link>
@@ -21,7 +22,7 @@ export default function UserInfo() {
     <Link
       href="#"
       className="font-light px-2"
-      onClick={() => signOut({ callbackUrl: "/" })}
+      onClick={() => auth.signOut({ callbackUrl: "/" })}
     >
       Log out
     </Link>

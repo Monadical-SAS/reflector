@@ -1,5 +1,5 @@
-import { Session } from "next-auth";
-import { JWT } from "next-auth/jwt";
+import type { Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import { parseMaybeNonEmptyString } from "./utils";
 
 export interface JWTWithAccessToken extends JWT {

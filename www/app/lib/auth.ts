@@ -1,11 +1,7 @@
 import { AuthOptions } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
-import { JWT } from "next-auth/jwt";
-import {
-  JWTWithAccessToken,
-  CustomSession,
-  assertExtendedToken,
-} from "./types";
+import type { JWT } from "next-auth/jwt";
+import { JWTWithAccessToken, CustomSession } from "./types";
 import {
   assertExists,
   assertExistsAndNonEmptyString,

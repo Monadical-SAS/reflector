@@ -1,8 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { DomainContext } from "../../domainContext";
 import { useTranscriptGet } from "../../lib/apiHooks";
-import { useSession } from "next-auth/react";
-import { assertExtendedToken } from "../../lib/types";
+import { useAuth } from "../../lib/AuthProvider";
 
 export type Mp3Response = {
   media: HTMLMediaElement | null;
@@ -21,11 +20,9 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
   );
   const [audioDeleted, setAudioDeleted] = useState<boolean | null>(null);
   const { api_url } = useContext(DomainContext);
-  const { data: session } = useSession();
-  const sessionExtended =
-    session === null ? null : assertExtendedToken(session);
+  const auth = useAuth();
   const accessTokenInfo =
-    sessionExtended === null ? null : sessionExtended.accessToken;
+    auth.status === "authenticated" ? auth.accessToken : null;
 
   const {
     data: transcript,

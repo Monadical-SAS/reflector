@@ -21,13 +21,13 @@ import { toaster } from "../components/ui/toaster";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
 import { useMeetingAudioConsent } from "../lib/apiHooks";
 import type { components } from "../reflector-api";
 
 type Meeting = components["schemas"]["Meeting"];
 import { FaBars } from "react-icons/fa6";
+import { useAuth } from "../lib/AuthProvider";
 
 export type RoomDetails = {
   params: {
@@ -260,7 +260,7 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const status = useSessionStatus();
+  const status = useAuth().status;
   const isAuthenticated = status === "authenticated";
   const isLoading = status === "loading" || meeting.loading;
 

@@ -9,35 +9,24 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import useSessionStatus from "../../../lib/useSessionStatus";
 import { featureEnabled } from "../../../domainContext";
-import { signIn } from "next-auth/react";
 import {
   Flex,
   Box,
   Spinner,
   Heading,
   Button,
-  Card,
   Center,
-  Link,
-  CardBody,
-  Stack,
   Text,
-  Icon,
-  Grid,
-  IconButton,
   Spacer,
-  Menu,
-  Tooltip,
-  Input,
 } from "@chakra-ui/react";
+import { useAuth } from "../../../lib/AuthProvider";
 const TranscriptCreate = () => {
   const isClient = typeof window !== "undefined";
   const router = useRouter();
-  const status = useSessionStatus();
-  const isAuthenticated = status === "authenticated";
-  const isLoading = status === "loading";
+  const auth = useAuth();
+  const isAuthenticated = auth.status === "authenticated";
+  const isLoading = auth.status === "loading";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
@@ -145,7 +134,7 @@ const TranscriptCreate = () => {
             {isLoading ? (
               <Spinner />
             ) : requireLogin && !isAuthenticated ? (
-              <Button onClick={() => signIn("authentik")}>Log in</Button>
+              <Button onClick={() => auth.signIn("authentik")}>Log in</Button>
             ) : (
               <Flex
                 rounded="xl"

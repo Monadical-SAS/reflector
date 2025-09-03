@@ -1,15 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
+import { signOut, signIn } from "next-auth/react";
 import { configureApiAuth } from "./apiClient";
-import {
-  assertExtendedToken,
-  assertExtendedTokenAndUserId,
-  CustomSession,
-} from "./types";
+import { assertExtendedTokenAndUserId, CustomSession } from "./types";
+import { Session } from "next-auth";
+import { SessionAutoRefresh } from "./SessionAutoRefresh";
 
-type AuthContextType =
+type AuthContextType = (
   | { status: "loading" }
   | { status: "unauthenticated"; error?: string }
   | {
@@ -17,25 +16,41 @@ type AuthContextType =
       accessToken: string;
       accessTokenExpires: number;
       user: CustomSession["user"];
-    };
+    }
+) & {
+  update: () => Promise<Session | null>;
+  signIn: typeof signIn;
+  signOut: typeof signOut;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useNextAuthSession();
+  const { data: session, status, update } = useNextAuthSession();
   const customSession = session ? assertExtendedTokenAndUserId(session) : null;
 
-  const contextValue: AuthContextType =
-    status === "loading"
-      ? { status: "loading" as const }
+  const contextValue: AuthContextType = {
+    ...(status === "loading"
+      ? { status }
       : status === "authenticated" && customSession?.accessToken
         ? {
-            status: "authenticated" as const,
+            status,
             accessToken: customSession.accessToken,
             accessTokenExpires: customSession.accessTokenExpires,
             user: customSession.user,
           }
-        : { status: "unauthenticated" as const };
+        : status === "authenticated" && !customSession?.accessToken
+          ? (() => {
+              console.warn(
+                "illegal state: authenticated but have no session/or access token. ignoring",
+              );
+              return { status: "unauthenticated" as const };
+            })()
+          : { status: "unauthenticated" as const }),
+    update,
+    signIn,
+    signOut,
+  };
 
   // not useEffect, we need it ASAP
   configureApiAuth(
@@ -43,7 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>
+      <SessionAutoRefresh>{children}</SessionAutoRefresh>
+    </AuthContext.Provider>
   );
 }
 
