@@ -162,10 +162,21 @@ export function useRoomUpdate() {
   const queryClient = useQueryClient();
 
   return $api.useMutation("patch", "/v1/rooms/{room_id}", {
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
-      });
+    onSuccess: async (room) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions("get", "/v1/rooms/{room_id}", {
+            params: {
+              path: {
+                room_id: room.id,
+              },
+            },
+          }).queryKey,
+        }),
+      ]);
     },
     onError: (error) => {
       setError(error as Error, "There was an error updating the room");
