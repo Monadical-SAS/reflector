@@ -9,22 +9,20 @@
 
 import { useEffect } from "react";
 import { useAuth } from "./AuthProvider";
+import { REFRESH_ACCESS_TOKEN_BEFORE } from "./auth";
 
-export function SessionAutoRefresh({
-  children,
-  refreshInterval = 5 /* seconds */,
-}) {
+const REFRESH_BEFORE = REFRESH_ACCESS_TOKEN_BEFORE;
+
+export function SessionAutoRefresh({ children }) {
   const auth = useAuth();
   const accessTokenExpires =
     auth.status === "authenticated" ? auth.accessTokenExpires : null;
-  console.log("authauth", auth);
-  const refreshIntervalMs = refreshInterval * 1000;
 
   useEffect(() => {
     const interval = setInterval(() => {
       if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
-        if (timeLeft < refreshIntervalMs) {
+        if (timeLeft < REFRESH_BEFORE) {
           auth
             .update()
             .then(() => {})
@@ -34,10 +32,10 @@ export function SessionAutoRefresh({
             });
         }
       }
-    }, refreshIntervalMs);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [accessTokenExpires, refreshInterval, auth.update]);
+  }, [accessTokenExpires, auth.update]);
 
   return children;
 }

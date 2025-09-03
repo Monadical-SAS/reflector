@@ -7,15 +7,18 @@ import {
   assertExistsAndNonEmptyString,
   parseMaybeNonEmptyString,
 } from "./utils";
-import { REFRESH_ACCESS_TOKEN_ERROR } from "./auth";
+import {
+  REFRESH_ACCESS_TOKEN_BEFORE,
+  REFRESH_ACCESS_TOKEN_ERROR,
+} from "./auth";
 
-const PRETIMEOUT = 600;
-
+// TODO redis for vercel?
 const tokenCache = new Map<
   string,
   { token: JWTWithAccessToken; timestamp: number }
 >();
-const TOKEN_CACHE_TTL = 60 * 60 * 24 * 30 * 1000; // 30 days in milliseconds
+// REFRESH_ACCESS_TOKEN_BEFORE because refresh is based on access token expiration (imagine we cache it 30 days)
+const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 
 const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 
@@ -49,7 +52,7 @@ export const authOptions: AuthOptions = {
       if (account && user) {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
-        const expiresAtS = assertExists(account.expires_at) - PRETIMEOUT;
+        const expiresAtS = assertExists(account.expires_at);
         const expiresAtMs = expiresAtS * 1000;
         if (!account.access_token) {
           tokenCache.delete(KEY);
@@ -165,8 +168,7 @@ async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
     return {
       ...token,
       accessToken: refreshedTokens.access_token,
-      accessTokenExpires:
-        Date.now() + (refreshedTokens.expires_in - PRETIMEOUT) * 1000,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
       refreshToken: refreshedTokens.refresh_token,
     };
   } catch (error) {
