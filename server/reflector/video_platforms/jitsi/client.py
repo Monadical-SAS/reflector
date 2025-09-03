@@ -13,31 +13,23 @@ from ..base import MeetingData, VideoPlatformClient
 
 
 class JitsiMeetingData(MeetingData):
-    """Jitsi-specific meeting data with typed extra_data."""
-
     @property
     def user_jwt(self) -> str:
-        """JWT token for regular users."""
         return self.extra_data.get("user_jwt", "")
 
     @property
     def host_jwt(self) -> str:
-        """JWT token for moderators."""
         return self.extra_data.get("host_jwt", "")
 
     @property
     def domain(self) -> str:
-        """Jitsi domain."""
         return self.extra_data.get("domain", "")
 
 
 class JitsiClient(VideoPlatformClient):
-    """Jitsi Meet video platform implementation."""
-
     PLATFORM_NAME = VideoPlatform.JITSI
 
     def _generate_jwt(self, room: str, moderator: bool, exp: datetime) -> str:
-        """Generate JWT token for Jitsi Meet room access."""
         if not settings.JITSI_JWT_SECRET:
             raise ValueError("JITSI_JWT_SECRET is required for JWT generation")
 
@@ -64,15 +56,11 @@ class JitsiClient(VideoPlatformClient):
     async def create_meeting(
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> JitsiMeetingData:
-        """Create a Jitsi Meet room with JWT authentication."""
-        # Generate unique room name
         jitsi_room = f"reflector-{room.name}-{generate_uuid4()}"
 
-        # Generate JWT tokens
         user_jwt = self._generate_jwt(room=jitsi_room, moderator=False, exp=end_date)
         host_jwt = self._generate_jwt(room=jitsi_room, moderator=True, exp=end_date)
 
-        # Build room URLs with JWT tokens
         room_url = f"https://{settings.JITSI_DOMAIN}/{jitsi_room}?jwt={user_jwt}"
         host_room_url = f"https://{settings.JITSI_DOMAIN}/{jitsi_room}?jwt={host_jwt}"
 
@@ -90,7 +78,6 @@ class JitsiClient(VideoPlatformClient):
         )
 
     async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
-        """Get room sessions (mock implementation - Jitsi doesn't provide sessions API)."""
         return {
             "roomName": room_name,
             "sessions": [
@@ -104,17 +91,14 @@ class JitsiClient(VideoPlatformClient):
         }
 
     async def delete_room(self, room_name: str) -> bool:
-        """Delete room (no-op - Jitsi rooms auto-expire with JWT expiration)."""
         return True
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
-        """Upload logo (no-op - custom branding handled via Jitsi server config)."""
         return True
 
     def verify_webhook_signature(
         self, body: bytes, signature: str, timestamp: Optional[str] = None
     ) -> bool:
-        """Verify webhook signature for Prosody event-sync webhooks."""
         if not signature or not self.config.webhook_secret:
             return False
 

@@ -12,8 +12,6 @@ from ..base import MeetingData, VideoPlatformClient
 
 
 class WherebyClient(VideoPlatformClient):
-    """Whereby video platform implementation."""
-
     PLATFORM_NAME = VideoPlatform.WHEREBY
 
     def __init__(self, config):
@@ -27,7 +25,6 @@ class WherebyClient(VideoPlatformClient):
     async def create_meeting(
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> MeetingData:
-        """Create a Whereby meeting room."""
         data = {
             "isLocked": room.is_locked,
             "roomNamePrefix": room_name_prefix,
@@ -72,7 +69,6 @@ class WherebyClient(VideoPlatformClient):
         )
 
     async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
-        """Get session information for a room."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.config.api_url}/insights/room-sessions?roomName={room_name}",
@@ -83,11 +79,9 @@ class WherebyClient(VideoPlatformClient):
             return response.json()
 
     async def delete_room(self, room_name: str) -> bool:
-        """Delete a room. Whereby rooms auto-expire, so this is a no-op."""
         return True
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
-        """Upload a logo to the room."""
         try:
             async with httpx.AsyncClient() as client:
                 with open(logo_path, "rb") as f:
@@ -107,7 +101,6 @@ class WherebyClient(VideoPlatformClient):
     def verify_webhook_signature(
         self, body: bytes, signature: str, timestamp: Optional[str] = None
     ) -> bool:
-        """Verify webhook signature for Whereby webhooks."""
         if not signature or not self.config.webhook_secret:
             return False
 

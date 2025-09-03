@@ -25,7 +25,6 @@ router = APIRouter()
 
 
 def parse_datetime_with_timezone(iso_string: str) -> datetime:
-    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
     dt = datetime.fromisoformat(iso_string)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
@@ -202,11 +201,9 @@ async def rooms_create_meeting(
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
 
-        # Use platform abstraction to create meeting
         platform = room.platform
         client = create_platform_client(platform)
 
-        # Use platform client
         platform_meeting = await client.create_meeting("", end_date=end_date, room=room)
         await client.upload_logo(platform_meeting.room_name, "./images/logo.png")
 
@@ -215,11 +212,9 @@ async def rooms_create_meeting(
             "room_name": platform_meeting.room_name,
             "room_url": platform_meeting.room_url,
             "host_room_url": platform_meeting.host_room_url,
-            "start_date": current_time,  # Platform client provides datetime objects
+            "start_date": current_time,
             "end_date": end_date,
         }
-
-        # Now try to save to database
         try:
             meeting = await meetings_controller.create(
                 id=meeting_data["meeting_id"],
@@ -232,8 +227,6 @@ async def rooms_create_meeting(
                 room=room,
             )
         except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError):
-            # Another request already created a meeting for this room
-            # Log this race condition occurrence
             logger.info(
                 "Race condition detected for room %s - fetching existing meeting",
                 room.name,
@@ -243,13 +236,10 @@ async def rooms_create_meeting(
                 meeting_data["meeting_id"],
                 room.name,
             )
-
-            # Fetch the meeting that was created by the other request
             meeting = await meetings_controller.get_active(
                 room=room, current_time=current_time
             )
             if meeting is None:
-                # Edge case: meeting was created but expired/deleted between checks
                 logger.error(
                     "Meeting disappeared after race condition for room %s", room.name
                 )
@@ -268,7 +258,6 @@ async def rooms_test_webhook(
     room_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    """Test webhook configuration by sending a sample payload."""
     user_id = user["sub"] if user else None
 
     room = await rooms_controller.get_by_id(room_id)
