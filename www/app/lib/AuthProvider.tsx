@@ -10,6 +10,7 @@ import { SessionAutoRefresh } from "./SessionAutoRefresh";
 
 type AuthContextType = (
   | { status: "loading" }
+  | { status: "refreshing" }
   | { status: "unauthenticated"; error?: string }
   | {
       status: "authenticated";
@@ -30,23 +31,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const customSession = session ? assertExtendedTokenAndUserId(session) : null;
 
   const contextValue: AuthContextType = {
-    ...(status === "loading"
+    ...(status === "loading" && !customSession
       ? { status }
-      : status === "authenticated" && customSession?.accessToken
-        ? {
-            status,
-            accessToken: customSession.accessToken,
-            accessTokenExpires: customSession.accessTokenExpires,
-            user: customSession.user,
-          }
-        : status === "authenticated" && !customSession?.accessToken
-          ? (() => {
-              console.warn(
-                "illegal state: authenticated but have no session/or access token. ignoring",
-              );
-              return { status: "unauthenticated" as const };
-            })()
-          : { status: "unauthenticated" as const }),
+      : status === "loading" && customSession
+        ? { status: "refreshing" as const }
+        : status === "authenticated" && customSession?.accessToken
+          ? {
+              status,
+              accessToken: customSession.accessToken,
+              accessTokenExpires: customSession.accessTokenExpires,
+              user: customSession.user,
+            }
+          : status === "authenticated" && !customSession?.accessToken
+            ? (() => {
+                console.warn(
+                  "illegal state: authenticated but have no session/or access token. ignoring",
+                );
+                return { status: "unauthenticated" as const };
+              })()
+            : { status: "unauthenticated" as const }),
     update,
     signIn,
     signOut,

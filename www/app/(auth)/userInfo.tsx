@@ -8,9 +8,10 @@ export default function UserInfo() {
   const status = auth.status;
   const isLoading = status === "loading";
   const isAuthenticated = status === "authenticated";
+  const isRefreshing = status === "refreshing";
   return isLoading ? (
     <Spinner size="xs" className="mx-3" />
-  ) : !isAuthenticated ? (
+  ) : !isAuthenticated && !isRefreshing ? (
     <Link
       href="/"
       className="font-light px-2"

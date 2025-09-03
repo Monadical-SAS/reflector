@@ -8,16 +8,14 @@ import {
   parseMaybeNonEmptyString,
 } from "./utils";
 
-const PRETIMEOUT = 60; // seconds before token expires to refresh it
+const PRETIMEOUT = 600;
 
-// Simple in-memory cache for tokens (in production, consider using a proper cache solution)
 const tokenCache = new Map<
   string,
   { token: JWTWithAccessToken; timestamp: number }
 >();
 const TOKEN_CACHE_TTL = 60 * 60 * 24 * 30 * 1000; // 30 days in milliseconds
 
-// Simple lock mechanism to prevent concurrent token refreshes
 const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 
 const CLIENT_ID = assertExistsAndNonEmptyString(
@@ -100,32 +98,25 @@ async function lockedRefreshAccessToken(
 ): Promise<JWTWithAccessToken> {
   const lockKey = `${token.sub}-refresh`;
 
-  // Check if there's already a refresh in progress
   const existingRefresh = refreshLocks.get(lockKey);
   if (existingRefresh) {
-    return existingRefresh;
+    return await existingRefresh;
   }
 
-  // Create a new refresh promise
   const refreshPromise = (async () => {
     try {
-      // Check cache for recent token
       const cached = tokenCache.get(`token:${token.sub}`);
       if (cached) {
-        // Clean up old cache entries
         if (Date.now() - cached.timestamp > TOKEN_CACHE_TTL) {
           tokenCache.delete(`token:${token.sub}`);
         } else if (Date.now() < cached.token.accessTokenExpires) {
-          // Token is still valid
           return cached.token;
         }
       }
 
-      // Refresh the token
       const currentToken = cached?.token || (token as JWTWithAccessToken);
       const newToken = await refreshAccessToken(currentToken);
 
-      // Update cache
       tokenCache.set(`token:${token.sub}`, {
         token: newToken,
         timestamp: Date.now(),
@@ -133,7 +124,6 @@ async function lockedRefreshAccessToken(
 
       return newToken;
     } finally {
-      // Clean up the lock after a short delay
       setTimeout(() => refreshLocks.delete(lockKey), 100);
     }
   })();

@@ -18,15 +18,17 @@ export function SessionAutoRefresh({
   const accessTokenExpires =
     auth.status === "authenticated" ? auth.accessTokenExpires : null;
 
+  const refreshIntervalMs = refreshInterval * 1000;
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (accessTokenExpires) {
+      if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
-        if (timeLeft < refreshInterval * 1000) {
+        if (timeLeft < refreshIntervalMs) {
           auth.update();
         }
       }
-    }, refreshInterval * 1000);
+    }, refreshIntervalMs);
 
     return () => clearInterval(interval);
   }, [accessTokenExpires, refreshInterval, auth.update]);
