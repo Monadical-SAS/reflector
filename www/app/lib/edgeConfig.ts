@@ -32,6 +32,14 @@ export function edgeDomainToKey(domain: string) {
 export async function getConfig() {
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
 
+  console.log("DEBUG: CI env vars:", {
+    CI: process.env.CI,
+    IS_CI: process.env.IS_CI,
+    isCI,
+    NEXT_PHASE: process.env.NEXT_PHASE,
+    isBuildPhase,
+  });
+
   if (isCI) {
     // "noop"
     return require("../../config-template").localConfig;
