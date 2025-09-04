@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         case "authenticated": {
           if (customSession?.error === REFRESH_ACCESS_TOKEN_ERROR) {
-            // token had chance to expire but next auth still returns "authenticated" so show user unauthenticated state
+            // token had expired but next auth still returns "authenticated" so show user unauthenticated state
             return {
               status: "unauthenticated" as const,
             };
