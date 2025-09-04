@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timezone
+from enum import StrEnum
 from sqlite3 import IntegrityError
 from typing import Literal
 
@@ -10,6 +11,12 @@ from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
+
+
+class VideoPlatform(StrEnum):
+    WHEREBY = "whereby"
+    JITSI = "jitsi"
+
 
 rooms = sqlalchemy.Table(
     "room",
@@ -43,6 +50,9 @@ rooms = sqlalchemy.Table(
     ),
     sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
     sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
+    sqlalchemy.Column(
+        "platform", sqlalchemy.String, nullable=False, server_default="whereby"
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
 )
 
@@ -64,6 +74,7 @@ class Room(BaseModel):
     is_shared: bool = False
     webhook_url: str | None = None
     webhook_secret: str | None = None
+    platform: VideoPlatform = VideoPlatform.WHEREBY
 
 
 class RoomController:
@@ -114,6 +125,7 @@ class RoomController:
         is_shared: bool,
         webhook_url: str = "",
         webhook_secret: str = "",
+        platform: str = "whereby",
     ):
         """
         Add a new room
@@ -134,6 +146,7 @@ class RoomController:
             is_shared=is_shared,
             webhook_url=webhook_url,
             webhook_secret=webhook_secret,
+            platform=platform,
         )
         query = rooms.insert().values(**room.model_dump())
         try:

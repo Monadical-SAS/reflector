@@ -127,6 +127,14 @@ class Settings(BaseSettings):
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
 
+    # Jitsi Meet
+    JITSI_DOMAIN: str = "meet.jit.si"
+    JITSI_JWT_SECRET: str | None = None
+    JITSI_WEBHOOK_SECRET: str | None = None
+    JITSI_APP_ID: str = "reflector"
+    JITSI_JWT_ISSUER: str = "reflector"
+    JITSI_JWT_AUDIENCE: str = "jitsi"
+
     # Zulip integration
     ZULIP_REALM: str | None = None
     ZULIP_API_KEY: str | None = None
