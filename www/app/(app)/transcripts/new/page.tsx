@@ -7,6 +7,7 @@ import About from "../../../(aboutAndPrivacy)/about";
 import Privacy from "../../../(aboutAndPrivacy)/privacy";
 import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
+import { SourceKind } from "../../../api";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
 import useSessionStatus from "../../../lib/useSessionStatus";
@@ -61,13 +62,21 @@ const TranscriptCreate = () => {
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    createTranscript.create({
+      name,
+      target_language: getTargetLanguage(),
+      source_kind: "live" as SourceKind,
+    });
   };
 
   const uploadFile = () => {
     if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    createTranscript.create({
+      name,
+      target_language: getTargetLanguage(),
+      source_kind: "file" as SourceKind,
+    });
   };
 
   useEffect(() => {
