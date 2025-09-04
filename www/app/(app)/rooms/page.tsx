@@ -189,6 +189,7 @@ export default function RoomsList() {
   const handleCloseDialog = () => {
     setShowWebhookSecret(false);
     setWebhookTestResult(null);
+    setEditRoomId(null);
     onClose();
   };
 
