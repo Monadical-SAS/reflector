@@ -551,6 +551,7 @@ export interface components {
        * @default en
        */
       target_language: string;
+      source_kind?: components["schemas"]["SourceKind"] | null;
     };
     /** DeletionStatus */
     DeletionStatus: {

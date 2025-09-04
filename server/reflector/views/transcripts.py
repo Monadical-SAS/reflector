@@ -96,6 +96,7 @@ class CreateTranscript(BaseModel):
     name: str
     source_language: str = Field("en")
     target_language: str = Field("en")
+    source_kind: SourceKind | None = None
 
 
 class UpdateTranscript(BaseModel):
@@ -213,7 +214,7 @@ async def transcripts_create(
     user_id = user["sub"] if user else None
     return await transcripts_controller.add(
         info.name,
-        source_kind=SourceKind.LIVE,
+        source_kind=info.source_kind or SourceKind.LIVE,
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,

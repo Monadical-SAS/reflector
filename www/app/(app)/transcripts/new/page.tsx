@@ -21,6 +21,8 @@ import {
   Spacer,
 } from "@chakra-ui/react";
 import { useAuth } from "../../../lib/AuthProvider";
+import type { components } from "../../../reflector-api";
+
 const TranscriptCreate = () => {
   const isClient = typeof window !== "undefined";
   const router = useRouter();
@@ -58,6 +60,7 @@ const TranscriptCreate = () => {
       name,
       source_language: "en",
       target_language: targetLang || "en",
+      source_kind: "live",
     });
   };
 
@@ -69,6 +72,7 @@ const TranscriptCreate = () => {
       name,
       source_language: "en",
       target_language: targetLang || "en",
+      source_kind: "file",
     });
   };
 
