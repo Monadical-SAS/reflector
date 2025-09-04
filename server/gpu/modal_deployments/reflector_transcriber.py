@@ -190,7 +190,13 @@ def web():
 
         for upload_file in upload_files:
             audio_suffix = upload_file.filename.split(".")[-1]
-            assert audio_suffix in supported_file_types
+            if audio_suffix not in supported_file_types:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Unsupported audio format. Supported extensions: {', '.join(supported_file_types)}"
+                    ),
+                )
 
             content = upload_file.file.read()
             func = transcriber.transcribe_segment.spawn(
