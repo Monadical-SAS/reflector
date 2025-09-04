@@ -19,6 +19,9 @@ export function SessionAutoRefresh({ children }) {
     auth.status === "authenticated" ? auth.accessTokenExpires : null;
 
   useEffect(() => {
+    // technical value for how often the setInterval will be polling news - not too fast (no spam in case of errors)
+    // and not too slow (debuggable)
+    const INTERVAL_REFRESH_MS = 5000;
     const interval = setInterval(() => {
       if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
@@ -32,7 +35,7 @@ export function SessionAutoRefresh({ children }) {
             });
         }
       }
-    }, 5000);
+    }, INTERVAL_REFRESH_MS);
 
     return () => clearInterval(interval);
   }, [accessTokenExpires, auth.update]);
