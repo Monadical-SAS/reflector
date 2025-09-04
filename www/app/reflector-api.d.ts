@@ -566,8 +566,17 @@ export interface components {
       user_id: string | null;
       /** Name */
       name: string;
-      /** Status */
-      status: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
       /** Locked */
       locked: boolean;
       /** Duration */
@@ -611,8 +620,17 @@ export interface components {
       user_id: string | null;
       /** Name */
       name: string;
-      /** Status */
-      status: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
       /** Locked */
       locked: boolean;
       /** Duration */
