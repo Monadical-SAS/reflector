@@ -32,28 +32,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const customSession = session ? assertCustomSession(session) : null;
 
   const contextValue: AuthContextType = {
-    ...(status === "loading" && !customSession
-      ? { status }
-      : status === "loading" && customSession
-        ? { status: "refreshing" as const }
-        : status === "authenticated" &&
-            customSession?.error === REFRESH_ACCESS_TOKEN_ERROR
-          ? { status: "unauthenticated" }
-          : status === "authenticated" && customSession?.accessToken
-            ? {
-                status,
-                accessToken: customSession.accessToken,
-                accessTokenExpires: customSession.accessTokenExpires,
-                user: customSession.user,
-              }
-            : status === "authenticated" && !customSession?.accessToken
-              ? (() => {
-                  console.warn(
-                    "illegal state: authenticated but have no session/or access token. ignoring",
-                  );
-                  return { status: "unauthenticated" as const };
-                })()
-              : { status: "unauthenticated" as const }),
+    ...(() => {
+      switch (status) {
+        case "loading": {
+          const sessionIsHere = !!customSession;
+          switch (sessionIsHere) {
+            case false: {
+              return { status };
+            }
+            case true: {
+              return { status: "refreshing" as const };
+            }
+            default: {
+              const _: never = sessionIsHere;
+              throw new Error("unreachable");
+            }
+          }
+        }
+        case "authenticated": {
+          if (customSession?.error === REFRESH_ACCESS_TOKEN_ERROR) {
+            // token had chance to expire but next auth still returns "authenticated" so show user unauthenticated state
+            return {
+              status: "unauthenticated" as const,
+            };
+          } else if (customSession?.accessToken) {
+            return {
+              status,
+              accessToken: customSession.accessToken,
+              accessTokenExpires: customSession.accessTokenExpires,
+              user: customSession.user,
+            };
+          } else {
+            console.warn(
+              "illegal state: authenticated but have no session/or access token. ignoring",
+            );
+            return { status: "unauthenticated" as const };
+          }
+        }
+        case "unauthenticated": {
+          return { status: "unauthenticated" as const };
+        }
+        default: {
+          const _: never = status;
+          throw new Error("unreachable");
+        }
+      }
+    })(),
     update,
     signIn,
     signOut,
