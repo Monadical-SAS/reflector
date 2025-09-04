@@ -1,12 +1,13 @@
-## Reflector GPU Transcription API (Parakeet)
+## Reflector GPU Transcription API (Specification)
 
-This document describes the GPU transcription API deployed on Modal.com using NVIDIA Parakeet. The API surface and response shapes are OpenAI/Whisper-compatible. If desired, you can switch to a Whisper deployment by changing the base URL; no client changes are required.
+This document defines the Reflector GPU transcription API that all implementations must adhere to. Current implementations include NVIDIA Parakeet (NeMo) and Whisper (faster-whisper), both deployed on Modal.com. The API surface and response shapes are OpenAI/Whisper-compatible, so clients can switch implementations by changing only the base URL.
 
 ### Base URL and Authentication
 
-- Parakeet base URL (Modal web endpoint), for example:
+- Example base URLs (Modal web endpoints):
 
-  - `https://<account>--reflector-transcriber-parakeet-web.modal.run`
+  - Parakeet: `https://<account>--reflector-transcriber-parakeet-web.modal.run`
+  - Whisper: `https://<account>--reflector-transcriber-web.modal.run`
 
 - All endpoints are served under `/v1` and require a Bearer token:
 
@@ -14,7 +15,7 @@ This document describes the GPU transcription API deployed on Modal.com using NV
 Authorization: Bearer <REFLECTOR_GPU_APIKEY>
 ```
 
-Note: To use Whisper instead, deploy the Whisper variant and point `TRANSCRIPT_URL` to its base URL (e.g., `https://<account>--reflector-transcriber-web.modal.run`). The API is identical.
+Note: To switch implementations, deploy the desired variant and point `TRANSCRIPT_URL` to its base URL. The API is identical.
 
 ### Supported file types
 
@@ -23,9 +24,11 @@ Note: To use Whisper instead, deploy the Whisper variant and point `TRANSCRIPT_U
 ### Models and languages
 
 - Parakeet (NVIDIA NeMo): default `nvidia/parakeet-tdt-0.6b-v2`
-  - Language: only `en` is supported. Other languages return HTTP 400.
+  - Language support: only `en`. Other languages return HTTP 400.
+- Whisper (faster-whisper): default `large-v2` (or deployment-specific)
+  - Language support: multilingual (per Whisper model capabilities).
 
-Note: The `model` parameter is accepted for interface parity, but is currently informational for Parakeet.
+Note: The `model` parameter is accepted by all implementations for interface parity. Some backends may treat it as informational.
 
 ### Endpoints
 
@@ -38,8 +41,10 @@ Request: multipart/form-data
 - `file`: single file to transcribe
 - `files`: multiple files to transcribe
 - `model`: optional, defaults to implementation-specific model (see above)
-- `language`: language code; Parakeet requires `en`
-- `batch`: boolean; when `true` and multiple files are provided, returns a `results` array
+- `language`: language code
+  - Parakeet: must be `en` or HTTP 400
+  - Whisper: model-dependent; typically multilingual
+- `batch`: boolean; optional performance hint. Implementations may use more efficient batching internally. Response shape is the same for multiple files regardless of this flag.
 
 Responses
 
@@ -56,17 +61,7 @@ Single file response:
 }
 ```
 
-Multiple files, non-batch mode (processed one-by-one):
-
-```json
-{
-  "results": [
-    {"filename": "a1.mp3", "text": "...", "words": [...]},
-    {"filename": "a2.mp3", "text": "...", "words": [...]}]
-}
-```
-
-Multiple files with `batch=true`:
+Multiple files response:
 
 ```json
 {
@@ -79,7 +74,7 @@ Multiple files with `batch=true`:
 Notes:
 
 - Word objects always include keys: `word`, `start`, `end`.
-- Parakeet may include a trailing space in `word` to match Whisper tokenization behavior; clients should trim if needed.
+- Some implementations may include a trailing space in `word` to match Whisper tokenization behavior; clients should trim if needed.
 
 Example curl (single file):
 
@@ -132,7 +127,7 @@ Response:
 Notes:
 
 - `timestamp_offset` is added to each word’s `start`/`end` in the response.
-- Parakeet performs VAD-based chunking for long-form audio.
+- Implementations may perform VAD-based chunking and batching for long-form audio; word timings are adjusted accordingly.
 
 Example curl:
 
@@ -151,7 +146,7 @@ curl -X POST \
 ### Error handling
 
 - 400 Bad Request
-  - `language` other than `en`
+  - Parakeet: `language` other than `en`
   - Missing required parameters (`file`/`files` for upload; `audio_file_url` for URL endpoint)
   - Unsupported file extension
 - 401 Unauthorized
@@ -161,13 +156,13 @@ curl -X POST \
 
 ### Implementation details
 
-- GPUs: A10G for small-file/live, L40S for large-file URL transcription
+- GPUs: A10G for small-file/live, L40S for large-file URL transcription (subject to deployment)
 - VAD chunking and segment batching; word timings adjusted and overlapping ends constrained
-- Pads very short segments (< 0.5s) to avoid model crashes
+- Pads very short segments (< 0.5s) to avoid model crashes on some backends
 
 ### Server configuration (Reflector API)
 
-Set the Reflector server to use the Modal backend and point `TRANSCRIPT_URL` to your Parakeet deployment:
+Set the Reflector server to use the Modal backend and point `TRANSCRIPT_URL` to your chosen deployment:
 
 ```
 TRANSCRIPT_BACKEND=modal
@@ -175,4 +170,12 @@ TRANSCRIPT_URL=https://<account>--reflector-transcriber-parakeet-web.modal.run
 TRANSCRIPT_MODAL_API_KEY=<REFLECTOR_GPU_APIKEY>
 ```
 
-To switch to Whisper, simply update `TRANSCRIPT_URL` to the Whisper deployment (e.g., `https://<account>--reflector-transcriber-web.modal.run`). The server integrates via an OpenAI-compatible client, expecting `text` and `words[{word,start,end}]` and supporting both single and multi-file responses per the shapes above.
+### Conformance tests
+
+Use the pytest-based conformance tests to validate any new implementation (including self-hosted) against this spec:
+
+```
+TRANSCRIPT_URL=https://<your-deployment-base> \
+TRANSCRIPT_MODAL_API_KEY=your-api-key \
+uv run -m pytest -m gpu_modal --no-cov server/tests/test_gpu_modal_transcript.py
+```
