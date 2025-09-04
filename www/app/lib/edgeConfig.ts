@@ -2,14 +2,6 @@ import { get } from "@vercel/edge-config";
 
 import { isBuildPhase, isCI } from "./next";
 
-console.log("DEBUG: CI env vars:", {
-  CI: process.env.CI,
-  IS_CI: process.env.IS_CI,
-  isCI,
-  NEXT_PHASE: process.env.NEXT_PHASE,
-  isBuildPhase,
-});
-
 type EdgeConfig = {
   [domainWithDash: string]: {
     features: {
@@ -38,7 +30,6 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
-  throw new Error("next js and github actions are great");
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
 
   if (isCI) {

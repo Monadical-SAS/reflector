@@ -11,7 +11,7 @@ on:
       - "www/**"
 
 jobs:
-  test-frontend:
+  test-next-server:
     runs-on: ubuntu-latest
 
     defaults:
