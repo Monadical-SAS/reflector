@@ -11,12 +11,13 @@ import {
   REFRESH_ACCESS_TOKEN_BEFORE,
   REFRESH_ACCESS_TOKEN_ERROR,
 } from "./auth";
+import {
+  getTokenCache,
+  setTokenCache,
+  deleteTokenCache,
+} from "./redisTokenCache";
+import { tokenCacheRedis } from "./redisClient";
 
-// TODO redis for vercel?
-const tokenCache = new Map<
-  string,
-  { token: JWTWithAccessToken; timestamp: number }
->();
 // REFRESH_ACCESS_TOKEN_BEFORE because refresh is based on access token expiration (imagine we cache it 30 days)
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 
@@ -55,7 +56,7 @@ export const authOptions: AuthOptions = {
         const expiresAtS = assertExists(account.expires_at);
         const expiresAtMs = expiresAtS * 1000;
         if (!account.access_token) {
-          tokenCache.delete(KEY);
+          await deleteTokenCache(tokenCacheRedis, KEY);
         } else {
           const jwtToken: JWTWithAccessToken = {
             ...token,
@@ -63,8 +64,7 @@ export const authOptions: AuthOptions = {
             accessTokenExpires: expiresAtMs,
             refreshToken: account.refresh_token,
           };
-          // Store in memory cache
-          tokenCache.set(KEY, {
+          await setTokenCache(tokenCacheRedis, KEY, {
             token: jwtToken,
             timestamp: Date.now(),
           });
@@ -72,7 +72,7 @@ export const authOptions: AuthOptions = {
         }
       }
 
-      const currentToken = tokenCache.get(KEY);
+      const currentToken = await getTokenCache(tokenCacheRedis, KEY);
       if (currentToken && Date.now() < currentToken.token.accessTokenExpires) {
         return currentToken.token;
       }
@@ -109,10 +109,10 @@ async function lockedRefreshAccessToken(
 
   const refreshPromise = (async () => {
     try {
-      const cached = tokenCache.get(`token:${token.sub}`);
+      const cached = await getTokenCache(tokenCacheRedis, `token:${token.sub}`);
       if (cached) {
         if (Date.now() - cached.timestamp > TOKEN_CACHE_TTL) {
-          tokenCache.delete(`token:${token.sub}`);
+          await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
         } else if (Date.now() < cached.token.accessTokenExpires) {
           return cached.token;
         }
@@ -121,7 +121,7 @@ async function lockedRefreshAccessToken(
       const currentToken = cached?.token || (token as JWTWithAccessToken);
       const newToken = await refreshAccessToken(currentToken);
 
-      tokenCache.set(`token:${token.sub}`, {
+      await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
         token: newToken,
         timestamp: Date.now(),
       });
