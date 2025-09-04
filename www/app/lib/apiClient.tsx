@@ -9,11 +9,14 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import createFetchClient from "openapi-react-query";
+import { assertExistsAndNonEmptyString } from "./utils";
+
+const API_URL = assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL);
 
 // Create the base openapi-fetch client with a default URL
 // The actual URL will be set via middleware in AuthProvider
 export const client = createClient<paths>({
-  baseUrl: "http://127.0.0.1:1250",
+  baseUrl: API_URL,
 });
 
 export const $api = createFetchClient<paths>(client);
