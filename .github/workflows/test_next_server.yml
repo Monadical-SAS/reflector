@@ -43,10 +43,6 @@ jobs:
 
     - name: Run tests
       run: pnpm test
-      env:
-        IS_CI: "true"
 
     - name: Build
       run: pnpm build
-      env:
-        IS_CI: "true"
