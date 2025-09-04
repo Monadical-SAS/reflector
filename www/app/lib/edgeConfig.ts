@@ -1,5 +1,6 @@
 import { get } from "@vercel/edge-config";
-import { isDevelopment } from "./utils";
+
+import { isBuildPhase } from "./next";
 
 type EdgeConfig = {
   [domainWithDash: string]: {
@@ -30,6 +31,11 @@ export function edgeDomainToKey(domain: string) {
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
+
+  if (isBuildPhase) {
+    // "noop"
+    return require("../../config-template").localConfig;
+  }
 
   if (process.env.NEXT_PUBLIC_ENV === "development") {
     return require("../../config").localConfig;
