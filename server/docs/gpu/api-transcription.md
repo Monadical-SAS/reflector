@@ -38,13 +38,20 @@ Transcribe one or more uploaded audio files.
 
 Request: multipart/form-data
 
-- `file`: single file to transcribe
-- `files`: multiple files to transcribe
-- `model`: optional, defaults to implementation-specific model (see above)
-- `language`: language code
-  - Parakeet: must be `en` or HTTP 400
+- `file` (File) — optional. Single file to transcribe.
+- `files` (File[]) — optional. One or more files to transcribe.
+- `model` (string) — optional. Defaults to the implementation-specific model (see above).
+- `language` (string) — optional, defaults to `en`.
+  - Parakeet: only `en` is accepted; other values return HTTP 400
   - Whisper: model-dependent; typically multilingual
-- `batch`: boolean; optional performance hint. Implementations may use more efficient batching internally. Response shape is the same for multiple files regardless of this flag.
+- `batch` (boolean) — optional, defaults to `false`.
+
+Notes:
+
+- Provide either `file` or `files`, not both. If neither is provided, HTTP 400.
+- `batch` requires `files`; using `batch=true` without `files` returns HTTP 400.
+- Response shape for multiple files is the same regardless of `batch`.
+- Files sent to this endpoint are processed in a single pass (no VAD/chunking). This is intended for short clips (roughly ≤ 30s; depends on GPU memory/model). For longer audio, prefer `/v1/audio/transcriptions-from-url` which supports VAD-based chunking.
 
 Responses
 
@@ -82,7 +89,6 @@ Example curl (single file):
 curl -X POST \
   -H "Authorization: Bearer $REFLECTOR_GPU_APIKEY" \
   -F "file=@/path/to/audio.mp3" \
-  -F "model=nvidia/parakeet-tdt-0.6b-v2" \
   -F "language=en" \
   "$BASE_URL/v1/audio/transcriptions"
 ```
@@ -102,6 +108,13 @@ curl -X POST \
 Transcribe a single remote audio file by URL.
 
 Request: application/json
+
+Body parameters:
+
+- `audio_file_url` (string) — required. URL of the audio file to transcribe.
+- `model` (string) — optional. Defaults to the implementation-specific model (see above).
+- `language` (string) — optional, defaults to `en`. Parakeet only accepts `en`.
+- `timestamp_offset` (number) — optional, defaults to `0.0`. Added to each word's `start`/`end` in the response.
 
 ```json
 {
