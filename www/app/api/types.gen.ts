@@ -26,6 +26,7 @@ export type CreateRoom = {
   is_shared: boolean;
   webhook_url: string;
   webhook_secret: string;
+  platform: VideoPlatform;
 };
 
 export type CreateTranscript = {
@@ -125,6 +126,22 @@ export type HTTPValidationError = {
   detail?: Array<ValidationError>;
 };
 
+export type JibriRecordingEvent = {
+  room_name: string;
+  recording_file: string;
+  recording_status: string;
+  timestamp: string;
+};
+
+export type JitsiWebhookEvent = {
+  event: string;
+  room: string;
+  timestamp: string;
+  data?: {
+    [key: string]: unknown;
+  };
+};
+
 export type Meeting = {
   id: string;
   room_name: string;
@@ -176,6 +193,7 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  platform?: VideoPlatform;
 };
 
 export type RoomDetails = {
@@ -191,8 +209,9 @@ export type RoomDetails = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
-  webhook_url: string;
-  webhook_secret: string;
+  platform?: VideoPlatform;
+  webhook_url: string | null;
+  webhook_secret: string | null;
 };
 
 export type RtcOffer = {
@@ -206,10 +225,7 @@ export type SearchResponse = {
    * Total number of search results
    */
   total: number;
-  /**
-   * Search query text
-   */
-  query: string;
+  query?: string | null;
   /**
    * Results per page
    */
@@ -302,6 +318,7 @@ export type UpdateRoom = {
   is_shared: boolean;
   webhook_url: string;
   webhook_secret: string;
+  platform: VideoPlatform;
 };
 
 export type UpdateTranscript = {
@@ -327,6 +344,8 @@ export type ValidationError = {
   msg: string;
   type: string;
 };
+
+export type VideoPlatform = "whereby" | "jitsi";
 
 export type WebhookTestResult = {
   success: boolean;
@@ -620,6 +639,20 @@ export type V1WherebyWebhookData = {
 };
 
 export type V1WherebyWebhookResponse = unknown;
+
+export type V1JitsiEventsWebhookData = {
+  requestBody: JitsiWebhookEvent;
+};
+
+export type V1JitsiEventsWebhookResponse = unknown;
+
+export type V1JibriRecordingCompleteData = {
+  requestBody: JibriRecordingEvent;
+};
+
+export type V1JibriRecordingCompleteResponse = unknown;
+
+export type V1JitsiHealthCheckResponse = unknown;
 
 export type $OpenApiTs = {
   "/metrics": {
@@ -1139,6 +1172,46 @@ export type $OpenApiTs = {
          * Validation Error
          */
         422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/jitsi/events": {
+    post: {
+      req: V1JitsiEventsWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/jibri/recording-complete": {
+    post: {
+      req: V1JibriRecordingCompleteData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/jitsi/health": {
+    get: {
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
       };
     };
   };

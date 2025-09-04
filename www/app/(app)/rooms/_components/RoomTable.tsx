@@ -7,10 +7,15 @@ import {
   IconButton,
   Text,
   Spinner,
+  Badge,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
 import { RoomDetails } from "../../../api";
 import { RoomActionsMenu } from "./RoomActionsMenu";
+import {
+  getPlatformDisplayName,
+  getPlatformColor,
+} from "../../../lib/videoPlatforms";
 
 interface RoomTableProps {
   rooms: RoomDetails[];
@@ -92,16 +97,19 @@ export function RoomTable({
         <Table.Root>
           <Table.Header>
             <Table.Row>
-              <Table.ColumnHeader width="250px" fontWeight="600">
+              <Table.ColumnHeader width="200px" fontWeight="600">
                 Room Name
               </Table.ColumnHeader>
-              <Table.ColumnHeader width="250px" fontWeight="600">
-                Zulip
-              </Table.ColumnHeader>
-              <Table.ColumnHeader width="150px" fontWeight="600">
-                Room Size
+              <Table.ColumnHeader width="120px" fontWeight="600">
+                Platform
               </Table.ColumnHeader>
               <Table.ColumnHeader width="200px" fontWeight="600">
+                Zulip
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="130px" fontWeight="600">
+                Room Size
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="180px" fontWeight="600">
                 Recording
               </Table.ColumnHeader>
               <Table.ColumnHeader
@@ -115,6 +123,14 @@ export function RoomTable({
               <Table.Row key={room.id}>
                 <Table.Cell>
                   <Link href={`/${room.name}`}>{room.name}</Link>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge
+                    colorPalette={getPlatformColor(room.platform)}
+                    size="sm"
+                  >
+                    {getPlatformDisplayName(room.platform)}
+                  </Badge>
                 </Table.Cell>
                 <Table.Cell>
                   {getZulipDisplay(

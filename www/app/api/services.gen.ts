@@ -74,6 +74,11 @@ import type {
   V1ZulipGetTopicsResponse,
   V1WherebyWebhookData,
   V1WherebyWebhookResponse,
+  V1JitsiEventsWebhookData,
+  V1JitsiEventsWebhookResponse,
+  V1JibriRecordingCompleteData,
+  V1JibriRecordingCompleteResponse,
+  V1JitsiHealthCheckResponse,
 } from "./types.gen";
 
 export class DefaultService {
@@ -255,7 +260,6 @@ export class DefaultService {
 
   /**
    * Rooms Test Webhook
-   * Test webhook configuration by sending a sample payload.
    * @param data The data for the request.
    * @param data.roomId
    * @returns WebhookTestResult Successful Response
@@ -937,6 +941,72 @@ export class DefaultService {
       errors: {
         422: "Validation Error",
       },
+    });
+  }
+
+  /**
+   * Jitsi Events Webhook
+   * Handle Prosody event-sync webhooks from Jitsi Meet.
+   *
+   * Expected event types:
+   * - muc-occupant-joined: participant joined the room
+   * - muc-occupant-left: participant left the room
+   * - jibri-recording-on: recording started
+   * - jibri-recording-off: recording stopped
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1JitsiEventsWebhook(
+    data: V1JitsiEventsWebhookData,
+  ): CancelablePromise<V1JitsiEventsWebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/jitsi/events",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Jibri Recording Complete
+   * Handle Jibri recording completion webhook.
+   *
+   * This endpoint is called by the Jibri finalize script when a recording
+   * is completed and uploaded to storage.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1JibriRecordingComplete(
+    data: V1JibriRecordingCompleteData,
+  ): CancelablePromise<V1JibriRecordingCompleteResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/jibri/recording-complete",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Jitsi Health Check
+   * Simple health check endpoint for Jitsi webhook configuration.
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1JitsiHealthCheck(): CancelablePromise<V1JitsiHealthCheckResponse> {
+    return this.httpRequest.request({
+      method: "GET",
+      url: "/v1/jitsi/health",
     });
   }
 }

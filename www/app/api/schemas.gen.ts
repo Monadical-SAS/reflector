@@ -99,6 +99,9 @@ export const $CreateRoom = {
       type: "string",
       title: "Webhook Secret",
     },
+    platform: {
+      $ref: "#/components/schemas/VideoPlatform",
+    },
   },
   type: "object",
   required: [
@@ -113,6 +116,7 @@ export const $CreateRoom = {
     "is_shared",
     "webhook_url",
     "webhook_secret",
+    "platform",
   ],
   title: "CreateRoom",
 } as const;
@@ -697,6 +701,58 @@ export const $HTTPValidationError = {
   title: "HTTPValidationError",
 } as const;
 
+export const $JibriRecordingEvent = {
+  properties: {
+    room_name: {
+      type: "string",
+      title: "Room Name",
+    },
+    recording_file: {
+      type: "string",
+      title: "Recording File",
+    },
+    recording_status: {
+      type: "string",
+      title: "Recording Status",
+    },
+    timestamp: {
+      type: "string",
+      format: "date-time",
+      title: "Timestamp",
+    },
+  },
+  type: "object",
+  required: ["room_name", "recording_file", "recording_status", "timestamp"],
+  title: "JibriRecordingEvent",
+} as const;
+
+export const $JitsiWebhookEvent = {
+  properties: {
+    event: {
+      type: "string",
+      title: "Event",
+    },
+    room: {
+      type: "string",
+      title: "Room",
+    },
+    timestamp: {
+      type: "string",
+      format: "date-time",
+      title: "Timestamp",
+    },
+    data: {
+      additionalProperties: true,
+      type: "object",
+      title: "Data",
+      default: {},
+    },
+  },
+  type: "object",
+  required: ["event", "room", "timestamp"],
+  title: "JitsiWebhookEvent",
+} as const;
+
 export const $Meeting = {
   properties: {
     id: {
@@ -960,6 +1016,10 @@ export const $Room = {
       type: "boolean",
       title: "Is Shared",
     },
+    platform: {
+      $ref: "#/components/schemas/VideoPlatform",
+      default: "whereby",
+    },
   },
   type: "object",
   required: [
@@ -1030,12 +1090,30 @@ export const $RoomDetails = {
       type: "boolean",
       title: "Is Shared",
     },
+    platform: {
+      $ref: "#/components/schemas/VideoPlatform",
+      default: "whereby",
+    },
     webhook_url: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Webhook Url",
     },
     webhook_secret: {
-      type: "string",
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Webhook Secret",
     },
   },
@@ -1091,10 +1169,17 @@ export const $SearchResponse = {
       description: "Total number of search results",
     },
     query: {
-      type: "string",
-      minLength: 0,
+      anyOf: [
+        {
+          type: "string",
+          minLength: 1,
+          description: "Search query text",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Query",
-      description: "Search query text",
     },
     limit: {
       type: "integer",
@@ -1111,7 +1196,7 @@ export const $SearchResponse = {
     },
   },
   type: "object",
-  required: ["results", "total", "query", "limit", "offset"],
+  required: ["results", "total", "limit", "offset"],
   title: "SearchResponse",
 } as const;
 
@@ -1449,6 +1534,9 @@ export const $UpdateRoom = {
       type: "string",
       title: "Webhook Secret",
     },
+    platform: {
+      $ref: "#/components/schemas/VideoPlatform",
+    },
   },
   type: "object",
   required: [
@@ -1463,6 +1551,7 @@ export const $UpdateRoom = {
     "is_shared",
     "webhook_url",
     "webhook_secret",
+    "platform",
   ],
   title: "UpdateRoom",
 } as const;
@@ -1639,6 +1728,12 @@ export const $ValidationError = {
   type: "object",
   required: ["loc", "msg", "type"],
   title: "ValidationError",
+} as const;
+
+export const $VideoPlatform = {
+  type: "string",
+  enum: ["whereby", "jitsi"],
+  title: "VideoPlatform",
 } as const;
 
 export const $WebhookTestResult = {

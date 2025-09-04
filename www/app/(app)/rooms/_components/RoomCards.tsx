@@ -10,10 +10,15 @@ import {
   Text,
   VStack,
   HStack,
+  Badge,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
 import { RoomDetails } from "../../../api";
 import { RoomActionsMenu } from "./RoomActionsMenu";
+import {
+  getPlatformDisplayName,
+  getPlatformColor,
+} from "../../../lib/videoPlatforms";
 
 interface RoomCardsProps {
   rooms: RoomDetails[];
@@ -93,6 +98,15 @@ export function RoomCards({
                 />
               </Flex>
               <VStack align="start" fontSize="sm" gap={0}>
+                <HStack gap={2}>
+                  <Text fontWeight="500">Platform:</Text>
+                  <Badge
+                    colorPalette={getPlatformColor(room.platform)}
+                    size="sm"
+                  >
+                    {getPlatformDisplayName(room.platform)}
+                  </Badge>
+                </HStack>
                 {room.zulip_auto_post && (
                   <HStack gap={2}>
                     <Text fontWeight="500">Zulip:</Text>
