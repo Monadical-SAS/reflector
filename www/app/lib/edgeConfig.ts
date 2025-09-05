@@ -32,7 +32,10 @@ export function edgeDomainToKey(domain: string) {
 export async function getConfig() {
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
 
-  console.log(process.env);
+  if (1 === 1) {
+    console.error(process.env);
+    throw new Error("hello");
+  }
 
   if (isCI) {
     // "noop"
