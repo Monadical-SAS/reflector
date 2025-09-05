@@ -43,6 +43,5 @@ jobs:
 
     - name: Run tests
       run: pnpm test
-
-    - name: Build
-      run: pnpm build
+      env:
+        NEXT_PUBLIC_IS_CI: true

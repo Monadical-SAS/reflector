@@ -42,8 +42,9 @@ export async function getConfig() {
     return require("../../config-template").localConfig;
   }
 
-  if (process.env.NEXT_PUBLIC_ENV === "development" && !isCI) {
-    return require("../../config").localConfig;
+  if (process.env.NEXT_PUBLIC_ENV === "development") {
+    const configPath = "../../config";
+    return require(configPath).localConfig;
   }
 
   let config = await get(edgeDomainToKey(domain));
