@@ -5,68 +5,59 @@ import {
   VStack,
   Heading,
   Text,
-  Card,
   HStack,
   Badge,
   Spinner,
   Flex,
   Link,
   Button,
-  Alert,
   IconButton,
   Tooltip,
   Wrap,
 } from "@chakra-ui/react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaSync, FaClock, FaUsers, FaEnvelope } from "react-icons/fa";
 import { LuArrowLeft } from "react-icons/lu";
-import useApi from "../../../../lib/useApi";
-import { CalendarEventResponse } from "../../../../api";
+import {
+  useRoomCalendarEvents,
+  useRoomIcsSync,
+} from "../../../../lib/apiHooks";
+import type { components } from "../../../../reflector-api";
+
+type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 
 export default function RoomCalendarPage() {
   const params = useParams();
   const router = useRouter();
   const roomName = params.roomName as string;
-  const api = useApi();
 
-  const [events, setEvents] = useState<CalendarEventResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const fetchEvents = async () => {
-    if (!api) return;
+  // React Query hooks
+  const eventsQuery = useRoomCalendarEvents(roomName);
+  const syncMutation = useRoomIcsSync();
 
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.v1RoomsListMeetings({ roomName });
-      setEvents(response);
-    } catch (err: any) {
-      setError(err.body?.detail || "Failed to load calendar events");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const events = eventsQuery.data || [];
+  const loading = eventsQuery.isLoading;
+  const error = eventsQuery.error ? "Failed to load calendar events" : null;
 
   const handleSync = async () => {
-    if (!api) return;
-
     try {
       setSyncing(true);
-      await api.v1RoomsSyncIcs({ roomName });
-      await fetchEvents(); // Refresh events after sync
+      await syncMutation.mutateAsync({
+        params: {
+          path: { room_name: roomName },
+        },
+      });
+      // Refetch events after sync
+      await eventsQuery.refetch();
     } catch (err: any) {
-      setError(err.body?.detail || "Failed to sync calendar");
+      console.error("Sync failed:", err);
     } finally {
       setSyncing(false);
     }
   };
-
-  useEffect(() => {
-    fetchEvents();
-  }, [api, roomName]);
 
   const formatEventTime = (start: string, end: string) => {
     const startDate = new Date(start);
@@ -125,7 +116,7 @@ export default function RoomCalendarPage() {
       <HStack fontSize="sm" color="gray.600" flexWrap="wrap">
         <FaUsers />
         <Text>Attendees:</Text>
-        <Wrap spacing={2}>
+        <Wrap gap={2}>
           {attendees.map((attendee, index) => {
             const email = getAttendeeEmail(attendee);
             const display = getAttendeeDisplay(attendee);
@@ -178,9 +169,9 @@ export default function RoomCalendarPage() {
 
   return (
     <Box w={{ base: "full", md: "container.xl" }} mx="auto" pt={2}>
-      <VStack align="stretch" spacing={6}>
+      <VStack align="stretch" gap={6}>
         <Flex justify="space-between" align="center">
-          <HStack spacing={3}>
+          <HStack gap={3}>
             <IconButton
               aria-label="Back to rooms"
               title="Back to rooms"
@@ -192,21 +183,25 @@ export default function RoomCalendarPage() {
             </IconButton>
             <Heading size="lg">Calendar for {roomName}</Heading>
           </HStack>
-          <Button
-            colorPalette="blue"
-            onClick={handleSync}
-            leftIcon={syncing ? <Spinner size="sm" /> : <FaSync />}
-            disabled={syncing}
-          >
+          <Button colorPalette="blue" onClick={handleSync} disabled={syncing}>
+            {syncing ? <Spinner size="sm" /> : <FaSync />}
             Force Sync
           </Button>
         </Flex>
 
         {error && (
-          <Alert.Root status="error">
-            <Alert.Indicator />
-            <Alert.Title>{error}</Alert.Title>
-          </Alert.Root>
+          <Box
+            p={4}
+            borderRadius="md"
+            bg="red.50"
+            borderLeft="4px solid"
+            borderColor="red.400"
+          >
+            <Text fontWeight="semibold" color="red.800">
+              Error
+            </Text>
+            <Text color="red.700">{error}</Text>
+          </Box>
         )}
 
         {loading ? (
@@ -214,66 +209,62 @@ export default function RoomCalendarPage() {
             <Spinner size="xl" />
           </Flex>
         ) : events.length === 0 ? (
-          <Card.Root>
-            <Card.Body>
-              <Text textAlign="center" color="gray.500">
-                No calendar events found. Make sure your calendar is configured
-                and synced.
-              </Text>
-            </Card.Body>
-          </Card.Root>
+          <Box bg="white" borderRadius="lg" boxShadow="md" p={6}>
+            <Text textAlign="center" color="gray.500">
+              No calendar events found. Make sure your calendar is configured
+              and synced.
+            </Text>
+          </Box>
         ) : (
-          <VStack align="stretch" spacing={6}>
+          <VStack align="stretch" gap={6}>
             {/* Active Events */}
             {activeEvents.length > 0 && (
               <Box>
                 <Heading size="md" mb={3} color="green.600">
                   Active Now
                 </Heading>
-                <VStack align="stretch" spacing={3}>
+                <VStack align="stretch" gap={3}>
                   {activeEvents.map((event) => (
-                    <Card.Root
+                    <Box
                       key={event.id}
+                      bg="white"
+                      borderRadius="lg"
+                      boxShadow="md"
+                      p={6}
                       borderColor="green.200"
                       borderWidth={2}
                     >
-                      <Card.Body>
-                        <Flex justify="space-between" align="start">
-                          <VStack align="start" spacing={2} flex={1}>
-                            <HStack>
-                              <Heading size="sm">
-                                {event.title || "Untitled Event"}
-                              </Heading>
-                              <Badge colorPalette="green">Active</Badge>
-                            </HStack>
-                            <HStack fontSize="sm" color="gray.600">
-                              <FaClock />
-                              <Text>
-                                {formatEventTime(
-                                  event.start_time,
-                                  event.end_time,
-                                )}
-                              </Text>
-                            </HStack>
-                            {event.description && (
-                              <Text
-                                fontSize="sm"
-                                color="gray.700"
-                                noOfLines={2}
-                              >
-                                {event.description}
-                              </Text>
-                            )}
-                            {renderAttendees(event.attendees)}
-                          </VStack>
-                          <Link href={`/${roomName}`}>
-                            <Button size="sm" colorPalette="green">
-                              Join Room
-                            </Button>
-                          </Link>
-                        </Flex>
-                      </Card.Body>
-                    </Card.Root>
+                      <Flex justify="space-between" align="start">
+                        <VStack align="start" gap={2} flex={1}>
+                          <HStack>
+                            <Heading size="sm">
+                              {event.title || "Untitled Event"}
+                            </Heading>
+                            <Badge colorPalette="green">Active</Badge>
+                          </HStack>
+                          <HStack fontSize="sm" color="gray.600">
+                            <FaClock />
+                            <Text>
+                              {formatEventTime(
+                                event.start_time,
+                                event.end_time,
+                              )}
+                            </Text>
+                          </HStack>
+                          {event.description && (
+                            <Text fontSize="sm" color="gray.700" noOfLines={2}>
+                              {event.description}
+                            </Text>
+                          )}
+                          {renderAttendees(event.attendees)}
+                        </VStack>
+                        <Link href={`/${roomName}`}>
+                          <Button size="sm" colorPalette="green">
+                            Join Room
+                          </Button>
+                        </Link>
+                      </Flex>
+                    </Box>
                   ))}
                 </VStack>
               </Box>
