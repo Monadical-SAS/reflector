@@ -10,8 +10,11 @@ import {
 } from "@tanstack/react-query";
 import createFetchClient from "openapi-react-query";
 import { assertExistsAndNonEmptyString } from "./utils";
+import { isBuildPhase } from "./next";
 
-const API_URL = assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL);
+const API_URL = !isBuildPhase
+  ? assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL)
+  : "http://localhost";
 
 // Create the base openapi-fetch client with a default URL
 // The actual URL will be set via middleware in AuthProvider
