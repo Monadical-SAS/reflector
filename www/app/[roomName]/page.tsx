@@ -21,11 +21,13 @@ import { toaster } from "../components/ui/toaster";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import useSessionStatus from "../lib/useSessionStatus";
 import { useRecordingConsent } from "../recordingConsentContext";
-import useApi from "../lib/useApi";
-import { Meeting } from "../api";
+import { useMeetingAudioConsent } from "../lib/apiHooks";
+import type { components } from "../reflector-api";
+
+type Meeting = components["schemas"]["Meeting"];
 import { FaBars } from "react-icons/fa6";
+import { useAuth } from "../lib/AuthProvider";
 
 export type RoomDetails = {
   params: {
@@ -76,31 +78,30 @@ const useConsentDialog = (
   wherebyRef: RefObject<HTMLElement> /*accessibility*/,
 ) => {
   const { state: consentState, touch, hasConsent } = useRecordingConsent();
-  const [consentLoading, setConsentLoading] = useState(false);
   // toast would open duplicates, even with using "id=" prop
   const [modalOpen, setModalOpen] = useState(false);
-  const api = useApi();
+  const audioConsentMutation = useMeetingAudioConsent();
 
   const handleConsent = useCallback(
     async (meetingId: string, given: boolean) => {
-      if (!api) return;
-
-      setConsentLoading(true);
-
       try {
-        await api.v1MeetingAudioConsent({
-          meetingId,
-          requestBody: { consent_given: given },
+        await audioConsentMutation.mutateAsync({
+          params: {
+            path: {
+              meeting_id: meetingId,
+            },
+          },
+          body: {
+            consent_given: given,
+          },
         });
 
         touch(meetingId);
       } catch (error) {
         console.error("Error submitting consent:", error);
-      } finally {
-        setConsentLoading(false);
       }
     },
-    [api, touch],
+    [audioConsentMutation, touch],
   );
 
   const showConsentModal = useCallback(() => {
@@ -194,7 +195,12 @@ const useConsentDialog = (
     return cleanup;
   }, [meetingId, handleConsent, wherebyRef, modalOpen]);
 
-  return { showConsentModal, consentState, hasConsent, consentLoading };
+  return {
+    showConsentModal,
+    consentState,
+    hasConsent,
+    consentLoading: audioConsentMutation.isPending,
+  };
 };
 
 function ConsentDialogButton({
@@ -254,7 +260,9 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useSessionStatus();
+  const status = useAuth().status;
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading" || meeting.loading;
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url

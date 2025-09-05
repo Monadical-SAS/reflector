@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useError } from "../(errors)/errorContext";
-import { Meeting } from "../api";
+import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
-import useApi from "../lib/useApi";
+
+type Meeting = components["schemas"]["Meeting"];
+import { useRoomsCreateMeeting } from "../lib/apiHooks";
 import { notFound } from "next/navigation";
 
 type ErrorMeeting = {
@@ -30,27 +32,25 @@ const useRoomMeeting = (
   roomName: string | null | undefined,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setErrorState] = useState<Error | null>(null);
   const [reload, setReload] = useState(0);
   const { setError } = useError();
-  const api = useApi();
+  const createMeetingMutation = useRoomsCreateMeeting();
   const reloadHandler = () => setReload((prev) => prev + 1);
 
   useEffect(() => {
-    if (!roomName || !api) return;
+    if (!roomName) return;
 
-    if (!response) {
-      setLoading(true);
-    }
-
-    api
-      .v1RoomsCreateMeeting({ roomName })
-      .then((result) => {
+    const createMeeting = async () => {
+      try {
+        const result = await createMeetingMutation.mutateAsync({
+          params: {
+            path: {
+              room_name: roomName,
+            },
+          },
+        });
         setResponse(result);
-        setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error: any) {
         const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman && error.status !== 404) {
           setError(
@@ -60,9 +60,14 @@ const useRoomMeeting = (
         } else {
           setError(error);
         }
-        setErrorState(error);
-      });
-  }, [roomName, !api, reload]);
+      }
+    };
+
+    createMeeting();
+  }, [roomName, reload]);
+
+  const loading = createMeetingMutation.isPending && !response;
+  const error = createMeetingMutation.error as Error | null;
 
   return { response, loading, error, reload: reloadHandler } as
     | ErrorMeeting

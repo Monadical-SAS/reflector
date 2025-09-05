@@ -1,5 +1,5 @@
 /**
- * This is a custom hook that automatically refreshes the session when the access token is about to expire.
+ * This is a custom provider that automatically refreshes the session when the access token is about to expire.
  * When communicating with the reflector API, we need to ensure that the access token is always valid.
  *
  * We could have implemented that as an interceptor on the API client, but not everything is using the
@@ -7,30 +7,38 @@
  */
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { CustomSession } from "./types";
+import { useAuth } from "./AuthProvider";
+import { REFRESH_ACCESS_TOKEN_BEFORE } from "./auth";
 
-export function SessionAutoRefresh({
-  children,
-  refreshInterval = 20 /* seconds */,
-}) {
-  const { data: session, update } = useSession();
-  const customSession = session as CustomSession;
-  const accessTokenExpires = customSession?.accessTokenExpires;
+const REFRESH_BEFORE = REFRESH_ACCESS_TOKEN_BEFORE;
+
+export function SessionAutoRefresh({ children }) {
+  const auth = useAuth();
+  const accessTokenExpires =
+    auth.status === "authenticated" ? auth.accessTokenExpires : null;
 
   useEffect(() => {
+    // technical value for how often the setInterval will be polling news - not too fast (no spam in case of errors)
+    // and not too slow (debuggable)
+    const INTERVAL_REFRESH_MS = 5000;
     const interval = setInterval(() => {
-      if (accessTokenExpires) {
+      if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
-        if (timeLeft < refreshInterval * 1000) {
-          update();
+        if (timeLeft < REFRESH_BEFORE) {
+          auth
+            .update()
+            .then(() => {})
+            .catch((e) => {
+              // note: 401 won't be considered error here
+              console.error("error refreshing auth token", e);
+            });
         }
       }
-    }, refreshInterval * 1000);
+    }, INTERVAL_REFRESH_MS);
 
     return () => clearInterval(interval);
-  }, [accessTokenExpires, refreshInterval, update]);
+  }, [accessTokenExpires, auth.update]);
 
   return children;
 }

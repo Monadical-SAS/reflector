@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { GetTranscript } from "../../api";
-import { useError } from "../../(errors)/errorContext";
-import { shouldShowError } from "../../lib/errorUtils";
-import useApi from "../../lib/useApi";
+import type { components } from "../../reflector-api";
+import { useTranscriptGet } from "../../lib/apiHooks";
+
+type GetTranscript = components["schemas"]["GetTranscript"];
 
 type ErrorTranscript = {
   error: Error;
@@ -28,43 +27,43 @@ type SuccessTranscript = {
 const useTranscript = (
   id: string | null,
 ): ErrorTranscript | LoadingTranscript | SuccessTranscript => {
-  const [response, setResponse] = useState<GetTranscript | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setErrorState] = useState<Error | null>(null);
-  const [reload, setReload] = useState(0);
-  const { setError } = useError();
-  const api = useApi();
-  const reloadHandler = () => setReload((prev) => prev + 1);
+  const { data, isLoading, error, refetch } = useTranscriptGet(id);
 
-  useEffect(() => {
-    if (!id || !api) return;
+  // Map to the expected return format
+  if (isLoading) {
+    return {
+      response: null,
+      loading: true,
+      error: false,
+      reload: refetch,
+    };
+  }
 
-    if (!response) {
-      setLoading(true);
-    }
+  if (error) {
+    return {
+      error: error as Error,
+      loading: false,
+      response: null,
+      reload: refetch,
+    };
+  }
 
-    api
-      .v1TranscriptGet({ transcriptId: id })
-      .then((result) => {
-        setResponse(result);
-        setLoading(false);
-        console.debug("Transcript Loaded:", result);
-      })
-      .catch((error) => {
-        const shouldShowHuman = shouldShowError(error);
-        if (shouldShowHuman) {
-          setError(error, "There was an error loading the transcript");
-        } else {
-          setError(error);
-        }
-        setErrorState(error);
-      });
-  }, [id, !api, reload]);
+  // Check if data is undefined or null
+  if (!data) {
+    return {
+      response: null,
+      loading: true,
+      error: false,
+      reload: refetch,
+    };
+  }
 
-  return { response, loading, error, reload: reloadHandler } as
-    | ErrorTranscript
-    | LoadingTranscript
-    | SuccessTranscript;
+  return {
+    response: data,
+    loading: false,
+    error: null,
+    reload: refetch,
+  };
 };
 
 export default useTranscript;

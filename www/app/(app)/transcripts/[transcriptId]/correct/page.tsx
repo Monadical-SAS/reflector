@@ -6,9 +6,10 @@ import TopicPlayer from "./topicPlayer";
 import useParticipants from "../../useParticipants";
 import useTopicWithWords from "../../useTopicWithWords";
 import ParticipantList from "./participantList";
-import { GetTranscriptTopic } from "../../../../api";
+import type { components } from "../../../../reflector-api";
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { SelectedText, selectedTextIsTimeSlice } from "./types";
-import useApi from "../../../../lib/useApi";
+import { useTranscriptUpdate } from "../../../../lib/apiHooks";
 import useTranscript from "../../useTranscript";
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ export type TranscriptCorrect = {
 export default function TranscriptCorrect({
   params: { transcriptId },
 }: TranscriptCorrect) {
-  const api = useApi();
+  const updateTranscriptMutation = useTranscriptUpdate();
   const transcript = useTranscript(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();
   const [currentTopic, _sct] = stateCurrentTopic;
@@ -34,16 +35,21 @@ export default function TranscriptCorrect({
   const { setError } = useError();
   const router = useRouter();
 
-  const markAsDone = () => {
+  const markAsDone = async () => {
     if (transcript.response && !transcript.response.reviewed) {
-      api
-        ?.v1TranscriptUpdate({ transcriptId, requestBody: { reviewed: true } })
-        .then(() => {
-          router.push(`/transcripts/${transcriptId}`);
-        })
-        .catch((e) => {
-          setError(e, "Error marking as done");
+      try {
+        await updateTranscriptMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: { reviewed: true },
         });
+        router.push(`/transcripts/${transcriptId}`);
+      } catch (e) {
+        setError(e as Error, "Error marking as done");
+      }
     }
   };
 

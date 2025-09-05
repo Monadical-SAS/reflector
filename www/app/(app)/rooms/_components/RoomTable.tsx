@@ -9,11 +9,13 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
-import { RoomDetails } from "../../../api";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
 
 interface RoomTableProps {
-  rooms: RoomDetails[];
+  rooms: Room[];
   linkCopied: string;
   onCopyUrl: (roomName: string) => void;
   onEdit: (roomId: string, roomData: any) => void;

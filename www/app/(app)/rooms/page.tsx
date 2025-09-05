@@ -15,13 +15,24 @@ import {
   createListCollection,
   useDisclosure,
 } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
-import useApi from "../../lib/useApi";
 import useRoomList from "./useRoomList";
-import { ApiError, RoomDetails } from "../../api";
+import type { components } from "../../reflector-api";
+import {
+  useRoomCreate,
+  useRoomUpdate,
+  useRoomDelete,
+  useZulipStreams,
+  useZulipTopics,
+  useRoomGet,
+  useRoomTestWebhook,
+} from "../../lib/apiHooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
+import { assertExists } from "../../lib/utils";
+
+type Room = components["schemas"]["Room"];
 
 interface SelectOption {
   label: string;
@@ -76,66 +87,77 @@ export default function RoomsList() {
   const recordingTypeCollection = createListCollection({
     items: recordingTypeOptions,
   });
-  const [room, setRoom] = useState(roomInitialState);
+  const [roomInput, setRoomInput] = useState<null | typeof roomInitialState>(
+    null,
+  );
   const [isEditing, setIsEditing] = useState(false);
-  const [editRoomId, setEditRoomId] = useState("");
-  const api = useApi();
-  // TODO seems to be no setPage calls
-  const [page, setPage] = useState<number>(1);
-  const { loading, response, refetch } = useRoomList(PaginationPage(page));
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [editRoomId, setEditRoomId] = useState<string | null>(null);
+  const {
+    loading,
+    response,
+    refetch,
+    error: roomListError,
+  } = useRoomList(PaginationPage(1));
   const [nameError, setNameError] = useState("");
   const [linkCopied, setLinkCopied] = useState("");
+  const [selectedStreamId, setSelectedStreamId] = useState<number | null>(null);
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<string | null>(
     null,
   );
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
-  interface Stream {
-    stream_id: number;
-    name: string;
-  }
 
-  interface Topic {
-    name: string;
-  }
+  const createRoomMutation = useRoomCreate();
+  const updateRoomMutation = useRoomUpdate();
+  const deleteRoomMutation = useRoomDelete();
+  const { data: streams = [] } = useZulipStreams();
+  const { data: topics = [] } = useZulipTopics(selectedStreamId);
 
+  const {
+    data: detailedEditedRoom,
+    isLoading: isDetailedEditedRoomLoading,
+    error: detailedEditedRoomError,
+  } = useRoomGet(editRoomId);
+
+  const error = roomListError || detailedEditedRoomError;
+
+  // room being edited, as fetched from the server
+  const editedRoom: typeof roomInitialState | null = useMemo(
+    () =>
+      detailedEditedRoom
+        ? {
+            name: detailedEditedRoom.name,
+            zulipAutoPost: detailedEditedRoom.zulip_auto_post,
+            zulipStream: detailedEditedRoom.zulip_stream,
+            zulipTopic: detailedEditedRoom.zulip_topic,
+            isLocked: detailedEditedRoom.is_locked,
+            roomMode: detailedEditedRoom.room_mode,
+            recordingType: detailedEditedRoom.recording_type,
+            recordingTrigger: detailedEditedRoom.recording_trigger,
+            isShared: detailedEditedRoom.is_shared,
+            webhookUrl: detailedEditedRoom.webhook_url || "",
+            webhookSecret: detailedEditedRoom.webhook_secret || "",
+          }
+        : null,
+    [detailedEditedRoom],
+  );
+
+  // a room input value or a last api room state
+  const room = roomInput || editedRoom || roomInitialState;
+
+  const roomTestWebhookMutation = useRoomTestWebhook();
+
+  // Update selected stream ID when zulip stream changes
   useEffect(() => {
-    const fetchZulipStreams = async () => {
-      if (!api) return;
-
-      try {
-        const response = await api.v1ZulipGetStreams();
-        setStreams(response);
-      } catch (error) {
-        console.error("Error fetching Zulip streams:", error);
+    if (room.zulipStream && streams.length > 0) {
+      const selectedStream = streams.find((s) => s.name === room.zulipStream);
+      if (selectedStream !== undefined) {
+        setSelectedStreamId(selectedStream.stream_id);
       }
-    };
-
-    if (room.zulipAutoPost) {
-      fetchZulipStreams();
+    } else {
+      setSelectedStreamId(null);
     }
-  }, [room.zulipAutoPost, !api]);
-
-  useEffect(() => {
-    const fetchZulipTopics = async () => {
-      if (!api || !room.zulipStream) return;
-      try {
-        const selectedStream = streams.find((s) => s.name === room.zulipStream);
-        if (selectedStream) {
-          const response = await api.v1ZulipGetTopics({
-            streamId: selectedStream.stream_id,
-          });
-          setTopics(response);
-        }
-      } catch (error) {
-        console.error("Error fetching Zulip topics:", error);
-      }
-    };
-
-    fetchZulipTopics();
-  }, [room.zulipStream, streams, api]);
+  }, [room.zulipStream, streams]);
 
   const streamOptions: SelectOption[] = streams.map((stream) => {
     return { label: stream.name, value: stream.name };
@@ -167,12 +189,17 @@ export default function RoomsList() {
   const handleCloseDialog = () => {
     setShowWebhookSecret(false);
     setWebhookTestResult(null);
+    setEditRoomId(null);
     onClose();
   };
 
   const handleTestWebhook = async () => {
-    if (!room.webhookUrl || !editRoomId) {
+    if (!room.webhookUrl) {
       setWebhookTestResult("Please enter a webhook URL first");
+      return;
+    }
+    if (!editRoomId) {
+      console.error("No room ID to test webhook");
       return;
     }
 
@@ -180,22 +207,24 @@ export default function RoomsList() {
     setWebhookTestResult(null);
 
     try {
-      const response = await api?.v1RoomsTestWebhook({
-        roomId: editRoomId,
+      const response = await roomTestWebhookMutation.mutateAsync({
+        params: {
+          path: {
+            room_id: editRoomId,
+          },
+        },
       });
 
-      if (response?.success) {
+      if (response.success) {
         setWebhookTestResult(
           `✅ Webhook test successful! Status: ${response.status_code}`,
         );
       } else {
         let errorMsg = `❌ Webhook test failed`;
-        if (response?.status_code) {
-          errorMsg += ` (Status: ${response.status_code})`;
-        }
-        if (response?.error) {
+        errorMsg += ` (Status: ${response.status_code})`;
+        if (response.error) {
           errorMsg += `: ${response.error}`;
-        } else if (response?.response_preview) {
+        } else if (response.response_preview) {
           // Try to parse and extract meaningful error from response
           // Specific to N8N at the moment, as there is no specification for that
           // We could just display as is, but decided here to dig a little bit more.
@@ -249,27 +278,29 @@ export default function RoomsList() {
       };
 
       if (isEditing) {
-        await api?.v1RoomsUpdate({
-          roomId: editRoomId,
-          requestBody: roomData,
+        await updateRoomMutation.mutateAsync({
+          params: {
+            path: { room_id: assertExists(editRoomId) },
+          },
+          body: roomData,
         });
       } else {
-        await api?.v1RoomsCreate({
-          requestBody: roomData,
+        await createRoomMutation.mutateAsync({
+          body: roomData,
         });
       }
 
-      setRoom(roomInitialState);
+      setRoomInput(null);
       setIsEditing(false);
       setEditRoomId("");
       setNameError("");
       refetch();
+      onClose();
       handleCloseDialog();
-    } catch (err) {
+    } catch (err: any) {
       if (
-        err instanceof ApiError &&
-        err.status === 400 &&
-        (err.body as any).detail == "Room name is not unique"
+        err?.status === 400 &&
+        err?.body?.detail == "Room name is not unique"
       ) {
         setNameError(
           "This room name is already taken. Please choose a different name.",
@@ -280,46 +311,11 @@ export default function RoomsList() {
     }
   };
 
-  const handleEditRoom = async (roomId, roomData) => {
+  const handleEditRoom = async (roomId: string, roomData) => {
     // Reset states
     setShowWebhookSecret(false);
     setWebhookTestResult(null);
 
-    // Fetch full room details to get webhook fields
-    try {
-      const detailedRoom = await api?.v1RoomsGet({ roomId });
-      if (detailedRoom) {
-        setRoom({
-          name: detailedRoom.name,
-          zulipAutoPost: detailedRoom.zulip_auto_post,
-          zulipStream: detailedRoom.zulip_stream,
-          zulipTopic: detailedRoom.zulip_topic,
-          isLocked: detailedRoom.is_locked,
-          roomMode: detailedRoom.room_mode,
-          recordingType: detailedRoom.recording_type,
-          recordingTrigger: detailedRoom.recording_trigger,
-          isShared: detailedRoom.is_shared,
-          webhookUrl: detailedRoom.webhook_url || "",
-          webhookSecret: detailedRoom.webhook_secret || "",
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch room details, using list data:", error);
-      // Fallback to using the data from the list
-      setRoom({
-        name: roomData.name,
-        zulipAutoPost: roomData.zulip_auto_post,
-        zulipStream: roomData.zulip_stream,
-        zulipTopic: roomData.zulip_topic,
-        isLocked: roomData.is_locked,
-        roomMode: roomData.room_mode,
-        recordingType: roomData.recording_type,
-        recordingTrigger: roomData.recording_trigger,
-        isShared: roomData.is_shared,
-        webhookUrl: roomData.webhook_url || "",
-        webhookSecret: roomData.webhook_secret || "",
-      });
-    }
     setEditRoomId(roomId);
     setIsEditing(true);
     setNameError("");
@@ -328,8 +324,10 @@ export default function RoomsList() {
 
   const handleDeleteRoom = async (roomId: string) => {
     try {
-      await api?.v1RoomsDelete({
-        roomId,
+      await deleteRoomMutation.mutateAsync({
+        params: {
+          path: { room_id: roomId },
+        },
       });
       refetch();
     } catch (err) {
@@ -346,15 +344,15 @@ export default function RoomsList() {
         .toLowerCase();
       setNameError("");
     }
-    setRoom({
+    setRoomInput({
       ...room,
       [name]: type === "checkbox" ? checked : value,
     });
   };
 
-  const myRooms: RoomDetails[] =
+  const myRooms: Room[] =
     response?.items.filter((roomData) => !roomData.is_shared) || [];
-  const sharedRooms: RoomDetails[] =
+  const sharedRooms: Room[] =
     response?.items.filter((roomData) => roomData.is_shared) || [];
 
   if (loading && !response)
@@ -368,6 +366,9 @@ export default function RoomsList() {
         <Spinner size="xl" />
       </Flex>
     );
+
+  if (roomListError)
+    return <div>{`${roomListError.name}: ${roomListError.message}`}</div>;
 
   return (
     <Flex
@@ -387,7 +388,7 @@ export default function RoomsList() {
           colorPalette="primary"
           onClick={() => {
             setIsEditing(false);
-            setRoom(roomInitialState);
+            setRoomInput(null);
             setNameError("");
             setShowWebhookSecret(false);
             setWebhookTestResult(null);
@@ -456,7 +457,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.roomMode]}
                   onValueChange={(e) =>
-                    setRoom({ ...room, roomMode: e.value[0] })
+                    setRoomInput({ ...room, roomMode: e.value[0] })
                   }
                   collection={roomModeCollection}
                 >
@@ -486,7 +487,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.recordingType]}
                   onValueChange={(e) =>
-                    setRoom({
+                    setRoomInput({
                       ...room,
                       recordingType: e.value[0],
                       recordingTrigger:
@@ -521,7 +522,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={[room.recordingTrigger]}
                   onValueChange={(e) =>
-                    setRoom({ ...room, recordingTrigger: e.value[0] })
+                    setRoomInput({ ...room, recordingTrigger: e.value[0] })
                   }
                   collection={recordingTriggerCollection}
                   disabled={room.recordingType !== "cloud"}
@@ -576,7 +577,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={room.zulipStream ? [room.zulipStream] : []}
                   onValueChange={(e) =>
-                    setRoom({
+                    setRoomInput({
                       ...room,
                       zulipStream: e.value[0],
                       zulipTopic: "",
@@ -611,7 +612,7 @@ export default function RoomsList() {
                 <Select.Root
                   value={room.zulipTopic ? [room.zulipTopic] : []}
                   onValueChange={(e) =>
-                    setRoom({ ...room, zulipTopic: e.value[0] })
+                    setRoomInput({ ...room, zulipTopic: e.value[0] })
                   }
                   collection={topicCollection}
                   disabled={!room.zulipAutoPost}

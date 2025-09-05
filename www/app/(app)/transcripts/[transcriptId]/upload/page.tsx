@@ -24,9 +24,15 @@ const TranscriptUpload = (details: TranscriptUpload) => {
 
   const router = useRouter();
 
-  const [status, setStatus] = useState(
+  const [status_, setStatus] = useState(
     webSockets.status.value || transcript.response?.status || "idle",
   );
+
+  // status is obviously done if we have transcript
+  const status =
+    !transcript.loading && transcript.response?.status === "ended"
+      ? transcript.response?.status
+      : status_;
 
   useEffect(() => {
     if (!transcriptStarted && webSockets.transcriptTextLive.length !== 0)
@@ -35,8 +41,11 @@ const TranscriptUpload = (details: TranscriptUpload) => {
 
   useEffect(() => {
     //TODO HANDLE ERROR STATUS BETTER
+    // TODO deprecate webSockets.status.value / depend on transcript.response?.status from query lib
     const newStatus =
-      webSockets.status.value || transcript.response?.status || "idle";
+      transcript.response?.status === "ended"
+        ? "ended"
+        : webSockets.status.value || transcript.response?.status || "idle";
     setStatus(newStatus);
     if (newStatus && (newStatus == "ended" || newStatus == "error")) {
       console.log(newStatus, "redirecting");

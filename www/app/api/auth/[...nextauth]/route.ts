@@ -1,8 +1,5 @@
-// NextAuth route handler for Authentik
-// Refresh rotation has been taken from https://next-auth.js.org/v3/tutorials/refresh-token-rotation even if we are using 4.x
-
 import NextAuth from "next-auth";
-import { authOptions } from "../../../lib/auth";
+import { authOptions } from "../../../lib/authBackend";
 
 const handler = NextAuth(authOptions);
 

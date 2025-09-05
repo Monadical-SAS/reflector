@@ -1,16 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 import { getConfig } from "./app/lib/edgeConfig";
 import { NextResponse } from "next/server";
-
-const LOGIN_REQUIRED_PAGES = [
-  "/transcripts/[!new]",
-  "/browse(.*)",
-  "/rooms(.*)",
-];
-
-const PROTECTED_PAGES = new RegExp(
-  LOGIN_REQUIRED_PAGES.map((page) => `^${page}$`).join("|"),
-);
+import { PROTECTED_PAGES } from "./app/lib/auth";
 
 export const config = {
   matcher: [

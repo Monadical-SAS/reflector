@@ -18,7 +18,10 @@ import {
   highlightMatches,
   generateTextFragment,
 } from "../../../lib/textHighlight";
-import { SearchResult } from "../../../api";
+import type { components } from "../../../reflector-api";
+
+type SearchResult = components["schemas"]["SearchResult"];
+type SourceKind = components["schemas"]["SourceKind"];
 
 interface TranscriptCardsProps {
   results: SearchResult[];
@@ -120,7 +123,7 @@ function TranscriptCard({
     : "N/A";
   const formattedDate = formatLocalDate(result.created_at);
   const source =
-    result.source_kind === "room"
+    result.source_kind === ("room" as SourceKind)
       ? result.room_name || result.room_id
       : result.source_kind;
 

@@ -27,6 +27,7 @@ from reflector.db.search import (
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptParticipant,
+    TranscriptStatus,
     TranscriptTopic,
     transcripts_controller,
 )
@@ -63,7 +64,7 @@ class GetTranscriptMinimal(BaseModel):
     id: str
     user_id: str | None
     name: str
-    status: str
+    status: TranscriptStatus
     locked: bool
     duration: float
     title: str | None

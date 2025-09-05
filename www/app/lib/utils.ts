@@ -137,9 +137,28 @@ export function extractDomain(url) {
   }
 }
 
-export function assertExists<T>(value: T | null | undefined, err?: string): T {
+export type NonEmptyString = string & { __brand: "NonEmptyString" };
+export const parseMaybeNonEmptyString = (
+  s: string,
+  trim = true,
+): NonEmptyString | null => {
+  s = trim ? s.trim() : s;
+  return s.length > 0 ? (s as NonEmptyString) : null;
+};
+export const parseNonEmptyString = (s: string, trim = true): NonEmptyString =>
+  assertExists(parseMaybeNonEmptyString(s, trim), "Expected non-empty string");
+
+export const assertExists = <T>(
+  value: T | null | undefined,
+  err?: string,
+): T => {
   if (value === null || value === undefined) {
     throw new Error(`Assertion failed: ${err ?? "value is null or undefined"}`);
   }
   return value;
-}
+};
+
+export const assertExistsAndNonEmptyString = (
+  value: string | null | undefined,
+): NonEmptyString =>
+  parseNonEmptyString(assertExists(value, "Expected non-empty string"));

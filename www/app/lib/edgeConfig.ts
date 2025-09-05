@@ -1,5 +1,5 @@
 import { get } from "@vercel/edge-config";
-import { isDevelopment } from "./utils";
+import { isBuildPhase } from "./next";
 
 type EdgeConfig = {
   [domainWithDash: string]: {
@@ -29,12 +29,18 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
-  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
-
   if (process.env.NEXT_PUBLIC_ENV === "development") {
-    return require("../../config").localConfig;
+    try {
+      return require("../../config").localConfig;
+    } catch (e) {
+      // next build() WILL try to execute the require above even if conditionally protected
+      // but thank god it at least runs catch{} block properly
+      if (!isBuildPhase) throw new Error(e);
+      return require("../../config-template").localConfig;
+    }
   }
 
+  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
   let config = await get(edgeDomainToKey(domain));
 
   if (typeof config !== "object") {
