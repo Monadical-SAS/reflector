@@ -143,11 +143,7 @@ export default function ICSSettings({
   }
 
   return (
-    <VStack gap={4} align="stretch" mt={6}>
-      <Text fontWeight="semibold" fontSize="lg">
-        Calendar Integration (ICS)
-      </Text>
-
+    <VStack gap={4} align="stretch">
       <Field.Root>
         <Checkbox.Root
           checked={icsEnabled}

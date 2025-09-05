@@ -710,3 +710,20 @@ export function useRoomIcsStatus(roomName: string | null) {
     },
   );
 }
+
+export function useRoomCalendarEvents(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings",
+    {
+      params: {
+        path: { room_name: roomName || "" },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
