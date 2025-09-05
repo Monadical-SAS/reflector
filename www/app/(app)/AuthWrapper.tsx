@@ -2,6 +2,7 @@
 
 import { Flex, Spinner } from "@chakra-ui/react";
 import { useAuth } from "../lib/AuthProvider";
+import { useLoginRequiredPages } from "../lib/useLoginRequiredPages";
 
 export default function AuthWrapper({
   children,
@@ -9,8 +10,10 @@ export default function AuthWrapper({
   children: React.ReactNode;
 }) {
   const auth = useAuth();
+  const redirectPath = useLoginRequiredPages();
+  const redirectHappens = !!redirectPath;
 
-  if (auth.status === "loading") {
+  if (auth.status === "loading" || redirectHappens) {
     return (
       <Flex
         flexDir="column"
