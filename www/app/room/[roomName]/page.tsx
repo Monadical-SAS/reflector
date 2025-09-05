@@ -3,10 +3,18 @@
 import { useEffect, useState } from "react";
 import { Box, Spinner, VStack, Text } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import useApi from "../../lib/useApi";
-import useSessionStatus from "../../lib/useSessionStatus";
+import type { components } from "../../reflector-api";
+import { useAuth } from "../../lib/AuthProvider";
+import {
+  useRoomGetByName,
+  useRoomUpcomingMeetings,
+  useRoomActiveMeetings,
+  useRoomsCreateMeeting,
+} from "../../lib/apiHooks";
 import MeetingSelection from "../../[roomName]/MeetingSelection";
-import { Meeting, Room } from "../../api";
+
+type Meeting = components["schemas"]["Meeting"];
+type Room = components["schemas"]["Room"];
 
 interface RoomPageProps {
   params: {
@@ -17,66 +25,26 @@ interface RoomPageProps {
 export default function RoomPage({ params }: RoomPageProps) {
   const { roomName } = params;
   const router = useRouter();
-  const api = useApi();
-  const { data: session } = useSessionStatus();
+  const auth = useAuth();
 
-  const [room, setRoom] = useState<Room | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [checkingMeetings, setCheckingMeetings] = useState(false);
+  // React Query hooks
+  const roomQuery = useRoomGetByName(roomName);
+  const activeMeetingsQuery = useRoomActiveMeetings(roomName);
+  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
+  const createMeetingMutation = useRoomsCreateMeeting();
 
-  const isOwner = session?.user?.id === room?.user_id;
+  const room = roomQuery.data;
+  const activeMeetings = activeMeetingsQuery.data || [];
+  const upcomingMeetings = upcomingMeetingsQuery.data || [];
 
-  useEffect(() => {
-    if (!api) return;
+  const isLoading = roomQuery.isLoading;
+  const isCheckingMeetings =
+    (room?.ics_enabled &&
+      (activeMeetingsQuery.isLoading || upcomingMeetingsQuery.isLoading)) ||
+    createMeetingMutation.isPending;
 
-    const fetchRoom = async () => {
-      try {
-        // Get room details
-        const roomData = await api.v1RoomsRetrieve({ roomName });
-        setRoom(roomData);
-
-        // Check if we should show meeting selection
-        if (roomData.ics_enabled) {
-          setCheckingMeetings(true);
-
-          // Check for active meetings
-          const activeMeetings = await api.v1RoomsListActiveMeetings({
-            roomName,
-          });
-
-          // Check for upcoming meetings
-          const upcomingEvents = await api.v1RoomsListUpcomingMeetings({
-            roomName,
-            minutesAhead: 30,
-          });
-
-          // If there's only one active meeting and no upcoming, auto-join
-          if (activeMeetings.length === 1 && upcomingEvents.length === 0) {
-            handleMeetingSelect(activeMeetings[0]);
-          } else if (
-            activeMeetings.length === 0 &&
-            upcomingEvents.length === 0
-          ) {
-            // No meetings, create unscheduled
-            handleCreateUnscheduled();
-          }
-          // Otherwise, show selection UI (handled by render)
-        } else {
-          // ICS not enabled, use traditional flow
-          handleCreateUnscheduled();
-        }
-      } catch (err) {
-        console.error("Failed to fetch room:", err);
-        // Room not found or error
-        router.push("/rooms");
-      } finally {
-        setLoading(false);
-        setCheckingMeetings(false);
-      }
-    };
-
-    fetchRoom();
-  }, [api, roomName]);
+  const isOwner =
+    auth.status === "authenticated" && auth.user?.id === room?.user_id;
 
   const handleMeetingSelect = (meeting: Meeting) => {
     // Navigate to the classic room page with the meeting
@@ -86,18 +54,46 @@ export default function RoomPage({ params }: RoomPageProps) {
   };
 
   const handleCreateUnscheduled = async () => {
-    if (!api) return;
-
     try {
       // Create a new unscheduled meeting
-      const meeting = await api.v1RoomsCreateMeeting({ roomName });
+      const meeting = await createMeetingMutation.mutateAsync({
+        params: {
+          path: { room_name: roomName },
+        },
+      });
       handleMeetingSelect(meeting);
     } catch (err) {
       console.error("Failed to create meeting:", err);
     }
   };
 
-  if (loading || checkingMeetings) {
+  // Auto-navigate logic based on query results
+  useEffect(() => {
+    if (!room || isLoading || isCheckingMeetings) return;
+
+    if (room.ics_enabled) {
+      // If there's only one active meeting and no upcoming, auto-join
+      if (activeMeetings.length === 1 && upcomingMeetings.length === 0) {
+        handleMeetingSelect(activeMeetings[0]);
+      } else if (activeMeetings.length === 0 && upcomingMeetings.length === 0) {
+        // No meetings, create unscheduled
+        handleCreateUnscheduled();
+      }
+      // Otherwise, show selection UI (handled by render)
+    } else {
+      // ICS not enabled, use traditional flow
+      handleCreateUnscheduled();
+    }
+  }, [room, activeMeetings, upcomingMeetings, isLoading, isCheckingMeetings]);
+
+  // Handle room not found
+  useEffect(() => {
+    if (roomQuery.isError) {
+      router.push("/rooms");
+    }
+  }, [roomQuery.isError, router]);
+
+  if (isLoading || isCheckingMeetings) {
     return (
       <Box
         minH="100vh"
@@ -106,9 +102,9 @@ export default function RoomPage({ params }: RoomPageProps) {
         justifyContent="center"
         bg="gray.50"
       >
-        <VStack spacing={4}>
+        <VStack gap={4}>
           <Spinner size="xl" color="blue.500" />
-          <Text>{loading ? "Loading room..." : "Checking meetings..."}</Text>
+          <Text>{isLoading ? "Loading room..." : "Checking meetings..."}</Text>
         </VStack>
       </Box>
     );

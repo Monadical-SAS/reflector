@@ -6,17 +6,20 @@ import {
   HStack,
   Text,
   Spinner,
-  Progress,
-  Card,
-  CardBody,
   Button,
   Icon,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaClock, FaArrowLeft } from "react-icons/fa";
-import useApi from "../../../lib/useApi";
-import { CalendarEventResponse } from "../../../api";
+import type { components } from "../../../reflector-api";
+import {
+  useRoomUpcomingMeetings,
+  useRoomActiveMeetings,
+  useRoomJoinMeeting,
+} from "../../../lib/apiHooks";
+
+type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 
 interface WaitingPageProps {
   params: {
@@ -32,37 +35,41 @@ export default function WaitingPage({ params }: WaitingPageProps) {
 
   const [event, setEvent] = useState<CalendarEventResponse | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
   const [checkingMeeting, setCheckingMeeting] = useState(false);
-  const api = useApi();
+
+  // Use React Query hooks
+  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
+  const activeMeetingsQuery = useRoomActiveMeetings(roomName);
+  const joinMeetingMutation = useRoomJoinMeeting();
+  const loading = upcomingMeetingsQuery.isLoading;
 
   useEffect(() => {
-    if (!api || !eventId) return;
+    if (!eventId || !upcomingMeetingsQuery.data) return;
 
-    const fetchEvent = async () => {
-      try {
-        const events = await api.v1RoomsListUpcomingMeetings({
-          roomName,
-          minutesAhead: 60,
-        });
+    const targetEvent = upcomingMeetingsQuery.data.find(
+      (e) => e.id === eventId,
+    );
+    if (targetEvent) {
+      setEvent(targetEvent);
+    } else if (!upcomingMeetingsQuery.isLoading) {
+      // Event not found or already started
+      router.push(`/room/${roomName}`);
+    }
+  }, [
+    eventId,
+    upcomingMeetingsQuery.data,
+    upcomingMeetingsQuery.isLoading,
+    router,
+    roomName,
+  ]);
 
-        const targetEvent = events.find((e) => e.id === eventId);
-        if (targetEvent) {
-          setEvent(targetEvent);
-        } else {
-          // Event not found or already started
-          router.push(`/room/${roomName}`);
-        }
-      } catch (err) {
-        console.error("Failed to fetch event:", err);
-        router.push(`/room/${roomName}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEvent();
-  }, [api, eventId, roomName]);
+  // Handle query errors
+  useEffect(() => {
+    if (upcomingMeetingsQuery.error) {
+      console.error("Failed to fetch event:", upcomingMeetingsQuery.error);
+      router.push(`/room/${roomName}`);
+    }
+  }, [upcomingMeetingsQuery.error, router, roomName]);
 
   useEffect(() => {
     if (!event) return;
@@ -81,25 +88,25 @@ export default function WaitingPage({ params }: WaitingPageProps) {
     };
 
     const checkForActiveMeeting = async () => {
-      if (!api || checkingMeeting) return;
+      if (checkingMeeting) return;
 
       setCheckingMeeting(true);
       try {
-        // Check for active meetings
-        const activeMeetings = await api.v1RoomsListActiveMeetings({
-          roomName,
-        });
+        // Refetch active meetings to get latest data
+        const result = await activeMeetingsQuery.refetch();
+        if (!result.data) return;
 
         // Find meeting for this calendar event
-        const calendarMeeting = activeMeetings.find(
+        const calendarMeeting = result.data.find(
           (m) => m.calendar_event_id === eventId,
         );
 
         if (calendarMeeting) {
           // Meeting is now active, join it
-          const meeting = await api.v1RoomsJoinMeeting({
-            roomName,
-            meetingId: calendarMeeting.id,
+          const meeting = await joinMeetingMutation.mutateAsync({
+            params: {
+              path: { room_name: roomName, meeting_id: calendarMeeting.id },
+            },
           });
 
           // Navigate to the meeting room
@@ -128,7 +135,14 @@ export default function WaitingPage({ params }: WaitingPageProps) {
       clearInterval(interval);
       if (checkInterval) clearInterval(checkInterval);
     };
-  }, [event, api, eventId, roomName, checkingMeeting]);
+  }, [
+    event,
+    eventId,
+    roomName,
+    checkingMeeting,
+    activeMeetingsQuery,
+    joinMeetingMutation,
+  ]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -165,7 +179,7 @@ export default function WaitingPage({ params }: WaitingPageProps) {
         justifyContent="center"
         bg="gray.50"
       >
-        <VStack spacing={4}>
+        <VStack gap={4}>
           <Spinner size="xl" color="blue.500" />
           <Text>Loading meeting details...</Text>
         </VStack>
@@ -182,12 +196,10 @@ export default function WaitingPage({ params }: WaitingPageProps) {
         justifyContent="center"
         bg="gray.50"
       >
-        <VStack spacing={4}>
+        <VStack gap={4}>
           <Text fontSize="lg">Meeting not found</Text>
-          <Button
-            leftIcon={<FaArrowLeft />}
-            onClick={() => router.push(`/room/${roomName}`)}
-          >
+          <Button onClick={() => router.push(`/room/${roomName}`)}>
+            <FaArrowLeft />
             Back to Room
           </Button>
         </VStack>
@@ -203,75 +215,91 @@ export default function WaitingPage({ params }: WaitingPageProps) {
       justifyContent="center"
       bg="gray.50"
     >
-      <Card maxW="lg" width="100%" mx={4}>
-        <CardBody>
-          <VStack spacing={6} py={4}>
-            <Icon as={FaClock} boxSize={16} color="blue.500" />
+      <Box
+        maxW="lg"
+        width="100%"
+        mx={4}
+        bg="white"
+        borderRadius="lg"
+        boxShadow="md"
+        p={6}
+      >
+        <VStack gap={6}>
+          <Icon as={FaClock} boxSize={16} color="blue.500" />
 
-            <VStack spacing={2}>
-              <Text fontSize="2xl" fontWeight="bold">
-                {event.title || "Scheduled Meeting"}
-              </Text>
-              <Text color="gray.600" textAlign="center">
-                The meeting will start automatically when it's time
-              </Text>
-            </VStack>
+          <VStack gap={2}>
+            <Text fontSize="2xl" fontWeight="bold">
+              {event.title || "Scheduled Meeting"}
+            </Text>
+            <Text color="gray.600" textAlign="center">
+              The meeting will start automatically when it's time
+            </Text>
+          </VStack>
 
-            <Box width="100%">
-              <Text
-                fontSize="4xl"
-                fontWeight="bold"
-                textAlign="center"
-                color="blue.600"
-              >
-                {formatTime(timeRemaining)}
-              </Text>
-              <Progress
-                value={getProgressValue()}
-                colorScheme="blue"
-                size="sm"
-                mt={4}
+          <Box width="100%">
+            <Text
+              fontSize="4xl"
+              fontWeight="bold"
+              textAlign="center"
+              color="blue.600"
+            >
+              {formatTime(timeRemaining)}
+            </Text>
+            <Box
+              width="100%"
+              height="8px"
+              bg="gray.200"
+              borderRadius="full"
+              mt={4}
+              position="relative"
+              overflow="hidden"
+            >
+              <Box
+                width={`${getProgressValue()}%`}
+                height="100%"
+                bg="blue.500"
                 borderRadius="full"
+                transition="width 0.3s ease"
               />
             </Box>
+          </Box>
 
-            {event.description && (
-              <Box width="100%" p={4} bg="gray.100" borderRadius="md">
-                <Text fontSize="sm" fontWeight="semibold" mb={1}>
-                  Meeting Description
-                </Text>
-                <Text fontSize="sm" color="gray.700">
-                  {event.description}
-                </Text>
-              </Box>
-            )}
-
-            <VStack spacing={3} width="100%">
-              <Text fontSize="sm" color="gray.500">
-                Scheduled for {new Date(event.start_time).toLocaleString()}
+          {event.description && (
+            <Box width="100%" p={4} bg="gray.100" borderRadius="md">
+              <Text fontSize="sm" fontWeight="semibold" mb={1}>
+                Meeting Description
               </Text>
+              <Text fontSize="sm" color="gray.700">
+                {event.description}
+              </Text>
+            </Box>
+          )}
 
-              {checkingMeeting && (
-                <HStack spacing={2}>
-                  <Spinner size="sm" color="blue.500" />
-                  <Text fontSize="sm" color="blue.600">
-                    Checking if meeting has started...
-                  </Text>
-                </HStack>
-              )}
-            </VStack>
+          <VStack gap={3} width="100%">
+            <Text fontSize="sm" color="gray.500">
+              Scheduled for {new Date(event.start_time).toLocaleString()}
+            </Text>
 
-            <Button
-              variant="outline"
-              leftIcon={<FaArrowLeft />}
-              onClick={() => router.push(`/room/${roomName}`)}
-              width="100%"
-            >
-              Back to Meeting Selection
-            </Button>
+            {checkingMeeting && (
+              <HStack gap={2}>
+                <Spinner size="sm" color="blue.500" />
+                <Text fontSize="sm" color="blue.600">
+                  Checking if meeting has started...
+                </Text>
+              </HStack>
+            )}
           </VStack>
-        </CardBody>
-      </Card>
+
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/room/${roomName}`)}
+            width="100%"
+          >
+            <FaArrowLeft />
+            Back to Meeting Selection
+          </Button>
+        </VStack>
+      </Box>
     </Box>
   );
 }

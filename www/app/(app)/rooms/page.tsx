@@ -141,6 +141,9 @@ export default function RoomsList() {
             isShared: detailedEditedRoom.is_shared,
             webhookUrl: detailedEditedRoom.webhook_url || "",
             webhookSecret: detailedEditedRoom.webhook_secret || "",
+            icsUrl: detailedEditedRoom.ics_url || "",
+            icsEnabled: detailedEditedRoom.ics_enabled || false,
+            icsFetchInterval: detailedEditedRoom.ics_fetch_interval || 5,
           }
         : null,
     [detailedEditedRoom],
@@ -323,7 +326,7 @@ export default function RoomsList() {
     setShowWebhookSecret(false);
     setWebhookTestResult(null);
 
-    setRoom({
+    setRoomInput({
       name: roomData.name,
       zulipAutoPost: roomData.zulip_auto_post,
       zulipStream: roomData.zulip_stream,
@@ -788,13 +791,13 @@ export default function RoomsList() {
               </Field.Root>
 
               <ICSSettings
-                roomId={editRoomId}
+                roomId={editRoomId ?? undefined}
                 roomName={room.name}
                 icsUrl={room.icsUrl}
                 icsEnabled={room.icsEnabled}
                 icsFetchInterval={room.icsFetchInterval}
                 onChange={(settings) => {
-                  setRoom({
+                  setRoomInput({
                     ...room,
                     icsUrl:
                       settings.ics_url !== undefined

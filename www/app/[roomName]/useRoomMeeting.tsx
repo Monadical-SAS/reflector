@@ -47,7 +47,6 @@ const useRoomMeeting = (
         const meeting = JSON.parse(storedMeeting);
         sessionStorage.removeItem(`meeting_${roomName}`); // Clean up
         setResponse(meeting);
-        setLoading(false);
         return;
       } catch (e) {
         console.error("Failed to parse stored meeting:", e);
