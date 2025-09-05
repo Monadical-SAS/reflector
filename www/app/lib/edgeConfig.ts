@@ -29,9 +29,8 @@ export function edgeDomainToKey(domain: string) {
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
   if (process.env.NEXT_PUBLIC_ENV === "development") {
-    // helps to stop nextjs build from eager loading. don't inline it.
-    const configPath = "../../config";
-    return require(configPath).localConfig;
+    // helps to stop nextjs build from eager loading. don't "require()" it
+    return (await import("../../config")).localConfig;
   }
 
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
