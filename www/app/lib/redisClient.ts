@@ -3,6 +3,10 @@ import { isBuildPhase } from "./next";
 
 export type RedisClient = Pick<Redis, "get" | "setex" | "del">;
 
+const KV_USE_TLS = process.env.KV_USE_TLS
+  ? process.env.KV_USE_TLS === "true"
+  : undefined;
+
 const getRedisClient = (): RedisClient => {
   const redisUrl = process.env.KV_URL;
   if (!redisUrl) {
@@ -11,6 +15,11 @@ const getRedisClient = (): RedisClient => {
   const redis = new Redis(redisUrl, {
     maxRetriesPerRequest: 3,
     lazyConnect: true,
+    ...(KV_USE_TLS === true
+      ? {
+          tls: {},
+        }
+      : {}),
   });
 
   redis.on("error", (error) => {
