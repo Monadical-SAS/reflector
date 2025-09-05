@@ -1,4 +1,5 @@
 import { get } from "@vercel/edge-config";
+import { isBuildPhase } from "./next";
 
 type EdgeConfig = {
   [domainWithDash: string]: {
@@ -29,8 +30,12 @@ export function edgeDomainToKey(domain: string) {
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
   if (process.env.NEXT_PUBLIC_ENV === "development") {
-    // helps to stop nextjs build from eager loading. don't "require()" it
-    return (await import("../../config")).localConfig;
+    try {
+      return require("../../config").localConfig;
+    } catch (e) {
+      if (!isBuildPhase) throw new Error(e);
+      return require("../../config-template").localConfig;
+    }
   }
 
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
