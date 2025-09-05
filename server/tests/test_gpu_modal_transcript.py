@@ -272,6 +272,9 @@ class TestGPUModalTranscript:
                 for f in temp_files:
                     Path(f).unlink(missing_ok=True)
 
+    @pytest.mark.skipif(
+        not "parakeet" in get_model_name(), reason="Parakeet only supports English"
+    )
     def test_transcriptions_error_handling(self):
         """Test error handling for invalid requests."""
         url = get_modal_transcript_url()
