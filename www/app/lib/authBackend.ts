@@ -45,6 +45,7 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, user }) {
+      console.log("token.sub jwt callback", token.sub);
       const KEY = `token:${token.sub}`;
 
       if (account && user) {
@@ -70,6 +71,13 @@ export const authOptions: AuthOptions = {
       }
 
       const currentToken = await getTokenCache(tokenCacheRedis, KEY);
+      console.log(
+        "currentToken.token.accessTokenExpires",
+        currentToken?.token?.accessTokenExpires,
+        currentToken?.token?.accessTokenExpires
+          ? Date.now() < currentToken?.token?.accessTokenExpires
+          : "?",
+      );
       if (currentToken && Date.now() < currentToken.token.accessTokenExpires) {
         return currentToken.token;
       }

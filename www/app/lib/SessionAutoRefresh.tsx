@@ -25,15 +25,16 @@ export function SessionAutoRefresh({ children }) {
     const interval = setInterval(() => {
       if (accessTokenExpires !== null) {
         const timeLeft = accessTokenExpires - Date.now();
-        if (timeLeft < REFRESH_BEFORE) {
-          auth
-            .update()
-            .then(() => {})
-            .catch((e) => {
-              // note: 401 won't be considered error here
-              console.error("error refreshing auth token", e);
-            });
-        }
+        console.log("time left", timeLeft);
+        // if (timeLeft < REFRESH_BEFORE) {
+        //   auth
+        //     .update()
+        //     .then(() => {})
+        //     .catch((e) => {
+        //       // note: 401 won't be considered error here
+        //       console.error("error refreshing auth token", e);
+        //     });
+        // }
       }
     }, INTERVAL_REFRESH_MS);
 

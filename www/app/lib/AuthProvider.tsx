@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import { signOut, signIn } from "next-auth/react";
-import { configureApiAuth } from "./apiClient";
+import { configureApiAuth, configureApiAuthRefresh } from "./apiClient";
 import { assertCustomSession, CustomSession } from "./types";
 import { Session } from "next-auth";
 import { SessionAutoRefresh } from "./SessionAutoRefresh";
@@ -87,6 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   configureApiAuth(
     contextValue.status === "authenticated" ? contextValue.accessToken : null,
   );
+
+  useEffect(() => {
+    configureApiAuthRefresh(
+      contextValue.status === "authenticated" ? contextValue.update : null,
+    );
+  }, [contextValue.status === "authenticated" && contextValue.update]);
 
   return (
     <AuthContext.Provider value={contextValue}>
