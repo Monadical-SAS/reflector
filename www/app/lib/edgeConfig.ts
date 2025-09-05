@@ -30,23 +30,18 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
-  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
-
-  if ("1" === "1") {
-    console.error("process.env", process.env);
-    throw new Error("hello");
-  }
-
   if (isCI) {
     // "noop"
     return require("../../config-template").localConfig;
   }
 
   if (process.env.NEXT_PUBLIC_ENV === "development") {
+    // helps to
     const configPath = "../../config";
     return require(configPath).localConfig;
   }
 
+  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
   let config = await get(edgeDomainToKey(domain));
 
   if (typeof config !== "object") {
