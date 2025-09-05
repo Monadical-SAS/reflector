@@ -32,28 +32,5 @@ export function edgeDomainToKey(domain: string) {
 export async function getConfig() {
   const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL!).hostname;
 
-  if (1 === 1) {
-    console.error(process.env);
-    throw new Error("hello");
-  }
-
-  if (isCI) {
-    // "noop"
-    return require("../../config-template").localConfig;
-  }
-
-  if (process.env.NEXT_PUBLIC_ENV === "development") {
-    return require("../../config").localConfig;
-  }
-
-  let config = await get(edgeDomainToKey(domain));
-
-  if (typeof config !== "object") {
-    console.warn("No config for this domain, falling back to default");
-    config = await get(edgeDomainToKey("default"));
-  }
-
-  if (typeof config !== "object") throw Error("Error fetching config");
-
-  return config as DomainConfig;
+  return require("../../config-template").localConfig;
 }
