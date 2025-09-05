@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 import sqlalchemy as sa
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
@@ -41,13 +42,16 @@ meetings = sa.Table(
         nullable=False,
         server_default=sa.true(),
     ),
-    sa.Index("idx_meeting_room_id", "room_id"),
-    sa.Index(
-        "idx_one_active_meeting_per_room",
-        "room_id",
-        unique=True,
-        postgresql_where=sa.text("is_active = true"),
+    sa.Column(
+        "calendar_event_id",
+        sa.String,
+        sa.ForeignKey("calendar_event.id", ondelete="SET NULL"),
     ),
+    sa.Column("calendar_metadata", JSONB),
+    sa.Column("last_participant_left_at", sa.DateTime(timezone=True)),
+    sa.Column("grace_period_minutes", sa.Integer, server_default=sa.text("15")),
+    sa.Index("idx_meeting_room_id", "room_id"),
+    sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
 
 meeting_consent = sa.Table(
@@ -90,6 +94,11 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
+    is_active: bool = True
+    calendar_event_id: str | None = None
+    calendar_metadata: dict[str, Any] | None = None
+    last_participant_left_at: datetime | None = None
+    grace_period_minutes: int = 15
 
 
 class MeetingController:
@@ -103,6 +112,8 @@ class MeetingController:
         end_date: datetime,
         user_id: str,
         room: Room,
+        calendar_event_id: str | None = None,
+        calendar_metadata: dict[str, Any] | None = None,
     ):
         """
         Create a new meeting
@@ -120,6 +131,8 @@ class MeetingController:
             room_mode=room.room_mode,
             recording_type=room.recording_type,
             recording_trigger=room.recording_trigger,
+            calendar_event_id=calendar_event_id,
+            calendar_metadata=calendar_metadata,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
@@ -149,6 +162,7 @@ class MeetingController:
     async def get_active(self, room: Room, current_time: datetime) -> Meeting:
         """
         Get latest active meeting for a room.
+        For backward compatibility, returns the most recent active meeting.
         """
         end_date = getattr(meetings.c, "end_date")
         query = (
@@ -166,6 +180,47 @@ class MeetingController:
         if not result:
             return None
 
+        return Meeting(**result)
+
+    async def get_all_active_for_room(
+        self, room: Room, current_time: datetime
+    ) -> list[Meeting]:
+        """
+        Get all active meetings for a room.
+        This supports multiple concurrent meetings per room.
+        """
+        end_date = getattr(meetings.c, "end_date")
+        query = (
+            meetings.select()
+            .where(
+                sa.and_(
+                    meetings.c.room_id == room.id,
+                    meetings.c.end_date > current_time,
+                    meetings.c.is_active,
+                )
+            )
+            .order_by(end_date.desc())
+        )
+        results = await get_database().fetch_all(query)
+        return [Meeting(**result) for result in results]
+
+    async def get_active_by_calendar_event(
+        self, room: Room, calendar_event_id: str, current_time: datetime
+    ) -> Meeting | None:
+        """
+        Get active meeting for a specific calendar event.
+        """
+        query = meetings.select().where(
+            sa.and_(
+                meetings.c.room_id == room.id,
+                meetings.c.calendar_event_id == calendar_event_id,
+                meetings.c.end_date > current_time,
+                meetings.c.is_active,
+            )
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
         return Meeting(**result)
 
     async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
@@ -194,6 +249,15 @@ class MeetingController:
             meeting.host_room_url = ""
 
         return meeting
+
+    async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
+        query = meetings.select().where(
+            meetings.c.calendar_event_id == calendar_event_id
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
+        return Meeting(**result)
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)

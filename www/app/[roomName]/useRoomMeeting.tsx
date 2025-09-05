@@ -40,6 +40,19 @@ const useRoomMeeting = (
   useEffect(() => {
     if (!roomName) return;
 
+    // Check if meeting was pre-selected from meeting selection page
+    const storedMeeting = sessionStorage.getItem(`meeting_${roomName}`);
+    if (storedMeeting) {
+      try {
+        const meeting = JSON.parse(storedMeeting);
+        sessionStorage.removeItem(`meeting_${roomName}`); // Clean up
+        setResponse(meeting);
+        return;
+      } catch (e) {
+        console.error("Failed to parse stored meeting:", e);
+      }
+    }
+
     const createMeeting = async () => {
       try {
         const result = await createMeetingMutation.mutateAsync({
