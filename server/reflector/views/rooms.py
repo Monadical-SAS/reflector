@@ -1,6 +1,7 @@
 import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from typing import Annotated, Any, Literal, Optional
 
 import asyncpg.exceptions
@@ -300,14 +301,23 @@ class ICSStatus(BaseModel):
     events_count: int = 0
 
 
+class SyncStatus(str, Enum):
+    success = "success"
+    unchanged = "unchanged"
+    error = "error"
+    skipped = "skipped"
+
+
 class ICSSyncResult(BaseModel):
-    status: str
+    status: SyncStatus
     hash: Optional[str] = None
     events_found: int = 0
+    total_events: int = 0
     events_created: int = 0
     events_updated: int = 0
     events_deleted: int = 0
     error: Optional[str] = None
+    reason: Optional[str] = None
 
 
 @router.post("/rooms/{room_name}/ics/sync", response_model=ICSSyncResult)
