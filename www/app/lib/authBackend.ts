@@ -17,16 +17,15 @@ import {
   deleteTokenCache,
 } from "./redisTokenCache";
 import { tokenCacheRedis } from "./redisClient";
-import { isCI } from "./next";
 
 // REFRESH_ACCESS_TOKEN_BEFORE because refresh is based on access token expiration (imagine we cache it 30 days)
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 
 const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 
-const CLIENT_ID = !isCI
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_ID)
-  : "noop";
+const CLIENT_ID = assertExistsAndNonEmptyString(
+  process.env.AUTHENTIK_CLIENT_ID,
+);
 const CLIENT_SECRET = !isCI
   ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_SECRET)
   : "noop";

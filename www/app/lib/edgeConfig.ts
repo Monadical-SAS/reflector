@@ -1,7 +1,5 @@
 import { get } from "@vercel/edge-config";
 
-import { isBuildPhase, isCI } from "./next";
-
 type EdgeConfig = {
   [domainWithDash: string]: {
     features: {
@@ -30,12 +28,6 @@ export function edgeDomainToKey(domain: string) {
 
 // get edge config server-side (prefer DomainContext when available), domain is the hostname
 export async function getConfig() {
-  if (isCI) {
-    // "noop"
-    // TODO sometime later we may have proper config if we have bigger test suite that requires values from the config
-    return require("../../config-template").localConfig;
-  }
-
   if (process.env.NEXT_PUBLIC_ENV === "development") {
     // helps to stop nextjs build from eager loading. don't inline it.
     const configPath = "../../config";
