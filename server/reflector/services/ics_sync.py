@@ -36,6 +36,18 @@ class SyncStats(TypedDict):
     events_deleted: int
 
 
+class SyncResult(TypedDict, total=False):
+    status: str  # "success", "unchanged", "error", "skipped"
+    hash: str | None
+    events_found: int
+    total_events: int
+    events_created: int
+    events_updated: int
+    events_deleted: int
+    error: str | None
+    reason: str | None
+
+
 class ICSFetchService:
     def __init__(self):
         self.client = httpx.AsyncClient(
@@ -53,8 +65,9 @@ class ICSFetchService:
 
     def extract_room_events(
         self, calendar: Calendar, room_name: str, room_url: str
-    ) -> list[EventData]:
+    ) -> tuple[list[EventData], int]:
         events = []
+        total_events = 0
         now = datetime.now(timezone.utc)
         window_start = now - timedelta(hours=1)
         window_end = now + timedelta(hours=24)
@@ -66,18 +79,19 @@ class ICSFetchService:
                 if status == "CANCELLED":
                     continue
 
-                # Check if event matches this room
-                if self._event_matches_room(component, room_name, room_url):
-                    event_data = self._parse_event(component)
+                # Count total non-cancelled events in the time window
+                event_data = self._parse_event(component)
+                if (
+                    event_data
+                    and window_start <= event_data["start_time"] <= window_end
+                ):
+                    total_events += 1
 
-                    # Only include events in our time window
-                    if (
-                        event_data
-                        and window_start <= event_data["start_time"] <= window_end
-                    ):
+                    # Check if event matches this room
+                    if self._event_matches_room(component, room_name, room_url):
                         events.append(event_data)
 
-        return events
+        return events, total_events
 
     def _event_matches_room(self, event: Event, room_name: str, room_url: str) -> bool:
         location = str(event.get("LOCATION", ""))
@@ -160,20 +174,19 @@ class ICSFetchService:
         attendees = []
 
         # Parse ATTENDEE properties
-        for attendee in event.get("ATTENDEE", []):
-            if not isinstance(attendee, list):
-                attendee = [attendee]
-
-            for att in attendee:
-                att_data: AttendeeData = {
-                    "email": str(att).replace("mailto:", "") if att else None,
-                    "name": att.params.get("CN") if hasattr(att, "params") else None,
-                    "status": att.params.get("PARTSTAT")
-                    if hasattr(att, "params")
-                    else None,
-                    "role": att.params.get("ROLE") if hasattr(att, "params") else None,
-                }
-                attendees.append(att_data)
+        attendees = event.get("ATTENDEE", [])
+        if not isinstance(attendees, list):
+            attendees = [attendees]
+        for att in attendees:
+            att_data: AttendeeData = {
+                "email": str(att).replace("mailto:", "") if att else None,
+                "name": att.params.get("CN") if hasattr(att, "params") else None,
+                "status": att.params.get("PARTSTAT")
+                if hasattr(att, "params")
+                else None,
+                "role": att.params.get("ROLE") if hasattr(att, "params") else None,
+            }
+            attendees.append(att_data)
 
         # Add organizer
         organizer = event.get("ORGANIZER")
@@ -194,7 +207,7 @@ class ICSSyncService:
     def __init__(self):
         self.fetch_service = ICSFetchService()
 
-    async def sync_room_calendar(self, room: Room) -> dict:
+    async def sync_room_calendar(self, room: Room) -> SyncResult:
         if not room.ics_enabled or not room.ics_url:
             return {"status": "skipped", "reason": "ICS not configured"}
 
@@ -210,7 +223,21 @@ class ICSSyncService:
             content_hash = hashlib.md5(ics_content.encode()).hexdigest()
             if room.ics_last_etag == content_hash:
                 logger.info(f"No changes in ICS for room {room.id}")
-                return {"status": "unchanged", "hash": content_hash}
+                # Still parse to get event count
+                calendar = self.fetch_service.parse_ics(ics_content)
+                room_url = f"{settings.BASE_URL}/room/{room.name}"
+                events, total_events = self.fetch_service.extract_room_events(
+                    calendar, room.name, room_url
+                )
+                return {
+                    "status": "unchanged",
+                    "hash": content_hash,
+                    "events_found": len(events),
+                    "total_events": total_events,
+                    "events_created": 0,
+                    "events_updated": 0,
+                    "events_deleted": 0,
+                }
 
             # Parse calendar
             calendar = self.fetch_service.parse_ics(ics_content)
@@ -219,7 +246,7 @@ class ICSSyncService:
             room_url = f"{settings.BASE_URL}/room/{room.name}"
 
             # Extract matching events
-            events = self.fetch_service.extract_room_events(
+            events, total_events = self.fetch_service.extract_room_events(
                 calendar, room.name, room_url
             )
 
@@ -240,6 +267,7 @@ class ICSSyncService:
                 "status": "success",
                 "hash": content_hash,
                 "events_found": len(events),
+                "total_events": total_events,
                 **sync_result,
             }
 

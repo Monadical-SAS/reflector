@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+PRODID:-//Test/1.0/EN
+X-WR-CALNAME:Test Attendee Bug
+BEGIN:VEVENT
+ATTENDEE:MAILTO:alice@example.com,bob@example.com,charlie@example.com,diana@example.com,eve@example.com,frank@example.com,george@example.com,helen@example.com,ivan@example.com,jane@example.com,kevin@example.com,laura@example.com,mike@example.com,nina@example.com,oscar@example.com,paul@example.com,queen@example.com,robert@example.com,sarah@example.com,tom@example.com,ursula@example.com,victor@example.com,wendy@example.com,xavier@example.com,yvonne@example.com,zack@example.com,amy@example.com,bill@example.com,carol@example.com
+DTEND:20250819T190000Z
+DTSTAMP:20250819T174000Z
+DTSTART:20250819T180000Z
+LOCATION:http://localhost:1250/room/test-room
+ORGANIZER;CN=Test Organizer:MAILTO:organizer@example.com
+SEQUENCE:1
+SUMMARY:Test Meeting with Many Attendees
+UID:test-attendee-bug-event
+END:VEVENT
+END:VCALENDAR
