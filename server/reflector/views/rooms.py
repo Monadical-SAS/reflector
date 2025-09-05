@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 import asyncpg.exceptions
 from fastapi import APIRouter, Depends, HTTPException
@@ -62,7 +62,20 @@ class Meeting(BaseModel):
     host_room_url: str
     start_date: datetime
     end_date: datetime
+    user_id: str | None = None
+    room_id: str | None = None
+    is_locked: bool = False
+    room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
+    recording_trigger: Literal[
+        "none", "prompt", "automatic", "automatic-2nd-participant"
+    ] = "automatic-2nd-participant"
+    num_clients: int = 0
+    is_active: bool = True
+    calendar_event_id: str | None = None
+    calendar_metadata: dict[str, Any] | None = None
+    last_participant_left_at: datetime | None = None
+    grace_period_minutes: int = 15
 
 
 class CreateRoom(BaseModel):

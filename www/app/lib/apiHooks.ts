@@ -616,3 +616,97 @@ export function useRoomsCreateMeeting() {
     },
   });
 }
+
+// Calendar integration hooks
+export function useRoomGetByName(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms",
+    {
+      params: {
+        query: { page: 1 }, // We'll need to filter by room name on the client side
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+      select: (data) => data.items?.find((room) => room.name === roomName),
+    },
+  );
+}
+
+export function useRoomUpcomingMeetings(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/upcoming",
+    {
+      params: {
+        path: { room_name: roomName || "" },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
+
+export function useRoomActiveMeetings(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/active",
+    {
+      params: {
+        path: { room_name: roomName || "" },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
+
+export function useRoomJoinMeeting() {
+  const { setError } = useError();
+
+  return $api.useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/join",
+    {
+      onError: (error) => {
+        setError(error as Error, "There was an error joining the meeting");
+      },
+    },
+  );
+}
+
+export function useRoomIcsSync() {
+  const { setError } = useError();
+
+  return $api.useMutation("post", "/v1/rooms/{room_name}/ics/sync", {
+    onError: (error) => {
+      setError(error as Error, "There was an error syncing the calendar");
+    },
+  });
+}
+
+export function useRoomIcsStatus(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/ics/status",
+    {
+      params: {
+        path: { room_name: roomName || "" },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}

@@ -7,16 +7,14 @@ import {
   Checkbox,
   Button,
   Text,
-  Alert,
-  AlertIcon,
-  AlertTitle,
   Badge,
   createListCollection,
   Spinner,
+  Box,
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { FaSync, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
-import useApi from "../../../lib/useApi";
+import { useRoomIcsSync, useRoomIcsStatus } from "../../../lib/apiHooks";
 
 interface ICSSettingsProps {
   roomId?: string;
@@ -60,31 +58,35 @@ export default function ICSSettings({
   >("idle");
   const [syncMessage, setSyncMessage] = useState<string>("");
   const [testResult, setTestResult] = useState<string>("");
-  const api = useApi();
+
+  // React Query hooks
+  const syncMutation = useRoomIcsSync();
+  const statusQuery = useRoomIcsStatus(roomName || null);
 
   const fetchIntervalCollection = createListCollection({
     items: fetchIntervalOptions,
   });
 
   const handleTestConnection = async () => {
-    if (!api || !icsUrl || !roomName) return;
+    if (!icsUrl || !roomName) return;
 
     setSyncStatus("syncing");
     setTestResult("");
 
     try {
-      // First update the room with the ICS URL
-      await api.v1RoomsPartialUpdate({
-        roomId: roomId || roomName,
-        requestBody: {
-          ics_url: icsUrl,
-          ics_enabled: true,
-          ics_fetch_interval: icsFetchInterval,
-        },
+      // First notify parent to update the room with the ICS URL
+      onChange({
+        ics_url: icsUrl,
+        ics_enabled: true,
+        ics_fetch_interval: icsFetchInterval,
       });
 
       // Then trigger a sync
-      const result = await api.v1RoomsTriggerIcsSync({ roomName });
+      const result = await syncMutation.mutateAsync({
+        params: {
+          path: { room_name: roomName },
+        },
+      });
 
       if (result.status === "success") {
         setSyncStatus("success");
@@ -102,13 +104,17 @@ export default function ICSSettings({
   };
 
   const handleManualSync = async () => {
-    if (!api || !roomName) return;
+    if (!roomName) return;
 
     setSyncStatus("syncing");
     setSyncMessage("");
 
     try {
-      const result = await api.v1RoomsTriggerIcsSync({ roomName });
+      const result = await syncMutation.mutateAsync({
+        params: {
+          path: { room_name: roomName },
+        },
+      });
 
       if (result.status === "success") {
         setSyncStatus("success");
@@ -137,7 +143,7 @@ export default function ICSSettings({
   }
 
   return (
-    <VStack spacing={4} align="stretch" mt={6}>
+    <VStack gap={4} align="stretch" mt={6}>
       <Text fontWeight="semibold" fontSize="lg">
         Calendar Integration (ICS)
       </Text>
@@ -145,7 +151,7 @@ export default function ICSSettings({
       <Field.Root>
         <Checkbox.Root
           checked={icsEnabled}
-          onCheckedChange={(e) => onChange({ ics_enabled: e.checked })}
+          onCheckedChange={(e) => onChange({ ics_enabled: !!e.checked })}
         >
           <Checkbox.HiddenInput />
           <Checkbox.Control>
@@ -197,16 +203,14 @@ export default function ICSSettings({
           </Field.Root>
 
           {icsUrl && (
-            <HStack spacing={3}>
+            <HStack gap={3}>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleTestConnection}
                 disabled={syncStatus === "syncing"}
-                leftIcon={
-                  syncStatus === "syncing" ? <Spinner size="sm" /> : undefined
-                }
               >
+                {syncStatus === "syncing" && <Spinner size="sm" />}
                 Test Connection
               </Button>
 
@@ -216,8 +220,8 @@ export default function ICSSettings({
                   variant="outline"
                   onClick={handleManualSync}
                   disabled={syncStatus === "syncing"}
-                  leftIcon={<FaSync />}
                 >
+                  <FaSync />
                   Sync Now
                 </Button>
               )}
@@ -225,21 +229,41 @@ export default function ICSSettings({
           )}
 
           {testResult && (
-            <Alert status={syncStatus === "success" ? "success" : "error"}>
-              <AlertIcon />
-              <Text fontSize="sm">{testResult}</Text>
-            </Alert>
+            <Box
+              p={3}
+              borderRadius="md"
+              bg={syncStatus === "success" ? "green.50" : "red.50"}
+              borderLeft="4px solid"
+              borderColor={syncStatus === "success" ? "green.400" : "red.400"}
+            >
+              <Text
+                fontSize="sm"
+                color={syncStatus === "success" ? "green.800" : "red.800"}
+              >
+                {testResult}
+              </Text>
+            </Box>
           )}
 
           {syncMessage && (
-            <Alert status={syncStatus === "success" ? "success" : "error"}>
-              <AlertIcon />
-              <Text fontSize="sm">{syncMessage}</Text>
-            </Alert>
+            <Box
+              p={3}
+              borderRadius="md"
+              bg={syncStatus === "success" ? "green.50" : "red.50"}
+              borderLeft="4px solid"
+              borderColor={syncStatus === "success" ? "green.400" : "red.400"}
+            >
+              <Text
+                fontSize="sm"
+                color={syncStatus === "success" ? "green.800" : "red.800"}
+              >
+                {syncMessage}
+              </Text>
+            </Box>
           )}
 
           {icsLastSync && (
-            <HStack spacing={4} fontSize="sm" color="gray.600">
+            <HStack gap={4} fontSize="sm" color="gray.600">
               <HStack>
                 <FaCheckCircle color="green" />
                 <Text>Last sync: {new Date(icsLastSync).toLocaleString()}</Text>

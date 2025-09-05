@@ -22,10 +22,10 @@ import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { useRecordingConsent } from "../recordingConsentContext";
-import { useMeetingAudioConsent } from "../lib/apiHooks";
+import { useMeetingAudioConsent, useRoomGetByName } from "../lib/apiHooks";
 import type { components } from "../reflector-api";
-import useApi from "../lib/useApi";
-import { FaBars, FaInfoCircle } from "react-icons/fa6";
+import { FaBars } from "react-icons/fa6";
+import { FaInfoCircle } from "react-icons/fa";
 import MeetingInfo from "./MeetingInfo";
 import { useAuth } from "../lib/AuthProvider";
 
@@ -263,12 +263,15 @@ export default function Room(details: RoomDetails) {
   const roomName = details.params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const status = useAuth().status;
+  const auth = useAuth();
+  const status = auth.status;
   const isAuthenticated = status === "authenticated";
   const isLoading = status === "loading" || meeting.loading;
   const [showMeetingInfo, setShowMeetingInfo] = useState(false);
-  const [room, setRoom] = useState<Room | null>(null);
-  const api = useApi();
+
+  // Fetch room details using React Query
+  const roomQuery = useRoomGetByName(roomName);
+  const room = roomQuery.data;
 
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
@@ -282,14 +285,8 @@ export default function Room(details: RoomDetails) {
     router.push("/browse");
   }, [router]);
 
-  // Fetch room details
-  useEffect(() => {
-    if (!api || !roomName) return;
-
-    api.v1RoomsRetrieve({ roomName }).then(setRoom).catch(console.error);
-  }, [api, roomName]);
-
-  const isOwner = session?.user?.id === room?.user_id;
+  const isOwner =
+    auth.status === "authenticated" ? auth.user?.id === room?.user_id : false;
 
   useEffect(() => {
     if (
@@ -352,8 +349,8 @@ export default function Room(details: RoomDetails) {
                 colorPalette="blue"
                 size="sm"
                 onClick={() => setShowMeetingInfo(!showMeetingInfo)}
-                leftIcon={<Icon as={FaInfoCircle} />}
               >
+                <Icon as={FaInfoCircle} />
                 Meeting Info
               </Button>
               {showMeetingInfo && (

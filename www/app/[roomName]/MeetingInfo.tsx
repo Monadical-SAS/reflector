@@ -1,14 +1,8 @@
-import {
-  Box,
-  VStack,
-  HStack,
-  Text,
-  Badge,
-  Icon,
-  Divider,
-} from "@chakra-ui/react";
+import { Box, VStack, HStack, Text, Badge, Icon } from "@chakra-ui/react";
 import { FaCalendarAlt, FaUsers, FaClock, FaInfoCircle } from "react-icons/fa";
-import { Meeting } from "../api";
+import type { components } from "../reflector-api";
+
+type Meeting = components["schemas"]["Meeting"];
 
 interface MeetingInfoProps {
   meeting: Meeting;
@@ -52,7 +46,7 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
       maxW="300px"
       zIndex={999}
     >
-      <VStack align="stretch" spacing={3}>
+      <VStack align="stretch" gap={3}>
         {/* Meeting Title */}
         <HStack>
           <Icon
@@ -60,13 +54,13 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
             color="blue.500"
           />
           <Text fontWeight="semibold" fontSize="md">
-            {metadata?.title ||
+            {(metadata as any)?.title ||
               (isCalendarMeeting ? "Calendar Meeting" : "Unscheduled Meeting")}
           </Text>
         </HStack>
 
         {/* Meeting Status */}
-        <HStack spacing={2}>
+        <HStack gap={2}>
           {meeting.is_active && (
             <Badge colorScheme="green" fontSize="xs">
               Active
@@ -84,10 +78,10 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
           )}
         </HStack>
 
-        <Divider />
+        <Box h="1px" bg="gray.200" />
 
         {/* Meeting Details */}
-        <VStack align="stretch" spacing={2} fontSize="sm">
+        <VStack align="stretch" gap={2} fontSize="sm">
           {/* Participants */}
           <HStack>
             <Icon as={FaUsers} color="gray.500" />
@@ -106,9 +100,9 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
           </HStack>
 
           {/* Calendar Description (Owner only) */}
-          {isOwner && metadata?.description && (
+          {isOwner && (metadata as any)?.description && (
             <>
-              <Divider />
+              <Box h="1px" bg="gray.200" />
               <Box>
                 <Text
                   fontWeight="semibold"
@@ -119,64 +113,66 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
                   Description
                 </Text>
                 <Text fontSize="xs" color="gray.700">
-                  {metadata.description}
+                  {(metadata as any).description}
                 </Text>
               </Box>
             </>
           )}
 
           {/* Attendees (Owner only) */}
-          {isOwner && metadata?.attendees && metadata.attendees.length > 0 && (
-            <>
-              <Divider />
-              <Box>
-                <Text
-                  fontWeight="semibold"
-                  fontSize="xs"
-                  color="gray.600"
-                  mb={1}
-                >
-                  Invited Attendees ({metadata.attendees.length})
-                </Text>
-                <VStack align="stretch" spacing={1}>
-                  {metadata.attendees
-                    .slice(0, 5)
-                    .map((attendee: any, idx: number) => (
-                      <HStack key={idx} fontSize="xs">
-                        <Badge
-                          colorScheme={
-                            attendee.status === "ACCEPTED"
-                              ? "green"
-                              : attendee.status === "DECLINED"
-                                ? "red"
-                                : attendee.status === "TENTATIVE"
-                                  ? "yellow"
-                                  : "gray"
-                          }
-                          fontSize="xs"
-                          size="sm"
-                        >
-                          {attendee.status?.charAt(0) || "?"}
-                        </Badge>
-                        <Text color="gray.700" isTruncated>
-                          {attendee.name || attendee.email}
-                        </Text>
-                      </HStack>
-                    ))}
-                  {metadata.attendees.length > 5 && (
-                    <Text fontSize="xs" color="gray.500" fontStyle="italic">
-                      +{metadata.attendees.length - 5} more
-                    </Text>
-                  )}
-                </VStack>
-              </Box>
-            </>
-          )}
+          {isOwner &&
+            (metadata as any)?.attendees &&
+            (metadata as any).attendees.length > 0 && (
+              <>
+                <Box h="1px" bg="gray.200" />
+                <Box>
+                  <Text
+                    fontWeight="semibold"
+                    fontSize="xs"
+                    color="gray.600"
+                    mb={1}
+                  >
+                    Invited Attendees ({(metadata as any).attendees.length})
+                  </Text>
+                  <VStack align="stretch" gap={1}>
+                    {(metadata as any).attendees
+                      .slice(0, 5)
+                      .map((attendee: any, idx: number) => (
+                        <HStack key={idx} fontSize="xs">
+                          <Badge
+                            colorScheme={
+                              attendee.status === "ACCEPTED"
+                                ? "green"
+                                : attendee.status === "DECLINED"
+                                  ? "red"
+                                  : attendee.status === "TENTATIVE"
+                                    ? "yellow"
+                                    : "gray"
+                            }
+                            fontSize="xs"
+                            size="sm"
+                          >
+                            {attendee.status?.charAt(0) || "?"}
+                          </Badge>
+                          <Text color="gray.700" truncate>
+                            {attendee.name || attendee.email}
+                          </Text>
+                        </HStack>
+                      ))}
+                    {(metadata as any).attendees.length > 5 && (
+                      <Text fontSize="xs" color="gray.500" fontStyle="italic">
+                        +{(metadata as any).attendees.length - 5} more
+                      </Text>
+                    )}
+                  </VStack>
+                </Box>
+              </>
+            )}
 
           {/* Recording Info */}
           {meeting.recording_type !== "none" && (
             <>
-              <Divider />
+              <Box h="1px" bg="gray.200" />
               <HStack fontSize="xs">
                 <Badge colorScheme="red" fontSize="xs">
                   Recording
@@ -192,8 +188,8 @@ export default function MeetingInfo({ meeting, isOwner }: MeetingInfoProps) {
         </VStack>
 
         {/* Meeting Times */}
-        <Divider />
-        <VStack align="stretch" spacing={1} fontSize="xs" color="gray.600">
+        <Box h="1px" bg="gray.200" />
+        <VStack align="stretch" gap={1} fontSize="xs" color="gray.600">
           <Text>Start: {new Date(meeting.start_date).toLocaleString()}</Text>
           <Text>End: {new Date(meeting.end_date).toLocaleString()}</Text>
         </VStack>
