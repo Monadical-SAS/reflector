@@ -26,25 +26,23 @@ const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
 const CLIENT_ID = assertExistsAndNonEmptyString(
   process.env.AUTHENTIK_CLIENT_ID,
 );
-const CLIENT_SECRET = !isCI
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_SECRET)
-  : "noop";
+const CLIENT_SECRET = assertExistsAndNonEmptyString(
+  process.env.AUTHENTIK_CLIENT_SECRET,
+);
 
 export const authOptions: AuthOptions = {
-  providers: !isCI
-    ? [
-        AuthentikProvider({
-          clientId: CLIENT_ID,
-          clientSecret: CLIENT_SECRET,
-          issuer: process.env.AUTHENTIK_ISSUER,
-          authorization: {
-            params: {
-              scope: "openid email profile offline_access",
-            },
-          },
-        }),
-      ]
-    : [],
+  providers: [
+    AuthentikProvider({
+      clientId: CLIENT_ID,
+      clientSecret: CLIENT_SECRET,
+      issuer: process.env.AUTHENTIK_ISSUER,
+      authorization: {
+        params: {
+          scope: "openid email profile offline_access",
+        },
+      },
+    }),
+  ],
   session: {
     strategy: "jwt",
   },
