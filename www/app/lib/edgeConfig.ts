@@ -33,6 +33,8 @@ export async function getConfig() {
     try {
       return require("../../config").localConfig;
     } catch (e) {
+      // next build() WILL try to execute the require above even if conditionally protected
+      // but thank god it at least runs catch{} block properly
       if (!isBuildPhase) throw new Error(e);
       return require("../../config-template").localConfig;
     }
