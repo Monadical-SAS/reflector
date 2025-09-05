@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { isBuildPhase } from "./next";
 
 export type RedisClient = Pick<Redis, "get" | "setex" | "del">;
 
@@ -26,4 +27,20 @@ const getRedisClient = (): RedisClient => {
   return redis;
 };
 
-export const tokenCacheRedis = getRedisClient();
+// next.js buildtime usage - we want to isolate next.js "build" time concepts here
+const noopClient: RedisClient = (() => {
+  const noopSetex: Redis["setex"] = async () => {
+    return "OK" as const;
+  };
+  const noopDel: Redis["del"] = async () => {
+    return 0;
+  };
+  return {
+    get: async () => {
+      return null;
+    },
+    setex: noopSetex,
+    del: noopDel,
+  };
+})();
+export const tokenCacheRedis = isBuildPhase ? noopClient : getRedisClient();
