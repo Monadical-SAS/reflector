@@ -32,11 +32,12 @@ export function edgeDomainToKey(domain: string) {
 export async function getConfig() {
   if (isCI) {
     // "noop"
+    // TODO sometime later we may have proper config if we have bigger test suite that requires values from the config
     return require("../../config-template").localConfig;
   }
 
   if (process.env.NEXT_PUBLIC_ENV === "development") {
-    // helps to
+    // helps to stop nextjs build from eager loading. don't inline it.
     const configPath = "../../config";
     return require(configPath).localConfig;
   }
