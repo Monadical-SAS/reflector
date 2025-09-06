@@ -10,6 +10,7 @@ import {
 import {
   REFRESH_ACCESS_TOKEN_BEFORE,
   REFRESH_ACCESS_TOKEN_ERROR,
+  shouldRefreshToken,
 } from "./auth";
 import {
   getTokenCache,
@@ -85,9 +86,13 @@ export const authOptions: AuthOptions = {
         "currentToken from cache",
         JSON.stringify(currentToken, null, 2),
         "will be returned?",
-        currentToken && Date.now() < currentToken.token.accessTokenExpires,
+        currentToken &&
+          !shouldRefreshToken(currentToken.token.accessTokenExpires),
       );
-      if (currentToken && Date.now() < currentToken.token.accessTokenExpires) {
+      if (
+        currentToken &&
+        !shouldRefreshToken(currentToken.token.accessTokenExpires)
+      ) {
         return currentToken.token;
       }
 
@@ -128,7 +133,7 @@ async function lockedRefreshAccessToken(
       if (cached) {
         if (Date.now() - cached.timestamp > TOKEN_CACHE_TTL) {
           await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
-        } else if (Date.now() < cached.token.accessTokenExpires) {
+        } else if (!shouldRefreshToken(cached.token.accessTokenExpires)) {
           console.debug("returning cached token", cached.token);
           return cached.token;
         }

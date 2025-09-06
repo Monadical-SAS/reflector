@@ -9,9 +9,7 @@
 
 import { useEffect } from "react";
 import { useAuth } from "./AuthProvider";
-import { REFRESH_ACCESS_TOKEN_BEFORE } from "./auth";
-
-const REFRESH_BEFORE = REFRESH_ACCESS_TOKEN_BEFORE;
+import { shouldRefreshToken } from "./auth";
 
 export function SessionAutoRefresh({ children }) {
   const auth = useAuth();
@@ -26,7 +24,7 @@ export function SessionAutoRefresh({ children }) {
     const interval = setInterval(() => {
       if (accessTokenExpires === null) return;
       const timeLeft = accessTokenExpires - Date.now();
-      if (timeLeft < REFRESH_BEFORE) {
+      if (shouldRefreshToken(accessTokenExpires)) {
         auth
           .update()
           .then(() => {})
