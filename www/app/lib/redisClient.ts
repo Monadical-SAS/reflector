@@ -16,10 +16,6 @@ const KV_USE_TLS = process.env.KV_USE_TLS
 
 let redisClient: Redis | null = null;
 
-const KV_USE_TLS = process.env.KV_USE_TLS
-  ? process.env.KV_USE_TLS === "true"
-  : undefined;
-
 const getRedisClient = (): RedisClient => {
   if (redisClient) return redisClient;
   const redisUrl = process.env.KV_URL;
