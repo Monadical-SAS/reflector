@@ -8,10 +8,11 @@ import { assertCustomSession, CustomSession } from "./types";
 import { Session } from "next-auth";
 import { SessionAutoRefresh } from "./SessionAutoRefresh";
 import { REFRESH_ACCESS_TOKEN_ERROR } from "./auth";
+import { assertExists } from "./utils";
 
 type AuthContextType = (
   | { status: "loading" }
-  | { status: "refreshing" }
+  | { status: "refreshing"; user: CustomSession["user"] }
   | { status: "unauthenticated"; error?: string }
   | {
       status: "authenticated";
@@ -41,7 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return { status };
             }
             case true: {
-              return { status: "refreshing" as const };
+              return {
+                status: "refreshing" as const,
+                user: assertExists(customSession).user,
+              };
             }
             default: {
               const _: never = sessionIsHere;

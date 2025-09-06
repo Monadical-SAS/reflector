@@ -9,7 +9,6 @@ const TokenCacheEntrySchema = z.object({
     accessToken: z.string(),
     accessTokenExpires: z.number(),
     refreshToken: z.string().optional(),
-    error: z.string().optional(),
   }),
   timestamp: z.number(),
 });
@@ -46,14 +45,15 @@ export async function getTokenCache(
   }
 }
 
+const TTL_SECONDS = 30 * 24 * 60 * 60;
+
 export async function setTokenCache(
   redis: KV,
   key: string,
   value: TokenCacheEntry,
 ): Promise<void> {
   const encodedValue = TokenCacheEntryCodec.encode(value);
-  const ttlSeconds = Math.floor(REFRESH_ACCESS_TOKEN_BEFORE / 1000);
-  await redis.setex(key, ttlSeconds, encodedValue);
+  await redis.setex(key, TTL_SECONDS, encodedValue);
 }
 
 export async function deleteTokenCache(redis: KV, key: string): Promise<void> {
