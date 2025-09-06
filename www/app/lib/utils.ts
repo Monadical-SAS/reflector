@@ -158,6 +158,17 @@ export const assertExists = <T>(
   return value;
 };
 
+export const assertNotExists = <T>(
+  value: T | null | undefined,
+  err?: string,
+): void => {
+  if (value !== null && value !== undefined) {
+    throw new Error(
+      `Assertion failed: ${err ?? "value is not null or undefined"}`,
+    );
+  }
+};
+
 export const assertExistsAndNonEmptyString = (
   value: string | null | undefined,
 ): NonEmptyString =>

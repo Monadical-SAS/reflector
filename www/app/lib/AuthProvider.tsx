@@ -11,7 +11,7 @@ import { REFRESH_ACCESS_TOKEN_ERROR } from "./auth";
 
 type AuthContextType = (
   | { status: "loading" }
-  | { status: "refreshing" }
+  | { status: "refreshing"; user: CustomSession["user"] }
   | { status: "unauthenticated"; error?: string }
   | {
       status: "authenticated";
@@ -41,7 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return { status };
             }
             case true: {
-              return { status: "refreshing" as const };
+              return {
+                status: "refreshing" as const,
+                user: customSession.user,
+              };
             }
             default: {
               const _: never = sessionIsHere;

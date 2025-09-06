@@ -1,20 +1,29 @@
 import Redis from "ioredis";
 import { isBuildPhase } from "./next";
+import Redlock, { ResourceLockedError } from "redlock";
 
 export type RedisClient = Pick<Redis, "get" | "setex" | "del">;
-
+export type RedlockClient = {
+  using: <T>(
+    keys: string | string[],
+    ttl: number,
+    cb: () => Promise<T>,
+  ) => Promise<T>;
+};
 const KV_USE_TLS = process.env.KV_USE_TLS
   ? process.env.KV_USE_TLS === "true"
   : undefined;
 
+let redisClient: Redis | null = null;
+
 const getRedisClient = (): RedisClient => {
+  if (redisClient) return redisClient;
   const redisUrl = process.env.KV_URL;
   if (!redisUrl) {
     throw new Error("KV_URL environment variable is required");
   }
-  const redis = new Redis(redisUrl, {
+  redisClient = new Redis(redisUrl, {
     maxRetriesPerRequest: 3,
-    lazyConnect: true,
     ...(KV_USE_TLS === true
       ? {
           tls: {},
@@ -22,18 +31,11 @@ const getRedisClient = (): RedisClient => {
       : {}),
   });
 
-  redis.on("error", (error) => {
+  redisClient.on("error", (error) => {
     console.error("Redis error:", error);
   });
 
-  // not necessary but will indicate redis config errors by failfast at startup
-  // happens only once; after that connection is allowed to die and the lib is assumed to be able to restore it eventually
-  redis.connect().catch((e) => {
-    console.error("Failed to connect to Redis:", e);
-    process.exit(1);
-  });
-
-  return redis;
+  return redisClient;
 };
 
 // next.js buildtime usage - we want to isolate next.js "build" time concepts here
@@ -52,4 +54,25 @@ const noopClient: RedisClient = (() => {
     del: noopDel,
   };
 })();
+
+const noopRedlock: RedlockClient = {
+  using: <T>(resource: string | string[], ttl: number, cb: () => Promise<T>) =>
+    cb(),
+};
+
+export const redlock: RedlockClient = isBuildPhase
+  ? noopRedlock
+  : (() => {
+      const r = new Redlock([getRedisClient()], {});
+      r.on("error", (error) => {
+        if (error instanceof ResourceLockedError) {
+          return;
+        }
+
+        // Log all other errors.
+        console.error(error);
+      });
+      return r;
+    })();
+
 export const tokenCacheRedis = isBuildPhase ? noopClient : getRedisClient();

@@ -2,7 +2,11 @@ import { AuthOptions } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
 import type { JWT } from "next-auth/jwt";
 import { JWTWithAccessToken, CustomSession } from "./types";
-import { assertExists, assertExistsAndNonEmptyString } from "./utils";
+import {
+  assertExists,
+  assertExistsAndNonEmptyString,
+  assertNotExists,
+} from "./utils";
 import {
   REFRESH_ACCESS_TOKEN_BEFORE,
   REFRESH_ACCESS_TOKEN_ERROR,
@@ -12,14 +16,10 @@ import {
   setTokenCache,
   deleteTokenCache,
 } from "./redisTokenCache";
-import { tokenCacheRedis } from "./redisClient";
+import { tokenCacheRedis, redlock } from "./redisClient";
 import { isBuildPhase } from "./next";
 
-// REFRESH_ACCESS_TOKEN_BEFORE because refresh is based on access token expiration (imagine we cache it 30 days)
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
-
-const refreshLocks = new Map<string, Promise<JWTWithAccessToken>>();
-
 const CLIENT_ID = !isBuildPhase
   ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_ID)
   : "noop";
@@ -45,31 +45,48 @@ export const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, user }) {
-      const KEY = `token:${token.sub}`;
+      if (account && !account.access_token) {
+        await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+      }
 
       if (account && user) {
         // called only on first login
         // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
-        const expiresAtS = assertExists(account.expires_at);
-        const expiresAtMs = expiresAtS * 1000;
-        if (!account.access_token) {
-          await deleteTokenCache(tokenCacheRedis, KEY);
-        } else {
+        if (account.access_token) {
+          const expiresAtS = assertExists(account.expires_at);
+          const expiresAtMs = expiresAtS * 1000;
           const jwtToken: JWTWithAccessToken = {
             ...token,
             accessToken: account.access_token,
             accessTokenExpires: expiresAtMs,
             refreshToken: account.refresh_token,
           };
-          await setTokenCache(tokenCacheRedis, KEY, {
-            token: jwtToken,
-            timestamp: Date.now(),
-          });
-          return jwtToken;
+          if (jwtToken.error) {
+            await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+          } else {
+            assertNotExists(
+              jwtToken.error,
+              `panic! trying to cache token with error in jwt: ${jwtToken.error}`,
+            );
+            await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
+              token: jwtToken,
+              timestamp: Date.now(),
+            });
+            return jwtToken;
+          }
         }
       }
 
-      const currentToken = await getTokenCache(tokenCacheRedis, KEY);
+      const currentToken = await getTokenCache(
+        tokenCacheRedis,
+        `token:${token.sub}`,
+      );
+      console.debug(
+        "currentToken from cache",
+        JSON.stringify(currentToken, null, 2),
+        "will be returned?",
+        currentToken && Date.now() < currentToken.token.accessTokenExpires,
+      );
       if (currentToken && Date.now() < currentToken.token.accessTokenExpires) {
         return currentToken.token;
       }
@@ -97,20 +114,22 @@ export const authOptions: AuthOptions = {
 async function lockedRefreshAccessToken(
   token: JWT,
 ): Promise<JWTWithAccessToken> {
-  const lockKey = `${token.sub}-refresh`;
+  const lockKey = `${token.sub}-lock`;
 
-  const existingRefresh = refreshLocks.get(lockKey);
-  if (existingRefresh) {
-    return await existingRefresh;
-  }
-
-  const refreshPromise = (async () => {
-    try {
+  return redlock
+    .using([lockKey], 10000, async () => {
       const cached = await getTokenCache(tokenCacheRedis, `token:${token.sub}`);
+      if (cached)
+        console.debug(
+          "received cached token. to delete?",
+          Date.now() - cached.timestamp > TOKEN_CACHE_TTL,
+        );
+      else console.debug("no cached token received");
       if (cached) {
         if (Date.now() - cached.timestamp > TOKEN_CACHE_TTL) {
           await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
         } else if (Date.now() < cached.token.accessTokenExpires) {
+          console.debug("returning cached token", cached.token);
           return cached.token;
         }
       }
@@ -118,19 +137,35 @@ async function lockedRefreshAccessToken(
       const currentToken = cached?.token || (token as JWTWithAccessToken);
       const newToken = await refreshAccessToken(currentToken);
 
+      console.debug("current token during refresh", currentToken);
+      console.debug("new token during refresh", newToken);
+
+      if (newToken.error) {
+        await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+        return newToken;
+      }
+
+      assertNotExists(
+        newToken.error,
+        `panic! trying to cache token with error during refresh: ${newToken.error}`,
+      );
       await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
         token: newToken,
         timestamp: Date.now(),
       });
 
       return newToken;
-    } finally {
-      setTimeout(() => refreshLocks.delete(lockKey), 100);
-    }
-  })();
-
-  refreshLocks.set(lockKey, refreshPromise);
-  return refreshPromise;
+    })
+    .catch((e) => {
+      console.error("error refreshing token", e);
+      deleteTokenCache(tokenCacheRedis, `token:${token.sub}`).catch((e) => {
+        console.error("error deleting errored token", e);
+      });
+      return {
+        ...token,
+        error: REFRESH_ACCESS_TOKEN_ERROR,
+      } as JWTWithAccessToken;
+    });
 }
 
 async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
