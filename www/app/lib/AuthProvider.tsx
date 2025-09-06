@@ -8,6 +8,7 @@ import { assertCustomSession, CustomSession } from "./types";
 import { Session } from "next-auth";
 import { SessionAutoRefresh } from "./SessionAutoRefresh";
 import { REFRESH_ACCESS_TOKEN_ERROR } from "./auth";
+import { assertExists } from "./utils";
 
 type AuthContextType = (
   | { status: "loading" }
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             case true: {
               return {
                 status: "refreshing" as const,
-                user: customSession.user,
+                user: assertExists(customSession).user,
               };
             }
             default: {
