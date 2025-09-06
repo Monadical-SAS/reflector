@@ -18,10 +18,6 @@ export function SessionAutoRefresh({ children }) {
 
   const accessTokenExpires =
     auth.status === "authenticated" ? auth.accessTokenExpires : null;
-  console.log(
-    "auth.accessTokenExpiresauth.accessTokenExpires",
-    accessTokenExpires,
-  );
 
   useEffect(() => {
     // technical value for how often the setInterval will be polling news - not too fast (no spam in case of errors)
@@ -30,7 +26,6 @@ export function SessionAutoRefresh({ children }) {
     const interval = setInterval(() => {
       if (accessTokenExpires === null) return;
       const timeLeft = accessTokenExpires - Date.now();
-      console.log("timeLefttimeLeft", timeLeft);
       if (timeLeft < REFRESH_BEFORE) {
         auth
           .update()
