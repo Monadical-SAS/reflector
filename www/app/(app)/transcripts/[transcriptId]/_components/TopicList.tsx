@@ -5,6 +5,7 @@ import useParticipants from "../../useParticipants";
 import { Box, Flex, Text, Accordion } from "@chakra-ui/react";
 import { featureEnabled } from "../../../../domainContext";
 import { TopicItem } from "./TopicItem";
+import { TranscriptStatus } from "../../../../lib/transcript";
 
 type TopicListProps = {
   topics: Topic[];
@@ -14,7 +15,7 @@ type TopicListProps = {
   ];
   autoscroll: boolean;
   transcriptId: string;
-  status: string;
+  status: TranscriptStatus | null;
   currentTranscriptText: any;
 };
 

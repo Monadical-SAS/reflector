@@ -1,6 +1,7 @@
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { parseMaybeNonEmptyString } from "./utils";
+import { TranscriptStatus } from "./transcript";
 
 export interface JWTWithAccessToken extends JWT {
   accessToken: string;
@@ -72,3 +73,10 @@ export const assertCustomSession = <S extends Session>(s: S): CustomSession => {
   // no other checks for now
   return r as CustomSession;
 };
+
+// checks full type equality; tested on literals
+// usage: const _assert: Equals<ApiTranscriptStatus, TranscriptStatus> = true;
+export type Equals<T, U> =
+  (<G>() => G extends T ? 1 : 2) extends <G>() => G extends U ? 1 : 2
+    ? true
+    : never;

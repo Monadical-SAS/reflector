@@ -16,7 +16,7 @@ export type UseWebSockets = {
   title: string;
   topics: Topic[];
   finalSummary: FinalSummary;
-  status: Status;
+  status: Status | null;
   waveform: AudioWaveform | null;
   duration: number | null;
 };
@@ -34,7 +34,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
-  const [status, setStatus] = useState<Status>({ value: "" });
+  const [status, setStatus] = useState<Status | null>(null);
   const { setError } = useError();
 
   const { websocket_url: websocketUrl } = useContext(DomainContext);

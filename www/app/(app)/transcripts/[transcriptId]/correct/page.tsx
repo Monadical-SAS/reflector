@@ -9,8 +9,10 @@ import ParticipantList from "./participantList";
 import type { components } from "../../../../reflector-api";
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { SelectedText, selectedTextIsTimeSlice } from "./types";
-import { useTranscriptUpdate } from "../../../../lib/apiHooks";
-import useTranscript from "../../useTranscript";
+import {
+  useTranscriptGet,
+  useTranscriptUpdate,
+} from "../../../../lib/apiHooks";
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
 import { Box, Grid } from "@chakra-ui/react";
@@ -25,7 +27,7 @@ export default function TranscriptCorrect({
   params: { transcriptId },
 }: TranscriptCorrect) {
   const updateTranscriptMutation = useTranscriptUpdate();
-  const transcript = useTranscript(transcriptId);
+  const transcript = useTranscriptGet(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();
   const [currentTopic, _sct] = stateCurrentTopic;
   const stateSelectedText = useState<SelectedText>();
@@ -36,7 +38,7 @@ export default function TranscriptCorrect({
   const router = useRouter();
 
   const markAsDone = async () => {
-    if (transcript.response && !transcript.response.reviewed) {
+    if (transcript.data && !transcript.data.reviewed) {
       try {
         await updateTranscriptMutation.mutateAsync({
           params: {
@@ -114,7 +116,7 @@ export default function TranscriptCorrect({
           }}
         />
       </Grid>
-      {transcript.response && !transcript.response?.reviewed && (
+      {transcript.data && !transcript.data?.reviewed && (
         <div className="flex flex-row justify-end">
           <button
             className="p-2 px-4 rounded bg-green-400"
