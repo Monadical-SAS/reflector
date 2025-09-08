@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  reactStrictMode: false,
   experimental: { esmExternals: "loose" },
   env: {
     IS_CI: process.env.IS_CI,

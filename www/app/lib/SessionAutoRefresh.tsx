@@ -23,7 +23,6 @@ export function SessionAutoRefresh({ children }) {
     const INTERVAL_REFRESH_MS = 5000;
     const interval = setInterval(() => {
       if (accessTokenExpires === null) return;
-      const timeLeft = accessTokenExpires - Date.now();
       if (shouldRefreshToken(accessTokenExpires)) {
         auth
           .update()
