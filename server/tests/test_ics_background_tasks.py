@@ -36,7 +36,7 @@ async def test_sync_room_ics_task():
     event.add("summary", "Task Test Meeting")
     from reflector.settings import settings
 
-    event.add("location", f"{settings.BASE_URL}/room/{room.name}")
+    event.add("location", f"{settings.UI_BASE_URL}/{room.name}")
     now = datetime.now(timezone.utc)
     event.add("dtstart", now + timedelta(hours=1))
     event.add("dtend", now + timedelta(hours=2))

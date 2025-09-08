@@ -448,6 +448,7 @@ export default function RoomsList() {
                   <Tabs.Trigger value="general">General</Tabs.Trigger>
                   <Tabs.Trigger value="calendar">Calendar</Tabs.Trigger>
                   <Tabs.Trigger value="share">Share</Tabs.Trigger>
+                  <Tabs.Trigger value="webhook">Webhook</Tabs.Trigger>
                 </Tabs.List>
 
                 <Tabs.Content value="general" pt={6}>
@@ -613,9 +614,134 @@ export default function RoomsList() {
                       <Checkbox.Label>Shared room</Checkbox.Label>
                     </Checkbox.Root>
                   </Field.Root>
+                </Tabs.Content>
 
-                  {/* Webhook Configuration Section */}
-                  <Field.Root mt={8}>
+                <Tabs.Content value="calendar" pt={6}>
+                  <ICSSettings
+                    roomId={editRoomId ?? undefined}
+                    roomName={room.name}
+                    icsUrl={room.icsUrl}
+                    icsEnabled={room.icsEnabled}
+                    icsFetchInterval={room.icsFetchInterval}
+                    onChange={(settings) => {
+                      setRoomInput({
+                        ...room,
+                        icsUrl:
+                          settings.ics_url !== undefined
+                            ? settings.ics_url
+                            : room.icsUrl,
+                        icsEnabled:
+                          settings.ics_enabled !== undefined
+                            ? settings.ics_enabled
+                            : room.icsEnabled,
+                        icsFetchInterval:
+                          settings.ics_fetch_interval !== undefined
+                            ? settings.ics_fetch_interval
+                            : room.icsFetchInterval,
+                      });
+                    }}
+                    isOwner={true}
+                    isEditing={isEditing}
+                  />
+                </Tabs.Content>
+
+                <Tabs.Content value="share" pt={6}>
+                  <Field.Root>
+                    <Checkbox.Root
+                      name="zulipAutoPost"
+                      checked={room.zulipAutoPost}
+                      onCheckedChange={(e) => {
+                        const syntheticEvent = {
+                          target: {
+                            name: "zulipAutoPost",
+                            type: "checkbox",
+                            checked: e.checked,
+                          },
+                        };
+                        handleRoomChange(syntheticEvent);
+                      }}
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>
+                        Automatically post transcription to Zulip
+                      </Checkbox.Label>
+                    </Checkbox.Root>
+                  </Field.Root>
+
+                  <Field.Root mt={4}>
+                    <Field.Label>Zulip stream</Field.Label>
+                    <Select.Root
+                      value={room.zulipStream ? [room.zulipStream] : []}
+                      onValueChange={(e) =>
+                        setRoomInput({
+                          ...room,
+                          zulipStream: e.value[0],
+                          zulipTopic: "",
+                        })
+                      }
+                      collection={streamCollection}
+                      disabled={!room.zulipAutoPost}
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder="Select stream" />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Select.Positioner>
+                        <Select.Content>
+                          {streamOptions.map((option) => (
+                            <Select.Item key={option.value} item={option}>
+                              {option.label}
+                              <Select.ItemIndicator />
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
+                    </Select.Root>
+                  </Field.Root>
+
+                  <Field.Root mt={4}>
+                    <Field.Label>Zulip topic</Field.Label>
+                    <Select.Root
+                      value={room.zulipTopic ? [room.zulipTopic] : []}
+                      onValueChange={(e) =>
+                        setRoomInput({ ...room, zulipTopic: e.value[0] })
+                      }
+                      collection={topicCollection}
+                      disabled={!room.zulipAutoPost}
+                    >
+                      <Select.HiddenSelect />
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder="Select topic" />
+                        </Select.Trigger>
+                        <Select.IndicatorGroup>
+                          <Select.Indicator />
+                        </Select.IndicatorGroup>
+                      </Select.Control>
+                      <Select.Positioner>
+                        <Select.Content>
+                          {topicOptions.map((option) => (
+                            <Select.Item key={option.value} item={option}>
+                              {option.label}
+                              <Select.ItemIndicator />
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
+                    </Select.Root>
+                  </Field.Root>
+                </Tabs.Content>
+
+                <Tabs.Content value="webhook" pt={6}>
+                  <Field.Root>
                     <Field.Label>Webhook URL</Field.Label>
                     <Input
                       name="webhookUrl"
@@ -717,129 +843,6 @@ export default function RoomsList() {
                       )}
                     </>
                   )}
-                </Tabs.Content>
-
-                <Tabs.Content value="calendar" pt={6}>
-                  <ICSSettings
-                    roomId={editRoomId ?? undefined}
-                    roomName={room.name}
-                    icsUrl={room.icsUrl}
-                    icsEnabled={room.icsEnabled}
-                    icsFetchInterval={room.icsFetchInterval}
-                    onChange={(settings) => {
-                      setRoomInput({
-                        ...room,
-                        icsUrl:
-                          settings.ics_url !== undefined
-                            ? settings.ics_url
-                            : room.icsUrl,
-                        icsEnabled:
-                          settings.ics_enabled !== undefined
-                            ? settings.ics_enabled
-                            : room.icsEnabled,
-                        icsFetchInterval:
-                          settings.ics_fetch_interval !== undefined
-                            ? settings.ics_fetch_interval
-                            : room.icsFetchInterval,
-                      });
-                    }}
-                    isOwner={true}
-                  />
-                </Tabs.Content>
-
-                <Tabs.Content value="share" pt={6}>
-                  <Field.Root>
-                    <Checkbox.Root
-                      name="zulipAutoPost"
-                      checked={room.zulipAutoPost}
-                      onCheckedChange={(e) => {
-                        const syntheticEvent = {
-                          target: {
-                            name: "zulipAutoPost",
-                            type: "checkbox",
-                            checked: e.checked,
-                          },
-                        };
-                        handleRoomChange(syntheticEvent);
-                      }}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>
-                        Automatically post transcription to Zulip
-                      </Checkbox.Label>
-                    </Checkbox.Root>
-                  </Field.Root>
-
-                  <Field.Root mt={4}>
-                    <Field.Label>Zulip stream</Field.Label>
-                    <Select.Root
-                      value={room.zulipStream ? [room.zulipStream] : []}
-                      onValueChange={(e) =>
-                        setRoomInput({
-                          ...room,
-                          zulipStream: e.value[0],
-                          zulipTopic: "",
-                        })
-                      }
-                      collection={streamCollection}
-                      disabled={!room.zulipAutoPost}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select stream" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {streamOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
-
-                  <Field.Root mt={4}>
-                    <Field.Label>Zulip topic</Field.Label>
-                    <Select.Root
-                      value={room.zulipTopic ? [room.zulipTopic] : []}
-                      onValueChange={(e) =>
-                        setRoomInput({ ...room, zulipTopic: e.value[0] })
-                      }
-                      collection={topicCollection}
-                      disabled={!room.zulipAutoPost}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select topic" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {topicOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
                 </Tabs.Content>
               </Tabs.Root>
             </Dialog.Body>

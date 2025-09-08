@@ -12,8 +12,9 @@ import {
   Spinner,
   Box,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import { FaSync, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { LuRefreshCw } from "react-icons/lu";
+import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 import { useRoomIcsSync, useRoomIcsStatus } from "../../../lib/apiHooks";
 
 interface ICSSettingsProps {
@@ -26,6 +27,7 @@ interface ICSSettingsProps {
   icsLastEtag?: string;
   onChange: (settings: Partial<ICSSettingsData>) => void;
   isOwner?: boolean;
+  isEditing?: boolean;
 }
 
 export interface ICSSettingsData {
@@ -52,12 +54,18 @@ export default function ICSSettings({
   icsLastEtag,
   onChange,
   isOwner = true,
+  isEditing = false,
 }: ICSSettingsProps) {
   const [syncStatus, setSyncStatus] = useState<
     "idle" | "syncing" | "success" | "error"
   >("idle");
   const [syncMessage, setSyncMessage] = useState<string>("");
-  const [testResult, setTestResult] = useState<string>("");
+  const [syncResult, setSyncResult] = useState<{
+    eventsFound: number;
+    totalEvents: number;
+    eventsCreated: number;
+    eventsUpdated: number;
+  } | null>(null);
 
   // React Query hooks
   const syncMutation = useRoomIcsSync();
@@ -67,46 +75,21 @@ export default function ICSSettings({
     items: fetchIntervalOptions,
   });
 
-  const handleTestConnection = async () => {
-    if (!icsUrl || !roomName) return;
-
-    setSyncStatus("syncing");
-    setTestResult("");
-
-    try {
-      // First notify parent to update the room with the ICS URL
-      onChange({
-        ics_url: icsUrl,
-        ics_enabled: true,
-        ics_fetch_interval: icsFetchInterval,
-      });
-
-      // Then trigger a sync
-      const result = await syncMutation.mutateAsync({
-        params: {
-          path: { room_name: roomName },
-        },
-      });
-
-      if (result.status === "success") {
-        setSyncStatus("success");
-        setTestResult(
-          `Successfully synced! Found ${result.events_found} events.`,
-        );
-      } else {
-        setSyncStatus("error");
-        setTestResult(result.error || "Sync failed");
-      }
-    } catch (err: any) {
-      setSyncStatus("error");
-      setTestResult(err.body?.detail || "Failed to test ICS connection");
+  // Clear sync results when dialog closes
+  useEffect(() => {
+    if (!isEditing) {
+      setSyncStatus("idle");
+      setSyncResult(null);
+      setSyncMessage("");
     }
-  };
+  }, [isEditing]);
 
-  const handleManualSync = async () => {
-    if (!roomName) return;
+  const handleForceSync = async () => {
+    if (!roomName || !isEditing) return;
 
+    // Clear previous results
     setSyncStatus("syncing");
+    setSyncResult(null);
     setSyncMessage("");
 
     try {
@@ -116,26 +99,22 @@ export default function ICSSettings({
         },
       });
 
-      if (result.status === "success") {
+      if (result.status === "success" || result.status === "unchanged") {
         setSyncStatus("success");
-        setSyncMessage(
-          `Sync complete! Found ${result.events_found} events, ` +
-            `created ${result.events_created}, updated ${result.events_updated}.`,
-        );
+        setSyncResult({
+          eventsFound: result.events_found || 0,
+          totalEvents: result.total_events || 0,
+          eventsCreated: result.events_created || 0,
+          eventsUpdated: result.events_updated || 0,
+        });
       } else {
         setSyncStatus("error");
         setSyncMessage(result.error || "Sync failed");
       }
     } catch (err: any) {
       setSyncStatus("error");
-      setSyncMessage(err.body?.detail || "Failed to sync calendar");
+      setSyncMessage(err.body?.detail || "Failed to force sync calendar");
     }
-
-    // Clear status after 5 seconds
-    setTimeout(() => {
-      setSyncStatus("idle");
-      setSyncMessage("");
-    }, 5000);
   };
 
   if (!isOwner) {
@@ -198,46 +177,48 @@ export default function ICSSettings({
             </Field.HelperText>
           </Field.Root>
 
-          {icsUrl && (
+          {icsUrl && isEditing && roomName && (
             <HStack gap={3}>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleTestConnection}
+                onClick={handleForceSync}
                 disabled={syncStatus === "syncing"}
               >
-                {syncStatus === "syncing" && <Spinner size="sm" />}
-                Test Connection
+                {syncStatus === "syncing" ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <LuRefreshCw />
+                )}
+                Force Sync
               </Button>
-
-              {roomName && icsLastSync && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleManualSync}
-                  disabled={syncStatus === "syncing"}
-                >
-                  <FaSync />
-                  Sync Now
-                </Button>
-              )}
             </HStack>
           )}
 
-          {testResult && (
+          {syncResult && syncStatus === "success" && (
             <Box
               p={3}
               borderRadius="md"
-              bg={syncStatus === "success" ? "green.50" : "red.50"}
+              bg="green.50"
               borderLeft="4px solid"
-              borderColor={syncStatus === "success" ? "green.400" : "red.400"}
+              borderColor="green.400"
             >
-              <Text
-                fontSize="sm"
-                color={syncStatus === "success" ? "green.800" : "red.800"}
-              >
-                {testResult}
-              </Text>
+              <VStack gap={1} align="stretch">
+                <Text fontSize="sm" color="green.800" fontWeight="medium">
+                  Sync completed
+                </Text>
+                <Text fontSize="sm" color="green.700">
+                  {syncResult.totalEvents} events downloaded,{" "}
+                  {syncResult.eventsFound} match this room
+                </Text>
+                {(syncResult.eventsCreated > 0 ||
+                  syncResult.eventsUpdated > 0) && (
+                  <Text fontSize="sm" color="green.700">
+                    {syncResult.eventsCreated} created,{" "}
+                    {syncResult.eventsUpdated} updated
+                  </Text>
+                )}
+              </VStack>
             </Box>
           )}
 

@@ -36,8 +36,11 @@ class SyncStats(TypedDict):
     events_deleted: int
 
 
-class SyncResult(TypedDict, total=False):
+class SyncResultBase(TypedDict):
     status: str  # "success", "unchanged", "error", "skipped"
+
+
+class SyncResult(SyncResultBase, total=False):
     hash: str | None
     events_found: int
     total_events: int
@@ -73,41 +76,41 @@ class ICSFetchService:
         window_end = now + timedelta(hours=24)
 
         for component in calendar.walk():
-            if component.name == "VEVENT":
-                # Skip cancelled events
-                status = component.get("STATUS", "").upper()
-                if status == "CANCELLED":
-                    continue
+            if component.name != "VEVENT":
+                continue
 
-                # Count total non-cancelled events in the time window
-                event_data = self._parse_event(component)
-                if (
-                    event_data
-                    and window_start <= event_data["start_time"] <= window_end
-                ):
-                    total_events += 1
+            status = component.get("STATUS", "").upper()
+            if status == "CANCELLED":
+                continue
 
-                    # Check if event matches this room
-                    if self._event_matches_room(component, room_name, room_url):
-                        events.append(event_data)
+            # Count total non-cancelled events in the time window
+            event_data = self._parse_event(component)
+            print(room_url, event_data)
+            if event_data and window_start <= event_data["start_time"] <= window_end:
+                total_events += 1
+
+                # Check if event matches this room
+                if self._event_matches_room(component, room_name, room_url):
+                    events.append(event_data)
 
         return events, total_events
 
     def _event_matches_room(self, event: Event, room_name: str, room_url: str) -> bool:
+        print("_____", room_url)
         location = str(event.get("LOCATION", ""))
         description = str(event.get("DESCRIPTION", ""))
 
-        # Only match full room URL (with or without protocol)
+        # Only match full room URL
+        # XXX leaved here as a patterns, to later be extended with tinyurl or such too
         patterns = [
-            room_url,  # Full URL with protocol
-            room_url.replace("https://", ""),  # Without https protocol
-            room_url.replace("http://", ""),  # Without http protocol
+            room_url,
         ]
 
         # Check location and description for patterns
         text_to_check = f"{location} {description}".lower()
 
         for pattern in patterns:
+            print(text_to_check, pattern.lower())
             if pattern.lower() in text_to_check:
                 return True
 
@@ -225,7 +228,7 @@ class ICSSyncService:
                 logger.info(f"No changes in ICS for room {room.id}")
                 # Still parse to get event count
                 calendar = self.fetch_service.parse_ics(ics_content)
-                room_url = f"{settings.BASE_URL}/room/{room.name}"
+                room_url = f"{settings.UI_BASE_URL}/{room.name}"
                 events, total_events = self.fetch_service.extract_room_events(
                     calendar, room.name, room_url
                 )
@@ -243,7 +246,7 @@ class ICSSyncService:
             calendar = self.fetch_service.parse_ics(ics_content)
 
             # Build room URL
-            room_url = f"{settings.BASE_URL}/room/{room.name}"
+            room_url = f"{settings.UI_BASE_URL}/{room.name}"
 
             # Extract matching events
             events, total_events = self.fetch_service.extract_room_events(

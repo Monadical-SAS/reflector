@@ -13,7 +13,7 @@ from reflector.services.ics_sync import ICSFetchService, ICSSyncService
 async def test_ics_fetch_service_event_matching():
     service = ICSFetchService()
     room_name = "test-room"
-    room_url = "https://example.com/room/test-room"
+    room_url = "https://example.com/test-room"
 
     # Create test event
     event = Event()
@@ -21,12 +21,12 @@ async def test_ics_fetch_service_event_matching():
     event.add("summary", "Test Meeting")
 
     # Test matching with full URL in location
-    event.add("location", "https://example.com/room/test-room")
+    event.add("location", "https://example.com/test-room")
     assert service._event_matches_room(event, room_name, room_url) is True
 
-    # Test matching with URL without protocol
-    event["location"] = "example.com/room/test-room"
-    assert service._event_matches_room(event, room_name, room_url) is True
+    # Test non-matching with URL without protocol (exact matching only now)
+    event["location"] = "example.com/test-room"
+    assert service._event_matches_room(event, room_name, room_url) is False
 
     # Test matching in description
     event["location"] = "Conference Room A"
@@ -39,7 +39,7 @@ async def test_ics_fetch_service_event_matching():
     assert service._event_matches_room(event, room_name, room_url) is False
 
     # Test partial paths should NOT match anymore
-    event["location"] = "/room/test-room"
+    event["location"] = "/test-room"
     assert service._event_matches_room(event, room_name, room_url) is False
 
     event["location"] = f"Room: {room_name}"
@@ -55,7 +55,7 @@ async def test_ics_fetch_service_parse_event():
     event.add("uid", "test-456")
     event.add("summary", "Team Standup")
     event.add("description", "Daily team sync")
-    event.add("location", "https://example.com/room/standup")
+    event.add("location", "https://example.com/standup")
 
     now = datetime.now(timezone.utc)
     event.add("dtstart", now)
@@ -73,7 +73,7 @@ async def test_ics_fetch_service_parse_event():
     assert result["ics_uid"] == "test-456"
     assert result["title"] == "Team Standup"
     assert result["description"] == "Daily team sync"
-    assert result["location"] == "https://example.com/room/standup"
+    assert result["location"] == "https://example.com/standup"
     assert len(result["attendees"]) == 3  # 2 attendees + 1 organizer
 
 
@@ -81,7 +81,7 @@ async def test_ics_fetch_service_parse_event():
 async def test_ics_fetch_service_extract_room_events():
     service = ICSFetchService()
     room_name = "meeting"
-    room_url = "https://example.com/room/meeting"
+    room_url = "https://example.com/meeting"
 
     # Create calendar with multiple events
     cal = Calendar()
@@ -100,7 +100,7 @@ async def test_ics_fetch_service_extract_room_events():
     event2 = Event()
     event2.add("uid", "no-match")
     event2.add("summary", "Other Meeting")
-    event2.add("location", "https://example.com/room/other")
+    event2.add("location", "https://example.com/other")
     event2.add("dtstart", now + timedelta(hours=4))
     event2.add("dtend", now + timedelta(hours=5))
     cal.add_component(event2)
@@ -125,9 +125,10 @@ async def test_ics_fetch_service_extract_room_events():
     cal.add_component(event4)
 
     # Extract events
-    events = service.extract_room_events(cal, room_name, room_url)
+    events, total_events = service.extract_room_events(cal, room_name, room_url)
 
     assert len(events) == 2
+    assert total_events == 3  # 3 events in time window (excluding cancelled)
     assert events[0]["ics_uid"] == "match-1"
     assert events[1]["ics_uid"] == "match-2"
 
@@ -155,10 +156,10 @@ async def test_ics_sync_service_sync_room_calendar():
     event = Event()
     event.add("uid", "sync-event-1")
     event.add("summary", "Sync Test Meeting")
-    # Use the actual BASE_URL from settings
+    # Use the actual UI_BASE_URL from settings
     from reflector.settings import settings
 
-    event.add("location", f"{settings.BASE_URL}/room/{room.name}")
+    event.add("location", f"{settings.UI_BASE_URL}/{room.name}")
     now = datetime.now(timezone.utc)
     event.add("dtstart", now + timedelta(hours=1))
     event.add("dtend", now + timedelta(hours=2))
