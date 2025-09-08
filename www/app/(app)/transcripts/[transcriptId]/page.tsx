@@ -12,6 +12,7 @@ import Player from "../player";
 import { useRouter } from "next/navigation";
 import { Box, Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
 import { useTranscriptGet } from "../../../lib/apiHooks";
+import { TranscriptStatus } from "../../../lib/transcript";
 
 type TranscriptDetails = {
   params: {
@@ -22,7 +23,11 @@ type TranscriptDetails = {
 export default function TranscriptDetails(details: TranscriptDetails) {
   const transcriptId = details.params.transcriptId;
   const router = useRouter();
-  const statusToRedirect = ["idle", "recording", "processing"];
+  const statusToRedirect = [
+    "idle",
+    "recording",
+    "processing",
+  ] satisfies TranscriptStatus[] as TranscriptStatus[];
 
   const transcript = useTranscriptGet(transcriptId);
   const waiting =
