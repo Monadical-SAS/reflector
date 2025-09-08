@@ -14,6 +14,7 @@ import reflector.auth as auth
 from reflector.db import get_database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
+from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
 from reflector.whereby import create_meeting, upload_logo
 from reflector.worker.webhook import test_webhook
@@ -338,8 +339,6 @@ async def rooms_sync_ics(
 
     if not room.ics_enabled or not room.ics_url:
         raise HTTPException(status_code=400, detail="ICS not configured for this room")
-
-    from reflector.services.ics_sync import ics_sync_service
 
     result = await ics_sync_service.sync_room_calendar(room)
 

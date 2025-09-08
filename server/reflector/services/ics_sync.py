@@ -171,7 +171,7 @@ class ICSFetchService:
         return dt
 
     def _parse_attendees(self, event: Event) -> list[AttendeeData]:
-        attendees = []
+        final_attendees = []
 
         # Parse ATTENDEE properties
         attendees = event.get("ATTENDEE", [])
@@ -186,7 +186,7 @@ class ICSFetchService:
                 else None,
                 "role": att.params.get("ROLE") if hasattr(att, "params") else None,
             }
-            attendees.append(att_data)
+            final_attendees.append(att_data)
 
         # Add organizer
         organizer = event.get("ORGANIZER")
@@ -198,9 +198,9 @@ class ICSFetchService:
                 else None,
                 "role": "ORGANIZER",
             }
-            attendees.append(org_data)
+            final_attendees.append(org_data)
 
-        return attendees
+        return final_attendees
 
 
 class ICSSyncService:
