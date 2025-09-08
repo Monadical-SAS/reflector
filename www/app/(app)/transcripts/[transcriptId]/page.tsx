@@ -26,7 +26,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   const transcript = useTranscriptGet(transcriptId);
   const waiting =
-    !transcript.data || statusToRedirect.includes(transcript.data.status);
+    transcript.data && statusToRedirect.includes(transcript.data.status);
 
   const mp3 = useMp3(transcriptId, waiting);
   const topics = useTopics(transcriptId);
