@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // not useEffect, we need it ASAP
+  // apparently, still no guarantee this code runs before mutations are fired
   configureApiAuth(
     contextValue.status === "authenticated" ? contextValue.accessToken : null,
   );
