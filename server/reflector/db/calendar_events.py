@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import sqlalchemy as sa
@@ -65,7 +65,6 @@ class CalendarEventController:
         start_after: datetime | None = None,
         end_before: datetime | None = None,
     ) -> list[CalendarEvent]:
-        """Get calendar events for a room."""
         query = calendar_events.select().where(calendar_events.c.room_id == room_id)
 
         if not include_deleted:
@@ -83,9 +82,9 @@ class CalendarEventController:
         return [CalendarEvent(**result) for result in results]
 
     async def get_upcoming(
-        self, room_id: str, minutes_ahead: int = 30
+        self, room_id: str, minutes_ahead: int = 120
     ) -> list[CalendarEvent]:
-        """Get upcoming events for a room within the specified minutes."""
+        """Get upcoming events for a room within the specified minutes, including currently happening events."""
         now = datetime.now(timezone.utc)
         future_time = now + timedelta(minutes=minutes_ahead)
 
@@ -95,8 +94,8 @@ class CalendarEventController:
                 sa.and_(
                     calendar_events.c.room_id == room_id,
                     calendar_events.c.is_deleted == False,
-                    calendar_events.c.start_time >= now,
                     calendar_events.c.start_time <= future_time,
+                    calendar_events.c.end_time >= now,
                 )
             )
             .order_by(calendar_events.c.start_time.asc())
@@ -106,7 +105,6 @@ class CalendarEventController:
         return [CalendarEvent(**result) for result in results]
 
     async def get_by_ics_uid(self, room_id: str, ics_uid: str) -> CalendarEvent | None:
-        """Get a calendar event by its ICS UID."""
         query = calendar_events.select().where(
             sa.and_(
                 calendar_events.c.room_id == room_id,
@@ -117,11 +115,9 @@ class CalendarEventController:
         return CalendarEvent(**result) if result else None
 
     async def upsert(self, event: CalendarEvent) -> CalendarEvent:
-        """Create or update a calendar event."""
         existing = await self.get_by_ics_uid(event.room_id, event.ics_uid)
 
         if existing:
-            # Update existing event
             event.id = existing.id
             event.created_at = existing.created_at
             event.updated_at = datetime.now(timezone.utc)
@@ -132,7 +128,6 @@ class CalendarEventController:
                 .values(**event.model_dump())
             )
         else:
-            # Insert new event
             query = calendar_events.insert().values(**event.model_dump())
 
         await get_database().execute(query)
@@ -144,7 +139,6 @@ class CalendarEventController:
         """Soft delete future events that are no longer in the calendar."""
         now = datetime.now(timezone.utc)
 
-        # First, get the IDs of events to delete
         select_query = calendar_events.select().where(
             sa.and_(
                 calendar_events.c.room_id == room_id,
@@ -160,7 +154,6 @@ class CalendarEventController:
         delete_count = len(to_delete)
 
         if delete_count > 0:
-            # Now update them
             update_query = (
                 calendar_events.update()
                 .where(
@@ -181,13 +174,9 @@ class CalendarEventController:
         return delete_count
 
     async def delete_by_room(self, room_id: str) -> int:
-        """Hard delete all events for a room (used when room is deleted)."""
         query = calendar_events.delete().where(calendar_events.c.room_id == room_id)
         result = await get_database().execute(query)
         return result.rowcount
 
-
-# Add missing import
-from datetime import timedelta
 
 calendar_events_controller = CalendarEventController()

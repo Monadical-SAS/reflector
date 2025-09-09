@@ -132,6 +132,16 @@ async def test_calendar_event_get_upcoming():
     )
     await calendar_events_controller.upsert(upcoming_event)
 
+    # Currently happening event (started 10 minutes ago, ends in 20 minutes)
+    current_event = CalendarEvent(
+        room_id=room.id,
+        ics_uid="current-event",
+        title="Current Meeting",
+        start_time=now - timedelta(minutes=10),
+        end_time=now + timedelta(minutes=20),
+    )
+    await calendar_events_controller.upsert(current_event)
+
     # Future event beyond 30 minutes
     future_event = CalendarEvent(
         room_id=room.id,
@@ -142,20 +152,83 @@ async def test_calendar_event_get_upcoming():
     )
     await calendar_events_controller.upsert(future_event)
 
-    # Get upcoming events (default 30 minutes)
+    # Get upcoming events (default 120 minutes) - should include current, upcoming, and future
     upcoming = await calendar_events_controller.get_upcoming(room.id)
 
-    assert len(upcoming) == 1
-    assert upcoming[0].ics_uid == "upcoming-event"
+    assert len(upcoming) == 3
+    # Events should be sorted by start_time (current event first, then upcoming, then future)
+    assert upcoming[0].ics_uid == "current-event"
+    assert upcoming[1].ics_uid == "upcoming-event"
+    assert upcoming[2].ics_uid == "future-event"
 
     # Get upcoming with custom window
     upcoming_extended = await calendar_events_controller.get_upcoming(
         room.id, minutes_ahead=180
     )
 
-    assert len(upcoming_extended) == 2
-    assert upcoming_extended[0].ics_uid == "upcoming-event"
-    assert upcoming_extended[1].ics_uid == "future-event"
+    assert len(upcoming_extended) == 3
+    # Events should be sorted by start_time
+    assert upcoming_extended[0].ics_uid == "current-event"
+    assert upcoming_extended[1].ics_uid == "upcoming-event"
+    assert upcoming_extended[2].ics_uid == "future-event"
+
+
+@pytest.mark.asyncio
+async def test_calendar_event_get_upcoming_includes_currently_happening():
+    """Test that get_upcoming includes currently happening events but excludes ended events."""
+    # Create room
+    room = await rooms_controller.add(
+        name="current-happening-room",
+        user_id="test-user",
+        zulip_auto_post=False,
+        zulip_stream="",
+        zulip_topic="",
+        is_locked=False,
+        room_mode="normal",
+        recording_type="cloud",
+        recording_trigger="automatic-2nd-participant",
+        is_shared=False,
+    )
+
+    now = datetime.now(timezone.utc)
+
+    # Event that ended in the past (should NOT be included)
+    past_ended_event = CalendarEvent(
+        room_id=room.id,
+        ics_uid="past-ended-event",
+        title="Past Ended Meeting",
+        start_time=now - timedelta(hours=2),
+        end_time=now - timedelta(minutes=30),
+    )
+    await calendar_events_controller.upsert(past_ended_event)
+
+    # Event currently happening (started 10 minutes ago, ends in 20 minutes) - SHOULD be included
+    currently_happening_event = CalendarEvent(
+        room_id=room.id,
+        ics_uid="currently-happening",
+        title="Currently Happening Meeting",
+        start_time=now - timedelta(minutes=10),
+        end_time=now + timedelta(minutes=20),
+    )
+    await calendar_events_controller.upsert(currently_happening_event)
+
+    # Event starting soon (in 5 minutes) - SHOULD be included
+    upcoming_soon_event = CalendarEvent(
+        room_id=room.id,
+        ics_uid="upcoming-soon",
+        title="Upcoming Soon Meeting",
+        start_time=now + timedelta(minutes=5),
+        end_time=now + timedelta(minutes=35),
+    )
+    await calendar_events_controller.upsert(upcoming_soon_event)
+
+    # Get upcoming events
+    upcoming = await calendar_events_controller.get_upcoming(room.id, minutes_ahead=30)
+
+    # Should only include currently happening and upcoming soon events
+    assert len(upcoming) == 2
+    assert upcoming[0].ics_uid == "currently-happening"
+    assert upcoming[1].ics_uid == "upcoming-soon"
 
 
 @pytest.mark.asyncio

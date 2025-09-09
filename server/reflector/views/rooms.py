@@ -431,7 +431,7 @@ async def rooms_list_meetings(
 async def rooms_list_upcoming_meetings(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
-    minutes_ahead: int = 30,
+    minutes_ahead: int = 120,
 ):
     user_id = user["sub"] if user else None
     room = await rooms_controller.get_by_name(room_name)

@@ -357,8 +357,9 @@ async def test_list_upcoming_meetings(authenticated_client):
     response = await client.get(f"/rooms/{room.name}/meetings/upcoming")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
+    assert len(data) == 2
     assert data[0]["title"] == "Soon"
+    assert data[1]["title"] == "Later"
 
     response = await client.get(
         f"/rooms/{room.name}/meetings/upcoming", params={"minutes_ahead": 180}

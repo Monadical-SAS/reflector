@@ -24,6 +24,12 @@ import {
 } from "../lib/apiHooks";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  formatDateTime,
+  formatCountdown,
+  formatStartedAgo,
+} from "../lib/timeUtils";
+import MinimalHeader from "../components/MinimalHeader";
 
 type Meeting = components["schemas"]["Meeting"];
 type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
@@ -35,32 +41,6 @@ interface MeetingSelectionProps {
   onMeetingSelect: (meeting: Meeting) => void;
   onCreateUnscheduled: () => void;
 }
-
-const formatDateTime = (date: string | Date) => {
-  const d = new Date(date);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const formatCountdown = (startTime: string | Date) => {
-  const now = new Date();
-  const start = new Date(startTime);
-  const diff = start.getTime() - now.getTime();
-
-  if (diff <= 0) return "Starting now";
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    return `Starts in ${hours}h ${minutes % 60}m`;
-  }
-  return `Starts in ${minutes} minutes`;
-};
 
 export default function MeetingSelection({
   roomName,
@@ -158,234 +138,255 @@ export default function MeetingSelection({
       ? `${displayName} Room`
       : `${displayName}'s Room`;
 
+  const handleLeaveMeeting = () => {
+    router.push("/");
+  };
+
   return (
-    <Flex
-      flexDir="column"
-      w={{ base: "full", md: "container.xl" }}
-      mx="auto"
-      px={6}
-      py={8}
-      minH="100vh"
-    >
+    <Flex flexDir="column" minH="100vh">
+      <MinimalHeader
+        roomName={roomName}
+        displayName={room?.display_name || room?.name}
+        showLeaveButton={true}
+        onLeave={handleLeaveMeeting}
+      />
+
       <Flex
-        flexDir="row"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={6}
+        flexDir="column"
+        w={{ base: "full", md: "container.xl" }}
+        mx="auto"
+        px={6}
+        py={8}
+        flex="1"
       >
-        <Text fontSize="lg" fontWeight="semibold">
-          {displayName}'s room
-        </Text>
-      </Flex>
-
-      {/* Active Meetings */}
-      {activeMeetings.length > 0 && (
-        <VStack align="stretch" gap={4} mb={6}>
-          <Text fontSize="md" fontWeight="semibold" color="gray.700">
-            Active Meetings
-          </Text>
-          {activeMeetings.map((meeting) => (
-            <Box
-              key={meeting.id}
-              width="100%"
-              bg="white"
-              border="1px solid"
-              borderColor="gray.200"
-              borderRadius="md"
-              p={4}
-              _hover={{ borderColor: "gray.300" }}
-            >
-              <HStack justify="space-between" align="start">
-                <VStack align="start" gap={2} flex={1}>
-                  <HStack>
-                    <Icon as={FaCalendarAlt} color="blue.500" />
-                    <Text fontWeight="semibold">
-                      {(meeting.calendar_metadata as any)?.title || "Meeting"}
-                    </Text>
-                  </HStack>
-
-                  {isOwner &&
-                    (meeting.calendar_metadata as any)?.description && (
-                      <Text fontSize="sm" color="gray.600">
-                        {(meeting.calendar_metadata as any).description}
+        {/* Active Meetings */}
+        {activeMeetings.length > 0 && (
+          <VStack align="stretch" gap={4} mb={6}>
+            <Text fontSize="md" fontWeight="semibold" color="gray.700">
+              Active Meetings
+            </Text>
+            {activeMeetings.map((meeting) => (
+              <Box
+                key={meeting.id}
+                width="100%"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="md"
+                p={4}
+                _hover={{ borderColor: "gray.300" }}
+              >
+                <HStack justify="space-between" align="start">
+                  <VStack align="start" gap={2} flex={1}>
+                    <HStack>
+                      <Icon as={FaCalendarAlt} color="blue.500" />
+                      <Text fontWeight="semibold">
+                        {(meeting.calendar_metadata as any)?.title || "Meeting"}
                       </Text>
-                    )}
-
-                  <HStack gap={4} fontSize="sm" color="gray.500">
-                    <HStack>
-                      <Icon as={FaUsers} />
-                      <Text>{meeting.num_clients} participants</Text>
                     </HStack>
-                    <HStack>
-                      <Icon as={FaClock} />
-                      <Text>Started {formatDateTime(meeting.start_date)}</Text>
-                    </HStack>
-                  </HStack>
 
-                  {isOwner && (meeting.calendar_metadata as any)?.attendees && (
-                    <HStack gap={2} flexWrap="wrap">
-                      {(meeting.calendar_metadata as any).attendees
-                        .slice(0, 3)
-                        .map((attendee: any, idx: number) => (
-                          <Badge key={idx} colorScheme="green" fontSize="xs">
-                            {attendee.name || attendee.email}
-                          </Badge>
-                        ))}
-                      {(meeting.calendar_metadata as any).attendees.length >
-                        3 && (
-                        <Badge colorScheme="gray" fontSize="xs">
-                          +
-                          {(meeting.calendar_metadata as any).attendees.length -
-                            3}{" "}
-                          more
-                        </Badge>
+                    {isOwner &&
+                      (meeting.calendar_metadata as any)?.description && (
+                        <Text fontSize="sm" color="gray.600">
+                          {(meeting.calendar_metadata as any).description}
+                        </Text>
                       )}
-                    </HStack>
-                  )}
-                </VStack>
 
-                <HStack gap={2}>
-                  <Button
-                    colorScheme="blue"
-                    size="md"
-                    onClick={() => handleJoinMeeting(meeting.id)}
-                  >
-                    Join Now
-                  </Button>
-                  {isOwner && (
+                    <HStack gap={4} fontSize="sm" color="gray.500">
+                      <HStack>
+                        <Icon as={FaUsers} />
+                        <Text>{meeting.num_clients} participants</Text>
+                      </HStack>
+                      <HStack>
+                        <Icon as={FaClock} />
+                        <Text>
+                          Started {formatDateTime(meeting.start_date)}
+                        </Text>
+                      </HStack>
+                    </HStack>
+
+                    {isOwner &&
+                      (meeting.calendar_metadata as any)?.attendees && (
+                        <HStack gap={2} flexWrap="wrap">
+                          {(meeting.calendar_metadata as any).attendees
+                            .slice(0, 3)
+                            .map((attendee: any, idx: number) => (
+                              <Badge
+                                key={idx}
+                                colorScheme="green"
+                                fontSize="xs"
+                              >
+                                {attendee.name || attendee.email}
+                              </Badge>
+                            ))}
+                          {(meeting.calendar_metadata as any).attendees.length >
+                            3 && (
+                            <Badge colorScheme="gray" fontSize="xs">
+                              +
+                              {(meeting.calendar_metadata as any).attendees
+                                .length - 3}{" "}
+                              more
+                            </Badge>
+                          )}
+                        </HStack>
+                      )}
+                  </VStack>
+
+                  <HStack gap={2}>
+                    <Button
+                      colorScheme="blue"
+                      size="md"
+                      onClick={() => handleJoinMeeting(meeting.id)}
+                    >
+                      Join Now
+                    </Button>
+                    {isOwner && (
+                      <Button
+                        variant="outline"
+                        colorScheme="red"
+                        size="md"
+                        onClick={() => handleEndMeeting(meeting.id)}
+                        isLoading={deactivateMeetingMutation.isPending}
+                      >
+                        <Icon as={LuX} />
+                        End Meeting
+                      </Button>
+                    )}
+                  </HStack>
+                </HStack>
+              </Box>
+            ))}
+          </VStack>
+        )}
+
+        {/* Upcoming Meetings */}
+        {upcomingEvents.length > 0 && (
+          <VStack align="stretch" gap={4} mb={6}>
+            <Text fontSize="md" fontWeight="semibold" color="gray.700">
+              Upcoming Meetings
+            </Text>
+            {upcomingEvents.map((event) => {
+              const now = new Date();
+              const startTime = new Date(event.start_time);
+              const endTime = new Date(event.end_time);
+              const isOngoing = startTime <= now && now <= endTime;
+
+              return (
+                <Box
+                  key={event.id}
+                  width="100%"
+                  bg="white"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  borderRadius="md"
+                  p={4}
+                  _hover={{ borderColor: "gray.300" }}
+                >
+                  <HStack justify="space-between" align="start">
+                    <VStack align="start" gap={2} flex={1}>
+                      <HStack>
+                        <Icon
+                          as={FaCalendarAlt}
+                          color={isOngoing ? "blue.500" : "orange.500"}
+                        />
+                        <Text fontWeight="semibold">
+                          {event.title || "Scheduled Meeting"}
+                        </Text>
+                        <Badge
+                          colorScheme={isOngoing ? "blue" : "orange"}
+                          fontSize="xs"
+                        >
+                          {isOngoing
+                            ? formatStartedAgo(event.start_time)
+                            : formatCountdown(event.start_time)}
+                        </Badge>
+                      </HStack>
+
+                      {isOwner && event.description && (
+                        <Text fontSize="sm" color="gray.600">
+                          {event.description}
+                        </Text>
+                      )}
+
+                      <HStack gap={4} fontSize="sm" color="gray.500">
+                        <Text>
+                          {formatDateTime(event.start_time)} -{" "}
+                          {formatDateTime(event.end_time)}
+                        </Text>
+                      </HStack>
+
+                      {isOwner && event.attendees && (
+                        <HStack gap={2} flexWrap="wrap">
+                          {event.attendees
+                            .slice(0, 3)
+                            .map((attendee: any, idx: number) => (
+                              <Badge
+                                key={idx}
+                                colorScheme="purple"
+                                fontSize="xs"
+                              >
+                                {attendee.name || attendee.email}
+                              </Badge>
+                            ))}
+                          {event.attendees.length > 3 && (
+                            <Badge colorScheme="gray" fontSize="xs">
+                              +{event.attendees.length - 3} more
+                            </Badge>
+                          )}
+                        </HStack>
+                      )}
+                    </VStack>
+
                     <Button
                       variant="outline"
-                      colorScheme="red"
+                      colorScheme={isOngoing ? "blue" : "orange"}
                       size="md"
-                      onClick={() => handleEndMeeting(meeting.id)}
-                      isLoading={deactivateMeetingMutation.isPending}
+                      onClick={() => handleJoinUpcoming(event)}
                     >
-                      <Icon as={LuX} />
-                      End Meeting
+                      {isOngoing ? "Join Now" : "Join Early"}
                     </Button>
-                  )}
-                </HStack>
-              </HStack>
-            </Box>
-          ))}
-        </VStack>
-      )}
-
-      {/* Upcoming Meetings */}
-      {upcomingEvents.length > 0 && (
-        <VStack align="stretch" gap={4} mb={6}>
-          <Text fontSize="md" fontWeight="semibold" color="gray.700">
-            Upcoming Meetings
-          </Text>
-          {upcomingEvents.map((event) => (
-            <Box
-              key={event.id}
-              width="100%"
-              bg="white"
-              border="1px solid"
-              borderColor="gray.200"
-              borderRadius="md"
-              p={4}
-              _hover={{ borderColor: "gray.300" }}
-            >
-              <HStack justify="space-between" align="start">
-                <VStack align="start" gap={2} flex={1}>
-                  <HStack>
-                    <Icon as={FaCalendarAlt} color="orange.500" />
-                    <Text fontWeight="semibold">
-                      {event.title || "Scheduled Meeting"}
-                    </Text>
-                    <Badge colorScheme="orange" fontSize="xs">
-                      {formatCountdown(event.start_time)}
-                    </Badge>
                   </HStack>
+                </Box>
+              );
+            })}
+          </VStack>
+        )}
 
-                  {isOwner && event.description && (
-                    <Text fontSize="sm" color="gray.600">
-                      {event.description}
-                    </Text>
-                  )}
+        {/* Create Unscheduled Meeting - Only for room owners or shared rooms */}
+        {(isOwner || isSharedRoom) && (
+          <Box width="100%" bg="gray.50" borderRadius="md" p={4} mt={6}>
+            <HStack justify="space-between" align="center">
+              <VStack align="start" gap={1}>
+                <Text fontWeight="semibold">Start a Quick Meeting</Text>
+                <Text fontSize="sm" color="gray.600">
+                  Jump into a meeting room right away
+                </Text>
+              </VStack>
+              <Button colorScheme="green" onClick={onCreateUnscheduled}>
+                Create Meeting
+              </Button>
+            </HStack>
+          </Box>
+        )}
 
-                  <HStack gap={4} fontSize="sm" color="gray.500">
-                    <Text>
-                      {formatDateTime(event.start_time)} -{" "}
-                      {formatDateTime(event.end_time)}
-                    </Text>
-                  </HStack>
-
-                  {isOwner && event.attendees && (
-                    <HStack gap={2} flexWrap="wrap">
-                      {event.attendees
-                        .slice(0, 3)
-                        .map((attendee: any, idx: number) => (
-                          <Badge key={idx} colorScheme="purple" fontSize="xs">
-                            {attendee.name || attendee.email}
-                          </Badge>
-                        ))}
-                      {event.attendees.length > 3 && (
-                        <Badge colorScheme="gray" fontSize="xs">
-                          +{event.attendees.length - 3} more
-                        </Badge>
-                      )}
-                    </HStack>
-                  )}
-                </VStack>
-
-                <Button
-                  variant="outline"
-                  colorScheme="orange"
-                  size="md"
-                  onClick={() => handleJoinUpcoming(event)}
-                >
-                  Join Early
-                </Button>
-              </HStack>
-            </Box>
-          ))}
-        </VStack>
-      )}
-
-      {/* Create Unscheduled Meeting - Only for room owners or shared rooms */}
-      {(isOwner || isSharedRoom) && (
-        <Box width="100%" bg="gray.50" borderRadius="md" p={4} mt={6}>
-          <HStack justify="space-between" align="center">
-            <VStack align="start" gap={1}>
-              <Text fontWeight="semibold">Start a Quick Meeting</Text>
-              <Text fontSize="sm" color="gray.600">
-                Jump into a meeting room right away
-              </Text>
-            </VStack>
-            <Button colorScheme="green" onClick={onCreateUnscheduled}>
-              Create Meeting
-            </Button>
-          </HStack>
-        </Box>
-      )}
-
-      {/* Message for non-owners of private rooms */}
-      {!isOwner && !isSharedRoom && (
-        <Box
-          width="100%"
-          bg="gray.50"
-          border="1px solid"
-          borderColor="gray.200"
-          borderRadius="md"
-          p={4}
-          mt={6}
-        >
-          <Text fontSize="sm" color="gray.600" textAlign="center">
-            Only the room owner can create unscheduled meetings in this private
-            room.
-          </Text>
-        </Box>
-      )}
-
-      {/* Footer with back to reflector link */}
-      <Box mt="auto" pt={8} borderTop="1px solid" borderColor="gray.100">
-        <Text textAlign="center" fontSize="sm" color="gray.500">
-          <Link href="/browse">← Back to Reflector</Link>
-        </Text>
-      </Box>
+        {/* Message for non-owners of private rooms */}
+        {!isOwner && !isSharedRoom && (
+          <Box
+            width="100%"
+            bg="gray.50"
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="md"
+            p={4}
+            mt={6}
+          >
+            <Text fontSize="sm" color="gray.600" textAlign="center">
+              Only the room owner can create unscheduled meetings in this
+              private room.
+            </Text>
+          </Box>
+        )}
+      </Flex>
     </Flex>
   );
 }

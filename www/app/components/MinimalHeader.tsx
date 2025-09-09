@@ -9,17 +9,23 @@ interface MinimalHeaderProps {
   roomName: string;
   displayName?: string;
   showLeaveButton?: boolean;
+  onLeave?: () => void;
 }
 
 export default function MinimalHeader({
   roomName,
   displayName,
   showLeaveButton = true,
+  onLeave,
 }: MinimalHeaderProps) {
   const router = useRouter();
 
   const handleLeaveMeeting = () => {
-    router.push(`/${roomName}`);
+    if (onLeave) {
+      onLeave();
+    } else {
+      router.push(`/${roomName}`);
+    }
   };
 
   const roomTitle = displayName
@@ -36,8 +42,6 @@ export default function MinimalHeader({
       w="100%"
       py="2"
       px="4"
-      borderBottom="1px solid"
-      borderColor="gray.200"
       bg="white"
       position="sticky"
       top="0"
@@ -59,7 +63,7 @@ export default function MinimalHeader({
         </Text>
       </Flex>
 
-      {/* Leave Meeting Button */}
+      {/* Leave Room Button */}
       {showLeaveButton && (
         <Button
           variant="outline"
@@ -67,7 +71,7 @@ export default function MinimalHeader({
           size="sm"
           onClick={handleLeaveMeeting}
         >
-          Leave Meeting
+          Leave Room
         </Button>
       )}
     </Flex>
