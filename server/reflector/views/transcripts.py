@@ -350,8 +350,6 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
-    if not transcript:
-        raise HTTPException(status_code=404, detail="Transcript not found")
     values = info.dict(exclude_unset=True)
     updated_transcript = await transcripts_controller.update(transcript, values)
     return updated_transcript

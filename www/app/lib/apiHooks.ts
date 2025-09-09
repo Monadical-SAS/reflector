@@ -96,8 +96,6 @@ export function useTranscriptProcess() {
 }
 
 export function useTranscriptGet(transcriptId: string | null) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}",
@@ -109,7 +107,7 @@ export function useTranscriptGet(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated,
+      enabled: !!transcriptId,
     },
   );
 }
@@ -292,18 +290,16 @@ export function useTranscriptUploadAudio() {
 }
 
 export function useTranscriptWaveform(transcriptId: string | null) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/audio/waveform",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated,
+      enabled: !!transcriptId,
     },
   );
 }
@@ -316,7 +312,7 @@ export function useTranscriptMP3(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/audio/mp3",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -326,8 +322,6 @@ export function useTranscriptMP3(transcriptId: string | null) {
 }
 
 export function useTranscriptTopics(transcriptId: string | null) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/topics",
@@ -337,7 +331,7 @@ export function useTranscriptTopics(transcriptId: string | null) {
       },
     },
     {
-      enabled: !!transcriptId && isAuthenticated,
+      enabled: !!transcriptId,
     },
   );
 }

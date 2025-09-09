@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import Recorder from "../../recorder";
 import { TopicList } from "../_components/TopicList";
-import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
 import { Topic } from "../../webSocketTypes";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
@@ -11,6 +10,8 @@ import useMp3 from "../../useMp3";
 import WaveformLoading from "../../waveformLoading";
 import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
 import LiveTrancription from "../../liveTranscription";
+import { useTranscriptGet } from "../../../../lib/apiHooks";
+import { TranscriptStatus } from "../../../../lib/transcript";
 
 type TranscriptDetails = {
   params: {
@@ -19,7 +20,7 @@ type TranscriptDetails = {
 };
 
 const TranscriptRecord = (details: TranscriptDetails) => {
-  const transcript = useTranscript(details.params.transcriptId);
+  const transcript = useTranscriptGet(details.params.transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
 
@@ -29,8 +30,8 @@ const TranscriptRecord = (details: TranscriptDetails) => {
 
   const router = useRouter();
 
-  const [status, setStatus] = useState(
-    webSockets.status.value || transcript.response?.status || "idle",
+  const [status, setStatus] = useState<TranscriptStatus>(
+    webSockets.status?.value || transcript.data?.status || "idle",
   );
 
   useEffect(() => {
@@ -41,7 +42,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
   useEffect(() => {
     //TODO HANDLE ERROR STATUS BETTER
     const newStatus =
-      webSockets.status.value || transcript.response?.status || "idle";
+      webSockets.status?.value || transcript.data?.status || "idle";
     setStatus(newStatus);
     if (newStatus && (newStatus == "ended" || newStatus == "error")) {
       console.log(newStatus, "redirecting");
@@ -49,7 +50,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
       const newUrl = "/transcripts/" + details.params.transcriptId;
       router.replace(newUrl);
     }
-  }, [webSockets.status.value, transcript.response?.status]);
+  }, [webSockets.status?.value, transcript.data?.status]);
 
   useEffect(() => {
     if (webSockets.waveform && webSockets.waveform) mp3.getNow();
