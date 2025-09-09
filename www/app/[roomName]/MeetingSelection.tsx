@@ -86,9 +86,9 @@ export default function MeetingSelection({
     }
   };
 
-  const handleJoinUpcoming = (event: CalendarEventResponse) => {
-    // Navigate to waiting page with event info
-    router.push(`/${roomName}/wait/${event.id}`);
+  const handleJoinUpcoming = async (event: CalendarEventResponse) => {
+    // Create an unscheduled meeting for this calendar event
+    onCreateUnscheduled();
   };
 
   const handleEndMeeting = async (meetingId: string) => {
@@ -270,6 +270,10 @@ export default function MeetingSelection({
               const startTime = new Date(event.start_time);
               const endTime = new Date(event.end_time);
               const isOngoing = startTime <= now && now <= endTime;
+              const minutesUntilStart = Math.floor(
+                (startTime.getTime() - now.getTime()) / (1000 * 60),
+              );
+              const canJoinEarly = minutesUntilStart <= 5; // Allow joining 5 minutes before
 
               return (
                 <Box
@@ -339,11 +343,12 @@ export default function MeetingSelection({
 
                     <Button
                       variant="outline"
-                      colorScheme={isOngoing ? "blue" : "orange"}
+                      colorScheme={isOngoing || canJoinEarly ? "blue" : "gray"}
                       size="md"
                       onClick={() => handleJoinUpcoming(event)}
+                      isDisabled={!isOngoing && !canJoinEarly}
                     >
-                      {isOngoing ? "Join Now" : "Join Early"}
+                      Join
                     </Button>
                   </HStack>
                 </Box>
