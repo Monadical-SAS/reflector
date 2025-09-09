@@ -2,12 +2,6 @@
 
 import createClient from "openapi-fetch";
 import type { paths } from "../reflector-api";
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
 import createFetchClient from "openapi-react-query";
 import { assertExistsAndNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
@@ -16,16 +10,11 @@ const API_URL = !isBuildPhase
   ? assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL)
   : "http://localhost";
 
-// Create the base openapi-fetch client with a default URL
-// The actual URL will be set via middleware in AuthProvider
 export const client = createClient<paths>({
   baseUrl: API_URL,
 });
 
-export const $api = createFetchClient<paths>(client);
-
-let currentAuthToken: string | null | undefined = null;
-
+// has to be called BEFORE $api is created with createFetchClient<paths>(client) or onRequest doesn't fire [at least for POST]
 client.use({
   onRequest({ request }) {
     if (currentAuthToken) {
@@ -43,6 +32,10 @@ client.use({
     return request;
   },
 });
+
+export const $api = createFetchClient<paths>(client);
+
+let currentAuthToken: string | null | undefined = null;
 
 // the function contract: lightweight, idempotent
 export const configureApiAuth = (token: string | null | undefined) => {
