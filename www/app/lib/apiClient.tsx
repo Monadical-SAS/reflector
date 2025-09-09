@@ -56,6 +56,8 @@ export const $api = createFetchClient<paths>(client);
 let currentAuthToken: string | null | undefined = undefined;
 
 // the function contract: lightweight, idempotent
-export const configureApiAuth = (token: string | null) => {
+export const configureApiAuth = (token: string | null | undefined) => {
+  // watch only for the initial loading; "reloading" state assumes token presence/absence
+  if (token === undefined && currentAuthToken !== undefined) return;
   currentAuthToken = token;
 };
