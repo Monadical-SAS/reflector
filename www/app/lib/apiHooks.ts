@@ -571,6 +571,35 @@ export function useMeetingAudioConsent() {
   });
 }
 
+export function useMeetingDeactivate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("patch", "/v1/meetings/{meeting_id}/deactivate", {
+    onError: (error) => {
+      setError(error as Error, "Failed to end meeting");
+    },
+    onSuccess: () => {
+      // Invalidate all meeting-related queries to refresh the UI
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            (key.some(
+              (k) => typeof k === "string" && k.includes("/meetings/active"),
+            ) ||
+              key.some(
+                (k) =>
+                  typeof k === "string" && k.includes("/meetings/upcoming"),
+              ))
+          );
+        },
+      });
+    },
+  });
+}
+
 export function useTranscriptWebRTC() {
   const { setError } = useError();
 

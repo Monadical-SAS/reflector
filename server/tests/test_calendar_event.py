@@ -36,7 +36,7 @@ async def test_calendar_event_create():
         description="Weekly team sync",
         start_time=now + timedelta(hours=1),
         end_time=now + timedelta(hours=2),
-        location=f"https://example.com/room/{room.name}",
+        location=f"https://example.com/{room.name}",
         attendees=[
             {"email": "alice@example.com", "name": "Alice", "status": "ACCEPTED"},
             {"email": "bob@example.com", "name": "Bob", "status": "TENTATIVE"},

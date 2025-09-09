@@ -9,7 +9,7 @@ ATTENDEE:MAILTO:alice@example.com,bob@example.com,charlie@example.com,diana@exam
 DTEND:20250819T190000Z
 DTSTAMP:20250819T174000Z
 DTSTART:20250819T180000Z
-LOCATION:http://localhost:1250/room/test-room
+LOCATION:http://localhost:1250/test-room
 ORGANIZER;CN=Test Organizer:MAILTO:organizer@example.com
 SEQUENCE:1
 SUMMARY:Test Meeting with Many Attendees

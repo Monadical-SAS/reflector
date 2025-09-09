@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useError } from "../(errors)/errorContext";
-import type { components } from "../reflector-api";
-import { shouldShowError } from "../lib/errorUtils";
+import { useError } from "../../../(errors)/errorContext";
+import type { components } from "../../../reflector-api";
+import { shouldShowError } from "../../../lib/errorUtils";
 
 type Meeting = components["schemas"]["Meeting"];
-import { useRoomsCreateMeeting } from "../lib/apiHooks";
+import { useRoomsCreateMeeting } from "../../../lib/apiHooks";
 import { notFound } from "next/navigation";
 
 type ErrorMeeting = {
@@ -30,6 +30,7 @@ type SuccessMeeting = {
 
 const useRoomMeeting = (
   roomName: string | null | undefined,
+  meetingId?: string,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
   const [reload, setReload] = useState(0);
@@ -40,19 +41,9 @@ const useRoomMeeting = (
   useEffect(() => {
     if (!roomName) return;
 
-    // Check if meeting was pre-selected from meeting selection page
-    const storedMeeting = sessionStorage.getItem(`meeting_${roomName}`);
-    if (storedMeeting) {
-      try {
-        const meeting = JSON.parse(storedMeeting);
-        sessionStorage.removeItem(`meeting_${roomName}`); // Clean up
-        setResponse(meeting);
-        return;
-      } catch (e) {
-        console.error("Failed to parse stored meeting:", e);
-      }
-    }
-
+    // For any case where we need a meeting (with or without meetingId),
+    // we create a new meeting. The meetingId parameter can be used for
+    // additional logic in the future if needed (e.g., fetching existing meetings)
     const createMeeting = async () => {
       try {
         const result = await createMeetingMutation.mutateAsync({
@@ -77,7 +68,7 @@ const useRoomMeeting = (
     };
 
     createMeeting();
-  }, [roomName, reload]);
+  }, [roomName, meetingId, reload]);
 
   const loading = createMeetingMutation.isPending && !response;
   const error = createMeetingMutation.error as Error | null;

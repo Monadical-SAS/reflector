@@ -448,7 +448,7 @@ export default function RoomsList() {
                   <Tabs.Trigger value="general">General</Tabs.Trigger>
                   <Tabs.Trigger value="calendar">Calendar</Tabs.Trigger>
                   <Tabs.Trigger value="share">Share</Tabs.Trigger>
-                  <Tabs.Trigger value="webhook">Webhook</Tabs.Trigger>
+                  <Tabs.Trigger value="webhook">WebHook</Tabs.Trigger>
                 </Tabs.List>
 
                 <Tabs.Content value="general" pt={6}>

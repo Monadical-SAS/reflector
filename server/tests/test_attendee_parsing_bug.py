@@ -51,7 +51,7 @@ async def test_attendee_parsing_bug():
         calendar = sync_service.fetch_service.parse_ics(ics_content)
         from reflector.settings import settings
 
-        room_url = f"{settings.BASE_URL}/room/{room.name}"
+        room_url = f"{settings.BASE_URL}/{room.name}"
 
         print(f"Room URL being used for matching: {room_url}")
         print(f"ICS content:\n{ics_content}")

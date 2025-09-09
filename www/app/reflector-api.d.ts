@@ -41,6 +41,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/meetings/{meeting_id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Meeting Deactivate
+     * @description Deactivate a meeting (owner only)
+     */
+    patch: operations["v1_meeting_deactivate"];
+    trace?: never;
+  };
   "/v1/rooms": {
     parameters: {
       query?: never;
@@ -932,8 +952,7 @@ export interface components {
     };
     /** ICSSyncResult */
     ICSSyncResult: {
-      /** Status */
-      status: string;
+      status: components["schemas"]["SyncStatus"];
       /** Hash */
       hash?: string | null;
       /**
@@ -941,6 +960,11 @@ export interface components {
        * @default 0
        */
       events_found: number;
+      /**
+       * Total Events
+       * @default 0
+       */
+      total_events: number;
       /**
        * Events Created
        * @default 0
@@ -958,6 +982,8 @@ export interface components {
       events_deleted: number;
       /** Error */
       error?: string | null;
+      /** Reason */
+      reason?: string | null;
     };
     /** Meeting */
     Meeting: {
@@ -1280,6 +1306,11 @@ export interface components {
       /** Name */
       name: string;
     };
+    /**
+     * SyncStatus
+     * @enum {string}
+     */
+    SyncStatus: "success" | "unchanged" | "error" | "skipped";
     /** Topic */
     Topic: {
       /** Name */
@@ -1471,6 +1502,37 @@ export interface operations {
         "application/json": components["schemas"]["MeetingConsentRequest"];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_meeting_deactivate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {

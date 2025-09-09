@@ -7,11 +7,19 @@ import {
   IconButton,
   Text,
   Spinner,
+  Badge,
+  VStack,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
 import type { components } from "../../../reflector-api";
+import {
+  useRoomActiveMeetings,
+  useRoomUpcomingMeetings,
+} from "../../../lib/apiHooks";
 
 type Room = components["schemas"]["Room"];
+type Meeting = components["schemas"]["Meeting"];
+type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
 
 interface RoomTableProps {
@@ -63,6 +71,70 @@ const getZulipDisplay = (
   return "Enabled";
 };
 
+function MeetingStatus({ roomName }: { roomName: string }) {
+  const activeMeetingsQuery = useRoomActiveMeetings(roomName);
+  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
+
+  const activeMeetings = activeMeetingsQuery.data || [];
+  const upcomingMeetings = upcomingMeetingsQuery.data || [];
+
+  if (activeMeetingsQuery.isLoading || upcomingMeetingsQuery.isLoading) {
+    return <Spinner size="sm" />;
+  }
+
+  if (activeMeetings.length > 0) {
+    const meeting = activeMeetings[0];
+    const title = (meeting.calendar_metadata as any)?.title || "Active Meeting";
+    return (
+      <VStack gap={1} alignItems="start">
+        <Badge colorScheme="green" size="sm">
+          Active
+        </Badge>
+        <Text fontSize="xs" color="gray.600" lineHeight={1}>
+          {title}
+        </Text>
+        <Text fontSize="xs" color="gray.500" lineHeight={1}>
+          {meeting.num_clients} participants
+        </Text>
+      </VStack>
+    );
+  }
+
+  if (upcomingMeetings.length > 0) {
+    const event = upcomingMeetings[0];
+    const startTime = new Date(event.start_time);
+    const now = new Date();
+    const diffMinutes = Math.floor(
+      (startTime.getTime() - now.getTime()) / 60000,
+    );
+
+    return (
+      <VStack gap={1} alignItems="start">
+        <Badge colorScheme="orange" size="sm">
+          {diffMinutes < 60 ? `In ${diffMinutes}m` : "Upcoming"}
+        </Badge>
+        <Text fontSize="xs" color="gray.600" lineHeight={1}>
+          {event.title || "Scheduled Meeting"}
+        </Text>
+        <Text fontSize="xs" color="gray.500" lineHeight={1}>
+          {startTime.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            month: "short",
+            day: "numeric",
+          })}
+        </Text>
+      </VStack>
+    );
+  }
+
+  return (
+    <Text fontSize="xs" color="gray.500">
+      No meetings
+    </Text>
+  );
+}
+
 export function RoomTable({
   rooms,
   linkCopied,
@@ -97,13 +169,16 @@ export function RoomTable({
               <Table.ColumnHeader width="250px" fontWeight="600">
                 Room Name
               </Table.ColumnHeader>
-              <Table.ColumnHeader width="250px" fontWeight="600">
-                Zulip
-              </Table.ColumnHeader>
-              <Table.ColumnHeader width="150px" fontWeight="600">
-                Room Size
+              <Table.ColumnHeader width="200px" fontWeight="600">
+                Current Meeting
               </Table.ColumnHeader>
               <Table.ColumnHeader width="200px" fontWeight="600">
+                Zulip
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="120px" fontWeight="600">
+                Room Size
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="150px" fontWeight="600">
                 Recording
               </Table.ColumnHeader>
               <Table.ColumnHeader
@@ -117,6 +192,9 @@ export function RoomTable({
               <Table.Row key={room.id}>
                 <Table.Cell>
                   <Link href={`/${room.name}`}>{room.name}</Link>
+                </Table.Cell>
+                <Table.Cell>
+                  <MeetingStatus roomName={room.name} />
                 </Table.Cell>
                 <Table.Cell>
                   {getZulipDisplay(

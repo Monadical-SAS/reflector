@@ -19,7 +19,7 @@ ATTENDEE;CN=Mathieu Virbel;PARTSTAT=ACCEPTED:MAILTO:mathieu@monadical.com
 DTEND;TZID=America/Costa_Rica:20250819T143000
 DTSTAMP:20250819T155951Z
 DTSTART;TZID=America/Costa_Rica:20250819T140000
-LOCATION:http://localhost:1250/room/mathieu
+LOCATION:http://localhost:1250/mathieu
 ORGANIZER;CN=Mathieu Virbel:MAILTO:mathieu@monadical.com
 SEQUENCE:1
 SUMMARY:Checkin

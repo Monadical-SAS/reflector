@@ -108,7 +108,7 @@ async def test_trigger_ics_sync(authenticated_client):
     event.add("summary", "API Test Meeting")
     from reflector.settings import settings
 
-    event.add("location", f"{settings.BASE_URL}/room/{room.name}")
+    event.add("location", f"{settings.BASE_URL}/{room.name}")
     now = datetime.now(timezone.utc)
     event.add("dtstart", now + timedelta(hours=1))
     event.add("dtend", now + timedelta(hours=2))
