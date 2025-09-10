@@ -99,11 +99,10 @@ Start with `cd www`.
 
 ```bash
 pnpm install
-cp .env_template .env
-cp config-template.ts config.ts
+cp .env.example .env
 ```
 
-Then, fill in the environment variables in `.env` and the configuration in `config.ts` as needed. If you are unsure on how to proceed, ask in Zulip.
+Then, fill in the environment variables in `.env` as needed. If you are unsure on how to proceed, ask in Zulip.
 
 **Run in development mode**
 
@@ -167,4 +166,35 @@ You can manually process an audio file by calling the process tool:
 
 ```bash
 uv run python -m reflector.tools.process path/to/audio.wav
+```
+
+
+## Feature Flags
+
+Reflector uses environment variable-based feature flags to control application functionality. These flags allow you to enable or disable features without code changes.
+
+### Available Feature Flags
+
+| Feature Flag | Environment Variable |
+|-------------|---------------------|
+| `requireLogin` | `NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN` |
+| `privacy` | `NEXT_PUBLIC_FEATURE_PRIVACY` |
+| `browse` | `NEXT_PUBLIC_FEATURE_BROWSE` |
+| `sendToZulip` | `NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP` |
+| `rooms` | `NEXT_PUBLIC_FEATURE_ROOMS` |
+
+### Setting Feature Flags
+
+Feature flags are controlled via environment variables using the pattern `NEXT_PUBLIC_FEATURE_{FEATURE_NAME}` where `{FEATURE_NAME}` is the SCREAMING_SNAKE_CASE version of the feature name.
+
+**Examples:**
+```bash
+# Enable user authentication requirement
+NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN=true
+
+# Disable browse functionality
+NEXT_PUBLIC_FEATURE_BROWSE=false
+
+# Enable Zulip integration
+NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP=true
 ```
