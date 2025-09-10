@@ -16,6 +16,9 @@ if (SENTRY_DSN) {
     // Setting this option to true will print useful information to the console while you're setting up Sentry.
     debug: false,
 
+    // Explicitly control IP address collection for v10 compatibility
+    sendDefaultPii: false,
+
     replaysOnErrorSampleRate: 0.0,
 
     // This sets the sample rate to be 10%. You may want this to be 100% while
@@ -23,3 +26,5 @@ if (SENTRY_DSN) {
     replaysSessionSampleRate: 0.0,
   });
 }
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
