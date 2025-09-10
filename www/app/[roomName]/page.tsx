@@ -7,6 +7,7 @@ import {
   useState,
   useContext,
   RefObject,
+  use,
 } from "react";
 import {
   Box,
@@ -30,9 +31,9 @@ import { FaBars } from "react-icons/fa6";
 import { useAuth } from "../lib/AuthProvider";
 
 export type RoomDetails = {
-  params: {
+  params: Promise<{
     roomName: string;
-  };
+  }>;
 };
 
 // stages: we focus on the consent, then whereby steals focus, then we focus on the consent again, then return focus to whoever stole it initially
@@ -255,9 +256,10 @@ const useWhereby = () => {
 };
 
 export default function Room(details: RoomDetails) {
+  const params = use(details.params);
   const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
-  const roomName = details.params.roomName;
+  const roomName = params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
   const status = useAuth().status;

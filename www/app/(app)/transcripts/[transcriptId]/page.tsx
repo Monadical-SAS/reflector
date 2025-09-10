@@ -5,7 +5,7 @@ import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
 import { TopicList } from "./_components/TopicList";
 import { Topic } from "../webSocketTypes";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, use } from "react";
 import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
@@ -15,13 +15,14 @@ import { useTranscriptGet } from "../../../lib/apiHooks";
 import { TranscriptStatus } from "../../../lib/transcript";
 
 type TranscriptDetails = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
 export default function TranscriptDetails(details: TranscriptDetails) {
-  const transcriptId = details.params.transcriptId;
+  const params = use(details.params);
+  const transcriptId = params.transcriptId;
   const router = useRouter();
   const statusToRedirect = [
     "idle",
@@ -43,7 +44,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   useEffect(() => {
     if (waiting) {
-      const newUrl = "/transcripts/" + details.params.transcriptId + "/record";
+      const newUrl = "/transcripts/" + params.transcriptId + "/record";
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
