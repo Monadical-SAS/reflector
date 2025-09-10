@@ -106,9 +106,9 @@ export default function MeetingSelection({
   };
 
   const handleJoinUpcoming = async (meeting: Meeting) => {
-    // Join the upcoming meeting directly
+    // Join the upcoming meeting and navigate to local meeting page
     try {
-      await joinMeetingMutation.mutateAsync({
+      const joinedMeeting = await joinMeetingMutation.mutateAsync({
         params: {
           path: {
             room_name: roomName,
@@ -116,15 +116,15 @@ export default function MeetingSelection({
           },
         },
       });
-      handleJoinDirect(meeting.room_url);
+      onMeetingSelect(joinedMeeting);
     } catch (err) {
       console.error("Failed to join upcoming meeting:", err);
     }
   };
 
-  const handleJoinDirect = (roomUrl: string) => {
-    // Go directly to the meeting URL (Whereby/etc)
-    window.open(roomUrl, "_blank");
+  const handleJoinDirect = (meeting: Meeting) => {
+    // Navigate to local meeting page instead of external URL
+    onMeetingSelect(meeting);
   };
 
   const handleEndMeeting = async (meetingId: string) => {
@@ -168,7 +168,7 @@ export default function MeetingSelection({
   }
 
   // Generate display name for room
-  const displayName = room?.display_name || room?.name || roomName;
+  const displayName = room?.name || roomName;
   const roomTitle =
     displayName.endsWith("'s") || displayName.endsWith("s")
       ? `${displayName} Room`
@@ -182,7 +182,7 @@ export default function MeetingSelection({
     <Flex flexDir="column" minH="100vh">
       <MinimalHeader
         roomName={roomName}
-        displayName={room?.display_name || room?.name}
+        displayName={room?.name}
         showLeaveButton={true}
         onLeave={handleLeaveMeeting}
       />
@@ -295,9 +295,9 @@ export default function MeetingSelection({
                       fontSize="lg"
                       px={8}
                       py={6}
-                      onClick={() => handleJoinDirect(meeting.room_url)}
-                      leftIcon={<Icon as={FaUsers} boxSize="20px" />}
+                      onClick={() => handleJoinDirect(meeting)}
                     >
+                      <Icon as={FaUsers} boxSize="20px" me={2} />
                       Join Now
                     </Button>
                     {isOwner && (
@@ -306,9 +306,9 @@ export default function MeetingSelection({
                         colorScheme="red"
                         size="md"
                         onClick={() => handleEndMeeting(meeting.id)}
-                        isLoading={deactivateMeetingMutation.isPending}
-                        leftIcon={<Icon as={LuX} />}
+                        loading={deactivateMeetingMutation.isPending}
                       >
+                        <Icon as={LuX} me={2} />
                         End Meeting
                       </Button>
                     )}
