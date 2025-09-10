@@ -7,12 +7,14 @@ import { toaster } from "../components/ui/toaster";
 interface WherebyEmbedProps {
   roomUrl: string;
   onLeave?: () => void;
+  isWebinar?: boolean;
 }
 
-// currently used for webinars only
+// used for both webinars and meetings
 export default function WherebyWebinarEmbed({
   roomUrl,
   onLeave,
+  isWebinar = false,
 }: WherebyEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
@@ -26,7 +28,8 @@ export default function WherebyWebinarEmbed({
           <Box p={4} bg="white" borderRadius="md" boxShadow="md">
             <HStack justifyContent="space-between" alignItems="center">
               <Text>
-                This webinar is being recorded. By continuing, you agree to our{" "}
+                This {isWebinar ? "webinar" : "meeting"} is being recorded. By
+                continuing, you agree to our{" "}
                 <Link
                   href="https://monadical.com/privacy"
                   color="blue.600"

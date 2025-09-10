@@ -12,6 +12,12 @@ import {
 import type { components } from "../reflector-api";
 import MeetingSelection from "./MeetingSelection";
 import { useAuth } from "../lib/AuthProvider";
+import useRoomMeeting from "./useRoomMeeting";
+import dynamic from "next/dynamic";
+
+const WherebyEmbed = dynamic(() => import("../lib/WherebyWebinarEmbed"), {
+  ssr: false,
+});
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -36,10 +42,19 @@ export default function RoomClient({ params }: RoomClientProps) {
   const activeMeetings = activeMeetingsQuery.data || [];
   const upcomingMeetings = upcomingMeetingsQuery.data || [];
 
-  const isOwner =
-    auth.status === "authenticated" ? auth.user?.id === room?.user_id : false;
+  // For non-ICS rooms, create a meeting and get Whereby URL
+  const roomMeeting = useRoomMeeting(
+    room && !room.ics_enabled ? roomName : null,
+  );
+  const roomUrl =
+    roomMeeting?.response?.host_room_url || roomMeeting?.response?.room_url;
 
   const isLoading = auth.status === "loading" || roomQuery.isLoading;
+
+  const isOwner =
+    auth.status === "authenticated" && room
+      ? auth.user?.id === room.user_id
+      : false;
 
   const handleMeetingSelect = (selectedMeeting: Meeting) => {
     // Navigate to specific meeting using path segment
@@ -59,14 +74,6 @@ export default function RoomClient({ params }: RoomClientProps) {
       console.error("Failed to create meeting:", err);
     }
   };
-
-  // For non-ICS rooms, automatically create and join meeting
-  useEffect(() => {
-    if (!room || isLoading || room.ics_enabled) return;
-
-    // Non-ICS room: create meeting automatically
-    handleCreateUnscheduled();
-  }, [room, isLoading]);
 
   // Handle room not found
   useEffect(() => {
@@ -105,20 +112,26 @@ export default function RoomClient({ params }: RoomClientProps) {
     );
   }
 
-  // For ICS-enabled rooms, ALWAYS show meeting selection (no auto-redirect)
+  // For ICS-enabled rooms, show meeting selection
   if (room.ics_enabled) {
     return (
       <MeetingSelection
         roomName={roomName}
         isOwner={isOwner}
         isSharedRoom={room?.is_shared || false}
+        authLoading={["loading", "refreshing"].includes(auth.status)}
         onMeetingSelect={handleMeetingSelect}
         onCreateUnscheduled={handleCreateUnscheduled}
       />
     );
   }
 
-  // Non-ICS rooms will auto-redirect via useEffect above
+  // For non-ICS rooms, show Whereby embed directly
+  if (roomUrl) {
+    return <WherebyEmbed roomUrl={roomUrl} />;
+  }
+
+  // Loading state for non-ICS rooms while creating meeting
   return (
     <Box
       display="flex"

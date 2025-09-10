@@ -4,7 +4,9 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
+from reflector.asynctask import asynctask
 from reflector.db import get_database
+from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms, rooms_controller
 from reflector.services.ics_sync import ics_sync_service
@@ -14,11 +16,8 @@ logger = structlog.wrap_logger(get_task_logger(__name__))
 
 
 @shared_task
-def sync_room_ics(room_id: str):
-    asynctask(_sync_room_ics_async(room_id))
-
-
-async def _sync_room_ics_async(room_id: str):
+@asynctask
+async def sync_room_ics(room_id: str):
     try:
         room = await rooms_controller.get_by_id(room_id)
         if not room:
@@ -55,11 +54,8 @@ async def _sync_room_ics_async(room_id: str):
 
 
 @shared_task
-def sync_all_ics_calendars():
-    asynctask(_sync_all_ics_calendars_async())
-
-
-async def _sync_all_ics_calendars_async():
+@asynctask
+async def sync_all_ics_calendars():
     try:
         logger.info("Starting sync for all ICS-enabled rooms")
 
@@ -99,16 +95,68 @@ def _should_sync(room) -> bool:
     return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
 
-@shared_task
-def pre_create_upcoming_meetings():
-    asynctask(_pre_create_upcoming_meetings_async())
+async def create_upcoming_meetings_for_event(event, create_window, room_id, room):
+    if event.start_time <= create_window:
+        return
+    existing_meeting = await meetings_controller.get_by_calendar_event(event.id)
 
+    if existing_meeting:
+        return
 
-async def _pre_create_upcoming_meetings_async():
+    logger.info(
+        "Pre-creating meeting for calendar event",
+        room_id=room_id,
+        event_id=event.id,
+        event_title=event.title,
+    )
+
     try:
-        logger.info("Starting pre-creation of upcoming meetings")
+        end_date = event.end_time or (event.start_time + timedelta(hours=1))
 
-        from reflector.db.calendar_events import calendar_events_controller
+        whereby_meeting = await create_meeting(
+            event.title or "Scheduled Meeting",
+            end_date=end_date,
+            room=room,
+        )
+        await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+
+        meeting = await meetings_controller.create(
+            id=whereby_meeting["meetingId"],
+            room_name=whereby_meeting["roomName"],
+            room_url=whereby_meeting["roomUrl"],
+            host_room_url=whereby_meeting["hostRoomUrl"],
+            start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
+            end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
+            user_id=room.user_id,
+            room=room,
+            calendar_event_id=event.id,
+            calendar_metadata={
+                "title": event.title,
+                "description": event.description,
+                "attendees": event.attendees,
+            },
+        )
+
+        logger.info(
+            "Meeting pre-created successfully",
+            meeting_id=meeting.id,
+            event_id=event.id,
+        )
+
+    except Exception as e:
+        logger.error(
+            "Failed to pre-create meeting",
+            room_id=room_id,
+            event_id=event.id,
+            error=str(e),
+        )
+
+
+@shared_task
+@asynctask
+async def create_upcoming_meetings():
+    try:
+        logger.info("Starting creation of upcoming meetings")
 
         # Get ALL rooms with ICS enabled
         query = rooms.select().where(
@@ -116,7 +164,7 @@ async def _pre_create_upcoming_meetings_async():
         )
         all_rooms = await get_database().fetch_all(query)
         now = datetime.now(timezone.utc)
-        pre_create_window = now + timedelta(minutes=1)
+        create_window = now - timedelta(minutes=6)
 
         for room_data in all_rooms:
             room_id = room_data["id"]
@@ -126,84 +174,13 @@ async def _pre_create_upcoming_meetings_async():
                 continue
 
             events = await calendar_events_controller.get_upcoming(
-                room_id, minutes_ahead=2
+                room_id,
+                minutes_ahead=7,
             )
 
             for event in events:
-                if event.start_time <= pre_create_window:
-                    existing_meeting = await meetings_controller.get_by_calendar_event(
-                        event.id
-                    )
-
-                    if not existing_meeting:
-                        logger.info(
-                            "Pre-creating meeting for calendar event",
-                            room_id=room_id,
-                            event_id=event.id,
-                            event_title=event.title,
-                        )
-
-                        try:
-                            end_date = event.end_time or (
-                                event.start_time + timedelta(hours=1)
-                            )
-
-                            whereby_meeting = await create_meeting(
-                                event.title or "Scheduled Meeting",
-                                end_date=end_date,
-                                room=room,
-                            )
-                            await upload_logo(
-                                whereby_meeting["roomName"], "./images/logo.png"
-                            )
-
-                            meeting = await meetings_controller.create(
-                                id=whereby_meeting["meetingId"],
-                                room_name=whereby_meeting["roomName"],
-                                room_url=whereby_meeting["roomUrl"],
-                                host_room_url=whereby_meeting["hostRoomUrl"],
-                                start_date=datetime.fromisoformat(
-                                    whereby_meeting["startDate"]
-                                ),
-                                end_date=datetime.fromisoformat(
-                                    whereby_meeting["endDate"]
-                                ),
-                                user_id=room.user_id,
-                                room=room,
-                                calendar_event_id=event.id,
-                                calendar_metadata={
-                                    "title": event.title,
-                                    "description": event.description,
-                                    "attendees": event.attendees,
-                                },
-                            )
-
-                            logger.info(
-                                "Meeting pre-created successfully",
-                                meeting_id=meeting.id,
-                                event_id=event.id,
-                            )
-
-                        except Exception as e:
-                            logger.error(
-                                "Failed to pre-create meeting",
-                                room_id=room_id,
-                                event_id=event.id,
-                                error=str(e),
-                            )
-
+                await create_upcoming_meetings_for_event(event)
         logger.info("Completed pre-creation check for upcoming meetings")
 
     except Exception as e:
-        logger.error("Error in pre_create_upcoming_meetings", error=str(e))
-
-
-def asynctask(coro):
-    import asyncio
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+        logger.error("Error in create_upcoming_meetings", error=str(e))

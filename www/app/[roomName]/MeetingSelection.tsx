@@ -17,7 +17,6 @@ import { LuX } from "react-icons/lu";
 import type { components } from "../reflector-api";
 import {
   useRoomActiveMeetings,
-  useRoomUpcomingMeetings,
   useRoomJoinMeeting,
   useMeetingDeactivate,
   useRoomGetByName,
@@ -31,13 +30,16 @@ import {
 } from "../lib/timeUtils";
 import MinimalHeader from "../components/MinimalHeader";
 
+// Meeting join settings
+const EARLY_JOIN_MINUTES = 5; // Allow joining 5 minutes before meeting starts
+
 type Meeting = components["schemas"]["Meeting"];
-type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 
 interface MeetingSelectionProps {
   roomName: string;
   isOwner: boolean;
   isSharedRoom: boolean;
+  authLoading: boolean;
   onMeetingSelect: (meeting: Meeting) => void;
   onCreateUnscheduled: () => void;
 }
@@ -46,6 +48,7 @@ export default function MeetingSelection({
   roomName,
   isOwner,
   isSharedRoom,
+  authLoading,
   onMeetingSelect,
   onCreateUnscheduled,
 }: MeetingSelectionProps) {
@@ -54,20 +57,36 @@ export default function MeetingSelection({
   // Use React Query hooks for data fetching
   const roomQuery = useRoomGetByName(roomName);
   const activeMeetingsQuery = useRoomActiveMeetings(roomName);
-  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
   const joinMeetingMutation = useRoomJoinMeeting();
   const deactivateMeetingMutation = useMeetingDeactivate();
 
   const room = roomQuery.data;
+  const allMeetings = activeMeetingsQuery.data || [];
 
-  const activeMeetings = activeMeetingsQuery.data || [];
-  const upcomingEvents = upcomingMeetingsQuery.data || [];
-  const loading =
-    roomQuery.isLoading ||
-    activeMeetingsQuery.isLoading ||
-    upcomingMeetingsQuery.isLoading;
-  const error =
-    roomQuery.error || activeMeetingsQuery.error || upcomingMeetingsQuery.error;
+  // Separate current ongoing meetings from upcoming meetings (created by worker, within 5 minutes)
+  const now = new Date();
+  const currentMeetings = allMeetings.filter((meeting) => {
+    const startTime = new Date(meeting.start_date);
+    // Meeting is ongoing if it started and participants have joined or it's been running for a while
+    return (
+      meeting.num_clients > 0 || now.getTime() - startTime.getTime() > 60000
+    ); // 1 minute threshold
+  });
+
+  const upcomingMeetings = allMeetings.filter((meeting) => {
+    const startTime = new Date(meeting.start_date);
+    const minutesUntilStart = Math.floor(
+      (startTime.getTime() - now.getTime()) / (1000 * 60),
+    );
+    // Show meetings that start within 5 minutes and haven't started yet
+    return (
+      minutesUntilStart <= EARLY_JOIN_MINUTES &&
+      minutesUntilStart > 0 &&
+      meeting.num_clients === 0
+    );
+  });
+  const loading = roomQuery.isLoading || activeMeetingsQuery.isLoading;
+  const error = roomQuery.error || activeMeetingsQuery.error;
 
   const handleJoinMeeting = async (meetingId: string) => {
     try {
@@ -86,9 +105,26 @@ export default function MeetingSelection({
     }
   };
 
-  const handleJoinUpcoming = async (event: CalendarEventResponse) => {
-    // Create an unscheduled meeting for this calendar event
-    onCreateUnscheduled();
+  const handleJoinUpcoming = async (meeting: Meeting) => {
+    // Join the upcoming meeting directly
+    try {
+      await joinMeetingMutation.mutateAsync({
+        params: {
+          path: {
+            room_name: roomName,
+            meeting_id: meeting.id,
+          },
+        },
+      });
+      handleJoinDirect(meeting.room_url);
+    } catch (err) {
+      console.error("Failed to join upcoming meeting:", err);
+    }
+  };
+
+  const handleJoinDirect = (roomUrl: string) => {
+    // Go directly to the meeting URL (Whereby/etc)
+    window.open(roomUrl, "_blank");
   };
 
   const handleEndMeeting = async (meetingId: string) => {
@@ -158,73 +194,93 @@ export default function MeetingSelection({
         px={6}
         py={8}
         flex="1"
+        gap={6}
       >
-        {/* Active Meetings */}
-        {activeMeetings.length > 0 && (
-          <VStack align="stretch" gap={4} mb={6}>
-            <Text fontSize="md" fontWeight="semibold" color="gray.700">
-              Active Meetings
+        {/* Current Ongoing Meetings - BIG DISPLAY */}
+        {currentMeetings.length > 0 && (
+          <VStack align="stretch" gap={6} mb={8}>
+            <Text fontSize="xl" fontWeight="bold" color="gray.800">
+              Live Meeting{currentMeetings.length > 1 ? "s" : ""}
             </Text>
-            {activeMeetings.map((meeting) => (
+            {currentMeetings.map((meeting) => (
               <Box
                 key={meeting.id}
                 width="100%"
-                bg="white"
-                border="1px solid"
-                borderColor="gray.200"
-                borderRadius="md"
-                p={4}
-                _hover={{ borderColor: "gray.300" }}
+                bg="blue.50"
+                border="3px solid"
+                borderColor="blue.300"
+                borderRadius="xl"
+                p={8}
+                _hover={{ borderColor: "blue.400", bg: "blue.100" }}
+                transition="all 0.2s"
+                shadow="lg"
               >
                 <HStack justify="space-between" align="start">
-                  <VStack align="start" gap={2} flex={1}>
+                  <VStack align="start" gap={4} flex={1}>
                     <HStack>
-                      <Icon as={FaCalendarAlt} color="blue.500" />
-                      <Text fontWeight="semibold">
-                        {(meeting.calendar_metadata as any)?.title || "Meeting"}
+                      <Icon
+                        as={FaCalendarAlt}
+                        color="blue.600"
+                        boxSize="24px"
+                      />
+                      <Text fontSize="2xl" fontWeight="bold" color="blue.800">
+                        {(meeting.calendar_metadata as any)?.title ||
+                          "Live Meeting"}
                       </Text>
+                      <Badge colorScheme="blue" fontSize="lg" px={4} py={2}>
+                        LIVE
+                      </Badge>
                     </HStack>
 
                     {isOwner &&
                       (meeting.calendar_metadata as any)?.description && (
-                        <Text fontSize="sm" color="gray.600">
+                        <Text fontSize="lg" color="gray.700">
                           {(meeting.calendar_metadata as any).description}
                         </Text>
                       )}
 
-                    <HStack gap={4} fontSize="sm" color="gray.500">
+                    <HStack gap={8} fontSize="md" color="gray.600">
                       <HStack>
-                        <Icon as={FaUsers} />
-                        <Text>{meeting.num_clients} participants</Text>
+                        <Icon as={FaUsers} boxSize="20px" />
+                        <Text fontWeight="medium">
+                          {meeting.num_clients} participants
+                        </Text>
                       </HStack>
                       <HStack>
-                        <Icon as={FaClock} />
+                        <Icon as={FaClock} boxSize="20px" />
                         <Text>
-                          Started {formatDateTime(meeting.start_date)}
+                          Started {formatStartedAgo(meeting.start_date)}
                         </Text>
                       </HStack>
                     </HStack>
 
                     {isOwner &&
                       (meeting.calendar_metadata as any)?.attendees && (
-                        <HStack gap={2} flexWrap="wrap">
+                        <HStack gap={3} flexWrap="wrap">
                           {(meeting.calendar_metadata as any).attendees
-                            .slice(0, 3)
+                            .slice(0, 4)
                             .map((attendee: any, idx: number) => (
                               <Badge
                                 key={idx}
-                                colorScheme="green"
-                                fontSize="xs"
+                                colorScheme="blue"
+                                fontSize="sm"
+                                px={3}
+                                py={1}
                               >
                                 {attendee.name || attendee.email}
                               </Badge>
                             ))}
                           {(meeting.calendar_metadata as any).attendees.length >
-                            3 && (
-                            <Badge colorScheme="gray" fontSize="xs">
+                            4 && (
+                            <Badge
+                              colorScheme="gray"
+                              fontSize="sm"
+                              px={3}
+                              py={1}
+                            >
                               +
                               {(meeting.calendar_metadata as any).attendees
-                                .length - 3}{" "}
+                                .length - 4}{" "}
                               more
                             </Badge>
                           )}
@@ -232,11 +288,15 @@ export default function MeetingSelection({
                       )}
                   </VStack>
 
-                  <HStack gap={2}>
+                  <VStack gap={3}>
                     <Button
                       colorScheme="blue"
-                      size="md"
-                      onClick={() => handleJoinMeeting(meeting.id)}
+                      size="xl"
+                      fontSize="lg"
+                      px={8}
+                      py={6}
+                      onClick={() => handleJoinDirect(meeting.room_url)}
+                      leftIcon={<Icon as={FaUsers} boxSize="20px" />}
                     >
                       Join Now
                     </Button>
@@ -247,113 +307,76 @@ export default function MeetingSelection({
                         size="md"
                         onClick={() => handleEndMeeting(meeting.id)}
                         isLoading={deactivateMeetingMutation.isPending}
+                        leftIcon={<Icon as={LuX} />}
                       >
-                        <Icon as={LuX} />
                         End Meeting
                       </Button>
                     )}
-                  </HStack>
+                  </VStack>
                 </HStack>
               </Box>
             ))}
           </VStack>
         )}
 
-        {/* Upcoming Meetings */}
-        {upcomingEvents.length > 0 && (
+        {/* Upcoming Meetings - SMALLER ASIDE DISPLAY */}
+        {upcomingMeetings.length > 0 && (
           <VStack align="stretch" gap={4} mb={6}>
-            <Text fontSize="md" fontWeight="semibold" color="gray.700">
-              Upcoming Meetings
+            <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+              Starting Soon
             </Text>
-            {upcomingEvents.map((event) => {
-              const now = new Date();
-              const startTime = new Date(event.start_time);
-              const endTime = new Date(event.end_time);
-              const isOngoing = startTime <= now && now <= endTime;
-              const minutesUntilStart = Math.floor(
-                (startTime.getTime() - now.getTime()) / (1000 * 60),
-              );
-              const canJoinEarly = minutesUntilStart <= 5; // Allow joining 5 minutes before
+            <HStack gap={4} flexWrap="wrap">
+              {upcomingMeetings.map((meeting) => {
+                const now = new Date();
+                const startTime = new Date(meeting.start_date);
+                const minutesUntilStart = Math.floor(
+                  (startTime.getTime() - now.getTime()) / (1000 * 60),
+                );
 
-              return (
-                <Box
-                  key={event.id}
-                  width="100%"
-                  bg="white"
-                  border="1px solid"
-                  borderColor="gray.200"
-                  borderRadius="md"
-                  p={4}
-                  _hover={{ borderColor: "gray.300" }}
-                >
-                  <HStack justify="space-between" align="start">
-                    <VStack align="start" gap={2} flex={1}>
+                return (
+                  <Box
+                    key={meeting.id}
+                    bg="white"
+                    border="2px solid"
+                    borderColor="orange.200"
+                    borderRadius="lg"
+                    p={4}
+                    minW="300px"
+                    maxW="400px"
+                    _hover={{ borderColor: "orange.300", bg: "orange.50" }}
+                    transition="all 0.2s"
+                  >
+                    <VStack align="start" gap={3}>
                       <HStack>
-                        <Icon
-                          as={FaCalendarAlt}
-                          color={isOngoing ? "blue.500" : "orange.500"}
-                        />
-                        <Text fontWeight="semibold">
-                          {event.title || "Scheduled Meeting"}
-                        </Text>
-                        <Badge
-                          colorScheme={isOngoing ? "blue" : "orange"}
-                          fontSize="xs"
-                        >
-                          {isOngoing
-                            ? formatStartedAgo(event.start_time)
-                            : formatCountdown(event.start_time)}
-                        </Badge>
-                      </HStack>
-
-                      {isOwner && event.description && (
-                        <Text fontSize="sm" color="gray.600">
-                          {event.description}
-                        </Text>
-                      )}
-
-                      <HStack gap={4} fontSize="sm" color="gray.500">
-                        <Text>
-                          {formatDateTime(event.start_time)} -{" "}
-                          {formatDateTime(event.end_time)}
+                        <Icon as={FaCalendarAlt} color="orange.500" />
+                        <Text fontWeight="semibold" fontSize="md">
+                          {(meeting.calendar_metadata as any)?.title ||
+                            "Upcoming Meeting"}
                         </Text>
                       </HStack>
 
-                      {isOwner && event.attendees && (
-                        <HStack gap={2} flexWrap="wrap">
-                          {event.attendees
-                            .slice(0, 3)
-                            .map((attendee: any, idx: number) => (
-                              <Badge
-                                key={idx}
-                                colorScheme="purple"
-                                fontSize="xs"
-                              >
-                                {attendee.name || attendee.email}
-                              </Badge>
-                            ))}
-                          {event.attendees.length > 3 && (
-                            <Badge colorScheme="gray" fontSize="xs">
-                              +{event.attendees.length - 3} more
-                            </Badge>
-                          )}
-                        </HStack>
-                      )}
+                      <Badge colorScheme="orange" fontSize="sm" px={2} py={1}>
+                        in {minutesUntilStart} minute
+                        {minutesUntilStart !== 1 ? "s" : ""}
+                      </Badge>
+
+                      <Text fontSize="sm" color="gray.600">
+                        Starts: {formatDateTime(meeting.start_date)}
+                      </Text>
+
+                      <Button
+                        colorScheme="orange"
+                        size="sm"
+                        width="full"
+                        onClick={() => handleJoinUpcoming(meeting)}
+                      >
+                        Join Early
+                      </Button>
                     </VStack>
-
-                    <Button
-                      variant="outline"
-                      colorScheme={isOngoing || canJoinEarly ? "blue" : "gray"}
-                      size="md"
-                      onClick={() => handleJoinUpcoming(event)}
-                      isDisabled={!isOngoing && !canJoinEarly}
-                    >
-                      Join
-                    </Button>
-                  </HStack>
-                </Box>
-              );
-            })}
+                  </Box>
+                );
+              })}
+            </HStack>
           </VStack>
         )}
 
@@ -374,8 +397,8 @@ export default function MeetingSelection({
           </Box>
         )}
 
-        {/* Message for non-owners of private rooms */}
-        {!isOwner && !isSharedRoom && (
+        {/* Message for non-owners of private rooms - only show when auth is not loading */}
+        {!authLoading && !isOwner && !isSharedRoom && (
           <Box
             width="100%"
             bg="gray.50"

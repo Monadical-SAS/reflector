@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useError } from "../../../(errors)/errorContext";
-import type { components } from "../../../reflector-api";
-import { shouldShowError } from "../../../lib/errorUtils";
+import { useError } from "../(errors)/errorContext";
+import type { components } from "../reflector-api";
+import { shouldShowError } from "../lib/errorUtils";
 
 type Meeting = components["schemas"]["Meeting"];
-import { useRoomsCreateMeeting } from "../../../lib/apiHooks";
+import { useRoomsCreateMeeting } from "../lib/apiHooks";
 import { notFound } from "next/navigation";
 
 type ErrorMeeting = {
