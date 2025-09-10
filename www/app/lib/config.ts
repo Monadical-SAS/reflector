@@ -13,8 +13,6 @@ type Config = Readonly<{
   api_url: string;
 }>;
 
-export type DomainConfig = Config;
-
 function parseBooleanEnv(
   value: string | undefined,
   defaultValue: boolean = false,

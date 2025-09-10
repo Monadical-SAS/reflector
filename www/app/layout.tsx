@@ -4,7 +4,6 @@ import { Poppins } from "next/font/google";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
 import { RecordingConsentProvider } from "./recordingConsentContext";
-import { getConfig } from "./lib/config";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
 
@@ -62,13 +61,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const config = getConfig();
-
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
       <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
