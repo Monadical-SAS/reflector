@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { featureEnabled } from "../../domainContext";
 import type { components } from "../../reflector-api";
 
 type GetTranscript = components["schemas"]["GetTranscript"];
@@ -24,6 +23,8 @@ import {
   useZulipTopics,
   useTranscriptPostToZulip,
 } from "../../lib/apiHooks";
+
+import { featureEnabled } from "../../lib/config";
 
 type ShareZulipProps = {
   transcriptResponse: GetTranscript;

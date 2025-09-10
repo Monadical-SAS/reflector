@@ -1,5 +1,5 @@
 import { withAuth } from "next-auth/middleware";
-import { getConfig } from "./app/lib/edgeConfig";
+import { getConfig } from "./app/lib/config";
 import { NextResponse } from "next/server";
 import { PROTECTED_PAGES } from "./app/lib/auth";
 

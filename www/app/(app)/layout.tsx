@@ -1,5 +1,5 @@
 import { Container, Flex, Link } from "@chakra-ui/react";
-import { getConfig } from "../lib/edgeConfig";
+import { getConfig } from "../lib/config";
 import NextLink from "next/link";
 import Image from "next/image";
 import UserInfo from "../(auth)/userInfo";
@@ -11,7 +11,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const config = await getConfig();
+  const config = getConfig();
   const { requireLogin, privacy, browse, rooms } = config.features;
   return (
     <Container

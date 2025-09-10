@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import { featureEnabled } from "../../../domainContext";
 import {
   Flex,
   Box,
@@ -22,6 +21,8 @@ import {
 } from "@chakra-ui/react";
 import { useAuth } from "../../../lib/AuthProvider";
 import type { components } from "../../../reflector-api";
+
+import { featureEnabled } from "../../../lib/config";
 
 const TranscriptCreate = () => {
   const isClient = typeof window !== "undefined";

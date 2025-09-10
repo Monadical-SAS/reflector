@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import type { components } from "../../reflector-api";
@@ -23,6 +22,8 @@ import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";
 import { useAuth } from "../../lib/AuthProvider";
+
+import { featureEnabled } from "../../lib/config";
 
 type ShareAndPrivacyProps = {
   finalSummaryRef: any;

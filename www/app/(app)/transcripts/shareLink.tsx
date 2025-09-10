@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, use } from "react";
-import { featureEnabled } from "../../domainContext";
 import { Button, Flex, Input, Text } from "@chakra-ui/react";
 import QRCode from "react-qr-code";
+
+import { featureEnabled } from "../../lib/config";
 
 type ShareLinkProps = {
   transcriptId: string;

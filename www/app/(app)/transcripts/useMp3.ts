@@ -1,7 +1,7 @@
-import { useContext, useEffect, useState } from "react";
-import { DomainContext } from "../../domainContext";
+import { useEffect, useState } from "react";
 import { useTranscriptGet } from "../../lib/apiHooks";
 import { useAuth } from "../../lib/AuthProvider";
+import { getConfig } from "../../lib/config";
 
 export type Mp3Response = {
   media: HTMLMediaElement | null;
@@ -19,7 +19,7 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     null,
   );
   const [audioDeleted, setAudioDeleted] = useState<boolean | null>(null);
-  const { api_url } = useContext(DomainContext);
+  const { api_url } = getConfig();
   const auth = useAuth();
   const accessTokenInfo =
     auth.status === "authenticated" ? auth.accessToken : null;
