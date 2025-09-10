@@ -47,6 +47,7 @@ class FileDiarizationModalProcessor(FileDiarizationProcessor):
                     "audio_file_url": data.audio_url,
                     "timestamp": 0,
                 },
+                follow_redirects=True,
             )
             response.raise_for_status()
             diarization_data = response.json()["diarization"]

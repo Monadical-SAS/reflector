@@ -54,6 +54,7 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
                     "language": data.language,
                     "batch": True,
                 },
+                follow_redirects=True,
             )
             response.raise_for_status()
             result = response.json()
