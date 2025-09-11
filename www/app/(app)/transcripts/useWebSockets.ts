@@ -492,7 +492,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, websocketUrl]);
+  }, [transcriptId]);
 
   return {
     transcriptTextLive,
