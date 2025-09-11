@@ -151,7 +151,7 @@ class MeetingController:
     async def get_by_room_name(
         self,
         room_name: str,
-    ) -> Meeting:
+    ) -> Meeting | None:
         """
         Get a meeting by room name.
         """
@@ -162,7 +162,7 @@ class MeetingController:
 
         return Meeting(**result)
 
-    async def get_active(self, room: Room, current_time: datetime) -> Meeting:
+    async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         """
         Get latest active meeting for a room.
         For backward compatibility, returns the most recent active meeting.
@@ -188,10 +188,6 @@ class MeetingController:
     async def get_all_active_for_room(
         self, room: Room, current_time: datetime
     ) -> list[Meeting]:
-        """
-        Get all active meetings for a room.
-        This supports multiple concurrent meetings per room.
-        """
         end_date = getattr(meetings.c, "end_date")
         query = (
             meetings.select()
@@ -272,7 +268,6 @@ class MeetingConsentController:
         return MeetingConsent(**result) if result else None
 
     async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
-        """Create new consent or update existing one for authenticated users"""
         if consent.user_id:
             # For authenticated users, check if consent already exists
             # not transactional but we're ok with that; the consents ain't deleted anyways
