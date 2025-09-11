@@ -23,7 +23,7 @@ import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";
 import { useAuth } from "../../lib/AuthProvider";
 
-import { featureEnabled } from "../../lib/config";
+import { featureEnabled } from "../../lib/features";
 
 type ShareAndPrivacyProps = {
   finalSummaryRef: any;

@@ -6,8 +6,7 @@ type AudioWaveform = components["schemas"]["AudioWaveform"];
 type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
-import { $api } from "../../lib/apiClient";
-import { getConfig } from "../../lib/config";
+import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -37,7 +36,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [status, setStatus] = useState<Status | null>(null);
   const { setError } = useError();
 
-  const { websocket_url: websocketUrl } = getConfig();
   const queryClient = useQueryClient();
 
   const [accumulatedText, setAccumulatedText] = useState<string>("");
@@ -328,7 +326,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
     if (!transcriptId) return;
 
-    const url = `${websocketUrl}/v1/transcripts/${transcriptId}/events`;
+    const url = `${WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -494,7 +492,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, websocketUrl]);
+  }, [transcriptId]);
 
   return {
     transcriptTextLive,

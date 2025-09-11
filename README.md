@@ -99,8 +99,7 @@ Start with `cd www`.
 
 ```bash
 pnpm install
-cp .env_template .env
-cp config-template.ts config.ts
+cp .env.example .env
 ```
 
 Then, fill in the environment variables in `.env` as needed. If you are unsure on how to proceed, ask in Zulip.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranscriptGet } from "../../lib/apiHooks";
 import { useAuth } from "../../lib/AuthProvider";
-import { getConfig } from "../../lib/config";
+import { API_URL } from "../../lib/apiClient";
 
 export type Mp3Response = {
   media: HTMLMediaElement | null;
@@ -19,7 +19,6 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     null,
   );
   const [audioDeleted, setAudioDeleted] = useState<boolean | null>(null);
-  const { api_url } = getConfig();
   const auth = useAuth();
   const accessTokenInfo =
     auth.status === "authenticated" ? auth.accessToken : null;
@@ -78,7 +77,7 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
 
     // Audio is not deleted, proceed to load it
     audioElement = document.createElement("audio");
-    audioElement.src = `${api_url}/v1/transcripts/${transcriptId}/audio/mp3`;
+    audioElement.src = `${API_URL}/v1/transcripts/${transcriptId}/audio/mp3`;
     audioElement.crossOrigin = "anonymous";
     audioElement.preload = "auto";
 
@@ -110,7 +109,7 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
         if (handleError) audioElement.removeEventListener("error", handleError);
       }
     };
-  }, [transcriptId, transcript, later, api_url]);
+  }, [transcriptId, transcript, later]);
 
   const getNow = () => {
     setLater(false);
