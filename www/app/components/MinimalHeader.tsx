@@ -1,6 +1,6 @@
 "use client";
 
-import { Flex, Link, Button, Text } from "@chakra-ui/react";
+import { Flex, Link, Button, Text, HStack } from "@chakra-ui/react";
 import NextLink from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ interface MinimalHeaderProps {
   displayName?: string;
   showLeaveButton?: boolean;
   onLeave?: () => void;
+  showCreateButton?: boolean;
+  onCreateMeeting?: () => void;
 }
 
 export default function MinimalHeader({
@@ -17,6 +19,8 @@ export default function MinimalHeader({
   displayName,
   showLeaveButton = true,
   onLeave,
+  showCreateButton = false,
+  onCreateMeeting,
 }: MinimalHeaderProps) {
   const router = useRouter();
 
@@ -63,17 +67,28 @@ export default function MinimalHeader({
         </Text>
       </Flex>
 
-      {/* Leave Room Button */}
-      {showLeaveButton && (
-        <Button
-          variant="outline"
-          colorScheme="gray"
-          size="sm"
-          onClick={handleLeaveMeeting}
-        >
-          Leave Room
-        </Button>
-      )}
+      {/* Action Buttons */}
+      <HStack gap={2}>
+        {showCreateButton && onCreateMeeting && (
+          <Button
+            colorScheme="green"
+            size="sm"
+            onClick={onCreateMeeting}
+          >
+            Create Meeting
+          </Button>
+        )}
+        {showLeaveButton && (
+          <Button
+            variant="outline"
+            colorScheme="gray"
+            size="sm"
+            onClick={handleLeaveMeeting}
+          >
+            Leave Room
+          </Button>
+        )}
+      </HStack>
     </Flex>
   );
 }

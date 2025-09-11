@@ -185,6 +185,8 @@ export default function MeetingSelection({
         displayName={room?.name}
         showLeaveButton={true}
         onLeave={handleLeaveMeeting}
+        showCreateButton={isOwner || isSharedRoom}
+        onCreateMeeting={onCreateUnscheduled}
       />
 
       <Flex
@@ -391,29 +393,12 @@ export default function MeetingSelection({
                 </Text>
                 <Text fontSize="md" color="gray.600" maxW="400px">
                   There are no ongoing or upcoming meetings in this room at the moment.
-                  {(isOwner || isSharedRoom) && " You can start a quick meeting below."}
                 </Text>
               </VStack>
             </VStack>
           </Flex>
         )}
 
-        {/* Create Unscheduled Meeting - Only for room owners or shared rooms */}
-        {(isOwner || isSharedRoom) && (
-          <Box width="100%" bg="gray.50" borderRadius="md" p={4} mt={6}>
-            <HStack justify="space-between" align="center">
-              <VStack align="start" gap={1}>
-                <Text fontWeight="semibold">Start a Quick Meeting</Text>
-                <Text fontSize="sm" color="gray.600">
-                  Jump into a meeting room right away
-                </Text>
-              </VStack>
-              <Button colorScheme="green" onClick={onCreateUnscheduled}>
-                Create Meeting
-              </Button>
-            </HStack>
-          </Box>
-        )}
       </Flex>
     </Flex>
   );
