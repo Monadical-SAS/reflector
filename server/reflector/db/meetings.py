@@ -20,7 +20,7 @@ meetings = sa.Table(
     sa.Column(
         "room_id",
         sa.String,
-        sa.ForeignKey("room.id", ondelete="CASCADE"),
+        sa.ForeignKey("room.id", ondelete="CASCADE", name="fk_meeting_room_id"),
         nullable=True,
     ),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
