@@ -397,23 +397,6 @@ export default function MeetingSelection({
           </Box>
         )}
 
-        {/* Message for non-owners of private rooms - only show when auth is not loading */}
-        {!authLoading && !isOwner && !isSharedRoom && (
-          <Box
-            width="100%"
-            bg="gray.50"
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="md"
-            p={4}
-            mt={6}
-          >
-            <Text fontSize="sm" color="gray.600" textAlign="center">
-              Only the room owner can create unscheduled meetings in this
-              private room.
-            </Text>
-          </Box>
-        )}
       </Flex>
     </Flex>
   );
