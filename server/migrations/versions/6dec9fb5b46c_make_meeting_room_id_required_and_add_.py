@@ -23,7 +23,7 @@ def upgrade() -> None:
     with op.batch_alter_table("meeting", schema=None) as batch_op:
         batch_op.alter_column("room_id", existing_type=sa.VARCHAR(), nullable=False)
         batch_op.create_foreign_key(
-            "fk_meeting_room_id", "room", ["room_id"], ["id"], ondelete="CASCADE"
+            None, "room", ["room_id"], ["id"], ondelete="CASCADE"
         )
 
     # ### end Alembic commands ###
