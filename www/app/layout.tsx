@@ -61,8 +61,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
-export const dynamic = "force-dynamic";
-
 export default async function RootLayout({
   children,
 }: {

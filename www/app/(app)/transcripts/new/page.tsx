@@ -20,12 +20,11 @@ import {
   Spacer,
 } from "@chakra-ui/react";
 import { useAuth } from "../../../lib/AuthProvider";
-import type { components } from "../../../reflector-api";
-
 import { featureEnabled } from "../../../lib/config";
 
+export const dynamic = "force-dynamic";
+
 const TranscriptCreate = () => {
-  const isClient = typeof window !== "undefined";
   const router = useRouter();
   const auth = useAuth();
   const isAuthenticated = auth.status === "authenticated";
@@ -177,7 +176,7 @@ const TranscriptCreate = () => {
                     placeholder="Choose your language"
                   />
                 </Box>
-                {isClient && !loading ? (
+                {!loading ? (
                   permissionOk ? (
                     <Spacer />
                   ) : permissionDenied ? (
