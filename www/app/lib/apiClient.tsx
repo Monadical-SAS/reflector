@@ -7,7 +7,10 @@ import { assertExistsAndNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
 
 export const API_URL = !isBuildPhase
-  ? assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL)
+  ? assertExistsAndNonEmptyString(
+      process.env.NEXT_PUBLIC_API_URL,
+      "NEXT_PUBLIC_API_URL required",
+    )
   : "http://localhost";
 
 // TODO decide strict validation or not

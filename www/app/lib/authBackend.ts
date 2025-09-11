@@ -22,10 +22,16 @@ import { isBuildPhase } from "./next";
 
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 const CLIENT_ID = !isBuildPhase
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_ID)
+  ? assertExistsAndNonEmptyString(
+      process.env.AUTHENTIK_CLIENT_ID,
+      "AUTHENTIK_CLIENT_ID required",
+    )
   : "noop";
 const CLIENT_SECRET = !isBuildPhase
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_SECRET)
+  ? assertExistsAndNonEmptyString(
+      process.env.AUTHENTIK_CLIENT_SECRET,
+      "AUTHENTIK_CLIENT_SECRET required",
+    )
   : "noop";
 
 export const authOptions: AuthOptions = {
@@ -173,9 +179,14 @@ async function lockedRefreshAccessToken(
     });
 }
 
+const AUTHENTIC_REFRESH_TOKEN_URL = assertExistsAndNonEmptyString(
+  process.env.AUTHENTIK_REFRESH_TOKEN_URL,
+  "AUTHENTIK_REFRESH_TOKEN_URL required",
+);
+
 async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
   try {
-    const url = `${process.env.AUTHENTIK_REFRESH_TOKEN_URL}`;
+    const url = AUTHENTIC_REFRESH_TOKEN_URL;
 
     const options = {
       headers: {
