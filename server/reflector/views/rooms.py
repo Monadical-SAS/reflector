@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 import reflector.auth as auth
 from reflector.db import get_database
+from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.services.ics_sync import ics_sync_service
@@ -392,8 +393,6 @@ async def rooms_ics_status(
     if room.ics_enabled and room.ics_last_sync:
         next_sync = room.ics_last_sync + timedelta(seconds=room.ics_fetch_interval)
 
-    from reflector.db.calendar_events import calendar_events_controller
-
     events = await calendar_events_controller.get_by_room(
         room.id, include_deleted=False
     )
@@ -433,8 +432,6 @@ async def rooms_list_meetings(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    from reflector.db.calendar_events import calendar_events_controller
-
     events = await calendar_events_controller.get_by_room(
         room.id, include_deleted=False
     )
@@ -460,8 +457,6 @@ async def rooms_list_upcoming_meetings(
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-
-    from reflector.db.calendar_events import calendar_events_controller
 
     events = await calendar_events_controller.get_upcoming(
         room.id, minutes_ahead=minutes_ahead
