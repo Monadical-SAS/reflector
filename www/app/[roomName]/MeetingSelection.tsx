@@ -375,11 +375,11 @@ export default function MeetingSelection({
 
         {/* No meetings message - show when no ongoing or upcoming meetings */}
         {currentMeetings.length === 0 && upcomingMeetings.length === 0 && (
-          <Box
+          <Flex
             width="100%"
-            bg="gray.50"
-            borderRadius="xl"
-            p={8}
+            flex="1"
+            justify="center"
+            align="center"
             textAlign="center"
             mb={6}
           >
@@ -395,7 +395,7 @@ export default function MeetingSelection({
                 </Text>
               </VStack>
             </VStack>
-          </Box>
+          </Flex>
         )}
 
         {/* Create Unscheduled Meeting - Only for room owners or shared rooms */}
