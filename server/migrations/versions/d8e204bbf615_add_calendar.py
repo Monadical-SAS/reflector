@@ -1,8 +1,8 @@
 """add calendar
 
-Revision ID: 69f9517c06a9
+Revision ID: d8e204bbf615
 Revises: d4a1c446458c
-Create Date: 2025-09-05 12:35:01.954623
+Create Date: 2025-09-10 19:56:22.295756
 
 """
 
@@ -13,7 +13,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "69f9517c06a9"
+revision: str = "d8e204bbf615"
 down_revision: Union[str, None] = "d4a1c446458c"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -39,7 +39,12 @@ def upgrade() -> None:
         ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["room_id"], ["room.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["room_id"],
+            ["room.id"],
+            name="fk_calendar_event_room_id",
+            ondelete="CASCADE",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("room_id", "ics_uid", name="uq_room_calendar_event"),
     )
@@ -67,7 +72,11 @@ def upgrade() -> None:
             "idx_meeting_calendar_event", ["calendar_event_id"], unique=False
         )
         batch_op.create_foreign_key(
-            None, "calendar_event", ["calendar_event_id"], ["id"], ondelete="SET NULL"
+            "fk_meeting_calendar_event_id",
+            "calendar_event",
+            ["calendar_event_id"],
+            ["id"],
+            ondelete="SET NULL",
         )
 
     with op.batch_alter_table("room", schema=None) as batch_op:
@@ -105,7 +114,7 @@ def downgrade() -> None:
         batch_op.drop_column("ics_url")
 
     with op.batch_alter_table("meeting", schema=None) as batch_op:
-        batch_op.drop_constraint(None, type_="foreignkey")
+        batch_op.drop_constraint("fk_meeting_calendar_event_id", type_="foreignkey")
         batch_op.drop_index("idx_meeting_calendar_event")
         batch_op.drop_column("calendar_metadata")
         batch_op.drop_column("calendar_event_id")

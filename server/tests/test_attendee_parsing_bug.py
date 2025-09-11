@@ -32,12 +32,29 @@ async def test_attendee_parsing_bug():
         ics_enabled=True,
     )
 
-    # Read the test ICS file that reproduces the bug
+    # Read the test ICS file that reproduces the bug and update it with current time
+    from datetime import datetime, timedelta, timezone
+
     test_ics_path = os.path.join(
         os.path.dirname(__file__), "test_attendee_parsing_bug.ics"
     )
     with open(test_ics_path, "r") as f:
         ics_content = f.read()
+
+    # Replace the dates with current time + 1 hour to ensure it's within the 24h window
+    now = datetime.now(timezone.utc)
+    future_time = now + timedelta(hours=1)
+    end_time = future_time + timedelta(hours=1)
+
+    # Format dates for ICS format
+    dtstart = future_time.strftime("%Y%m%dT%H%M%SZ")
+    dtend = end_time.strftime("%Y%m%dT%H%M%SZ")
+    dtstamp = now.strftime("%Y%m%dT%H%M%SZ")
+
+    # Update the ICS content with current dates
+    ics_content = ics_content.replace("20250910T180000Z", dtstart)
+    ics_content = ics_content.replace("20250910T190000Z", dtend)
+    ics_content = ics_content.replace("20250910T174000Z", dtstamp)
 
     # Create sync service and mock the fetch
     sync_service = ICSSyncService()
@@ -51,7 +68,7 @@ async def test_attendee_parsing_bug():
         calendar = sync_service.fetch_service.parse_ics(ics_content)
         from reflector.settings import settings
 
-        room_url = f"{settings.BASE_URL}/{room.name}"
+        room_url = f"{settings.UI_BASE_URL}/{room.name}"
 
         print(f"Room URL being used for matching: {room_url}")
         print(f"ICS content:\n{ics_content}")
@@ -84,8 +101,8 @@ async def test_attendee_parsing_bug():
                 f"Attendee {i}: email='{attendee.get('email')}', name='{attendee.get('name')}'"
             )
 
-        # The bug would cause individual characters to be parsed as attendees
-        # Check if we have the problematic parsing (emails like "M", "A", "I", etc.)
+        # With the fix, we should now get properly parsed email addresses
+        # Check that no single characters are parsed as emails
         single_char_emails = [
             att for att in attendees if att.get("email") and len(att["email"]) == 1
         ]
@@ -97,16 +114,24 @@ async def test_attendee_parsing_bug():
             for att in single_char_emails:
                 print(f"  - '{att['email']}'")
 
-        # For now, just assert that we have attendees (the test will show the bug)
-        # In a fix, we would expect proper email addresses, not single characters
+        # Should have attendees but not single-character emails
         assert len(attendees) > 0
+        assert (
+            len(single_char_emails) == 0
+        ), f"Found {len(single_char_emails)} single-character emails, parsing is still buggy"
 
-        if len(attendees) > 3:
-            pytest.fail(
-                f"ATTENDEE PARSING BUG DETECTED: "
-                f"Found {len(attendees)} attendees with {len(single_char_emails)} single-character emails. "
-                f"This suggests a comma-separated string was parsed as individual characters."
-            )
+        # Check that all emails are valid (contain @ symbol)
+        valid_emails = [
+            att for att in attendees if att.get("email") and "@" in att["email"]
+        ]
+        assert len(valid_emails) == len(
+            attendees
+        ), "Some attendees don't have valid email addresses"
+
+        # We expect around 29 attendees (28 from the comma-separated list + 1 organizer)
+        assert (
+            len(attendees) >= 25
+        ), f"Expected around 29 attendees, got {len(attendees)}"
 
 
 @pytest.mark.asyncio

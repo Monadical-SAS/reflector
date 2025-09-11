@@ -44,7 +44,11 @@ meetings = sa.Table(
     sa.Column(
         "calendar_event_id",
         sa.String,
-        sa.ForeignKey("calendar_event.id", ondelete="SET NULL"),
+        sa.ForeignKey(
+            "calendar_event.id",
+            ondelete="SET NULL",
+            name="fk_meeting_calendar_event_id",
+        ),
     ),
     sa.Column("calendar_metadata", JSONB),
     sa.Column("last_participant_left_at", sa.DateTime(timezone=True)),

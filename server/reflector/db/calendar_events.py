@@ -15,7 +15,7 @@ calendar_events = sa.Table(
     sa.Column(
         "room_id",
         sa.String,
-        sa.ForeignKey("room.id", ondelete="CASCADE"),
+        sa.ForeignKey("room.id", ondelete="CASCADE", name="fk_calendar_event_room_id"),
         nullable=False,
     ),
     sa.Column("ics_uid", sa.Text, nullable=False),

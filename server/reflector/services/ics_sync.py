@@ -85,7 +85,6 @@ class ICSFetchService:
 
             # Count total non-cancelled events in the time window
             event_data = self._parse_event(component)
-            print(room_url, event_data)
             if event_data and window_start <= event_data["start_time"] <= window_end:
                 total_events += 1
 
@@ -96,7 +95,6 @@ class ICSFetchService:
         return events, total_events
 
     def _event_matches_room(self, event: Event, room_name: str, room_url: str) -> bool:
-        print("_____", room_url)
         location = str(event.get("LOCATION", ""))
         description = str(event.get("DESCRIPTION", ""))
 
@@ -110,7 +108,6 @@ class ICSFetchService:
         text_to_check = f"{location} {description}".lower()
 
         for pattern in patterns:
-            print(text_to_check, pattern.lower())
             if pattern.lower() in text_to_check:
                 return True
 
@@ -181,21 +178,53 @@ class ICSFetchService:
         if not isinstance(attendees, list):
             attendees = [attendees]
         for att in attendees:
-            att_data: AttendeeData = {
-                "email": str(att).replace("mailto:", "") if att else None,
-                "name": att.params.get("CN") if hasattr(att, "params") else None,
-                "status": att.params.get("PARTSTAT")
-                if hasattr(att, "params")
-                else None,
-                "role": att.params.get("ROLE") if hasattr(att, "params") else None,
-            }
-            final_attendees.append(att_data)
+            email_str = str(att).replace("mailto:", "") if att else None
+
+            # Handle malformed comma-separated email addresses in a single ATTENDEE field
+            if email_str and "," in email_str:
+                # Split comma-separated emails and create separate attendee entries
+                email_parts = [email.strip() for email in email_str.split(",")]
+                for email in email_parts:
+                    if email and "@" in email:  # Basic email validation
+                        # Clean up any remaining MAILTO: prefix
+                        clean_email = email.replace("MAILTO:", "").replace(
+                            "mailto:", ""
+                        )
+                        att_data: AttendeeData = {
+                            "email": clean_email,
+                            "name": att.params.get("CN")
+                            if hasattr(att, "params") and email == email_parts[0]
+                            else None,
+                            "status": att.params.get("PARTSTAT")
+                            if hasattr(att, "params") and email == email_parts[0]
+                            else None,
+                            "role": att.params.get("ROLE")
+                            if hasattr(att, "params") and email == email_parts[0]
+                            else None,
+                        }
+                        final_attendees.append(att_data)
+            else:
+                # Normal single attendee
+                att_data: AttendeeData = {
+                    "email": email_str,
+                    "name": att.params.get("CN") if hasattr(att, "params") else None,
+                    "status": att.params.get("PARTSTAT")
+                    if hasattr(att, "params")
+                    else None,
+                    "role": att.params.get("ROLE") if hasattr(att, "params") else None,
+                }
+                final_attendees.append(att_data)
 
         # Add organizer
         organizer = event.get("ORGANIZER")
         if organizer:
+            org_email = (
+                str(organizer).replace("mailto:", "").replace("MAILTO:", "")
+                if organizer
+                else None
+            )
             org_data: AttendeeData = {
-                "email": str(organizer).replace("mailto:", "") if organizer else None,
+                "email": org_email,
                 "name": organizer.params.get("CN")
                 if hasattr(organizer, "params")
                 else None,
