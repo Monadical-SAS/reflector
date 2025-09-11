@@ -189,7 +189,8 @@ export default function MeetingSelection({
 
       <Flex
         flexDir="column"
-        w={{ base: "full", md: "container.xl" }}
+        w="full"
+        maxW="800px"
         mx="auto"
         px={6}
         py={8}
@@ -206,14 +207,9 @@ export default function MeetingSelection({
               <Box
                 key={meeting.id}
                 width="100%"
-                bg="blue.50"
-                border="3px solid"
-                borderColor="blue.300"
+                bg="gray.50"
                 borderRadius="xl"
                 p={8}
-                _hover={{ borderColor: "blue.400", bg: "blue.100" }}
-                transition="all 0.2s"
-                shadow="lg"
               >
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={4} flex={1}>
@@ -227,9 +223,6 @@ export default function MeetingSelection({
                         {(meeting.calendar_metadata as any)?.title ||
                           "Live Meeting"}
                       </Text>
-                      <Badge colorScheme="blue" fontSize="lg" px={4} py={2}>
-                        LIVE
-                      </Badge>
                     </HStack>
 
                     {isOwner &&
