@@ -19,7 +19,7 @@ import {
 import { useRecordingConsent } from "../../recordingConsentContext";
 import { toaster } from "../../components/ui/toaster";
 import { FaBars } from "react-icons/fa6";
-import MinimalHeader from "../../components/MinimalHeader";
+import MeetingMinimalHeader from "../../components/MeetingMinimalHeader";
 import type { components } from "../../reflector-api";
 
 type Meeting = components["schemas"]["Meeting"];
@@ -308,7 +308,7 @@ export default function MeetingPage({ params }: MeetingPageProps) {
   if (isLoading) {
     return (
       <Box display="flex" flexDirection="column" minH="100vh">
-        <MinimalHeader
+        <MeetingMinimalHeader
           roomName={roomName}
           displayName={room?.name}
           showLeaveButton={false}
@@ -350,7 +350,7 @@ export default function MeetingPage({ params }: MeetingPageProps) {
   // But keeping it as a fallback
   return (
     <Box display="flex" flexDirection="column" minH="100vh">
-      <MinimalHeader roomName={roomName} displayName={room?.name} />
+      <MeetingMinimalHeader roomName={roomName} displayName={room?.name} />
       <Box
         display="flex"
         justifyContent="center"

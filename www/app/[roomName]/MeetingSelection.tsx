@@ -28,7 +28,7 @@ import {
   formatCountdown,
   formatStartedAgo,
 } from "../lib/timeUtils";
-import MinimalHeader from "../components/MinimalHeader";
+import MeetingMinimalHeader from "../components/MeetingMinimalHeader";
 
 // Meeting join settings
 const EARLY_JOIN_MINUTES = 5; // Allow joining 5 minutes before meeting starts
@@ -180,7 +180,7 @@ export default function MeetingSelection({
 
   return (
     <Flex flexDir="column" minH="100vh">
-      <MinimalHeader
+      <MeetingMinimalHeader
         roomName={roomName}
         displayName={room?.name}
         showLeaveButton={true}

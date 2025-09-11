@@ -5,7 +5,7 @@ import NextLink from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-interface MinimalHeaderProps {
+interface MeetingMinimalHeaderProps {
   roomName: string;
   displayName?: string;
   showLeaveButton?: boolean;
@@ -14,14 +14,14 @@ interface MinimalHeaderProps {
   onCreateMeeting?: () => void;
 }
 
-export default function MinimalHeader({
+export default function MeetingMinimalHeader({
   roomName,
   displayName,
   showLeaveButton = true,
   onLeave,
   showCreateButton = false,
   onCreateMeeting,
-}: MinimalHeaderProps) {
+}: MeetingMinimalHeaderProps) {
   const router = useRouter();
 
   const handleLeaveMeeting = () => {
