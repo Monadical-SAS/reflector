@@ -118,8 +118,8 @@ async def test_get_active_by_calendar_event():
 
 
 @pytest.mark.asyncio
-async def test_calendar_meeting_force_close_after_30_min():
-    """Test that calendar meetings force close 30 minutes after scheduled end."""
+async def test_calendar_meeting_deactivates_after_scheduled_end():
+    """Test that unused calendar meetings deactivate after scheduled end time."""
     # Create a room
     room = await rooms_controller.add(
         name="test-room",
@@ -134,13 +134,13 @@ async def test_calendar_meeting_force_close_after_30_min():
         is_shared=False,
     )
 
-    # Create a calendar event
+    # Create a calendar event that ended 35 minutes ago
     event = CalendarEvent(
         room_id=room.id,
-        ics_uid="test-event-force",
-        title="Test Meeting Force Close",
+        ics_uid="test-event-unused",
+        title="Test Meeting Unused",
         start_time=datetime.now(timezone.utc) - timedelta(hours=2),
-        end_time=datetime.now(timezone.utc) - timedelta(minutes=35),  # Ended 35 min ago
+        end_time=datetime.now(timezone.utc) - timedelta(minutes=35),
     )
     event = await calendar_events_controller.upsert(event)
 
@@ -148,10 +148,10 @@ async def test_calendar_meeting_force_close_after_30_min():
 
     # Create meeting linked to calendar event
     meeting = await meetings_controller.create(
-        id="meeting-force",
-        room_name="test-meeting-force",
-        room_url="https://whereby.com/test-force",
-        host_room_url="https://whereby.com/test-force-host",
+        id="meeting-unused",
+        room_name="test-meeting-unused",
+        room_url="https://whereby.com/test-unused",
+        host_room_url="https://whereby.com/test-unused-host",
         start_date=event.start_time,
         end_date=event.end_time,
         user_id="test-user",
@@ -159,13 +159,13 @@ async def test_calendar_meeting_force_close_after_30_min():
         calendar_event_id=event.id,
     )
 
-    # Test that calendar meetings force close 30 min after scheduled end
-    # The meeting ended 35 minutes ago, so it should be force closed
+    # Test the new logic: unused calendar meetings deactivate after scheduled end
+    # The meeting ended 35 minutes ago and was never used, so it should be deactivated
 
-    # Manually test the force close logic that would be in process_meetings
-    if meeting.calendar_event_id:
-        if current_time > meeting.end_date + timedelta(minutes=30):
-            await meetings_controller.update_meeting(meeting.id, is_active=False)
+    # Simulate process_meetings logic for unused calendar meeting past end time
+    if meeting.calendar_event_id and current_time > meeting.end_date:
+        # In real code, we'd check has_had_sessions = False here
+        await meetings_controller.update_meeting(meeting.id, is_active=False)
 
     updated_meeting = await meetings_controller.get_by_id(meeting.id)
-    assert updated_meeting.is_active is False  # Force closed after 30 min
+    assert updated_meeting.is_active is False  # Deactivated after scheduled end
