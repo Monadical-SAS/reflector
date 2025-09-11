@@ -5,12 +5,14 @@ from typing import TypedDict
 
 import httpx
 import pytz
+import structlog
 from icalendar import Calendar, Event
-from loguru import logger
 
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.settings import settings
+
+logger = structlog.get_logger()
 
 
 class SyncStatus(str, Enum):
@@ -262,7 +264,7 @@ class ICSSyncService:
             # Check if content changed
             content_hash = hashlib.md5(ics_content.encode()).hexdigest()
             if room.ics_last_etag == content_hash:
-                logger.info(f"No changes in ICS for room {room.id}")
+                logger.info("No changes in ICS for room", room_id=room.id)
                 # Still parse to get event count
                 calendar = self.fetch_service.parse_ics(ics_content)
                 room_url = f"{settings.UI_BASE_URL}/{room.name}"
@@ -312,7 +314,7 @@ class ICSSyncService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to sync ICS for room {room.id}: {e}")
+            logger.error("Failed to sync ICS for room", room_id=room.id, error=str(e))
             return {"status": SyncStatus.ERROR, "error": str(e)}
 
     def _should_sync(self, room: Room) -> bool:
