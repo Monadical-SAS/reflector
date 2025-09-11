@@ -133,8 +133,8 @@ class ICSFetchService:
         events = []
         total_events = 0
         now = datetime.now(timezone.utc)
-        window_start = now + timedelta(hours=EVENT_WINDOW_DELTA_START)
-        window_end = now + timedelta(hours=EVENT_WINDOW_DELTA_END)
+        window_start = now + EVENT_WINDOW_DELTA_START
+        window_end = now + EVENT_WINDOW_DELTA_END
 
         for component in calendar.walk():
             if component.name != "VEVENT":
