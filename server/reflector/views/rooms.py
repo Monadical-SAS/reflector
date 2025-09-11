@@ -318,7 +318,7 @@ async def rooms_test_webhook(
 
 
 class ICSStatus(BaseModel):
-    status: str
+    status: Literal["enabled", "disabled"]
     last_sync: Optional[datetime] = None
     next_sync: Optional[datetime] = None
     last_etag: Optional[str] = None
