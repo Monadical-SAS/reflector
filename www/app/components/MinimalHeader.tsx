@@ -62,7 +62,7 @@ export default function MinimalHeader({
             alt="Reflector"
           />
         </Link>
-        <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+        <Text fontSize="lg" fontWeight="semibold" color="black">
           {roomTitle}
         </Text>
       </Flex>

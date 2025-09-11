@@ -388,7 +388,7 @@ export default function MeetingSelection({
             <VStack gap={4}>
               <Icon as={FaCalendarAlt} boxSize="48px" color="gray.400" />
               <VStack gap={2}>
-                <Text fontSize="xl" fontWeight="semibold" color="gray.700">
+                <Text fontSize="xl" fontWeight="semibold" color="black">
                   No meetings right now
                 </Text>
                 <Text fontSize="md" color="gray.600" maxW="400px">
