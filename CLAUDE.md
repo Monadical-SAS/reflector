@@ -66,7 +66,6 @@ pnpm install
 
 # Copy configuration templates
 cp .env_template .env
-cp config-template.ts config.ts
 ```
 
 **Development:**

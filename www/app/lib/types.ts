@@ -72,3 +72,7 @@ export const assertCustomSession = <S extends Session>(s: S): CustomSession => {
   // no other checks for now
   return r as CustomSession;
 };
+
+export type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
