@@ -171,5 +171,6 @@ export const assertNotExists = <T>(
 
 export const assertExistsAndNonEmptyString = (
   value: string | null | undefined,
+  err?: string,
 ): NonEmptyString =>
-  parseNonEmptyString(assertExists(value, "Expected non-empty string"));
+  parseNonEmptyString(assertExists(value, err || "Expected non-empty string"));

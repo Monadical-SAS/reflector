@@ -3,9 +3,7 @@ import { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
-import { DomainContextProvider } from "./domainContext";
 import { RecordingConsentProvider } from "./recordingConsentContext";
-import { getConfig } from "./lib/edgeConfig";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
 
@@ -68,21 +66,17 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const config = await getConfig();
-
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
       <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
-        <DomainContextProvider config={config}>
-          <RecordingConsentProvider>
-            <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-              <ErrorProvider>
-                <ErrorMessage />
-                <Providers>{children}</Providers>
-              </ErrorProvider>
-            </ErrorBoundary>
-          </RecordingConsentProvider>
-        </DomainContextProvider>
+        <RecordingConsentProvider>
+          <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+            <ErrorProvider>
+              <ErrorMessage />
+              <Providers>{children}</Providers>
+            </ErrorProvider>
+          </ErrorBoundary>
+        </RecordingConsentProvider>
       </body>
     </html>
   );
