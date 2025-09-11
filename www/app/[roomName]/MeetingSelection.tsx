@@ -392,13 +392,13 @@ export default function MeetingSelection({
                   No meetings right now
                 </Text>
                 <Text fontSize="md" color="gray.600" maxW="400px">
-                  There are no ongoing or upcoming meetings in this room at the moment.
+                  There are no ongoing or upcoming meetings in this room at the
+                  moment.
                 </Text>
               </VStack>
             </VStack>
           </Flex>
         )}
-
       </Flex>
     </Flex>
   );

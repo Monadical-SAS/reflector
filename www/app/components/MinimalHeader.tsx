@@ -70,11 +70,7 @@ export default function MinimalHeader({
       {/* Action Buttons */}
       <HStack gap={2}>
         {showCreateButton && onCreateMeeting && (
-          <Button
-            colorScheme="green"
-            size="sm"
-            onClick={onCreateMeeting}
-          >
+          <Button colorScheme="green" size="sm" onClick={onCreateMeeting}>
             Create Meeting
           </Button>
         )}
