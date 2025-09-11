@@ -36,6 +36,8 @@ async def test_create_room_with_ics_fields(authenticated_client):
             "recording_type": "cloud",
             "recording_trigger": "automatic-2nd-participant",
             "is_shared": False,
+            "webhook_url": "",
+            "webhook_secret": "",
             "ics_url": "https://calendar.example.com/test.ics",
             "ics_fetch_interval": 600,
             "ics_enabled": True,
@@ -64,6 +66,8 @@ async def test_update_room_ics_configuration(authenticated_client):
             "recording_type": "cloud",
             "recording_trigger": "automatic-2nd-participant",
             "is_shared": False,
+            "webhook_url": "",
+            "webhook_secret": "",
         },
     )
     assert response.status_code == 200
@@ -108,7 +112,7 @@ async def test_trigger_ics_sync(authenticated_client):
     event.add("summary", "API Test Meeting")
     from reflector.settings import settings
 
-    event.add("location", f"{settings.BASE_URL}/{room.name}")
+    event.add("location", f"{settings.UI_BASE_URL}/{room.name}")
     now = datetime.now(timezone.utc)
     event.add("dtstart", now + timedelta(hours=1))
     event.add("dtend", now + timedelta(hours=2))
