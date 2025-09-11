@@ -218,9 +218,6 @@ class RoomController:
         return room
 
     async def get_ics_enabled(self) -> list[Room]:
-        """
-        Get all rooms with ICS enabled
-        """
         query = rooms.select().where(
             rooms.c.ics_enabled == True, rooms.c.ics_url != None
         )
