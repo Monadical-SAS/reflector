@@ -5,11 +5,10 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from reflector.asynctask import asynctask
-from reflector.db import get_database
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
-from reflector.db.rooms import rooms, rooms_controller
-from reflector.services.ics_sync import ics_sync_service
+from reflector.db.rooms import rooms_controller
+from reflector.services.ics_sync import SyncStatus, ics_sync_service
 from reflector.whereby import create_meeting, upload_logo
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
@@ -31,7 +30,7 @@ async def sync_room_ics(room_id: str):
         logger.info("Starting ICS sync for room", room_id=room_id, room_name=room.name)
         result = await ics_sync_service.sync_room_calendar(room)
 
-        if result["status"] == "success":
+        if result["status"] == SyncStatus.SUCCESS:
             logger.info(
                 "ICS sync completed successfully",
                 room_id=room_id,
@@ -40,9 +39,9 @@ async def sync_room_ics(room_id: str):
                 events_updated=result.get("events_updated", 0),
                 events_deleted=result.get("events_deleted", 0),
             )
-        elif result["status"] == "unchanged":
+        elif result["status"] == SyncStatus.UNCHANGED:
             logger.debug("ICS content unchanged", room_id=room_id)
-        elif result["status"] == "error":
+        elif result["status"] == SyncStatus.ERROR:
             logger.error("ICS sync failed", room_id=room_id, error=result.get("error"))
         else:
             logger.debug(
@@ -59,27 +58,15 @@ async def sync_all_ics_calendars():
     try:
         logger.info("Starting sync for all ICS-enabled rooms")
 
-        # Get ALL rooms - not filtered by is_shared
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
-        ics_enabled_rooms = list(all_rooms)
-
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled()
         logger.info(f"Found {len(ics_enabled_rooms)} rooms with ICS enabled")
 
-        for room_data in ics_enabled_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
-
-            if not room:
-                continue
-
+        for room in ics_enabled_rooms:
             if not _should_sync(room):
-                logger.debug("Skipping room, not time to sync yet", room_id=room_id)
+                logger.debug("Skipping room, not time to sync yet", room_id=room.id)
                 continue
 
-            sync_room_ics.delay(room_id)
+            sync_room_ics.delay(room.id)
 
         logger.info("Queued sync tasks for all eligible rooms")
 
@@ -158,29 +145,19 @@ async def create_upcoming_meetings():
     try:
         logger.info("Starting creation of upcoming meetings")
 
-        # Get ALL rooms with ICS enabled
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled()
         now = datetime.now(timezone.utc)
         create_window = now - timedelta(minutes=6)
 
-        for room_data in all_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
-
-            if not room:
-                continue
-
+        for room in ics_enabled_rooms:
             events = await calendar_events_controller.get_upcoming(
-                room_id,
+                room.id,
                 minutes_ahead=7,
             )
 
             for event in events:
                 await create_upcoming_meetings_for_event(
-                    event, create_window, room_id, room
+                    event, create_window, room.id, room
                 )
         logger.info("Completed pre-creation check for upcoming meetings")
 

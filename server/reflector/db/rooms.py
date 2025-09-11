@@ -217,6 +217,16 @@ class RoomController:
 
         return room
 
+    async def get_ics_enabled(self) -> list[Room]:
+        """
+        Get all rooms with ICS enabled
+        """
+        query = rooms.select().where(
+            rooms.c.ics_enabled == True, rooms.c.ics_url != None
+        )
+        results = await get_database().fetch_all(query)
+        return [Room(**result) for result in results]
+
     async def remove_by_id(
         self,
         room_id: str,

@@ -1,5 +1,6 @@
 import hashlib
 from datetime import date, datetime, timedelta, timezone
+from enum import Enum
 from typing import TypedDict
 
 import httpx
@@ -10,6 +11,13 @@ from loguru import logger
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.settings import settings
+
+
+class SyncStatus(str, Enum):
+    SUCCESS = "success"
+    UNCHANGED = "unchanged"
+    ERROR = "error"
+    SKIPPED = "skipped"
 
 
 class AttendeeData(TypedDict, total=False):
@@ -37,7 +45,7 @@ class SyncStats(TypedDict):
 
 
 class SyncResultBase(TypedDict):
-    status: str  # "success", "unchanged", "error", "skipped"
+    status: SyncStatus
 
 
 class SyncResult(SyncResultBase, total=False):
@@ -241,12 +249,12 @@ class ICSSyncService:
 
     async def sync_room_calendar(self, room: Room) -> SyncResult:
         if not room.ics_enabled or not room.ics_url:
-            return {"status": "skipped", "reason": "ICS not configured"}
+            return {"status": SyncStatus.SKIPPED, "reason": "ICS not configured"}
 
         try:
             # Check if it's time to sync
             if not self._should_sync(room):
-                return {"status": "skipped", "reason": "Not time to sync yet"}
+                return {"status": SyncStatus.SKIPPED, "reason": "Not time to sync yet"}
 
             # Fetch ICS file
             ics_content = await self.fetch_service.fetch_ics(room.ics_url)
@@ -262,7 +270,7 @@ class ICSSyncService:
                     calendar, room.name, room_url
                 )
                 return {
-                    "status": "unchanged",
+                    "status": SyncStatus.UNCHANGED,
                     "hash": content_hash,
                     "events_found": len(events),
                     "total_events": total_events,
@@ -296,7 +304,7 @@ class ICSSyncService:
             )
 
             return {
-                "status": "success",
+                "status": SyncStatus.SUCCESS,
                 "hash": content_hash,
                 "events_found": len(events),
                 "total_events": total_events,
@@ -305,7 +313,7 @@ class ICSSyncService:
 
         except Exception as e:
             logger.error(f"Failed to sync ICS for room {room.id}: {e}")
-            return {"status": "error", "error": str(e)}
+            return {"status": SyncStatus.ERROR, "error": str(e)}
 
     def _should_sync(self, room: Room) -> bool:
         if not room.ics_last_sync:
