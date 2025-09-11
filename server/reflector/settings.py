@@ -1,6 +1,8 @@
 from pydantic.types import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from reflector.utils.string import NonEmptyString
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -120,7 +122,7 @@ class Settings(BaseSettings):
 
     # Whereby integration
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
-    WHEREBY_API_KEY: str | None = None
+    WHEREBY_API_KEY: NonEmptyString | None = None
     WHEREBY_WEBHOOK_SECRET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
