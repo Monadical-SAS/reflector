@@ -953,8 +953,11 @@ export interface components {
     };
     /** ICSStatus */
     ICSStatus: {
-      /** Status */
-      status: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "enabled" | "disabled";
       /** Last Sync */
       last_sync?: string | null;
       /** Next Sync */
