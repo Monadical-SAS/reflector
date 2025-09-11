@@ -389,7 +389,6 @@ export default function MeetingSelection({
             </HStack>
           </Box>
         )}
-
       </Flex>
     </Flex>
   );

@@ -1,9 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button, HStack, Icon, Spinner, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Spinner,
+  Text,
+  VStack,
+} from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import { useRoomGetByName, useRoomJoinMeeting, useMeetingAudioConsent } from "../../lib/apiHooks";
+import {
+  useRoomGetByName,
+  useRoomJoinMeeting,
+  useMeetingAudioConsent,
+} from "../../lib/apiHooks";
 import { useRecordingConsent } from "../../recordingConsentContext";
 import { toaster } from "../../components/ui/toaster";
 import { FaBars } from "react-icons/fa6";
@@ -248,8 +260,10 @@ export default function MeetingPage({ params }: MeetingPageProps) {
   const joinMeetingMutation = useRoomJoinMeeting();
 
   const room = roomQuery.data;
-  const isLoading = roomQuery.isLoading || (!attemptedJoin && room && !joinMeetingMutation.data);
-  
+  const isLoading =
+    roomQuery.isLoading ||
+    (!attemptedJoin && room && !joinMeetingMutation.data);
+
   // Try to join the meeting when room is loaded
   useEffect(() => {
     if (room && !attemptedJoin && !joinMeetingMutation.isPending) {
@@ -326,10 +340,7 @@ export default function MeetingPage({ params }: MeetingPageProps) {
           style={{ width: "100vw", height: "100vh" }}
         />
         {recordingType && recordingTypeRequiresConsent(recordingType) && (
-          <ConsentDialogButton
-            meetingId={meetingId}
-            wherebyRef={wherebyRef}
-          />
+          <ConsentDialogButton meetingId={meetingId} wherebyRef={wherebyRef} />
         )}
       </>
     );
@@ -339,10 +350,7 @@ export default function MeetingPage({ params }: MeetingPageProps) {
   // But keeping it as a fallback
   return (
     <Box display="flex" flexDirection="column" minH="100vh">
-      <MinimalHeader
-        roomName={roomName}
-        displayName={room?.name}
-      />
+      <MinimalHeader roomName={roomName} displayName={room?.name} />
       <Box
         display="flex"
         justifyContent="center"

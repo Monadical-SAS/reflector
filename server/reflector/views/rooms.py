@@ -244,14 +244,10 @@ async def rooms_create_meeting(
         except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError):
             # Another request already created a meeting for this room
             # Log this race condition occurrence
-            logger.info(
-                "Race condition detected for room %s - fetching existing meeting",
-                room.name,
-            )
             logger.warning(
-                "Whereby meeting %s was created but not used (resource leak) for room %s",
-                whereby_meeting["meetingId"],
+                "Race condition detected for room %s and meeting %s - fetching existing meeting",
                 room.name,
+                whereby_meeting["meetingId"],
             )
 
             # Fetch the meeting that was created by the other request
@@ -261,7 +257,9 @@ async def rooms_create_meeting(
             if meeting is None:
                 # Edge case: meeting was created but expired/deleted between checks
                 logger.error(
-                    "Meeting disappeared after race condition for room %s", room.name
+                    "Meeting disappeared after race condition for room %s",
+                    room.name,
+                    exc_info=True,
                 )
                 raise HTTPException(
                     status_code=503, detail="Unable to join meeting - please try again"

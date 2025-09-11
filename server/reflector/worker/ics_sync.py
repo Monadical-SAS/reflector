@@ -179,7 +179,9 @@ async def create_upcoming_meetings():
             )
 
             for event in events:
-                await create_upcoming_meetings_for_event(event)
+                await create_upcoming_meetings_for_event(
+                    event, create_window, room_id, room
+                )
         logger.info("Completed pre-creation check for upcoming meetings")
 
     except Exception as e:

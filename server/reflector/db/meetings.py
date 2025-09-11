@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -232,23 +231,6 @@ class MeetingController:
         if not result:
             return None
         return Meeting(**result)
-
-    async def get_by_id_for_http(self, meeting_id: str, user_id: str | None) -> Meeting:
-        """
-        Get a meeting by ID for HTTP request.
-
-        If not found, it will raise a 404 error.
-        """
-        query = meetings.select().where(meetings.c.id == meeting_id)
-        result = await get_database().fetch_one(query)
-        if not result:
-            raise HTTPException(status_code=404, detail="Meeting not found")
-
-        meeting = Meeting(**result)
-        if result["user_id"] != user_id:
-            meeting.host_room_url = ""
-
-        return meeting
 
     async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
         query = meetings.select().where(

@@ -150,15 +150,7 @@ export default function WebinarPage(details: WebinarDetails) {
 
   if (status === WebinarStatus.Live) {
     return (
-      <>
-        {roomUrl && (
-          <WherebyEmbed
-            roomUrl={roomUrl}
-            onLeave={handleLeave}
-            isWebinar={true}
-          />
-        )}
-      </>
+      <>{roomUrl && <WherebyEmbed roomUrl={roomUrl} onLeave={handleLeave} />}</>
     );
   }
   if (status === WebinarStatus.Ended) {

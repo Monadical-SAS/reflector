@@ -58,7 +58,7 @@ async def test_empty_transcript_title_only_match():
             "id": test_id,
             "name": "Empty Transcript",
             "title": "Empty Meeting",
-            "status": "completed",
+            "status": "ended",
             "locked": False,
             "duration": 0.0,
             "created_at": datetime.now(timezone.utc),
@@ -109,7 +109,7 @@ async def test_search_with_long_summary():
             "id": test_id,
             "name": "Test Long Summary",
             "title": "Regular Meeting",
-            "status": "completed",
+            "status": "ended",
             "locked": False,
             "duration": 1800.0,
             "created_at": datetime.now(timezone.utc),
@@ -165,7 +165,7 @@ async def test_postgresql_search_with_data():
             "id": test_id,
             "name": "Test Search Transcript",
             "title": "Engineering Planning Meeting Q4 2024",
-            "status": "completed",
+            "status": "ended",
             "locked": False,
             "duration": 1800.0,
             "created_at": datetime.now(timezone.utc),
@@ -221,7 +221,7 @@ We need to implement PostgreSQL tsvector for better performance.""",
         test_result = next((r for r in results if r.id == test_id), None)
         if test_result:
             assert test_result.title == "Engineering Planning Meeting Q4 2024"
-            assert test_result.status == "completed"
+            assert test_result.status == "ended"
             assert test_result.duration == 1800.0
             assert 0 <= test_result.rank <= 1, "Rank should be normalized to 0-1"
 
@@ -268,7 +268,7 @@ def mock_db_result():
         "title": "Test Transcript",
         "created_at": datetime(2024, 6, 15, tzinfo=timezone.utc),
         "duration": 3600.0,
-        "status": "completed",
+        "status": "ended",
         "user_id": "test-user",
         "room_id": "room1",
         "source_kind": SourceKind.LIVE,
@@ -433,7 +433,7 @@ class TestSearchResultModel:
             room_id="room-456",
             source_kind=SourceKind.ROOM,
             created_at=datetime(2024, 6, 15, tzinfo=timezone.utc),
-            status="completed",
+            status="ended",
             rank=0.85,
             duration=1800.5,
             search_snippets=["snippet 1", "snippet 2"],
@@ -443,7 +443,7 @@ class TestSearchResultModel:
         assert result.title == "Test Title"
         assert result.user_id == "user-123"
         assert result.room_id == "room-456"
-        assert result.status == "completed"
+        assert result.status == "ended"
         assert result.rank == 0.85
         assert result.duration == 1800.5
         assert len(result.search_snippets) == 2
@@ -474,7 +474,7 @@ class TestSearchResultModel:
             id="test-id",
             source_kind=SourceKind.LIVE,
             created_at=datetime(2024, 6, 15, 12, 30, 45, tzinfo=timezone.utc),
-            status="completed",
+            status="ended",
             rank=0.9,
             duration=None,
             search_snippets=[],

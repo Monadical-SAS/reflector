@@ -4,18 +4,16 @@ import "@whereby.com/browser-sdk/embed";
 import { Box, Button, HStack, Text, Link } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
 
-interface WherebyEmbedProps {
+interface WherebyWebinarEmbedProps {
   roomUrl: string;
   onLeave?: () => void;
-  isWebinar?: boolean;
 }
 
-// used for both webinars and meetings
+// used for webinars only
 export default function WherebyWebinarEmbed({
   roomUrl,
   onLeave,
-  isWebinar = false,
-}: WherebyEmbedProps) {
+}: WherebyWebinarEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
   // TODO extract common toast logic / styles to be used by consent toast on normal rooms
@@ -28,8 +26,7 @@ export default function WherebyWebinarEmbed({
           <Box p={4} bg="white" borderRadius="md" boxShadow="md">
             <HStack justifyContent="space-between" alignItems="center">
               <Text>
-                This {isWebinar ? "webinar" : "meeting"} is being recorded. By
-                continuing, you agree to our{" "}
+                This webinar is being recorded. By continuing, you agree to our{" "}
                 <Link
                   href="https://monadical.com/privacy"
                   color="blue.600"

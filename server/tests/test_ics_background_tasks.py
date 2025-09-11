@@ -8,8 +8,8 @@ from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.rooms import rooms_controller
 from reflector.worker.ics_sync import (
     _should_sync,
-    _sync_all_ics_calendars_async,
-    _sync_room_ics_async,
+    sync_all_ics_calendars,
+    sync_room_ics,
 )
 
 
@@ -48,7 +48,7 @@ async def test_sync_room_ics_task():
     ) as mock_fetch:
         mock_fetch.return_value = ics_content
 
-        await _sync_room_ics_async(room.id)
+        await sync_room_ics(room.id)
 
         events = await calendar_events_controller.get_by_room(room.id)
         assert len(events) == 1
@@ -124,7 +124,7 @@ async def test_sync_all_ics_calendars():
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        await _sync_all_ics_calendars_async()
+        await sync_all_ics_calendars()
 
         assert mock_delay.call_count == 2
         called_room_ids = [call.args[0] for call in mock_delay.call_args_list]
@@ -196,7 +196,7 @@ async def test_sync_respects_fetch_interval():
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        await _sync_all_ics_calendars_async()
+        await sync_all_ics_calendars()
 
         assert mock_delay.call_count == 1
         assert mock_delay.call_args[0][0] == room2.id
@@ -224,7 +224,7 @@ async def test_sync_handles_errors_gracefully():
     ) as mock_fetch:
         mock_fetch.side_effect = Exception("Network error")
 
-        await _sync_room_ics_async(room.id)
+        await sync_room_ics(room.id)
 
         events = await calendar_events_controller.get_by_room(room.id)
         assert len(events) == 0

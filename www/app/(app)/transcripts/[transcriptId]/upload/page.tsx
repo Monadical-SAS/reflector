@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import useTranscript from "../../useTranscript";
 import { useWebSockets } from "../../useWebSockets";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import useMp3 from "../../useMp3";
 import { Center, VStack, Text, Heading, Button } from "@chakra-ui/react";
 import FileUploadButton from "../../fileUploadButton";
+import { useTranscriptGet } from "../../../../lib/apiHooks";
 
 type TranscriptUpload = {
   params: {
@@ -15,7 +15,7 @@ type TranscriptUpload = {
 };
 
 const TranscriptUpload = (details: TranscriptUpload) => {
-  const transcript = useTranscript(details.params.transcriptId);
+  const transcript = useTranscriptGet(details.params.transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
 
   const webSockets = useWebSockets(details.params.transcriptId);
@@ -25,13 +25,13 @@ const TranscriptUpload = (details: TranscriptUpload) => {
   const router = useRouter();
 
   const [status_, setStatus] = useState(
-    webSockets.status.value || transcript.response?.status || "idle",
+    webSockets.status?.value || transcript.data?.status || "idle",
   );
 
   // status is obviously done if we have transcript
   const status =
-    !transcript.loading && transcript.response?.status === "ended"
-      ? transcript.response?.status
+    !transcript.isLoading && transcript.data?.status === "ended"
+      ? transcript.data?.status
       : status_;
 
   useEffect(() => {
@@ -43,9 +43,9 @@ const TranscriptUpload = (details: TranscriptUpload) => {
     //TODO HANDLE ERROR STATUS BETTER
     // TODO deprecate webSockets.status.value / depend on transcript.response?.status from query lib
     const newStatus =
-      transcript.response?.status === "ended"
+      transcript.data?.status === "ended"
         ? "ended"
-        : webSockets.status.value || transcript.response?.status || "idle";
+        : webSockets.status?.value || transcript.data?.status || "idle";
     setStatus(newStatus);
     if (newStatus && (newStatus == "ended" || newStatus == "error")) {
       console.log(newStatus, "redirecting");
@@ -53,7 +53,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
       const newUrl = "/transcripts/" + details.params.transcriptId;
       router.replace(newUrl);
     }
-  }, [webSockets.status.value, transcript.response?.status]);
+  }, [webSockets.status?.value, transcript.data?.status]);
 
   useEffect(() => {
     if (webSockets.waveform && webSockets.waveform) mp3.getNow();

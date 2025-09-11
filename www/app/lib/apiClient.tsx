@@ -2,12 +2,6 @@
 
 import createClient from "openapi-fetch";
 import type { paths } from "../reflector-api";
-import {
-  queryOptions,
-  useMutation,
-  useQuery,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
 import createFetchClient from "openapi-react-query";
 import { assertExistsAndNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
@@ -16,18 +10,31 @@ const API_URL = !isBuildPhase
   ? assertExistsAndNonEmptyString(process.env.NEXT_PUBLIC_API_URL)
   : "http://localhost";
 
-// Create the base openapi-fetch client with a default URL
-// The actual URL will be set via middleware in AuthProvider
 export const client = createClient<paths>({
   baseUrl: API_URL,
 });
 
-export const $api = createFetchClient<paths>(client);
-
-let currentAuthToken: string | null | undefined = null;
+const waitForAuthTokenDefinitivePresenceOrAbscence = async () => {
+  let tries = 0;
+  let time = 0;
+  const STEP = 100;
+  while (currentAuthToken === undefined) {
+    await new Promise((resolve) => setTimeout(resolve, STEP));
+    time += STEP;
+    tries++;
+    // most likely first try is more than enough, if it's more there's already something weird happens
+    if (tries > 10) {
+      // even when there's no auth assumed at all, we probably should explicitly call configureApiAuth(null)
+      throw new Error(
+        `Could not get auth token definitive presence/absence in ${time}ms. not calling configureApiAuth?`,
+      );
+    }
+  }
+};
 
 client.use({
-  onRequest({ request }) {
+  async onRequest({ request }) {
+    await waitForAuthTokenDefinitivePresenceOrAbscence();
     if (currentAuthToken) {
       request.headers.set("Authorization", `Bearer ${currentAuthToken}`);
     }
@@ -44,7 +51,13 @@ client.use({
   },
 });
 
+export const $api = createFetchClient<paths>(client);
+
+let currentAuthToken: string | null | undefined = undefined;
+
 // the function contract: lightweight, idempotent
 export const configureApiAuth = (token: string | null | undefined) => {
+  // watch only for the initial loading; "reloading" state assumes token presence/absence
+  if (token === undefined && currentAuthToken !== undefined) return;
   currentAuthToken = token;
 };

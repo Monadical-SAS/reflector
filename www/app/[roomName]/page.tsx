@@ -21,7 +21,13 @@ import { toaster } from "../components/ui/toaster";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { useRecordingConsent } from "../recordingConsentContext";
-import { useMeetingAudioConsent, useRoomGetByName, useRoomActiveMeetings, useRoomUpcomingMeetings, useRoomsCreateMeeting } from "../lib/apiHooks";
+import {
+  useMeetingAudioConsent,
+  useRoomGetByName,
+  useRoomActiveMeetings,
+  useRoomUpcomingMeetings,
+  useRoomsCreateMeeting,
+} from "../lib/apiHooks";
 import type { components } from "../reflector-api";
 import MeetingSelection from "./MeetingSelection";
 import useRoomMeeting from "./useRoomMeeting";
@@ -281,12 +287,11 @@ export default function Room(details: RoomDetails) {
   const roomUrl =
     roomMeeting?.response?.host_room_url || roomMeeting?.response?.room_url;
 
-  const isLoading = status === "loading" || roomQuery.isLoading || roomMeeting?.loading;
+  const isLoading =
+    status === "loading" || roomQuery.isLoading || roomMeeting?.loading;
 
   const isOwner =
-    isAuthenticated && room
-      ? auth.user?.id === room.user_id
-      : false;
+    isAuthenticated && room ? auth.user?.id === room.user_id : false;
 
   const meetingId = roomMeeting?.response?.id;
 

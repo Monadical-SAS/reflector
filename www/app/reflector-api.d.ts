@@ -1243,8 +1243,17 @@ export interface components {
       source_kind: components["schemas"]["SourceKind"];
       /** Created At */
       created_at: string;
-      /** Status */
-      status: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
       /** Rank */
       rank: number;
       /**

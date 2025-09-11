@@ -1,4 +1,5 @@
 import type { components } from "../../reflector-api";
+import type { TranscriptStatus } from "../../lib/transcript";
 
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 
@@ -13,7 +14,7 @@ export type FinalSummary = {
 };
 
 export type Status = {
-  value: string;
+  value: TranscriptStatus;
 };
 
 export type TranslatedTopic = {
