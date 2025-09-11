@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranscriptGet } from "../../lib/apiHooks";
 import { useAuth } from "../../lib/AuthProvider";
-import { config } from "../../lib/config";
 import { API_URL } from "../../lib/apiClient";
 
 export type Mp3Response = {

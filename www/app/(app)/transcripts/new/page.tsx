@@ -20,7 +20,7 @@ import {
   Spacer,
 } from "@chakra-ui/react";
 import { useAuth } from "../../../lib/AuthProvider";
-import { featureEnabled } from "../../../lib/config";
+import { featureEnabled } from "../../../lib/features";
 
 export const dynamic = "force-dynamic";
 

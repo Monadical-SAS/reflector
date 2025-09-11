@@ -24,7 +24,7 @@ import {
   useTranscriptPostToZulip,
 } from "../../lib/apiHooks";
 
-import { featureEnabled } from "../../lib/config";
+import { featureEnabled } from "../../lib/features";
 
 type ShareZulipProps = {
   transcriptResponse: GetTranscript;

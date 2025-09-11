@@ -1,5 +1,5 @@
 import { Container, Flex, Link } from "@chakra-ui/react";
-import { config } from "../lib/config";
+import { featureEnabled } from "../lib/features";
 import NextLink from "next/link";
 import Image from "next/image";
 import UserInfo from "../(auth)/userInfo";
@@ -11,7 +11,6 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { requireLogin, browse, rooms } = config.features;
   return (
     <Container
       minW="100vw"
@@ -57,7 +56,7 @@ export default async function AppLayout({
           >
             Create
           </Link>
-          {browse ? (
+          {featureEnabled("browse") ? (
             <>
               &nbsp;·&nbsp;
               <Link href="/browse" as={NextLink} className="font-light px-2">
@@ -67,7 +66,7 @@ export default async function AppLayout({
           ) : (
             <></>
           )}
-          {rooms ? (
+          {featureEnabled("rooms") ? (
             <>
               &nbsp;·&nbsp;
               <Link href="/rooms" as={NextLink} className="font-light px-2">
@@ -77,7 +76,7 @@ export default async function AppLayout({
           ) : (
             <></>
           )}
-          {requireLogin ? (
+          {featureEnabled("requireLogin") ? (
             <>
               &nbsp;·&nbsp;
               <UserInfo />

@@ -7,7 +7,6 @@ type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
 import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
-import { config } from "../../lib/config";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
