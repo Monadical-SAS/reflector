@@ -642,19 +642,16 @@ export function useRoomsCreateMeeting() {
 
 // Calendar integration hooks
 export function useRoomGetByName(roomName: string | null) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
-    "/v1/rooms",
+    "/v1/rooms/name/{room_name}",
     {
       params: {
-        query: { page: 1 }, // We'll need to filter by room name on the client side
+        path: { room_name: roomName || "" },
       },
     },
     {
-      enabled: !!roomName && isAuthenticated,
-      select: (data) => data.items?.find((room) => room.name === roomName),
+      enabled: !!roomName,
     },
   );
 }

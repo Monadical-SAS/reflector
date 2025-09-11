@@ -155,6 +155,30 @@ async def rooms_get(
     return room
 
 
+@router.get("/rooms/name/{room_name}", response_model=RoomDetails)
+async def rooms_get_by_name(
+    room_name: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    user_id = user["sub"] if user else None
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    # Convert to RoomDetails format (add webhook fields if user is owner)
+    room_dict = room.__dict__.copy()
+    if user_id == room.user_id:
+        # User is owner, include webhook details if available
+        room_dict["webhook_url"] = getattr(room, "webhook_url", None)
+        room_dict["webhook_secret"] = getattr(room, "webhook_secret", None)
+    else:
+        # Non-owner, hide webhook details
+        room_dict["webhook_url"] = None
+        room_dict["webhook_secret"] = None
+    
+    return RoomDetails(**room_dict)
+
+
 @router.post("/rooms", response_model=Room)
 async def rooms_create(
     room: CreateRoom,
