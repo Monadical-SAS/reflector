@@ -22,8 +22,6 @@ import {
 import { useAuth } from "../../../lib/AuthProvider";
 import { featureEnabled } from "../../../lib/features";
 
-export const dynamic = "force-dynamic";
-
 const TranscriptCreate = () => {
   const router = useRouter();
   const auth = useAuth();
