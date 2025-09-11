@@ -21,7 +21,7 @@ meetings = sa.Table(
         "room_id",
         sa.String,
         sa.ForeignKey("room.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     ),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column("room_mode", sa.String, nullable=False, server_default="normal"),
@@ -83,7 +83,7 @@ class Meeting(BaseModel):
     host_room_url: str
     start_date: datetime
     end_date: datetime
-    room_id: str
+    room_id: str | None
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
