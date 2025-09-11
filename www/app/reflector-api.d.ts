@@ -1072,13 +1072,6 @@ export interface components {
       calendar_metadata?: {
         [key: string]: unknown;
       } | null;
-      /** Last Participant Left At */
-      last_participant_left_at?: string | null;
-      /**
-       * Grace Period Minutes
-       * @default 15
-       */
-      grace_period_minutes: number;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {

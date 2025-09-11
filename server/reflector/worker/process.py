@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from urllib.parse import unquote
 
 import av
@@ -149,7 +149,15 @@ async def process_recording(bucket_name: str, object_key: str):
 async def process_meetings():
     """
     Checks which meetings are still active and deactivates those that have ended.
-    Supports multiple active meetings per room and grace period logic.
+
+    Deactivation logic:
+    - Active sessions: Keep meeting active regardless of scheduled time
+    - No active sessions:
+      * Calendar meetings:
+        - If previously used (had sessions): Deactivate immediately
+        - If never used: Keep active until scheduled end time, then deactivate
+      * On-the-fly meetings: Deactivate immediately (created when someone joins,
+        so no sessions means everyone left)
     """
     logger.info("Processing meetings")
     meetings = await meetings_controller.get_all_active()
@@ -161,56 +169,37 @@ async def process_meetings():
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
 
-        # Check if meeting has passed its scheduled end time
-        if end_date <= current_time:
-            # For calendar meetings, force close 30 minutes after scheduled end
+        response = await get_room_sessions(meeting.room_name)
+        room_sessions = response.get("results", [])
+        has_active_sessions = room_sessions and any(
+            rs["endedAt"] is None for rs in room_sessions
+        )
+        has_had_sessions = bool(room_sessions)
+
+        if has_active_sessions:
+            logger.debug("Meeting %s still has active sessions", meeting.id)
+        else:
             if meeting.calendar_event_id:
-                if current_time > end_date + timedelta(minutes=30):
+                if has_had_sessions:
                     should_deactivate = True
                     logger.info(
-                        "Meeting %s forced closed 30 min after calendar end", meeting.id
+                        "Calendar meeting %s ended - all participants left", meeting.id
                     )
-            else:
-                # Unscheduled meetings follow normal closure rules
-                should_deactivate = True
-
-        # Check Whereby room sessions only if not already deactivating
-        if not should_deactivate and end_date > current_time:
-            response = await get_room_sessions(meeting.room_name)
-            room_sessions = response.get("results", [])
-            has_active_sessions = room_sessions and any(
-                rs["endedAt"] is None for rs in room_sessions
-            )
-
-            if not has_active_sessions:
-                # No active sessions - check grace period
-                if meeting.num_clients == 0:
-                    if meeting.last_participant_left_at:
-                        # Check if grace period has expired
-                        grace_period = timedelta(minutes=meeting.grace_period_minutes)
-                        if (
-                            current_time
-                            > meeting.last_participant_left_at + grace_period
-                        ):
-                            should_deactivate = True
-                            logger.info("Meeting %s grace period expired", meeting.id)
-                    else:
-                        # First time all participants left, record the time
-                        await meetings_controller.update_meeting(
-                            meeting.id, last_participant_left_at=current_time
-                        )
-                        logger.info(
-                            "Meeting %s marked empty at %s", meeting.id, current_time
-                        )
-            else:
-                # Has active sessions - clear grace period if set
-                if meeting.last_participant_left_at:
-                    await meetings_controller.update_meeting(
-                        meeting.id, last_participant_left_at=None
-                    )
+                elif current_time > end_date:
+                    should_deactivate = True
                     logger.info(
-                        "Meeting %s reactivated - participant rejoined", meeting.id
+                        "Calendar meeting %s deactivated - scheduled time ended with no participants",
+                        meeting.id,
                     )
+                else:
+                    logger.debug(
+                        "Calendar meeting %s waiting for participants until %s",
+                        meeting.id,
+                        end_date,
+                    )
+            else:
+                should_deactivate = True
+                logger.info("On-the-fly meeting %s has no active sessions", meeting.id)
 
         if should_deactivate:
             await meetings_controller.update_meeting(meeting.id, is_active=False)

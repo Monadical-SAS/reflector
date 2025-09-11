@@ -51,8 +51,6 @@ meetings = sa.Table(
         ),
     ),
     sa.Column("calendar_metadata", JSONB),
-    sa.Column("last_participant_left_at", sa.DateTime(timezone=True)),
-    sa.Column("grace_period_minutes", sa.Integer, server_default=sa.text("15")),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -100,8 +98,6 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
-    last_participant_left_at: datetime | None = None
-    grace_period_minutes: int = 15
 
 
 class MeetingController:

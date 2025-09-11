@@ -77,8 +77,6 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
-    last_participant_left_at: datetime | None = None
-    grace_period_minutes: int = 15
 
 
 class CreateRoom(BaseModel):
@@ -475,7 +473,6 @@ async def rooms_list_active_meetings(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    """List all active meetings for a room (supports multiple active meetings)"""
     user_id = user["sub"] if user else None
     room = await rooms_controller.get_by_name(room_name)
 
@@ -501,7 +498,6 @@ async def rooms_join_meeting(
     meeting_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    """Join a specific meeting by ID"""
     user_id = user["sub"] if user else None
     room = await rooms_controller.get_by_name(room_name)
 
