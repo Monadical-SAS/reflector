@@ -373,6 +373,31 @@ export default function MeetingSelection({
           </VStack>
         )}
 
+        {/* No meetings message - show when no ongoing or upcoming meetings */}
+        {currentMeetings.length === 0 && upcomingMeetings.length === 0 && (
+          <Box
+            width="100%"
+            bg="gray.50"
+            borderRadius="xl"
+            p={8}
+            textAlign="center"
+            mb={6}
+          >
+            <VStack gap={4}>
+              <Icon as={FaCalendarAlt} boxSize="48px" color="gray.400" />
+              <VStack gap={2}>
+                <Text fontSize="xl" fontWeight="semibold" color="gray.700">
+                  No meetings right now
+                </Text>
+                <Text fontSize="md" color="gray.600" maxW="400px">
+                  There are no ongoing or upcoming meetings in this room at the moment.
+                  {(isOwner || isSharedRoom) && " You can start a quick meeting below."}
+                </Text>
+              </VStack>
+            </VStack>
+          </Box>
+        )}
+
         {/* Create Unscheduled Meeting - Only for room owners or shared rooms */}
         {(isOwner || isSharedRoom) && (
           <Box width="100%" bg="gray.50" borderRadius="md" p={4} mt={6}>
