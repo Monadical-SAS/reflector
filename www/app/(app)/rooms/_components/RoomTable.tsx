@@ -84,7 +84,9 @@ function MeetingStatus({ roomName }: { roomName: string }) {
 
   if (activeMeetings.length > 0) {
     const meeting = activeMeetings[0];
-    const title = (meeting.calendar_metadata as any)?.title || "Active Meeting";
+    const title = String(
+      meeting.calendar_metadata?.["title"] || "Active Meeting",
+    );
     return (
       <VStack gap={1} alignItems="start">
         <Badge colorScheme="green" size="sm">

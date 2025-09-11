@@ -580,13 +580,12 @@ export function useMeetingDeactivate() {
           const key = query.queryKey;
           return (
             Array.isArray(key) &&
-            (key.some(
-              (k) => typeof k === "string" && k.includes("/meetings/active"),
-            ) ||
-              key.some(
-                (k) =>
-                  typeof k === "string" && k.includes("/meetings/upcoming"),
-              ))
+            key.some(
+              (k) =>
+                typeof k === "string" &&
+                (k.includes("/meetings/active") ||
+                  k.includes("/meetings/upcoming")),
+            )
           );
         },
       });
@@ -747,3 +746,4 @@ export function useRoomCalendarEvents(roomName: string | null) {
     },
   );
 }
+// End of Calendar integration hooks

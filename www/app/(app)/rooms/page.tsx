@@ -42,6 +42,8 @@ interface SelectOption {
 }
 
 const RESERVED_PATHS = ["browse", "rooms", "transcripts"];
+const SUCCESS_EMOJI = "✅";
+const ERROR_EMOJI = "❌";
 
 const roomModeOptions: SelectOption[] = [
   { label: "2-4 people", value: "normal" },
@@ -225,10 +227,10 @@ export default function RoomsList() {
 
       if (response.success) {
         setWebhookTestResult(
-          `✅ Webhook test successful! Status: ${response.status_code}`,
+          `${SUCCESS_EMOJI} Webhook test successful! Status: ${response.status_code}`,
         );
       } else {
-        let errorMsg = `❌ Webhook test failed`;
+        let errorMsg = `${ERROR_EMOJI} Webhook test failed`;
         errorMsg += ` (Status: ${response.status_code})`;
         if (response.error) {
           errorMsg += `: ${response.error}`;
@@ -828,11 +830,11 @@ export default function RoomsList() {
                                   padding: "8px",
                                   borderRadius: "4px",
                                   backgroundColor: webhookTestResult.startsWith(
-                                    "✅",
+                                    SUCCESS_EMOJI,
                                   )
                                     ? "#f0fdf4"
                                     : "#fef2f2",
-                                  border: `1px solid ${webhookTestResult.startsWith("✅") ? "#86efac" : "#fca5a5"}`,
+                                  border: `1px solid ${webhookTestResult.startsWith(SUCCESS_EMOJI) ? "#86efac" : "#fca5a5"}`,
                                 }}
                               >
                                 {webhookTestResult}

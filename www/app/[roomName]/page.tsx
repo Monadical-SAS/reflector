@@ -371,7 +371,6 @@ export default function Room(details: RoomDetails) {
     );
   }
 
-  // For ICS-enabled rooms, show meeting selection
   if (room.ics_enabled) {
     return (
       <MeetingSelection
