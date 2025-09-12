@@ -56,9 +56,9 @@ export default function MeetingSelection({
   const allMeetings = activeMeetingsQuery.data || [];
 
   const now = new Date();
-  const [currentMeetings, upcomingMeetings] = R.pipe(
+  const [currentMeetings, upcomingMeetings] = R.partition(
     allMeetings,
-    R.partition((meeting) => {
+    (meeting) => {
       const startTime = new Date(meeting.start_date);
       // Meeting is ongoing if it started and participants have joined or it's been running for a while
       return (
@@ -66,7 +66,7 @@ export default function MeetingSelection({
         now.getTime() - startTime.getTime() >
           MEETING_DEFAULT_TIME_MINUTES * 1000
       );
-    }),
+    },
   );
 
   const loading = roomQuery.isLoading || activeMeetingsQuery.isLoading;
