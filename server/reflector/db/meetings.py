@@ -44,6 +44,7 @@ meetings = sa.Table(
         nullable=False,
         server_default=sa.true(),
     ),
+    sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index(
         "idx_one_active_meeting_per_room",
         "room_id",
