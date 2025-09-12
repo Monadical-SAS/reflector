@@ -119,7 +119,7 @@ addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
-    "gpu_modal: mark test to run only with GPU Modal endpoints (deselect with '-m \"not gpu_modal\"')",
+    "model_api: tests for the unified model-serving HTTP API (backend- and hardware-agnostic)",
 ]
 
 [tool.ruff.lint]

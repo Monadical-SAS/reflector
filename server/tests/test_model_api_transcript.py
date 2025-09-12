@@ -2,20 +2,20 @@
 Tests for GPU Modal transcription endpoints.
 
 These tests are marked with the "gpu-modal" group and will not run by default.
-Run them with: pytest -m gpu-modal tests/test_gpu_modal_transcript_parakeet.py
+Run them with: pytest -m gpu-modal tests/test_model_api_transcript_parakeet.py
 
 Required environment variables:
 - TRANSCRIPT_URL: URL to the Modal.com endpoint (required)
 - TRANSCRIPT_MODAL_API_KEY: API key for authentication (optional)
 - TRANSCRIPT_MODEL: Model name to use (optional, defaults to nvidia/parakeet-tdt-0.6b-v2)
 
-Example with pytest (override default addopts to run ONLY gpu_modal tests):
+Example with pytest (override default addopts to run ONLY model_api tests):
     TRANSCRIPT_URL=https://monadical-sas--reflector-transcriber-parakeet-web-dev.modal.run \
     TRANSCRIPT_MODAL_API_KEY=your-api-key \
-    uv run -m pytest -m gpu_modal --no-cov tests/test_gpu_modal_transcript.py
+    uv run -m pytest -m model_api --no-cov tests/test_model_api_transcript.py
 
     # Or with completely clean options:
-    uv run -m pytest -m gpu_modal -o addopts="" tests/
+    uv run -m pytest -m model_api -o addopts="" tests/
 
 Running Modal locally for testing:
     modal serve gpu/modal_deployments/reflector_transcriber_parakeet.py
@@ -58,8 +58,8 @@ def get_model_name():
     return os.environ.get("TRANSCRIPT_MODEL", "nvidia/parakeet-tdt-0.6b-v2")
 
 
-@pytest.mark.gpu_modal
-class TestGPUModalTranscript:
+@pytest.mark.model_api
+class TestModelAPITranscript:
     """Test suite for GPU Modal transcription endpoints."""
 
     def test_transcriptions_from_url(self):

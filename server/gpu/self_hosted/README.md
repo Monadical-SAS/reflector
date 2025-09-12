@@ -62,4 +62,4 @@ Conformance tests
 
 TRANSCRIPT_URL=http://localhost:8000 \
 TRANSCRIPT_MODAL_API_KEY=dev-key \
-uv run -m pytest -m gpu_modal --no-cov ../../tests/test_gpu_modal_transcript.py
+uv run -m pytest -m model_api --no-cov ../../tests/test_model_api_transcript.py

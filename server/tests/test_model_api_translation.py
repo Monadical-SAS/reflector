@@ -1,13 +1,13 @@
 """
 Tests for GPU Modal-compatible translation endpoint (self-hosted service compatible shape).
 
-Marked with the "gpu_modal" marker and skipped unless TRANSLATION_URL is provided
+Marked with the "model_api" marker and skipped unless TRANSLATION_URL is provided
 or we fallback to TRANSCRIPT_URL base (same host for self-hosted).
 
 Run locally against self-hosted server:
     REFLECTOR_GPU_APIKEY=dev-key \
     TRANSLATION_URL=http://localhost:8000 \
-    uv run -m pytest -m gpu_modal --no-cov tests/test_gpu_modal_translation.py
+    uv run -m pytest -m model_api --no-cov tests/test_model_api_translation.py
 """
 
 import os
@@ -34,8 +34,8 @@ def get_auth_headers():
     return {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
 
-@pytest.mark.gpu_modal
-class TestGPUModalTranslation:
+@pytest.mark.model_api
+class TestModelAPITranslation:
     def test_translate_text(self):
         url = get_translation_url()
         headers = get_auth_headers()
