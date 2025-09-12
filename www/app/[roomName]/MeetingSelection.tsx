@@ -182,10 +182,10 @@ export default function MeetingSelection({
         w="full"
         maxW="800px"
         mx="auto"
-        px={6}
-        py={8}
+        px={{ base: 4, md: 6 }}
+        py={{ base: 4, md: 8 }}
         flex="1"
-        gap={6}
+        gap={{ base: 4, md: 6 }}
       >
         {/* Current Ongoing Meetings - BIG DISPLAY */}
         {currentMeetings.length > 0 ? (
@@ -196,17 +196,26 @@ export default function MeetingSelection({
                 width="100%"
                 bg="gray.50"
                 borderRadius="xl"
-                p={8}
+                p={{ base: 4, md: 8 }}
               >
-                <HStack justify="space-between" align="start">
-                  <VStack align="start" gap={4} flex={1}>
+                <Flex
+                  direction={{ base: "column", md: "row" }}
+                  justify="space-between"
+                  align={{ base: "stretch", md: "start" }}
+                  gap={{ base: 4, md: 6 }}
+                >
+                  <VStack align="start" gap={{ base: 3, md: 4 }} flex={1}>
                     <HStack>
                       <Icon
                         as={FaCalendarAlt}
                         color="blue.600"
                         boxSize="24px"
                       />
-                      <Text fontSize="2xl" fontWeight="bold" color="blue.800">
+                      <Text
+                        fontSize={{ base: "xl", md: "2xl" }}
+                        fontWeight="bold"
+                        color="blue.800"
+                      >
                         {(meeting.calendar_metadata as any)?.title ||
                           "Live Meeting"}
                       </Text>
@@ -214,26 +223,40 @@ export default function MeetingSelection({
 
                     {isOwner &&
                       (meeting.calendar_metadata as any)?.description && (
-                        <Text fontSize="lg" color="gray.700">
+                        <Text
+                          fontSize={{ base: "md", md: "lg" }}
+                          color="gray.700"
+                        >
                           {(meeting.calendar_metadata as any).description}
                         </Text>
                       )}
 
-                    <HStack gap={8} fontSize="md" color="gray.600">
+                    <Flex
+                      gap={{ base: 4, md: 8 }}
+                      fontSize={{ base: "sm", md: "md" }}
+                      color="gray.600"
+                      flexWrap="wrap"
+                    >
                       <HStack>
-                        <Icon as={FaUsers} boxSize="20px" />
+                        <Icon
+                          as={FaUsers}
+                          boxSize={{ base: "16px", md: "20px" }}
+                        />
                         <Text fontWeight="medium">
-                          {meeting.num_clients} participants
+                          {meeting.num_clients || 0} participant
+                          {meeting.num_clients !== 1 ? "s" : ""}
                         </Text>
                       </HStack>
                       <HStack>
-                        <Icon as={FaClock} boxSize="20px" />
+                        <Icon
+                          as={FaClock}
+                          boxSize={{ base: "16px", md: "20px" }}
+                        />
                         <Text>
-                          Started{" "}
                           {formatStartedAgo(new Date(meeting.start_date))}
                         </Text>
                       </HStack>
-                    </HStack>
+                    </Flex>
 
                     {isOwner &&
                       (meeting.calendar_metadata as any)?.attendees && (
@@ -269,16 +292,21 @@ export default function MeetingSelection({
                       )}
                   </VStack>
 
-                  <VStack gap={3}>
+                  <VStack gap={3} width={{ base: "full", md: "auto" }}>
                     <Button
                       colorScheme="blue"
-                      size="xl"
-                      fontSize="lg"
-                      px={8}
-                      py={6}
+                      size={{ base: "lg", md: "xl" }}
+                      fontSize={{ base: "md", md: "lg" }}
+                      px={{ base: 6, md: 8 }}
+                      py={{ base: 4, md: 6 }}
+                      width={{ base: "full", md: "auto" }}
                       onClick={() => handleJoinDirect(meeting)}
                     >
-                      <Icon as={FaUsers} boxSize="20px" me={2} />
+                      <Icon
+                        as={FaUsers}
+                        boxSize={{ base: "18px", md: "20px" }}
+                        me={2}
+                      />
                       Join Now
                     </Button>
                     {isOwner && (
@@ -294,7 +322,7 @@ export default function MeetingSelection({
                       </Button>
                     )}
                   </VStack>
-                </HStack>
+                </Flex>
               </Box>
             ))}
           </VStack>
@@ -317,12 +345,17 @@ export default function MeetingSelection({
                   width="100%"
                   bg="orange.50"
                   borderRadius="xl"
-                  p={8}
+                  p={{ base: 4, md: 8 }}
                   border="2px solid"
                   borderColor="orange.200"
                 >
-                  <HStack justify="space-between" align="start">
-                    <VStack align="start" gap={4} flex={1}>
+                  <Flex
+                    direction={{ base: "column", md: "row" }}
+                    justify="space-between"
+                    align={{ base: "stretch", md: "start" }}
+                    gap={{ base: 4, md: 6 }}
+                  >
+                    <VStack align="start" gap={{ base: 3, md: 4 }} flex={1}>
                       <HStack>
                         <Icon
                           as={FaCalendarAlt}
@@ -330,7 +363,7 @@ export default function MeetingSelection({
                           boxSize="24px"
                         />
                         <Text
-                          fontSize="2xl"
+                          fontSize={{ base: "xl", md: "2xl" }}
                           fontWeight="bold"
                           color="orange.800"
                         >
@@ -341,20 +374,34 @@ export default function MeetingSelection({
 
                       {isOwner &&
                         (meeting.calendar_metadata as any)?.description && (
-                          <Text fontSize="lg" color="gray.700">
+                          <Text
+                            fontSize={{ base: "md", md: "lg" }}
+                            color="gray.700"
+                          >
                             {(meeting.calendar_metadata as any).description}
                           </Text>
                         )}
 
-                      <HStack gap={8} fontSize="md" color="gray.600">
-                        <Badge colorScheme="orange" fontSize="md" px={3} py={1}>
+                      <Flex
+                        gap={{ base: 2, md: 8 }}
+                        fontSize={{ base: "sm", md: "md" }}
+                        color="gray.600"
+                        flexWrap="wrap"
+                        align="center"
+                      >
+                        <Badge
+                          colorScheme="orange"
+                          fontSize={{ base: "sm", md: "md" }}
+                          px={3}
+                          py={1}
+                        >
                           Starts in {minutesUntilStart} minute
                           {minutesUntilStart !== 1 ? "s" : ""}
                         </Badge>
                         <Text>
                           {formatDateTime(new Date(meeting.start_date))}
                         </Text>
-                      </HStack>
+                      </Flex>
 
                       {isOwner &&
                         (meeting.calendar_metadata as any)?.attendees && (
@@ -390,16 +437,21 @@ export default function MeetingSelection({
                         )}
                     </VStack>
 
-                    <VStack gap={3}>
+                    <VStack gap={3} width={{ base: "full", md: "auto" }}>
                       <Button
                         colorScheme="orange"
-                        size="xl"
-                        fontSize="lg"
-                        px={8}
-                        py={6}
+                        size={{ base: "lg", md: "xl" }}
+                        fontSize={{ base: "md", md: "lg" }}
+                        px={{ base: 6, md: 8 }}
+                        py={{ base: 4, md: 6 }}
+                        width={{ base: "full", md: "auto" }}
                         onClick={() => handleJoinUpcoming(meeting)}
                       >
-                        <Icon as={FaClock} boxSize="20px" me={2} />
+                        <Icon
+                          as={FaClock}
+                          boxSize={{ base: "18px", md: "20px" }}
+                          me={2}
+                        />
                         Join Early
                       </Button>
                       {isOwner && (
@@ -415,7 +467,7 @@ export default function MeetingSelection({
                         </Button>
                       )}
                     </VStack>
-                  </HStack>
+                  </Flex>
                 </Box>
               );
             })}
@@ -428,7 +480,11 @@ export default function MeetingSelection({
             <Text fontSize="lg" fontWeight="semibold" color="gray.700">
               Starting Soon
             </Text>
-            <HStack gap={4} flexWrap="wrap">
+            <Flex
+              gap={4}
+              flexWrap="wrap"
+              direction={{ base: "column", sm: "row" }}
+            >
               {upcomingMeetings.map((meeting) => {
                 const now = new Date();
                 const startTime = new Date(meeting.start_date);
@@ -444,8 +500,8 @@ export default function MeetingSelection({
                     borderColor="orange.200"
                     borderRadius="lg"
                     p={4}
-                    minW="300px"
-                    maxW="400px"
+                    minW={{ base: "100%", sm: "300px" }}
+                    maxW={{ base: "100%", sm: "400px" }}
                     _hover={{ borderColor: "orange.300", bg: "orange.50" }}
                     transition="all 0.2s"
                   >
@@ -479,7 +535,7 @@ export default function MeetingSelection({
                   </Box>
                 );
               })}
-            </HStack>
+            </Flex>
           </VStack>
         )}
 
