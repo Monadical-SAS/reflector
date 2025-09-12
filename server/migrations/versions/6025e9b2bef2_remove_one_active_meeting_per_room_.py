@@ -1,7 +1,7 @@
 """remove_one_active_meeting_per_room_constraint
 
 Revision ID: 6025e9b2bef2
-Revises: 61882a919591
+Revises: 2ae3db106d4e
 Create Date: 2025-08-18 18:45:44.418392
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "6025e9b2bef2"
-down_revision: Union[str, None] = "61882a919591"
+down_revision: Union[str, None] = "2ae3db106d4e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
