@@ -1,6 +1,6 @@
 "use client";
 
-import * as R from "remeda";
+import { partition } from "remeda";
 import {
   Box,
   VStack,
@@ -56,7 +56,7 @@ export default function MeetingSelection({
   const allMeetings = activeMeetingsQuery.data || [];
 
   const now = new Date();
-  const [currentMeetings, upcomingMeetings] = R.partition(
+  const [currentMeetings, upcomingMeetings] = partition(
     allMeetings,
     (meeting) => {
       const startTime = new Date(meeting.start_date);
