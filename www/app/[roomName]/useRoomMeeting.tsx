@@ -40,6 +40,7 @@ const useRoomMeeting = (
   useEffect(() => {
     if (!roomName) return;
 
+    // For any case where we need a meeting (with or without meetingId),
     const createMeeting = async () => {
       try {
         const result = await createMeetingMutation.mutateAsync({
@@ -47,6 +48,9 @@ const useRoomMeeting = (
             path: {
               room_name: roomName,
             },
+          },
+          body: {
+            allow_duplicated: false,
           },
         });
         setResponse(result);
@@ -63,7 +67,7 @@ const useRoomMeeting = (
       }
     };
 
-    createMeeting();
+    createMeeting().then(() => {});
   }, [roomName, reload]);
 
   const loading = createMeetingMutation.isPending && !response;

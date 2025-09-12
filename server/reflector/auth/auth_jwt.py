@@ -67,7 +67,8 @@ def current_user(
     try:
         payload = jwtauth.verify_token(token)
         sub = payload["sub"]
-        return UserInfo(sub=sub)
+        email = payload["email"]
+        return UserInfo(sub=sub, email=email)
     except JWTError as e:
         logger.error(f"JWT error: {e}")
         raise HTTPException(status_code=401, detail="Invalid authentication")
