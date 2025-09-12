@@ -179,15 +179,12 @@ async function lockedRefreshAccessToken(
     });
 }
 
-const AUTHENTIC_REFRESH_TOKEN_URL = assertExistsAndNonEmptyString(
-  process.env.AUTHENTIK_REFRESH_TOKEN_URL,
-  "AUTHENTIK_REFRESH_TOKEN_URL required",
-);
-
 async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
+  const url = assertExistsAndNonEmptyString(
+    process.env.AUTHENTIK_REFRESH_TOKEN_URL,
+    "AUTHENTIK_REFRESH_TOKEN_URL required",
+  );
   try {
-    const url = AUTHENTIC_REFRESH_TOKEN_URL;
-
     const options = {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
