@@ -1,7 +1,7 @@
 [project]
-name = "self-hosted"
+name = "reflector-gpu"
 version = "0.1.0"
-description = "Add your description here"
+description = "Self-hosted GPU service for speech transcription, diarization, and translation via FastAPI."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
