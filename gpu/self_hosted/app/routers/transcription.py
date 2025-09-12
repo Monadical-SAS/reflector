@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
-
+from pathlib import Path
 from ..auth import apikey_auth
 from ..config import SUPPORTED_FILE_EXTENSIONS, UPLOADS_PATH
 from ..services.transcriber import MODEL_NAME
@@ -53,8 +53,8 @@ def transcribe(
 
     upload_files = [file] if file else files
 
-    uploaded_filenames: list[str] = []
-    with cleanup_uploaded_files(uploaded_filenames):
+    uploaded_paths: list[Path] = []
+    with cleanup_uploaded_files(uploaded_paths):
         for upload_file in upload_files:
             audio_suffix = upload_file.filename.split(".")[-1].lower()
             if audio_suffix not in SUPPORTED_FILE_EXTENSIONS:
@@ -69,22 +69,20 @@ def transcribe(
             with open(file_path, "wb") as f:
                 content = upload_file.file.read()
                 f.write(content)
-            uploaded_filenames.append(unique_filename)
+            uploaded_paths.append(file_path)
 
         if batch and len(upload_files) > 1:
             results = []
-            for filename in uploaded_filenames:
-                file_path = str(UPLOADS_PATH / filename)
-                result = service.transcribe_file(file_path, language=language)
-                result["filename"] = filename
+            for path in uploaded_paths:
+                result = service.transcribe_file(str(path), language=language)
+                result["filename"] = path.name
                 results.append(result)
             return {"results": results}
 
         results = []
-        for filename in uploaded_filenames:
-            file_path = str(UPLOADS_PATH / filename)
-            result = service.transcribe_file(file_path, language=language)
-            result["filename"] = filename
+        for path in uploaded_paths:
+            result = service.transcribe_file(str(path), language=language)
+            result["filename"] = path.name
             results.append(result)
 
         return {"results": results} if len(results) > 1 else results[0]
@@ -103,8 +101,8 @@ def transcribe_from_url(
     timestamp_offset: float = Body(0.0),
 ):
     service = request.app.state.whisper
-    with download_audio_file(audio_file_url) as (unique_filename, _ext):
-        file_path = str(UPLOADS_PATH / unique_filename)
+    with download_audio_file(audio_file_url) as (file_path, _ext):
+        file_path = str(file_path)
         result = service.transcribe_vad_url_segment(
             file_path=file_path, timestamp_offset=timestamp_offset, language=language
         )

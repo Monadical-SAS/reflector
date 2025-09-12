@@ -5,6 +5,7 @@ import uuid
 from contextlib import contextmanager
 from typing import Mapping
 from urllib.parse import urlparse
+from pathlib import Path
 
 import requests
 from fastapi import HTTPException
@@ -55,7 +56,7 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
     )
 
 
-def download_audio_to_uploads(audio_file_url: str) -> tuple[str, str]:
+def download_audio_to_uploads(audio_file_url: str) -> tuple[Path, str]:
     response = requests.head(audio_file_url, allow_redirects=True)
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Audio file not found")
@@ -65,42 +66,42 @@ def download_audio_to_uploads(audio_file_url: str) -> tuple[str, str]:
 
     audio_suffix = detect_audio_format(audio_file_url, response.headers)
     unique_filename = f"{uuid.uuid4()}.{audio_suffix}"
-    file_path = UPLOADS_PATH / unique_filename
+    file_path: Path = UPLOADS_PATH / unique_filename
 
     with open(file_path, "wb") as f:
         f.write(response.content)
 
-    return unique_filename, audio_suffix
+    return file_path, audio_suffix
 
 
 @contextmanager
 def download_audio_file(audio_file_url: str):
     """Download an audio file to UPLOADS_PATH and remove it after use.
 
-    Yields (unique_filename, audio_suffix).
+    Yields (file_path: Path, audio_suffix: str).
     """
-    unique_filename, audio_suffix = download_audio_to_uploads(audio_file_url)
+    file_path, audio_suffix = download_audio_to_uploads(audio_file_url)
     try:
-        yield unique_filename, audio_suffix
+        yield file_path, audio_suffix
     finally:
         try:
-            (UPLOADS_PATH / unique_filename).unlink(missing_ok=True)
+            file_path.unlink(missing_ok=True)
         except Exception as e:
-            logger.error("Error deleting temporary file %s: %s", unique_filename, e)
+            logger.error("Error deleting temporary file %s: %s", file_path, e)
 
 
 @contextmanager
-def cleanup_uploaded_files(filenames: list[str]):
-    """Ensure files in UPLOADS_PATH are removed after use.
+def cleanup_uploaded_files(file_paths: list[Path]):
+    """Ensure provided file paths are removed after use.
 
     The provided list can be populated inside the context; all present entries
     at exit will be deleted.
     """
     try:
-        yield filenames
+        yield file_paths
     finally:
-        for filename in list(filenames):
+        for path in list(file_paths):
             try:
-                (UPLOADS_PATH / filename).unlink(missing_ok=True)
+                path.unlink(missing_ok=True)
             except Exception as e:
-                logger.error("Error deleting temporary file %s: %s", filename, e)
+                logger.error("Error deleting temporary file %s: %s", path, e)
