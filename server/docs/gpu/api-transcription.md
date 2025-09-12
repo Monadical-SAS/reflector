@@ -190,5 +190,5 @@ Use the pytest-based conformance tests to validate any new implementation (inclu
 ```
 TRANSCRIPT_URL=https://<your-deployment-base> \
 TRANSCRIPT_MODAL_API_KEY=your-api-key \
-uv run -m pytest -m gpu_modal --no-cov server/tests/test_gpu_modal_transcript.py
+uv run -m pytest -m model_api --no-cov server/tests/test_model_api_transcript.py
 ```
