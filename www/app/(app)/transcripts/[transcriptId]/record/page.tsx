@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Recorder from "../../recorder";
 import { TopicList } from "../_components/TopicList";
 import { useWebSockets } from "../../useWebSockets";
@@ -14,19 +14,20 @@ import { useTranscriptGet } from "../../../../lib/apiHooks";
 import { TranscriptStatus } from "../../../../lib/transcript";
 
 type TranscriptDetails = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
 const TranscriptRecord = (details: TranscriptDetails) => {
-  const transcript = useTranscriptGet(details.params.transcriptId);
+  const params = use(details.params);
+  const transcript = useTranscriptGet(params.transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
 
-  const webSockets = useWebSockets(details.params.transcriptId);
+  const webSockets = useWebSockets(params.transcriptId);
 
-  const mp3 = useMp3(details.params.transcriptId, true);
+  const mp3 = useMp3(params.transcriptId, true);
 
   const router = useRouter();
 
@@ -47,7 +48,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
     if (newStatus && (newStatus == "ended" || newStatus == "error")) {
       console.log(newStatus, "redirecting");
 
-      const newUrl = "/transcripts/" + details.params.transcriptId;
+      const newUrl = "/transcripts/" + params.transcriptId;
       router.replace(newUrl);
     }
   }, [webSockets.status?.value, transcript.data?.status]);
@@ -75,7 +76,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
         <WaveformLoading />
       ) : (
         // todo: only start recording animation when you get "recorded" status
-        <Recorder transcriptId={details.params.transcriptId} status={status} />
+        <Recorder transcriptId={params.transcriptId} status={status} />
       )}
       <VStack
         align={"left"}
@@ -98,7 +99,7 @@ const TranscriptRecord = (details: TranscriptDetails) => {
               topics={webSockets.topics}
               useActiveTopic={useActiveTopic}
               autoscroll={true}
-              transcriptId={details.params.transcriptId}
+              transcriptId={params.transcriptId}
               status={status}
               currentTranscriptText={webSockets.accumulatedText}
             />
