@@ -351,7 +351,9 @@ export default function MeetingSelection({
                           Starts in {minutesUntilStart} minute
                           {minutesUntilStart !== 1 ? "s" : ""}
                         </Badge>
-                        <Text>{formatDateTime(meeting.start_date)}</Text>
+                        <Text>
+                          {formatDateTime(new Date(meeting.start_date))}
+                        </Text>
                       </HStack>
 
                       {isOwner &&
