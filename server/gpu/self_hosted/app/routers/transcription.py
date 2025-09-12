@@ -1,32 +1,25 @@
 import uuid
 
-from fastapi import APIRouter, Body, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, UploadFile
 
 from ..auth import apikey_auth
 from ..config import SUPPORTED_FILE_EXTENSIONS, UPLOADS_PATH
-from ..services.transcriber import MODEL_NAME, WhisperService
-from ..utils import cleanup_uploaded_files, download_audio_file, ensure_dirs
+from ..services.transcriber import MODEL_NAME
+from ..utils import cleanup_uploaded_files, download_audio_file
 
 router = APIRouter(prefix="/v1/audio", tags=["transcription"])
 
 
-service = WhisperService()
-
-
-@router.on_event("startup")
-def _startup():
-    ensure_dirs()
-    service.load()
-
-
 @router.post("/transcriptions", dependencies=[Depends(apikey_auth)])
 def transcribe(
+    request: Request,
     file: UploadFile = None,
     files: list[UploadFile] | None = None,
     model: str = Form(MODEL_NAME),
     language: str = Form("en"),
     batch: bool = Form(False),
 ):
+    service = request.app.state.whisper
     if not file and not files:
         raise HTTPException(
             status_code=400, detail="Either 'file' or 'files' parameter is required"
@@ -77,11 +70,13 @@ def transcribe(
 
 @router.post("/transcriptions-from-url", dependencies=[Depends(apikey_auth)])
 def transcribe_from_url(
+    request: Request,
     audio_file_url: str = Body(..., description="URL of the audio file to transcribe"),
     model: str = Body(MODEL_NAME),
     language: str = Body("en"),
     timestamp_offset: float = Body(0.0),
 ):
+    service = request.app.state.whisper
     with download_audio_file(audio_file_url) as (unique_filename, _ext):
         file_path = str(UPLOADS_PATH / unique_filename)
         result = service.transcribe_vad_url_segment(
