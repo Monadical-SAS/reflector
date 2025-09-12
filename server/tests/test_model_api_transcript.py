@@ -1,17 +1,17 @@
 """
-Tests for GPU Modal transcription endpoints.
+Tests for transcription Model API endpoints.
 
-These tests are marked with the "gpu-modal" group and will not run by default.
-Run them with: pytest -m gpu-modal tests/test_model_api_transcript_parakeet.py
+These tests are marked with the "model_api" group and will not run by default.
+Run them with: pytest -m model_api tests/test_model_api_transcript.py
 
 Required environment variables:
-- TRANSCRIPT_URL: URL to the Modal.com endpoint (required)
-- TRANSCRIPT_MODAL_API_KEY: API key for authentication (optional)
+- TRANSCRIPT_URL: URL to the Model API endpoint (required)
+- TRANSCRIPT_API_KEY: API key for authentication (optional)
 - TRANSCRIPT_MODEL: Model name to use (optional, defaults to nvidia/parakeet-tdt-0.6b-v2)
 
 Example with pytest (override default addopts to run ONLY model_api tests):
     TRANSCRIPT_URL=https://monadical-sas--reflector-transcriber-parakeet-web-dev.modal.run \
-    TRANSCRIPT_MODAL_API_KEY=your-api-key \
+    TRANSCRIPT_API_KEY=your-api-key \
     uv run -m pytest -m model_api --no-cov tests/test_model_api_transcript.py
 
     # Or with completely clean options:
@@ -40,14 +40,16 @@ def get_modal_transcript_url():
     url = os.environ.get("TRANSCRIPT_URL")
     if not url:
         pytest.skip(
-            "TRANSCRIPT_URL environment variable is required for GPU Modal tests"
+            "TRANSCRIPT_URL environment variable is required for Model API tests"
         )
     return url
 
 
 def get_auth_headers():
     """Get authentication headers if API key is available."""
-    api_key = os.environ.get("TRANSCRIPT_MODAL_API_KEY")
+    api_key = os.environ.get("TRANSCRIPT_API_KEY") or os.environ.get(
+        "REFLECTOR_GPU_APIKEY"
+    )
     if api_key:
         return {"Authorization": f"Bearer {api_key}"}
     return {}

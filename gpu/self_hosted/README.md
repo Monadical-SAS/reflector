@@ -1,6 +1,6 @@
-Self-hosted Whisper Transcriber (FastAPI)
+# Self-hosted Model API
 
-Run a Whisper (faster-whisper) transcription service compatible with Reflector's GPU Modal API. Works on CPU or GPU.
+Run transcription, translation, and diarization services compatible with Reflector's GPU Model API. Works on CPU or GPU.
 
 Environment variables
 
@@ -14,10 +14,10 @@ Requirements
 - NVIDIA GPU optional. If available, it will be used automatically
 
 Local run
-
-uv venv
+Set env vars in self_hosted/.env file
 uv sync
-REFLECTOR_GPU_APIKEY=dev-key uv run uvicorn main:app --host 0.0.0.0 --port 8000
+
+uv run uvicorn main:app --host 0.0.0.0 --port 8000
 
 Authentication
 
@@ -61,5 +61,13 @@ Conformance tests
 # From this directory
 
 TRANSCRIPT_URL=http://localhost:8000 \
-TRANSCRIPT_MODAL_API_KEY=dev-key \
-uv run -m pytest -m model_api --no-cov ../../tests/test_model_api_transcript.py
+TRANSCRIPT_API_KEY=dev-key \
+uv run -m pytest -m model_api --no-cov ../../server/tests/test_model_api_transcript.py
+
+TRANSLATION_URL=http://localhost:8000 \
+TRANSLATION_API_KEY=dev-key \
+uv run -m pytest -m model_api --no-cov ../../server/tests/test_model_api_translation.py
+
+DIARIZATION_URL=http://localhost:8000 \
+DIARIZATION_API_KEY=dev-key \
+uv run -m pytest -m model_api --no-cov ../../server/tests/test_model_api_diarization.py

@@ -1,10 +1,10 @@
 """
-Tests for GPU Modal-compatible diarization endpoint (self-hosted service compatible shape).
+Tests for diarization Model API endpoint (self-hosted service compatible shape).
 
 Marked with the "model_api" marker and skipped unless DIARIZATION_URL is provided.
 
 Run with for local self-hosted server:
-    REFLECTOR_GPU_APIKEY=dev-key \
+    DIARIZATION_API_KEY=dev-key \
     DIARIZATION_URL=http://localhost:8000 \
     uv run -m pytest -m model_api --no-cov tests/test_model_api_diarization.py
 """
@@ -24,13 +24,13 @@ def get_modal_diarization_url():
     url = os.environ.get("DIARIZATION_URL")
     if not url:
         pytest.skip(
-            "DIARIZATION_URL environment variable is required for GPU Modal tests"
+            "DIARIZATION_URL environment variable is required for Model API tests"
         )
     return url
 
 
 def get_auth_headers():
-    api_key = os.environ.get("DIARIZATION_MODAL_API_KEY") or os.environ.get(
+    api_key = os.environ.get("DIARIZATION_API_KEY") or os.environ.get(
         "REFLECTOR_GPU_APIKEY"
     )
     return {"Authorization": f"Bearer {api_key}"} if api_key else {}
