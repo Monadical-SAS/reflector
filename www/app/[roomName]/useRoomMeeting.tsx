@@ -49,6 +49,9 @@ const useRoomMeeting = (
               room_name: roomName,
             },
           },
+          body: {
+            allow_duplicated: false,
+          },
         });
         setResponse(result);
       } catch (error: any) {

@@ -54,10 +54,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /**
-     * Meeting Deactivate
-     * @description Deactivate a meeting (owner only)
-     */
+    /** Meeting Deactivate */
     patch: operations["v1_meeting_deactivate"];
     trace?: never;
   };
@@ -227,10 +224,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * Rooms List Active Meetings
-     * @description List all active meetings for a room (supports multiple active meetings)
-     */
+    /** Rooms List Active Meetings */
     get: operations["v1_rooms_list_active_meetings"];
     put?: never;
     post?: never;
@@ -249,10 +243,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Rooms Join Meeting
-     * @description Join a specific meeting by ID
-     */
+    /** Rooms Join Meeting */
     post: operations["v1_rooms_join_meeting"];
     delete?: never;
     options?: never;
@@ -739,6 +730,14 @@ export interface components {
        * @default false
        */
       ics_enabled: boolean;
+    };
+    /** CreateRoomMeeting */
+    CreateRoomMeeting: {
+      /**
+       * Allow Duplicated
+       * @default false
+       */
+      allow_duplicated: boolean | null;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -1780,7 +1779,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateRoomMeeting"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {

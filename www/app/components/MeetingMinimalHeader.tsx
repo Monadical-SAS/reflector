@@ -12,6 +12,7 @@ interface MeetingMinimalHeaderProps {
   onLeave?: () => void;
   showCreateButton?: boolean;
   onCreateMeeting?: () => void;
+  isCreatingMeeting?: boolean;
 }
 
 export default function MeetingMinimalHeader({
@@ -21,6 +22,7 @@ export default function MeetingMinimalHeader({
   onLeave,
   showCreateButton = false,
   onCreateMeeting,
+  isCreatingMeeting = false,
 }: MeetingMinimalHeaderProps) {
   const router = useRouter();
 
@@ -70,7 +72,13 @@ export default function MeetingMinimalHeader({
       {/* Action Buttons */}
       <HStack gap={2}>
         {showCreateButton && onCreateMeeting && (
-          <Button colorScheme="green" size="sm" onClick={onCreateMeeting}>
+          <Button
+            colorScheme="green"
+            size="sm"
+            onClick={onCreateMeeting}
+            loading={isCreatingMeeting}
+            disabled={isCreatingMeeting}
+          >
             Create Meeting
           </Button>
         )}
@@ -80,6 +88,7 @@ export default function MeetingMinimalHeader({
             colorScheme="gray"
             size="sm"
             onClick={handleLeaveMeeting}
+            disabled={isCreatingMeeting}
           >
             Leave Room
           </Button>

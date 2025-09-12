@@ -191,6 +191,7 @@ async def process_meetings():
 
             # This API call could be slow, extend lock if needed
             response = await get_room_sessions(meeting.room_name)
+            print(response)
 
             try:
                 # Extend lock after slow operation to ensure we still hold it

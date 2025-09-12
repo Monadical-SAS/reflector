@@ -113,6 +113,10 @@ class UpdateRoom(BaseModel):
     ics_enabled: Optional[bool] = None
 
 
+class CreateRoomMeeting(BaseModel):
+    allow_duplicated: Optional[bool] = False
+
+
 class DeletionStatus(BaseModel):
     status: str
 
@@ -235,6 +239,7 @@ async def rooms_delete(
 @router.post("/rooms/{room_name}/meeting", response_model=Meeting)
 async def rooms_create_meeting(
     room_name: str,
+    info: CreateRoomMeeting,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     user_id = user["sub"] if user else None
@@ -243,7 +248,12 @@ async def rooms_create_meeting(
         raise HTTPException(status_code=404, detail="Room not found")
 
     current_time = datetime.now(timezone.utc)
-    meeting = await meetings_controller.get_active(room=room, current_time=current_time)
+
+    meeting = None
+    if not info.allow_duplicated:
+        meeting = await meetings_controller.get_active(
+            room=room, current_time=current_time
+        )
 
     if meeting is None:
         end_date = current_time + timedelta(hours=8)
