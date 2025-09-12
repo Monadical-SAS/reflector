@@ -105,7 +105,6 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
             host_room_url="https://example.com/meeting-host",
             start_date=old_date,
             end_date=old_date + timedelta(hours=1),
-            user_id=None,
             room_id=None,
         )
     )
@@ -241,7 +240,6 @@ async def test_meeting_consent_cascade_delete():
             host_room_url="https://example.com/cascade-test-host",
             start_date=datetime.now(timezone.utc),
             end_date=datetime.now(timezone.utc) + timedelta(hours=1),
-            user_id="test-user",
             room_id=None,
         )
     )
