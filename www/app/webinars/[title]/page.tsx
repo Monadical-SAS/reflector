@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -30,9 +30,9 @@ const FORM_FIELDS = {
 };
 
 export type WebinarDetails = {
-  params: {
+  params: Promise<{
     title: string;
-  };
+  }>;
 };
 
 export type Webinar = {
@@ -63,7 +63,8 @@ const WEBINARS: Webinar[] = [
 ];
 
 export default function WebinarPage(details: WebinarDetails) {
-  const title = details.params.title;
+  const params = use(details.params);
+  const title = params.title;
   const webinar = WEBINARS.find((webinar) => webinar.title === title);
   if (!webinar) {
     return notFound();

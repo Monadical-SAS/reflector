@@ -11,11 +11,11 @@ export type FeatureName = (typeof FEATURES)[number];
 export type Features = Readonly<Record<FeatureName, boolean>>;
 
 export const DEFAULT_FEATURES: Features = {
-  requireLogin: false,
+  requireLogin: true,
   privacy: true,
-  browse: false,
-  sendToZulip: false,
-  rooms: false,
+  browse: true,
+  sendToZulip: true,
+  rooms: true,
 } as const;
 
 function parseBooleanEnv(

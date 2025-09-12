@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useWebSockets } from "../../useWebSockets";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
@@ -9,18 +9,19 @@ import FileUploadButton from "../../fileUploadButton";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
 
 type TranscriptUpload = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
 const TranscriptUpload = (details: TranscriptUpload) => {
-  const transcript = useTranscriptGet(details.params.transcriptId);
+  const params = use(details.params);
+  const transcript = useTranscriptGet(params.transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
 
-  const webSockets = useWebSockets(details.params.transcriptId);
+  const webSockets = useWebSockets(params.transcriptId);
 
-  const mp3 = useMp3(details.params.transcriptId, true);
+  const mp3 = useMp3(params.transcriptId, true);
 
   const router = useRouter();
 
@@ -50,7 +51,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
     if (newStatus && (newStatus == "ended" || newStatus == "error")) {
       console.log(newStatus, "redirecting");
 
-      const newUrl = "/transcripts/" + details.params.transcriptId;
+      const newUrl = "/transcripts/" + params.transcriptId;
       router.replace(newUrl);
     }
   }, [webSockets.status?.value, transcript.data?.status]);
@@ -84,7 +85,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
                   Please select the file, supported formats: .mp3, m4a, .wav,
                   .mp4, .mov or .webm
                 </Text>
-                <FileUploadButton transcriptId={details.params.transcriptId} />
+                <FileUploadButton transcriptId={params.transcriptId} />
               </>
             )}
             {status && status == "uploaded" && (
