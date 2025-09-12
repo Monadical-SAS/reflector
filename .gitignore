@@ -15,6 +15,7 @@ www/REFACTOR.md
 www/reload-frontend
 server/test.sqlite
 CLAUDE.local.md
+./www/.pnpm-store
 www/.env.development
 www/.env.production
 .playwright-mcp
