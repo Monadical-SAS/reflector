@@ -1,6 +1,8 @@
 import uuid
+from typing import Optional, Union
 
 from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, UploadFile
+from pydantic import BaseModel
 
 from ..auth import apikey_auth
 from ..config import SUPPORTED_FILE_EXTENSIONS, UPLOADS_PATH
@@ -10,7 +12,27 @@ from ..utils import cleanup_uploaded_files, download_audio_file
 router = APIRouter(prefix="/v1/audio", tags=["transcription"])
 
 
-@router.post("/transcriptions", dependencies=[Depends(apikey_auth)])
+class WordTiming(BaseModel):
+    word: str
+    start: float
+    end: float
+
+
+class TranscriptResult(BaseModel):
+    text: str
+    words: list[WordTiming]
+    filename: Optional[str] = None
+
+
+class TranscriptBatchResponse(BaseModel):
+    results: list[TranscriptResult]
+
+
+@router.post(
+    "/transcriptions",
+    dependencies=[Depends(apikey_auth)],
+    response_model=Union[TranscriptResult, TranscriptBatchResponse],
+)
 def transcribe(
     request: Request,
     file: UploadFile = None,
@@ -68,7 +90,11 @@ def transcribe(
         return {"results": results} if len(results) > 1 else results[0]
 
 
-@router.post("/transcriptions-from-url", dependencies=[Depends(apikey_auth)])
+@router.post(
+    "/transcriptions-from-url",
+    dependencies=[Depends(apikey_auth)],
+    response_model=TranscriptResult,
+)
 def transcribe_from_url(
     request: Request,
     audio_file_url: str = Body(..., description="URL of the audio file to transcribe"),
