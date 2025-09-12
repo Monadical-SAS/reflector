@@ -1,9 +1,12 @@
 import logging
 import os
 import sys
+import uuid
 from contextlib import contextmanager
 from typing import Mapping
+from urllib.parse import urlparse
 
+import requests
 from fastapi import HTTPException
 
 from .config import SUPPORTED_FILE_EXTENSIONS, UPLOADS_PATH
@@ -31,8 +34,6 @@ def ensure_dirs():
 
 
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
-    from urllib.parse import urlparse
-
     url_path = urlparse(url).path
     for ext in SUPPORTED_FILE_EXTENSIONS:
         if url_path.lower().endswith(f".{ext}"):
@@ -55,10 +56,6 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
 
 
 def download_audio_to_uploads(audio_file_url: str) -> tuple[str, str]:
-    import uuid
-
-    import requests
-
     response = requests.head(audio_file_url, allow_redirects=True)
     if response.status_code == 404:
         raise HTTPException(status_code=404, detail="Audio file not found")

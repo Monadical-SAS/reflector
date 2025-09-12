@@ -1,8 +1,15 @@
 import os
+import shutil
+import subprocess
 import threading
 from typing import Generator
 
+import faster_whisper
+import librosa
+import numpy as np
+import torch
 from fastapi import HTTPException
+from silero_vad import VADIterator, load_silero_vad
 
 from ..config import SAMPLE_RATE, VAD_CONFIG
 
@@ -22,9 +29,6 @@ class WhisperService:
         self.lock = threading.Lock()
 
     def load(self):
-        import faster_whisper
-        import torch
-
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         compute_type = MODEL_COMPUTE_TYPE or (
             "float16" if self.device == "cuda" else "int8"
@@ -38,8 +42,6 @@ class WhisperService:
         )
 
     def pad_audio(self, audio_array, sample_rate: int = SAMPLE_RATE):
-        import numpy as np
-
         audio_duration = len(audio_array) / sample_rate
         if audio_duration < VAD_CONFIG["silence_padding"]:
             silence_samples = int(sample_rate * VAD_CONFIG["silence_padding"])
@@ -63,8 +65,6 @@ class WhisperService:
     def transcribe_file(self, file_path: str, language: str = "en") -> dict:
         input_for_model: str | "object" = file_path
         try:
-            import librosa
-
             audio_array, _sample_rate = librosa.load(
                 file_path, sr=SAMPLE_RATE, mono=True
             )
@@ -101,13 +101,7 @@ class WhisperService:
     def transcribe_vad_url_segment(
         self, file_path: str, timestamp_offset: float = 0.0, language: str = "en"
     ) -> dict:
-        import numpy as np
-        from silero_vad import VADIterator, load_silero_vad
-
         def load_audio_via_ffmpeg(input_path: str, sample_rate: int) -> np.ndarray:
-            import shutil
-            import subprocess
-
             ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
             cmd = [
                 ffmpeg_bin,

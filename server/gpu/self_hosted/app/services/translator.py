@@ -1,5 +1,7 @@
 import threading
 
+from transformers import MarianMTModel, MarianTokenizer, pipeline
+
 
 class TextTranslatorService:
     """Simple text-to-text translator using HuggingFace MarianMT models.
@@ -12,8 +14,6 @@ class TextTranslatorService:
         self._lock = threading.Lock()
 
     def load(self, source_language: str = "en", target_language: str = "fr"):
-        from transformers import MarianMTModel, MarianTokenizer, pipeline
-
         # Pick a default MarianMT model pair if available; fall back to Helsinki-NLP en->fr
         model_name = self._resolve_model_name(source_language, target_language)
         tokenizer = MarianTokenizer.from_pretrained(model_name)

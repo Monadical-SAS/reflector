@@ -1,6 +1,10 @@
 import os
 import threading
 
+import torch
+import torchaudio
+from pyannote.audio import Pipeline
+
 
 class PyannoteDiarizationService:
     def __init__(self):
@@ -9,9 +13,6 @@ class PyannoteDiarizationService:
         self._lock = threading.Lock()
 
     def load(self):
-        import torch
-        from pyannote.audio import Pipeline
-
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
         self._pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
@@ -20,8 +21,6 @@ class PyannoteDiarizationService:
         self._pipeline.to(torch.device(self._device))
 
     def diarize_file(self, file_path: str, timestamp: float = 0.0) -> dict:
-        import torchaudio
-
         if self._pipeline is None:
             self.load()
         waveform, sample_rate = torchaudio.load(file_path)

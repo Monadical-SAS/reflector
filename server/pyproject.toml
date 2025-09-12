@@ -131,7 +131,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "reflector/processors/summary/summary_builder.py" = ["E501"]
-"gpu/**.py" = ["PLC0415"]
+"gpu/modal_deployments/**.py" = ["PLC0415"]
 "reflector/tools/**.py" = ["PLC0415"]
 "migrations/versions/**.py" = ["PLC0415"]
 "tests/**.py" = ["PLC0415"]
