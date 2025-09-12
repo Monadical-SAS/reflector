@@ -1,3 +1,5 @@
+from pathlib import Path
+
 SUPPORTED_FILE_EXTENSIONS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
 SAMPLE_RATE = 16000
 VAD_CONFIG = {
@@ -7,4 +9,4 @@ VAD_CONFIG = {
 }
 
 # App-level paths
-UPLOADS_PATH = "/tmp/whisper-uploads"
+UPLOADS_PATH = Path("/tmp/whisper-uploads")

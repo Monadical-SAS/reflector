@@ -1,5 +1,5 @@
 services:
-  gpu_self_hosted:
+  reflector_gpu:
     build:
       context: .
     ports:

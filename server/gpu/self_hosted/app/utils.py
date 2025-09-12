@@ -1,10 +1,14 @@
+import logging
 import os
 import sys
+from contextlib import contextmanager
 from typing import Mapping
 
 from fastapi import HTTPException
 
 from .config import SUPPORTED_FILE_EXTENSIONS, UPLOADS_PATH
+
+logger = logging.getLogger(__name__)
 
 
 class NoStdStreams:
@@ -23,7 +27,7 @@ class NoStdStreams:
 
 
 def ensure_dirs():
-    os.makedirs(UPLOADS_PATH, exist_ok=True)
+    UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
@@ -64,9 +68,42 @@ def download_audio_to_uploads(audio_file_url: str) -> tuple[str, str]:
 
     audio_suffix = detect_audio_format(audio_file_url, response.headers)
     unique_filename = f"{uuid.uuid4()}.{audio_suffix}"
-    file_path = f"{UPLOADS_PATH}/{unique_filename}"
+    file_path = UPLOADS_PATH / unique_filename
 
     with open(file_path, "wb") as f:
         f.write(response.content)
 
     return unique_filename, audio_suffix
+
+
+@contextmanager
+def download_audio_file(audio_file_url: str):
+    """Download an audio file to UPLOADS_PATH and remove it after use.
+
+    Yields (unique_filename, audio_suffix).
+    """
+    unique_filename, audio_suffix = download_audio_to_uploads(audio_file_url)
+    try:
+        yield unique_filename, audio_suffix
+    finally:
+        try:
+            (UPLOADS_PATH / unique_filename).unlink(missing_ok=True)
+        except Exception as e:
+            logger.error("Error deleting temporary file %s: %s", unique_filename, e)
+
+
+@contextmanager
+def cleanup_uploaded_files(filenames: list[str]):
+    """Ensure files in UPLOADS_PATH are removed after use.
+
+    The provided list can be populated inside the context; all present entries
+    at exit will be deleted.
+    """
+    try:
+        yield filenames
+    finally:
+        for filename in list(filenames):
+            try:
+                (UPLOADS_PATH / filename).unlink(missing_ok=True)
+            except Exception as e:
+                logger.error("Error deleting temporary file %s: %s", filename, e)

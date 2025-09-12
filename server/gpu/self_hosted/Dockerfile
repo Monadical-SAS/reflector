@@ -37,10 +37,10 @@ COPY pyproject.toml uv.lock /app/
 
 COPY ./app /app/app
 COPY ./main.py /app/
-COPY ./start.sh /app/
+COPY ./runserver.sh /app/
 
 EXPOSE 8000
 
-CMD ["sh", "/app/start.sh"]
+CMD ["sh", "/app/runserver.sh"]
 
 
