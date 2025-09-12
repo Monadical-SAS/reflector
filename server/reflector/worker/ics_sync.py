@@ -104,7 +104,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
         end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
 
         whereby_meeting = await create_meeting(
-            event.title or "Scheduled Meeting",
+            "",
             end_date=end_date,
             room=room,
         )
@@ -117,7 +117,6 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
             host_room_url=whereby_meeting["hostRoomUrl"],
             start_date=datetime.fromisoformat(whereby_meeting["startDate"]),
             end_date=datetime.fromisoformat(whereby_meeting["endDate"]),
-            user_id=room.user_id,
             room=room,
             calendar_event_id=event.id,
             calendar_metadata={
