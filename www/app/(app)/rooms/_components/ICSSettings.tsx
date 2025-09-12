@@ -67,9 +67,7 @@ export default function ICSSettings({
     eventsUpdated: number;
   } | null>(null);
 
-  // React Query hooks
   const syncMutation = useRoomIcsSync();
-  const statusQuery = useRoomIcsStatus(roomName || null);
 
   const fetchIntervalCollection = createListCollection({
     items: fetchIntervalOptions,

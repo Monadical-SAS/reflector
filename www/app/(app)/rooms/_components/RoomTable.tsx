@@ -21,6 +21,7 @@ type Room = components["schemas"]["Room"];
 type Meeting = components["schemas"]["Meeting"];
 type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
+import { MEETING_DEFAULT_TIME_MINUTES } from "../../../[roomName]/[meetingId]/constants";
 
 interface RoomTableProps {
   rooms: Room[];
@@ -113,7 +114,9 @@ function MeetingStatus({ roomName }: { roomName: string }) {
     return (
       <VStack gap={1} alignItems="start">
         <Badge colorScheme="orange" size="sm">
-          {diffMinutes < 60 ? `In ${diffMinutes}m` : "Upcoming"}
+          {diffMinutes < MEETING_DEFAULT_TIME_MINUTES
+            ? `In ${diffMinutes}m`
+            : "Upcoming"}
         </Badge>
         <Text fontSize="xs" color="gray.600" lineHeight={1}>
           {event.title || "Scheduled Meeting"}

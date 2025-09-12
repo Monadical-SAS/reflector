@@ -102,7 +102,7 @@ export function useTranscriptGet(transcriptId: string | null) {
     {
       params: {
         path: {
-          transcript_id: transcriptId || "",
+          transcript_id: transcriptId!,
         },
       },
     },
@@ -120,7 +120,7 @@ export function useRoomGet(roomId: string | null) {
     "/v1/rooms/{room_id}",
     {
       params: {
-        path: { room_id: roomId || "" },
+        path: { room_id: roomId! },
       },
     },
     {
@@ -327,7 +327,7 @@ export function useTranscriptTopics(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/topics",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -344,7 +344,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/topics/with-words",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -365,8 +365,8 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
     {
       params: {
         path: {
-          transcript_id: transcriptId || "",
-          topic_id: topicId || "",
+          transcript_id: transcriptId!,
+          topic_id: topicId!,
         },
       },
     },
@@ -384,7 +384,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/participants",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -569,23 +569,18 @@ export function useMeetingDeactivate() {
   const { setError } = useError();
   const queryClient = useQueryClient();
 
-  return $api.useMutation("patch", "/v1/meetings/{meeting_id}/deactivate", {
+  return $api.useMutation("patch", `/v1/meetings/{meeting_id}/deactivate`, {
     onError: (error) => {
       setError(error as Error, "Failed to end meeting");
     },
     onSuccess: () => {
-      // Invalidate all meeting-related queries to refresh the UI
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
-          return (
-            Array.isArray(key) &&
-            key.some(
-              (k) =>
-                typeof k === "string" &&
-                (k.includes("/meetings/active") ||
-                  k.includes("/meetings/upcoming")),
-            )
+          return key.some(
+            (k) =>
+              typeof k === "string" &&
+              !!MEETING_LIST_PATH_PARTIALS.find((e) => k.includes(e)),
           );
         },
       });
@@ -646,7 +641,7 @@ export function useRoomGetByName(roomName: string | null) {
     "/v1/rooms/name/{room_name}",
     {
       params: {
-        path: { room_name: roomName || "" },
+        path: { room_name: roomName! },
       },
     },
     {
@@ -660,10 +655,10 @@ export function useRoomUpcomingMeetings(roomName: string | null) {
 
   return $api.useQuery(
     "get",
-    "/v1/rooms/{room_name}/meetings/upcoming",
+    "/v1/rooms/{room_name}/meetings/upcoming" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_UPCOMING_PATH_PARTIAL}`,
     {
       params: {
-        path: { room_name: roomName || "" },
+        path: { room_name: roomName! },
       },
     },
     {
@@ -672,15 +667,24 @@ export function useRoomUpcomingMeetings(roomName: string | null) {
   );
 }
 
+const MEETINGS_PATH_PARTIAL = "meetings" as const;
+const MEETINGS_ACTIVE_PATH_PARTIAL = `${MEETINGS_PATH_PARTIAL}/active` as const;
+const MEETINGS_UPCOMING_PATH_PARTIAL =
+  `${MEETINGS_PATH_PARTIAL}/upcoming` as const;
+const MEETING_LIST_PATH_PARTIALS = [
+  MEETINGS_ACTIVE_PATH_PARTIAL,
+  MEETINGS_UPCOMING_PATH_PARTIAL,
+];
+
 export function useRoomActiveMeetings(roomName: string | null) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
     "get",
-    "/v1/rooms/{room_name}/meetings/active",
+    "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
     {
       params: {
-        path: { room_name: roomName || "" },
+        path: { room_name: roomName! },
       },
     },
     {
@@ -721,7 +725,7 @@ export function useRoomIcsStatus(roomName: string | null) {
     "/v1/rooms/{room_name}/ics/status",
     {
       params: {
-        path: { room_name: roomName || "" },
+        path: { room_name: roomName! },
       },
     },
     {
@@ -738,7 +742,7 @@ export function useRoomCalendarEvents(roomName: string | null) {
     "/v1/rooms/{room_name}/meetings",
     {
       params: {
-        path: { room_name: roomName || "" },
+        path: { room_name: roomName! },
       },
     },
     {

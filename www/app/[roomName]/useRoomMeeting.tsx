@@ -30,7 +30,6 @@ type SuccessMeeting = {
 
 const useRoomMeeting = (
   roomName: string | null | undefined,
-  meetingId?: string,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
   const [reload, setReload] = useState(0);
@@ -42,8 +41,6 @@ const useRoomMeeting = (
     if (!roomName) return;
 
     // For any case where we need a meeting (with or without meetingId),
-    // we create a new meeting. The meetingId parameter can be used for
-    // additional logic in the future if needed (e.g., fetching existing meetings)
     const createMeeting = async () => {
       try {
         const result = await createMeetingMutation.mutateAsync({
@@ -67,8 +64,8 @@ const useRoomMeeting = (
       }
     };
 
-    createMeeting();
-  }, [roomName, meetingId, reload]);
+    createMeeting().then(() => {});
+  }, [roomName, reload]);
 
   const loading = createMeetingMutation.isPending && !response;
   const error = createMeetingMutation.error as Error | null;

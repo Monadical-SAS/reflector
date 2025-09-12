@@ -82,6 +82,9 @@ def _should_sync(room) -> bool:
     return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
 
+MEETING_DEFAULT_DURATION = timedelta(hours=1)
+
+
 async def create_upcoming_meetings_for_event(event, create_window, room_id, room):
     if event.start_time <= create_window:
         return
@@ -98,7 +101,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
     )
 
     try:
-        end_date = event.end_time or (event.start_time + timedelta(hours=1))
+        end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
 
         whereby_meeting = await create_meeting(
             event.title or "Scheduled Meeting",

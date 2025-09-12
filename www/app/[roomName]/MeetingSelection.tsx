@@ -1,5 +1,6 @@
 "use client";
 
+import * as R from "remeda";
 import {
   Box,
   VStack,
@@ -22,16 +23,9 @@ import {
   useRoomGetByName,
 } from "../lib/apiHooks";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  formatDateTime,
-  formatCountdown,
-  formatStartedAgo,
-} from "../lib/timeUtils";
+import { formatDateTime, formatStartedAgo } from "../lib/timeUtils";
 import MeetingMinimalHeader from "../components/MeetingMinimalHeader";
-
-// Meeting join settings
-const EARLY_JOIN_MINUTES = 5; // Allow joining 5 minutes before meeting starts
+import { MEETING_DEFAULT_TIME_MINUTES } from "./[meetingId]/constants";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -48,13 +42,11 @@ export default function MeetingSelection({
   roomName,
   isOwner,
   isSharedRoom,
-  authLoading,
   onMeetingSelect,
   onCreateUnscheduled,
 }: MeetingSelectionProps) {
   const router = useRouter();
 
-  // Use React Query hooks for data fetching
   const roomQuery = useRoomGetByName(roomName);
   const activeMeetingsQuery = useRoomActiveMeetings(roomName);
   const joinMeetingMutation = useRoomJoinMeeting();
@@ -63,47 +55,22 @@ export default function MeetingSelection({
   const room = roomQuery.data;
   const allMeetings = activeMeetingsQuery.data || [];
 
-  // Separate current ongoing meetings from upcoming meetings (created by worker, within 5 minutes)
   const now = new Date();
-  const currentMeetings = allMeetings.filter((meeting) => {
-    const startTime = new Date(meeting.start_date);
-    // Meeting is ongoing if it started and participants have joined or it's been running for a while
-    return (
-      meeting.num_clients > 0 || now.getTime() - startTime.getTime() > 60000
-    ); // 1 minute threshold
-  });
+  const [currentMeetings, upcomingMeetings] = R.pipe(
+    allMeetings,
+    R.partition((meeting) => {
+      const startTime = new Date(meeting.start_date);
+      // Meeting is ongoing if it started and participants have joined or it's been running for a while
+      return (
+        meeting.num_clients > 0 ||
+        now.getTime() - startTime.getTime() >
+          MEETING_DEFAULT_TIME_MINUTES * 1000
+      );
+    }),
+  );
 
-  const upcomingMeetings = allMeetings.filter((meeting) => {
-    const startTime = new Date(meeting.start_date);
-    const minutesUntilStart = Math.floor(
-      (startTime.getTime() - now.getTime()) / (1000 * 60),
-    );
-    // Show meetings that start within 5 minutes and haven't started yet
-    return (
-      minutesUntilStart <= EARLY_JOIN_MINUTES &&
-      minutesUntilStart > 0 &&
-      meeting.num_clients === 0
-    );
-  });
   const loading = roomQuery.isLoading || activeMeetingsQuery.isLoading;
   const error = roomQuery.error || activeMeetingsQuery.error;
-
-  const handleJoinMeeting = async (meetingId: string) => {
-    try {
-      const meeting = await joinMeetingMutation.mutateAsync({
-        params: {
-          path: {
-            room_name: roomName,
-            meeting_id: meetingId,
-          },
-        },
-      });
-      onMeetingSelect(meeting);
-    } catch (err) {
-      console.error("Failed to join meeting:", err);
-      // Handle error appropriately since we don't have setError anymore
-    }
-  };
 
   const handleJoinUpcoming = async (meeting: Meeting) => {
     // Join the upcoming meeting and navigate to local meeting page
@@ -166,13 +133,6 @@ export default function MeetingSelection({
       </Box>
     );
   }
-
-  // Generate display name for room
-  const displayName = room?.name || roomName;
-  const roomTitle =
-    displayName.endsWith("'s") || displayName.endsWith("s")
-      ? `${displayName} Room`
-      : `${displayName}'s Room`;
 
   const handleLeaveMeeting = () => {
     router.push("/");
@@ -244,7 +204,8 @@ export default function MeetingSelection({
                       <HStack>
                         <Icon as={FaClock} boxSize="20px" />
                         <Text>
-                          Started {formatStartedAgo(meeting.start_date)}
+                          Started{" "}
+                          {formatStartedAgo(new Date(meeting.start_date))}
                         </Text>
                       </HStack>
                     </HStack>
@@ -356,7 +317,7 @@ export default function MeetingSelection({
                       </Badge>
 
                       <Text fontSize="sm" color="gray.600">
-                        Starts: {formatDateTime(meeting.start_date)}
+                        Starts: {formatDateTime(new Date(meeting.start_date))}
                       </Text>
 
                       <Button
