@@ -15,11 +15,7 @@ async def lifespan(app: FastAPI):
     whisper_service = WhisperService()
     whisper_service.load()
     app.state.whisper = whisper_service
-    try:
-        yield
-    finally:
-        # No teardown needed currently
-        pass
+    yield
 
 
 def create_app() -> FastAPI:
