@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, use } from "react";
 import TopicHeader from "./topicHeader";
 import TopicWords from "./topicWords";
 import TopicPlayer from "./topicPlayer";
@@ -18,14 +18,16 @@ import { useRouter } from "next/navigation";
 import { Box, Grid } from "@chakra-ui/react";
 
 export type TranscriptCorrect = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
-export default function TranscriptCorrect({
-  params: { transcriptId },
-}: TranscriptCorrect) {
+export default function TranscriptCorrect(props: TranscriptCorrect) {
+  const params = use(props.params);
+
+  const { transcriptId } = params;
+
   const updateTranscriptMutation = useTranscriptUpdate();
   const transcript = useTranscriptGet(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();

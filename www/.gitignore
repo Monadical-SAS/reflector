@@ -40,7 +40,6 @@ next-env.d.ts
 # Sentry Auth Token
 .sentryclirc
 
-config.ts
 
 # openapi logs
 openapi-ts-error-*.log

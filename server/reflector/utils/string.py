@@ -10,8 +10,11 @@ NonEmptyString = Annotated[
 non_empty_string_adapter = TypeAdapter(NonEmptyString)
 
 
-def parse_non_empty_string(s: str) -> NonEmptyString:
-    return non_empty_string_adapter.validate_python(s)
+def parse_non_empty_string(s: str, error: str | None = None) -> NonEmptyString:
+    try:
+        return non_empty_string_adapter.validate_python(s)
+    except Exception as e:
+        raise ValueError(f"{e}: {error}" if error else e) from e
 
 
 def try_parse_non_empty_string(s: str) -> NonEmptyString | None:

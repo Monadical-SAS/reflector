@@ -18,8 +18,12 @@ meetings = sa.Table(
     sa.Column("host_room_url", sa.String),
     sa.Column("start_date", sa.DateTime(timezone=True)),
     sa.Column("end_date", sa.DateTime(timezone=True)),
-    sa.Column("user_id", sa.String),
-    sa.Column("room_id", sa.String),
+    sa.Column(
+        "room_id",
+        sa.String,
+        sa.ForeignKey("room.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column("room_mode", sa.String, nullable=False, server_default="normal"),
     sa.Column("recording_type", sa.String, nullable=False, server_default="cloud"),
@@ -86,8 +90,7 @@ class Meeting(BaseModel):
     host_room_url: str
     start_date: datetime
     end_date: datetime
-    user_id: str | None = None
-    room_id: str | None = None
+    room_id: str | None
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
@@ -109,14 +112,10 @@ class MeetingController:
         host_room_url: str,
         start_date: datetime,
         end_date: datetime,
-        user_id: str,
         room: Room,
         calendar_event_id: str | None = None,
         calendar_metadata: dict[str, Any] | None = None,
     ):
-        """
-        Create a new meeting
-        """
         meeting = Meeting(
             id=id,
             room_name=room_name,
@@ -124,7 +123,6 @@ class MeetingController:
             host_room_url=host_room_url,
             start_date=start_date,
             end_date=end_date,
-            user_id=user_id,
             room_id=room.id,
             is_locked=room.is_locked,
             room_mode=room.room_mode,
@@ -138,9 +136,6 @@ class MeetingController:
         return meeting
 
     async def get_all_active(self) -> list[Meeting]:
-        """
-        Get active meetings.
-        """
         query = meetings.select().where(meetings.c.is_active)
         return await get_database().fetch_all(query)
 
@@ -150,8 +145,9 @@ class MeetingController:
     ) -> Meeting | None:
         """
         Get a meeting by room name.
+        For backward compatibility, returns the most recent meeting.
         """
-        query = meetings.select().where(meetings.c.room_name == room_name)
+        query = meetings.select().where(meetings.c.room_name == room_name).order_by(end_date.desc())
         result = await get_database().fetch_one(query)
         if not result:
             return None
@@ -219,9 +215,6 @@ class MeetingController:
         return Meeting(**result)
 
     async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
-        """
-        Get a meeting by id
-        """
         query = meetings.select().where(meetings.c.id == meeting_id)
         result = await get_database().fetch_one(query)
         if not result:
@@ -261,7 +254,7 @@ class MeetingConsentController:
         result = await get_database().fetch_one(query)
         if result is None:
             return None
-        return MeetingConsent(**result) if result else None
+        return MeetingConsent(**result)
 
     async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
         if consent.user_id:

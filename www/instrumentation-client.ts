@@ -23,3 +23,5 @@ if (SENTRY_DSN) {
     replaysSessionSampleRate: 0.0,
   });
 }
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

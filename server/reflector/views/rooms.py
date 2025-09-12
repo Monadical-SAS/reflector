@@ -261,7 +261,6 @@ async def rooms_create_meeting(
                 host_room_url=whereby_meeting["hostRoomUrl"],
                 start_date=parse_datetime_with_timezone(whereby_meeting["startDate"]),
                 end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
-                user_id=user_id,
                 room=room,
             )
         except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError):
