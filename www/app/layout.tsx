@@ -6,6 +6,7 @@ import ErrorMessage from "./(errors)/errorMessage";
 import { RecordingConsentProvider } from "./recordingConsentContext";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
+import { assertExistsAndNonEmptyString } from "./lib/utils";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -20,8 +21,13 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+const NEXT_PUBLIC_SITE_URL = assertExistsAndNonEmptyString(
+  process.env.NEXT_PUBLIC_SITE_URL,
+  "NEXT_PUBLIC_SITE_URL required",
+);
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
+  metadataBase: new URL(NEXT_PUBLIC_SITE_URL),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",

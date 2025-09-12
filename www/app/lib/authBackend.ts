@@ -19,102 +19,126 @@ import {
 } from "./redisTokenCache";
 import { tokenCacheRedis, redlock } from "./redisClient";
 import { isBuildPhase } from "./next";
+import { sequenceThrows } from "./errorUtils";
+import { featureEnabled } from "./features";
 
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
-const CLIENT_ID = !isBuildPhase
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_ID)
-  : "noop";
-const CLIENT_SECRET = !isBuildPhase
-  ? assertExistsAndNonEmptyString(process.env.AUTHENTIK_CLIENT_SECRET)
-  : "noop";
+const getAuthentikClientId = () =>
+  assertExistsAndNonEmptyString(
+    process.env.AUTHENTIK_CLIENT_ID,
+    "AUTHENTIK_CLIENT_ID required",
+  );
+const getAuthentikClientSecret = () =>
+  assertExistsAndNonEmptyString(
+    process.env.AUTHENTIK_CLIENT_SECRET,
+    "AUTHENTIK_CLIENT_SECRET required",
+  );
+const getAuthentikRefreshTokenUrl = () =>
+  assertExistsAndNonEmptyString(
+    process.env.AUTHENTIK_REFRESH_TOKEN_URL,
+    "AUTHENTIK_REFRESH_TOKEN_URL required",
+  );
 
-export const authOptions: AuthOptions = {
-  providers: [
-    AuthentikProvider({
-      clientId: CLIENT_ID,
-      clientSecret: CLIENT_SECRET,
-      issuer: process.env.AUTHENTIK_ISSUER,
-      authorization: {
-        params: {
-          scope: "openid email profile offline_access",
+export const authOptions = (): AuthOptions =>
+  featureEnabled("requireLogin")
+    ? {
+        providers: [
+          AuthentikProvider({
+            ...(() => {
+              const [clientId, clientSecret] = sequenceThrows(
+                getAuthentikClientId,
+                getAuthentikClientSecret,
+              );
+              return {
+                clientId,
+                clientSecret,
+              };
+            })(),
+            issuer: process.env.AUTHENTIK_ISSUER,
+            authorization: {
+              params: {
+                scope: "openid email profile offline_access",
+              },
+            },
+          }),
+        ],
+        session: {
+          strategy: "jwt",
         },
-      },
-    }),
-  ],
-  session: {
-    strategy: "jwt",
-  },
-  callbacks: {
-    async jwt({ token, account, user }) {
-      if (account && !account.access_token) {
-        await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
-      }
+        callbacks: {
+          async jwt({ token, account, user }) {
+            if (account && !account.access_token) {
+              await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+            }
 
-      if (account && user) {
-        // called only on first login
-        // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
-        if (account.access_token) {
-          const expiresAtS = assertExists(account.expires_at);
-          const expiresAtMs = expiresAtS * 1000;
-          const jwtToken: JWTWithAccessToken = {
-            ...token,
-            accessToken: account.access_token,
-            accessTokenExpires: expiresAtMs,
-            refreshToken: account.refresh_token,
-          };
-          if (jwtToken.error) {
-            await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
-          } else {
-            assertNotExists(
-              jwtToken.error,
-              `panic! trying to cache token with error in jwt: ${jwtToken.error}`,
+            if (account && user) {
+              // called only on first login
+              // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
+              if (account.access_token) {
+                const expiresAtS = assertExists(account.expires_at);
+                const expiresAtMs = expiresAtS * 1000;
+                const jwtToken: JWTWithAccessToken = {
+                  ...token,
+                  accessToken: account.access_token,
+                  accessTokenExpires: expiresAtMs,
+                  refreshToken: account.refresh_token,
+                };
+                if (jwtToken.error) {
+                  await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+                } else {
+                  assertNotExists(
+                    jwtToken.error,
+                    `panic! trying to cache token with error in jwt: ${jwtToken.error}`,
+                  );
+                  await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
+                    token: jwtToken,
+                    timestamp: Date.now(),
+                  });
+                  return jwtToken;
+                }
+              }
+            }
+
+            const currentToken = await getTokenCache(
+              tokenCacheRedis,
+              `token:${token.sub}`,
             );
-            await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
-              token: jwtToken,
-              timestamp: Date.now(),
-            });
-            return jwtToken;
-          }
-        }
-      }
+            console.debug(
+              "currentToken from cache",
+              JSON.stringify(currentToken, null, 2),
+              "will be returned?",
+              currentToken &&
+                !shouldRefreshToken(currentToken.token.accessTokenExpires),
+            );
+            if (
+              currentToken &&
+              !shouldRefreshToken(currentToken.token.accessTokenExpires)
+            ) {
+              return currentToken.token;
+            }
 
-      const currentToken = await getTokenCache(
-        tokenCacheRedis,
-        `token:${token.sub}`,
-      );
-      console.debug(
-        "currentToken from cache",
-        JSON.stringify(currentToken, null, 2),
-        "will be returned?",
-        currentToken &&
-          !shouldRefreshToken(currentToken.token.accessTokenExpires),
-      );
-      if (
-        currentToken &&
-        !shouldRefreshToken(currentToken.token.accessTokenExpires)
-      ) {
-        return currentToken.token;
-      }
-
-      // access token has expired, try to update it
-      return await lockedRefreshAccessToken(token);
-    },
-    async session({ session, token }) {
-      const extendedToken = token as JWTWithAccessToken;
-      return {
-        ...session,
-        accessToken: extendedToken.accessToken,
-        accessTokenExpires: extendedToken.accessTokenExpires,
-        error: extendedToken.error,
-        user: {
-          id: assertExists(extendedToken.sub),
-          name: extendedToken.name,
-          email: extendedToken.email,
+            // access token has expired, try to update it
+            return await lockedRefreshAccessToken(token);
+          },
+          async session({ session, token }) {
+            const extendedToken = token as JWTWithAccessToken;
+            return {
+              ...session,
+              accessToken: extendedToken.accessToken,
+              accessTokenExpires: extendedToken.accessTokenExpires,
+              error: extendedToken.error,
+              user: {
+                id: assertExists(extendedToken.sub),
+                name: extendedToken.name,
+                email: extendedToken.email,
+              },
+            } satisfies CustomSession;
+          },
         },
-      } satisfies CustomSession;
-    },
-  },
-};
+      }
+    : {
+        providers: [],
+      };
 
 async function lockedRefreshAccessToken(
   token: JWT,
@@ -174,16 +198,19 @@ async function lockedRefreshAccessToken(
 }
 
 async function refreshAccessToken(token: JWT): Promise<JWTWithAccessToken> {
+  const [url, clientId, clientSecret] = sequenceThrows(
+    getAuthentikRefreshTokenUrl,
+    getAuthentikClientId,
+    getAuthentikClientSecret,
+  );
   try {
-    const url = `${process.env.AUTHENTIK_REFRESH_TOKEN_URL}`;
-
     const options = {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: process.env.AUTHENTIK_CLIENT_ID as string,
-        client_secret: process.env.AUTHENTIK_CLIENT_SECRET as string,
+        client_id: clientId,
+        client_secret: clientSecret,
         grant_type: "refresh_token",
         refresh_token: token.refreshToken as string,
       }).toString(),
