@@ -292,6 +292,9 @@ export default function Room(details: RoomDetails) {
         params: {
           path: { room_name: roomName },
         },
+        body: {
+          allow_duplicated: room ? room.ics_enabled : false,
+        },
       });
       handleMeetingSelect(newMeeting);
     } catch (err) {
@@ -363,6 +366,7 @@ export default function Room(details: RoomDetails) {
         authLoading={["loading", "refreshing"].includes(auth.status)}
         onMeetingSelect={handleMeetingSelect}
         onCreateUnscheduled={handleCreateUnscheduled}
+        isCreatingMeeting={createMeetingMutation.isPending}
       />
     );
   }
