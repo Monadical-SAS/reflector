@@ -1,7 +1,7 @@
 """make meeting room_id nullable but keep foreign key
 
 Revision ID: def1b5867d4c
-Revises: dc60389b76b6
+Revises: 0ce521cda2ee
 Create Date: 2025-09-11 09:42:18.697264
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "def1b5867d4c"
-down_revision: Union[str, None] = "dc60389b76b6"
+down_revision: Union[str, None] = "0ce521cda2ee"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
