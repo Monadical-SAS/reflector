@@ -6,6 +6,7 @@ from .routers.diarization import router as diarization_router
 from .routers.transcription import router as transcription_router
 from .routers.translation import router as translation_router
 from .services.transcriber import WhisperService
+from .services.diarizer import PyannoteDiarizationService
 from .utils import ensure_dirs
 
 
@@ -15,6 +16,9 @@ async def lifespan(app: FastAPI):
     whisper_service = WhisperService()
     whisper_service.load()
     app.state.whisper = whisper_service
+    diarization_service = PyannoteDiarizationService()
+    diarization_service.load()
+    app.state.diarizer = diarization_service
     yield
 
 

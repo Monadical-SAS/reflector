@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from ..auth import apikey_auth
@@ -9,8 +9,6 @@ from ..services.diarizer import PyannoteDiarizationService
 from ..utils import download_audio_file
 
 router = APIRouter(tags=["diarization"])
-
-diarizer = PyannoteDiarizationService()
 
 
 class DiarizationSegment(BaseModel):
@@ -26,7 +24,8 @@ class DiarizationResponse(BaseModel):
 @router.post(
     "/diarize", dependencies=[Depends(apikey_auth)], response_model=DiarizationResponse
 )
-def diarize(audio_file_url: str, timestamp: float = 0.0):
+def diarize(request: Request, audio_file_url: str, timestamp: float = 0.0):
     with download_audio_file(audio_file_url) as (unique_filename, _ext):
         file_path = str(UPLOADS_PATH / unique_filename)
+        diarizer: PyannoteDiarizationService = request.app.state.diarizer
         return diarizer.diarize_file(file_path, timestamp=timestamp)
