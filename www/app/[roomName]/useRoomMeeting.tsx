@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useError } from "../(errors)/errorContext";
 import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
+import { useUuidV4 as useUuid } from "react-uuid-hook";
 
 type Meeting = components["schemas"]["Meeting"];
 import { useRoomsCreateMeeting } from "../lib/apiHooks";
-import { notFound } from "next/navigation";
 
 type ErrorMeeting = {
   error: Error;
@@ -37,6 +37,9 @@ const useRoomMeeting = (
   const createMeetingMutation = useRoomsCreateMeeting();
   const reloadHandler = () => setReload((prev) => prev + 1);
 
+  // Generate idempotency key based on room name
+  const [uuid, refreshUuid] = useUuid(roomName || "");
+
   useEffect(() => {
     if (!roomName) return;
 
@@ -51,9 +54,11 @@ const useRoomMeeting = (
           },
           body: {
             allow_duplicated: false,
+            idempotency_key: uuid,
           },
         });
         setResponse(result);
+        refreshUuid();
       } catch (error: any) {
         const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman && error.status !== 404) {
@@ -68,7 +73,8 @@ const useRoomMeeting = (
     };
 
     createMeeting().then(() => {});
-  }, [roomName, reload]);
+    // roomName is excluded, giving place to uuid that is generated on roomName prefix. roomName itself is used though
+  }, [reload, uuid]);
 
   const loading = createMeetingMutation.isPending && !response;
   const error = createMeetingMutation.error as Error | null;

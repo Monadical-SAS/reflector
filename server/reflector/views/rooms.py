@@ -77,6 +77,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    idempotency_key: str | None = None
 
 
 class CreateRoom(BaseModel):
@@ -115,6 +116,7 @@ class UpdateRoom(BaseModel):
 
 class CreateRoomMeeting(BaseModel):
     allow_duplicated: Optional[bool] = False
+    idempotency_key: Optional[str] = None
 
 
 class DeletionStatus(BaseModel):
@@ -250,7 +252,29 @@ async def rooms_create_meeting(
     current_time = datetime.now(timezone.utc)
 
     meeting = None
-    if not info.allow_duplicated:
+
+    # Check if idempotency key is provided - if so, check for existing meeting with that key
+    if info.idempotency_key:
+        meeting = await meetings_controller.get_by_idempotency_key(
+            room_id=room.id, idempotency_key=info.idempotency_key
+        )
+        if meeting:
+            logger.info(
+                "Returning existing meeting for idempotency key %s in room %s",
+                info.idempotency_key,
+                room.name,
+            )
+            # Check if it's still active and return it
+            if meeting.end_date > current_time and meeting.is_active:
+                if user_id != room.user_id:
+                    meeting.host_room_url = ""
+                return meeting
+            else:
+                # Meeting exists but expired, we'll create a new one below
+                meeting = None
+
+    # Fallback to old logic if no idempotency key or if allow_duplicated is False
+    if meeting is None and not info.allow_duplicated:
         meeting = await meetings_controller.get_active(
             room=room, current_time=current_time
         )
@@ -272,30 +296,54 @@ async def rooms_create_meeting(
                 start_date=parse_datetime_with_timezone(whereby_meeting["startDate"]),
                 end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
                 room=room,
+                idempotency_key=info.idempotency_key,
             )
-        except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError):
-            # Another request already created a meeting for this room
-            # Log this race condition occurrence
-            logger.warning(
-                "Race condition detected for room %s and meeting %s - fetching existing meeting",
-                room.name,
-                whereby_meeting["meetingId"],
-            )
-
-            # Fetch the meeting that was created by the other request
-            meeting = await meetings_controller.get_active(
-                room=room, current_time=current_time
-            )
-            if meeting is None:
-                # Edge case: meeting was created but expired/deleted between checks
-                logger.error(
-                    "Meeting disappeared after race condition for room %s",
+        except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError) as e:
+            # Handle different types of unique constraint violations
+            if "idx_meeting_idempotency" in str(e) and info.idempotency_key:
+                # Idempotency key constraint violated - fetch existing meeting
+                logger.info(
+                    "Idempotency key %s already exists for room %s - fetching existing meeting",
+                    info.idempotency_key,
                     room.name,
-                    exc_info=True,
                 )
-                raise HTTPException(
-                    status_code=503, detail="Unable to join meeting - please try again"
+                meeting = await meetings_controller.get_by_idempotency_key(
+                    room_id=room.id, idempotency_key=info.idempotency_key
                 )
+                if meeting is None:
+                    logger.error(
+                        "Meeting with idempotency key %s disappeared after constraint violation for room %s",
+                        info.idempotency_key,
+                        room.name,
+                        exc_info=True,
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Unable to join meeting - please try again",
+                    )
+            else:
+                # Regular race condition for active meeting
+                logger.warning(
+                    "Race condition detected for room %s and meeting %s - fetching existing meeting",
+                    room.name,
+                    whereby_meeting["meetingId"],
+                )
+
+                # Fetch the meeting that was created by the other request
+                meeting = await meetings_controller.get_active(
+                    room=room, current_time=current_time
+                )
+                if meeting is None:
+                    # Edge case: meeting was created but expired/deleted between checks
+                    logger.error(
+                        "Meeting disappeared after race condition for room %s",
+                        room.name,
+                        exc_info=True,
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Unable to join meeting - please try again",
+                    )
 
     if user_id != room.user_id:
         meeting.host_room_url = ""
