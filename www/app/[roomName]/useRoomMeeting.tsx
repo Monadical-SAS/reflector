@@ -38,7 +38,7 @@ const useRoomMeeting = (
   const reloadHandler = () => setReload((prev) => prev + 1);
 
   // Generate idempotency key based on room name
-  const [uuid, refreshUuid] = useUuid(roomName || "");
+  const [uuid] = useUuid(roomName || "");
 
   useEffect(() => {
     if (!roomName) return;
@@ -58,7 +58,6 @@ const useRoomMeeting = (
           },
         });
         setResponse(result);
-        refreshUuid();
       } catch (error: any) {
         const shouldShowHuman = shouldShowError(error);
         if (shouldShowHuman && error.status !== 404) {
