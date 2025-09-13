@@ -253,27 +253,11 @@ async def rooms_create_meeting(
 
     meeting = None
 
-    # Check if idempotency key is provided - if so, check for existing meeting with that key
     if info.idempotency_key:
         meeting = await meetings_controller.get_by_idempotency_key(
             room_id=room.id, idempotency_key=info.idempotency_key
         )
-        if meeting:
-            logger.info(
-                "Returning existing meeting for idempotency key %s in room %s",
-                info.idempotency_key,
-                room.name,
-            )
-            # Check if it's still active and return it
-            if meeting.end_date > current_time and meeting.is_active:
-                if user_id != room.user_id:
-                    meeting.host_room_url = ""
-                return meeting
-            else:
-                # Meeting exists but expired, we'll create a new one below
-                meeting = None
 
-    # Fallback to old logic if no idempotency key or if allow_duplicated is False
     if meeting is None and not info.allow_duplicated:
         meeting = await meetings_controller.get_active(
             room=room, current_time=current_time
@@ -286,7 +270,6 @@ async def rooms_create_meeting(
 
         await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
-        # Now try to save to database
         try:
             meeting = await meetings_controller.create(
                 id=whereby_meeting["meetingId"],
@@ -299,7 +282,6 @@ async def rooms_create_meeting(
                 idempotency_key=info.idempotency_key,
             )
         except (asyncpg.exceptions.UniqueViolationError, sqlite3.IntegrityError) as e:
-            # Handle different types of unique constraint violations
             if "idx_meeting_idempotency" in str(e) and info.idempotency_key:
                 # Idempotency key constraint violated - fetch existing meeting
                 logger.info(
