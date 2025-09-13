@@ -738,6 +738,8 @@ export interface components {
        * @default false
        */
       allow_duplicated: boolean | null;
+      /** Idempotency Key */
+      idempotency_key?: string | null;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -1071,6 +1073,8 @@ export interface components {
       calendar_metadata?: {
         [key: string]: unknown;
       } | null;
+      /** Idempotency Key */
+      idempotency_key?: string | null;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {

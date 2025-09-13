@@ -55,8 +55,16 @@ meetings = sa.Table(
         ),
     ),
     sa.Column("calendar_metadata", JSONB),
+    sa.Column("idempotency_key", sa.String, nullable=True),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
+    sa.Index(
+        "idx_meeting_idempotency",
+        "room_id",
+        "idempotency_key",
+        unique=True,
+        postgresql_where=sa.text("idempotency_key IS NOT NULL"),
+    ),
 )
 
 meeting_consent = sa.Table(
@@ -101,6 +109,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    idempotency_key: str | None = None
 
 
 class MeetingController:
@@ -115,6 +124,7 @@ class MeetingController:
         room: Room,
         calendar_event_id: str | None = None,
         calendar_metadata: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
     ):
         meeting = Meeting(
             id=id,
@@ -130,6 +140,7 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
+            idempotency_key=idempotency_key,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
@@ -147,7 +158,11 @@ class MeetingController:
         Get a meeting by room name.
         For backward compatibility, returns the most recent meeting.
         """
-        query = meetings.select().where(meetings.c.room_name == room_name).order_by(end_date.desc())
+        query = (
+            meetings.select()
+            .where(meetings.c.room_name == room_name)
+            .order_by(end_date.desc())
+        )
         result = await get_database().fetch_one(query)
         if not result:
             return None
@@ -233,6 +248,21 @@ class MeetingController:
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
+
+    async def get_by_idempotency_key(
+        self, room_id: str, idempotency_key: str
+    ) -> Meeting | None:
+        """Get meeting by room and idempotency key"""
+        query = meetings.select().where(
+            sa.and_(
+                meetings.c.room_id == room_id,
+                meetings.c.idempotency_key == idempotency_key,
+            )
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
+        return Meeting(**result)
 
 
 class MeetingConsentController:
