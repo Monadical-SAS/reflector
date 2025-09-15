@@ -53,7 +53,7 @@ export default function Player(props: PlayerProps) {
     return () => {
       document.removeEventListener("keydown", keyHandler);
     };
-  });
+  }, [wavesurfer]);
 
   // Waveform setup
   useEffect(() => {
