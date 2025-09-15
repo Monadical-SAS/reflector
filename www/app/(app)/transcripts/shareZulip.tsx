@@ -14,8 +14,7 @@ import {
   Checkbox,
   Combobox,
   Spinner,
-  useFilter,
-  useListCollection,
+  createListCollection,
 } from "@chakra-ui/react";
 import { TbBrandZulip } from "react-icons/tb";
 import {
@@ -48,8 +47,6 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   const { data: topics = [] } = useZulipTopics(selectedStreamId);
   const postToZulipMutation = useTranscriptPostToZulip();
 
-  const { contains } = useFilter({ sensitivity: "base" });
-
   const streamItems = useMemo(() => {
     return streams.map((stream: Stream) => ({
       label: stream.name,
@@ -64,17 +61,21 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
     }));
   }, [topics]);
 
-  const { collection: streamItemsCollection, filter: streamItemsFilter } =
-    useListCollection({
-      initialItems: streamItems,
-      filter: contains,
-    });
+  const streamCollection = useMemo(
+    () =>
+      createListCollection({
+        items: streamItems,
+      }),
+    [streamItems],
+  );
 
-  const { collection: topicItemsCollection, filter: topicItemsFilter } =
-    useListCollection({
-      initialItems: topicItems,
-      filter: contains,
-    });
+  const topicCollection = useMemo(
+    () =>
+      createListCollection({
+        items: topicItems,
+      }),
+    [topicItems],
+  );
 
   // Update selected stream ID when stream changes
   useEffect(() => {
@@ -156,15 +157,12 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                     <Flex align="center" gap={2}>
                       <Text>#</Text>
                       <Combobox.Root
-                        collection={streamItemsCollection}
+                        collection={streamCollection}
                         value={stream ? [stream] : []}
                         onValueChange={(e) => {
                           setTopic(undefined);
                           setStream(e.value[0]);
                         }}
-                        onInputValueChange={(e) =>
-                          streamItemsFilter(e.inputValue)
-                        }
                         openOnClick={true}
                         positioning={{
                           strategy: "fixed",
@@ -181,7 +179,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                         <Combobox.Positioner>
                           <Combobox.Content>
                             <Combobox.Empty>No streams found</Combobox.Empty>
-                            {streamItemsCollection.items.map((item) => (
+                            {streamItems.map((item) => (
                               <Combobox.Item key={item.value} item={item}>
                                 {item.label}
                               </Combobox.Item>
@@ -197,12 +195,9 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                       <Flex align="center" gap={2}>
                         <Text visibility="hidden">#</Text>
                         <Combobox.Root
-                          collection={topicItemsCollection}
+                          collection={topicCollection}
                           value={topic ? [topic] : []}
                           onValueChange={(e) => setTopic(e.value[0])}
-                          onInputValueChange={(e) =>
-                            topicItemsFilter(e.inputValue)
-                          }
                           openOnClick
                           selectionBehavior="replace"
                           skipAnimationOnMount={true}
@@ -222,7 +217,7 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
                           <Combobox.Positioner>
                             <Combobox.Content>
                               <Combobox.Empty>No topics found</Combobox.Empty>
-                              {topicItemsCollection.items.map((item) => (
+                              {topicItems.map((item) => (
                                 <Combobox.Item key={item.value} item={item}>
                                   {item.label}
                                   <Combobox.ItemIndicator />
