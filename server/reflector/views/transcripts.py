@@ -27,6 +27,7 @@ from reflector.db.search import (
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptParticipant,
+    TranscriptStatus,
     TranscriptTopic,
     transcripts_controller,
 )
@@ -63,7 +64,7 @@ class GetTranscriptMinimal(BaseModel):
     id: str
     user_id: str | None
     name: str
-    status: str
+    status: TranscriptStatus
     locked: bool
     duration: float
     title: str | None
@@ -96,6 +97,7 @@ class CreateTranscript(BaseModel):
     name: str
     source_language: str = Field("en")
     target_language: str = Field("en")
+    source_kind: SourceKind | None = None
 
 
 class UpdateTranscript(BaseModel):
@@ -213,7 +215,7 @@ async def transcripts_create(
     user_id = user["sub"] if user else None
     return await transcripts_controller.add(
         info.name,
-        source_kind=SourceKind.LIVE,
+        source_kind=info.source_kind or SourceKind.LIVE,
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
@@ -348,8 +350,6 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
-    if not transcript:
-        raise HTTPException(status_code=404, detail="Transcript not found")
     values = info.dict(exclude_unset=True)
     updated_transcript = await transcripts_controller.update(transcript, values)
     return updated_transcript

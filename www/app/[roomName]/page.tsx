@@ -1,25 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import { Box, Spinner } from "@chakra-ui/react";
 import useRoomMeeting from "./useRoomMeeting";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import useSessionStatus from "../lib/useSessionStatus";
+import { useAuth } from "../lib/AuthProvider";
 import VideoPlatformEmbed from "../lib/videoPlatforms/VideoPlatformEmbed";
 
 export type RoomDetails = {
-  params: {
+  params: Promise<{
     roomName: string;
-  };
+  }>;
 };
 
 export default function Room(details: RoomDetails) {
   const [platformReady, setPlatformReady] = useState(false);
-  const roomName = details.params.roomName;
+  const params = use(details.params);
+  const roomName = params.roomName;
   const meeting = useRoomMeeting(roomName);
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useSessionStatus();
+  const status = useAuth().status;
+  const isAuthenticated = status === "authenticated";
+  const isLoading = status === "loading" || meeting.loading;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");

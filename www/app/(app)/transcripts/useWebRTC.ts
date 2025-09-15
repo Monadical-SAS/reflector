@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import Peer from "simple-peer";
 import { useError } from "../../(errors)/errorContext";
-import useApi from "../../lib/useApi";
-import { RtcOffer } from "../../api";
+import { useTranscriptWebRTC } from "../../lib/apiHooks";
+import type { components } from "../../reflector-api";
+type RtcOffer = components["schemas"]["RtcOffer"];
 
 const useWebRTC = (
   stream: MediaStream | null,
@@ -10,10 +11,10 @@ const useWebRTC = (
 ): Peer => {
   const [peer, setPeer] = useState<Peer | null>(null);
   const { setError } = useError();
-  const api = useApi();
+  const { mutateAsync: mutateWebRtcTranscriptAsync } = useTranscriptWebRTC();
 
   useEffect(() => {
-    if (!stream || !transcriptId || !api) {
+    if (!stream || !transcriptId) {
       return;
     }
 
@@ -24,7 +25,7 @@ const useWebRTC = (
     try {
       p = new Peer({ initiator: true, stream: stream });
     } catch (error) {
-      setError(error, "Error creating WebRTC");
+      setError(error as Error, "Error creating WebRTC");
       return;
     }
 
@@ -32,26 +33,31 @@ const useWebRTC = (
       setError(new Error(`WebRTC error: ${err}`));
     });
 
-    p.on("signal", (data: any) => {
-      if (!api) return;
+    p.on("signal", async (data: any) => {
       if ("sdp" in data) {
         const rtcOffer: RtcOffer = {
           sdp: data.sdp,
           type: data.type,
         };
 
-        api
-          .v1TranscriptRecordWebrtc({ transcriptId, requestBody: rtcOffer })
-          .then((answer) => {
-            try {
-              p.signal(answer);
-            } catch (error) {
-              setError(error);
-            }
-          })
-          .catch((error) => {
-            setError(error, "Error loading WebRTCOffer");
+        try {
+          const answer = await mutateWebRtcTranscriptAsync({
+            params: {
+              path: {
+                transcript_id: transcriptId,
+              },
+            },
+            body: rtcOffer,
           });
+
+          try {
+            p.signal(answer);
+          } catch (error) {
+            setError(error as Error);
+          }
+        } catch (error) {
+          setError(error as Error, "Error loading WebRTCOffer");
+        }
       }
     });
 
@@ -63,7 +69,7 @@ const useWebRTC = (
     return () => {
       p.destroy();
     };
-  }, [stream, transcriptId, !api]);
+  }, [stream, transcriptId, mutateWebRtcTranscriptAsync]);
 
   return peer;
 };

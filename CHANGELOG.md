@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.10.0](https://github.com/Monadical-SAS/reflector/compare/v0.9.0...v0.10.0) (2025-09-11)
+
+
+### Features
+
+* replace nextjs-config with environment variables ([#632](https://github.com/Monadical-SAS/reflector/issues/632)) ([369ecdf](https://github.com/Monadical-SAS/reflector/commit/369ecdff13f3862d926a9c0b87df52c9d94c4dde))
+
+
+### Bug Fixes
+
+* anonymous users transcript permissions ([#621](https://github.com/Monadical-SAS/reflector/issues/621)) ([f81fe99](https://github.com/Monadical-SAS/reflector/commit/f81fe9948a9237b3e0001b2d8ca84f54d76878f9))
+* auth post ([#624](https://github.com/Monadical-SAS/reflector/issues/624)) ([cde99ca](https://github.com/Monadical-SAS/reflector/commit/cde99ca2716f84ba26798f289047732f0448742e))
+* auth post ([#626](https://github.com/Monadical-SAS/reflector/issues/626)) ([3b85ff3](https://github.com/Monadical-SAS/reflector/commit/3b85ff3bdf4fb053b103070646811bc990c0e70a))
+* auth post ([#627](https://github.com/Monadical-SAS/reflector/issues/627)) ([962038e](https://github.com/Monadical-SAS/reflector/commit/962038ee3f2a555dc3c03856be0e4409456e0996))
+* missing follow_redirects=True on modal endpoint ([#630](https://github.com/Monadical-SAS/reflector/issues/630)) ([fc363bd](https://github.com/Monadical-SAS/reflector/commit/fc363bd49b17b075e64f9186e5e0185abc325ea7))
+* sync backend and frontend token refresh logic ([#614](https://github.com/Monadical-SAS/reflector/issues/614)) ([5a5b323](https://github.com/Monadical-SAS/reflector/commit/5a5b3233820df9536da75e87ce6184a983d4713a))
+
+## [0.9.0](https://github.com/Monadical-SAS/reflector/compare/v0.8.2...v0.9.0) (2025-09-06)
+
+
+### Features
+
+* frontend openapi react query ([#606](https://github.com/Monadical-SAS/reflector/issues/606)) ([c4d2825](https://github.com/Monadical-SAS/reflector/commit/c4d2825c81f81ad8835629fbf6ea8c7383f8c31b))
+
+
+### Bug Fixes
+
+* align whisper transcriber api with parakeet ([#602](https://github.com/Monadical-SAS/reflector/issues/602)) ([0663700](https://github.com/Monadical-SAS/reflector/commit/0663700a615a4af69a03c96c410f049e23ec9443))
+* kv use tls explicit ([#610](https://github.com/Monadical-SAS/reflector/issues/610)) ([08d88ec](https://github.com/Monadical-SAS/reflector/commit/08d88ec349f38b0d13e0fa4cb73486c8dfd31836))
+* source kind for file processing ([#601](https://github.com/Monadical-SAS/reflector/issues/601)) ([dc82f8b](https://github.com/Monadical-SAS/reflector/commit/dc82f8bb3bdf3ab3d4088e592a30fd63907319e1))
+* token refresh locking ([#613](https://github.com/Monadical-SAS/reflector/issues/613)) ([7f5a4c9](https://github.com/Monadical-SAS/reflector/commit/7f5a4c9ddc7fd098860c8bdda2ca3b57f63ded2f))
+
 ## [0.8.2](https://github.com/Monadical-SAS/reflector/compare/v0.8.1...v0.8.2) (2025-08-29)
 
 

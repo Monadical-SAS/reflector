@@ -1,10 +1,9 @@
 import { Container, Flex, Link } from "@chakra-ui/react";
-import { getConfig } from "../lib/edgeConfig";
+import { featureEnabled } from "../lib/features";
 import NextLink from "next/link";
 import Image from "next/image";
-import About from "../(aboutAndPrivacy)/about";
-import Privacy from "../(aboutAndPrivacy)/privacy";
 import UserInfo from "../(auth)/userInfo";
+import AuthWrapper from "./AuthWrapper";
 import { RECORD_A_MEETING_URL } from "../api/urls";
 
 export default async function AppLayout({
@@ -12,8 +11,6 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const config = await getConfig();
-  const { requireLogin, privacy, browse, rooms } = config.features;
   return (
     <Container
       minW="100vw"
@@ -59,7 +56,7 @@ export default async function AppLayout({
           >
             Create
           </Link>
-          {browse ? (
+          {featureEnabled("browse") ? (
             <>
               &nbsp;·&nbsp;
               <Link href="/browse" as={NextLink} className="font-light px-2">
@@ -69,7 +66,7 @@ export default async function AppLayout({
           ) : (
             <></>
           )}
-          {rooms ? (
+          {featureEnabled("rooms") ? (
             <>
               &nbsp;·&nbsp;
               <Link href="/rooms" as={NextLink} className="font-light px-2">
@@ -79,7 +76,7 @@ export default async function AppLayout({
           ) : (
             <></>
           )}
-          {requireLogin ? (
+          {featureEnabled("requireLogin") ? (
             <>
               &nbsp;·&nbsp;
               <UserInfo />
@@ -90,7 +87,7 @@ export default async function AppLayout({
         </div>
       </Flex>
 
-      {children}
+      <AuthWrapper>{children}</AuthWrapper>
     </Container>
   );
 }

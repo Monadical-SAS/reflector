@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-import { Participant } from "../../api";
-import { useError } from "../../(errors)/errorContext";
-import useApi from "../../lib/useApi";
-import { shouldShowError } from "../../lib/errorUtils";
+import type { components } from "../../reflector-api";
+type Participant = components["schemas"]["Participant"];
+import { useTranscriptParticipants } from "../../lib/apiHooks";
 
 type ErrorParticipants = {
   error: Error;
@@ -29,46 +27,38 @@ export type UseParticipants = (
 ) & { refetch: () => void };
 
 const useParticipants = (transcriptId: string): UseParticipants => {
-  const [response, setResponse] = useState<Participant[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setErrorState] = useState<Error | null>(null);
-  const { setError } = useError();
-  const api = useApi();
-  const [count, setCount] = useState(0);
+  const {
+    data: response,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useTranscriptParticipants(transcriptId || null);
 
-  const refetch = () => {
-    if (!loading) {
-      setCount(count + 1);
-      setLoading(true);
-      setErrorState(null);
-    }
-  };
+  // Type-safe return based on state
+  if (error) {
+    return {
+      error: error as Error,
+      loading: false,
+      response: null,
+      refetch,
+    } satisfies ErrorParticipants & { refetch: () => void };
+  }
 
-  useEffect(() => {
-    if (!transcriptId || !api) return;
+  if (loading || !response) {
+    return {
+      response: response || null,
+      loading: true,
+      error: null,
+      refetch,
+    } satisfies LoadingParticipants & { refetch: () => void };
+  }
 
-    setLoading(true);
-    api
-      .v1TranscriptGetParticipants({ transcriptId })
-      .then((result) => {
-        setResponse(result);
-        setLoading(false);
-        console.debug("Participants Loaded:", result);
-      })
-      .catch((error) => {
-        const shouldShowHuman = shouldShowError(error);
-        if (shouldShowHuman) {
-          setError(error, "There was an error loading the participants");
-        } else {
-          setError(error);
-        }
-        setErrorState(error);
-        setResponse(null);
-        setLoading(false);
-      });
-  }, [transcriptId, !api, count]);
-
-  return { response, loading, error, refetch } as UseParticipants;
+  return {
+    response,
+    loading: false,
+    error: null,
+    refetch,
+  } satisfies SuccessParticipants & { refetch: () => void };
 };
 
 export default useParticipants;

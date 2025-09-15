@@ -1,16 +1,7 @@
 import { withAuth } from "next-auth/middleware";
-import { getConfig } from "./app/lib/edgeConfig";
+import { featureEnabled } from "./app/lib/features";
 import { NextResponse } from "next/server";
-
-const LOGIN_REQUIRED_PAGES = [
-  "/transcripts/[!new]",
-  "/browse(.*)",
-  "/rooms(.*)",
-];
-
-const PROTECTED_PAGES = new RegExp(
-  LOGIN_REQUIRED_PAGES.map((page) => `^${page}$`).join("|"),
-);
+import { PROTECTED_PAGES } from "./app/lib/auth";
 
 export const config = {
   matcher: [
@@ -28,13 +19,12 @@ export const config = {
 
 export default withAuth(
   async function middleware(request) {
-    const config = await getConfig();
     const pathname = request.nextUrl.pathname;
 
     // feature-flags protected paths
     if (
-      (!config.features.browse && pathname.startsWith("/browse")) ||
-      (!config.features.rooms && pathname.startsWith("/rooms"))
+      (!featureEnabled("browse") && pathname.startsWith("/browse")) ||
+      (!featureEnabled("rooms") && pathname.startsWith("/rooms"))
     ) {
       return NextResponse.redirect(request.nextUrl.origin);
     }
@@ -42,10 +32,8 @@ export default withAuth(
   {
     callbacks: {
       async authorized({ req, token }) {
-        const config = await getConfig();
-
         if (
-          config.features.requireLogin &&
+          featureEnabled("requireLogin") &&
           PROTECTED_PAGES.test(req.nextUrl.pathname)
         ) {
           return !!token;

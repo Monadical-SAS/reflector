@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 from reflector.db import get_database, metadata
@@ -18,8 +17,12 @@ meetings = sa.Table(
     sa.Column("host_room_url", sa.String),
     sa.Column("start_date", sa.DateTime(timezone=True)),
     sa.Column("end_date", sa.DateTime(timezone=True)),
-    sa.Column("user_id", sa.String),
-    sa.Column("room_id", sa.String),
+    sa.Column(
+        "room_id",
+        sa.String,
+        sa.ForeignKey("room.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
     sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
     sa.Column("room_mode", sa.String, nullable=False, server_default="normal"),
     sa.Column("recording_type", sa.String, nullable=False, server_default="cloud"),
@@ -83,8 +86,7 @@ class Meeting(BaseModel):
     host_room_url: str
     start_date: datetime
     end_date: datetime
-    user_id: str | None = None
-    room_id: str | None = None
+    room_id: str | None
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
@@ -105,12 +107,8 @@ class MeetingController:
         host_room_url: str,
         start_date: datetime,
         end_date: datetime,
-        user_id: str,
         room: Room,
     ):
-        """
-        Create a new meeting
-        """
         meeting = Meeting(
             id=id,
             room_name=room_name,
@@ -118,7 +116,6 @@ class MeetingController:
             host_room_url=host_room_url,
             start_date=start_date,
             end_date=end_date,
-            user_id=user_id,
             room_id=room.id,
             is_locked=room.is_locked,
             room_mode=room.room_mode,
@@ -131,19 +128,13 @@ class MeetingController:
         return meeting
 
     async def get_all_active(self) -> list[Meeting]:
-        """
-        Get active meetings.
-        """
         query = meetings.select().where(meetings.c.is_active)
         return await get_database().fetch_all(query)
 
     async def get_by_room_name(
         self,
         room_name: str,
-    ) -> Meeting:
-        """
-        Get a meeting by room name.
-        """
+    ) -> Meeting | None:
         query = meetings.select().where(meetings.c.room_name == room_name)
         result = await get_database().fetch_one(query)
         if not result:
@@ -151,10 +142,7 @@ class MeetingController:
 
         return Meeting(**result)
 
-    async def get_active(self, room: Room, current_time: datetime) -> Meeting:
-        """
-        Get latest active meeting for a room.
-        """
+    async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         end_date = getattr(meetings.c, "end_date")
         query = (
             meetings.select()
@@ -174,31 +162,11 @@ class MeetingController:
         return Meeting(**result)
 
     async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
-        """
-        Get a meeting by id
-        """
         query = meetings.select().where(meetings.c.id == meeting_id)
         result = await get_database().fetch_one(query)
         if not result:
             return None
         return Meeting(**result)
-
-    async def get_by_id_for_http(self, meeting_id: str, user_id: str | None) -> Meeting:
-        """
-        Get a meeting by ID for HTTP request.
-
-        If not found, it will raise a 404 error.
-        """
-        query = meetings.select().where(meetings.c.id == meeting_id)
-        result = await get_database().fetch_one(query)
-        if not result:
-            raise HTTPException(status_code=404, detail="Meeting not found")
-
-        meeting = Meeting(**result)
-        if result["user_id"] != user_id:
-            meeting.host_room_url = ""
-
-        return meeting
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
@@ -286,7 +254,7 @@ class MeetingConsentController:
         result = await get_database().fetch_one(query)
         if result is None:
             return None
-        return MeetingConsent(**result) if result else None
+        return MeetingConsent(**result)
 
     async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
         """Create new consent or update existing one for authenticated users"""

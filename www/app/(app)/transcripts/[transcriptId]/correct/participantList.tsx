@@ -1,8 +1,15 @@
 import { faArrowTurnDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { Participant } from "../../../../api";
-import useApi from "../../../../lib/useApi";
+import type { components } from "../../../../reflector-api";
+type Participant = components["schemas"]["Participant"];
+import {
+  useTranscriptSpeakerAssign,
+  useTranscriptSpeakerMerge,
+  useTranscriptParticipantUpdate,
+  useTranscriptParticipantCreate,
+  useTranscriptParticipantDelete,
+} from "../../../../lib/apiHooks";
 import { UseParticipants } from "../../useParticipants";
 import { selectedTextIsSpeaker, selectedTextIsTimeSlice } from "./types";
 import { useError } from "../../../../(errors)/errorContext";
@@ -30,9 +37,19 @@ const ParticipantList = ({
   topicWithWords,
   stateSelectedText,
 }: ParticipantList) => {
-  const api = useApi();
   const { setError } = useError();
-  const [loading, setLoading] = useState(false);
+  const speakerAssignMutation = useTranscriptSpeakerAssign();
+  const speakerMergeMutation = useTranscriptSpeakerMerge();
+  const participantUpdateMutation = useTranscriptParticipantUpdate();
+  const participantCreateMutation = useTranscriptParticipantCreate();
+  const participantDeleteMutation = useTranscriptParticipantDelete();
+
+  const loading =
+    speakerAssignMutation.isPending ||
+    speakerMergeMutation.isPending ||
+    participantUpdateMutation.isPending ||
+    participantCreateMutation.isPending ||
+    participantDeleteMutation.isPending;
   const [participantInput, setParticipantInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedText, setSelectedText] = stateSelectedText;
@@ -103,7 +120,6 @@ const ParticipantList = ({
   const onSuccess = () => {
     topicWithWords.refetch();
     participants.refetch();
-    setLoading(false);
     setAction(null);
     setSelectedText(undefined);
     setSelectedParticipant(undefined);
@@ -120,11 +136,14 @@ const ParticipantList = ({
       if (loading || participants.loading || topicWithWords.loading) return;
       if (!selectedTextIsTimeSlice(selectedText)) return;
 
-      setLoading(true);
       try {
-        await api?.v1TranscriptAssignSpeaker({
-          transcriptId,
-          requestBody: {
+        await speakerAssignMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: {
             participant: participant.id,
             timestamp_from: selectedText.start,
             timestamp_to: selectedText.end,
@@ -132,8 +151,7 @@ const ParticipantList = ({
         });
         onSuccess();
       } catch (error) {
-        setError(error, "There was an error assigning");
-        setLoading(false);
+        setError(error as Error, "There was an error assigning");
         throw error;
       }
     };
@@ -141,32 +159,38 @@ const ParticipantList = ({
   const mergeSpeaker =
     (speakerFrom, participantTo: Participant) => async () => {
       if (loading || participants.loading || topicWithWords.loading) return;
-      setLoading(true);
+
       if (participantTo.speaker) {
         try {
-          await api?.v1TranscriptMergeSpeaker({
-            transcriptId,
-            requestBody: {
+          await speakerMergeMutation.mutateAsync({
+            params: {
+              path: {
+                transcript_id: transcriptId,
+              },
+            },
+            body: {
               speaker_from: speakerFrom,
               speaker_to: participantTo.speaker,
             },
           });
           onSuccess();
         } catch (error) {
-          setError(error, "There was an error merging");
-          setLoading(false);
+          setError(error as Error, "There was an error merging");
         }
       } else {
         try {
-          await api?.v1TranscriptUpdateParticipant({
-            transcriptId,
-            participantId: participantTo.id,
-            requestBody: { speaker: speakerFrom },
+          await participantUpdateMutation.mutateAsync({
+            params: {
+              path: {
+                transcript_id: transcriptId,
+                participant_id: participantTo.id,
+              },
+            },
+            body: { speaker: speakerFrom },
           });
           onSuccess();
         } catch (error) {
-          setError(error, "There was an error merging (update)");
-          setLoading(false);
+          setError(error as Error, "There was an error merging (update)");
         }
       }
     };
@@ -186,105 +210,106 @@ const ParticipantList = ({
         (p) => p.speaker == selectedText,
       );
       if (participant && participant.name !== participantInput) {
-        setLoading(true);
-        api
-          ?.v1TranscriptUpdateParticipant({
-            transcriptId,
-            participantId: participant.id,
-            requestBody: {
+        try {
+          await participantUpdateMutation.mutateAsync({
+            params: {
+              path: {
+                transcript_id: transcriptId,
+                participant_id: participant.id,
+              },
+            },
+            body: {
               name: participantInput,
             },
-          })
-          .then(() => {
-            participants.refetch();
-            setLoading(false);
-            setAction(null);
-          })
-          .catch((e) => {
-            setError(e, "There was an error renaming");
-            setLoading(false);
           });
+          participants.refetch();
+          setAction(null);
+        } catch (e) {
+          setError(e as Error, "There was an error renaming");
+        }
       }
     } else if (
       action == "Create to rename" &&
       selectedTextIsSpeaker(selectedText)
     ) {
-      setLoading(true);
-      api
-        ?.v1TranscriptAddParticipant({
-          transcriptId,
-          requestBody: {
+      try {
+        await participantCreateMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: {
             name: participantInput,
             speaker: selectedText,
           },
-        })
-        .then(() => {
-          participants.refetch();
-          setParticipantInput("");
-          setOneMatch(undefined);
-          setLoading(false);
-        })
-        .catch((e) => {
-          setError(e, "There was an error creating");
-          setLoading(false);
         });
+        participants.refetch();
+        setParticipantInput("");
+        setOneMatch(undefined);
+      } catch (e) {
+        setError(e as Error, "There was an error creating");
+      }
     } else if (
       action == "Create and assign" &&
       selectedTextIsTimeSlice(selectedText)
     ) {
-      setLoading(true);
       try {
-        const participant = await api?.v1TranscriptAddParticipant({
-          transcriptId,
-          requestBody: {
+        const participant = await participantCreateMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: {
             name: participantInput,
           },
         });
-        setLoading(false);
         assignTo(participant)().catch(() => {
           // error and loading are handled by assignTo catch
           participants.refetch();
         });
       } catch (error) {
-        setError(e, "There was an error creating");
-        setLoading(false);
+        setError(error as Error, "There was an error creating");
       }
     } else if (action == "Create") {
-      setLoading(true);
-      api
-        ?.v1TranscriptAddParticipant({
-          transcriptId,
-          requestBody: {
+      try {
+        await participantCreateMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: {
             name: participantInput,
           },
-        })
-        .then(() => {
-          participants.refetch();
-          setParticipantInput("");
-          setLoading(false);
-          inputRef.current?.focus();
-        })
-        .catch((e) => {
-          setError(e, "There was an error creating");
-          setLoading(false);
         });
+        participants.refetch();
+        setParticipantInput("");
+        inputRef.current?.focus();
+      } catch (e) {
+        setError(e as Error, "There was an error creating");
+      }
     }
   };
 
-  const deleteParticipant = (participantId) => (e) => {
+  const deleteParticipant = (participantId) => async (e) => {
     e.stopPropagation();
     if (loading || participants.loading || topicWithWords.loading) return;
-    setLoading(true);
-    api
-      ?.v1TranscriptDeleteParticipant({ transcriptId, participantId })
-      .then(() => {
-        participants.refetch();
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError(e, "There was an error deleting");
-        setLoading(false);
+
+    try {
+      await participantDeleteMutation.mutateAsync({
+        params: {
+          path: {
+            transcript_id: transcriptId,
+            participant_id: participantId,
+          },
+        },
       });
+      participants.refetch();
+    } catch (e) {
+      setError(e as Error, "There was an error deleting");
+    }
   };
 
   const selectParticipant = (participant) => (e) => {

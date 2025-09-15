@@ -241,7 +241,9 @@ async def rooms_create_meeting(
             )
             if meeting is None:
                 logger.error(
-                    "Meeting disappeared after race condition for room %s", room.name
+                    "Meeting disappeared after race condition for room %s",
+                    room.name,
+                    exc_info=True,
                 )
                 raise HTTPException(
                     status_code=503, detail="Unable to join meeting - please try again"

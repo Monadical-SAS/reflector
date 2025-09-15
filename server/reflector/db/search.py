@@ -23,7 +23,7 @@ from pydantic import (
 
 from reflector.db import get_database
 from reflector.db.rooms import rooms
-from reflector.db.transcripts import SourceKind, transcripts
+from reflector.db.transcripts import SourceKind, TranscriptStatus, transcripts
 from reflector.db.utils import is_postgresql
 from reflector.logger import logger
 from reflector.utils.string import NonEmptyString, try_parse_non_empty_string
@@ -161,7 +161,7 @@ class SearchResult(BaseModel):
     room_name: str | None = None
     source_kind: SourceKind
     created_at: datetime
-    status: str = Field(..., min_length=1)
+    status: TranscriptStatus = Field(..., min_length=1)
     rank: float = Field(..., ge=0, le=1)
     duration: NonNegativeFloat | None = Field(..., description="Duration in seconds")
     search_snippets: list[str] = Field(

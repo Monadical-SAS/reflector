@@ -6,6 +6,7 @@ services:
       - 1250:1250
     volumes:
       - ./server/:/app/
+      - /app/.venv
     env_file:
       - ./server/.env
     environment:
@@ -16,6 +17,7 @@ services:
       context: server
     volumes:
       - ./server/:/app/
+      - /app/.venv
     env_file:
       - ./server/.env
     environment:
@@ -26,6 +28,7 @@ services:
       context: server
     volumes:
       - ./server/:/app/
+      - /app/.venv
     env_file:
       - ./server/.env
     environment:

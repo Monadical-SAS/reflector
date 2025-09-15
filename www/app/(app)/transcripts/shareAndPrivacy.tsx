@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { featureEnabled } from "../../domainContext";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
-import { GetTranscript, GetTranscriptTopic, UpdateTranscript } from "../../api";
+import type { components } from "../../reflector-api";
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
+type UpdateTranscript = components["schemas"]["UpdateTranscript"];
 import {
   Box,
   Flex,
@@ -15,12 +17,13 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { LuShare2 } from "react-icons/lu";
-import useApi from "../../lib/useApi";
-import useSessionUser from "../../lib/useSessionUser";
-import { CustomSession } from "../../lib/types";
+import { useTranscriptUpdate } from "../../lib/apiHooks";
 import ShareLink from "./shareLink";
 import ShareCopy from "./shareCopy";
 import ShareZulip from "./shareZulip";
+import { useAuth } from "../../lib/AuthProvider";
+
+import { featureEnabled } from "../../lib/features";
 
 type ShareAndPrivacyProps = {
   finalSummaryRef: any;
@@ -50,12 +53,9 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   );
   const [shareLoading, setShareLoading] = useState(false);
   const requireLogin = featureEnabled("requireLogin");
-  const api = useApi();
+  const updateTranscriptMutation = useTranscriptUpdate();
 
   const updateShareMode = async (selectedValue: string) => {
-    if (!api)
-      throw new Error("ShareLink's API should always be ready at this point");
-
     const selectedOption = shareOptionsData.find(
       (option) => option.value === selectedValue,
     );
@@ -67,19 +67,27 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
       share_mode: selectedValue as "public" | "semi-private" | "private",
     };
 
-    const updatedTranscript = await api.v1TranscriptUpdate({
-      transcriptId: props.transcriptResponse.id,
-      requestBody,
-    });
-    setShareMode(
-      shareOptionsData.find(
-        (option) => option.value === updatedTranscript.share_mode,
-      ) || shareOptionsData[0],
-    );
-    setShareLoading(false);
+    try {
+      const updatedTranscript = await updateTranscriptMutation.mutateAsync({
+        params: {
+          path: { transcript_id: props.transcriptResponse.id },
+        },
+        body: requestBody,
+      });
+      setShareMode(
+        shareOptionsData.find(
+          (option) => option.value === updatedTranscript.share_mode,
+        ) || shareOptionsData[0],
+      );
+    } catch (err) {
+      console.error("Failed to update share mode:", err);
+    } finally {
+      setShareLoading(false);
+    }
   };
 
-  const userId = useSessionUser().id;
+  const auth = useAuth();
+  const userId = auth.status === "authenticated" ? auth.user?.id : null;
 
   useEffect(() => {
     setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));
@@ -124,7 +132,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
                       "This transcript is public. Everyone can access it."}
                   </Text>
 
-                  {isOwner && api && (
+                  {isOwner && (
                     <Select.Root
                       key={shareMode.value}
                       value={[shareMode.value || ""]}

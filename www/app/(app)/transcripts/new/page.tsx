@@ -9,33 +9,25 @@ import { useRouter } from "next/navigation";
 import useCreateTranscript from "../createTranscript";
 import SelectSearch from "react-select-search";
 import { supportedLanguages } from "../../../supportedLanguages";
-import useSessionStatus from "../../../lib/useSessionStatus";
-import { featureEnabled } from "../../../domainContext";
-import { signIn } from "next-auth/react";
 import {
   Flex,
   Box,
   Spinner,
   Heading,
   Button,
-  Card,
   Center,
-  Link,
-  CardBody,
-  Stack,
   Text,
-  Icon,
-  Grid,
-  IconButton,
   Spacer,
-  Menu,
-  Tooltip,
-  Input,
 } from "@chakra-ui/react";
+import { useAuth } from "../../../lib/AuthProvider";
+import { featureEnabled } from "../../../lib/features";
+
 const TranscriptCreate = () => {
-  const isClient = typeof window !== "undefined";
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useSessionStatus();
+  const auth = useAuth();
+  const isAuthenticated = auth.status === "authenticated";
+  const isAuthRefreshing = auth.status === "refreshing";
+  const isLoading = auth.status === "loading";
   const requireLogin = featureEnabled("requireLogin");
 
   const [name, setName] = useState<string>("");
@@ -54,20 +46,32 @@ const TranscriptCreate = () => {
   const [loadingUpload, setLoadingUpload] = useState(false);
 
   const getTargetLanguage = () => {
-    if (targetLanguage === "NOTRANSLATION") return;
+    if (targetLanguage === "NOTRANSLATION") return undefined;
     return targetLanguage;
   };
 
   const send = () => {
     if (loadingRecord || createTranscript.loading || permissionDenied) return;
     setLoadingRecord(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    const targetLang = getTargetLanguage();
+    createTranscript.create({
+      name,
+      source_language: "en",
+      target_language: targetLang || "en",
+      source_kind: "live",
+    });
   };
 
   const uploadFile = () => {
     if (loadingUpload || createTranscript.loading || permissionDenied) return;
     setLoadingUpload(true);
-    createTranscript.create({ name, target_language: getTargetLanguage() });
+    const targetLang = getTargetLanguage();
+    createTranscript.create({
+      name,
+      source_language: "en",
+      target_language: targetLang || "en",
+      source_kind: "file",
+    });
   };
 
   useEffect(() => {
@@ -132,8 +136,8 @@ const TranscriptCreate = () => {
           <Center>
             {isLoading ? (
               <Spinner />
-            ) : requireLogin && !isAuthenticated ? (
-              <Button onClick={() => signIn("authentik")}>Log in</Button>
+            ) : requireLogin && !isAuthenticated && !isAuthRefreshing ? (
+              <Button onClick={() => auth.signIn("authentik")}>Log in</Button>
             ) : (
               <Flex
                 rounded="xl"
@@ -170,7 +174,7 @@ const TranscriptCreate = () => {
                     placeholder="Choose your language"
                   />
                 </Box>
-                {isClient && !loading ? (
+                {!loading ? (
                   permissionOk ? (
                     <Spacer />
                   ) : permissionDenied ? (

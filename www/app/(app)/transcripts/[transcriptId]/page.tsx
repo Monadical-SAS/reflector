@@ -1,32 +1,38 @@
 "use client";
 import Modal from "../modal";
-import useTranscript from "../useTranscript";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
 import { TopicList } from "./_components/TopicList";
 import { Topic } from "../webSocketTypes";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, use } from "react";
 import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import { useRouter } from "next/navigation";
 import { Box, Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
+import { useTranscriptGet } from "../../../lib/apiHooks";
+import { TranscriptStatus } from "../../../lib/transcript";
 
 type TranscriptDetails = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
 export default function TranscriptDetails(details: TranscriptDetails) {
-  const transcriptId = details.params.transcriptId;
+  const params = use(details.params);
+  const transcriptId = params.transcriptId;
   const router = useRouter();
-  const statusToRedirect = ["idle", "recording", "processing"];
+  const statusToRedirect = [
+    "idle",
+    "recording",
+    "processing",
+  ] satisfies TranscriptStatus[] as TranscriptStatus[];
 
-  const transcript = useTranscript(transcriptId);
-  const transcriptStatus = transcript.response?.status;
-  const waiting = statusToRedirect.includes(transcriptStatus || "");
+  const transcript = useTranscriptGet(transcriptId);
+  const waiting =
+    transcript.data && statusToRedirect.includes(transcript.data.status);
 
   const mp3 = useMp3(transcriptId, waiting);
   const topics = useTopics(transcriptId);
@@ -38,7 +44,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   useEffect(() => {
     if (waiting) {
-      const newUrl = "/transcripts/" + details.params.transcriptId + "/record";
+      const newUrl = "/transcripts/" + params.transcriptId + "/record";
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
@@ -56,7 +62,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     );
   }
 
-  if (transcript?.loading || topics?.loading) {
+  if (transcript?.isLoading || topics?.loading) {
     return <Modal title="Loading" text={"Loading transcript..."} />;
   }
 
@@ -86,7 +92,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 useActiveTopic={useActiveTopic}
                 waveform={waveform.waveform}
                 media={mp3.media}
-                mediaDuration={transcript.response.duration}
+                mediaDuration={transcript.data?.duration || null}
               />
             ) : !mp3.loading && (waveform.error || mp3.error) ? (
               <Box p={4} bg="red.100" borderRadius="md">
@@ -116,10 +122,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             <Flex direction="column" gap={0}>
               <Flex alignItems="center" gap={2}>
                 <TranscriptTitle
-                  title={transcript.response.title || "Unnamed Transcript"}
+                  title={transcript.data?.title || "Unnamed Transcript"}
                   transcriptId={transcriptId}
                   onUpdate={(newTitle) => {
-                    transcript.reload();
+                    transcript.refetch().then(() => {});
                   }}
                 />
               </Flex>
@@ -136,23 +142,23 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             useActiveTopic={useActiveTopic}
             autoscroll={false}
             transcriptId={transcriptId}
-            status={transcript.response?.status}
+            status={transcript.data?.status || null}
             currentTranscriptText=""
           />
-          {transcript.response && topics.topics ? (
+          {transcript.data && topics.topics ? (
             <>
               <FinalSummary
-                transcriptResponse={transcript.response}
+                transcriptResponse={transcript.data}
                 topicsResponse={topics.topics}
-                onUpdate={(newSummary) => {
-                  transcript.reload();
+                onUpdate={() => {
+                  transcript.refetch();
                 }}
               />
             </>
           ) : (
             <Flex justify={"center"} alignItems={"center"} h={"100%"}>
               <div className="flex flex-col h-full justify-center content-center">
-                {transcript.response.status == "processing" ? (
+                {transcript?.data?.status == "processing" ? (
                   <Text>Loading Transcript</Text>
                 ) : (
                   <Text>
