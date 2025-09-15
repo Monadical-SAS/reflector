@@ -29,8 +29,10 @@ const initialSessionPromise = getSession();
 const waitForAuthTokenDefinitivePresenceOrAbsence = async () => {
   const initialSession = await initialSessionPromise;
   if (currentAuthToken === undefined) {
-    const customSession = assertExtendedToken(initialSession);
-    currentAuthToken = customSession.accessToken;
+    currentAuthToken =
+      initialSession === null
+        ? null
+        : assertExtendedToken(initialSession).accessToken;
   }
   // otherwise already overwritten by external forces
   return currentAuthToken;
