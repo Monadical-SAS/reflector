@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useError } from "../(errors)/errorContext";
 import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
@@ -37,11 +37,16 @@ const useRoomMeeting = (
   const createMeetingMutation = useRoomsCreateMeeting();
   const reloadHandler = () => setReload((prev) => prev + 1);
 
+  // this is to undupe dev mode room creation
+  const creatingRef = useRef(false);
+
   useEffect(() => {
     if (!roomName) return;
+    if (creatingRef.current) return;
 
     // For any case where we need a meeting (with or without meetingId),
     const createMeeting = async () => {
+      creatingRef.current = true;
       try {
         const result = await createMeetingMutation.mutateAsync({
           params: {
@@ -64,6 +69,8 @@ const useRoomMeeting = (
         } else {
           setError(error);
         }
+      } finally {
+        creatingRef.current = false;
       }
     };
 
