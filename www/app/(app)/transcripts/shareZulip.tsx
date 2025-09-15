@@ -61,13 +61,21 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
     }));
   }, [topics]);
 
-  const streamCollection = createListCollection({
-    items: streamItems,
-  });
+  const streamCollection = useMemo(
+    () =>
+      createListCollection({
+        items: streamItems,
+      }),
+    [streamItems],
+  );
 
-  const topicCollection = createListCollection({
-    items: topicItems,
-  });
+  const topicCollection = useMemo(
+    () =>
+      createListCollection({
+        items: topicItems,
+      }),
+    [topicItems],
+  );
 
   // Update selected stream ID when stream changes
   useEffect(() => {
