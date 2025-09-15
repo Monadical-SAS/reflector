@@ -147,7 +147,12 @@ class MeetingController:
         Get a meeting by room name.
         For backward compatibility, returns the most recent meeting.
         """
-        query = meetings.select().where(meetings.c.room_name == room_name).order_by(end_date.desc())
+        end_date = getattr(meetings.c, "end_date")
+        query = (
+            meetings.select()
+            .where(meetings.c.room_name == room_name)
+            .order_by(end_date.desc())
+        )
         result = await get_database().fetch_one(query)
         if not result:
             return None
