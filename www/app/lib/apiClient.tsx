@@ -3,8 +3,10 @@
 import createClient from "openapi-fetch";
 import type { paths } from "../reflector-api";
 import createFetchClient from "openapi-react-query";
-import { assertExistsAndNonEmptyString } from "./utils";
+import { assertExistsAndNonEmptyString, parseNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
+import { getSession } from "next-auth/react";
+import { assertExtendedToken } from "./types";
 
 export const API_URL = !isBuildPhase
   ? assertExistsAndNonEmptyString(
@@ -21,29 +23,27 @@ export const client = createClient<paths>({
   baseUrl: API_URL,
 });
 
-const waitForAuthTokenDefinitivePresenceOrAbscence = async () => {
-  let tries = 0;
-  let time = 0;
-  const STEP = 100;
-  while (currentAuthToken === undefined) {
-    await new Promise((resolve) => setTimeout(resolve, STEP));
-    time += STEP;
-    tries++;
-    // most likely first try is more than enough, if it's more there's already something weird happens
-    if (tries > 10) {
-      // even when there's no auth assumed at all, we probably should explicitly call configureApiAuth(null)
-      throw new Error(
-        `Could not get auth token definitive presence/absence in ${time}ms. not calling configureApiAuth?`,
-      );
-    }
+// will assert presence/absence of login initially
+const initialSessionPromise = getSession();
+
+const waitForAuthTokenDefinitivePresenceOrAbsence = async () => {
+  const initialSession = await initialSessionPromise;
+  if (currentAuthToken === undefined) {
+    const customSession = assertExtendedToken(initialSession);
+    currentAuthToken = customSession.accessToken;
   }
+  // otherwise already overwritten by external forces
+  return currentAuthToken;
 };
 
 client.use({
   async onRequest({ request }) {
-    await waitForAuthTokenDefinitivePresenceOrAbscence();
-    if (currentAuthToken) {
-      request.headers.set("Authorization", `Bearer ${currentAuthToken}`);
+    const token = await waitForAuthTokenDefinitivePresenceOrAbsence();
+    if (token !== null) {
+      request.headers.set(
+        "Authorization",
+        `Bearer ${parseNonEmptyString(token)}`,
+      );
     }
     // XXX Only set Content-Type if not already set (FormData will set its own boundary)
     // This is a work around for uploading file, we're passing a formdata
