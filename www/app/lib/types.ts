@@ -21,7 +21,7 @@ export interface CustomSession extends Session {
 // assumption that JWT is JWTWithAccessToken - we set it in jwt callback of auth; typing isn't strong around there
 // but the assumption is crucial to auth working
 export const assertExtendedToken = <T>(
-  t: T,
+  t: Exclude<T, null | undefined>,
 ): T & {
   accessTokenExpires: number;
   accessToken: string;
@@ -45,7 +45,7 @@ export const assertExtendedToken = <T>(
 };
 
 export const assertExtendedTokenAndUserId = <U, T extends { user?: U }>(
-  t: T,
+  t: Exclude<T, null | undefined>,
 ): T & {
   accessTokenExpires: number;
   accessToken: string;
@@ -55,7 +55,7 @@ export const assertExtendedTokenAndUserId = <U, T extends { user?: U }>(
 } => {
   const extendedToken = assertExtendedToken(t);
   if (typeof (extendedToken.user as any)?.id === "string") {
-    return t as T & {
+    return t as Exclude<T, null | undefined> & {
       accessTokenExpires: number;
       accessToken: string;
       user: U & {
@@ -67,7 +67,9 @@ export const assertExtendedTokenAndUserId = <U, T extends { user?: U }>(
 };
 
 // best attempt to check the session is valid
-export const assertCustomSession = <S extends Session>(s: S): CustomSession => {
+export const assertCustomSession = <T extends Session>(
+  s: Exclude<T, null | undefined>,
+): CustomSession => {
   const r = assertExtendedTokenAndUserId(s);
   // no other checks for now
   return r as CustomSession;
