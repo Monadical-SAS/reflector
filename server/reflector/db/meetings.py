@@ -147,6 +147,7 @@ class MeetingController:
         Get a meeting by room name.
         For backward compatibility, returns the most recent meeting.
         """
+        end_date = getattr(meetings.c, "end_date")
         query = (
             meetings.select()
             .where(meetings.c.room_name == room_name)
