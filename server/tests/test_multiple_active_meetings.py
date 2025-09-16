@@ -37,7 +37,6 @@ async def test_multiple_active_meetings_per_room():
         host_room_url="https://whereby.com/test-1-host",
         start_date=current_time,
         end_date=end_time,
-        user_id="test-user",
         room=room,
     )
 
@@ -49,7 +48,6 @@ async def test_multiple_active_meetings_per_room():
         host_room_url="https://whereby.com/test-2-host",
         start_date=current_time,
         end_date=end_time,
-        user_id="test-user",
         room=room,
     )
 
@@ -101,7 +99,6 @@ async def test_get_active_by_calendar_event():
         host_room_url="https://whereby.com/test-cal-host",
         start_date=current_time,
         end_date=end_time,
-        user_id="test-user",
         room=room,
         calendar_event_id=event.id,
         calendar_metadata={"title": event.title},
@@ -154,7 +151,6 @@ async def test_calendar_meeting_deactivates_after_scheduled_end():
         host_room_url="https://whereby.com/test-unused-host",
         start_date=event.start_time,
         end_date=event.end_time,
-        user_id="test-user",
         room=room,
         calendar_event_id=event.id,
     )
