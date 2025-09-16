@@ -201,20 +201,32 @@ export default function ICSSettings({
                 bg="gray.100"
                 _hover={{ bg: "gray.200" }}
                 _focus={{ bg: "gray.200" }}
-                pr="48px"
+                pr="90px"
                 width="100%"
               />
-              <IconButton
-                aria-label="Copy room URL"
-                onClick={handleCopyRoomUrl}
-                variant="ghost"
-                position="absolute"
-                right="4px"
-                size="sm"
-                zIndex={1}
-              >
-                {justCopied ? <LuCheck /> : <LuCopy />}
-              </IconButton>
+              <HStack position="absolute" right="4px" gap={1} zIndex={1}>
+                <IconButton
+                  aria-label="Force sync calendar"
+                  onClick={handleForceSync}
+                  variant="ghost"
+                  size="sm"
+                  disabled={syncStatus === "syncing" || !icsUrl || !isEditing}
+                >
+                  {syncStatus === "syncing" ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <LuRefreshCw />
+                  )}
+                </IconButton>
+                <IconButton
+                  aria-label="Copy room URL"
+                  onClick={handleCopyRoomUrl}
+                  variant="ghost"
+                  size="sm"
+                >
+                  {justCopied ? <LuCheck /> : <LuCopy />}
+                </IconButton>
+              </HStack>
             </HStack>
           </Field.Root>
 
