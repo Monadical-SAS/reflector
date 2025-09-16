@@ -33,6 +33,7 @@ import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
 import { assertExists } from "../../lib/utils";
 import ICSSettings from "./_components/ICSSettings";
+import { roomAbsoluteUrl } from "../../lib/routesClient";
 
 type Room = components["schemas"]["Room"];
 
@@ -187,13 +188,12 @@ export default function RoomsList() {
   });
 
   const handleCopyUrl = (roomName: string) => {
-    const roomUrl = `${window.location.origin}/${roomName}`;
-    navigator.clipboard.writeText(roomUrl);
-    setLinkCopied(roomName);
-
-    setTimeout(() => {
-      setLinkCopied("");
-    }, 2000);
+    navigator.clipboard.writeText(roomAbsoluteUrl(roomName)).then(() => {
+      setLinkCopied(roomName);
+      setTimeout(() => {
+        setLinkCopied("");
+      }, 2000);
+    });
   };
 
   const handleCloseDialog = () => {
@@ -620,7 +620,6 @@ export default function RoomsList() {
 
                 <Tabs.Content value="calendar" pt={6}>
                   <ICSSettings
-                    roomId={editRoomId ?? undefined}
                     roomName={room.name}
                     icsUrl={room.icsUrl}
                     icsEnabled={room.icsEnabled}

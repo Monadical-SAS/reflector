@@ -11,15 +11,18 @@ import {
   createListCollection,
   Spinner,
   Box,
+  IconButton,
 } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
-import { LuRefreshCw } from "react-icons/lu";
+import { useState, useEffect, useRef } from "react";
+import { LuRefreshCw, LuCopy, LuCheck } from "react-icons/lu";
 import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 import { useRoomIcsSync, useRoomIcsStatus } from "../../../lib/apiHooks";
+import { toaster } from "../../../components/ui/toaster";
+import { roomAbsoluteUrl } from "../../../lib/routesClient";
+import { assertExists } from "../../../lib/utils";
 
 interface ICSSettingsProps {
-  roomId?: string;
-  roomName?: string;
+  roomName: string;
   icsUrl?: string;
   icsEnabled?: boolean;
   icsFetchInterval?: number;
@@ -45,7 +48,6 @@ const fetchIntervalOptions = [
 ];
 
 export default function ICSSettings({
-  roomId,
   roomName,
   icsUrl = "",
   icsEnabled = false,
@@ -66,12 +68,59 @@ export default function ICSSettings({
     eventsCreated: number;
     eventsUpdated: number;
   } | null>(null);
+  const [justCopied, setJustCopied] = useState(false);
+  const roomUrlInputRef = useRef<HTMLInputElement>(null);
 
   const syncMutation = useRoomIcsSync();
 
   const fetchIntervalCollection = createListCollection({
     items: fetchIntervalOptions,
   });
+
+  const handleCopyRoomUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        roomAbsoluteUrl(assertExists(roomName)),
+      );
+      setJustCopied(true);
+
+      toaster
+        .create({
+          placement: "top",
+          duration: 3000,
+          render: ({ dismiss }) => (
+            <Box
+              bg="green.500"
+              color="white"
+              px={4}
+              py={3}
+              borderRadius="md"
+              display="flex"
+              alignItems="center"
+              gap={2}
+              boxShadow="lg"
+            >
+              <LuCheck />
+              <Text>Room URL copied to clipboard!</Text>
+            </Box>
+          ),
+        })
+        .then(() => {});
+
+      setTimeout(() => {
+        setJustCopied(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy room url:", err);
+    }
+  };
+
+  const handleRoomUrlClick = () => {
+    if (roomUrlInputRef.current) {
+      roomUrlInputRef.current.select();
+      handleCopyRoomUrl();
+    }
+  };
 
   // Clear sync results when dialog closes
   useEffect(() => {
@@ -136,6 +185,39 @@ export default function ICSSettings({
 
       {icsEnabled && (
         <>
+          <Field.Root>
+            <Field.Label>Room URL</Field.Label>
+            <Field.HelperText>
+              To enable Reflector to recognize your calendar events as meetings,
+              add this URL as the location in your calendar events
+            </Field.HelperText>
+            <HStack gap={0} position="relative" width="100%">
+              <Input
+                ref={roomUrlInputRef}
+                value={roomAbsoluteUrl(roomName)}
+                readOnly
+                onClick={handleRoomUrlClick}
+                cursor="pointer"
+                bg="gray.100"
+                _hover={{ bg: "gray.200" }}
+                _focus={{ bg: "gray.200" }}
+                pr="48px"
+                width="100%"
+              />
+              <IconButton
+                aria-label="Copy room URL"
+                onClick={handleCopyRoomUrl}
+                variant="ghost"
+                position="absolute"
+                right="4px"
+                size="sm"
+                zIndex={1}
+              >
+                {justCopied ? <LuCheck /> : <LuCopy />}
+              </IconButton>
+            </HStack>
+          </Field.Root>
+
           <Field.Root>
             <Field.Label>ICS Calendar URL</Field.Label>
             <Input

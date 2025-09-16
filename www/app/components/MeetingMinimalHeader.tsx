@@ -4,6 +4,7 @@ import { Flex, Link, Button, Text, HStack } from "@chakra-ui/react";
 import NextLink from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { roomUrl } from "../lib/routes";
 
 interface MeetingMinimalHeaderProps {
   roomName: string;
@@ -30,7 +31,7 @@ export default function MeetingMinimalHeader({
     if (onLeave) {
       onLeave();
     } else {
-      router.push(`/${roomName}`);
+      router.push(roomUrl(roomName));
     }
   };
 
