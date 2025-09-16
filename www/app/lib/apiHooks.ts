@@ -75,7 +75,7 @@ export function useTranscriptDelete() {
 
   return $api.useMutation("delete", "/v1/transcripts/{transcript_id}", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: ["get", "/v1/transcripts/search"],
       });
     },
@@ -145,7 +145,7 @@ export function useRoomCreate() {
 
   return $api.useMutation("post", "/v1/rooms", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
       });
     },
@@ -188,7 +188,7 @@ export function useRoomDelete() {
 
   return $api.useMutation("delete", "/v1/rooms/{room_id}", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
       });
     },
@@ -236,7 +236,7 @@ export function useTranscriptUpdate() {
 
   return $api.useMutation("patch", "/v1/transcripts/{transcript_id}", {
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
           params: {
             path: { transcript_id: variables.params.path.transcript_id },
@@ -270,7 +270,7 @@ export function useTranscriptUploadAudio() {
     "/v1/transcripts/{transcript_id}/record/upload",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}",
@@ -402,7 +402,7 @@ export function useTranscriptParticipantUpdate() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -430,7 +430,7 @@ export function useTranscriptParticipantCreate() {
     "/v1/transcripts/{transcript_id}/participants",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -458,7 +458,7 @@ export function useTranscriptParticipantDelete() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -486,28 +486,30 @@ export function useTranscriptSpeakerAssign() {
     "/v1/transcripts/{transcript_id}/speaker/assign",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+        return Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}/participants",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+            ).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}/participants",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
+            ).queryKey,
+          }),
+        ]);
       },
       onError: (error) => {
         setError(error as Error, "There was an error assigning the speaker");
@@ -525,28 +527,30 @@ export function useTranscriptSpeakerMerge() {
     "/v1/transcripts/{transcript_id}/speaker/merge",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+        return Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}/participants",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+            ).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}/participants",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
+            ).queryKey,
+          }),
+        ]);
       },
       onError: (error) => {
         setError(error as Error, "There was an error merging speakers");
@@ -574,7 +578,7 @@ export function useMeetingDeactivate() {
       setError(error as Error, "Failed to end meeting");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
           return key.some(
@@ -608,7 +612,7 @@ export function useTranscriptCreate() {
 
   return $api.useMutation("post", "/v1/transcripts", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: ["get", "/v1/transcripts/search"],
       });
     },
@@ -623,10 +627,24 @@ export function useRoomsCreateMeeting() {
   const queryClient = useQueryClient();
 
   return $api.useMutation("post", "/v1/rooms/{room_name}/meeting", {
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
-      });
+    onSuccess: async (data, variables) => {
+      const roomName = variables.params.path.room_name;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
+            {
+              params: {
+                path: { room_name: roomName },
+              },
+            },
+          ).queryKey,
+        }),
+      ]);
     },
     onError: (error) => {
       setError(error as Error, "There was an error creating the meeting");
