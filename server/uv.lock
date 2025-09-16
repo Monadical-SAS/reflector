@@ -1341,15 +1341,6 @@ wheels = [
 ]
 
 [[package]]
-name = "inflection"
-version = "0.5.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e1/7e/691d061b7329bc8d54edbf0ec22fbfb2afe61facb681f9aaa9bff7a27d04/inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417", size = 15091, upload-time = "2020-08-22T08:16:29.139Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/91/aa6bde563e0085a02a435aa99b49ef75b0a4b062635e606dab23ce18d720/inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2", size = 9454, upload-time = "2020-08-22T08:16:27.816Z" },
-]
-
-[[package]]
 name = "iniconfig"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2314,18 +2305,6 @@ wheels = [
 ]
 
 [[package]]
-name = "profanityfilter"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "inflection" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/03/08740b5e0800f9eb9f675c149a497a3f3735e7b04e414bcce64136e7e487/profanityfilter-2.1.0.tar.gz", hash = "sha256:0ede04e92a9d7255faa52b53776518edc6586dda828aca677c74b5994dfdd9d8", size = 7910, upload-time = "2024-11-25T22:31:51.194Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/03/eb18f72dc6e6398e75e3762677f18ab3a773a384b18efd3ed9119844e892/profanityfilter-2.1.0-py2.py3-none-any.whl", hash = "sha256:e1bc07012760fd74512a335abb93a36877831ed26abab78bfe31bebb68f8c844", size = 7483, upload-time = "2024-11-25T22:31:50.129Z" },
-]
-
-[[package]]
 name = "prometheus-client"
 version = "0.22.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3133,7 +3112,6 @@ dependencies = [
     { name = "llama-index-llms-openai-like" },
     { name = "nltk" },
     { name = "openai" },
-    { name = "profanityfilter" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "protobuf" },
     { name = "psycopg2-binary" },
@@ -3210,7 +3188,6 @@ requires-dist = [
     { name = "llama-index-llms-openai-like", specifier = ">=0.4.0" },
     { name = "nltk", specifier = ">=3.8.1" },
     { name = "openai", specifier = ">=1.59.7" },
-    { name = "profanityfilter", specifier = ">=2.0.6" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=6.1.0" },
     { name = "protobuf", specifier = ">=4.24.3" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },

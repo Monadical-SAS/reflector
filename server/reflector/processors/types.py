@@ -4,10 +4,7 @@ import tempfile
 from pathlib import Path
 from typing import Annotated, TypedDict
 
-from profanityfilter import ProfanityFilter
 from pydantic import BaseModel, Field, PrivateAttr
-
-from reflector.redis_cache import redis_cache
 
 
 class DiarizationSegment(TypedDict):
@@ -19,9 +16,6 @@ class DiarizationSegment(TypedDict):
 
 
 PUNC_RE = re.compile(r"[.;:?!…]")
-
-profanity_filter = ProfanityFilter()
-profanity_filter.set_censor("*")
 
 
 class AudioFile(BaseModel):
@@ -124,21 +118,11 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
 
 class Transcript(BaseModel):
     translation: str | None = None
-    words: list[Word] = None
-
-    @property
-    def raw_text(self):
-        # Uncensored text
-        return "".join([word.text for word in self.words])
-
-    @redis_cache(prefix="profanity", duration=3600 * 24 * 7)
-    def _get_censored_text(self, text: str):
-        return profanity_filter.censor(text).strip()
+    words: list[Word] = []
 
     @property
     def text(self):
-        # Censored text
-        return self._get_censored_text(self.raw_text)
+        return "".join([word.text for word in self.words])
 
     @property
     def human_timestamp(self):
@@ -169,12 +153,6 @@ class Transcript(BaseModel):
         for word in self.words:
             word.start += offset
             word.end += offset
-
-    def clone(self):
-        words = [
-            Word(text=word.text, start=word.start, end=word.end) for word in self.words
-        ]
-        return Transcript(text=self.text, translation=self.translation, words=words)
 
     def as_segments(self) -> list[TranscriptSegment]:
         return words_to_segments(self.words)
