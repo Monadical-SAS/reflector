@@ -234,6 +234,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Rooms Get Meeting
+     * @description Get a single meeting by ID within a specific room.
+     */
+    get: operations["v1_rooms_get_meeting"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/rooms/{room_name}/meetings/{meeting_id}/join": {
     parameters: {
       query?: never;
@@ -1980,6 +2000,38 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Meeting"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_get_meeting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Meeting"];
         };
       };
       /** @description Validation Error */

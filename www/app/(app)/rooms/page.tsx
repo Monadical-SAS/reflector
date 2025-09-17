@@ -31,7 +31,7 @@ import {
 } from "../../lib/apiHooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
-import { assertExists } from "../../lib/utils";
+import { assertExists, NonEmptyString } from "../../lib/utils";
 import ICSSettings from "./_components/ICSSettings";
 import { roomAbsoluteUrl } from "../../lib/routesClient";
 
@@ -187,7 +187,7 @@ export default function RoomsList() {
     items: topicOptions,
   });
 
-  const handleCopyUrl = (roomName: string) => {
+  const handleCopyUrl = (roomName: NonEmptyString) => {
     navigator.clipboard.writeText(roomAbsoluteUrl(roomName)).then(() => {
       setLinkCopied(roomName);
       setTimeout(() => {

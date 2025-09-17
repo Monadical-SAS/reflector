@@ -25,11 +25,12 @@ import {
 import { useRouter } from "next/navigation";
 import { formatDateTime, formatStartedAgo } from "../lib/timeUtils";
 import MeetingMinimalHeader from "../components/MeetingMinimalHeader";
+import { NonEmptyString } from "../lib/utils";
 
 type Meeting = components["schemas"]["Meeting"];
 
 interface MeetingSelectionProps {
-  roomName: string;
+  roomName: NonEmptyString;
   isOwner: boolean;
   isSharedRoom: boolean;
   authLoading: boolean;
@@ -47,7 +48,6 @@ export default function MeetingSelection({
   isCreatingMeeting = false,
 }: MeetingSelectionProps) {
   const router = useRouter();
-
   const roomQuery = useRoomGetByName(roomName);
   const activeMeetingsQuery = useRoomActiveMeetings(roomName);
   const joinMeetingMutation = useRoomJoinMeeting();

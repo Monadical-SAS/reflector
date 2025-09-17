@@ -62,6 +62,7 @@ class Meeting(BaseModel):
     id: str
     room_name: str
     room_url: str
+    # TODO it's not always present, | None
     host_room_url: str
     start_date: datetime
     end_date: datetime
@@ -500,6 +501,34 @@ async def rooms_list_active_meetings(
             meeting.host_room_url = ""
 
     return meetings
+
+
+@router.get("/rooms/{room_name}/meetings/{meeting_id}", response_model=Meeting)
+async def rooms_get_meeting(
+    room_name: str,
+    meeting_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """Get a single meeting by ID within a specific room."""
+    user_id = user["sub"] if user else None
+
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    if meeting.room_id != room.id:
+        raise HTTPException(
+            status_code=403, detail="Meeting does not belong to this room"
+        )
+
+    if user_id != room.user_id and not room.is_shared:
+        meeting.host_room_url = ""
+
+    return meeting
 
 
 @router.post("/rooms/{room_name}/meetings/{meeting_id}/join", response_model=Meeting)

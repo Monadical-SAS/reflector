@@ -19,7 +19,11 @@ import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
 import { useRoomIcsSync, useRoomIcsStatus } from "../../../lib/apiHooks";
 import { toaster } from "../../../components/ui/toaster";
 import { roomAbsoluteUrl } from "../../../lib/routesClient";
-import { assertExists } from "../../../lib/utils";
+import {
+  assertExists,
+  assertExistsAndNonEmptyString,
+  parseNonEmptyString,
+} from "../../../lib/utils";
 
 interface ICSSettingsProps {
   roomName: string;
@@ -80,7 +84,7 @@ export default function ICSSettings({
   const handleCopyRoomUrl = async () => {
     try {
       await navigator.clipboard.writeText(
-        roomAbsoluteUrl(assertExists(roomName)),
+        roomAbsoluteUrl(assertExistsAndNonEmptyString(roomName)),
       );
       setJustCopied(true);
 
@@ -194,7 +198,7 @@ export default function ICSSettings({
             <HStack gap={0} position="relative" width="100%">
               <Input
                 ref={roomUrlInputRef}
-                value={roomAbsoluteUrl(roomName)}
+                value={roomAbsoluteUrl(parseNonEmptyString(roomName))}
                 readOnly
                 onClick={handleRoomUrlClick}
                 cursor="pointer"

@@ -1,5 +1,6 @@
 "use client";
 
+import { roomMeetingUrl, roomUrl as getRoomUrl } from "../lib/routes";
 import {
   useCallback,
   useEffect,
@@ -20,7 +21,6 @@ import {
 } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
 import { useRouter } from "next/navigation";
-import { notFound } from "next/navigation";
 import { useRecordingConsent } from "../recordingConsentContext";
 import {
   useMeetingAudioConsent,
@@ -28,19 +28,28 @@ import {
   useRoomActiveMeetings,
   useRoomUpcomingMeetings,
   useRoomsCreateMeeting,
+  useRoomGetMeeting,
 } from "../lib/apiHooks";
 import type { components } from "../reflector-api";
 import MeetingSelection from "./MeetingSelection";
-import useRoomMeeting from "./useRoomMeeting";
+import useRoomDefaultMeeting from "./useRoomDefaultMeeting";
 
 type Meeting = components["schemas"]["Meeting"];
 import { FaBars } from "react-icons/fa6";
 import { useAuth } from "../lib/AuthProvider";
-import { useWhereby } from "../lib/wherebyClient";
+import { getWherebyUrl, useWhereby } from "../lib/wherebyClient";
+import { useError } from "../(errors)/errorContext";
+import {
+  assertExistsAndNonEmptyString,
+  NonEmptyString,
+  parseNonEmptyString,
+} from "../lib/utils";
+import { printApiError } from "../api/_error";
 
 export type RoomDetails = {
   params: Promise<{
     roomName: string;
+    meetingId?: string;
   }>;
 };
 
@@ -216,7 +225,7 @@ function ConsentDialogButton({
   meetingId,
   wherebyRef,
 }: {
-  meetingId: string;
+  meetingId: NonEmptyString;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
   const { showConsentModal, consentState, hasConsent, consentLoading } =
@@ -252,37 +261,55 @@ export default function Room(details: RoomDetails) {
   const params = use(details.params);
   const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
-  const roomName = params.roomName;
-  useRoomMeeting(roomName);
+  const roomName = parseNonEmptyString(params.roomName);
   const router = useRouter();
   const auth = useAuth();
   const status = auth.status;
   const isAuthenticated = status === "authenticated";
+  const { setError } = useError();
 
   const roomQuery = useRoomGetByName(roomName);
   const createMeetingMutation = useRoomsCreateMeeting();
 
   const room = roomQuery.data;
 
-  // For non-ICS rooms, create a meeting and get Whereby URL
-  const roomMeeting = useRoomMeeting(
-    room && !room.ics_enabled ? roomName : null,
+  const pageMeetingId = params.meetingId;
+
+  // this one is called on room page
+  const defaultMeeting = useRoomDefaultMeeting(
+    room && !room.ics_enabled && !pageMeetingId ? roomName : null,
   );
-  const roomUrl =
-    roomMeeting?.response?.host_room_url || roomMeeting?.response?.room_url;
+
+  const explicitMeeting = useRoomGetMeeting(roomName, pageMeetingId || null);
+  const wherebyRoomUrl = explicitMeeting.data
+    ? getWherebyUrl(explicitMeeting.data)
+    : defaultMeeting.response
+      ? getWherebyUrl(defaultMeeting.response)
+      : null;
+  const recordingType = (explicitMeeting.data || defaultMeeting.response)
+    ?.recording_type;
+  const meetingId = (explicitMeeting.data || defaultMeeting.response)?.id;
 
   const isLoading =
-    status === "loading" || roomQuery.isLoading || roomMeeting?.loading;
+    status === "loading" ||
+    roomQuery.isLoading ||
+    defaultMeeting?.loading ||
+    explicitMeeting.isLoading;
+
+  const errors = [
+    explicitMeeting.error,
+    defaultMeeting.error,
+    roomQuery.error,
+    createMeetingMutation.error,
+  ].filter(Boolean);
 
   const isOwner =
     isAuthenticated && room ? auth.user?.id === room.user_id : false;
 
-  const meetingId = roomMeeting?.response?.id;
-
-  const recordingType = roomMeeting?.response?.recording_type;
-
   const handleMeetingSelect = (selectedMeeting: Meeting) => {
-    router.push(`/${roomName}/${selectedMeeting.id}`);
+    router.push(
+      roomMeetingUrl(roomName, parseNonEmptyString(selectedMeeting.id)),
+    );
   };
 
   const handleCreateUnscheduled = async () => {
@@ -307,25 +334,21 @@ export default function Room(details: RoomDetails) {
   }, [router]);
 
   useEffect(() => {
-    if (
-      !isLoading &&
-      (roomQuery.isError || roomMeeting?.error) &&
-      "status" in (roomQuery.error || roomMeeting?.error || {}) &&
-      (roomQuery.error as any)?.status === 404
-    ) {
-      notFound();
-    }
-  }, [isLoading, roomQuery.error, roomMeeting?.error]);
-
-  useEffect(() => {
-    if (isLoading || !isAuthenticated || !roomUrl || !wherebyLoaded) return;
+    if (isLoading || !isAuthenticated || !wherebyRoomUrl || !wherebyLoaded)
+      return;
 
     wherebyRef.current?.addEventListener("leave", handleLeave);
 
     return () => {
       wherebyRef.current?.removeEventListener("leave", handleLeave);
     };
-  }, [handleLeave, roomUrl, isLoading, isAuthenticated, wherebyLoaded]);
+  }, [handleLeave, wherebyRoomUrl, isLoading, isAuthenticated, wherebyLoaded]);
+
+  useEffect(() => {
+    if (!isLoading && !wherebyRoomUrl) {
+      setError(new Error("Whereby room URL not found"));
+    }
+  }, [isLoading, wherebyRoomUrl]);
 
   if (isLoading) {
     return (
@@ -357,7 +380,7 @@ export default function Room(details: RoomDetails) {
     );
   }
 
-  if (room.ics_enabled) {
+  if (room.ics_enabled && !params.meetingId) {
     return (
       <MeetingSelection
         roomName={roomName}
@@ -371,22 +394,42 @@ export default function Room(details: RoomDetails) {
     );
   }
 
-  // For non-ICS rooms, show Whereby embed directly
+  if (errors.length > 0) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="100vh"
+        bg="gray.50"
+        p={4}
+      >
+        {errors.map((error, i) => (
+          <Text key={i} fontSize="lg">
+            {printApiError(error)}
+          </Text>
+        ))}
+      </Box>
+    );
+  }
+
   return (
     <>
-      {roomUrl && meetingId && wherebyLoaded && (
+      {wherebyRoomUrl && wherebyLoaded && (
         <>
           <whereby-embed
             ref={wherebyRef}
-            room={roomUrl}
+            room={wherebyRoomUrl}
             style={{ width: "100vw", height: "100vh" }}
           />
-          {recordingType && recordingTypeRequiresConsent(recordingType) && (
-            <ConsentDialogButton
-              meetingId={meetingId}
-              wherebyRef={wherebyRef}
-            />
-          )}
+          {recordingType &&
+            recordingTypeRequiresConsent(recordingType) &&
+            meetingId && (
+              <ConsentDialogButton
+                meetingId={assertExistsAndNonEmptyString(meetingId)}
+                wherebyRef={wherebyRef}
+              />
+            )}
         </>
       )}
     </>

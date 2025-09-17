@@ -6,30 +6,31 @@ import { shouldShowError } from "../lib/errorUtils";
 type Meeting = components["schemas"]["Meeting"];
 import { useRoomsCreateMeeting } from "../lib/apiHooks";
 import { notFound } from "next/navigation";
+import { ApiError } from "../api/_error";
 
 type ErrorMeeting = {
-  error: Error;
+  error: ApiError;
   loading: false;
   response: null;
   reload: () => void;
 };
 
 type LoadingMeeting = {
+  error: null;
   response: null;
   loading: true;
-  error: false;
   reload: () => void;
 };
 
 type SuccessMeeting = {
+  error: null;
   response: Meeting;
   loading: false;
-  error: null;
   reload: () => void;
 };
 
-const useRoomMeeting = (
-  roomName: string | null | undefined,
+const useRoomDefaultMeeting = (
+  roomName: string | null,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
   const [reload, setReload] = useState(0);
@@ -44,7 +45,6 @@ const useRoomMeeting = (
     if (!roomName) return;
     if (creatingRef.current) return;
 
-    // For any case where we need a meeting (with or without meetingId),
     const createMeeting = async () => {
       creatingRef.current = true;
       try {
@@ -78,7 +78,7 @@ const useRoomMeeting = (
   }, [roomName, reload]);
 
   const loading = createMeetingMutation.isPending && !response;
-  const error = createMeetingMutation.error as Error | null;
+  const error = createMeetingMutation.error;
 
   return { response, loading, error, reload: reloadHandler } as
     | ErrorMeeting
@@ -86,4 +86,4 @@ const useRoomMeeting = (
     | SuccessMeeting;
 };
 
-export default useRoomMeeting;
+export default useRoomDefaultMeeting;

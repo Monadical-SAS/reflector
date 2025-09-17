@@ -12,7 +12,7 @@ import { useAuth } from "./AuthProvider";
  * or, limitation or incorrect usage of .d type generator from json schema
  * */
 
-const useAuthReady = () => {
+export const useAuthReady = () => {
   const auth = useAuth();
 
   return {
@@ -695,8 +695,6 @@ const MEETING_LIST_PATH_PARTIALS = [
 ];
 
 export function useRoomActiveMeetings(roomName: string | null) {
-  const { isAuthenticated } = useAuthReady();
-
   return $api.useQuery(
     "get",
     "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
@@ -706,7 +704,28 @@ export function useRoomActiveMeetings(roomName: string | null) {
       },
     },
     {
-      enabled: !!roomName && isAuthenticated,
+      enabled: !!roomName,
+    },
+  );
+}
+
+export function useRoomGetMeeting(
+  roomName: string | null,
+  meetingId: string | null,
+) {
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}",
+    {
+      params: {
+        path: {
+          room_name: roomName!,
+          meeting_id: meetingId!,
+        },
+      },
+    },
+    {
+      enabled: !!roomName && !!meetingId,
     },
   );
 }

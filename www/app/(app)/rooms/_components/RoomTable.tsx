@@ -25,6 +25,7 @@ type Meeting = components["schemas"]["Meeting"];
 type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
 import { MEETING_DEFAULT_TIME_MINUTES } from "../../../[roomName]/[meetingId]/constants";
+import { NonEmptyString, parseNonEmptyString } from "../../../lib/utils";
 
 // Custom icon component that combines calendar and refresh icons
 const CalendarSyncIcon = () => (
@@ -57,7 +58,7 @@ const CalendarSyncIcon = () => (
 interface RoomTableProps {
   rooms: Room[];
   linkCopied: string;
-  onCopyUrl: (roomName: string) => void;
+  onCopyUrl: (roomName: NonEmptyString) => void;
   onEdit: (roomId: string, roomData: any) => void;
   onDelete: (roomId: string) => void;
   loading?: boolean;
@@ -292,7 +293,9 @@ export function RoomTable({
                     ) : (
                       <IconButton
                         aria-label="Copy URL"
-                        onClick={() => onCopyUrl(room.name)}
+                        onClick={() =>
+                          onCopyUrl(parseNonEmptyString(room.name))
+                        }
                         size="sm"
                         variant="ghost"
                       >
