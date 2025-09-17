@@ -122,9 +122,6 @@ function MeetingStatus({ roomName }: { roomName: string }) {
     );
     return (
       <VStack gap={1} alignItems="start">
-        <Badge colorScheme="green" size="sm">
-          Meeting in progress
-        </Badge>
         <Text fontSize="xs" color="gray.600" lineHeight={1}>
           {title}
         </Text>
