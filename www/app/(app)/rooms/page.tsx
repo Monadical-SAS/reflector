@@ -31,7 +31,11 @@ import {
 } from "../../lib/apiHooks";
 import { RoomList } from "./_components/RoomList";
 import { PaginationPage } from "../browse/_components/Pagination";
-import { assertExists, NonEmptyString } from "../../lib/utils";
+import {
+  assertExists,
+  NonEmptyString,
+  parseNonEmptyString,
+} from "../../lib/utils";
 import ICSSettings from "./_components/ICSSettings";
 import { roomAbsoluteUrl } from "../../lib/routesClient";
 
@@ -620,7 +624,7 @@ export default function RoomsList() {
 
                 <Tabs.Content value="calendar" pt={6}>
                   <ICSSettings
-                    roomName={room.name}
+                    roomName={parseNonEmptyString(room.name)}
                     icsUrl={room.icsUrl}
                     icsEnabled={room.icsEnabled}
                     icsFetchInterval={room.icsFetchInterval}

@@ -177,10 +177,12 @@ export function RoomTable({
   onDelete,
   loading,
 }: RoomTableProps) {
-  const [syncingRooms, setSyncingRooms] = useState<Set<string>>(new Set());
+  const [syncingRooms, setSyncingRooms] = useState<Set<NonEmptyString>>(
+    new Set(),
+  );
   const syncMutation = useRoomIcsSync();
 
-  const handleForceSync = async (roomName: string) => {
+  const handleForceSync = async (roomName: NonEmptyString) => {
     setSyncingRooms((prev) => new Set(prev).add(roomName));
     try {
       await syncMutation.mutateAsync({
@@ -271,12 +273,16 @@ export function RoomTable({
                     {room.ics_enabled && (
                       <IconButton
                         aria-label="Force sync calendar"
-                        onClick={() => handleForceSync(room.name)}
+                        onClick={() =>
+                          handleForceSync(parseNonEmptyString(room.name))
+                        }
                         size="sm"
                         variant="ghost"
-                        disabled={syncingRooms.has(room.name)}
+                        disabled={syncingRooms.has(
+                          parseNonEmptyString(room.name),
+                        )}
                       >
-                        {syncingRooms.has(room.name) ? (
+                        {syncingRooms.has(parseNonEmptyString(room.name)) ? (
                           <Spinner size="sm" />
                         ) : (
                           <CalendarSyncIcon />

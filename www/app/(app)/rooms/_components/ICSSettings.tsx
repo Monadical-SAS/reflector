@@ -22,11 +22,12 @@ import { roomAbsoluteUrl } from "../../../lib/routesClient";
 import {
   assertExists,
   assertExistsAndNonEmptyString,
+  NonEmptyString,
   parseNonEmptyString,
 } from "../../../lib/utils";
 
 interface ICSSettingsProps {
-  roomName: string;
+  roomName: NonEmptyString;
   icsUrl?: string;
   icsEnabled?: boolean;
   icsFetchInterval?: number;
