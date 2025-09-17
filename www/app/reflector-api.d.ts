@@ -104,10 +104,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Rooms Test Webhook
-     * @description Test webhook configuration by sending a sample payload.
-     */
+    /** Rooms Test Webhook */
     post: operations["v1_rooms_test_webhook"];
     delete?: never;
     options?: never;
@@ -488,6 +485,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/jitsi/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Jitsi Events Webhook
+     * @description Handle Prosody event-sync webhooks from Jitsi Meet.
+     *
+     *     Expected event types:
+     *     - muc-occupant-joined: participant joined the room
+     *     - muc-occupant-left: participant left the room
+     *     - jibri-recording-on: recording started
+     *     - jibri-recording-off: recording stopped
+     */
+    post: operations["v1_jitsi_events_webhook"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/jibri/recording-complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Jibri Recording Complete
+     * @description Handle Jibri recording completion webhook.
+     *
+     *     This endpoint is called by the Jibri finalize script when a recording
+     *     is completed and uploaded to storage.
+     */
+    post: operations["v1_jibri_recording_complete"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/jitsi/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Jitsi Health Check
+     * @description Simple health check endpoint for Jitsi webhook configuration.
+     */
+    get: operations["v1_jitsi_health_check"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -536,6 +602,7 @@ export interface components {
       webhook_url: string;
       /** Webhook Secret */
       webhook_secret: string;
+      platform: components["schemas"]["VideoPlatform"];
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -748,6 +815,39 @@ export interface components {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
     };
+    /** JibriRecordingEvent */
+    JibriRecordingEvent: {
+      /** Room Name */
+      room_name: string;
+      /** Recording File */
+      recording_file: string;
+      /** Recording Status */
+      recording_status: string;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+    };
+    /** JitsiWebhookEvent */
+    JitsiWebhookEvent: {
+      /** Event */
+      event: string;
+      /** Room */
+      room: string;
+      /**
+       * Timestamp
+       * Format: date-time
+       */
+      timestamp: string;
+      /**
+       * Data
+       * @default {}
+       */
+      data: {
+        [key: string]: unknown;
+      };
+    };
     /** Meeting */
     Meeting: {
       /** Id */
@@ -844,6 +944,8 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** @default whereby */
+      platform: components["schemas"]["VideoPlatform"];
     };
     /** RoomDetails */
     RoomDetails: {
@@ -874,6 +976,8 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** @default whereby */
+      platform: components["schemas"]["VideoPlatform"];
       /** Webhook Url */
       webhook_url: string | null;
       /** Webhook Secret */
@@ -1043,6 +1147,7 @@ export interface components {
       webhook_url: string;
       /** Webhook Secret */
       webhook_secret: string;
+      platform: components["schemas"]["VideoPlatform"];
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -1083,6 +1188,11 @@ export interface components {
       /** Error Type */
       type: string;
     };
+    /**
+     * VideoPlatform
+     * @enum {string}
+     */
+    VideoPlatform: "whereby" | "jitsi";
     /** WebhookTestResult */
     WebhookTestResult: {
       /** Success */
@@ -2332,6 +2442,92 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_jitsi_events_webhook: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JitsiWebhookEvent"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_jibri_recording_complete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JibriRecordingEvent"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_jitsi_health_check: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
     };

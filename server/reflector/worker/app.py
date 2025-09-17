@@ -20,6 +20,7 @@ else:
             "reflector.worker.healthcheck",
             "reflector.worker.process",
             "reflector.worker.cleanup",
+            "reflector.worker.jitsi_events",
         ]
     )
 
@@ -32,6 +33,10 @@ else:
         "process_meetings": {
             "task": "reflector.worker.process.process_meetings",
             "schedule": float(settings.SQS_POLLING_TIMEOUT_SECONDS),
+        },
+        "process_jitsi_events": {
+            "task": "reflector.worker.jitsi_events.process_jitsi_events",
+            "schedule": 5.0,  # Process every 5 seconds
         },
         "reprocess_failed_recordings": {
             "task": "reflector.worker.process.reprocess_failed_recordings",

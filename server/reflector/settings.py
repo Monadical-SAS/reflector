@@ -123,11 +123,22 @@ class Settings(BaseSettings):
     # Whereby integration
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: NonEmptyString | None = None
+
+    # Jibri integration
+    JIBRI_RECORDINGS_PATH: str = "/recordings"
     WHEREBY_WEBHOOK_SECRET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
+
+    # Jitsi Meet
+    JITSI_DOMAIN: str = "meet.jit.si"
+    JITSI_JWT_SECRET: str | None = None
+    JITSI_WEBHOOK_SECRET: str | None = None
+    JITSI_APP_ID: str = "reflector"
+    JITSI_JWT_ISSUER: str = "reflector"
+    JITSI_JWT_AUDIENCE: str = "jitsi"
 
     # Zulip integration
     ZULIP_REALM: str | None = None
