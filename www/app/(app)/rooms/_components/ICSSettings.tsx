@@ -210,19 +210,6 @@ export default function ICSSettings({
               />
               <HStack position="absolute" right="4px" gap={1} zIndex={1}>
                 <IconButton
-                  aria-label="Force sync calendar"
-                  onClick={handleForceSync}
-                  variant="ghost"
-                  size="sm"
-                  disabled={syncStatus === "syncing" || !icsUrl || !isEditing}
-                >
-                  {syncStatus === "syncing" ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <LuRefreshCw />
-                  )}
-                </IconButton>
-                <IconButton
                   aria-label="Copy room URL"
                   onClick={handleCopyRoomUrl}
                   variant="ghost"

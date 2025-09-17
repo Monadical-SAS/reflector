@@ -123,7 +123,7 @@ function MeetingStatus({ roomName }: { roomName: string }) {
     return (
       <VStack gap={1} alignItems="start">
         <Badge colorScheme="green" size="sm">
-          Active
+          Meeting in progress
         </Badge>
         <Text fontSize="xs" color="gray.600" lineHeight={1}>
           {title}
@@ -270,7 +270,7 @@ export function RoomTable({
                   )}
                 </Table.Cell>
                 <Table.Cell>
-                  <Flex alignItems="center" gap={2}>
+                  <Flex alignItems="center" gap={2} justifyContent="flex-end">
                     {room.ics_enabled && (
                       <IconButton
                         aria-label="Force sync calendar"
