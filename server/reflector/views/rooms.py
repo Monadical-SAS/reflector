@@ -166,7 +166,6 @@ async def rooms_get_by_name(
 ):
     user_id = user["sub"] if user else None
     room = await rooms_controller.get_by_name(room_name)
-    logger.debug("room: %s", room)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
