@@ -128,10 +128,9 @@ function MeetingStatus({ roomName }: { roomName: string }) {
         <Text fontSize="xs" color="gray.600" lineHeight={1}>
           {title}
         </Text>
-        {/* num_clients is always 0 at this point. this is not implemented yet. */}
-        {/*<Text fontSize="xs" color="gray.500" lineHeight={1}>*/}
-        {/*  {meeting.num_clients} participants*/}
-        {/*</Text>*/}
+        <Text fontSize="xs" color="gray.500" lineHeight={1}>
+          {meeting.num_clients} participants
+        </Text>
       </VStack>
     );
   }
