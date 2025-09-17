@@ -9,6 +9,7 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
+from redis.exceptions import LockError
 
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
@@ -16,6 +17,7 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
+from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
 
@@ -147,24 +149,94 @@ async def process_recording(bucket_name: str, object_key: str):
 @shared_task
 @asynctask
 async def process_meetings():
+    """
+    Checks which meetings are still active and deactivates those that have ended.
+
+    Deactivation logic:
+    - Active sessions: Keep meeting active regardless of scheduled time
+    - No active sessions:
+      * Calendar meetings:
+        - If previously used (had sessions): Deactivate immediately
+        - If never used: Keep active until scheduled end time, then deactivate
+      * On-the-fly meetings: Deactivate immediately (created when someone joins,
+        so no sessions means everyone left)
+
+    Uses distributed locking to prevent race conditions when multiple workers
+    process the same meeting simultaneously.
+    """
     logger.info("Processing meetings")
     meetings = await meetings_controller.get_all_active()
+    current_time = datetime.now(timezone.utc)
+    redis_client = get_redis_client()
+    processed_count = 0
+    skipped_count = 0
+
     for meeting in meetings:
-        is_active = False
-        end_date = meeting.end_date
-        if end_date.tzinfo is None:
-            end_date = end_date.replace(tzinfo=timezone.utc)
-        if end_date > datetime.now(timezone.utc):
+        logger_ = logger.bind(meeting_id=meeting.id, room_name=meeting.room_name)
+        lock_key = f"meeting_process_lock:{meeting.id}"
+        lock = redis_client.lock(lock_key, timeout=120)
+
+        try:
+            if not lock.acquire(blocking=False):
+                logger_.debug("Meeting is being processed by another worker, skipping")
+                skipped_count += 1
+                continue
+
+            # Process the meeting
+            should_deactivate = False
+            end_date = meeting.end_date
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+
+            # This API call could be slow, extend lock if needed
             response = await get_room_sessions(meeting.room_name)
+
+            try:
+                # Extend lock after slow operation to ensure we still hold it
+                lock.extend(120, replace_ttl=True)
+            except LockError:
+                logger_.warning("Lost lock for meeting, skipping")
+                continue
+
             room_sessions = response.get("results", [])
-            is_active = not room_sessions or any(
+            has_active_sessions = room_sessions and any(
                 rs["endedAt"] is None for rs in room_sessions
             )
-        if not is_active:
-            await meetings_controller.update_meeting(meeting.id, is_active=False)
-            logger.info("Meeting %s is deactivated", meeting.id)
+            has_had_sessions = bool(room_sessions)
 
-    logger.info("Processed meetings")
+            if has_active_sessions:
+                logger_.debug("Meeting still has active sessions, keep it")
+            elif has_had_sessions:
+                should_deactivate = True
+                logger_.info("Meeting ended - all participants left")
+            elif current_time > end_date:
+                should_deactivate = True
+                logger_.info(
+                    "Meeting deactivated - scheduled time ended with no participants",
+                    meeting.id,
+                )
+            else:
+                logger_.debug("Meeting not yet started, keep it")
+
+            if should_deactivate:
+                await meetings_controller.update_meeting(meeting.id, is_active=False)
+                logger_.info("Meeting is deactivated")
+
+            processed_count += 1
+
+        except Exception as e:
+            logger_.error(f"Error processing meeting", exc_info=True)
+        finally:
+            try:
+                lock.release()
+            except LockError:
+                pass  # Lock already released or expired
+
+    logger.info(
+        f"Processed meetings finished",
+        processed_count=processed_count,
+        skipped_count=skipped_count,
+    )
 
 
 @shared_task

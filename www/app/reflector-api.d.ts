@@ -41,6 +41,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/meetings/{meeting_id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Meeting Deactivate */
+    patch: operations["v1_meeting_deactivate"];
+    trace?: never;
+  };
   "/v1/rooms": {
     parameters: {
       query?: never;
@@ -78,6 +95,23 @@ export interface paths {
     patch: operations["v1_rooms_update"];
     trace?: never;
   };
+  "/v1/rooms/name/{room_name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rooms Get By Name */
+    get: operations["v1_rooms_get_by_name"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/rooms/{room_name}/meeting": {
     parameters: {
       query?: never;
@@ -109,6 +143,128 @@ export interface paths {
      * @description Test webhook configuration by sending a sample payload.
      */
     post: operations["v1_rooms_test_webhook"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/ics/sync": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rooms Sync Ics */
+    post: operations["v1_rooms_sync_ics"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/ics/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rooms Ics Status */
+    get: operations["v1_rooms_ics_status"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rooms List Meetings */
+    get: operations["v1_rooms_list_meetings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/upcoming": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rooms List Upcoming Meetings */
+    get: operations["v1_rooms_list_upcoming_meetings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/active": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rooms List Active Meetings */
+    get: operations["v1_rooms_list_active_meetings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Rooms Get Meeting
+     * @description Get a single meeting by ID within a specific room.
+     */
+    get: operations["v1_rooms_get_meeting"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/join": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rooms Join Meeting */
+    post: operations["v1_rooms_join_meeting"];
     delete?: never;
     options?: never;
     head?: never;
@@ -505,6 +661,52 @@ export interface components {
        */
       chunk: string;
     };
+    /** CalendarEventResponse */
+    CalendarEventResponse: {
+      /** Id */
+      id: string;
+      /** Room Id */
+      room_id: string;
+      /** Ics Uid */
+      ics_uid: string;
+      /** Title */
+      title?: string | null;
+      /** Description */
+      description?: string | null;
+      /**
+       * Start Time
+       * Format: date-time
+       */
+      start_time: string;
+      /**
+       * End Time
+       * Format: date-time
+       */
+      end_time: string;
+      /** Attendees */
+      attendees?:
+        | {
+            [key: string]: unknown;
+          }[]
+        | null;
+      /** Location */
+      location?: string | null;
+      /**
+       * Last Synced
+       * Format: date-time
+       */
+      last_synced: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** CreateParticipant */
     CreateParticipant: {
       /** Speaker */
@@ -536,6 +738,26 @@ export interface components {
       webhook_url: string;
       /** Webhook Secret */
       webhook_secret: string;
+      /** Ics Url */
+      ics_url?: string | null;
+      /**
+       * Ics Fetch Interval
+       * @default 300
+       */
+      ics_fetch_interval: number;
+      /**
+       * Ics Enabled
+       * @default false
+       */
+      ics_enabled: boolean;
+    };
+    /** CreateRoomMeeting */
+    CreateRoomMeeting: {
+      /**
+       * Allow Duplicated
+       * @default false
+       */
+      allow_duplicated: boolean | null;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -748,6 +970,60 @@ export interface components {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
     };
+    /** ICSStatus */
+    ICSStatus: {
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "enabled" | "disabled";
+      /** Last Sync */
+      last_sync?: string | null;
+      /** Next Sync */
+      next_sync?: string | null;
+      /** Last Etag */
+      last_etag?: string | null;
+      /**
+       * Events Count
+       * @default 0
+       */
+      events_count: number;
+    };
+    /** ICSSyncResult */
+    ICSSyncResult: {
+      status: components["schemas"]["SyncStatus"];
+      /** Hash */
+      hash?: string | null;
+      /**
+       * Events Found
+       * @default 0
+       */
+      events_found: number;
+      /**
+       * Total Events
+       * @default 0
+       */
+      total_events: number;
+      /**
+       * Events Created
+       * @default 0
+       */
+      events_created: number;
+      /**
+       * Events Updated
+       * @default 0
+       */
+      events_updated: number;
+      /**
+       * Events Deleted
+       * @default 0
+       */
+      events_deleted: number;
+      /** Error */
+      error?: string | null;
+      /** Reason */
+      reason?: string | null;
+    };
     /** Meeting */
     Meeting: {
       /** Id */
@@ -768,12 +1044,53 @@ export interface components {
        * Format: date-time
        */
       end_date: string;
+      /** User Id */
+      user_id?: string | null;
+      /** Room Id */
+      room_id?: string | null;
+      /**
+       * Is Locked
+       * @default false
+       */
+      is_locked: boolean;
+      /**
+       * Room Mode
+       * @default normal
+       * @enum {string}
+       */
+      room_mode: "normal" | "group";
       /**
        * Recording Type
        * @default cloud
        * @enum {string}
        */
       recording_type: "none" | "local" | "cloud";
+      /**
+       * Recording Trigger
+       * @default automatic-2nd-participant
+       * @enum {string}
+       */
+      recording_trigger:
+        | "none"
+        | "prompt"
+        | "automatic"
+        | "automatic-2nd-participant";
+      /**
+       * Num Clients
+       * @default 0
+       */
+      num_clients: number;
+      /**
+       * Is Active
+       * @default true
+       */
+      is_active: boolean;
+      /** Calendar Event Id */
+      calendar_event_id?: string | null;
+      /** Calendar Metadata */
+      calendar_metadata?: {
+        [key: string]: unknown;
+      } | null;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {
@@ -844,6 +1161,22 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** Ics Url */
+      ics_url?: string | null;
+      /**
+       * Ics Fetch Interval
+       * @default 300
+       */
+      ics_fetch_interval: number;
+      /**
+       * Ics Enabled
+       * @default false
+       */
+      ics_enabled: boolean;
+      /** Ics Last Sync */
+      ics_last_sync?: string | null;
+      /** Ics Last Etag */
+      ics_last_etag?: string | null;
     };
     /** RoomDetails */
     RoomDetails: {
@@ -874,6 +1207,22 @@ export interface components {
       recording_trigger: string;
       /** Is Shared */
       is_shared: boolean;
+      /** Ics Url */
+      ics_url?: string | null;
+      /**
+       * Ics Fetch Interval
+       * @default 300
+       */
+      ics_fetch_interval: number;
+      /**
+       * Ics Enabled
+       * @default false
+       */
+      ics_enabled: boolean;
+      /** Ics Last Sync */
+      ics_last_sync?: string | null;
+      /** Ics Last Etag */
+      ics_last_etag?: string | null;
       /** Webhook Url */
       webhook_url: string | null;
       /** Webhook Secret */
@@ -998,6 +1347,11 @@ export interface components {
       /** Name */
       name: string;
     };
+    /**
+     * SyncStatus
+     * @enum {string}
+     */
+    SyncStatus: "success" | "unchanged" | "error" | "skipped";
     /** Topic */
     Topic: {
       /** Name */
@@ -1022,27 +1376,33 @@ export interface components {
     /** UpdateRoom */
     UpdateRoom: {
       /** Name */
-      name: string;
+      name?: string | null;
       /** Zulip Auto Post */
-      zulip_auto_post: boolean;
+      zulip_auto_post?: boolean | null;
       /** Zulip Stream */
-      zulip_stream: string;
+      zulip_stream?: string | null;
       /** Zulip Topic */
-      zulip_topic: string;
+      zulip_topic?: string | null;
       /** Is Locked */
-      is_locked: boolean;
+      is_locked?: boolean | null;
       /** Room Mode */
-      room_mode: string;
+      room_mode?: string | null;
       /** Recording Type */
-      recording_type: string;
+      recording_type?: string | null;
       /** Recording Trigger */
-      recording_trigger: string;
+      recording_trigger?: string | null;
       /** Is Shared */
-      is_shared: boolean;
+      is_shared?: boolean | null;
       /** Webhook Url */
-      webhook_url: string;
+      webhook_url?: string | null;
       /** Webhook Secret */
-      webhook_secret: string;
+      webhook_secret?: string | null;
+      /** Ics Url */
+      ics_url?: string | null;
+      /** Ics Fetch Interval */
+      ics_fetch_interval?: number | null;
+      /** Ics Enabled */
+      ics_enabled?: boolean | null;
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -1183,6 +1543,37 @@ export interface operations {
         "application/json": components["schemas"]["MeetingConsentRequest"];
       };
     };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_meeting_deactivate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
@@ -1368,7 +1759,7 @@ export interface operations {
       };
     };
   };
-  v1_rooms_create_meeting: {
+  v1_rooms_get_by_name: {
     parameters: {
       query?: never;
       header?: never;
@@ -1378,6 +1769,41 @@ export interface operations {
       cookie?: never;
     };
     requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoomDetails"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_create_meeting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateRoomMeeting"];
+      };
+    };
     responses: {
       /** @description Successful Response */
       200: {
@@ -1417,6 +1843,227 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["WebhookTestResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_sync_ics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ICSSyncResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_ics_status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ICSStatus"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_list_meetings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarEventResponse"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_list_upcoming_meetings: {
+    parameters: {
+      query?: {
+        minutes_ahead?: number;
+      };
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalendarEventResponse"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_list_active_meetings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Meeting"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_get_meeting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Meeting"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_join_meeting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Meeting"];
         };
       };
       /** @description Validation Error */

@@ -3,7 +3,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import useRoomMeeting from "../../[roomName]/useRoomMeeting";
+import useRoomDefaultMeeting from "../../[roomName]/useRoomDefaultMeeting";
 import dynamic from "next/dynamic";
 const WherebyEmbed = dynamic(() => import("../../lib/WherebyWebinarEmbed"), {
   ssr: false,
@@ -72,7 +72,7 @@ export default function WebinarPage(details: WebinarDetails) {
   const startDate = new Date(Date.parse(webinar.startsAt));
   const endDate = new Date(Date.parse(webinar.endsAt));
 
-  const meeting = useRoomMeeting(ROOM_NAME);
+  const meeting = useRoomDefaultMeeting(ROOM_NAME);
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
     : meeting?.response?.room_url;

@@ -45,6 +45,7 @@
     "react-qr-code": "^2.0.12",
     "react-select-search": "^4.1.7",
     "redlock": "5.0.0-beta.2",
+    "remeda": "^2.31.1",
     "sass": "^1.63.6",
     "simple-peer": "^9.11.1",
     "tailwindcss": "^3.3.2",
