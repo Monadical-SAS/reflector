@@ -237,16 +237,18 @@ export default function MeetingSelection({
                       color="gray.600"
                       flexWrap="wrap"
                     >
-                      <HStack>
-                        <Icon
-                          as={FaUsers}
-                          boxSize={{ base: "16px", md: "20px" }}
-                        />
-                        <Text fontWeight="medium">
-                          {meeting.num_clients || 0} participant
-                          {meeting.num_clients !== 1 ? "s" : ""}
-                        </Text>
-                      </HStack>
+                      {/* num_clients is always 0 at this point. this is not implemented yet. */}
+                      {/*<HStack>*/}
+                      {/*  <Icon*/}
+                      {/*    as={FaUsers}*/}
+                      {/*    boxSize={{ base: "16px", md: "20px" }}*/}
+                      {/*  />*/}
+                      {/*  */}
+                      {/*  <Text fontWeight="medium">*/}
+                      {/*    {meeting.num_clients || 0} participant*/}
+                      {/*    {meeting.num_clients !== 1 ? "s" : ""}*/}
+                      {/*  </Text>*/}
+                      {/*</HStack>*/}
                       <HStack>
                         <Icon
                           as={FaClock}
