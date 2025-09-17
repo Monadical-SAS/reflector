@@ -8,6 +8,7 @@ from reflector.asynctask import asynctask
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
+from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import SyncStatus, ics_sync_service
 from reflector.whereby import create_meeting, upload_logo
 
@@ -144,24 +145,31 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
 @shared_task
 @asynctask
 async def create_upcoming_meetings():
-    try:
-        logger.info("Starting creation of upcoming meetings")
-
-        ics_enabled_rooms = await rooms_controller.get_ics_enabled()
-        now = datetime.now(timezone.utc)
-        create_window = now - timedelta(minutes=6)
-
-        for room in ics_enabled_rooms:
-            events = await calendar_events_controller.get_upcoming(
-                room.id,
-                minutes_ahead=7,
+    async with RedisAsyncLock("create_upcoming_meetings", skip_if_locked=True) as lock:
+        if not lock.acquired:
+            logger.warning(
+                "Another worker is already creating upcoming meetings, skipping"
             )
+            return
 
-            for event in events:
-                await create_upcoming_meetings_for_event(
-                    event, create_window, room.id, room
+        try:
+            logger.info("Starting creation of upcoming meetings")
+
+            ics_enabled_rooms = await rooms_controller.get_ics_enabled()
+            now = datetime.now(timezone.utc)
+            create_window = now - timedelta(minutes=6)
+
+            for room in ics_enabled_rooms:
+                events = await calendar_events_controller.get_upcoming(
+                    room.id,
+                    minutes_ahead=7,
                 )
-        logger.info("Completed pre-creation check for upcoming meetings")
 
-    except Exception as e:
-        logger.error("Error in create_upcoming_meetings", error=str(e))
+                for event in events:
+                    await create_upcoming_meetings_for_event(
+                        event, create_window, room.id, room
+                    )
+            logger.info("Completed pre-creation check for upcoming meetings")
+
+        except Exception as e:
+            logger.error("Error in create_upcoming_meetings", error=str(e))

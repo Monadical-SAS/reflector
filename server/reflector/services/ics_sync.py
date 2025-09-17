@@ -58,6 +58,7 @@ from icalendar import Calendar, Event
 
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.rooms import Room, rooms_controller
+from reflector.redis_cache import RedisAsyncLock
 from reflector.settings import settings
 
 logger = structlog.get_logger()
@@ -294,6 +295,19 @@ class ICSSyncService:
         self.fetch_service = ICSFetchService()
 
     async def sync_room_calendar(self, room: Room) -> SyncResult:
+        async with RedisAsyncLock(
+            f"ics_sync_room:{room.id}", skip_if_locked=True
+        ) as lock:
+            if not lock.acquired:
+                logger.warning("ICS sync already in progress for room", room_id=room.id)
+                return {
+                    "status": SyncStatus.SKIPPED,
+                    "reason": "Sync already in progress",
+                }
+
+            return await self._sync_room_calendar(room)
+
+    async def _sync_room_calendar(self, room: Room) -> SyncResult:
         if not room.ics_enabled or not room.ics_url:
             return {"status": SyncStatus.SKIPPED, "reason": "ICS not configured"}
 
