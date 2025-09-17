@@ -14,6 +14,7 @@ from reflector.metrics import metrics_init
 from reflector.settings import settings
 from reflector.video_platforms.jitsi import router as jitsi_router
 from reflector.video_platforms.whereby import router as whereby_router
+from reflector.views.jibri_webhook import router as jibri_webhook_router
 from reflector.views.meetings import router as meetings_router
 from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router
@@ -88,6 +89,7 @@ app.include_router(user_router, prefix="/v1")
 app.include_router(zulip_router, prefix="/v1")
 app.include_router(whereby_router, prefix="/v1")
 app.include_router(jitsi_router, prefix="/v1")
+app.include_router(jibri_webhook_router)  # No /v1 prefix, uses /api/v1/jibri
 add_pagination(app)
 
 # prepare celery

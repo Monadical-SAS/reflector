@@ -123,6 +123,9 @@ class Settings(BaseSettings):
     # Whereby integration
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: NonEmptyString | None = None
+
+    # Jibri integration
+    JIBRI_RECORDINGS_PATH: str = "/recordings"
     WHEREBY_WEBHOOK_SECRET: str | None = None
     AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
     AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
