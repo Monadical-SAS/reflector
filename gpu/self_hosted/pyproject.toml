@@ -1,0 +1,19 @@
+[project]
+name = "reflector-gpu"
+version = "0.1.0"
+description = "Self-hosted GPU service for speech transcription, diarization, and translation via FastAPI."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.116.1",
+    "uvicorn[standard]>=0.30.0",
+    "torch>=2.3.0",
+    "faster-whisper>=1.1.0",
+    "librosa==0.10.1",
+    "numpy<2",
+    "silero-vad==5.1.0",
+    "transformers>=4.35.0",
+    "sentencepiece",
+    "pyannote.audio==3.1.0",
+    "torchaudio>=2.3.0",
+]
