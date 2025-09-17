@@ -624,7 +624,7 @@ export default function RoomsList() {
 
                 <Tabs.Content value="calendar" pt={6}>
                   <ICSSettings
-                    roomName={parseNonEmptyString(room.name)}
+                    roomName={room.name ? parseNonEmptyString(room.name) : null}
                     icsUrl={room.icsUrl}
                     icsEnabled={room.icsEnabled}
                     icsFetchInterval={room.icsFetchInterval}
