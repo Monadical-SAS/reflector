@@ -34,7 +34,7 @@ async def test_cleanup_old_public_data_deletes_old_anonymous_transcripts():
         user_id=None,  # Anonymous
     )
     # Manually update created_at to be old
-    from reflector.db import get_database
+    # Removed get_database import
     from reflector.db.transcripts import transcripts
 
     await get_database().execute(
@@ -89,7 +89,7 @@ async def test_cleanup_old_public_data_deletes_old_anonymous_transcripts():
 @pytest.mark.asyncio
 async def test_cleanup_deletes_associated_meeting_and_recording():
     """Test that meetings and recordings associated with old transcripts are deleted."""
-    from reflector.db import get_database
+    # Removed get_database import
     from reflector.db.meetings import meetings
     from reflector.db.transcripts import transcripts
 
@@ -184,7 +184,7 @@ async def test_cleanup_handles_errors_gracefully():
     )
 
     # Update created_at to be old
-    from reflector.db import get_database
+    # Removed get_database import
     from reflector.db.transcripts import transcripts
 
     for t_id in [transcript1.id, transcript2.id]:
@@ -223,7 +223,7 @@ async def test_cleanup_handles_errors_gracefully():
 @pytest.mark.asyncio
 async def test_meeting_consent_cascade_delete():
     """Test that meeting_consent records are automatically deleted when meeting is deleted."""
-    from reflector.db import get_database
+    # Removed get_database import
     from reflector.db.meetings import (
         meeting_consent,
         meeting_consent_controller,

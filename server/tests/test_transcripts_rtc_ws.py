@@ -53,7 +53,8 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
     import threading
 
     from reflector.app import app
-    from reflector.db import get_database
+
+    # Database connection handled by SQLAlchemy engine
     from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
@@ -77,13 +78,8 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
             server_instance = Server(config)
 
             async def start_server():
-                # Initialize database connection in this event loop
-                database = get_database()
-                await database.connect()
-                try:
-                    await server_instance.serve()
-                finally:
-                    await database.disconnect()
+                # Database connections managed by SQLAlchemy engine
+                await server_instance.serve()
 
             # Signal that server is starting
             server_started.set()

@@ -85,6 +85,14 @@ async def setup_database(postgres_service):
 
 
 @pytest.fixture
+async def session():
+    from reflector.db import get_session_factory
+
+    async with get_session_factory()() as session:
+        yield session
+
+
+@pytest.fixture
 def dummy_processors():
     with (
         patch(

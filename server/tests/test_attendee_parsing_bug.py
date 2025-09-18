@@ -18,6 +18,7 @@ async def test_attendee_parsing_bug():
     """
     # Create a test room
     room = await rooms_controller.add(
+        session,
         name="test-room",
         user_id="test-user",
         zulip_auto_post=False,
