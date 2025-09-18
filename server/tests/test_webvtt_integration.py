@@ -8,6 +8,7 @@ from reflector.db.transcripts import (
     SourceKind,
     TranscriptController,
     TranscriptTopic,
+    transcripts_controller,
 )
 from reflector.processors.types import Word
 

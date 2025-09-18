@@ -1,6 +1,4 @@
 import os
-from tempfile import NamedTemporaryFile
-from unittest.mock import patch
 
 import pytest
 
@@ -34,382 +32,283 @@ def docker_compose_file(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def postgres_service(docker_ip, docker_services):
-    """Ensure that PostgreSQL service is up and responsive."""
-    port = docker_services.port_for("postgres_test", 5432)
-
-    def is_responsive():
-        try:
-            import psycopg2
-
-            conn = psycopg2.connect(
-                host=docker_ip,
-                port=port,
-                dbname="reflector_test",
-                user="test_user",
-                password="test_password",
-            )
-            conn.close()
-            return True
-        except Exception:
-            return False
-
-    docker_services.wait_until_responsive(timeout=30.0, pause=0.1, check=is_responsive)
-
-    # Return connection parameters
-    return {
-        "host": docker_ip,
-        "port": port,
-        "dbname": "reflector_test",
-        "user": "test_user",
-        "password": "test_password",
-    }
+def docker_ip():
+    """Get Docker IP address for test services"""
+    # For most Docker setups, localhost works
+    return "127.0.0.1"
 
 
-@pytest.fixture(scope="function", autouse=True)
-@pytest.mark.asyncio
+# Only register docker_services dependent fixtures if docker plugin is available
+try:
+    import pytest_docker  # noqa: F401
+
+    @pytest.fixture(scope="session")
+    def postgres_service(docker_ip, docker_services):
+        """Ensure that PostgreSQL service is up and responsive."""
+        port = docker_services.port_for("postgres_test", 5432)
+
+        def is_responsive():
+            try:
+                import psycopg2
+
+                conn = psycopg2.connect(
+                    host=docker_ip,
+                    port=port,
+                    dbname="reflector_test",
+                    user="test_user",
+                    password="test_password",
+                )
+                conn.close()
+                return True
+            except Exception:
+                return False
+
+        docker_services.wait_until_responsive(
+            timeout=30.0, pause=0.1, check=is_responsive
+        )
+
+        # Return connection parameters
+        return {
+            "host": docker_ip,
+            "port": port,
+            "database": "reflector_test",
+            "user": "test_user",
+            "password": "test_password",
+        }
+except ImportError:
+    # Docker plugin not available, provide a dummy fixture
+    @pytest.fixture(scope="session")
+    def postgres_service(docker_ip):
+        """Dummy postgres service when docker plugin is not available"""
+        return {
+            "host": docker_ip,
+            "port": 15432,  # Default test postgres port
+            "database": "reflector_test",
+            "user": "test_user",
+            "password": "test_password",
+        }
+
+
+@pytest.fixture(scope="session", autouse=True)
 async def setup_database(postgres_service):
-    from reflector.db import get_engine
-    from reflector.db.base import metadata
+    """Setup database and run migrations"""
+    from sqlalchemy.ext.asyncio import create_async_engine
 
-    async_engine = get_engine()
+    from reflector.db import Base
 
-    async with async_engine.begin() as conn:
-        await conn.run_sync(metadata.drop_all)
-        await conn.run_sync(metadata.create_all)
+    # Build database URL from connection params
+    db_config = postgres_service
+    DATABASE_URL = (
+        f"postgresql+asyncpg://{db_config['user']}:{db_config['password']}"
+        f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    )
 
-    try:
-        yield
-    finally:
-        await async_engine.dispose()
+    # Override settings
+    from reflector.settings import settings
+
+    settings.DATABASE_URL = DATABASE_URL
+
+    # Create engine and tables
+    engine = create_async_engine(DATABASE_URL, echo=False)
+
+    async with engine.begin() as conn:
+        # Drop all tables first to ensure clean state
+        await conn.run_sync(Base.metadata.drop_all)
+        # Create all tables
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield
+
+    # Cleanup
+    await engine.dispose()
 
 
 @pytest.fixture
-async def session():
+async def session(setup_database):
+    """Provide a transactional database session for tests"""
     from reflector.db import get_session_factory
 
     async with get_session_factory()() as session:
         yield session
+        await session.rollback()
 
 
 @pytest.fixture
-def dummy_processors():
-    with (
-        patch(
-            "reflector.processors.transcript_topic_detector.TranscriptTopicDetectorProcessor.get_topic"
-        ) as mock_topic,
-        patch(
-            "reflector.processors.transcript_final_title.TranscriptFinalTitleProcessor.get_title"
-        ) as mock_title,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_long_summary"
-        ) as mock_long_summary,
-        patch(
-            "reflector.processors.transcript_final_summary.TranscriptFinalSummaryProcessor.get_short_summary"
-        ) as mock_short_summary,
-    ):
-        from reflector.processors.transcript_topic_detector import TopicResponse
-
-        mock_topic.return_value = TopicResponse(
-            title="LLM TITLE", summary="LLM SUMMARY"
-        )
-        mock_title.return_value = "LLM Title"
-        mock_long_summary.return_value = "LLM LONG SUMMARY"
-        mock_short_summary.return_value = "LLM SHORT SUMMARY"
-        yield (
-            mock_topic,
-            mock_title,
-            mock_long_summary,
-            mock_short_summary,
-        )  # noqa
+def fake_mp3_upload(tmp_path):
+    """Create a temporary MP3 file for upload testing"""
+    mp3_file = tmp_path / "test.mp3"
+    # Create a minimal valid MP3 file (ID3v2 header + minimal frame)
+    mp3_data = b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"\xff\xfb" + b"\x00" * 100
+    mp3_file.write_bytes(mp3_data)
+    return mp3_file
 
 
 @pytest.fixture
-async def whisper_transcript():
-    from reflector.processors.audio_transcript_whisper import (
-        AudioTranscriptWhisperProcessor,
-    )
-
-    with patch(
-        "reflector.processors.audio_transcript_auto"
-        ".AudioTranscriptAutoProcessor.__new__"
-    ) as mock_audio:
-        mock_audio.return_value = AudioTranscriptWhisperProcessor()
-        yield
-
-
-@pytest.fixture
-async def dummy_transcript():
-    from reflector.processors.audio_transcript import AudioTranscriptProcessor
-    from reflector.processors.types import AudioFile, Transcript, Word
-
-    class TestAudioTranscriptProcessor(AudioTranscriptProcessor):
-        _time_idx = 0
-
-        async def _transcript(self, data: AudioFile):
-            i = self._time_idx
-            self._time_idx += 2
-            return Transcript(
-                text="Hello world.",
-                words=[
-                    Word(start=i, end=i + 1, text="Hello", speaker=0),
-                    Word(start=i + 1, end=i + 2, text=" world.", speaker=0),
-                ],
-            )
-
-    with patch(
-        "reflector.processors.audio_transcript_auto"
-        ".AudioTranscriptAutoProcessor.__new__"
-    ) as mock_audio:
-        mock_audio.return_value = TestAudioTranscriptProcessor()
-        yield
-
-
-@pytest.fixture
-async def dummy_diarization():
-    from reflector.processors.audio_diarization import AudioDiarizationProcessor
-
-    class TestAudioDiarizationProcessor(AudioDiarizationProcessor):
-        _time_idx = 0
-
-        async def _diarize(self, data):
-            i = self._time_idx
-            self._time_idx += 2
-            return [
-                {"start": i, "end": i + 1, "speaker": 0},
-                {"start": i + 1, "end": i + 2, "speaker": 1},
-            ]
-
-    with patch(
-        "reflector.processors.audio_diarization_auto"
-        ".AudioDiarizationAutoProcessor.__new__"
-    ) as mock_audio:
-        mock_audio.return_value = TestAudioDiarizationProcessor()
-        yield
-
-
-@pytest.fixture
-async def dummy_file_transcript():
-    from reflector.processors.file_transcript import FileTranscriptProcessor
+def dummy_transcript():
+    """Mock transcript processor response"""
     from reflector.processors.types import Transcript, Word
 
-    class TestFileTranscriptProcessor(FileTranscriptProcessor):
-        async def _transcript(self, data):
-            return Transcript(
-                text="Hello world. How are you today?",
-                words=[
-                    Word(start=0.0, end=0.5, text="Hello", speaker=0),
-                    Word(start=0.5, end=0.6, text=" ", speaker=0),
-                    Word(start=0.6, end=1.0, text="world", speaker=0),
-                    Word(start=1.0, end=1.1, text=".", speaker=0),
-                    Word(start=1.1, end=1.2, text=" ", speaker=0),
-                    Word(start=1.2, end=1.5, text="How", speaker=0),
-                    Word(start=1.5, end=1.6, text=" ", speaker=0),
-                    Word(start=1.6, end=1.8, text="are", speaker=0),
-                    Word(start=1.8, end=1.9, text=" ", speaker=0),
-                    Word(start=1.9, end=2.1, text="you", speaker=0),
-                    Word(start=2.1, end=2.2, text=" ", speaker=0),
-                    Word(start=2.2, end=2.5, text="today", speaker=0),
-                    Word(start=2.5, end=2.6, text="?", speaker=0),
-                ],
-            )
-
-    with patch(
-        "reflector.processors.file_transcript_auto.FileTranscriptAutoProcessor.__new__"
-    ) as mock_auto:
-        mock_auto.return_value = TestFileTranscriptProcessor()
-        yield
-
-
-@pytest.fixture
-async def dummy_file_diarization():
-    from reflector.processors.file_diarization import (
-        FileDiarizationOutput,
-        FileDiarizationProcessor,
+    return Transcript(
+        text="Hello world this is a test",
+        words=[
+            Word(word="Hello", start=0.0, end=0.5, speaker=0),
+            Word(word="world", start=0.5, end=1.0, speaker=0),
+            Word(word="this", start=1.0, end=1.5, speaker=0),
+            Word(word="is", start=1.5, end=1.8, speaker=0),
+            Word(word="a", start=1.8, end=2.0, speaker=0),
+            Word(word="test", start=2.0, end=2.5, speaker=0),
+        ],
     )
-    from reflector.processors.types import DiarizationSegment
-
-    class TestFileDiarizationProcessor(FileDiarizationProcessor):
-        async def _diarize(self, data):
-            return FileDiarizationOutput(
-                diarization=[
-                    DiarizationSegment(start=0.0, end=1.1, speaker=0),
-                    DiarizationSegment(start=1.2, end=2.6, speaker=1),
-                ]
-            )
-
-    with patch(
-        "reflector.processors.file_diarization_auto.FileDiarizationAutoProcessor.__new__"
-    ) as mock_auto:
-        mock_auto.return_value = TestFileDiarizationProcessor()
-        yield
 
 
 @pytest.fixture
-async def dummy_transcript_translator():
-    from reflector.processors.transcript_translator import TranscriptTranslatorProcessor
-
-    class TestTranscriptTranslatorProcessor(TranscriptTranslatorProcessor):
-        async def _translate(self, text: str) -> str:
-            source_language = self.get_pref("audio:source_language", "en")
-            target_language = self.get_pref("audio:target_language", "en")
-            return f"{source_language}:{target_language}:{text}"
-
-    def mock_new(cls, *args, **kwargs):
-        return TestTranscriptTranslatorProcessor(*args, **kwargs)
-
-    with patch(
-        "reflector.processors.transcript_translator_auto"
-        ".TranscriptTranslatorAutoProcessor.__new__",
-        mock_new,
-    ):
-        yield
+def dummy_transcript_translator():
+    """Mock transcript translation"""
+    return "Hola mundo esto es una prueba"
 
 
 @pytest.fixture
-async def dummy_llm():
-    from reflector.llm import LLM
+def dummy_diarization():
+    """Mock diarization processor response"""
+    from reflector.processors.types import DiarizationOutput, DiarizationSegment
 
-    class TestLLM(LLM):
-        def __init__(self):
-            self.model_name = "DUMMY MODEL"
-            self.llm_tokenizer = "DUMMY TOKENIZER"
-
-    # LLM doesn't have get_instance anymore, mocking constructor instead
-    with patch("reflector.llm.LLM") as mock_llm:
-        mock_llm.return_value = TestLLM()
-        yield
+    return DiarizationOutput(
+        diarization=[
+            DiarizationSegment(speaker=0, start=0.0, end=1.0),
+            DiarizationSegment(speaker=1, start=1.0, end=2.5),
+        ]
+    )
 
 
 @pytest.fixture
-async def dummy_storage():
-    from reflector.storage.base import Storage
+def dummy_file_transcript():
+    """Mock file transcript processor response"""
+    from reflector.processors.types import Transcript, Word
 
-    class DummyStorage(Storage):
-        async def _put_file(self, *args, **kwargs):
-            pass
-
-        async def _delete_file(self, *args, **kwargs):
-            pass
-
-        async def _get_file_url(self, *args, **kwargs):
-            return "http://fake_server/audio.mp3"
-
-        async def _get_file(self, *args, **kwargs):
-            from pathlib import Path
-
-            test_mp3 = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
-            return test_mp3.read_bytes()
-
-    dummy = DummyStorage()
-    with (
-        patch("reflector.storage.base.Storage.get_instance") as mock_storage,
-        patch("reflector.storage.get_transcripts_storage") as mock_get_transcripts,
-        patch(
-            "reflector.pipelines.main_file_pipeline.get_transcripts_storage"
-        ) as mock_get_transcripts2,
-    ):
-        mock_storage.return_value = dummy
-        mock_get_transcripts.return_value = dummy
-        mock_get_transcripts2.return_value = dummy
-        yield
-
-
-@pytest.fixture(scope="session")
-def celery_enable_logging():
-    return True
-
-
-@pytest.fixture(scope="session")
-def celery_config():
-    with NamedTemporaryFile() as f:
-        yield {
-            "broker_url": "memory://",
-            "result_backend": f"db+sqlite:///{f.name}",
-        }
-
-
-@pytest.fixture(scope="session")
-def celery_includes():
-    return [
-        "reflector.pipelines.main_live_pipeline",
-        "reflector.pipelines.main_file_pipeline",
-    ]
+    return Transcript(
+        text="This is a complete file transcript with multiple speakers",
+        words=[
+            Word(word="This", start=0.0, end=0.5, speaker=0),
+            Word(word="is", start=0.5, end=0.8, speaker=0),
+            Word(word="a", start=0.8, end=1.0, speaker=0),
+            Word(word="complete", start=1.0, end=1.5, speaker=1),
+            Word(word="file", start=1.5, end=1.8, speaker=1),
+            Word(word="transcript", start=1.8, end=2.3, speaker=1),
+            Word(word="with", start=2.3, end=2.5, speaker=0),
+            Word(word="multiple", start=2.5, end=3.0, speaker=0),
+            Word(word="speakers", start=3.0, end=3.5, speaker=0),
+        ],
+    )
 
 
 @pytest.fixture
-async def client():
-    from httpx import AsyncClient
+def dummy_file_diarization():
+    """Mock file diarization processor response"""
+    from reflector.processors.types import DiarizationOutput, DiarizationSegment
 
-    from reflector.app import app
-
-    async with AsyncClient(app=app, base_url="http://test/v1") as ac:
-        yield ac
-
-
-@pytest.fixture(scope="session")
-def fake_mp3_upload():
-    with patch(
-        "reflector.db.transcripts.TranscriptController.move_mp3_to_storage"
-    ) as mock_move:
-        mock_move.return_value = True
-        yield
+    return DiarizationOutput(
+        diarization=[
+            DiarizationSegment(speaker=0, start=0.0, end=1.0),
+            DiarizationSegment(speaker=1, start=1.0, end=2.3),
+            DiarizationSegment(speaker=0, start=2.3, end=3.5),
+        ]
+    )
 
 
 @pytest.fixture
-async def fake_transcript_with_topics(tmpdir, client):
-    import shutil
-    from pathlib import Path
-
+def fake_transcript_with_topics():
+    """Create a transcript with topics for testing"""
     from reflector.db.transcripts import TranscriptTopic
     from reflector.processors.types import Word
-    from reflector.settings import settings
-    from reflector.views.transcripts import transcripts_controller
 
-    settings.DATA_DIR = Path(tmpdir)
-
-    # create a transcript
-    response = await client.post("/transcripts", json={"name": "Test audio download"})
-    assert response.status_code == 200
-    tid = response.json()["id"]
-
-    transcript = await transcripts_controller.get_by_id(tid)
-    assert transcript is not None
-
-    await transcripts_controller.update(transcript, {"status": "ended"})
-
-    # manually copy a file at the expected location
-    audio_filename = transcript.audio_mp3_filename
-    path = Path(__file__).parent / "records" / "test_mathieu_hello.mp3"
-    audio_filename.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(path, audio_filename)
-
-    # create some topics
-    await transcripts_controller.upsert_topic(
-        transcript,
+    topics = [
         TranscriptTopic(
-            title="Topic 1",
-            summary="Topic 1 summary",
-            timestamp=0,
-            transcript="Hello world",
+            id="topic1",
+            title="Introduction",
+            summary="Opening remarks and introductions",
+            timestamp=0.0,
+            duration=30.0,
             words=[
-                Word(text="Hello", start=0, end=1, speaker=0),
-                Word(text="world", start=1, end=2, speaker=0),
+                Word(word="Hello", start=0.0, end=0.5, speaker=0),
+                Word(word="everyone", start=0.5, end=1.0, speaker=0),
             ],
         ),
-    )
-    await transcripts_controller.upsert_topic(
-        transcript,
         TranscriptTopic(
-            title="Topic 2",
-            summary="Topic 2 summary",
-            timestamp=2,
-            transcript="Hello world",
+            id="topic2",
+            title="Main Discussion",
+            summary="Core topics and key points",
+            timestamp=30.0,
+            duration=60.0,
             words=[
-                Word(text="Hello", start=2, end=3, speaker=0),
-                Word(text="world", start=3, end=4, speaker=0),
+                Word(word="Let's", start=30.0, end=30.3, speaker=1),
+                Word(word="discuss", start=30.3, end=30.8, speaker=1),
+                Word(word="the", start=30.8, end=31.0, speaker=1),
+                Word(word="agenda", start=31.0, end=31.5, speaker=1),
             ],
         ),
-    )
+    ]
+    return topics
 
-    yield transcript
+
+@pytest.fixture
+def dummy_processors(
+    dummy_transcript,
+    dummy_transcript_translator,
+    dummy_diarization,
+    dummy_file_transcript,
+    dummy_file_diarization,
+):
+    """Mock all processor responses"""
+    return {
+        "transcript": dummy_transcript,
+        "translator": dummy_transcript_translator,
+        "diarization": dummy_diarization,
+        "file_transcript": dummy_file_transcript,
+        "file_diarization": dummy_file_diarization,
+    }
+
+
+@pytest.fixture
+def dummy_storage():
+    """Mock storage backend"""
+    from unittest.mock import AsyncMock
+
+    storage = AsyncMock()
+    storage.get_file_url.return_value = "https://example.com/test-audio.mp3"
+    storage.put_file.return_value = None
+    storage.delete_file.return_value = None
+    return storage
+
+
+@pytest.fixture
+def dummy_llm():
+    """Mock LLM responses"""
+    return {
+        "title": "Test Meeting Title",
+        "summary": "This is a test meeting summary with key discussion points.",
+        "short_summary": "Brief test summary.",
+    }
+
+
+@pytest.fixture
+def whisper_transcript():
+    """Mock Whisper API response format"""
+    return {
+        "text": "Hello world this is a test",
+        "segments": [
+            {
+                "start": 0.0,
+                "end": 2.5,
+                "text": "Hello world this is a test",
+                "words": [
+                    {"word": "Hello", "start": 0.0, "end": 0.5},
+                    {"word": "world", "start": 0.5, "end": 1.0},
+                    {"word": "this", "start": 1.0, "end": 1.5},
+                    {"word": "is", "start": 1.5, "end": 1.8},
+                    {"word": "a", "start": 1.8, "end": 2.0},
+                    {"word": "test", "start": 2.0, "end": 2.5},
+                ],
+            }
+        ],
+        "language": "en",
+    }
