@@ -5,7 +5,6 @@ Deletes old anonymous transcripts and their associated meetings/recordings.
 Transcripts are the main entry point - any associated data is also removed.
 """
 
-import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
@@ -152,5 +151,5 @@ async def cleanup_old_public_data(
     retry_kwargs={"max_retries": 3, "countdown": 300},
 )
 @asynctask
-def cleanup_old_public_data_task(days: int | None = None):
-    asyncio.run(cleanup_old_public_data(days=days))
+async def cleanup_old_public_data_task(days: int | None = None):
+    await cleanup_old_public_data(days=days)
