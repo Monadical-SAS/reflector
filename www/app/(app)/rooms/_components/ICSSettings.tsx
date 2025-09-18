@@ -27,7 +27,7 @@ import {
 } from "../../../lib/utils";
 
 interface ICSSettingsProps {
-  roomName: NonEmptyString;
+  roomName: NonEmptyString | null;
   icsUrl?: string;
   icsEnabled?: boolean;
   icsFetchInterval?: number;
@@ -85,7 +85,7 @@ export default function ICSSettings({
   const handleCopyRoomUrl = async () => {
     try {
       await navigator.clipboard.writeText(
-        roomAbsoluteUrl(assertExistsAndNonEmptyString(roomName)),
+        roomAbsoluteUrl(assertExists(roomName)),
       );
       setJustCopied(true);
 
@@ -123,7 +123,7 @@ export default function ICSSettings({
   const handleRoomUrlClick = () => {
     if (roomUrlInputRef.current) {
       roomUrlInputRef.current.select();
-      handleCopyRoomUrl();
+      handleCopyRoomUrl().then(() => {});
     }
   };
 
@@ -196,30 +196,32 @@ export default function ICSSettings({
               To enable Reflector to recognize your calendar events as meetings,
               add this URL as the location in your calendar events
             </Field.HelperText>
-            <HStack gap={0} position="relative" width="100%">
-              <Input
-                ref={roomUrlInputRef}
-                value={roomAbsoluteUrl(parseNonEmptyString(roomName))}
-                readOnly
-                onClick={handleRoomUrlClick}
-                cursor="pointer"
-                bg="gray.100"
-                _hover={{ bg: "gray.200" }}
-                _focus={{ bg: "gray.200" }}
-                pr="90px"
-                width="100%"
-              />
-              <HStack position="absolute" right="4px" gap={1} zIndex={1}>
-                <IconButton
-                  aria-label="Copy room URL"
-                  onClick={handleCopyRoomUrl}
-                  variant="ghost"
-                  size="sm"
-                >
-                  {justCopied ? <LuCheck /> : <LuCopy />}
-                </IconButton>
+            {roomName ? (
+              <HStack gap={0} position="relative" width="100%">
+                <Input
+                  ref={roomUrlInputRef}
+                  value={roomAbsoluteUrl(parseNonEmptyString(roomName))}
+                  readOnly
+                  onClick={handleRoomUrlClick}
+                  cursor="pointer"
+                  bg="gray.100"
+                  _hover={{ bg: "gray.200" }}
+                  _focus={{ bg: "gray.200" }}
+                  pr="90px"
+                  width="100%"
+                />
+                <HStack position="absolute" right="4px" gap={1} zIndex={1}>
+                  <IconButton
+                    aria-label="Copy room URL"
+                    onClick={handleCopyRoomUrl}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {justCopied ? <LuCheck /> : <LuCopy />}
+                  </IconButton>
+                </HStack>
               </HStack>
-            </HStack>
+            ) : null}
           </Field.Root>
 
           <Field.Root>
