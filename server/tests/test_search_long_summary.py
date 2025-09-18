@@ -4,21 +4,21 @@ import json
 from datetime import datetime, timezone
 
 import pytest
+from sqlalchemy import delete, insert
 
-from reflector.db import get_database
+from reflector.db.base import TranscriptModel
 from reflector.db.search import SearchParameters, search_controller
-from reflector.db.transcripts import transcripts
 
 
 @pytest.mark.asyncio
-async def test_long_summary_snippet_prioritization():
+async def test_long_summary_snippet_prioritization(session):
     """Test that snippets from long_summary are prioritized over webvtt content."""
     test_id = "test-snippet-priority-3f9a2b8c"
 
     try:
         # Clean up any existing test data
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
+        await session.execute(
+            delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
         test_data = {
@@ -57,11 +57,11 @@ We need to consider various implementation approaches.""",
             "user_id": "test-user-priority",
         }
 
-        await get_database().execute(transcripts.insert().values(**test_data))
+        await session.execute(insert(TranscriptModel).values(**test_data))
 
         # Search for "robotics" which appears in both long_summary and webvtt
         params = SearchParameters(query_text="robotics", user_id="test-user-priority")
-        results, total = await search_controller.search_transcripts(params)
+        results, total = await search_controller.search_transcripts(session, params)
 
         assert total >= 1
         test_result = next((r for r in results if r.id == test_id), None)
@@ -86,20 +86,20 @@ We need to consider various implementation approaches.""",
             ), f"Snippet should contain search term: {snippet}"
 
     finally:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
+        await session.execute(
+            delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await get_database().disconnect()
+        await session.commit()
 
 
 @pytest.mark.asyncio
-async def test_long_summary_only_search():
+async def test_long_summary_only_search(session):
     """Test searching for content that only exists in long_summary."""
     test_id = "test-long-only-8b3c9f2a"
 
     try:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
+        await session.execute(
+            delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
         test_data = {
@@ -135,11 +135,11 @@ Discussion of timeline and deliverables.""",
             "user_id": "test-user-long",
         }
 
-        await get_database().execute(transcripts.insert().values(**test_data))
+        await session.execute(insert(TranscriptModel).values(**test_data))
 
         # Search for terms only in long_summary
         params = SearchParameters(query_text="cryptocurrency", user_id="test-user-long")
-        results, total = await search_controller.search_transcripts(params)
+        results, total = await search_controller.search_transcripts(session, params)
 
         found = any(r.id == test_id for r in results)
         assert found, "Should find transcript by long_summary-only content"
@@ -154,13 +154,13 @@ Discussion of timeline and deliverables.""",
 
         # Search for "yield farming" - a more specific term
         params2 = SearchParameters(query_text="yield farming", user_id="test-user-long")
-        results2, total2 = await search_controller.search_transcripts(params2)
+        results2, total2 = await search_controller.search_transcripts(session, params2)
 
         found2 = any(r.id == test_id for r in results2)
         assert found2, "Should find transcript by specific long_summary phrase"
 
     finally:
-        await get_database().execute(
-            transcripts.delete().where(transcripts.c.id == test_id)
+        await session.execute(
+            delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await get_database().disconnect()
+        await session.commit()

@@ -3,12 +3,13 @@ from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import apaginate
+from fastapi_pagination.ext.sqlalchemy import paginate
 from jose import jwt
 from pydantic import BaseModel, Field, constr, field_serializer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
-from reflector.db import get_database
+from reflector.db import get_session
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.search import (
@@ -149,23 +150,24 @@ async def transcripts_list(
     source_kind: SourceKind | None = None,
     room_id: str | None = None,
     search_term: str | None = None,
+    session: AsyncSession = Depends(get_session),
 ):
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
 
-    return await apaginate(
-        get_database(),
-        await transcripts_controller.get_all(
-            user_id=user_id,
-            source_kind=SourceKind(source_kind) if source_kind else None,
-            room_id=room_id,
-            search_term=search_term,
-            order_by="-created_at",
-            return_query=True,
-        ),
+    query = await transcripts_controller.get_all(
+        session,
+        user_id=user_id,
+        source_kind=SourceKind(source_kind) if source_kind else None,
+        room_id=room_id,
+        search_term=search_term,
+        order_by="-created_at",
+        return_query=True,
     )
+
+    return await paginate(session, query)
 
 
 @router.get("/transcripts/search", response_model=SearchResponse)
@@ -178,6 +180,7 @@ async def transcripts_search(
     user: Annotated[
         Optional[auth.UserInfo], Depends(auth.current_user_optional)
     ] = None,
+    session: AsyncSession = Depends(get_session),
 ):
     """
     Full-text search across transcript titles and content.
@@ -196,7 +199,7 @@ async def transcripts_search(
         source_kind=source_kind,
     )
 
-    results, total = await search_controller.search_transcripts(search_params)
+    results, total = await search_controller.search_transcripts(session, search_params)
 
     return SearchResponse(
         results=results,
@@ -211,9 +214,11 @@ async def transcripts_search(
 async def transcripts_create(
     info: CreateTranscript,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     return await transcripts_controller.add(
+        session,
         info.name,
         source_kind=info.source_kind or SourceKind.LIVE,
         source_language=info.source_language,
@@ -333,10 +338,11 @@ class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
 async def transcript_get(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     return await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
 
@@ -345,13 +351,16 @@ async def transcript_update(
     transcript_id: str,
     info: UpdateTranscript,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
     values = info.dict(exclude_unset=True)
-    updated_transcript = await transcripts_controller.update(transcript, values)
+    updated_transcript = await transcripts_controller.update(
+        session, transcript, values
+    )
     return updated_transcript
 
 
@@ -359,19 +368,20 @@ async def transcript_update(
 async def transcript_delete(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+    transcript = await transcripts_controller.get_by_id(session, transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
 
     if transcript.meeting_id:
-        meeting = await meetings_controller.get_by_id(transcript.meeting_id)
-        room = await rooms_controller.get_by_id(meeting.room_id)
+        meeting = await meetings_controller.get_by_id(session, transcript.meeting_id)
+        room = await rooms_controller.get_by_id(session, meeting.room_id)
         if room.is_shared:
             user_id = None
 
-    await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
+    await transcripts_controller.remove_by_id(session, transcript.id, user_id=user_id)
     return DeletionStatus(status="ok")
 
 
@@ -382,10 +392,11 @@ async def transcript_delete(
 async def transcript_get_topics(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     # convert to GetTranscriptTopic
@@ -401,10 +412,11 @@ async def transcript_get_topics(
 async def transcript_get_topics_with_words(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     # convert to GetTranscriptTopicWithWords
@@ -422,10 +434,11 @@ async def transcript_get_topics_with_words_per_speaker(
     transcript_id: str,
     topic_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     # get the topic from the transcript
@@ -444,10 +457,11 @@ async def transcript_post_to_zulip(
     topic: str,
     include_topics: bool,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
@@ -467,5 +481,5 @@ async def transcript_post_to_zulip(
     if not message_updated:
         response = await send_message_to_zulip(stream, topic, content)
         await transcripts_controller.update(
-            transcript, {"zulip_message_id": response["id"]}
+            session, transcript, {"zulip_message_id": response["id"]}
         )

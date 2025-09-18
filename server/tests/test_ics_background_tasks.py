@@ -4,9 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from icalendar import Calendar, Event
 
-from reflector.db import get_database
 from reflector.db.calendar_events import calendar_events_controller
-from reflector.db.rooms import rooms, rooms_controller
+from reflector.db.rooms import rooms_controller
 from reflector.services.ics_sync import ics_sync_service
 from reflector.worker.ics_sync import (
     _should_sync,
@@ -15,8 +14,9 @@ from reflector.worker.ics_sync import (
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_task():
+async def test_sync_room_ics_task(session):
     room = await rooms_controller.add(
+        session,
         name="task-test-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -52,14 +52,15 @@ async def test_sync_room_ics_task():
         # Call the service directly instead of the Celery task to avoid event loop issues
         await ics_sync_service.sync_room_calendar(room)
 
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(session, room.id)
         assert len(events) == 1
         assert events[0].ics_uid == "task-event-1"
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_disabled():
+async def test_sync_room_ics_disabled(session):
     room = await rooms_controller.add(
+        session,
         name="disabled-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -76,13 +77,14 @@ async def test_sync_room_ics_disabled():
     # Test that disabled rooms are skipped by the service
     result = await ics_sync_service.sync_room_calendar(room)
 
-    events = await calendar_events_controller.get_by_room(room.id)
+    events = await calendar_events_controller.get_by_room(session, room.id)
     assert len(events) == 0
 
 
 @pytest.mark.asyncio
-async def test_sync_all_ics_calendars():
+async def test_sync_all_ics_calendars(session):
     room1 = await rooms_controller.add(
+        session,
         name="sync-all-1",
         user_id="test-user",
         zulip_auto_post=False,
@@ -98,6 +100,7 @@ async def test_sync_all_ics_calendars():
     )
 
     room2 = await rooms_controller.add(
+        session,
         name="sync-all-2",
         user_id="test-user",
         zulip_auto_post=False,
@@ -113,6 +116,7 @@ async def test_sync_all_ics_calendars():
     )
 
     room3 = await rooms_controller.add(
+        session,
         name="sync-all-3",
         user_id="test-user",
         zulip_auto_post=False,
@@ -163,10 +167,11 @@ async def test_should_sync_logic():
 
 
 @pytest.mark.asyncio
-async def test_sync_respects_fetch_interval():
+async def test_sync_respects_fetch_interval(session):
     now = datetime.now(timezone.utc)
 
     room1 = await rooms_controller.add(
+        session,
         name="interval-test-1",
         user_id="test-user",
         zulip_auto_post=False,
@@ -183,11 +188,13 @@ async def test_sync_respects_fetch_interval():
     )
 
     await rooms_controller.update(
+        session,
         room1,
         {"ics_last_sync": now - timedelta(seconds=100)},
     )
 
     room2 = await rooms_controller.add(
+        session,
         name="interval-test-2",
         user_id="test-user",
         zulip_auto_post=False,
@@ -226,8 +233,9 @@ async def test_sync_respects_fetch_interval():
 
 
 @pytest.mark.asyncio
-async def test_sync_handles_errors_gracefully():
+async def test_sync_handles_errors_gracefully(session):
     room = await rooms_controller.add(
+        session,
         name="error-task-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -251,5 +259,5 @@ async def test_sync_handles_errors_gracefully():
         result = await ics_sync_service.sync_room_calendar(room)
         assert result["status"] == "error"
 
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(session, room.id)
         assert len(events) == 0

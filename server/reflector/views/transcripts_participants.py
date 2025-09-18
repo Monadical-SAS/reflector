@@ -8,8 +8,10 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
+from reflector.db import get_session
 from reflector.db.transcripts import TranscriptParticipant, transcripts_controller
 from reflector.views.types import DeletionStatus
 
@@ -37,10 +39,11 @@ class UpdateParticipant(BaseModel):
 async def transcript_get_participants(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> list[Participant]:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     if transcript.participants is None:
@@ -57,10 +60,11 @@ async def transcript_add_participant(
     transcript_id: str,
     participant: CreateParticipant,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> Participant:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     # ensure the speaker is unique
@@ -83,10 +87,11 @@ async def transcript_get_participant(
     transcript_id: str,
     participant_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> Participant:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     for p in transcript.participants:
@@ -102,10 +107,11 @@ async def transcript_update_participant(
     participant_id: str,
     participant: UpdateParticipant,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> Participant:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     # ensure the speaker is unique
@@ -139,10 +145,11 @@ async def transcript_delete_participant(
     transcript_id: str,
     participant_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> DeletionStatus:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
     await transcripts_controller.delete_participant(transcript, participant_id)
     return DeletionStatus(status="ok")
