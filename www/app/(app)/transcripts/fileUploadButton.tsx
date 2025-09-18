@@ -5,6 +5,7 @@ import { useError } from "../../(errors)/errorContext";
 
 type FileUploadButton = {
   transcriptId: string;
+  onUploadComplete?: () => void;
 };
 
 export default function FileUploadButton(props: FileUploadButton) {
@@ -31,6 +32,7 @@ export default function FileUploadButton(props: FileUploadButton) {
       const uploadNextChunk = async () => {
         if (chunkNumber == totalChunks) {
           setProgress(0);
+          props.onUploadComplete?.();
           return;
         }
 
