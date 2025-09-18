@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
@@ -28,8 +28,6 @@ class RecordingController:
         created_at: datetime | None = None,
     ):
         if created_at is None:
-            from datetime import timezone
-
             created_at = datetime.now(timezone.utc)
 
         recording = Recording(
