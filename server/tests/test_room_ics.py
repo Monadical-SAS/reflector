@@ -196,9 +196,9 @@ async def test_room_list_with_ics_enabled_filter():
     assert len(all_rooms) == 3
 
     # Filter for ICS-enabled rooms (would need to implement this in controller)
-    ics_rooms = [r for r in all_rooms if r["ics_enabled"]]
+    ics_rooms = [r for r in all_rooms if r.ics_enabled]
     assert len(ics_rooms) == 2
-    assert all(r["ics_enabled"] for r in ics_rooms)
+    assert all(r.ics_enabled for r in ics_rooms)
 
 
 @pytest.mark.asyncio

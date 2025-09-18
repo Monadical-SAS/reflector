@@ -19,8 +19,8 @@ dependencies = [
     "sentry-sdk[fastapi]>=1.29.2",
     "httpx>=0.24.1",
     "fastapi-pagination>=0.12.6",
-    "databases[aiosqlite, asyncpg]>=0.7.0",
-    "sqlalchemy<1.5",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
     "alembic>=1.11.3",
     "nltk>=3.8.1",
     "prometheus-fastapi-instrumentator>=6.1.0",
@@ -111,7 +111,7 @@ source = ["reflector"]
 
 [tool.pytest_env]
 ENVIRONMENT = "pytest"
-DATABASE_URL = "postgresql://test_user:test_password@localhost:15432/reflector_test"
+DATABASE_URL = "postgresql+asyncpg://test_user:test_password@localhost:15432/reflector_test"
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"

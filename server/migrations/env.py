@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from reflector.db import metadata
+from reflector.db.base import metadata
 from reflector.settings import settings
 
 # this is the Alembic Config object, which provides
@@ -25,8 +25,7 @@ target_metadata = metadata
 # ... etc.
 
 
-# don't use asyncpg for the moment
-settings.DATABASE_URL = settings.DATABASE_URL.replace("+asyncpg", "")
+# No need to modify URL, using sync engine from db module
 
 
 def run_migrations_offline() -> None:

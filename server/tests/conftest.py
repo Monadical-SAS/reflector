@@ -69,17 +69,19 @@ def postgres_service(docker_ip, docker_services):
 @pytest.fixture(scope="function", autouse=True)
 @pytest.mark.asyncio
 async def setup_database(postgres_service):
-    from reflector.db import engine, metadata, get_database  # noqa
+    from reflector.db import get_engine
+    from reflector.db.base import metadata
 
-    metadata.drop_all(bind=engine)
-    metadata.create_all(bind=engine)
-    database = get_database()
+    async_engine = get_engine()
+
+    async with async_engine.begin() as conn:
+        await conn.run_sync(metadata.drop_all)
+        await conn.run_sync(metadata.create_all)
 
     try:
-        await database.connect()
         yield
     finally:
-        await database.disconnect()
+        await async_engine.dispose()
 
 
 @pytest.fixture

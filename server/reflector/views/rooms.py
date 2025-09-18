@@ -5,12 +5,12 @@ from typing import Annotated, Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import apaginate
+from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from redis.exceptions import LockError
 
 import reflector.auth as auth
-from reflector.db import get_database
+from reflector.db import get_session_factory
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
@@ -182,12 +182,12 @@ async def rooms_list(
 
     user_id = user["sub"] if user else None
 
-    return await apaginate(
-        get_database(),
-        await rooms_controller.get_all(
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        query = await rooms_controller.get_all(
             user_id=user_id, order_by="-created_at", return_query=True
-        ),
-    )
+        )
+        return await paginate(session, query)
 
 
 @router.get("/rooms/{room_id}", response_model=RoomDetails)

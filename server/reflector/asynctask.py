@@ -1,21 +1,14 @@
 import asyncio
 import functools
 
-from reflector.db import get_database
-
 
 def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        async def run_with_db():
-            database = get_database()
-            await database.connect()
-            try:
-                return await f(*args, **kwargs)
-            finally:
-                await database.disconnect()
+        async def run_async():
+            return await f(*args, **kwargs)
 
-        coro = run_with_db()
+        coro = run_async()
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
