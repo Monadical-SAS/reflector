@@ -426,7 +426,10 @@ export default function Room(details: RoomDetails) {
             recordingTypeRequiresConsent(recordingType) &&
             meetingId && (
               <ConsentDialogButton
-                meetingId={assertExistsAndNonEmptyString(meetingId)}
+                meetingId={assertExistsAndNonEmptyString(
+                  meetingId,
+                  "panic! no meetingId",
+                )}
                 wherebyRef={wherebyRef}
               />
             )}

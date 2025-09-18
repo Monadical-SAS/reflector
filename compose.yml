@@ -38,8 +38,8 @@ services:
     image: redis:7.2
     ports:
       - 6379:6379
-  web:
-    image: node:18
+  web-dev:
+    image: node:22-alpine
     ports:
       - "3000:3000"
     command: sh -c "corepack enable && pnpm install && pnpm dev"
@@ -50,6 +50,8 @@ services:
       - /app/node_modules
     env_file:
       - ./www/.env.local
+    environment:
+      - NODE_ENV=development
 
   postgres:
     image: postgres:17

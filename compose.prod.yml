@@ -1,0 +1,68 @@
+# Production Docker Compose configuration for Frontend
+# Usage: docker compose -f compose.prod.yml up -d
+
+services:
+  web:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_WEBSOCKET_URL: ${NEXT_PUBLIC_WEBSOCKET_URL}
+        NEXTAUTH_URL: ${NEXTAUTH_URL}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+        AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER}
+        AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
+        AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET}
+        AUTHENTIK_REFRESH_TOKEN_URL: ${AUTHENTIK_REFRESH_TOKEN_URL}
+    image: reflector-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - KV_URL=${KV_URL:-redis://redis:6379}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-changeme-in-production}
+      - AUTHENTIK_ISSUER=${AUTHENTIK_ISSUER}
+      - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
+      - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
+      - AUTHENTIK_REFRESH_TOKEN_URL=${AUTHENTIK_REFRESH_TOKEN_URL}
+      - NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN=${NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN:-false}
+      - NEXT_PUBLIC_FEATURE_PRIVACY=${NEXT_PUBLIC_FEATURE_PRIVACY:-true}
+      - NEXT_PUBLIC_FEATURE_BROWSE=${NEXT_PUBLIC_FEATURE_BROWSE:-true}
+      - NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP=${NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP:-false}
+      - NEXT_PUBLIC_FEATURE_ROOMS=${NEXT_PUBLIC_FEATURE_ROOMS:-true}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_IGNORE_API_RESOLUTION_ERROR=${SENTRY_IGNORE_API_RESOLUTION_ERROR:-1}
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: reflector-prod
+    attachable: true
