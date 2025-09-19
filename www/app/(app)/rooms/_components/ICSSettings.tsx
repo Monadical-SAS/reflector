@@ -21,7 +21,6 @@ import { toaster } from "../../../components/ui/toaster";
 import { roomAbsoluteUrl } from "../../../lib/routesClient";
 import {
   assertExists,
-  assertExistsAndNonEmptyString,
   NonEmptyString,
   parseNonEmptyString,
 } from "../../../lib/utils";

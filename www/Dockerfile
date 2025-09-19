@@ -18,6 +18,32 @@ WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link  . .
 
+# Build-time environment variables (passed as build args)
+# These MUST be provided during build or the build will fail
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WEBSOCKET_URL
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ARG AUTHENTIK_ISSUER
+ARG AUTHENTIK_CLIENT_ID
+ARG AUTHENTIK_CLIENT_SECRET
+ARG AUTHENTIK_REFRESH_TOKEN_URL
+
+# Validate required build args - only truly essential ones
+RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "ERROR: NEXT_PUBLIC_API_URL is required" && exit 1)
+RUN test -n "$NEXT_PUBLIC_WEBSOCKET_URL" || (echo "ERROR: NEXT_PUBLIC_WEBSOCKET_URL is required" && exit 1)
+
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
+ENV NEXTAUTH_URL=$NEXTAUTH_URL
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+ENV AUTHENTIK_ISSUER=$AUTHENTIK_ISSUER
+ENV AUTHENTIK_CLIENT_ID=$AUTHENTIK_CLIENT_ID
+ENV AUTHENTIK_CLIENT_SECRET=$AUTHENTIK_CLIENT_SECRET
+ENV AUTHENTIK_REFRESH_TOKEN_URL=$AUTHENTIK_REFRESH_TOKEN_URL
+
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
@@ -51,6 +77,10 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT 3000
-ENV HOSTNAME localhost
+ENV HOSTNAME 0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/api/health', (r) => {r.resume(); process.exit(r.statusCode === 200 ? 0 : 1)})" \
+  || exit 1
 
 CMD ["node", "server.js"]

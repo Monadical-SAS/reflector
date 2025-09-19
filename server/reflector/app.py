@@ -65,6 +65,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+
 # metrics
 instrumentator = Instrumentator(
     excluded_handlers=["/docs", "/metrics"],

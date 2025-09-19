@@ -1,0 +1,14 @@
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+node_modules
+.next
+.git
+.gitignore
+*.md
+.DS_Store
+coverage
+.pnpm-store
+*.log
