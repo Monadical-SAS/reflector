@@ -35,12 +35,14 @@ class SpeakerMerge(BaseModel):
 async def transcript_assign_speaker(
     transcript_id: str,
     assignment: SpeakerAssignment,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ) -> SpeakerAssignmentStatus:
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if transcript.user_id is not None and transcript.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
@@ -113,12 +115,14 @@ async def transcript_assign_speaker(
 async def transcript_merge_speaker(
     transcript_id: str,
     merge: SpeakerMerge,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ) -> SpeakerAssignmentStatus:
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if transcript.user_id is not None and transcript.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
