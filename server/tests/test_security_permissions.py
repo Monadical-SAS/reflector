@@ -24,16 +24,7 @@ from reflector.views.transcripts import create_access_token
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_delete_transcript_in_shared_room(client):
-    """
-    Current behavior (documented risk): DELETE /v1/transcripts/{id} bypasses owner check
-    when transcript belongs to a meeting in a shared room. Anonymous caller can delete.
-    This test asserts the insecure behavior is present to guard future fixes.
-    """
-    # 1) Create a room as owner (authenticated user is optional in current API; user_id becomes None)
-    #    To ensure shared behavior, we explicitly create a shared room via controller since API
-    #    schema expects non-null user_id. We rely on the DB controller directly.
-
+async def test_anonymous_cannot_delete_transcript_in_shared_room(client):
     # Create a shared room with a fake owner id so meeting has a room_id
     room = await rooms_controller.add(
         name="shared-room-test",
@@ -71,24 +62,13 @@ async def test_anonymous_can_delete_transcript_in_shared_room(client):
         share_mode="private",
     )
 
-    # 2) Anonymous DELETE (no auth header). Because room is shared, handler resets user_id=None
-    #    and deletion proceeds even for non-owner/anonymous.
+    # Anonymous DELETE should be rejected
     del_resp = await client.delete(f"/transcripts/{t.id}")
-    assert del_resp.status_code == 200, del_resp.text
-    assert del_resp.json()["status"] == "ok"
-
-    # 3) Fetch again should be 404
-    resp_after = await client.get(f"/transcripts/{t.id}")
-    assert resp_after.status_code == 404
+    assert del_resp.status_code == 401, del_resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_mutate_participants_on_public_transcript(client):
-    """
-    Current behavior: participants CRUD uses get_by_id_for_http only; public/semi-private
-    allows non-owners (and even anonymous for public/anonymous transcripts) to mutate.
-    """
-
+async def test_anonymous_cannot_mutate_participants_on_public_transcript(client):
     # Create a public transcript with no owner
     t = await transcripts_controller.add(
         name="public-transcript",
@@ -97,35 +77,16 @@ async def test_anonymous_can_mutate_participants_on_public_transcript(client):
         share_mode="public",
     )
 
-    # Anonymous POST participant
+    # Anonymous POST participant must be rejected
     resp = await client.post(
         f"/transcripts/{t.id}/participants",
         json={"name": "AnonUser", "speaker": 0},
     )
-    assert resp.status_code == 200, resp.text
-    participant_id = resp.json()["id"]
-
-    # Anonymous PATCH participant
-    resp = await client.patch(
-        f"/transcripts/{t.id}/participants/{participant_id}",
-        json={"name": "AnonUser2"},
-    )
-    assert resp.status_code == 200, resp.text
-
-    # Anonymous DELETE participant
-    resp = await client.delete(f"/transcripts/{t.id}/participants/{participant_id}")
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == 401, resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_update_and_delete_room(client):
-    """
-    Current behavior: rooms endpoints accept optional auth and rely on controllers.
-    Update/delete should require owner, but anonymous path allows reaching update
-    and delete without clear 401/403 in some cases.
-    This test asserts that anonymous can perform update/delete today.
-    """
-
+async def test_anonymous_cannot_update_and_delete_room(client):
     # Create room as owner id "owner-3" via controller
     room = await rooms_controller.add(
         name="room-anon-update-delete",
@@ -159,23 +120,16 @@ async def test_anonymous_can_update_and_delete_room(client):
             "webhook_secret": "",
         },
     )
-    assert resp.status_code in (200, 422), resp.text
-    # Note: when anonymous, controller fetch inside may return 404 for non-owner
-    # depending on get_by_id_for_http behavior. If it returns 200, it's the insecure case.
+    # Expect authentication required
+    assert resp.status_code == 401, resp.text
 
     # Anonymous DELETE via API
     del_resp = await client.delete(f"/rooms/{room.id}")
-    # Either 200 (deleted) or 404 (not found after controller check). If 200, it proves deletion allowed.
-    assert del_resp.status_code in (200, 404), del_resp.text
+    assert del_resp.status_code == 401, del_resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_post_transcript_to_zulip(client, monkeypatch):
-    """
-    Current behavior: POST /v1/transcripts/{id}/zulip allows anonymous if transcript
-    is accessible via get_by_id_for_http. We mock external Zulip call.
-    """
-
+async def test_anonymous_cannot_post_transcript_to_zulip(client, monkeypatch):
     # Create a public transcript with some content
     t = await transcripts_controller.add(
         name="zulip-public",
@@ -201,15 +155,11 @@ async def test_anonymous_can_post_transcript_to_zulip(client, monkeypatch):
         f"/transcripts/{t.id}/zulip",
         params={"stream": "general", "topic": "Updates", "include_topics": False},
     )
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == 401, resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_assign_speaker_on_public_transcript(client):
-    """
-    Current behavior: speaker assign endpoint allows anonymous when transcript is public.
-    """
-
+async def test_anonymous_cannot_assign_speaker_on_public_transcript(client):
     # Create public transcript
     t = await transcripts_controller.add(
         name="public-assign",
@@ -238,12 +188,10 @@ async def test_anonymous_can_assign_speaker_on_public_transcript(client):
             "timestamp_to": 1.0,
         },
     )
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == 401, resp.text
 
 
 # Minimal server fixture for websocket tests
-
-
 @pytest.fixture
 def appserver_ws_simple(setup_database):
     host = "127.0.0.1"
@@ -294,12 +242,7 @@ def appserver_ws_simple(setup_database):
 
 
 @pytest.mark.asyncio
-async def test_websocket_allows_anonymous_on_private_transcript(appserver_ws_simple):
-    """
-    Current behavior: websocket accepts any subscriber if transcript exists,
-    without enforcing share mode. Anonymous can subscribe to private transcript events.
-    """
-
+async def test_websocket_denies_anonymous_on_private_transcript(appserver_ws_simple):
     host, port = appserver_ws_simple
 
     # Create a private transcript owned by someone
@@ -311,18 +254,14 @@ async def test_websocket_allows_anonymous_on_private_transcript(appserver_ws_sim
     )
 
     base_url = f"http://{host}:{port}/v1"
-    # Anonymous connect should succeed under current implementation
-    async with aconnect_ws(f"{base_url}/transcripts/{t.id}/events") as ws:
-        # Immediately close after connect; success implies no 403 gating
-        await ws.close()
+    # Anonymous connect should be denied
+    with pytest.raises(Exception):
+        async with aconnect_ws(f"{base_url}/transcripts/{t.id}/events") as ws:
+            await ws.close()
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_update_public_transcript(client):
-    """
-    Anonymous should be able to PATCH a public/ownerless transcript under current behavior.
-    """
-
+async def test_anonymous_cannot_update_public_transcript(client):
     t = await transcripts_controller.add(
         name="update-me",
         source_kind=SourceKind.LIVE,
@@ -334,16 +273,11 @@ async def test_anonymous_can_update_public_transcript(client):
         f"/transcripts/{t.id}",
         json={"title": "New Title From Anonymous"},
     )
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["title"] == "New Title From Anonymous"
+    assert resp.status_code == 401, resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_get_nonshared_room_by_id(client):
-    """
-    Current behavior: GET /v1/rooms/{id} returns room details even if not shared.
-    """
-
+async def test_anonymous_cannot_get_nonshared_room_by_id(client):
     room = await rooms_controller.add(
         name="private-room-exposed",
         user_id="owner-z",
@@ -360,18 +294,11 @@ async def test_anonymous_can_get_nonshared_room_by_id(client):
     )
 
     resp = await client.get(f"/rooms/{room.id}")
-    assert resp.status_code == 200, resp.text
-    data = resp.json()
-    assert data["id"] == room.id
-    assert data["is_shared"] is False
+    assert resp.status_code == 403, resp.text
 
 
 @pytest.mark.asyncio
-async def test_anonymous_can_call_rooms_webhook_test(client):
-    """
-    Current behavior: non-owner authenticated is 403, but anonymous bypasses owner check.
-    """
-
+async def test_anonymous_cannot_call_rooms_webhook_test(client):
     room = await rooms_controller.add(
         name="room-webhook-test",
         user_id="owner-y",
@@ -389,17 +316,30 @@ async def test_anonymous_can_call_rooms_webhook_test(client):
 
     # Anonymous caller
     resp = await client.post(f"/rooms/{room.id}/webhook/test")
-    # The endpoint attempts to send and returns success/failure payload; only ownership check
-    # for non-owner authenticated users yields 403.
-    assert resp.status_code == 200, resp.text
+    assert resp.status_code == 401, resp.text
+
+
+@pytest.mark.asyncio
+async def test_anonymous_cannot_create_room(client):
+    payload = {
+        "name": "room-create-auth-required",
+        "zulip_auto_post": False,
+        "zulip_stream": "",
+        "zulip_topic": "",
+        "is_locked": False,
+        "room_mode": "normal",
+        "recording_type": "cloud",
+        "recording_trigger": "automatic-2nd-participant",
+        "is_shared": False,
+        "webhook_url": "",
+        "webhook_secret": "",
+    }
+    resp = await client.post("/rooms", json=payload)
+    assert resp.status_code == 401, resp.text
 
 
 @pytest.mark.asyncio
 async def test_list_search_401_when_public_mode_false(client, monkeypatch):
-    """
-    When PUBLIC_MODE=false, anonymous list/search should return 401.
-    """
-
     monkeypatch.setattr(settings, "PUBLIC_MODE", False)
 
     resp = await client.get("/transcripts")
@@ -413,10 +353,6 @@ async def test_list_search_401_when_public_mode_false(client, monkeypatch):
 async def test_audio_mp3_requires_token_for_owned_transcript(
     client, tmpdir, monkeypatch
 ):
-    """
-    For transcripts with user_id, anonymous mp3 requires signed token, succeeds with token.
-    """
-
     # Use temp data dir
     monkeypatch.setattr(settings, "DATA_DIR", Path(tmpdir).as_posix())
 
@@ -438,7 +374,7 @@ async def test_audio_mp3_requires_token_for_owned_transcript(
 
     # Anonymous GET without token should be 403 or 404 depending on access; we call mp3
     resp = await client.get(f"/transcripts/{t.id}/audio/mp3")
-    assert resp.status_code in (401, 403)
+    assert resp.status_code == 403
 
     # With token should succeed
     token = create_access_token(
