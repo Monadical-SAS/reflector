@@ -811,10 +811,12 @@ export default function RoomsList() {
                                     padding: "8px",
                                     borderRadius: "4px",
                                     backgroundColor:
-                                      webhookTestResult.startsWith("✅")
+                                      webhookTestResult.startsWith(
+                                        SUCCESS_EMOJI,
+                                      )
                                         ? "#f0fdf4"
                                         : "#fef2f2",
-                                    border: `1px solid ${webhookTestResult.startsWith("✅") ? "#86efac" : "#fca5a5"}`,
+                                    border: `1px solid ${webhookTestResult.startsWith(SUCCESS_EMOJI) ? "#86efac" : "#fca5a5"}`,
                                   }}
                                 >
                                   {webhookTestResult}
