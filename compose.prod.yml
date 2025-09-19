@@ -17,8 +17,6 @@ services:
         AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET}
         AUTHENTIK_REFRESH_TOKEN_URL: ${AUTHENTIK_REFRESH_TOKEN_URL}
     image: reflector-frontend:latest
-    ports:
-      - "3000:3000"
     environment:
       - KV_URL=${KV_URL:-redis://redis:6379}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
