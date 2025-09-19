@@ -472,6 +472,7 @@ export default function RoomsList() {
                         placeholder="room-name"
                         value={room.name}
                         onChange={handleRoomChange}
+                        enterKeyHint="next"
                       />
                       <Field.HelperText>
                         No spaces or special characters allowed
@@ -730,6 +731,7 @@ export default function RoomsList() {
                         placeholder="https://example.com/webhook"
                         value={room.webhookUrl}
                         onChange={handleRoomChange}
+                        enterKeyHint="next"
                       />
                       <Field.HelperText>
                         Optional: URL to receive notifications when transcripts
