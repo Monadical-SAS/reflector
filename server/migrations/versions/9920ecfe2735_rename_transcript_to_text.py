@@ -28,7 +28,7 @@ def upgrade() -> None:
     transcript = table("transcript", column("id", sa.String), column("topics", sa.JSON))
 
     # Select all rows from the transcript table
-    results = bind.execute(select([transcript.c.id, transcript.c.topics]))
+    results = bind.execute(select(transcript.c.id, transcript.c.topics))
 
     for row in results:
         transcript_id = row["id"]
@@ -58,7 +58,7 @@ def downgrade() -> None:
     transcript = table("transcript", column("id", sa.String), column("topics", sa.JSON))
 
     # Select all rows from the transcript table
-    results = bind.execute(select([transcript.c.id, transcript.c.topics]))
+    results = bind.execute(select(transcript.c.id, transcript.c.topics))
 
     for row in results:
         transcript_id = row["id"]

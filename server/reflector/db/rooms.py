@@ -54,14 +54,14 @@ class RoomController:
         Parameters:
         - `order_by`: field to order by, e.g. "-created_at"
         """
-        query = rooms.select()
+        query = select(RoomModel)
         if user_id is not None:
             query = query.where(or_(RoomModel.user_id == user_id, RoomModel.is_shared))
         else:
             query = query.where(RoomModel.is_shared)
 
         if order_by is not None:
-            field = getattr(rooms.c, order_by[1:])
+            field = getattr(RoomModel, order_by[1:])
             if order_by.startswith("-"):
                 field = field.desc()
             query = query.order_by(field)
@@ -131,7 +131,7 @@ class RoomController:
         if values.get("webhook_url") and not values.get("webhook_secret"):
             values["webhook_secret"] = secrets.token_urlsafe(32)
 
-        query = update(rooms).where(RoomModel.id == room.id).values(**values)
+        query = update(RoomModel).where(RoomModel.id == room.id).values(**values)
         try:
             await session.execute(query)
             await session.commit()
@@ -148,7 +148,7 @@ class RoomController:
         """
         Get a room by id
         """
-        query = select(rooms).where(RoomModel.id == room_id)
+        query = select(RoomModel).where(RoomModel.id == room_id)
         if "user_id" in kwargs:
             query = query.where(RoomModel.user_id == kwargs["user_id"])
         result = await session.execute(query)
@@ -163,7 +163,7 @@ class RoomController:
         """
         Get a room by name
         """
-        query = select(rooms).where(RoomModel.name == room_name)
+        query = select(RoomModel).where(RoomModel.name == room_name)
         if "user_id" in kwargs:
             query = query.where(RoomModel.user_id == kwargs["user_id"])
         result = await session.execute(query)
@@ -180,7 +180,7 @@ class RoomController:
 
         If not found, it will raise a 404 error.
         """
-        query = select(rooms).where(RoomModel.id == meeting_id)
+        query = select(RoomModel).where(RoomModel.id == meeting_id)
         result = await session.execute(query)
         row = result.mappings().first()
         if not row:
@@ -191,7 +191,7 @@ class RoomController:
         return room
 
     async def get_ics_enabled(self, session: AsyncSession) -> list[Room]:
-        query = select(rooms).where(
+        query = select(RoomModel).where(
             RoomModel.ics_enabled == True, RoomModel.ics_url != None
         )
         result = await session.execute(query)
@@ -212,7 +212,7 @@ class RoomController:
             return
         if user_id is not None and room.user_id != user_id:
             return
-        query = delete(rooms).where(RoomModel.id == room_id)
+        query = delete(RoomModel).where(RoomModel.id == room_id)
         await session.execute(query)
         await session.commit()
 

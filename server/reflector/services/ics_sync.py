@@ -56,6 +56,7 @@ import pytz
 import structlog
 from icalendar import Calendar, Event
 
+from reflector.db import get_session_factory
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.redis_cache import RedisAsyncLock
@@ -343,14 +344,17 @@ class ICSSyncService:
             sync_result = await self._sync_events_to_database(room.id, events)
 
             # Update room sync metadata
-            await rooms_controller.update(
-                room,
-                {
-                    "ics_last_sync": datetime.now(timezone.utc),
-                    "ics_last_etag": content_hash,
-                },
-                mutate=False,
-            )
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                await rooms_controller.update(
+                    session,
+                    room,
+                    {
+                        "ics_last_sync": datetime.now(timezone.utc),
+                        "ics_last_etag": content_hash,
+                    },
+                    mutate=False,
+                )
 
             return {
                 "status": SyncStatus.SUCCESS,
@@ -379,24 +383,26 @@ class ICSSyncService:
 
         current_ics_uids = []
 
-        for event_data in events:
-            calendar_event = CalendarEvent(room_id=room_id, **event_data)
-            existing = await calendar_events_controller.get_by_ics_uid(
-                room_id, event_data["ics_uid"]
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            for event_data in events:
+                calendar_event = CalendarEvent(room_id=room_id, **event_data)
+                existing = await calendar_events_controller.get_by_ics_uid(
+                    session, room_id, event_data["ics_uid"]
+                )
+
+                if existing:
+                    updated += 1
+                else:
+                    created += 1
+
+                await calendar_events_controller.upsert(session, calendar_event)
+                current_ics_uids.append(event_data["ics_uid"])
+
+            # Soft delete events that are no longer in calendar
+            deleted = await calendar_events_controller.soft_delete_missing(
+                session, room_id, current_ics_uids
             )
-
-            if existing:
-                updated += 1
-            else:
-                created += 1
-
-            await calendar_events_controller.upsert(calendar_event)
-            current_ics_uids.append(event_data["ics_uid"])
-
-        # Soft delete events that are no longer in calendar
-        deleted = await calendar_events_controller.soft_delete_missing(
-            room_id, current_ics_uids
-        )
 
         return {
             "events_created": created,

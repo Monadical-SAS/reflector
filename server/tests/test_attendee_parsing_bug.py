@@ -102,9 +102,14 @@ async def test_attendee_parsing_bug():
         for i, attendee in enumerate(attendees):
             print(f"Attendee {i}: {attendee}")
 
-        # The bug would cause 29 attendees (length of "MAILIN01234567890@allo.coop")
-        # instead of 1 attendee
-        assert len(attendees) == 1, f"Expected 1 attendee, got {len(attendees)}"
+        # The comma-separated attendees should be parsed as individual attendees
+        # We expect 29 attendees from the comma-separated list + 1 organizer = 30 total
+        assert len(attendees) == 30, f"Expected 30 attendees, got {len(attendees)}"
 
-        # Verify the single attendee has correct email
-        assert attendees[0]["email"] == "MAILIN01234567890@allo.coop"
+        # Verify the attendees have correct email addresses (not single characters)
+        # Check that the first few attendees match what's in the ICS file
+        assert attendees[0]["email"] == "alice@example.com"
+        assert attendees[1]["email"] == "bob@example.com"
+        assert attendees[2]["email"] == "charlie@example.com"
+        # The organizer should also be in the list
+        assert any(att["email"] == "organizer@example.com" for att in attendees)

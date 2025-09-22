@@ -25,7 +25,8 @@ target_metadata = metadata
 # ... etc.
 
 
-# No need to modify URL, using sync engine from db module
+# don't use asyncpg for the moment
+settings.DATABASE_URL = settings.DATABASE_URL.replace("+asyncpg", "")
 
 
 def run_migrations_offline() -> None:
