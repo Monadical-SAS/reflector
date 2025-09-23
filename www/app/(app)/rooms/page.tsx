@@ -309,7 +309,7 @@ export default function RoomsList() {
 
       setRoomInput(null);
       setIsEditing(false);
-      setEditRoomId("");
+      setEditRoomId(null);
       setNameError("");
       refetch();
       onClose();
@@ -449,415 +449,428 @@ export default function RoomsList() {
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
-              <Tabs.Root defaultValue="general">
-                <Tabs.List>
-                  <Tabs.Trigger value="general">General</Tabs.Trigger>
-                  <Tabs.Trigger value="calendar">Calendar</Tabs.Trigger>
-                  <Tabs.Trigger value="share">Share</Tabs.Trigger>
-                  <Tabs.Trigger value="webhook">WebHook</Tabs.Trigger>
-                </Tabs.List>
+              <form
+                id="room-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveRoom();
+                }}
+              >
+                <Tabs.Root defaultValue="general">
+                  <Tabs.List>
+                    <Tabs.Trigger value="general">General</Tabs.Trigger>
+                    <Tabs.Trigger value="calendar">Calendar</Tabs.Trigger>
+                    <Tabs.Trigger value="share">Share</Tabs.Trigger>
+                    <Tabs.Trigger value="webhook">WebHook</Tabs.Trigger>
+                  </Tabs.List>
 
-                <Tabs.Content value="general" pt={6}>
-                  <Field.Root>
-                    <Field.Label>Room name</Field.Label>
-                    <Input
-                      name="name"
-                      placeholder="room-name"
-                      value={room.name}
-                      onChange={handleRoomChange}
-                    />
-                    <Field.HelperText>
-                      No spaces or special characters allowed
-                    </Field.HelperText>
-                    {nameError && (
-                      <Field.ErrorText>{nameError}</Field.ErrorText>
-                    )}
-                  </Field.Root>
+                  <Tabs.Content value="general" pt={6}>
+                    <Field.Root>
+                      <Field.Label>Room name</Field.Label>
+                      <Input
+                        name="name"
+                        placeholder="room-name"
+                        value={room.name}
+                        onChange={handleRoomChange}
+                        enterKeyHint="next"
+                      />
+                      <Field.HelperText>
+                        No spaces or special characters allowed
+                      </Field.HelperText>
+                      {nameError && (
+                        <Field.ErrorText>{nameError}</Field.ErrorText>
+                      )}
+                    </Field.Root>
 
-                  <Field.Root mt={4}>
-                    <Checkbox.Root
-                      name="isLocked"
-                      checked={room.isLocked}
-                      onCheckedChange={(e) => {
-                        const syntheticEvent = {
-                          target: {
-                            name: "isLocked",
-                            type: "checkbox",
-                            checked: e.checked,
-                          },
-                        };
-                        handleRoomChange(syntheticEvent);
-                      }}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>Locked room</Checkbox.Label>
-                    </Checkbox.Root>
-                  </Field.Root>
+                    <Field.Root mt={4}>
+                      <Checkbox.Root
+                        name="isLocked"
+                        checked={room.isLocked}
+                        onCheckedChange={(e) => {
+                          const syntheticEvent = {
+                            target: {
+                              name: "isLocked",
+                              type: "checkbox",
+                              checked: e.checked,
+                            },
+                          };
+                          handleRoomChange(syntheticEvent);
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Locked room</Checkbox.Label>
+                      </Checkbox.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Room size</Field.Label>
+                      <Select.Root
+                        value={[room.roomMode]}
+                        onValueChange={(e) =>
+                          setRoomInput({ ...room, roomMode: e.value[0] })
+                        }
+                        collection={roomModeCollection}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select room size" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {roomModeOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Recording type</Field.Label>
+                      <Select.Root
+                        value={[room.recordingType]}
+                        onValueChange={(e) =>
+                          setRoomInput({
+                            ...room,
+                            recordingType: e.value[0],
+                            recordingTrigger:
+                              e.value[0] !== "cloud"
+                                ? "none"
+                                : room.recordingTrigger,
+                          })
+                        }
+                        collection={recordingTypeCollection}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select recording type" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {recordingTypeOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Cloud recording start trigger</Field.Label>
+                      <Select.Root
+                        value={[room.recordingTrigger]}
+                        onValueChange={(e) =>
+                          setRoomInput({
+                            ...room,
+                            recordingTrigger: e.value[0],
+                          })
+                        }
+                        collection={recordingTriggerCollection}
+                        disabled={room.recordingType !== "cloud"}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select trigger" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {recordingTriggerOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
 
-                  <Field.Root mt={4}>
-                    <Field.Label>Room size</Field.Label>
-                    <Select.Root
-                      value={[room.roomMode]}
-                      onValueChange={(e) =>
-                        setRoomInput({ ...room, roomMode: e.value[0] })
-                      }
-                      collection={roomModeCollection}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select room size" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {roomModeOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
+                    <Field.Root mt={4}>
+                      <Checkbox.Root
+                        name="isShared"
+                        checked={room.isShared}
+                        onCheckedChange={(e) => {
+                          const syntheticEvent = {
+                            target: {
+                              name: "isShared",
+                              type: "checkbox",
+                              checked: e.checked,
+                            },
+                          };
+                          handleRoomChange(syntheticEvent);
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Shared room</Checkbox.Label>
+                      </Checkbox.Root>
+                    </Field.Root>
+                  </Tabs.Content>
 
-                  <Field.Root mt={4}>
-                    <Field.Label>Recording type</Field.Label>
-                    <Select.Root
-                      value={[room.recordingType]}
-                      onValueChange={(e) =>
-                        setRoomInput({
-                          ...room,
-                          recordingType: e.value[0],
-                          recordingTrigger:
-                            e.value[0] !== "cloud"
-                              ? "none"
-                              : room.recordingTrigger,
-                        })
-                      }
-                      collection={recordingTypeCollection}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select recording type" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {recordingTypeOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
+                  <Tabs.Content value="share" pt={6}>
+                    <Field.Root>
+                      <Checkbox.Root
+                        name="zulipAutoPost"
+                        checked={room.zulipAutoPost}
+                        onCheckedChange={(e) => {
+                          const syntheticEvent = {
+                            target: {
+                              name: "zulipAutoPost",
+                              type: "checkbox",
+                              checked: e.checked,
+                            },
+                          };
+                          handleRoomChange(syntheticEvent);
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>
+                          Automatically post transcription to Zulip
+                        </Checkbox.Label>
+                      </Checkbox.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Zulip stream</Field.Label>
+                      <Select.Root
+                        value={room.zulipStream ? [room.zulipStream] : []}
+                        onValueChange={(e) =>
+                          setRoomInput({
+                            ...room,
+                            zulipStream: e.value[0],
+                            zulipTopic: "",
+                          })
+                        }
+                        collection={streamCollection}
+                        disabled={!room.zulipAutoPost}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select stream" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {streamOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Zulip topic</Field.Label>
+                      <Select.Root
+                        value={room.zulipTopic ? [room.zulipTopic] : []}
+                        onValueChange={(e) =>
+                          setRoomInput({ ...room, zulipTopic: e.value[0] })
+                        }
+                        collection={topicCollection}
+                        disabled={!room.zulipAutoPost}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select topic" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {topicOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+                  </Tabs.Content>
 
-                  <Field.Root mt={4}>
-                    <Field.Label>Cloud recording start trigger</Field.Label>
-                    <Select.Root
-                      value={[room.recordingTrigger]}
-                      onValueChange={(e) =>
-                        setRoomInput({ ...room, recordingTrigger: e.value[0] })
-                      }
-                      collection={recordingTriggerCollection}
-                      disabled={room.recordingType !== "cloud"}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select trigger" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {recordingTriggerOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
+                  <Tabs.Content value="webhook" pt={6}>
+                    <Field.Root>
+                      <Field.Label>Webhook URL</Field.Label>
+                      <Input
+                        name="webhookUrl"
+                        placeholder="https://example.com/webhook"
+                        value={room.webhookUrl}
+                        onChange={handleRoomChange}
+                        enterKeyHint="next"
+                      />
+                      <Field.HelperText>
+                        Optional: URL to receive notifications when transcripts
+                        are ready
+                      </Field.HelperText>
+                    </Field.Root>
 
-                  <Field.Root mt={4}>
-                    <Checkbox.Root
-                      name="isShared"
-                      checked={room.isShared}
-                      onCheckedChange={(e) => {
-                        const syntheticEvent = {
-                          target: {
-                            name: "isShared",
-                            type: "checkbox",
-                            checked: e.checked,
-                          },
-                        };
-                        handleRoomChange(syntheticEvent);
-                      }}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>Shared room</Checkbox.Label>
-                    </Checkbox.Root>
-                  </Field.Root>
-                </Tabs.Content>
-
-                <Tabs.Content value="calendar" pt={6}>
-                  <ICSSettings
-                    roomName={room.name ? parseNonEmptyString(room.name) : null}
-                    icsUrl={room.icsUrl}
-                    icsEnabled={room.icsEnabled}
-                    icsFetchInterval={room.icsFetchInterval}
-                    onChange={(settings) => {
-                      setRoomInput({
-                        ...room,
-                        icsUrl:
-                          settings.ics_url !== undefined
-                            ? settings.ics_url
-                            : room.icsUrl,
-                        icsEnabled:
-                          settings.ics_enabled !== undefined
-                            ? settings.ics_enabled
-                            : room.icsEnabled,
-                        icsFetchInterval:
-                          settings.ics_fetch_interval !== undefined
-                            ? settings.ics_fetch_interval
-                            : room.icsFetchInterval,
-                      });
-                    }}
-                    isOwner={true}
-                    isEditing={isEditing}
-                  />
-                </Tabs.Content>
-
-                <Tabs.Content value="share" pt={6}>
-                  <Field.Root>
-                    <Checkbox.Root
-                      name="zulipAutoPost"
-                      checked={room.zulipAutoPost}
-                      onCheckedChange={(e) => {
-                        const syntheticEvent = {
-                          target: {
-                            name: "zulipAutoPost",
-                            type: "checkbox",
-                            checked: e.checked,
-                          },
-                        };
-                        handleRoomChange(syntheticEvent);
-                      }}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      <Checkbox.Label>
-                        Automatically post transcription to Zulip
-                      </Checkbox.Label>
-                    </Checkbox.Root>
-                  </Field.Root>
-
-                  <Field.Root mt={4}>
-                    <Field.Label>Zulip stream</Field.Label>
-                    <Select.Root
-                      value={room.zulipStream ? [room.zulipStream] : []}
-                      onValueChange={(e) =>
-                        setRoomInput({
-                          ...room,
-                          zulipStream: e.value[0],
-                          zulipTopic: "",
-                        })
-                      }
-                      collection={streamCollection}
-                      disabled={!room.zulipAutoPost}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select stream" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {streamOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
-
-                  <Field.Root mt={4}>
-                    <Field.Label>Zulip topic</Field.Label>
-                    <Select.Root
-                      value={room.zulipTopic ? [room.zulipTopic] : []}
-                      onValueChange={(e) =>
-                        setRoomInput({ ...room, zulipTopic: e.value[0] })
-                      }
-                      collection={topicCollection}
-                      disabled={!room.zulipAutoPost}
-                    >
-                      <Select.HiddenSelect />
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText placeholder="Select topic" />
-                        </Select.Trigger>
-                        <Select.IndicatorGroup>
-                          <Select.Indicator />
-                        </Select.IndicatorGroup>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          {topicOptions.map((option) => (
-                            <Select.Item key={option.value} item={option}>
-                              {option.label}
-                              <Select.ItemIndicator />
-                            </Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
-                </Tabs.Content>
-
-                <Tabs.Content value="webhook" pt={6}>
-                  <Field.Root>
-                    <Field.Label>Webhook URL</Field.Label>
-                    <Input
-                      name="webhookUrl"
-                      type="url"
-                      placeholder="https://example.com/webhook"
-                      value={room.webhookUrl}
-                      onChange={handleRoomChange}
-                    />
-                    <Field.HelperText>
-                      Optional: URL to receive notifications when transcripts
-                      are ready
-                    </Field.HelperText>
-                  </Field.Root>
-
-                  {room.webhookUrl && (
-                    <>
-                      <Field.Root mt={4}>
-                        <Field.Label>Webhook Secret</Field.Label>
-                        <Flex gap={2}>
-                          <Input
-                            name="webhookSecret"
-                            type={showWebhookSecret ? "text" : "password"}
-                            value={room.webhookSecret}
-                            onChange={handleRoomChange}
-                            placeholder={
-                              isEditing && room.webhookSecret
-                                ? "••••••••"
-                                : "Leave empty to auto-generate"
-                            }
-                            flex="1"
-                          />
-                          {isEditing && room.webhookSecret && (
-                            <IconButton
-                              size="sm"
-                              variant="ghost"
-                              aria-label={
-                                showWebhookSecret
-                                  ? "Hide secret"
-                                  : "Show secret"
+                    {room.webhookUrl && (
+                      <>
+                        <Field.Root mt={4}>
+                          <Field.Label>Webhook Secret</Field.Label>
+                          <Flex gap={2}>
+                            <Input
+                              name="webhookSecret"
+                              type={showWebhookSecret ? "text" : "password"}
+                              value={room.webhookSecret}
+                              onChange={handleRoomChange}
+                              placeholder={
+                                isEditing && room.webhookSecret
+                                  ? "••••••••"
+                                  : "Leave empty to auto-generate"
                               }
-                              onClick={() =>
-                                setShowWebhookSecret(!showWebhookSecret)
-                              }
-                            >
-                              {showWebhookSecret ? <LuEyeOff /> : <LuEye />}
-                            </IconButton>
-                          )}
-                        </Flex>
-                        <Field.HelperText>
-                          Used for HMAC signature verification (auto-generated
-                          if left empty)
-                        </Field.HelperText>
-                      </Field.Root>
-
-                      {isEditing && (
-                        <>
-                          <Flex
-                            mt={2}
-                            gap={2}
-                            alignItems="flex-start"
-                            direction="column"
-                          >
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleTestWebhook}
-                              disabled={testingWebhook || !room.webhookUrl}
-                            >
-                              {testingWebhook ? (
-                                <>
-                                  <Spinner size="xs" mr={2} />
-                                  Testing...
-                                </>
-                              ) : (
-                                "Test Webhook"
-                              )}
-                            </Button>
-                            {webhookTestResult && (
-                              <div
-                                style={{
-                                  fontSize: "14px",
-                                  wordBreak: "break-word",
-                                  maxWidth: "100%",
-                                  padding: "8px",
-                                  borderRadius: "4px",
-                                  backgroundColor: webhookTestResult.startsWith(
-                                    SUCCESS_EMOJI,
-                                  )
-                                    ? "#f0fdf4"
-                                    : "#fef2f2",
-                                  border: `1px solid ${webhookTestResult.startsWith(SUCCESS_EMOJI) ? "#86efac" : "#fca5a5"}`,
-                                }}
+                              flex="1"
+                            />
+                            {isEditing && room.webhookSecret && (
+                              <IconButton
+                                size="sm"
+                                variant="ghost"
+                                aria-label={
+                                  showWebhookSecret
+                                    ? "Hide secret"
+                                    : "Show secret"
+                                }
+                                onClick={() =>
+                                  setShowWebhookSecret(!showWebhookSecret)
+                                }
                               >
-                                {webhookTestResult}
-                              </div>
+                                {showWebhookSecret ? <LuEyeOff /> : <LuEye />}
+                              </IconButton>
                             )}
                           </Flex>
-                        </>
-                      )}
-                    </>
-                  )}
-                </Tabs.Content>
-              </Tabs.Root>
+                          <Field.HelperText>
+                            Used for HMAC signature verification (auto-generated
+                            if left empty)
+                          </Field.HelperText>
+                        </Field.Root>
+
+                        {isEditing && (
+                          <>
+                            <Flex
+                              mt={2}
+                              gap={2}
+                              alignItems="flex-start"
+                              direction="column"
+                            >
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleTestWebhook}
+                                disabled={testingWebhook || !room.webhookUrl}
+                              >
+                                {testingWebhook ? (
+                                  <>
+                                    <Spinner size="xs" mr={2} />
+                                    Testing...
+                                  </>
+                                ) : (
+                                  "Test Webhook"
+                                )}
+                              </Button>
+                              {webhookTestResult && (
+                                <div
+                                  style={{
+                                    fontSize: "14px",
+                                    wordBreak: "break-word",
+                                    maxWidth: "100%",
+                                    padding: "8px",
+                                    borderRadius: "4px",
+                                    backgroundColor:
+                                      webhookTestResult.startsWith(
+                                        SUCCESS_EMOJI,
+                                      )
+                                        ? "#f0fdf4"
+                                        : "#fef2f2",
+                                    border: `1px solid ${webhookTestResult.startsWith(SUCCESS_EMOJI) ? "#86efac" : "#fca5a5"}`,
+                                  }}
+                                >
+                                  {webhookTestResult}
+                                </div>
+                              )}
+                            </Flex>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Tabs.Content>
+
+                  <Tabs.Content value="calendar" pt={6}>
+                    <Field.Root>
+                      <ICSSettings
+                        roomName={
+                          room.name ? parseNonEmptyString(room.name) : null
+                        }
+                        icsUrl={room.icsUrl}
+                        icsEnabled={room.icsEnabled}
+                        icsFetchInterval={room.icsFetchInterval}
+                        onChange={(settings) => {
+                          setRoomInput({
+                            ...room,
+                            icsUrl:
+                              settings.ics_url !== undefined
+                                ? settings.ics_url
+                                : room.icsUrl,
+                            icsEnabled:
+                              settings.ics_enabled !== undefined
+                                ? settings.ics_enabled
+                                : room.icsEnabled,
+                            icsFetchInterval:
+                              settings.ics_fetch_interval !== undefined
+                                ? settings.ics_fetch_interval
+                                : room.icsFetchInterval,
+                          });
+                        }}
+                        isOwner={true}
+                        isEditing={isEditing}
+                      />
+                    </Field.Root>
+                  </Tabs.Content>
+                </Tabs.Root>
+              </form>
             </Dialog.Body>
             <Dialog.Footer>
               <Button variant="ghost" onClick={handleCloseDialog}>
                 Cancel
               </Button>
               <Button
+                type="submit"
                 colorPalette="primary"
-                onClick={handleSaveRoom}
+                form="room-form"
                 disabled={
                   !room.name || (room.zulipAutoPost && !room.zulipTopic)
                 }
