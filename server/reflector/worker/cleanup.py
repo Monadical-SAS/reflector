@@ -34,49 +34,47 @@ class CleanupStats(TypedDict):
 
 
 async def delete_single_transcript(
-    session_factory, transcript_data: dict, stats: CleanupStats
+    session_factory, transcript_data: dict, stats: CleanupStats, session=None
 ):
     transcript_id = transcript_data["id"]
     meeting_id = transcript_data["meeting_id"]
     recording_id = transcript_data["recording_id"]
 
     try:
-        async with session_factory() as session:
-            async with session.begin():
-                if meeting_id:
+        if session:
+            # Use provided session for testing - don't start new transaction
+            if meeting_id:
+                await session.execute(
+                    delete(MeetingModel).where(MeetingModel.id == meeting_id)
+                )
+                stats["meetings_deleted"] += 1
+                logger.info("Deleted associated meeting", meeting_id=meeting_id)
+
+            if recording_id:
+                result = await session.execute(
+                    select(RecordingModel).where(RecordingModel.id == recording_id)
+                )
+                recording = result.mappings().first()
+                if recording:
+                    try:
+                        await get_recordings_storage().delete_file(
+                            recording["object_key"]
+                        )
+                    except Exception as storage_error:
+                        logger.warning(
+                            "Failed to delete recording from storage",
+                            recording_id=recording_id,
+                            object_key=recording["object_key"],
+                            error=str(storage_error),
+                        )
+
                     await session.execute(
-                        delete(MeetingModel).where(MeetingModel.id == meeting_id)
+                        delete(RecordingModel).where(RecordingModel.id == recording_id)
                     )
-                    stats["meetings_deleted"] += 1
-                    logger.info("Deleted associated meeting", meeting_id=meeting_id)
-
-                if recording_id:
-                    result = await session.execute(
-                        select(RecordingModel).where(RecordingModel.id == recording_id)
+                    stats["recordings_deleted"] += 1
+                    logger.info(
+                        "Deleted associated recording", recording_id=recording_id
                     )
-                    recording = result.mappings().first()
-                    if recording:
-                        try:
-                            await get_recordings_storage().delete_file(
-                                recording["object_key"]
-                            )
-                        except Exception as storage_error:
-                            logger.warning(
-                                "Failed to delete recording from storage",
-                                recording_id=recording_id,
-                                object_key=recording["object_key"],
-                                error=str(storage_error),
-                            )
-
-                        await session.execute(
-                            delete(RecordingModel).where(
-                                RecordingModel.id == recording_id
-                            )
-                        )
-                        stats["recordings_deleted"] += 1
-                        logger.info(
-                            "Deleted associated recording", recording_id=recording_id
-                        )
 
             await transcripts_controller.remove_by_id(session, transcript_id)
             stats["transcripts_deleted"] += 1
@@ -85,6 +83,55 @@ async def delete_single_transcript(
                 transcript_id=transcript_id,
                 created_at=transcript_data["created_at"].isoformat(),
             )
+        else:
+            # Use session factory for production
+            async with session_factory() as session:
+                async with session.begin():
+                    if meeting_id:
+                        await session.execute(
+                            delete(MeetingModel).where(MeetingModel.id == meeting_id)
+                        )
+                        stats["meetings_deleted"] += 1
+                        logger.info("Deleted associated meeting", meeting_id=meeting_id)
+
+                    if recording_id:
+                        result = await session.execute(
+                            select(RecordingModel).where(
+                                RecordingModel.id == recording_id
+                            )
+                        )
+                        recording = result.mappings().first()
+                        if recording:
+                            try:
+                                await get_recordings_storage().delete_file(
+                                    recording["object_key"]
+                                )
+                            except Exception as storage_error:
+                                logger.warning(
+                                    "Failed to delete recording from storage",
+                                    recording_id=recording_id,
+                                    object_key=recording["object_key"],
+                                    error=str(storage_error),
+                                )
+
+                            await session.execute(
+                                delete(RecordingModel).where(
+                                    RecordingModel.id == recording_id
+                                )
+                            )
+                            stats["recordings_deleted"] += 1
+                            logger.info(
+                                "Deleted associated recording",
+                                recording_id=recording_id,
+                            )
+
+                await transcripts_controller.remove_by_id(session, transcript_id)
+                stats["transcripts_deleted"] += 1
+                logger.info(
+                    "Deleted transcript",
+                    transcript_id=transcript_id,
+                    created_at=transcript_data["created_at"].isoformat(),
+                )
     except Exception as e:
         error_msg = f"Failed to delete transcript {transcript_id}: {str(e)}"
         logger.error(error_msg, exc_info=e)
@@ -92,7 +139,7 @@ async def delete_single_transcript(
 
 
 async def cleanup_old_transcripts(
-    session_factory, cutoff_date: datetime, stats: CleanupStats
+    session_factory, cutoff_date: datetime, stats: CleanupStats, session=None
 ):
     """Delete old anonymous transcripts and their associated recordings/meetings."""
     query = select(
@@ -104,14 +151,27 @@ async def cleanup_old_transcripts(
         (TranscriptModel.created_at < cutoff_date) & (TranscriptModel.user_id.is_(None))
     )
 
-    async with session_factory() as session:
+    if session:
+        # Use provided session for testing
         result = await session.execute(query)
         old_transcripts = result.mappings().all()
+    else:
+        # Use session factory for production
+        async with session_factory() as session:
+            result = await session.execute(query)
+            old_transcripts = result.mappings().all()
 
     logger.info(f"Found {len(old_transcripts)} old transcripts to delete")
 
     for transcript_data in old_transcripts:
-        await delete_single_transcript(session_factory, transcript_data, stats)
+        try:
+            await delete_single_transcript(
+                session_factory, transcript_data, stats, session
+            )
+        except Exception as e:
+            error_msg = f"Failed to delete transcript {transcript_data['id']}: {str(e)}"
+            logger.error(error_msg, exc_info=e)
+            stats["errors"].append(error_msg)
 
 
 def log_cleanup_results(stats: CleanupStats):
@@ -132,6 +192,7 @@ def log_cleanup_results(stats: CleanupStats):
 
 async def cleanup_old_public_data(
     days: PositiveInt | None = None,
+    session=None,
 ) -> CleanupStats | None:
     if days is None:
         days = settings.PUBLIC_DATA_RETENTION_DAYS
@@ -154,7 +215,7 @@ async def cleanup_old_public_data(
     }
 
     session_factory = get_session_factory()
-    await cleanup_old_transcripts(session_factory, cutoff_date, stats)
+    await cleanup_old_transcripts(session_factory, cutoff_date, stats, session)
 
     log_cleanup_results(stats)
     return stats

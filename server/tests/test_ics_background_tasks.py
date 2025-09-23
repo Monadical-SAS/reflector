@@ -30,8 +30,8 @@ async def test_sync_room_ics_task(session):
         ics_url="https://calendar.example.com/task.ics",
         ics_enabled=True,
     )
-    # Commit to make room visible to ICS service's separate session
-    await session.commit()
+    # Flush to make room visible to other operations within the same session
+    await session.flush()
 
     cal = Calendar()
     event = Event()
@@ -46,17 +46,34 @@ async def test_sync_room_ics_task(session):
     cal.add_component(event)
     ics_content = cal.to_ical().decode("utf-8")
 
-    with patch(
-        "reflector.services.ics_sync.ICSFetchService.fetch_ics", new_callable=AsyncMock
-    ) as mock_fetch:
-        mock_fetch.return_value = ics_content
+    # Mock the session factory to use our test session
+    from contextlib import asynccontextmanager
 
-        # Call the service directly instead of the Celery task to avoid event loop issues
-        await ics_sync_service.sync_room_calendar(room)
+    @asynccontextmanager
+    async def mock_session_context():
+        yield session
 
-        events = await calendar_events_controller.get_by_room(session, room.id)
-        assert len(events) == 1
-        assert events[0].ics_uid == "task-event-1"
+    class MockSessionMaker:
+        def __call__(self):
+            return mock_session_context()
+
+    mock_session_factory = MockSessionMaker()
+
+    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
+        mock_get_factory.return_value = mock_session_factory
+
+        with patch(
+            "reflector.services.ics_sync.ICSFetchService.fetch_ics",
+            new_callable=AsyncMock,
+        ) as mock_fetch:
+            mock_fetch.return_value = ics_content
+
+            # Call the service directly instead of the Celery task to avoid event loop issues
+            await ics_sync_service.sync_room_calendar(room)
+
+            events = await calendar_events_controller.get_by_room(session, room.id)
+            assert len(events) == 1
+            assert events[0].ics_uid == "task-event-1"
 
 
 @pytest.mark.asyncio

@@ -101,21 +101,37 @@ async def mock_transcript_in_db(tmpdir):
         target_language="en",
     )
 
-    # Mock the controller to return our transcript
+    # Mock all transcripts controller methods that are used in the pipeline
     try:
         with patch(
             "reflector.pipelines.main_file_pipeline.transcripts_controller.get_by_id"
         ) as mock_get:
             mock_get.return_value = transcript
             with patch(
-                "reflector.pipelines.main_live_pipeline.transcripts_controller.get_by_id"
-            ) as mock_get2:
-                mock_get2.return_value = transcript
+                "reflector.pipelines.main_file_pipeline.transcripts_controller.update"
+            ) as mock_update:
+                mock_update.return_value = transcript
                 with patch(
-                    "reflector.pipelines.main_live_pipeline.transcripts_controller.update"
-                ) as mock_update:
-                    mock_update.return_value = None
-                    yield transcript
+                    "reflector.pipelines.main_file_pipeline.transcripts_controller.set_status"
+                ) as mock_set_status:
+                    mock_set_status.return_value = None
+                    with patch(
+                        "reflector.pipelines.main_file_pipeline.transcripts_controller.upsert_topic"
+                    ) as mock_upsert_topic:
+                        mock_upsert_topic.return_value = None
+                        with patch(
+                            "reflector.pipelines.main_file_pipeline.transcripts_controller.append_event"
+                        ) as mock_append_event:
+                            mock_append_event.return_value = None
+                            with patch(
+                                "reflector.pipelines.main_live_pipeline.transcripts_controller.get_by_id"
+                            ) as mock_get2:
+                                mock_get2.return_value = transcript
+                                with patch(
+                                    "reflector.pipelines.main_live_pipeline.transcripts_controller.update"
+                                ) as mock_update2:
+                                    mock_update2.return_value = None
+                                    yield transcript
     finally:
         # Restore original DATA_DIR
         settings.DATA_DIR = original_data_dir

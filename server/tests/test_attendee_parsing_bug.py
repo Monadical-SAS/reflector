@@ -1,15 +1,14 @@
 import os
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from reflector.db import get_session_factory
 from reflector.db.rooms import rooms_controller
 from reflector.services.ics_sync import ICSSyncService
 
 
 @pytest.mark.asyncio
-async def test_attendee_parsing_bug():
+async def test_attendee_parsing_bug(session):
     """
     Test that reproduces the attendee parsing bug where a string with comma-separated
     emails gets parsed as individual characters instead of separate email addresses.
@@ -18,22 +17,24 @@ async def test_attendee_parsing_bug():
     instead of properly parsed email addresses.
     """
     # Create a test room
-    async with get_session_factory()() as session:
-        room = await rooms_controller.add(
-            session,
-            name="test-room",
-            user_id="test-user",
-            zulip_auto_post=False,
-            zulip_stream="",
-            zulip_topic="",
-            is_locked=False,
-            room_mode="normal",
-            recording_type="cloud",
-            recording_trigger="automatic-2nd-participant",
-            is_shared=False,
-            ics_url="http://test.com/test.ics",
-            ics_enabled=True,
-        )
+    room = await rooms_controller.add(
+        session,
+        name="test-room",
+        user_id="test-user",
+        zulip_auto_post=False,
+        zulip_stream="",
+        zulip_topic="",
+        is_locked=False,
+        room_mode="normal",
+        recording_type="cloud",
+        recording_trigger="automatic-2nd-participant",
+        is_shared=False,
+        ics_url="http://test.com/test.ics",
+        ics_enabled=True,
+    )
+
+    # Force flush to make room visible to other sessions
+    await session.flush()
 
     # Read the test ICS file that reproduces the bug and update it with current time
     from datetime import datetime, timedelta, timezone
@@ -62,37 +63,55 @@ async def test_attendee_parsing_bug():
     # Create sync service and mock the fetch
     sync_service = ICSSyncService()
 
-    with patch.object(
-        sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
-    ) as mock_fetch:
-        mock_fetch.return_value = ics_content
+    # Mock the session factory to use our test session
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock
 
-        # Debug: Parse the ICS content directly to examine attendee parsing
-        calendar = sync_service.fetch_service.parse_ics(ics_content)
-        from reflector.settings import settings
+    @asynccontextmanager
+    async def mock_session_context():
+        yield session
 
-        room_url = f"{settings.UI_BASE_URL}/{room.name}"
+    # Create a mock sessionmaker that behaves like async_sessionmaker
+    class MockSessionMaker:
+        def __call__(self):
+            return mock_session_context()
 
-        print(f"Room URL being used for matching: {room_url}")
-        print(f"ICS content:\n{ics_content}")
+    mock_session_factory = MockSessionMaker()
 
-        events, total_events = sync_service.fetch_service.extract_room_events(
-            calendar, room.name, room_url
-        )
+    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
+        mock_get_factory.return_value = mock_session_factory
 
-        print(f"Total events in calendar: {total_events}")
-        print(f"Events matching room: {len(events)}")
+        with patch.object(
+            sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
+        ) as mock_fetch:
+            mock_fetch.return_value = ics_content
 
-        # Perform the sync
-        result = await sync_service.sync_room_calendar(room)
+            # Debug: Parse the ICS content directly to examine attendee parsing
+            calendar = sync_service.fetch_service.parse_ics(ics_content)
+            from reflector.settings import settings
 
-        # Check that the sync succeeded
-        assert result.get("status") == "success"
-        assert result.get("events_found", 0) >= 0  # Allow for debugging
+            room_url = f"{settings.UI_BASE_URL}/{room.name}"
 
-        # We already have the matching events from the debug code above
-        assert len(events) == 1
-        event = events[0]
+            print(f"Room URL being used for matching: {room_url}")
+            print(f"ICS content:\n{ics_content}")
+
+            events, total_events = sync_service.fetch_service.extract_room_events(
+                calendar, room.name, room_url
+            )
+
+            print(f"Total events in calendar: {total_events}")
+            print(f"Events matching room: {len(events)}")
+
+            # Perform the sync
+            result = await sync_service.sync_room_calendar(room)
+
+            # Check that the sync succeeded
+            assert result.get("status") == "success"
+            assert result.get("events_found", 0) >= 0  # Allow for debugging
+
+            # We already have the matching events from the debug code above
+            assert len(events) == 1
+            event = events[0]
 
         # This is where the bug manifests - check the attendees
         attendees = event["attendees"]
