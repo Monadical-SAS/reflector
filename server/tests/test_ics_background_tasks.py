@@ -45,32 +45,17 @@ async def test_sync_room_ics_task(db_session):
     cal.add_component(event)
     ics_content = cal.to_ical().decode("utf-8")
 
-    from contextlib import asynccontextmanager
+    with patch(
+        "reflector.services.ics_sync.ICSFetchService.fetch_ics",
+        new_callable=AsyncMock,
+    ) as mock_fetch:
+        mock_fetch.return_value = ics_content
 
-    @asynccontextmanager
-    async def mock_session_context():
-        yield db_session
+        await ics_sync_service.sync_room_calendar(db_session, room)
 
-    class MockSessionMaker:
-        def __call__(self):
-            return mock_session_context()
-
-    mock_session_factory = MockSessionMaker()
-
-    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
-        mock_get_factory.return_value = mock_session_factory
-
-        with patch(
-            "reflector.services.ics_sync.ICSFetchService.fetch_ics",
-            new_callable=AsyncMock,
-        ) as mock_fetch:
-            mock_fetch.return_value = ics_content
-
-            await ics_sync_service.sync_room_calendar(room)
-
-            events = await calendar_events_controller.get_by_room(db_session, room.id)
-            assert len(events) == 1
-            assert events[0].ics_uid == "task-event-1"
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
+        assert len(events) == 1
+        assert events[0].ics_uid == "task-event-1"
 
 
 @pytest.mark.asyncio
@@ -90,7 +75,7 @@ async def test_sync_room_ics_disabled(db_session):
         ics_enabled=False,
     )
 
-    result = await ics_sync_service.sync_room_calendar(room)
+    result = await ics_sync_service.sync_room_calendar(db_session, room)
 
     events = await calendar_events_controller.get_by_room(db_session, room.id)
     assert len(events) == 0
@@ -259,7 +244,7 @@ async def test_sync_handles_errors_gracefully(db_session):
     ) as mock_fetch:
         mock_fetch.side_effect = Exception("Network error")
 
-        result = await ics_sync_service.sync_room_calendar(room)
+        result = await ics_sync_service.sync_room_calendar(db_session, room)
         assert result["status"] == "error"
 
         events = await calendar_events_controller.get_by_room(db_session, room.id)

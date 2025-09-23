@@ -54,59 +54,45 @@ async def test_attendee_parsing_bug(db_session):
     ics_content = ics_content.replace("20250910T174000Z", dtstamp)
 
     sync_service = ICSSyncService()
-    from contextlib import asynccontextmanager
     from unittest.mock import AsyncMock
 
-    @asynccontextmanager
-    async def mock_session_context():
-        yield db_session
+    with patch.object(
+        sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
+    ) as mock_fetch:
+        mock_fetch.return_value = ics_content
 
-    class MockSessionMaker:
-        def __call__(self):
-            return mock_session_context()
+        calendar = sync_service.fetch_service.parse_ics(ics_content)
+        from reflector.settings import settings
 
-    mock_session_factory = MockSessionMaker()
+        room_url = f"{settings.UI_BASE_URL}/{room.name}"
 
-    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
-        mock_get_factory.return_value = mock_session_factory
+        print(f"Room URL being used for matching: {room_url}")
+        print(f"ICS content:\n{ics_content}")
 
-        with patch.object(
-            sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.return_value = ics_content
+        events, total_events = sync_service.fetch_service.extract_room_events(
+            calendar, room.name, room_url
+        )
 
-            calendar = sync_service.fetch_service.parse_ics(ics_content)
-            from reflector.settings import settings
+        print(f"Total events in calendar: {total_events}")
+        print(f"Events matching room: {len(events)}")
 
-            room_url = f"{settings.UI_BASE_URL}/{room.name}"
+        result = await sync_service.sync_room_calendar(db_session, room)
 
-            print(f"Room URL being used for matching: {room_url}")
-            print(f"ICS content:\n{ics_content}")
+        assert result.get("status") == "success"
+        assert result.get("events_found", 0) >= 0
 
-            events, total_events = sync_service.fetch_service.extract_room_events(
-                calendar, room.name, room_url
-            )
+        assert len(events) == 1
+        event = events[0]
 
-            print(f"Total events in calendar: {total_events}")
-            print(f"Events matching room: {len(events)}")
+    attendees = event["attendees"]
 
-            result = await sync_service.sync_room_calendar(room)
+    print(f"Number of attendees: {len(attendees)}")
+    for i, attendee in enumerate(attendees):
+        print(f"Attendee {i}: {attendee}")
 
-            assert result.get("status") == "success"
-            assert result.get("events_found", 0) >= 0
+    assert len(attendees) == 30, f"Expected 30 attendees, got {len(attendees)}"
 
-            assert len(events) == 1
-            event = events[0]
-
-        attendees = event["attendees"]
-
-        print(f"Number of attendees: {len(attendees)}")
-        for i, attendee in enumerate(attendees):
-            print(f"Attendee {i}: {attendee}")
-
-        assert len(attendees) == 30, f"Expected 30 attendees, got {len(attendees)}"
-
-        assert attendees[0]["email"] == "alice@example.com"
-        assert attendees[1]["email"] == "bob@example.com"
-        assert attendees[2]["email"] == "charlie@example.com"
-        assert any(att["email"] == "organizer@example.com" for att in attendees)
+    assert attendees[0]["email"] == "alice@example.com"
+    assert attendees[1]["email"] == "bob@example.com"
+    assert attendees[2]["email"] == "charlie@example.com"
+    assert any(att["email"] == "organizer@example.com" for att in attendees)

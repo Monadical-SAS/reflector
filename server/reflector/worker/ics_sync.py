@@ -32,7 +32,7 @@ async def sync_room_ics(session: AsyncSession, room_id: str):
             return
 
         logger.info("Starting ICS sync for room", room_id=room_id, room_name=room.name)
-        result = await ics_sync_service.sync_room_calendar(room)
+        result = await ics_sync_service.sync_room_calendar(session, room)
 
         if result["status"] == SyncStatus.SUCCESS:
             logger.info(

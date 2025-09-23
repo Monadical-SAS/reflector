@@ -168,74 +168,59 @@ async def test_ics_sync_service_sync_room_calendar(db_session):
     cal.add_component(event)
     ics_content = cal.to_ical().decode("utf-8")
 
-    from contextlib import asynccontextmanager
-
-    @asynccontextmanager
-    async def mock_session_context():
-        yield db_session
-
-    class MockSessionMaker:
-        def __call__(self):
-            return mock_session_context()
-
-    mock_session_factory = MockSessionMaker()
-
     # Create sync service and mock fetch
     sync_service = ICSSyncService()
 
-    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
-        mock_get_factory.return_value = mock_session_factory
+    with patch.object(
+        sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
+    ) as mock_fetch:
+        mock_fetch.return_value = ics_content
 
-        with patch.object(
-            sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.return_value = ics_content
+        # First sync
+        result = await sync_service.sync_room_calendar(db_session, room)
 
-            # First sync
-            result = await sync_service.sync_room_calendar(room)
+        assert result["status"] == "success"
+        assert result["events_found"] == 1
+        assert result["events_created"] == 1
+        assert result["events_updated"] == 0
+        assert result["events_deleted"] == 0
 
-            assert result["status"] == "success"
-            assert result["events_found"] == 1
-            assert result["events_created"] == 1
-            assert result["events_updated"] == 0
-            assert result["events_deleted"] == 0
+        # Verify event was created
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
+        assert len(events) == 1
+        assert events[0].ics_uid == "sync-event-1"
+        assert events[0].title == "Sync Test Meeting"
 
-            # Verify event was created
-            events = await calendar_events_controller.get_by_room(db_session, room.id)
-            assert len(events) == 1
-            assert events[0].ics_uid == "sync-event-1"
-            assert events[0].title == "Sync Test Meeting"
+        # Second sync with same content (should be unchanged)
+        # Refresh room to get updated etag and force sync by setting old sync time
+        room = await rooms_controller.get_by_id(db_session, room.id)
+        await rooms_controller.update(
+            db_session,
+            room,
+            {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)},
+        )
+        result = await sync_service.sync_room_calendar(db_session, room)
+        assert result["status"] == "unchanged"
 
-            # Second sync with same content (should be unchanged)
-            # Refresh room to get updated etag and force sync by setting old sync time
-            room = await rooms_controller.get_by_id(db_session, room.id)
-            await rooms_controller.update(
-                db_session,
-                room,
-                {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)},
-            )
-            result = await sync_service.sync_room_calendar(room)
-            assert result["status"] == "unchanged"
+        # Third sync with updated event
+        event["summary"] = "Updated Meeting Title"
+        cal = Calendar()
+        cal.add_component(event)
+        ics_content = cal.to_ical().decode("utf-8")
+        mock_fetch.return_value = ics_content
 
-            # Third sync with updated event
-            event["summary"] = "Updated Meeting Title"
-            cal = Calendar()
-            cal.add_component(event)
-            ics_content = cal.to_ical().decode("utf-8")
-            mock_fetch.return_value = ics_content
+        # Force sync by clearing etag
+        await rooms_controller.update(db_session, room, {"ics_last_etag": None})
 
-            # Force sync by clearing etag
-            await rooms_controller.update(db_session, room, {"ics_last_etag": None})
+        result = await sync_service.sync_room_calendar(db_session, room)
+        assert result["status"] == "success"
+        assert result["events_created"] == 0
+        assert result["events_updated"] == 1
 
-            result = await sync_service.sync_room_calendar(room)
-            assert result["status"] == "success"
-            assert result["events_created"] == 0
-            assert result["events_updated"] == 1
-
-            # Verify event was updated
-            events = await calendar_events_controller.get_by_room(db_session, room.id)
-            assert len(events) == 1
-            assert events[0].title == "Updated Meeting Title"
+        # Verify event was updated
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
+        assert len(events) == 1
+        assert events[0].title == "Updated Meeting Title"
 
 
 @pytest.mark.asyncio
@@ -266,7 +251,7 @@ async def test_ics_sync_service_skip_disabled():
     room.ics_enabled = False
     room.ics_url = "https://calendar.example.com/test.ics"
 
-    result = await service.sync_room_calendar(room)
+    result = await service.sync_room_calendar(MagicMock(), room)
     assert result["status"] == "skipped"
     assert result["reason"] == "ICS not configured"
 
@@ -274,7 +259,7 @@ async def test_ics_sync_service_skip_disabled():
     room.ics_enabled = True
     room.ics_url = None
 
-    result = await service.sync_room_calendar(room)
+    result = await service.sync_room_calendar(MagicMock(), room)
     assert result["status"] == "skipped"
     assert result["reason"] == "ICS not configured"
 
@@ -299,28 +284,13 @@ async def test_ics_sync_service_error_handling(db_session):
     )
     await db_session.flush()
 
-    from contextlib import asynccontextmanager
-
-    @asynccontextmanager
-    async def mock_session_context():
-        yield db_session
-
-    class MockSessionMaker:
-        def __call__(self):
-            return mock_session_context()
-
-    mock_session_factory = MockSessionMaker()
-
     sync_service = ICSSyncService()
 
-    with patch("reflector.services.ics_sync.get_session_factory") as mock_get_factory:
-        mock_get_factory.return_value = mock_session_factory
+    with patch.object(
+        sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
+    ) as mock_fetch:
+        mock_fetch.side_effect = Exception("Network error")
 
-        with patch.object(
-            sync_service.fetch_service, "fetch_ics", new_callable=AsyncMock
-        ) as mock_fetch:
-            mock_fetch.side_effect = Exception("Network error")
-
-            result = await sync_service.sync_room_calendar(room)
-            assert result["status"] == "error"
-            assert "Network error" in result["error"]
+        result = await sync_service.sync_room_calendar(db_session, room)
+        assert result["status"] == "error"
+        assert "Network error" in result["error"]

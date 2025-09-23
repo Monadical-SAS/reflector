@@ -387,7 +387,7 @@ async def rooms_sync_ics(
     if not room.ics_enabled or not room.ics_url:
         raise HTTPException(status_code=400, detail="ICS not configured for this room")
 
-    result = await ics_sync_service.sync_room_calendar(room)
+    result = await ics_sync_service.sync_room_calendar(session, room)
 
     if result["status"] == "error":
         raise HTTPException(
