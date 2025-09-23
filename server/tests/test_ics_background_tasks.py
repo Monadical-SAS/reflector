@@ -14,7 +14,7 @@ from reflector.worker.ics_sync import (
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_task(session):
+async def test_sync_room_ics_task(db_db_session):
     room = await rooms_controller.add(
         session,
         name="task-test-room",
@@ -30,7 +30,7 @@ async def test_sync_room_ics_task(session):
         ics_url="https://calendar.example.com/task.ics",
         ics_enabled=True,
     )
-    await session.flush()
+    await db_session.flush()
 
     cal = Calendar()
     event = Event()
@@ -49,7 +49,7 @@ async def test_sync_room_ics_task(session):
 
     @asynccontextmanager
     async def mock_session_context():
-        yield session
+        yield db_session
 
     class MockSessionMaker:
         def __call__(self):
@@ -74,7 +74,7 @@ async def test_sync_room_ics_task(session):
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_disabled(session):
+async def test_sync_room_ics_disabled(db_db_session):
     room = await rooms_controller.add(
         session,
         name="disabled-room",
@@ -97,7 +97,7 @@ async def test_sync_room_ics_disabled(session):
 
 
 @pytest.mark.asyncio
-async def test_sync_all_ics_calendars(session):
+async def test_sync_all_ics_calendars(db_db_session):
     room1 = await rooms_controller.add(
         session,
         name="sync-all-1",
@@ -176,7 +176,7 @@ async def test_should_sync_logic():
 
 
 @pytest.mark.asyncio
-async def test_sync_respects_fetch_interval(session):
+async def test_sync_respects_fetch_interval(db_db_session):
     now = datetime.now(timezone.utc)
 
     room1 = await rooms_controller.add(
@@ -237,7 +237,7 @@ async def test_sync_respects_fetch_interval(session):
 
 
 @pytest.mark.asyncio
-async def test_sync_handles_errors_gracefully(session):
+async def test_sync_handles_errors_gracefully(db_db_session):
     room = await rooms_controller.add(
         session,
         name="error-task-room",

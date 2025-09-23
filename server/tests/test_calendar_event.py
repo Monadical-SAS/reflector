@@ -11,7 +11,7 @@ from reflector.db.rooms import rooms_controller
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_create(session):
+async def test_calendar_event_create(db_db_session):
     """Test creating a calendar event."""
     # Create a room first
     room = await rooms_controller.add(
@@ -54,7 +54,7 @@ async def test_calendar_event_create(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_by_room(session):
+async def test_calendar_event_get_by_room(db_db_session):
     """Test getting calendar events for a room."""
     # Create room
     room = await rooms_controller.add(
@@ -95,7 +95,7 @@ async def test_calendar_event_get_by_room(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_upcoming(session):
+async def test_calendar_event_get_upcoming(db_db_session):
     """Test getting upcoming events within time window."""
     # Create room
     room = await rooms_controller.add(
@@ -177,7 +177,7 @@ async def test_calendar_event_get_upcoming(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_upcoming_includes_currently_happening(session):
+async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_session):
     """Test that get_upcoming includes currently happening events but excludes ended events."""
     # Create room
     room = await rooms_controller.add(
@@ -238,7 +238,7 @@ async def test_calendar_event_get_upcoming_includes_currently_happening(session)
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_upsert(session):
+async def test_calendar_event_upsert(db_db_session):
     """Test upserting (create/update) calendar events."""
     # Create room
     room = await rooms_controller.add(
@@ -285,7 +285,7 @@ async def test_calendar_event_upsert(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_soft_delete(session):
+async def test_calendar_event_soft_delete(db_db_session):
     """Test soft deleting events no longer in calendar."""
     # Create room
     room = await rooms_controller.add(
@@ -338,7 +338,7 @@ async def test_calendar_event_soft_delete(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_past_events_not_deleted(session):
+async def test_calendar_event_past_events_not_deleted(db_db_session):
     """Test that past events are not soft deleted."""
     # Create room
     room = await rooms_controller.add(
@@ -393,7 +393,7 @@ async def test_calendar_event_past_events_not_deleted(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_with_raw_ics_data(session):
+async def test_calendar_event_with_raw_ics_data(db_db_session):
     """Test storing raw ICS data with calendar event."""
     # Create room
     room = await rooms_controller.add(

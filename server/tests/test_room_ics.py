@@ -10,7 +10,7 @@ from reflector.db.rooms import rooms_controller
 
 
 @pytest.mark.asyncio
-async def test_room_create_with_ics_fields(session):
+async def test_room_create_with_ics_fields(db_db_session):
     """Test creating a room with ICS calendar fields."""
     room = await rooms_controller.add(
         session,
@@ -41,7 +41,7 @@ async def test_room_create_with_ics_fields(session):
 
 
 @pytest.mark.asyncio
-async def test_room_update_ics_configuration(session):
+async def test_room_update_ics_configuration(db_db_session):
     """Test updating room ICS configuration."""
     # Create room without ICS
     room = await rooms_controller.add(
@@ -80,7 +80,7 @@ async def test_room_update_ics_configuration(session):
 
 
 @pytest.mark.asyncio
-async def test_room_ics_sync_metadata(session):
+async def test_room_ics_sync_metadata(db_db_session):
     """Test updating room ICS sync metadata."""
     room = await rooms_controller.add(
         session,
@@ -114,7 +114,7 @@ async def test_room_ics_sync_metadata(session):
 
 
 @pytest.mark.asyncio
-async def test_room_get_with_ics_fields(session):
+async def test_room_get_with_ics_fields(db_db_session):
     """Test retrieving room with ICS fields."""
     # Create room
     created_room = await rooms_controller.add(
@@ -150,7 +150,7 @@ async def test_room_get_with_ics_fields(session):
 
 
 @pytest.mark.asyncio
-async def test_room_list_with_ics_enabled_filter(session):
+async def test_room_list_with_ics_enabled_filter(db_db_session):
     """Test listing rooms filtered by ICS enabled status."""
     # Create rooms with and without ICS
     room1 = await rooms_controller.add(
@@ -211,7 +211,7 @@ async def test_room_list_with_ics_enabled_filter(session):
 
 
 @pytest.mark.asyncio
-async def test_room_default_ics_values(session):
+async def test_room_default_ics_values(db_db_session):
     """Test that ICS fields have correct default values."""
     room = await rooms_controller.add(
         session,

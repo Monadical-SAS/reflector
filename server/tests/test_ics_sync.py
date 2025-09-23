@@ -134,7 +134,7 @@ async def test_ics_fetch_service_extract_room_events():
 
 
 @pytest.mark.asyncio
-async def test_ics_sync_service_sync_room_calendar(session):
+async def test_ics_sync_service_sync_room_calendar(db_db_session):
     # Create room
     room = await rooms_controller.add(
         session,
@@ -151,7 +151,7 @@ async def test_ics_sync_service_sync_room_calendar(session):
         ics_url="https://calendar.example.com/test.ics",
         ics_enabled=True,
     )
-    await session.flush()
+    await db_session.flush()
 
     # Mock ICS content
     cal = Calendar()
@@ -172,7 +172,7 @@ async def test_ics_sync_service_sync_room_calendar(session):
 
     @asynccontextmanager
     async def mock_session_context():
-        yield session
+        yield db_session
 
     class MockSessionMaker:
         def __call__(self):
@@ -280,7 +280,7 @@ async def test_ics_sync_service_skip_disabled():
 
 
 @pytest.mark.asyncio
-async def test_ics_sync_service_error_handling(session):
+async def test_ics_sync_service_error_handling(db_db_session):
     # Create room
     room = await rooms_controller.add(
         session,
@@ -297,13 +297,13 @@ async def test_ics_sync_service_error_handling(session):
         ics_url="https://calendar.example.com/error.ics",
         ics_enabled=True,
     )
-    await session.flush()
+    await db_session.flush()
 
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
     async def mock_session_context():
-        yield session
+        yield db_session
 
     class MockSessionMaker:
         def __call__(self):

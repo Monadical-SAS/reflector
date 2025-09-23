@@ -11,13 +11,13 @@ from reflector.db.search import SearchParameters, search_controller
 
 
 @pytest.mark.asyncio
-async def test_long_summary_snippet_prioritization(session):
+async def test_long_summary_snippet_prioritization(db_db_session):
     """Test that snippets from long_summary are prioritized over webvtt content."""
     test_id = "test-snippet-priority-3f9a2b8c"
 
     try:
         # Clean up any existing test data
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
@@ -57,7 +57,7 @@ We need to consider various implementation approaches.""",
             "user_id": "test-user-priority",
         }
 
-        await session.execute(insert(TranscriptModel).values(**test_data))
+        await db_session.execute(insert(TranscriptModel).values(**test_data))
 
         # Search for "robotics" which appears in both long_summary and webvtt
         params = SearchParameters(query_text="robotics", user_id="test-user-priority")
@@ -86,19 +86,19 @@ We need to consider various implementation approaches.""",
             ), f"Snippet should contain search term: {snippet}"
 
     finally:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await session.commit()
+        await db_session.commit()
 
 
 @pytest.mark.asyncio
-async def test_long_summary_only_search(session):
+async def test_long_summary_only_search(db_db_session):
     """Test searching for content that only exists in long_summary."""
     test_id = "test-long-only-8b3c9f2a"
 
     try:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
@@ -135,7 +135,7 @@ Discussion of timeline and deliverables.""",
             "user_id": "test-user-long",
         }
 
-        await session.execute(insert(TranscriptModel).values(**test_data))
+        await db_session.execute(insert(TranscriptModel).values(**test_data))
 
         # Search for terms only in long_summary
         params = SearchParameters(query_text="cryptocurrency", user_id="test-user-long")
@@ -160,7 +160,7 @@ Discussion of timeline and deliverables.""",
         assert found2, "Should find transcript by specific long_summary phrase"
 
     finally:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await session.commit()
+        await db_session.commit()

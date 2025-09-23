@@ -8,7 +8,7 @@ from reflector.services.ics_sync import ICSSyncService
 
 
 @pytest.mark.asyncio
-async def test_attendee_parsing_bug(session):
+async def test_attendee_parsing_bug(db_session):
     """
     Test that reproduces the attendee parsing bug where a string with comma-separated
     emails gets parsed as individual characters instead of separate email addresses.
@@ -17,7 +17,7 @@ async def test_attendee_parsing_bug(session):
     instead of properly parsed email addresses.
     """
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="test-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -31,7 +31,7 @@ async def test_attendee_parsing_bug(session):
         ics_url="http://test.com/test.ics",
         ics_enabled=True,
     )
-    await session.flush()
+    await db_session.flush()
 
     from datetime import datetime, timedelta, timezone
 
@@ -59,7 +59,7 @@ async def test_attendee_parsing_bug(session):
 
     @asynccontextmanager
     async def mock_session_context():
-        yield session
+        yield db_session
 
     class MockSessionMaker:
         def __call__(self):

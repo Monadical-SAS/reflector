@@ -30,7 +30,7 @@ class TestWebVTTAutoUpdate:
         )
 
         try:
-            result = await session.execute(
+            result = await db_session.execute(
                 select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
             row = result.scalar_one_or_none()
@@ -40,7 +40,7 @@ class TestWebVTTAutoUpdate:
         finally:
             await transcripts_controller.remove_by_id(session, transcript.id)
 
-    async def test_webvtt_updated_on_upsert_topic(self, session):
+    async def test_webvtt_updated_on_upsert_topic(self, db_db_session):
         """WebVTT should update when upserting topics via upsert_topic method."""
         # Using global transcripts_controller
 
@@ -64,7 +64,7 @@ class TestWebVTTAutoUpdate:
 
             await transcripts_controller.upsert_topic(session, transcript, topic)
 
-            result = await session.execute(
+            result = await db_session.execute(
                 select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
             row = result.scalar_one_or_none()
@@ -80,7 +80,7 @@ class TestWebVTTAutoUpdate:
         finally:
             await transcripts_controller.remove_by_id(session, transcript.id)
 
-    async def test_webvtt_updated_on_direct_topics_update(self, session):
+    async def test_webvtt_updated_on_direct_topics_update(self, db_db_session):
         """WebVTT should update when updating topics field directly."""
         # Using global transcripts_controller
 
@@ -109,7 +109,7 @@ class TestWebVTTAutoUpdate:
             )
 
             # Fetch from DB
-            result = await session.execute(
+            result = await db_session.execute(
                 select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
             row = result.scalar_one_or_none()
@@ -124,7 +124,9 @@ class TestWebVTTAutoUpdate:
         finally:
             await transcripts_controller.remove_by_id(session, transcript.id)
 
-    async def test_webvtt_updated_manually_with_handle_topics_update(self, session):
+    async def test_webvtt_updated_manually_with_handle_topics_update(
+        self, db_db_session
+    ):
         """Test that _handle_topics_update works when called manually."""
         # Using global transcripts_controller
 
@@ -153,7 +155,7 @@ class TestWebVTTAutoUpdate:
             await transcripts_controller.update(session, transcript, values)
 
             # Fetch from DB
-            result = await session.execute(
+            result = await db_session.execute(
                 select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
             row = result.scalar_one_or_none()
@@ -169,7 +171,7 @@ class TestWebVTTAutoUpdate:
         finally:
             await transcripts_controller.remove_by_id(session, transcript.id)
 
-    async def test_webvtt_update_with_non_sequential_topics_fails(self, session):
+    async def test_webvtt_update_with_non_sequential_topics_fails(self, db_db_session):
         """Test that non-sequential topics raise assertion error."""
         # Using global transcripts_controller
 
@@ -202,7 +204,7 @@ class TestWebVTTAutoUpdate:
         finally:
             await transcripts_controller.remove_by_id(session, transcript.id)
 
-    async def test_multiple_speakers_in_webvtt(self, session):
+    async def test_multiple_speakers_in_webvtt(self, db_db_session):
         """Test WebVTT generation with multiple speakers."""
         # Using global transcripts_controller
 
@@ -231,7 +233,7 @@ class TestWebVTTAutoUpdate:
             await transcripts_controller.update(session, transcript, values)
 
             # Fetch from DB
-            result = await session.execute(
+            result = await db_session.execute(
                 select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
             row = result.scalar_one_or_none()

@@ -17,25 +17,25 @@ from reflector.db.transcripts import SourceKind
 
 
 @pytest.mark.asyncio
-async def test_search_postgresql_only(session):
+async def test_search_postgresql_only(db_session):
     params = SearchParameters(query_text="any query here")
-    results, total = await search_controller.search_transcripts(session, params)
+    results, total = await search_controller.search_transcripts(db_session, params)
     assert results == []
     assert total == 0
 
     params_empty = SearchParameters(query_text=None)
     results_empty, total_empty = await search_controller.search_transcripts(
-        session, params_empty
+        db_session, params_empty
     )
     assert isinstance(results_empty, list)
     assert isinstance(total_empty, int)
 
 
 @pytest.mark.asyncio
-async def test_search_with_empty_query(session):
+async def test_search_with_empty_query(db_session):
     """Test that empty query returns all transcripts."""
     params = SearchParameters(query_text=None)
-    results, total = await search_controller.search_transcripts(session, params)
+    results, total = await search_controller.search_transcripts(db_session, params)
 
     assert isinstance(results, list)
     assert isinstance(total, int)
@@ -45,12 +45,12 @@ async def test_search_with_empty_query(session):
 
 
 @pytest.mark.asyncio
-async def test_empty_transcript_title_only_match(session):
+async def test_empty_transcript_title_only_match(db_session):
     """Test that transcripts with title-only matches return empty snippets."""
     test_id = "test-empty-9b3f2a8d"
 
     try:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
@@ -77,11 +77,11 @@ async def test_empty_transcript_title_only_match(session):
             "user_id": "test-user-1",
         }
 
-        await session.execute(insert(TranscriptModel).values(**test_data))
-        await session.commit()
+        await db_session.execute(insert(TranscriptModel).values(**test_data))
+        await db_session.commit()
 
         params = SearchParameters(query_text="empty", user_id="test-user-1")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
 
         assert total >= 1
         found = next((r for r in results if r.id == test_id), None)
@@ -90,19 +90,19 @@ async def test_empty_transcript_title_only_match(session):
         assert found.total_match_count == 0
 
     finally:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await session.commit()
+        await db_session.commit()
 
 
 @pytest.mark.asyncio
-async def test_search_with_long_summary(session):
+async def test_search_with_long_summary(db_session):
     """Test that long_summary content is searchable."""
     test_id = "test-long-summary-8a9f3c2d"
 
     try:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
@@ -132,11 +132,11 @@ Basic meeting content without special keywords.""",
             "user_id": "test-user-2",
         }
 
-        await session.execute(insert(TranscriptModel).values(**test_data))
-        await session.commit()
+        await db_session.execute(insert(TranscriptModel).values(**test_data))
+        await db_session.commit()
 
         params = SearchParameters(query_text="quantum computing", user_id="test-user-2")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
 
         assert total >= 1
         found = any(r.id == test_id for r in results)
@@ -148,18 +148,18 @@ Basic meeting content without special keywords.""",
         assert "quantum computing" in test_result.search_snippets[0].lower()
 
     finally:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await session.commit()
+        await db_session.commit()
 
 
 @pytest.mark.asyncio
-async def test_postgresql_search_with_data(session):
+async def test_postgresql_search_with_data(db_session):
     test_id = "test-search-e2e-7f3a9b2c"
 
     try:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
 
@@ -198,17 +198,17 @@ We need to implement PostgreSQL tsvector for better performance.""",
             "user_id": "test-user-3",
         }
 
-        await session.execute(insert(TranscriptModel).values(**test_data))
-        await session.commit()
+        await db_session.execute(insert(TranscriptModel).values(**test_data))
+        await db_session.commit()
 
         params = SearchParameters(query_text="planning", user_id="test-user-3")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by title word"
 
         params = SearchParameters(query_text="tsvector", user_id="test-user-3")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by webvtt content"
@@ -216,7 +216,7 @@ We need to implement PostgreSQL tsvector for better performance.""",
         params = SearchParameters(
             query_text="engineering planning", user_id="test-user-3"
         )
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by multiple words"
@@ -231,7 +231,7 @@ We need to implement PostgreSQL tsvector for better performance.""",
         params = SearchParameters(
             query_text="tsvector OR nosuchword", user_id="test-user-3"
         )
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript with OR query"
@@ -239,16 +239,16 @@ We need to implement PostgreSQL tsvector for better performance.""",
         params = SearchParameters(
             query_text='"full-text search"', user_id="test-user-3"
         )
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
         assert total >= 1
         found = any(r.id == test_id for r in results)
         assert found, "Should find test transcript by exact phrase"
 
     finally:
-        await session.execute(
+        await db_session.execute(
             delete(TranscriptModel).where(TranscriptModel.id == test_id)
         )
-        await session.commit()
+        await db_session.commit()
 
 
 @pytest.fixture
@@ -314,20 +314,20 @@ class TestSearchControllerFilters:
     """Test SearchController functionality with various filters."""
 
     @pytest.mark.asyncio
-    async def test_search_with_source_kind_filter(self, session):
+    async def test_search_with_source_kind_filter(self, db_session):
         """Test search filtering by source_kind."""
         controller = SearchController()
         params = SearchParameters(query_text="test", source_kind=SourceKind.LIVE)
 
         # This should not fail, even if no results are found
-        results, total = await controller.search_transcripts(session, params)
+        results, total = await controller.search_transcripts(db_session, params)
 
         assert isinstance(results, list)
         assert isinstance(total, int)
         assert total >= 0
 
     @pytest.mark.asyncio
-    async def test_search_with_single_room_id(self, session):
+    async def test_search_with_single_room_id(self, db_session):
         """Test search filtering by single room ID (currently supported)."""
         controller = SearchController()
         params = SearchParameters(
@@ -336,7 +336,7 @@ class TestSearchControllerFilters:
         )
 
         # This should not fail, even if no results are found
-        results, total = await controller.search_transcripts(session, params)
+        results, total = await controller.search_transcripts(db_session, params)
 
         assert isinstance(results, list)
         assert isinstance(total, int)
@@ -344,14 +344,14 @@ class TestSearchControllerFilters:
 
     @pytest.mark.asyncio
     async def test_search_result_includes_available_fields(
-        self, session, mock_db_result
+        self, db_session, mock_db_result
     ):
         """Test that search results include available fields like source_kind."""
         # Test that the search method works and returns SearchResult objects
         controller = SearchController()
         params = SearchParameters(query_text="test")
 
-        results, total = await controller.search_transcripts(session, params)
+        results, total = await controller.search_transcripts(db_session, params)
 
         assert isinstance(results, list)
         assert isinstance(total, int)

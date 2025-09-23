@@ -10,7 +10,7 @@ from reflector.db.rooms import rooms_controller
 
 
 @pytest.mark.asyncio
-async def test_multiple_active_meetings_per_room(session):
+async def test_multiple_active_meetings_per_room(db_db_session):
     """Test that multiple active meetings can exist for the same room."""
     # Create a room
     room = await rooms_controller.add(
@@ -65,7 +65,7 @@ async def test_multiple_active_meetings_per_room(session):
 
 
 @pytest.mark.asyncio
-async def test_get_active_by_calendar_event(session):
+async def test_get_active_by_calendar_event(db_db_session):
     """Test getting active meeting by calendar event ID."""
     # Create a room
     room = await rooms_controller.add(
@@ -120,7 +120,7 @@ async def test_get_active_by_calendar_event(session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_meeting_deactivates_after_scheduled_end(session):
+async def test_calendar_meeting_deactivates_after_scheduled_end(db_db_session):
     """Test that unused calendar meetings deactivate after scheduled end time."""
     # Create a room
     room = await rooms_controller.add(

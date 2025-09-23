@@ -10,11 +10,11 @@ from reflector.db.transcripts import SourceKind, transcripts_controller
 
 
 @pytest.mark.asyncio
-async def test_recording_deleted_with_transcript(session):
+async def test_recording_deleted_with_transcript(db_db_session):
     """Test that a recording is deleted when its associated transcript is deleted."""
     # First create a room and meeting to satisfy foreign key constraints
     room_id = "test-room"
-    await session.execute(
+    await db_session.execute(
         insert(RoomModel).values(
             id=room_id,
             name="test-room",
@@ -32,7 +32,7 @@ async def test_recording_deleted_with_transcript(session):
     )
 
     meeting_id = "test-meeting"
-    await session.execute(
+    await db_session.execute(
         insert(MeetingModel).values(
             id=meeting_id,
             room_id=room_id,
@@ -49,7 +49,7 @@ async def test_recording_deleted_with_transcript(session):
             recording_trigger="automatic",
         )
     )
-    await session.commit()
+    await db_session.commit()
 
     # Now create a recording
     recording = await recordings_controller.create(
