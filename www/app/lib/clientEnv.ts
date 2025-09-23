@@ -8,6 +8,7 @@ import {
 // CONTRACT: isomorphic with JSON.stringify
 export type ClientEnvCommon = EnvFeaturePartial & {
   API_URL: NonEmptyString;
+  WEBSOCKET_URL: NonEmptyString | null;
 };
 
 let clientEnv: ClientEnvCommon | null = null;
@@ -45,6 +46,10 @@ export const getClientEnvServer = (): ClientEnvCommon => {
     API_URL: assertExistsAndNonEmptyString(
       process.env.API_URL,
       "API_URL is missing",
+    ),
+    WEBSOCKET_URL: assertExistsAndNonEmptyString(
+      process.env.WEBSOCKET_URL,
+      "WEBSOCKET_URL is missing",
     ),
     ...FEATURE_ENV_NAMES.reduce((acc, x) => {
       acc[x] = parseBooleanString(process.env[x]);

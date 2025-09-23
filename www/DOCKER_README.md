@@ -5,17 +5,17 @@
 ### Required Build-time Variables (Must be provided for `docker build`)
 
 ```bash
-NEXT_PUBLIC_API_URL         # Backend API URL (e.g., https://api.example.com) - REQUIRED
-NEXT_PUBLIC_WEBSOCKET_URL   # WebSocket URL (e.g., wss://api.example.com) - REQUIRED
+API_URL         # Backend API URL (e.g., https://api.example.com) - REQUIRED
+WEBSOCKET_URL   # WebSocket URL (e.g., wss://api.example.com) - REQUIRED
 ```
 
 ### Optional Build-time Variables (Provide based on your setup)
 
 ```bash
-NEXT_PUBLIC_SITE_URL        # Frontend URL (e.g., https://app.example.com)
+SITE_URL        # Frontend URL (e.g., https://app.example.com)
 
-# Authentication variables (only needed if NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN=true)
-NEXTAUTH_URL                # NextAuth base URL (usually same as NEXT_PUBLIC_SITE_URL)
+# Authentication variables (only needed if FEATURE_REQUIRE_LOGIN=true)
+NEXTAUTH_URL                # NextAuth base URL (usually same as SITE_URL)
 NEXTAUTH_SECRET             # Random secret for NextAuth (generate with: openssl rand -base64 32)
 AUTHENTIK_ISSUER            # OAuth issuer URL (e.g., https://auth.example.com/application/o/app)
 AUTHENTIK_CLIENT_ID         # OAuth client ID
@@ -38,9 +38,9 @@ Create a `.env` file with all required variables:
 
 ```bash
 # Build variables
-NEXT_PUBLIC_SITE_URL=https://app.example.com
-NEXT_PUBLIC_API_URL=https://api.example.com
-NEXT_PUBLIC_WEBSOCKET_URL=wss://api.example.com
+SITE_URL=https://app.example.com
+API_URL=https://api.example.com
+WEBSOCKET_URL=wss://api.example.com
 NEXTAUTH_URL=https://app.example.com
 NEXTAUTH_SECRET=your-random-secret-here
 AUTHENTIK_ISSUER=https://auth.example.com/application/o/reflector
@@ -64,16 +64,16 @@ docker compose -f compose.prod.yml up -d web
 ```bash
 # Minimal build (no authentication)
 docker build \
-  --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
-  --build-arg NEXT_PUBLIC_WEBSOCKET_URL=wss://api.example.com \
+  --build-arg API_URL=https://api.example.com \
+  --build-arg WEBSOCKET_URL=wss://api.example.com \
   -t reflector-frontend:latest \
   ./www
 
 # Full build with authentication
 docker build \
-  --build-arg NEXT_PUBLIC_SITE_URL=https://app.example.com \
-  --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
-  --build-arg NEXT_PUBLIC_WEBSOCKET_URL=wss://api.example.com \
+  --build-arg SITE_URL=https://app.example.com \
+  --build-arg API_URL=https://api.example.com \
+  --build-arg WEBSOCKET_URL=wss://api.example.com \
   --build-arg NEXTAUTH_URL=https://app.example.com \
   --build-arg NEXTAUTH_SECRET=your-secret \
   --build-arg AUTHENTIK_ISSUER=https://auth.example.com/application/o/reflector \

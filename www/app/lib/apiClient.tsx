@@ -14,7 +14,8 @@ export const API_URL = !isBuildPhase
   : "http://localhost";
 
 // TODO decide strict validation or not
-export const WEBSOCKET_URL = process.env.WEBSOCKET_URL || "ws://127.0.0.1:1250";
+export const WEBSOCKET_URL =
+  getClientEnv().WEBSOCKET_URL || "ws://127.0.0.1:1250";
 
 export const client = createClient<paths>({
   baseUrl: API_URL,
