@@ -7,8 +7,6 @@ services:
       context: ./www
       dockerfile: Dockerfile
     image: reflector-frontend:latest
-    ports:
-      - "3000:3000"
     environment:
       - KV_URL=${KV_URL:-redis://redis:6379}
       - SITE_URL=${SITE_URL}
