@@ -30,7 +30,6 @@ async def test_sync_room_ics_task(session):
         ics_url="https://calendar.example.com/task.ics",
         ics_enabled=True,
     )
-    # Flush to make room visible to other operations within the same session
     await session.flush()
 
     cal = Calendar()
@@ -46,7 +45,6 @@ async def test_sync_room_ics_task(session):
     cal.add_component(event)
     ics_content = cal.to_ical().decode("utf-8")
 
-    # Mock the session factory to use our test session
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
@@ -68,7 +66,6 @@ async def test_sync_room_ics_task(session):
         ) as mock_fetch:
             mock_fetch.return_value = ics_content
 
-            # Call the service directly instead of the Celery task to avoid event loop issues
             await ics_sync_service.sync_room_calendar(room)
 
             events = await calendar_events_controller.get_by_room(session, room.id)
@@ -93,7 +90,6 @@ async def test_sync_room_ics_disabled(session):
         ics_enabled=False,
     )
 
-    # Test that disabled rooms are skipped by the service
     result = await ics_sync_service.sync_room_calendar(room)
 
     events = await calendar_events_controller.get_by_room(session, room.id)
@@ -150,7 +146,6 @@ async def test_sync_all_ics_calendars(session):
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        # Directly call the sync_all logic without the Celery wrapper
         ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
 
         for room in ics_enabled_rooms:
@@ -231,7 +226,6 @@ async def test_sync_respects_fetch_interval(session):
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        # Test the sync logic without the Celery wrapper
         ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
 
         for room in ics_enabled_rooms:
@@ -265,7 +259,6 @@ async def test_sync_handles_errors_gracefully(session):
     ) as mock_fetch:
         mock_fetch.side_effect = Exception("Network error")
 
-        # Call the service directly to test error handling
         result = await ics_sync_service.sync_room_calendar(room)
         assert result["status"] == "error"
 

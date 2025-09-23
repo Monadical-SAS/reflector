@@ -9,8 +9,7 @@ from sqlalchemy.pool import NullPool
 
 @pytest.fixture(scope="session")
 def event_loop():
-    """Creates session-scoped event loop to prevent 'event loop is closed' errors"""
-    # Windows fix for Python 3.8+
+    """Session-scoped event loop."""
     if sys.platform.startswith("win") and sys.version_info[:2] >= (3, 8):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -124,22 +123,18 @@ async def setup_database(postgres_service):
 
     settings.DATABASE_URL = DATABASE_URL
 
-    # Create engine with NullPool to prevent connection pooling issues
     engine = create_async_engine(
         DATABASE_URL,
         echo=False,
-        poolclass=NullPool,  # Critical: Prevents connection pool issues with asyncpg
+        poolclass=NullPool,
     )
 
     async with engine.begin() as conn:
-        # Drop all tables first to ensure clean state
         await conn.run_sync(Base.metadata.drop_all)
-        # Create all tables
         await conn.run_sync(Base.metadata.create_all)
 
     yield
 
-    # Cleanup - properly dispose of the engine
     await engine.dispose()
 
 
@@ -154,11 +149,10 @@ async def session(setup_database):
 
     from reflector.settings import settings
 
-    # Create a new engine with NullPool for this session
     engine = create_async_engine(
         settings.DATABASE_URL,
         echo=False,
-        poolclass=NullPool,  # Use NullPool to avoid connection caching issues
+        poolclass=NullPool,
     )
 
     async_session_maker = async_sessionmaker(

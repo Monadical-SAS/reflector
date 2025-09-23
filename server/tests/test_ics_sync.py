@@ -151,7 +151,6 @@ async def test_ics_sync_service_sync_room_calendar(session):
         ics_url="https://calendar.example.com/test.ics",
         ics_enabled=True,
     )
-    # Flush to make room visible to other operations within the same session
     await session.flush()
 
     # Mock ICS content
@@ -169,7 +168,6 @@ async def test_ics_sync_service_sync_room_calendar(session):
     cal.add_component(event)
     ics_content = cal.to_ical().decode("utf-8")
 
-    # Mock the session factory to use our test session
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
@@ -299,10 +297,8 @@ async def test_ics_sync_service_error_handling(session):
         ics_url="https://calendar.example.com/error.ics",
         ics_enabled=True,
     )
-    # Flush to make room visible to other operations within the same session
     await session.flush()
 
-    # Mock the session factory to use our test session
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
