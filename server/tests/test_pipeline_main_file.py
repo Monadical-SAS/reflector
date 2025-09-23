@@ -624,7 +624,10 @@ async def test_pipeline_file_process_no_transcript():
 
         # Should raise an exception for missing transcript when get_transcript is called
         with pytest.raises(Exception, match="Transcript not found"):
-            await pipeline.get_transcript()
+            from reflector.db import get_session_factory
+
+            async with get_session_factory()() as session:
+                await pipeline.get_transcript(session)
 
 
 @pytest.mark.asyncio

@@ -11,6 +11,7 @@ from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 from redis.exceptions import LockError
 
+from reflector.db import get_session_factory
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -82,66 +83,78 @@ async def process_recording(bucket_name: str, object_key: str):
     room_name = f"/{object_key[:36]}"
     recorded_at = parse_datetime_with_timezone(object_key[37:57])
 
-    meeting = await meetings_controller.get_by_room_name(room_name)
-    room = await rooms_controller.get_by_id(meeting.room_id)
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        async with session.begin():
+            meeting = await meetings_controller.get_by_room_name(session, room_name)
+            room = await rooms_controller.get_by_id(session, meeting.room_id)
 
-    recording = await recordings_controller.get_by_object_key(bucket_name, object_key)
-    if not recording:
-        recording = await recordings_controller.create(
-            Recording(
-                bucket_name=bucket_name,
-                object_key=object_key,
-                recorded_at=recorded_at,
-                meeting_id=meeting.id,
+            recording = await recordings_controller.get_by_object_key(
+                session, bucket_name, object_key
             )
-        )
+            if not recording:
+                recording = await recordings_controller.create(
+                    session,
+                    Recording(
+                        bucket_name=bucket_name,
+                        object_key=object_key,
+                        recorded_at=recorded_at,
+                        meeting_id=meeting.id,
+                    ),
+                )
 
-    transcript = await transcripts_controller.get_by_recording_id(recording.id)
-    if transcript:
-        await transcripts_controller.update(
-            transcript,
-            {
-                "topics": [],
-            },
-        )
-    else:
-        transcript = await transcripts_controller.add(
-            "",
-            source_kind=SourceKind.ROOM,
-            source_language="en",
-            target_language="en",
-            user_id=room.user_id,
-            recording_id=recording.id,
-            share_mode="public",
-            meeting_id=meeting.id,
-            room_id=room.id,
-        )
+            transcript = await transcripts_controller.get_by_recording_id(
+                session, recording.id
+            )
+            if transcript:
+                await transcripts_controller.update(
+                    session,
+                    transcript,
+                    {
+                        "topics": [],
+                    },
+                )
+            else:
+                transcript = await transcripts_controller.add(
+                    session,
+                    "",
+                    source_kind=SourceKind.ROOM,
+                    source_language="en",
+                    target_language="en",
+                    user_id=room.user_id,
+                    recording_id=recording.id,
+                    share_mode="public",
+                    meeting_id=meeting.id,
+                    room_id=room.id,
+                )
 
-    _, extension = os.path.splitext(object_key)
-    upload_filename = transcript.data_path / f"upload{extension}"
-    upload_filename.parent.mkdir(parents=True, exist_ok=True)
+            _, extension = os.path.splitext(object_key)
+            upload_filename = transcript.data_path / f"upload{extension}"
+            upload_filename.parent.mkdir(parents=True, exist_ok=True)
 
-    s3 = boto3.client(
-        "s3",
-        region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
-        aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
-    )
+            s3 = boto3.client(
+                "s3",
+                region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+                aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+            )
 
-    with open(upload_filename, "wb") as f:
-        s3.download_fileobj(bucket_name, object_key, f)
+            with open(upload_filename, "wb") as f:
+                s3.download_fileobj(bucket_name, object_key, f)
 
-    container = av.open(upload_filename.as_posix())
-    try:
-        if not len(container.streams.audio):
-            raise Exception("File has no audio stream")
-    except Exception:
-        upload_filename.unlink()
-        raise
-    finally:
-        container.close()
+            container = av.open(upload_filename.as_posix())
+            try:
+                if not len(container.streams.audio):
+                    raise Exception("File has no audio stream")
+            except Exception:
+                upload_filename.unlink()
+                raise
+            finally:
+                container.close()
 
-    await transcripts_controller.update(transcript, {"status": "uploaded"})
+            await transcripts_controller.update(
+                session, transcript, {"status": "uploaded"}
+            )
 
     task_pipeline_file_process.delay(transcript_id=transcript.id)
 
@@ -165,7 +178,10 @@ async def process_meetings():
     process the same meeting simultaneously.
     """
     logger.info("Processing meetings")
-    meetings = await meetings_controller.get_all_active()
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        async with session.begin():
+            meetings = await meetings_controller.get_all_active(session)
     current_time = datetime.now(timezone.utc)
     redis_client = get_redis_client()
     processed_count = 0
@@ -218,7 +234,9 @@ async def process_meetings():
                 logger_.debug("Meeting not yet started, keep it")
 
             if should_deactivate:
-                await meetings_controller.update_meeting(meeting.id, is_active=False)
+                await meetings_controller.update_meeting(
+                    session, meeting.id, is_active=False
+                )
                 logger_.info("Meeting is deactivated")
 
             processed_count += 1
@@ -260,40 +278,44 @@ async def reprocess_failed_recordings():
         bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
         pages = paginator.paginate(Bucket=bucket_name)
 
-        for page in pages:
-            if "Contents" not in page:
-                continue
-
-            for obj in page["Contents"]:
-                object_key = obj["Key"]
-
-                if not (object_key.endswith(".mp4")):
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            for page in pages:
+                if "Contents" not in page:
                     continue
 
-                recording = await recordings_controller.get_by_object_key(
-                    bucket_name, object_key
-                )
-                if not recording:
-                    logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
-                    reprocessed_count += 1
-                    continue
+                for obj in page["Contents"]:
+                    object_key = obj["Key"]
 
-                transcript = None
-                try:
-                    transcript = await transcripts_controller.get_by_recording_id(
-                        recording.id
-                    )
-                except ValidationError:
-                    await transcripts_controller.remove_by_recording_id(recording.id)
-                    logger.warning(
-                        f"Removed invalid transcript for recording: {recording.id}"
-                    )
+                    if not (object_key.endswith(".mp4")):
+                        continue
 
-                if transcript is None or transcript.status == "error":
-                    logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
-                    reprocessed_count += 1
+                    recording = await recordings_controller.get_by_object_key(
+                        session, bucket_name, object_key
+                    )
+                    if not recording:
+                        logger.info(f"Queueing recording for processing: {object_key}")
+                        process_recording.delay(bucket_name, object_key)
+                        reprocessed_count += 1
+                        continue
+
+                    transcript = None
+                    try:
+                        transcript = await transcripts_controller.get_by_recording_id(
+                            session, recording.id
+                        )
+                    except ValidationError:
+                        await transcripts_controller.remove_by_recording_id(
+                            session, recording.id
+                        )
+                        logger.warning(
+                            f"Removed invalid transcript for recording: {recording.id}"
+                        )
+
+                    if transcript is None or transcript.status == "error":
+                        logger.info(f"Queueing recording for processing: {object_key}")
+                        process_recording.delay(bucket_name, object_key)
+                        reprocessed_count += 1
 
     except Exception as e:
         logger.error(f"Error checking S3 bucket: {str(e)}")

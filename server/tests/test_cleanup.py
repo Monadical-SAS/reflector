@@ -15,12 +15,12 @@ from reflector.worker.cleanup import cleanup_old_public_data
 
 
 @pytest.mark.asyncio
-async def test_cleanup_old_public_data_skips_when_not_public():
+async def test_cleanup_old_public_data_skips_when_not_public(session):
     """Test that cleanup is skipped when PUBLIC_MODE is False."""
     with patch("reflector.worker.cleanup.settings") as mock_settings:
         mock_settings.PUBLIC_MODE = False
 
-        result = await cleanup_old_public_data()
+        result = await cleanup_old_public_data(session)
 
         # Should return early without doing anything
         assert result is None
@@ -81,7 +81,7 @@ async def test_cleanup_old_public_data_deletes_old_anonymous_transcripts(session
             mock_delete.return_value = None
 
             # Run cleanup with test session
-            await cleanup_old_public_data(session=session)
+            await cleanup_old_public_data(session)
 
             # Verify only old anonymous transcript was deleted
             assert mock_delete.call_count == 1
@@ -162,7 +162,7 @@ async def test_cleanup_deletes_associated_meeting_and_recording(session):
             mock_storage.return_value.delete_file = AsyncMock()
 
             # Run cleanup with test session
-            await cleanup_old_public_data(session=session)
+            await cleanup_old_public_data(session)
 
             # Verify transcript was deleted
             result = await session.execute(
@@ -226,7 +226,7 @@ async def test_cleanup_handles_errors_gracefully(session):
             mock_delete.side_effect = [Exception("Delete failed"), None]
 
             # Run cleanup with test session - should not raise exception
-            await cleanup_old_public_data(session=session)
+            await cleanup_old_public_data(session)
 
             # Both transcripts should have been attempted to delete
             assert mock_delete.call_count == 2

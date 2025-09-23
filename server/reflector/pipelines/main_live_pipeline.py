@@ -142,15 +142,9 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
             self._ws_manager = get_ws_manager()
         return self._ws_manager
 
-    async def get_transcript(self, session: AsyncSession = None) -> Transcript:
+    async def get_transcript(self, session: AsyncSession) -> Transcript:
         # fetch the transcript
-        if session:
-            result = await transcripts_controller.get_by_id(session, self.transcript_id)
-        else:
-            async with get_session_factory()() as session:
-                result = await transcripts_controller.get_by_id(
-                    session, self.transcript_id
-                )
+        result = await transcripts_controller.get_by_id(session, self.transcript_id)
         if not result:
             raise Exception("Transcript not found")
         return result
@@ -349,7 +343,8 @@ class PipelineMainLive(PipelineMainBase):
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
-        transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            transcript = await self.get_transcript(session)
 
         processors = [
             AudioFileWriterProcessor(
@@ -397,7 +392,8 @@ class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
         # now let's start the pipeline by pushing information to the
         # first processor diarization processor
         # XXX translation is lost when converting our data model to the processor model
-        transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            transcript = await self.get_transcript(session)
 
         # diarization works only if the file is uploaded to an external storage
         if transcript.audio_location == "local":
@@ -430,7 +426,8 @@ class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
 
     async def create(self) -> Pipeline:
         # get transcript
-        self._transcript = transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            self._transcript = transcript = await self.get_transcript(session)
 
         # create pipeline
         processors = self.get_processors()

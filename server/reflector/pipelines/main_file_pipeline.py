@@ -87,15 +87,9 @@ class PipelineMainFile(PipelineMainBase):
         self.logger = logger.bind(transcript_id=self.transcript_id)
         self.empty_pipeline = EmptyPipeline(logger=self.logger)
 
-    async def get_transcript(self, session: AsyncSession = None) -> Transcript:
+    async def get_transcript(self, session: AsyncSession) -> Transcript:
         """Get transcript with session"""
-        if session:
-            result = await transcripts_controller.get_by_id(session, self.transcript_id)
-        else:
-            async with get_session_factory()() as session:
-                result = await transcripts_controller.get_by_id(
-                    session, self.transcript_id
-                )
+        result = await transcripts_controller.get_by_id(session, self.transcript_id)
         if not result:
             raise Exception("Transcript not found")
         return result
