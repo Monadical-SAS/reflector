@@ -837,7 +837,7 @@ export default function RoomsList() {
                             ? parseNonEmptyString(
                                 room.name,
                                 true,
-                                "panic! room.name is required",
+                                "panic! room.name required",
                               )
                             : null
                         }

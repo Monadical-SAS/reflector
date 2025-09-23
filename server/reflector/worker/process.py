@@ -213,7 +213,6 @@ async def process_meetings():
                 should_deactivate = True
                 logger_.info(
                     "Meeting deactivated - scheduled time ended with no participants",
-                    meeting.id,
                 )
             else:
                 logger_.debug("Meeting not yet started, keep it")
@@ -224,8 +223,8 @@ async def process_meetings():
 
             processed_count += 1
 
-        except Exception as e:
-            logger_.error(f"Error processing meeting", exc_info=True)
+        except Exception:
+            logger_.error("Error processing meeting", exc_info=True)
         finally:
             try:
                 lock.release()
@@ -233,7 +232,7 @@ async def process_meetings():
                 pass  # Lock already released or expired
 
     logger.info(
-        f"Processed meetings finished",
+        "Processed meetings finished",
         processed_count=processed_count,
         skipped_count=skipped_count,
     )
