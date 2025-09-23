@@ -1,128 +1,81 @@
 # Docker Production Build Guide
 
-## Environment Variables
+## Overview
 
-### Required Build-time Variables (Must be provided for `docker build`)
+The Docker image builds without any environment variables and requires all configuration to be provided at runtime.
+
+## Environment Variables (ALL Runtime)
+
+### Required Runtime Variables
 
 ```bash
-API_URL         # Backend API URL (e.g., https://api.example.com) - REQUIRED
-WEBSOCKET_URL   # WebSocket URL (e.g., wss://api.example.com) - REQUIRED
+API_URL             # Backend API URL (e.g., https://api.example.com)
+WEBSOCKET_URL       # WebSocket URL (e.g., wss://api.example.com)
+NEXTAUTH_URL        # NextAuth base URL (e.g., https://app.example.com)
+NEXTAUTH_SECRET     # Random secret for NextAuth (generate with: openssl rand -base64 32)
+KV_URL              # Redis URL (e.g., redis://redis:6379)
 ```
 
-### Optional Build-time Variables (Provide based on your setup)
+### Optional Runtime Variables
 
 ```bash
-SITE_URL        # Frontend URL (e.g., https://app.example.com)
+SITE_URL                    # Frontend URL (defaults to NEXTAUTH_URL)
 
-# Authentication variables (only needed if FEATURE_REQUIRE_LOGIN=true)
-NEXTAUTH_URL                # NextAuth base URL (usually same as SITE_URL)
-NEXTAUTH_SECRET             # Random secret for NextAuth (generate with: openssl rand -base64 32)
-AUTHENTIK_ISSUER            # OAuth issuer URL (e.g., https://auth.example.com/application/o/app)
+AUTHENTIK_ISSUER            # OAuth issuer URL
 AUTHENTIK_CLIENT_ID         # OAuth client ID
 AUTHENTIK_CLIENT_SECRET     # OAuth client secret
 AUTHENTIK_REFRESH_TOKEN_URL # OAuth token refresh URL
-```
 
-### Runtime Variables (Required for `docker run`)
+FEATURE_REQUIRE_LOGIN=false # Require authentication
+FEATURE_PRIVACY=true        # Enable privacy features
+FEATURE_BROWSE=true         # Enable browsing features
+FEATURE_SEND_TO_ZULIP=false # Enable Zulip integration
+FEATURE_ROOMS=true          # Enable rooms feature
 
-```bash
-KV_URL                      # Redis URL (e.g., redis://redis:6379)
-# Plus all the build-time variables need to be provided at runtime too
+SENTRY_DSN                  # Sentry error tracking
+AUTH_CALLBACK_URL          # OAuth callback URL
 ```
 
 ## Building the Image
 
-### Option 1: Using Docker Compose (Recommended)
+### Option 1: Using Docker Compose
 
-Create a `.env` file with all required variables:
-
-```bash
-# Build variables
-SITE_URL=https://app.example.com
-API_URL=https://api.example.com
-WEBSOCKET_URL=wss://api.example.com
-NEXTAUTH_URL=https://app.example.com
-NEXTAUTH_SECRET=your-random-secret-here
-AUTHENTIK_ISSUER=https://auth.example.com/application/o/reflector
-AUTHENTIK_CLIENT_ID=your-client-id
-AUTHENTIK_CLIENT_SECRET=your-client-secret
-AUTHENTIK_REFRESH_TOKEN_URL=https://auth.example.com/application/o/token/
-
-# Runtime variables
-KV_URL=redis://redis:6379
-```
-
-Then build and run:
+1. Build the image (no environment variables needed):
 
 ```bash
 docker compose -f compose.prod.yml build
-docker compose -f compose.prod.yml up -d web
+```
+
+2. Create a `.env` file with runtime variables
+
+3. Run with environment variables:
+
+```bash
+docker compose -f compose.prod.yml --env-file .env up -d
 ```
 
 ### Option 2: Using Docker CLI
 
-```bash
-# Minimal build (no authentication)
-docker build \
-  --build-arg API_URL=https://api.example.com \
-  --build-arg WEBSOCKET_URL=wss://api.example.com \
-  -t reflector-frontend:latest \
-  ./www
+1. Build the image (no build args):
 
-# Full build with authentication
-docker build \
-  --build-arg SITE_URL=https://app.example.com \
-  --build-arg API_URL=https://api.example.com \
-  --build-arg WEBSOCKET_URL=wss://api.example.com \
-  --build-arg NEXTAUTH_URL=https://app.example.com \
-  --build-arg NEXTAUTH_SECRET=your-secret \
-  --build-arg AUTHENTIK_ISSUER=https://auth.example.com/application/o/reflector \
-  --build-arg AUTHENTIK_CLIENT_ID=your-client-id \
-  --build-arg AUTHENTIK_CLIENT_SECRET=your-client-secret \
-  --build-arg AUTHENTIK_REFRESH_TOKEN_URL=https://auth.example.com/application/o/token/ \
-  -t reflector-frontend:latest \
-  ./www
+```bash
+docker build -t reflector-frontend:latest ./www
 ```
 
-Then run:
+2. Run with environment variables:
 
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -e KV_URL=redis://redis:6379 \
+  -e API_URL=https://api.example.com \
+  -e WEBSOCKET_URL=wss://api.example.com \
   -e NEXTAUTH_URL=https://app.example.com \
   -e NEXTAUTH_SECRET=your-secret \
+  -e KV_URL=redis://redis:6379 \
   -e AUTHENTIK_ISSUER=https://auth.example.com/application/o/reflector \
   -e AUTHENTIK_CLIENT_ID=your-client-id \
   -e AUTHENTIK_CLIENT_SECRET=your-client-secret \
   -e AUTHENTIK_REFRESH_TOKEN_URL=https://auth.example.com/application/o/token/ \
+  -e FEATURE_REQUIRE_LOGIN=true \
   reflector-frontend:latest
 ```
-
-## Health Check
-
-The container includes a health check endpoint at `/api/health` that verifies:
-
-- Redis connectivity
-- Memory usage
-- General application health
-
-```bash
-curl http://localhost:3000/api/health
-```
-
-## Important Notes
-
-1. **No .env files in the image**: The production build does not include any `.env` files. All configuration must be provided via environment variables.
-
-2. **Build will fail without variables**: If any required variable is missing, the build will fail with an error. This is intentional to prevent deploying broken builds.
-
-3. **Secrets management**: Never commit secrets to version control. Use a secrets management system (Kubernetes Secrets, Docker Swarm Secrets, AWS Secrets Manager, etc.) in production.
-
-4. **NEXTAUTH_SECRET**: Generate a strong secret with:
-
-   ```bash
-   openssl rand -base64 32
-   ```
-
-5. **Network naming**: When using Docker Compose, services can reference each other by name (e.g., `redis`, `server`). In Kubernetes or other orchestrators, adjust URLs accordingly.
