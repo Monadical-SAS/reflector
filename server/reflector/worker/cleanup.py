@@ -95,7 +95,12 @@ async def cleanup_old_transcripts(
     session_factory, cutoff_date: datetime, stats: CleanupStats
 ):
     """Delete old anonymous transcripts and their associated recordings/meetings."""
-    query = select(transcripts).where(
+    query = select(
+        TranscriptModel.id,
+        TranscriptModel.meeting_id,
+        TranscriptModel.recording_id,
+        TranscriptModel.created_at,
+    ).where(
         (TranscriptModel.created_at < cutoff_date) & (TranscriptModel.user_id.is_(None))
     )
 
