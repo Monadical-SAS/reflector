@@ -1,6 +1,22 @@
+import asyncio
 import os
+import sys
 
 import pytest
+import pytest_asyncio
+from sqlalchemy.pool import NullPool
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Creates session-scoped event loop to prevent 'event loop is closed' errors"""
+    # Windows fix for Python 3.8+
+    if sys.platform.startswith("win") and sys.version_info[:2] >= (3, 8):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -89,7 +105,7 @@ except ImportError:
         }
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_database(postgres_service):
     """Setup database and run migrations"""
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -108,8 +124,12 @@ async def setup_database(postgres_service):
 
     settings.DATABASE_URL = DATABASE_URL
 
-    # Create engine and tables
-    engine = create_async_engine(DATABASE_URL, echo=False)
+    # Create engine with NullPool to prevent connection pooling issues
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        poolclass=NullPool,  # Critical: Prevents connection pool issues with asyncpg
+    )
 
     async with engine.begin() as conn:
         # Drop all tables first to ensure clean state
@@ -119,28 +139,60 @@ async def setup_database(postgres_service):
 
     yield
 
-    # Cleanup
+    # Cleanup - properly dispose of the engine
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def session(setup_database):
     """Provide a transactional database session for tests"""
-    import sqlalchemy.exc
+    from sqlalchemy.ext.asyncio import (
+        AsyncSession,
+        async_sessionmaker,
+        create_async_engine,
+    )
 
-    from reflector.db import get_session_factory
+    from reflector.settings import settings
 
-    async with get_session_factory()() as session:
-        # Start a transaction that we'll rollback at the end
-        transaction = await session.begin()
+    # Create a new engine with NullPool for this session
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=False,
+        poolclass=NullPool,  # Use NullPool to avoid connection caching issues
+    )
+
+    async_session_maker = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False,
+    )
+
+    async with async_session_maker() as session:
+        # Start a savepoint instead of a transaction to handle nested commits
+        await session.begin()
+
+        # Override commit to use flush instead in tests
+        original_commit = session.commit
+
+        async def flush_instead_of_commit():
+            await session.flush()
+
+        session.commit = flush_instead_of_commit
+
         try:
             yield session
+            await session.rollback()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
-            try:
-                await transaction.rollback()
-            except sqlalchemy.exc.ResourceClosedError:
-                # Transaction was already closed (e.g., by a commit), ignore
-                pass
+            session.commit = original_commit  # Restore original commit
+            await session.close()
+
+    # Properly dispose of the engine to close all connections
+    await engine.dispose()
 
 
 @pytest.fixture

@@ -117,6 +117,7 @@ DATABASE_URL = "postgresql+asyncpg://test_user:test_password@localhost:15432/ref
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 markers = [
     "model_api: tests for the unified model-serving HTTP API (backend- and hardware-agnostic)",
 ]
