@@ -15,11 +15,11 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.asynctask import asynctask
-from reflector.db import get_session_factory
 from reflector.db.base import MeetingModel, RecordingModel, TranscriptModel
 from reflector.db.transcripts import transcripts_controller
 from reflector.settings import settings
 from reflector.storage import get_recordings_storage
+from reflector.worker.session_decorator import with_session
 
 logger = structlog.get_logger(__name__)
 
@@ -161,8 +161,6 @@ async def cleanup_old_public_data(
     retry_kwargs={"max_retries": 3, "countdown": 300},
 )
 @asynctask
-async def cleanup_old_public_data_task(days: int | None = None):
-    session_factory = get_session_factory()
-    async with session_factory() as session:
-        async with session.begin():
-            await cleanup_old_public_data(session, days=days)
+@with_session
+async def cleanup_old_public_data_task(session: AsyncSession, days: int | None = None):
+    await cleanup_old_public_data(session, days=days)
