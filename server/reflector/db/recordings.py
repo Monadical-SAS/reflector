@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,8 @@ from reflector.utils import generate_uuid4
 
 
 class Recording(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     meeting_id: str
     url: str
@@ -53,7 +55,7 @@ class RecordingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Recording(**row.__dict__)
+        return Recording.model_validate(row)
 
     async def get_by_meeting_id(
         self, session: AsyncSession, meeting_id: str
@@ -63,7 +65,7 @@ class RecordingController:
         """
         query = select(RecordingModel).where(RecordingModel.meeting_id == meeting_id)
         result = await session.execute(query)
-        return [Recording(**row.__dict__) for row in result.scalars().all()]
+        return [Recording.model_validate(row) for row in result.scalars().all()]
 
     async def remove_by_id(self, session: AsyncSession, recording_id: str) -> None:
         """

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy import insert, select, update
+from sqlalchemy import delete, insert, select, update
 
 from reflector.db.base import (
     MeetingConsentModel,
@@ -310,11 +310,9 @@ async def test_meeting_consent_cascade_delete(db_session):
 
     # Delete the transcript and meeting
     await db_session.execute(
-        TranscriptModel.__table__.delete().where(TranscriptModel.id == transcript.id)
+        delete(TranscriptModel).where(TranscriptModel.id == transcript.id)
     )
-    await db_session.execute(
-        MeetingModel.__table__.delete().where(MeetingModel.id == meeting_id)
-    )
+    await db_session.execute(delete(MeetingModel).where(MeetingModel.id == meeting_id))
     await db_session.commit()
 
     # Verify consent entries were cascade deleted

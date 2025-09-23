@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,8 @@ from reflector.utils import generate_uuid4
 
 
 class CalendarEvent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     room_id: str
     ics_uid: str
@@ -50,7 +52,7 @@ class CalendarEventController:
         )
 
         result = await session.execute(query)
-        return [CalendarEvent(**row.__dict__) for row in result.scalars().all()]
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
 
     async def get_by_id(
         self, session: AsyncSession, event_id: str
@@ -60,7 +62,7 @@ class CalendarEventController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return CalendarEvent(**row.__dict__)
+        return CalendarEvent.model_validate(row)
 
     async def get_by_ics_uid(
         self, session: AsyncSession, room_id: str, ics_uid: str
@@ -75,7 +77,7 @@ class CalendarEventController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return CalendarEvent(**row.__dict__)
+        return CalendarEvent.model_validate(row)
 
     async def upsert(
         self, session: AsyncSession, event: CalendarEvent
@@ -137,7 +139,7 @@ class CalendarEventController:
         if not include_deleted:
             query = query.where(CalendarEventModel.is_deleted == False)
         result = await session.execute(query)
-        return [CalendarEvent(**row.__dict__) for row in result.scalars().all()]
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
 
     async def get_upcoming(
         self, session: AsyncSession, room_id: str, minutes_ahead: int = 120
@@ -159,7 +161,7 @@ class CalendarEventController:
         )
 
         result = await session.execute(query)
-        return [CalendarEvent(**row.__dict__) for row in result.scalars().all()]
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
 
     async def soft_delete_missing(
         self, session: AsyncSession, room_id: str, current_ics_uids: list[str]

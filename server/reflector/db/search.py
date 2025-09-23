@@ -369,12 +369,10 @@ class SearchController:
             rank_column = sqlalchemy.cast(1.0, sqlalchemy.Float).label("rank")
 
         columns = base_columns + [rank_column]
-        base_query = sqlalchemy.select(*columns).select_from(
-            TranscriptModel.__table__.join(
-                RoomModel.__table__,
-                TranscriptModel.room_id == RoomModel.id,
-                isouter=True,
-            )
+        base_query = (
+            sqlalchemy.select(*columns)
+            .select_from(TranscriptModel)
+            .outerjoin(RoomModel, TranscriptModel.room_id == RoomModel.id)
         )
 
         if params.query_text is not None:

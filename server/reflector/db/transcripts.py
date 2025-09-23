@@ -103,6 +103,8 @@ class TranscriptParticipant(BaseModel):
 class Transcript(BaseModel):
     """Full transcript model with all fields."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
     name: str = Field(default_factory=generate_transcript_name)
@@ -317,8 +319,9 @@ class TranscriptController:
             query = query.where(TranscriptModel.title.ilike(f"%{search_term}%"))
 
         # Exclude heavy JSON columns from list queries
+        # Get all ORM column attributes except excluded ones
         transcript_columns = [
-            col
+            getattr(TranscriptModel, col.name)
             for col in TranscriptModel.__table__.c
             if col.name not in exclude_columns
         ]
@@ -361,7 +364,7 @@ class TranscriptController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Transcript(**row.__dict__)
+        return Transcript.model_validate(row)
 
     async def get_by_recording_id(
         self, session: AsyncSession, recording_id: str, **kwargs
@@ -378,7 +381,7 @@ class TranscriptController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Transcript(**row.__dict__)
+        return Transcript.model_validate(row)
 
     async def get_by_room_id(
         self, session: AsyncSession, room_id: str, **kwargs
@@ -396,7 +399,9 @@ class TranscriptController:
                 field = field.desc()
             query = query.order_by(field)
         results = await session.execute(query)
-        return [Transcript(**dict(row)) for row in results.mappings().all()]
+        return [
+            Transcript.model_validate(dict(row)) for row in results.mappings().all()
+        ]
 
     async def get_by_id_for_http(
         self,
@@ -420,7 +425,7 @@ class TranscriptController:
             raise HTTPException(status_code=404, detail="Transcript not found")
 
         # if the transcript is anonymous, share mode is not checked
-        transcript = Transcript(**row.__dict__)
+        transcript = Transcript.model_validate(row)
         if transcript.user_id is None:
             return transcript
 

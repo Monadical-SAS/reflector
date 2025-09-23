@@ -4,7 +4,7 @@ from sqlite3 import IntegrityError
 from typing import Literal
 
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import or_
@@ -14,6 +14,8 @@ from reflector.utils import generate_uuid4
 
 
 class Room(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     name: str
     user_id: str
@@ -70,7 +72,7 @@ class RoomController:
             return query
 
         result = await session.execute(query)
-        return [Room(**row.__dict__) for row in result.scalars().all()]
+        return [Room.model_validate(row) for row in result.scalars().all()]
 
     async def add(
         self,
@@ -155,7 +157,7 @@ class RoomController:
         row = result.scalars().first()
         if not row:
             return None
-        return Room(**row.__dict__)
+        return Room.model_validate(row)
 
     async def get_by_name(
         self, session: AsyncSession, room_name: str, **kwargs
@@ -170,7 +172,7 @@ class RoomController:
         row = result.scalars().first()
         if not row:
             return None
-        return Room(**row.__dict__)
+        return Room.model_validate(row)
 
     async def get_by_id_for_http(
         self, session: AsyncSession, meeting_id: str, user_id: str | None
@@ -186,7 +188,7 @@ class RoomController:
         if not row:
             raise HTTPException(status_code=404, detail="Room not found")
 
-        room = Room(**row.__dict__)
+        room = Room.model_validate(row)
 
         return room
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,8 @@ from reflector.utils import generate_uuid4
 
 
 class MeetingConsent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     meeting_id: str
     user_id: str | None = None
@@ -20,6 +22,8 @@ class MeetingConsent(BaseModel):
 
 
 class Meeting(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     room_name: str
     room_url: str
@@ -76,7 +80,7 @@ class MeetingController:
     async def get_all_active(self, session: AsyncSession) -> list[Meeting]:
         query = select(MeetingModel).where(MeetingModel.is_active)
         result = await session.execute(query)
-        return [Meeting(**row.__dict__) for row in result.scalars().all()]
+        return [Meeting.model_validate(row) for row in result.scalars().all()]
 
     async def get_by_room_name(
         self,
@@ -96,7 +100,7 @@ class MeetingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Meeting(**row.__dict__)
+        return Meeting.model_validate(row)
 
     async def get_active(
         self, session: AsyncSession, room: Room, current_time: datetime
@@ -120,7 +124,7 @@ class MeetingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Meeting(**row.__dict__)
+        return Meeting.model_validate(row)
 
     async def get_all_active_for_room(
         self, session: AsyncSession, room: Room, current_time: datetime
@@ -137,7 +141,7 @@ class MeetingController:
             .order_by(MeetingModel.end_date.desc())
         )
         result = await session.execute(query)
-        return [Meeting(**row.__dict__) for row in result.scalars().all()]
+        return [Meeting.model_validate(row) for row in result.scalars().all()]
 
     async def get_active_by_calendar_event(
         self,
@@ -161,7 +165,7 @@ class MeetingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Meeting(**row.__dict__)
+        return Meeting.model_validate(row)
 
     async def get_by_id(
         self, session: AsyncSession, meeting_id: str, **kwargs
@@ -171,7 +175,7 @@ class MeetingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Meeting(**row.__dict__)
+        return Meeting.model_validate(row)
 
     async def get_by_calendar_event(
         self, session: AsyncSession, calendar_event_id: str
@@ -183,7 +187,7 @@ class MeetingController:
         row = result.scalar_one_or_none()
         if not row:
             return None
-        return Meeting(**row.__dict__)
+        return Meeting.model_validate(row)
 
     async def update_meeting(self, session: AsyncSession, meeting_id: str, **kwargs):
         query = (
@@ -201,7 +205,7 @@ class MeetingConsentController:
             MeetingConsentModel.meeting_id == meeting_id
         )
         result = await session.execute(query)
-        return [MeetingConsent(**row.__dict__) for row in result.scalars().all()]
+        return [MeetingConsent.model_validate(row) for row in result.scalars().all()]
 
     async def get_by_meeting_and_user(
         self, session: AsyncSession, meeting_id: str, user_id: str
@@ -217,7 +221,7 @@ class MeetingConsentController:
         row = result.scalar_one_or_none()
         if row is None:
             return None
-        return MeetingConsent(**row.__dict__)
+        return MeetingConsent.model_validate(row)
 
     async def upsert(
         self, session: AsyncSession, consent: MeetingConsent
