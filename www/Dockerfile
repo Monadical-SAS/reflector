@@ -18,33 +18,14 @@ WORKDIR /app
 COPY --from=deps --link /app/node_modules ./node_modules
 COPY --link  . .
 
-ARG SITE_URL
-ARG API_URL
-ARG WEBSOCKET_URL
-ARG NEXTAUTH_URL
-ARG NEXTAUTH_SECRET
-ARG AUTHENTIK_ISSUER
-ARG AUTHENTIK_CLIENT_ID
-ARG AUTHENTIK_CLIENT_SECRET
-ARG AUTHENTIK_REFRESH_TOKEN_URL
-
-ENV SITE_URL=$SITE_URL
-ENV API_URL=$API_URL
-ENV WEBSOCKET_URL=$WEBSOCKET_URL
-ENV NEXTAUTH_URL=$NEXTAUTH_URL
-ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-ENV AUTHENTIK_ISSUER=$AUTHENTIK_ISSUER
-ENV AUTHENTIK_CLIENT_ID=$AUTHENTIK_CLIENT_ID
-ENV AUTHENTIK_CLIENT_SECRET=$AUTHENTIK_CLIENT_SECRET
-ENV AUTHENTIK_REFRESH_TOKEN_URL=$AUTHENTIK_REFRESH_TOKEN_URL
-
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-RUN pnpm build
+# next.js has the feature of excluding build step planned https://github.com/vercel/next.js/discussions/46544
+RUN pnpm build-production
 # RUN npm run build
 
 # Production image, copy all the files and run next
@@ -71,10 +52,6 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT 3000
-ENV HOSTNAME 0.0.0.0
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:3000/api/health', (r) => {r.resume(); process.exit(r.statusCode === 200 ? 0 : 1)})" \
-  || exit 1
+ENV HOSTNAME localhost
 
 CMD ["node", "server.js"]

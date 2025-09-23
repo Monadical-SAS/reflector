@@ -1,9 +1,29 @@
-import { EnvFeaturePartial, FEATURE_ENV_NAMES } from "./features";
 import {
   assertExists,
   assertExistsAndNonEmptyString,
   NonEmptyString,
+  parseNonEmptyString,
 } from "./utils";
+import { isBuildPhase } from "./next";
+import { getNextEnvVar } from "./nextBuild";
+
+export const FEATURE_REQUIRE_LOGIN_ENV_NAME = "FEATURE_REQUIRE_LOGIN" as const;
+export const FEATURE_PRIVACY_ENV_NAME = "FEATURE_PRIVACY" as const;
+export const FEATURE_BROWSE_ENV_NAME = "FEATURE_BROWSE" as const;
+export const FEATURE_SEND_TO_ZULIP_ENV_NAME = "FEATURE_SEND_TO_ZULIP" as const;
+export const FEATURE_ROOMS_ENV_NAME = "FEATURE_ROOMS" as const;
+
+const FEATURE_ENV_NAMES = [
+  FEATURE_REQUIRE_LOGIN_ENV_NAME,
+  FEATURE_PRIVACY_ENV_NAME,
+  FEATURE_BROWSE_ENV_NAME,
+  FEATURE_SEND_TO_ZULIP_ENV_NAME,
+  FEATURE_ROOMS_ENV_NAME,
+] as const;
+
+export type EnvFeaturePartial = {
+  [key in (typeof FEATURE_ENV_NAMES)[number]]: boolean;
+};
 
 // CONTRACT: isomorphic with JSON.stringify
 export type ClientEnvCommon = EnvFeaturePartial & {
@@ -42,19 +62,24 @@ export const getClientEnvServer = (): ClientEnvCommon => {
     );
   }
   if (clientEnv) return clientEnv;
+
+  const features = FEATURE_ENV_NAMES.reduce((acc, x) => {
+    acc[x] = parseBooleanString(process.env[x]);
+    return acc;
+  }, {} as EnvFeaturePartial);
+
+  if (isBuildPhase) {
+    return {
+      API_URL: getNextEnvVar("API_URL"),
+      WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+      ...features,
+    };
+  }
+
   clientEnv = {
-    API_URL: assertExistsAndNonEmptyString(
-      process.env.API_URL,
-      "API_URL is missing",
-    ),
-    WEBSOCKET_URL: assertExistsAndNonEmptyString(
-      process.env.WEBSOCKET_URL,
-      "WEBSOCKET_URL is missing",
-    ),
-    ...FEATURE_ENV_NAMES.reduce((acc, x) => {
-      acc[x] = parseBooleanString(process.env[x]);
-      return acc;
-    }, {} as EnvFeaturePartial),
+    API_URL: getNextEnvVar("API_URL"),
+    WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+    ...features,
   };
   return clientEnv;
 };

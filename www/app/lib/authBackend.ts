@@ -20,23 +20,23 @@ import {
 import { tokenCacheRedis, redlock } from "./redisClient";
 import { sequenceThrows } from "./errorUtils";
 import { featureEnabled } from "./features";
+import { getNextEnvVar } from "./nextBuild";
 
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
-const getAuthentikClientId = () =>
-  assertExistsAndNonEmptyString(
-    process.env.AUTHENTIK_CLIENT_ID,
-    "AUTHENTIK_CLIENT_ID required",
-  );
-const getAuthentikClientSecret = () =>
-  assertExistsAndNonEmptyString(
-    process.env.AUTHENTIK_CLIENT_SECRET,
-    "AUTHENTIK_CLIENT_SECRET required",
-  );
+const getAuthentikClientId = () => getNextEnvVar("AUTHENTIK_CLIENT_ID");
+const getAuthentikClientSecret = () => getNextEnvVar("AUTHENTIK_CLIENT_SECRET");
 const getAuthentikRefreshTokenUrl = () =>
-  assertExistsAndNonEmptyString(
-    process.env.AUTHENTIK_REFRESH_TOKEN_URL,
-    "AUTHENTIK_REFRESH_TOKEN_URL required",
-  );
+  getNextEnvVar("AUTHENTIK_REFRESH_TOKEN_URL");
+
+const getAuthentikIssuer = () => {
+  const stringUrl = getNextEnvVar("AUTHENTIK_ISSUER");
+  try {
+    new URL(stringUrl);
+  } catch (e) {
+    throw new Error("AUTHENTIK_ISSUER is not a valid URL: " + stringUrl);
+  }
+  return stringUrl;
+};
 
 export const authOptions = (): AuthOptions =>
   featureEnabled("requireLogin")
@@ -44,16 +44,17 @@ export const authOptions = (): AuthOptions =>
         providers: [
           AuthentikProvider({
             ...(() => {
-              const [clientId, clientSecret] = sequenceThrows(
+              const [clientId, clientSecret, issuer] = sequenceThrows(
                 getAuthentikClientId,
                 getAuthentikClientSecret,
+                getAuthentikIssuer,
               );
               return {
                 clientId,
                 clientSecret,
+                issuer,
               };
             })(),
-            issuer: process.env.AUTHENTIK_ISSUER,
             authorization: {
               params: {
                 scope: "openid email profile offline_access",

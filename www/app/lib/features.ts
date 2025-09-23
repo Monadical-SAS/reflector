@@ -1,19 +1,10 @@
-import { getClientEnv } from "./clientEnv";
-
-export const FEATURE_ENV_NAMES = [
-  "FEATURE_REQUIRE_LOGIN",
-  "FEATURE_PRIVACY",
-  "FEATURE_BROWSE",
-  "FEATURE_SEND_TO_ZULIP",
-  "FEATURE_ROOMS",
-] as const;
-
-export type FeatureEnvName = (typeof FEATURE_ENV_NAMES)[number];
-
-// CONTRACT: isomorphic with JSON.stringify
-export type EnvFeaturePartial = {
-  [f in FeatureEnvName]: boolean | null;
-};
+import {
+  FEATURE_BROWSE_ENV_NAME,
+  FEATURE_PRIVACY_ENV_NAME,
+  FEATURE_REQUIRE_LOGIN_ENV_NAME,
+  FEATURE_ROOMS_ENV_NAME,
+  FEATURE_SEND_TO_ZULIP_ENV_NAME,
+} from "./clientEnv";
 
 export const FEATURES = [
   "requireLogin",
@@ -35,27 +26,37 @@ export const DEFAULT_FEATURES: Features = {
   rooms: true,
 } as const;
 
-export const ENV_TO_FEATURE: {
-  [k in FeatureEnvName]: FeatureName;
-} = {
-  FEATURE_REQUIRE_LOGIN: "requireLogin",
-  FEATURE_PRIVACY: "privacy",
-  FEATURE_BROWSE: "browse",
-  FEATURE_SEND_TO_ZULIP: "sendToZulip",
-  FEATURE_ROOMS: "rooms",
-} as const;
+function parseBooleanEnv(
+  value: string | undefined,
+  defaultValue: boolean = false,
+): boolean {
+  if (!value) return defaultValue;
+  return value.toLowerCase() === "true";
+}
 
-export const FEATURE_TO_ENV: {
-  [k in FeatureName]: FeatureEnvName;
-} = {
-  requireLogin: "FEATURE_REQUIRE_LOGIN",
-  privacy: "FEATURE_PRIVACY",
-  browse: "FEATURE_BROWSE",
-  sendToZulip: "FEATURE_SEND_TO_ZULIP",
-  rooms: "FEATURE_ROOMS",
+const features: Features = {
+  requireLogin: parseBooleanEnv(
+    process.env[FEATURE_REQUIRE_LOGIN_ENV_NAME],
+    DEFAULT_FEATURES.requireLogin,
+  ),
+  privacy: parseBooleanEnv(
+    process.env[FEATURE_PRIVACY_ENV_NAME],
+    DEFAULT_FEATURES.privacy,
+  ),
+  browse: parseBooleanEnv(
+    process.env[FEATURE_BROWSE_ENV_NAME],
+    DEFAULT_FEATURES.browse,
+  ),
+  sendToZulip: parseBooleanEnv(
+    process.env[FEATURE_SEND_TO_ZULIP_ENV_NAME],
+    DEFAULT_FEATURES.sendToZulip,
+  ),
+  rooms: parseBooleanEnv(
+    process.env[FEATURE_ROOMS_ENV_NAME],
+    DEFAULT_FEATURES.rooms,
+  ),
 };
 
 export const featureEnabled = (featureName: FeatureName): boolean => {
-  const features = getClientEnv();
-  return features[FEATURE_TO_ENV[featureName]] || DEFAULT_FEATURES[featureName];
+  return features[featureName];
 };

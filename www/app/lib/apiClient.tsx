@@ -3,7 +3,7 @@
 import createClient from "openapi-fetch";
 import type { paths } from "../reflector-api";
 import createFetchClient from "openapi-react-query";
-import { assertExistsAndNonEmptyString, parseNonEmptyString } from "./utils";
+import { parseNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
 import { getSession } from "next-auth/react";
 import { assertExtendedToken } from "./types";
@@ -13,9 +13,9 @@ export const API_URL = !isBuildPhase
   ? getClientEnv().API_URL
   : "http://localhost";
 
-// TODO decide strict validation or not
-export const WEBSOCKET_URL =
-  getClientEnv().WEBSOCKET_URL || "ws://127.0.0.1:1250";
+export const WEBSOCKET_URL = !isBuildPhase
+  ? getClientEnv().WEBSOCKET_URL || "ws://127.0.0.1:1250"
+  : "ws://localhost";
 
 export const client = createClient<paths>({
   baseUrl: API_URL,
@@ -42,7 +42,7 @@ client.use({
     if (token !== null) {
       request.headers.set(
         "Authorization",
-        `Bearer ${parseNonEmptyString(token)}`,
+        `Bearer ${parseNonEmptyString(token, true, "panic! token is required")}`,
       );
     }
     // XXX Only set Content-Type if not already set (FormData will set its own boundary)

@@ -168,6 +168,13 @@ You can manually process an audio file by calling the process tool:
 uv run python -m reflector.tools.process path/to/audio.wav
 ```
 
+## Build-time env variables
+
+Next.js projects are more used to NEXT_PUBLIC_ prefixed buildtime vars. We don't have those for the reason we need to serve a ccustomizable prebuild docker container.
+
+Instead, all the variables are runtime. Variables needed to the frontend are served to the frontend app at initial render.
+
+It also means there's no static prebuild and no static files to serve for js/html.
 
 ## Feature Flags
 

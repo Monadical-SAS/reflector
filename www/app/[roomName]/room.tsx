@@ -261,7 +261,11 @@ export default function Room(details: RoomDetails) {
   const params = use(details.params);
   const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
-  const roomName = parseNonEmptyString(params.roomName);
+  const roomName = parseNonEmptyString(
+    params.roomName,
+    true,
+    "panic! params.roomName is required",
+  );
   const router = useRouter();
   const auth = useAuth();
   const status = auth.status;
@@ -308,7 +312,14 @@ export default function Room(details: RoomDetails) {
 
   const handleMeetingSelect = (selectedMeeting: Meeting) => {
     router.push(
-      roomMeetingUrl(roomName, parseNonEmptyString(selectedMeeting.id)),
+      roomMeetingUrl(
+        roomName,
+        parseNonEmptyString(
+          selectedMeeting.id,
+          true,
+          "panic! selectedMeeting.id is required",
+        ),
+      ),
     );
   };
 
@@ -426,10 +437,7 @@ export default function Room(details: RoomDetails) {
             recordingTypeRequiresConsent(recordingType) &&
             meetingId && (
               <ConsentDialogButton
-                meetingId={assertExistsAndNonEmptyString(
-                  meetingId,
-                  "panic! no meetingId",
-                )}
+                meetingId={assertExistsAndNonEmptyString(meetingId)}
                 wherebyRef={wherebyRef}
               />
             )}

@@ -3,10 +3,12 @@ import { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
+import { RecordingConsentProvider } from "./recordingConsentContext";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
-import { assertExistsAndNonEmptyString } from "./lib/utils";
-import { getClientEnv } from "./lib/clientEnv";
+import { getNextEnvVar } from "./lib/nextBuild";
+
+export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -21,10 +23,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-const SITE_URL = assertExistsAndNonEmptyString(
-  process.env.SITE_URL,
-  "SITE_URL required",
-);
+const SITE_URL = getNextEnvVar("SITE_URL");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -67,8 +66,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
-const env = getClientEnv();
-
 export default async function RootLayout({
   children,
 }: {
@@ -76,16 +73,15 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
-      <body
-        className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}
-        data-env={JSON.stringify(env)}
-      >
-        <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-          <ErrorProvider>
-            <ErrorMessage />
-            <Providers>{children}</Providers>
-          </ErrorProvider>
-        </ErrorBoundary>
+      <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
+        <RecordingConsentProvider>
+          <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+            <ErrorProvider>
+              <ErrorMessage />
+              <Providers>{children}</Providers>
+            </ErrorProvider>
+          </ErrorBoundary>
+        </RecordingConsentProvider>
       </body>
     </html>
   );
