@@ -111,11 +111,6 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
     settings.DATA_DIR = DATA_DIR
 
 
-@pytest.fixture(scope="session")
-def celery_includes():
-    return ["reflector.pipelines.main_live_pipeline"]
-
-
 @pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
@@ -164,7 +159,7 @@ async def test_transcript_rtc_and_websocket(
             except Exception as e:
                 print(f"Test websocket: EXCEPTION {e}")
             finally:
-                ws.close()
+                await ws.close()
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
