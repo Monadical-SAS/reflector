@@ -115,8 +115,7 @@ async def test_cleanup_deletes_associated_meeting_and_recording(session):
     await session.execute(
         insert(MeetingModel).values(
             id=meeting_id,
-            transcript_id=old_transcript.id,
-            room_id="test-room",
+            room_id=None,
             room_name="test-room",
             room_url="https://example.com/room",
             host_room_url="https://example.com/room-host",
@@ -136,7 +135,6 @@ async def test_cleanup_deletes_associated_meeting_and_recording(session):
     await session.execute(
         insert(RecordingModel).values(
             id=recording_id,
-            transcript_id=old_transcript.id,
             meeting_id=meeting_id,
             url="https://example.com/recording.mp4",
             object_key="recordings/test.mp4",
@@ -258,8 +256,7 @@ async def test_meeting_consent_cascade_delete(session):
     await session.execute(
         insert(MeetingModel).values(
             id=meeting_id,
-            transcript_id=transcript.id,
-            room_id="test-room",
+            room_id=None,
             room_name="test-room",
             room_url="https://example.com/room",
             host_room_url="https://example.com/room-host",
@@ -275,19 +272,31 @@ async def test_meeting_consent_cascade_delete(session):
     )
     await session.commit()
 
+    # Update transcript with meeting_id
+    await session.execute(
+        update(TranscriptModel)
+        .where(TranscriptModel.id == transcript.id)
+        .values(meeting_id=meeting_id)
+    )
+    await session.commit()
+
     # Create meeting_consent entries
     await session.execute(
         insert(MeetingConsentModel).values(
+            id="consent-1",
             meeting_id=meeting_id,
-            user_name="User 1",
+            user_id="user-1",
             consent_given=True,
+            consent_timestamp=old_date,
         )
     )
     await session.execute(
         insert(MeetingConsentModel).values(
+            id="consent-2",
             meeting_id=meeting_id,
-            user_name="User 2",
+            user_id="user-2",
             consent_given=True,
+            consent_timestamp=old_date,
         )
     )
     await session.commit()

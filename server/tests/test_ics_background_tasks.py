@@ -30,6 +30,8 @@ async def test_sync_room_ics_task(session):
         ics_url="https://calendar.example.com/task.ics",
         ics_enabled=True,
     )
+    # Commit to make room visible to ICS service's separate session
+    await session.commit()
 
     cal = Calendar()
     event = Event()
@@ -132,16 +134,11 @@ async def test_sync_all_ics_calendars(session):
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
         # Directly call the sync_all logic without the Celery wrapper
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
 
-        for room_data in all_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
+        for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room_id)
+                sync_room_ics.delay(room.id)
 
         assert mock_delay.call_count == 2
         called_room_ids = [call.args[0] for call in mock_delay.call_args_list]
@@ -211,22 +208,18 @@ async def test_sync_respects_fetch_interval(session):
     )
 
     await rooms_controller.update(
+        session,
         room2,
         {"ics_last_sync": now - timedelta(seconds=100)},
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
         # Test the sync logic without the Celery wrapper
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
 
-        for room_data in all_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
+        for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room_id)
+                sync_room_ics.delay(room.id)
 
         assert mock_delay.call_count == 1
         assert mock_delay.call_args[0][0] == room2.id

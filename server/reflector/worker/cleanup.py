@@ -78,7 +78,7 @@ async def delete_single_transcript(
                             "Deleted associated recording", recording_id=recording_id
                         )
 
-            await transcripts_controller.remove_by_id(transcript_id)
+            await transcripts_controller.remove_by_id(session, transcript_id)
             stats["transcripts_deleted"] += 1
             logger.info(
                 "Deleted transcript",

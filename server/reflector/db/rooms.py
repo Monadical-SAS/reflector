@@ -70,7 +70,7 @@ class RoomController:
             return query
 
         result = await session.execute(query)
-        return [Room(**row) for row in result.mappings().all()]
+        return [Room(**row.__dict__) for row in result.scalars().all()]
 
     async def add(
         self,
@@ -117,7 +117,7 @@ class RoomController:
         new_room = RoomModel(**room.model_dump())
         session.add(new_room)
         try:
-            await session.commit()
+            await session.flush()
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
         return room
@@ -134,7 +134,7 @@ class RoomController:
         query = update(RoomModel).where(RoomModel.id == room.id).values(**values)
         try:
             await session.execute(query)
-            await session.commit()
+            await session.flush()
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
 
@@ -152,10 +152,10 @@ class RoomController:
         if "user_id" in kwargs:
             query = query.where(RoomModel.user_id == kwargs["user_id"])
         result = await session.execute(query)
-        row = result.mappings().first()
+        row = result.scalars().first()
         if not row:
             return None
-        return Room(**row)
+        return Room(**row.__dict__)
 
     async def get_by_name(
         self, session: AsyncSession, room_name: str, **kwargs
@@ -167,10 +167,10 @@ class RoomController:
         if "user_id" in kwargs:
             query = query.where(RoomModel.user_id == kwargs["user_id"])
         result = await session.execute(query)
-        row = result.mappings().first()
+        row = result.scalars().first()
         if not row:
             return None
-        return Room(**row)
+        return Room(**row.__dict__)
 
     async def get_by_id_for_http(
         self, session: AsyncSession, meeting_id: str, user_id: str | None
@@ -182,11 +182,11 @@ class RoomController:
         """
         query = select(RoomModel).where(RoomModel.id == meeting_id)
         result = await session.execute(query)
-        row = result.mappings().first()
+        row = result.scalars().first()
         if not row:
             raise HTTPException(status_code=404, detail="Room not found")
 
-        room = Room(**row)
+        room = Room(**row.__dict__)
 
         return room
 
@@ -195,8 +195,8 @@ class RoomController:
             RoomModel.ics_enabled == True, RoomModel.ics_url != None
         )
         result = await session.execute(query)
-        results = result.mappings().all()
-        return [Room(**r) for r in results]
+        results = result.scalars().all()
+        return [Room(**row.__dict__) for row in results]
 
     async def remove_by_id(
         self,
@@ -214,7 +214,7 @@ class RoomController:
             return
         query = delete(RoomModel).where(RoomModel.id == room_id)
         await session.execute(query)
-        await session.commit()
+        await session.flush()
 
 
 rooms_controller = RoomController()

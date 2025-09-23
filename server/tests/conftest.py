@@ -126,11 +126,21 @@ async def setup_database(postgres_service):
 @pytest.fixture
 async def session(setup_database):
     """Provide a transactional database session for tests"""
+    import sqlalchemy.exc
+
     from reflector.db import get_session_factory
 
     async with get_session_factory()() as session:
-        yield session
-        await session.rollback()
+        # Start a transaction that we'll rollback at the end
+        transaction = await session.begin()
+        try:
+            yield session
+        finally:
+            try:
+                await transaction.rollback()
+            except sqlalchemy.exc.ResourceClosedError:
+                # Transaction was already closed (e.g., by a commit), ignore
+                pass
 
 
 @pytest.fixture

@@ -369,7 +369,7 @@ class SearchController:
             rank_column = sqlalchemy.cast(1.0, sqlalchemy.Float).label("rank")
 
         columns = base_columns + [rank_column]
-        base_query = sqlalchemy.select(columns).select_from(
+        base_query = sqlalchemy.select(*columns).select_from(
             TranscriptModel.__table__.join(
                 RoomModel.__table__,
                 TranscriptModel.room_id == RoomModel.id,
@@ -409,7 +409,7 @@ class SearchController:
         result = await session.execute(query)
         rs = result.mappings().all()
 
-        count_query = sqlalchemy.select([sqlalchemy.func.count()]).select_from(
+        count_query = sqlalchemy.select(sqlalchemy.func.count()).select_from(
             base_query.alias("search_results")
         )
         count_result = await session.execute(count_query)
