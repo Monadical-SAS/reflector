@@ -1,5 +1,5 @@
 # Production Docker Compose configuration for Frontend
-# Usage: docker compose -f compose.prod.yml up -d
+# Usage: docker compose -f docker-compose.prod.yml up -d
 
 services:
   web:
@@ -18,22 +18,11 @@ services:
       - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
       - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
       - AUTHENTIK_REFRESH_TOKEN_URL=${AUTHENTIK_REFRESH_TOKEN_URL}
-      - FEATURE_REQUIRE_LOGIN=${FEATURE_REQUIRE_LOGIN:-false}
-      - FEATURE_PRIVACY=${FEATURE_PRIVACY:-true}
-      - FEATURE_BROWSE=${FEATURE_BROWSE:-true}
-      - FEATURE_SEND_TO_ZULIP=${FEATURE_SEND_TO_ZULIP:-false}
-      - FEATURE_ROOMS=${FEATURE_ROOMS:-true}
       - SENTRY_DSN=${SENTRY_DSN}
       - SENTRY_IGNORE_API_RESOLUTION_ERROR=${SENTRY_IGNORE_API_RESOLUTION_ERROR:-1}
     depends_on:
       - redis
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   redis:
     image: redis:7.2-alpine
@@ -48,8 +37,3 @@ services:
 
 volumes:
   redis_data:
-
-networks:
-  default:
-    name: reflector-prod
-    attachable: true

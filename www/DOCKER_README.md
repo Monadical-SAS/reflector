@@ -43,7 +43,7 @@ AUTH_CALLBACK_URL          # OAuth callback URL
 1. Build the image (no environment variables needed):
 
 ```bash
-docker compose -f compose.prod.yml build
+docker compose -f docker-compose.prod.yml build
 ```
 
 2. Create a `.env` file with runtime variables
@@ -51,7 +51,7 @@ docker compose -f compose.prod.yml build
 3. Run with environment variables:
 
 ```bash
-docker compose -f compose.prod.yml --env-file .env up -d
+docker compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
 ### Option 2: Using Docker CLI
