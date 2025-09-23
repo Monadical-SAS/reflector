@@ -11,11 +11,11 @@ from reflector.db.rooms import rooms_controller
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_create(db_db_session):
+async def test_calendar_event_create(db_session):
     """Test creating a calendar event."""
     # Create a room first
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="test-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -45,7 +45,7 @@ async def test_calendar_event_create(db_db_session):
     )
 
     # Save event
-    saved_event = await calendar_events_controller.upsert(session, event)
+    saved_event = await calendar_events_controller.upsert(db_session, event)
 
     assert saved_event.ics_uid == "test-event-123"
     assert saved_event.title == "Team Meeting"
@@ -54,11 +54,11 @@ async def test_calendar_event_create(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_by_room(db_db_session):
+async def test_calendar_event_get_by_room(db_session):
     """Test getting calendar events for a room."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="events-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -82,10 +82,10 @@ async def test_calendar_event_get_by_room(db_db_session):
             start_time=now + timedelta(hours=i),
             end_time=now + timedelta(hours=i + 1),
         )
-        await calendar_events_controller.upsert(session, event)
+        await calendar_events_controller.upsert(db_session, event)
 
     # Get events for room
-    events = await calendar_events_controller.get_by_room(session, room.id)
+    events = await calendar_events_controller.get_by_room(db_session, room.id)
 
     assert len(events) == 3
     assert all(e.room_id == room.id for e in events)
@@ -95,11 +95,11 @@ async def test_calendar_event_get_by_room(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_upcoming(db_db_session):
+async def test_calendar_event_get_upcoming(db_session):
     """Test getting upcoming events within time window."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="upcoming-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -123,7 +123,7 @@ async def test_calendar_event_get_upcoming(db_db_session):
         start_time=now - timedelta(hours=2),
         end_time=now - timedelta(hours=1),
     )
-    await calendar_events_controller.upsert(session, past_event)
+    await calendar_events_controller.upsert(db_session, past_event)
 
     # Upcoming event within 30 minutes
     upcoming_event = CalendarEvent(
@@ -133,7 +133,7 @@ async def test_calendar_event_get_upcoming(db_db_session):
         start_time=now + timedelta(minutes=15),
         end_time=now + timedelta(minutes=45),
     )
-    await calendar_events_controller.upsert(session, upcoming_event)
+    await calendar_events_controller.upsert(db_session, upcoming_event)
 
     # Currently happening event (started 10 minutes ago, ends in 20 minutes)
     current_event = CalendarEvent(
@@ -143,7 +143,7 @@ async def test_calendar_event_get_upcoming(db_db_session):
         start_time=now - timedelta(minutes=10),
         end_time=now + timedelta(minutes=20),
     )
-    await calendar_events_controller.upsert(session, current_event)
+    await calendar_events_controller.upsert(db_session, current_event)
 
     # Future event beyond 30 minutes
     future_event = CalendarEvent(
@@ -153,10 +153,10 @@ async def test_calendar_event_get_upcoming(db_db_session):
         start_time=now + timedelta(hours=2),
         end_time=now + timedelta(hours=3),
     )
-    await calendar_events_controller.upsert(session, future_event)
+    await calendar_events_controller.upsert(db_session, future_event)
 
     # Get upcoming events (default 120 minutes) - should include current, upcoming, and future
-    upcoming = await calendar_events_controller.get_upcoming(session, room.id)
+    upcoming = await calendar_events_controller.get_upcoming(db_session, room.id)
 
     assert len(upcoming) == 3
     # Events should be sorted by start_time (current event first, then upcoming, then future)
@@ -166,7 +166,7 @@ async def test_calendar_event_get_upcoming(db_db_session):
 
     # Get upcoming with custom window
     upcoming_extended = await calendar_events_controller.get_upcoming(
-        session, room.id, minutes_ahead=180
+        db_session, room.id, minutes_ahead=180
     )
 
     assert len(upcoming_extended) == 3
@@ -177,11 +177,11 @@ async def test_calendar_event_get_upcoming(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_session):
+async def test_calendar_event_get_upcoming_includes_currently_happening(db_session):
     """Test that get_upcoming includes currently happening events but excludes ended events."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="current-happening-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -204,7 +204,7 @@ async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_se
         start_time=now - timedelta(hours=2),
         end_time=now - timedelta(minutes=30),
     )
-    await calendar_events_controller.upsert(session, past_ended_event)
+    await calendar_events_controller.upsert(db_session, past_ended_event)
 
     # Event currently happening (started 10 minutes ago, ends in 20 minutes) - SHOULD be included
     currently_happening_event = CalendarEvent(
@@ -214,7 +214,7 @@ async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_se
         start_time=now - timedelta(minutes=10),
         end_time=now + timedelta(minutes=20),
     )
-    await calendar_events_controller.upsert(session, currently_happening_event)
+    await calendar_events_controller.upsert(db_session, currently_happening_event)
 
     # Event starting soon (in 5 minutes) - SHOULD be included
     upcoming_soon_event = CalendarEvent(
@@ -224,11 +224,11 @@ async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_se
         start_time=now + timedelta(minutes=5),
         end_time=now + timedelta(minutes=35),
     )
-    await calendar_events_controller.upsert(session, upcoming_soon_event)
+    await calendar_events_controller.upsert(db_session, upcoming_soon_event)
 
     # Get upcoming events
     upcoming = await calendar_events_controller.get_upcoming(
-        session, room.id, minutes_ahead=30
+        db_session, room.id, minutes_ahead=30
     )
 
     # Should only include currently happening and upcoming soon events
@@ -238,11 +238,11 @@ async def test_calendar_event_get_upcoming_includes_currently_happening(db_db_se
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_upsert(db_db_session):
+async def test_calendar_event_upsert(db_session):
     """Test upserting (create/update) calendar events."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="upsert-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -266,30 +266,30 @@ async def test_calendar_event_upsert(db_db_session):
         end_time=now + timedelta(hours=1),
     )
 
-    created = await calendar_events_controller.upsert(session, event)
+    created = await calendar_events_controller.upsert(db_session, event)
     assert created.title == "Original Title"
 
     # Update existing event
     event.title = "Updated Title"
     event.description = "Added description"
 
-    updated = await calendar_events_controller.upsert(session, event)
+    updated = await calendar_events_controller.upsert(db_session, event)
     assert updated.title == "Updated Title"
     assert updated.description == "Added description"
     assert updated.ics_uid == "upsert-test"
 
     # Verify only one event exists
-    events = await calendar_events_controller.get_by_room(session, room.id)
+    events = await calendar_events_controller.get_by_room(db_session, room.id)
     assert len(events) == 1
     assert events[0].title == "Updated Title"
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_soft_delete(db_db_session):
+async def test_calendar_event_soft_delete(db_session):
     """Test soft deleting events no longer in calendar."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="delete-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -313,36 +313,36 @@ async def test_calendar_event_soft_delete(db_db_session):
             start_time=now + timedelta(hours=i),
             end_time=now + timedelta(hours=i + 1),
         )
-        await calendar_events_controller.upsert(session, event)
+        await calendar_events_controller.upsert(db_session, event)
 
     # Soft delete events not in current list
     current_ids = ["event-0", "event-2"]  # Keep events 0 and 2
     deleted_count = await calendar_events_controller.soft_delete_missing(
-        session, room.id, current_ids
+        db_session, room.id, current_ids
     )
 
     assert deleted_count == 2  # Should delete events 1 and 3
 
     # Get non-deleted events
     events = await calendar_events_controller.get_by_room(
-        session, room.id, include_deleted=False
+        db_session, room.id, include_deleted=False
     )
     assert len(events) == 2
     assert {e.ics_uid for e in events} == {"event-0", "event-2"}
 
     # Get all events including deleted
     all_events = await calendar_events_controller.get_by_room(
-        session, room.id, include_deleted=True
+        db_session, room.id, include_deleted=True
     )
     assert len(all_events) == 4
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_past_events_not_deleted(db_db_session):
+async def test_calendar_event_past_events_not_deleted(db_session):
     """Test that past events are not soft deleted."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="past-events-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -365,7 +365,7 @@ async def test_calendar_event_past_events_not_deleted(db_db_session):
         start_time=now - timedelta(hours=2),
         end_time=now - timedelta(hours=1),
     )
-    await calendar_events_controller.upsert(session, past_event)
+    await calendar_events_controller.upsert(db_session, past_event)
 
     # Create future event
     future_event = CalendarEvent(
@@ -375,29 +375,29 @@ async def test_calendar_event_past_events_not_deleted(db_db_session):
         start_time=now + timedelta(hours=1),
         end_time=now + timedelta(hours=2),
     )
-    await calendar_events_controller.upsert(session, future_event)
+    await calendar_events_controller.upsert(db_session, future_event)
 
     # Try to soft delete all events (only future should be deleted)
     deleted_count = await calendar_events_controller.soft_delete_missing(
-        session, room.id, []
+        db_session, room.id, []
     )
 
     assert deleted_count == 1  # Only future event deleted
 
     # Verify past event still exists
     events = await calendar_events_controller.get_by_room(
-        session, room.id, include_deleted=False
+        db_session, room.id, include_deleted=False
     )
     assert len(events) == 1
     assert events[0].ics_uid == "past-event"
 
 
 @pytest.mark.asyncio
-async def test_calendar_event_with_raw_ics_data(db_db_session):
+async def test_calendar_event_with_raw_ics_data(db_session):
     """Test storing raw ICS data with calendar event."""
     # Create room
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="raw-ics-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -426,13 +426,13 @@ END:VEVENT"""
         ics_raw_data=raw_ics,
     )
 
-    saved = await calendar_events_controller.upsert(session, event)
+    saved = await calendar_events_controller.upsert(db_session, event)
 
     assert saved.ics_raw_data == raw_ics
 
     # Retrieve and verify
     retrieved = await calendar_events_controller.get_by_ics_uid(
-        session, room.id, "test-raw-123"
+        db_session, room.id, "test-raw-123"
     )
     assert retrieved is not None
     assert retrieved.ics_raw_data == raw_ics

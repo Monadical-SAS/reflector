@@ -11,7 +11,7 @@ from reflector.db.search import SearchParameters, search_controller
 
 
 @pytest.mark.asyncio
-async def test_long_summary_snippet_prioritization(db_db_session):
+async def test_long_summary_snippet_prioritization(db_session):
     """Test that snippets from long_summary are prioritized over webvtt content."""
     test_id = "test-snippet-priority-3f9a2b8c"
 
@@ -61,7 +61,7 @@ We need to consider various implementation approaches.""",
 
         # Search for "robotics" which appears in both long_summary and webvtt
         params = SearchParameters(query_text="robotics", user_id="test-user-priority")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
 
         assert total >= 1
         test_result = next((r for r in results if r.id == test_id), None)
@@ -93,7 +93,7 @@ We need to consider various implementation approaches.""",
 
 
 @pytest.mark.asyncio
-async def test_long_summary_only_search(db_db_session):
+async def test_long_summary_only_search(db_session):
     """Test searching for content that only exists in long_summary."""
     test_id = "test-long-only-8b3c9f2a"
 
@@ -139,7 +139,7 @@ Discussion of timeline and deliverables.""",
 
         # Search for terms only in long_summary
         params = SearchParameters(query_text="cryptocurrency", user_id="test-user-long")
-        results, total = await search_controller.search_transcripts(session, params)
+        results, total = await search_controller.search_transcripts(db_session, params)
 
         found = any(r.id == test_id for r in results)
         assert found, "Should find transcript by long_summary-only content"
@@ -154,7 +154,9 @@ Discussion of timeline and deliverables.""",
 
         # Search for "yield farming" - a more specific term
         params2 = SearchParameters(query_text="yield farming", user_id="test-user-long")
-        results2, total2 = await search_controller.search_transcripts(session, params2)
+        results2, total2 = await search_controller.search_transcripts(
+            db_session, params2
+        )
 
         found2 = any(r.id == test_id for r in results2)
         assert found2, "Should find transcript by specific long_summary phrase"

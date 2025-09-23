@@ -10,10 +10,10 @@ from reflector.db.rooms import rooms_controller
 
 
 @pytest.mark.asyncio
-async def test_room_create_with_ics_fields(db_db_session):
+async def test_room_create_with_ics_fields(db_session):
     """Test creating a room with ICS calendar fields."""
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="test-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -41,11 +41,11 @@ async def test_room_create_with_ics_fields(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_room_update_ics_configuration(db_db_session):
+async def test_room_update_ics_configuration(db_session):
     """Test updating room ICS configuration."""
     # Create room without ICS
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="update-test",
         user_id="test-user",
         zulip_auto_post=False,
@@ -63,7 +63,7 @@ async def test_room_update_ics_configuration(db_db_session):
 
     # Update with ICS configuration
     await rooms_controller.update(
-        session,
+        db_session,
         room,
         {
             "ics_url": "https://outlook.office365.com/owa/calendar/test/calendar.ics",
@@ -80,10 +80,10 @@ async def test_room_update_ics_configuration(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_room_ics_sync_metadata(db_db_session):
+async def test_room_ics_sync_metadata(db_session):
     """Test updating room ICS sync metadata."""
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="sync-test",
         user_id="test-user",
         zulip_auto_post=False,
@@ -101,7 +101,7 @@ async def test_room_ics_sync_metadata(db_db_session):
     # Update sync metadata
     sync_time = datetime.now(timezone.utc)
     await rooms_controller.update(
-        session,
+        db_session,
         room,
         {
             "ics_last_sync": sync_time,
@@ -114,11 +114,11 @@ async def test_room_ics_sync_metadata(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_room_get_with_ics_fields(db_db_session):
+async def test_room_get_with_ics_fields(db_session):
     """Test retrieving room with ICS fields."""
     # Create room
     created_room = await rooms_controller.add(
-        session,
+        db_session,
         name="get-test",
         user_id="test-user",
         zulip_auto_post=False,
@@ -135,14 +135,14 @@ async def test_room_get_with_ics_fields(db_db_session):
     )
 
     # Get by ID
-    room = await rooms_controller.get_by_id(session, created_room.id)
+    room = await rooms_controller.get_by_id(db_session, created_room.id)
     assert room is not None
     assert room.ics_url == "webcal://calendar.example.com/feed.ics"
     assert room.ics_fetch_interval == 900
     assert room.ics_enabled is True
 
     # Get by name
-    room = await rooms_controller.get_by_name(session, "get-test")
+    room = await rooms_controller.get_by_name(db_session, "get-test")
     assert room is not None
     assert room.ics_url == "webcal://calendar.example.com/feed.ics"
     assert room.ics_fetch_interval == 900
@@ -150,11 +150,11 @@ async def test_room_get_with_ics_fields(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_room_list_with_ics_enabled_filter(db_db_session):
+async def test_room_list_with_ics_enabled_filter(db_session):
     """Test listing rooms filtered by ICS enabled status."""
     # Create rooms with and without ICS
     room1 = await rooms_controller.add(
-        session,
+        db_session,
         name="ics-enabled-1",
         user_id="test-user",
         zulip_auto_post=False,
@@ -170,7 +170,7 @@ async def test_room_list_with_ics_enabled_filter(db_db_session):
     )
 
     room2 = await rooms_controller.add(
-        session,
+        db_session,
         name="ics-disabled",
         user_id="test-user",
         zulip_auto_post=False,
@@ -185,7 +185,7 @@ async def test_room_list_with_ics_enabled_filter(db_db_session):
     )
 
     room3 = await rooms_controller.add(
-        session,
+        db_session,
         name="ics-enabled-2",
         user_id="test-user",
         zulip_auto_post=False,
@@ -201,7 +201,7 @@ async def test_room_list_with_ics_enabled_filter(db_db_session):
     )
 
     # Get all rooms
-    all_rooms = await rooms_controller.get_all(session)
+    all_rooms = await rooms_controller.get_all(db_session)
     assert len(all_rooms) == 3
 
     # Filter for ICS-enabled rooms (would need to implement this in controller)
@@ -211,10 +211,10 @@ async def test_room_list_with_ics_enabled_filter(db_db_session):
 
 
 @pytest.mark.asyncio
-async def test_room_default_ics_values(db_db_session):
+async def test_room_default_ics_values(db_session):
     """Test that ICS fields have correct default values."""
     room = await rooms_controller.add(
-        session,
+        db_session,
         name="default-test",
         user_id="test-user",
         zulip_auto_post=False,
