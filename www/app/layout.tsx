@@ -7,6 +7,7 @@ import { RecordingConsentProvider } from "./recordingConsentContext";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
 import { getNextEnvVar } from "./lib/nextBuild";
+import { getClientEnv } from "./lib/clientEnv";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export const viewport: Viewport = {
 };
 
 const SITE_URL = getNextEnvVar("SITE_URL");
+const env = getClientEnv();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -73,15 +75,16 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
-      <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
-        <RecordingConsentProvider>
-          <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-            <ErrorProvider>
-              <ErrorMessage />
-              <Providers>{children}</Providers>
-            </ErrorProvider>
-          </ErrorBoundary>
-        </RecordingConsentProvider>
+      <body
+        className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}
+        data-env={JSON.stringify(env)}
+      >
+        <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+          <ErrorProvider>
+            <ErrorMessage />
+            <Providers>{children}</Providers>
+          </ErrorProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
