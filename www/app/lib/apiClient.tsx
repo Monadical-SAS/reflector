@@ -7,17 +7,14 @@ import { assertExistsAndNonEmptyString, parseNonEmptyString } from "./utils";
 import { isBuildPhase } from "./next";
 import { getSession } from "next-auth/react";
 import { assertExtendedToken } from "./types";
+import { getClientEnv } from "./clientEnv";
 
 export const API_URL = !isBuildPhase
-  ? assertExistsAndNonEmptyString(
-      process.env.NEXT_PUBLIC_API_URL,
-      "NEXT_PUBLIC_API_URL required",
-    )
+  ? getClientEnv().API_URL
   : "http://localhost";
 
 // TODO decide strict validation or not
-export const WEBSOCKET_URL =
-  process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://127.0.0.1:1250";
+export const WEBSOCKET_URL = process.env.WEBSOCKET_URL || "ws://127.0.0.1:1250";
 
 export const client = createClient<paths>({
   baseUrl: API_URL,

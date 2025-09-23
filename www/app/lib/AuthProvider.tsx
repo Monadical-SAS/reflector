@@ -28,7 +28,6 @@ type AuthContextType = (
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const isAuthEnabled = featureEnabled("requireLogin");
 
 const noopAuthContext: AuthContextType = {
   status: "unauthenticated",
@@ -45,7 +44,7 @@ const noopAuthContext: AuthContextType = {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useNextAuthSession();
-
+  const isAuthEnabled = featureEnabled("requireLogin");
   const contextValue: AuthContextType = isAuthEnabled
     ? {
         ...(() => {

@@ -62,7 +62,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
   useEffect(() => {
     document.onkeyup = (e) => {
-      if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
+      if (e.key === "a" && process.env.ENV === "development") {
         const segments: GetTranscriptSegmentTopic[] = [
           {
             speaker: 1,
@@ -201,7 +201,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
         setFinalSummary({ summary: "This is the final summary" });
       }
-      if (e.key === "z" && process.env.NEXT_PUBLIC_ENV === "development") {
+      if (e.key === "z" && process.env.ENV === "development") {
         setTranscriptTextLive(
           "This text is in English, and it is a pretty long sentence to test the limits",
         );

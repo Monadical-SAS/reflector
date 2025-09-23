@@ -18,7 +18,6 @@ import {
   deleteTokenCache,
 } from "./redisTokenCache";
 import { tokenCacheRedis, redlock } from "./redisClient";
-import { isBuildPhase } from "./next";
 import { sequenceThrows } from "./errorUtils";
 import { featureEnabled } from "./features";
 

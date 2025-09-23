@@ -1,7 +1,3 @@
-export function isDevelopment() {
-  return process.env.NEXT_PUBLIC_ENV === "development";
-}
-
 // Function to calculate WCAG contrast ratio
 export const getContrastRatio = (
   foreground: [number, number, number],

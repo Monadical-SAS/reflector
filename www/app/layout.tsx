@@ -3,10 +3,10 @@ import { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { ErrorProvider } from "./(errors)/errorContext";
 import ErrorMessage from "./(errors)/errorMessage";
-import { RecordingConsentProvider } from "./recordingConsentContext";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
 import { assertExistsAndNonEmptyString } from "./lib/utils";
+import { getClientEnv } from "./lib/clientEnv";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -21,13 +21,13 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-const NEXT_PUBLIC_SITE_URL = assertExistsAndNonEmptyString(
-  process.env.NEXT_PUBLIC_SITE_URL,
-  "NEXT_PUBLIC_SITE_URL required",
+const SITE_URL = assertExistsAndNonEmptyString(
+  process.env.SITE_URL,
+  "SITE_URL required",
 );
 
 export const metadata: Metadata = {
-  metadataBase: new URL(NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
@@ -67,6 +67,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true, noimageindex: true },
 };
 
+const env = getClientEnv();
+
 export default async function RootLayout({
   children,
 }: {
@@ -74,15 +76,16 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
-      <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
-        <RecordingConsentProvider>
-          <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-            <ErrorProvider>
-              <ErrorMessage />
-              <Providers>{children}</Providers>
-            </ErrorProvider>
-          </ErrorBoundary>
-        </RecordingConsentProvider>
+      <body
+        className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}
+        data-env={JSON.stringify(env)}
+      >
+        <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+          <ErrorProvider>
+            <ErrorMessage />
+            <Providers>{children}</Providers>
+          </ErrorProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

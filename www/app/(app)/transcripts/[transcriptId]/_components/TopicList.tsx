@@ -5,7 +5,6 @@ import useParticipants from "../../useParticipants";
 import { Box, Flex, Text, Accordion } from "@chakra-ui/react";
 import { TopicItem } from "./TopicItem";
 import { TranscriptStatus } from "../../../../lib/transcript";
-
 import { featureEnabled } from "../../../../lib/features";
 
 type TopicListProps = {

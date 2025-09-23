@@ -1,10 +1,10 @@
 import { Container, Flex, Link } from "@chakra-ui/react";
-import { featureEnabled } from "../lib/features";
 import NextLink from "next/link";
 import Image from "next/image";
 import UserInfo from "../(auth)/userInfo";
 import AuthWrapper from "./AuthWrapper";
 import { RECORD_A_MEETING_URL } from "../api/urls";
+import { featureEnabled } from "../lib/features";
 
 export default async function AppLayout({
   children,

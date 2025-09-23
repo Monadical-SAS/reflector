@@ -22,7 +22,6 @@ import {
   useZulipTopics,
   useTranscriptPostToZulip,
 } from "../../lib/apiHooks";
-
 import { featureEnabled } from "../../lib/features";
 
 type ShareZulipProps = {

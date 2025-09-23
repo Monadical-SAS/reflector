@@ -177,24 +177,24 @@ Reflector uses environment variable-based feature flags to control application f
 
 | Feature Flag | Environment Variable |
 |-------------|---------------------|
-| `requireLogin` | `NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN` |
-| `privacy` | `NEXT_PUBLIC_FEATURE_PRIVACY` |
-| `browse` | `NEXT_PUBLIC_FEATURE_BROWSE` |
-| `sendToZulip` | `NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP` |
-| `rooms` | `NEXT_PUBLIC_FEATURE_ROOMS` |
+| `requireLogin` | `FEATURE_REQUIRE_LOGIN` |
+| `privacy` | `FEATURE_PRIVACY` |
+| `browse` | `FEATURE_BROWSE` |
+| `sendToZulip` | `FEATURE_SEND_TO_ZULIP` |
+| `rooms` | `FEATURE_ROOMS` |
 
 ### Setting Feature Flags
 
-Feature flags are controlled via environment variables using the pattern `NEXT_PUBLIC_FEATURE_{FEATURE_NAME}` where `{FEATURE_NAME}` is the SCREAMING_SNAKE_CASE version of the feature name.
+Feature flags are controlled via environment variables using the pattern `FEATURE_{FEATURE_NAME}` where `{FEATURE_NAME}` is the SCREAMING_SNAKE_CASE version of the feature name.
 
 **Examples:**
 ```bash
 # Enable user authentication requirement
-NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN=true
+FEATURE_REQUIRE_LOGIN=true
 
 # Disable browse functionality
-NEXT_PUBLIC_FEATURE_BROWSE=false
+FEATURE_BROWSE=false
 
 # Enable Zulip integration
-NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP=true
+FEATURE_SEND_TO_ZULIP=true
 ```
