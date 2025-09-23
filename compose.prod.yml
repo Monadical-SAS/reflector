@@ -6,16 +6,6 @@ services:
     build:
       context: ./www
       dockerfile: Dockerfile
-      args:
-        SITE_URL: ${SITE_URL}
-        API_URL: ${API_URL}
-        WEBSOCKET_URL: ${WEBSOCKET_URL}
-        NEXTAUTH_URL: ${NEXTAUTH_URL}
-        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-        AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER}
-        AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
-        AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET}
-        AUTHENTIK_REFRESH_TOKEN_URL: ${AUTHENTIK_REFRESH_TOKEN_URL}
     image: reflector-frontend:latest
     ports:
       - "3000:3000"
