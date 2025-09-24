@@ -4,6 +4,8 @@ import {
   FEATURE_REQUIRE_LOGIN_ENV_NAME,
   FEATURE_ROOMS_ENV_NAME,
   FEATURE_SEND_TO_ZULIP_ENV_NAME,
+  FeatureEnvName,
+  getClientEnv,
 } from "./clientEnv";
 
 export const FEATURES = [
@@ -26,37 +28,30 @@ export const DEFAULT_FEATURES: Features = {
   rooms: true,
 } as const;
 
-function parseBooleanEnv(
-  value: string | undefined,
-  defaultValue: boolean = false,
-): boolean {
-  if (!value) return defaultValue;
-  return value.toLowerCase() === "true";
-}
+export const ENV_TO_FEATURE: {
+  [k in FeatureEnvName]: FeatureName;
+} = {
+  FEATURE_REQUIRE_LOGIN: "requireLogin",
+  FEATURE_PRIVACY: "privacy",
+  FEATURE_BROWSE: "browse",
+  FEATURE_SEND_TO_ZULIP: "sendToZulip",
+  FEATURE_ROOMS: "rooms",
+} as const;
 
-const features: Features = {
-  requireLogin: parseBooleanEnv(
-    process.env[FEATURE_REQUIRE_LOGIN_ENV_NAME],
-    DEFAULT_FEATURES.requireLogin,
-  ),
-  privacy: parseBooleanEnv(
-    process.env[FEATURE_PRIVACY_ENV_NAME],
-    DEFAULT_FEATURES.privacy,
-  ),
-  browse: parseBooleanEnv(
-    process.env[FEATURE_BROWSE_ENV_NAME],
-    DEFAULT_FEATURES.browse,
-  ),
-  sendToZulip: parseBooleanEnv(
-    process.env[FEATURE_SEND_TO_ZULIP_ENV_NAME],
-    DEFAULT_FEATURES.sendToZulip,
-  ),
-  rooms: parseBooleanEnv(
-    process.env[FEATURE_ROOMS_ENV_NAME],
-    DEFAULT_FEATURES.rooms,
-  ),
+export const FEATURE_TO_ENV: {
+  [k in FeatureName]: FeatureEnvName;
+} = {
+  requireLogin: "FEATURE_REQUIRE_LOGIN",
+  privacy: "FEATURE_PRIVACY",
+  browse: "FEATURE_BROWSE",
+  sendToZulip: "FEATURE_SEND_TO_ZULIP",
+  rooms: "FEATURE_ROOMS",
 };
 
+const features = getClientEnv();
+
 export const featureEnabled = (featureName: FeatureName): boolean => {
-  return features[featureName];
+  const isSet = features[FEATURE_TO_ENV[featureName]];
+  if (isSet === null) return DEFAULT_FEATURES[featureName];
+  return isSet;
 };

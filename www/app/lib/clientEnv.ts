@@ -21,8 +21,10 @@ const FEATURE_ENV_NAMES = [
   FEATURE_ROOMS_ENV_NAME,
 ] as const;
 
+export type FeatureEnvName = (typeof FEATURE_ENV_NAMES)[number];
+
 export type EnvFeaturePartial = {
-  [key in (typeof FEATURE_ENV_NAMES)[number]]: boolean;
+  [key in FeatureEnvName]: boolean | null;
 };
 
 // CONTRACT: isomorphic with JSON.stringify
@@ -51,7 +53,8 @@ export const getClientEnvClient = (): ClientEnvCommon => {
   return clientEnv!;
 };
 
-const parseBooleanString = (str: string | undefined): boolean => {
+const parseBooleanString = (str: string | undefined): boolean | null => {
+  if (str === undefined) return null;
   return str === "true";
 };
 
