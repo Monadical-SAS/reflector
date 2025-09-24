@@ -10,12 +10,14 @@ import httpx
 import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.settings import settings
 from reflector.utils.webvtt import topics_to_webvtt
+from reflector.worker.session_decorator import with_session
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -39,11 +41,13 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
     retry_backoff_max=3600,  # Max 1 hour between retries
 )
 @asynctask
+@with_session
 async def send_transcript_webhook(
     self,
     transcript_id: str,
     room_id: str,
     event_id: str,
+    session: AsyncSession,
 ):
     log = logger.bind(
         transcript_id=transcript_id,
@@ -53,12 +57,12 @@ async def send_transcript_webhook(
 
     try:
         # Fetch transcript and room
-        transcript = await transcripts_controller.get_by_id(transcript_id)
+        transcript = await transcripts_controller.get_by_id(session, transcript_id)
         if not transcript:
             log.error("Transcript not found, skipping webhook")
             return
 
-        room = await rooms_controller.get_by_id(room_id)
+        room = await rooms_controller.get_by_id(session, room_id)
         if not room:
             log.error("Room not found, skipping webhook")
             return

@@ -799,14 +799,16 @@ def pipeline_post(*, transcript_id: str):
 async def pipeline_process(transcript: Transcript, logger: Logger):
     try:
         if transcript.audio_location == "storage":
-            await transcripts_controller.download_mp3_from_storage(transcript)
-            transcript.audio_waveform_filename.unlink(missing_ok=True)
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "topics": [],
-                },
-            )
+            async with get_session_factory()() as session:
+                await transcripts_controller.download_mp3_from_storage(transcript)
+                transcript.audio_waveform_filename.unlink(missing_ok=True)
+                await transcripts_controller.update(
+                    session,
+                    transcript,
+                    {
+                        "topics": [],
+                    },
+                )
 
         # open audio
         audio_filename = next(transcript.data_path.glob("upload.*"), None)
@@ -838,12 +840,14 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
 
     except Exception as exc:
         logger.error("Pipeline error", exc_info=exc)
-        await transcripts_controller.update(
-            transcript,
-            {
-                "status": "error",
-            },
-        )
+        async with get_session_factory()() as session:
+            await transcripts_controller.update(
+                session,
+                transcript,
+                {
+                    "status": "error",
+                },
+            )
         raise
 
     logger.info("Pipeline ended")

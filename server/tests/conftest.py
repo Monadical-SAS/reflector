@@ -383,7 +383,7 @@ async def fake_transcript_with_topics(tmpdir, client, db_session):
     transcript = await transcripts_controller.get_by_id(db_session, tid)
     assert transcript is not None
 
-    await transcripts_controller.update(transcript, {"status": "ended"})
+    await transcripts_controller.update(db_session, transcript, {"status": "ended"})
 
     # manually copy a file at the expected location
     audio_filename = transcript.audio_mp3_filename
