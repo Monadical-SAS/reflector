@@ -13,8 +13,10 @@ from pathlib import Path
 import av
 import structlog
 from celery import chain, shared_task
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.asynctask import asynctask
+from reflector.db import get_session_factory
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     SourceKind,
@@ -53,6 +55,7 @@ from reflector.processors.types import (
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.worker.session_decorator import with_session
 from reflector.worker.webhook import send_transcript_webhook
 
 
@@ -97,17 +100,23 @@ class PipelineMainFile(PipelineMainBase):
     @broadcast_to_sockets
     async def set_status(self, transcript_id: str, status: TranscriptStatus):
         async with self.lock_transaction():
-            return await transcripts_controller.set_status(transcript_id, status)
+            async with get_session_factory()() as session:
+                return await transcripts_controller.set_status(
+                    session, transcript_id, status
+                )
 
     async def process(self, file_path: Path):
         """Main entry point for file processing"""
         self.logger.info(f"Starting file pipeline for {file_path}")
 
-        transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            transcript = await transcripts_controller.get_by_id(
+                session, self.transcript_id
+            )
 
-        # Clear transcript as we're going to regenerate everything
-        async with self.transaction():
+            # Clear transcript as we're going to regenerate everything
             await transcripts_controller.update(
+                session,
                 transcript,
                 {
                     "events": [],
@@ -123,6 +132,7 @@ class PipelineMainFile(PipelineMainBase):
 
         # Run parallel processing
         await self.run_parallel_processing(
+            session,
             audio_path,
             audio_url,
             transcript.source_language,
@@ -131,7 +141,8 @@ class PipelineMainFile(PipelineMainBase):
 
         self.logger.info("File pipeline complete")
 
-        await transcripts_controller.set_status(transcript.id, "ended")
+        async with get_session_factory()() as session:
+            await transcripts_controller.set_status(session, transcript.id, "ended")
 
     async def extract_and_write_audio(
         self, file_path: Path, transcript: Transcript
@@ -193,6 +204,7 @@ class PipelineMainFile(PipelineMainBase):
 
     async def run_parallel_processing(
         self,
+        session,
         audio_path: Path,
         audio_url: str,
         source_language: str,
@@ -206,7 +218,7 @@ class PipelineMainFile(PipelineMainBase):
         # Phase 1: Parallel processing of independent tasks
         transcription_task = self.transcribe_file(audio_url, source_language)
         diarization_task = self.diarize_file(audio_url)
-        waveform_task = self.generate_waveform(audio_path)
+        waveform_task = self.generate_waveform(session, audio_path)
 
         results = await asyncio.gather(
             transcription_task, diarization_task, waveform_task, return_exceptions=True
@@ -254,7 +266,7 @@ class PipelineMainFile(PipelineMainBase):
         )
         results = await asyncio.gather(
             self.generate_title(topics),
-            self.generate_summaries(topics),
+            self.generate_summaries(session, topics),
             return_exceptions=True,
         )
 
@@ -306,9 +318,9 @@ class PipelineMainFile(PipelineMainBase):
             self.logger.error(f"Diarization failed: {e}")
             return None
 
-    async def generate_waveform(self, audio_path: Path):
+    async def generate_waveform(self, session: AsyncSession, audio_path: Path):
         """Generate and save waveform"""
-        transcript = await self.get_transcript()
+        transcript = await transcripts_controller.get_by_id(session, self.transcript_id)
 
         processor = AudioWaveformProcessor(
             audio_path=audio_path,
@@ -361,13 +373,13 @@ class PipelineMainFile(PipelineMainBase):
 
         await processor.flush()
 
-    async def generate_summaries(self, topics: list[TitleSummary]):
+    async def generate_summaries(self, session, topics: list[TitleSummary]):
         """Generate long and short summaries from topics"""
         if not topics:
             self.logger.warning("No topics for summary generation")
             return
 
-        transcript = await self.get_transcript()
+        transcript = await transcripts_controller.get_by_id(session, self.transcript_id)
         processor = TranscriptFinalSummaryProcessor(
             transcript=transcript,
             callback=self.on_long_summary,
@@ -383,14 +395,15 @@ class PipelineMainFile(PipelineMainBase):
 
 @shared_task
 @asynctask
-async def task_send_webhook_if_needed(*, transcript_id: str):
+@with_session
+async def task_send_webhook_if_needed(session, *, transcript_id: str):
     """Send webhook if this is a room recording with webhook configured"""
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+    transcript = await transcripts_controller.get_by_id(session, transcript_id)
     if not transcript:
         return
 
     if transcript.source_kind == SourceKind.ROOM and transcript.room_id:
-        room = await rooms_controller.get_by_id(transcript.room_id)
+        room = await rooms_controller.get_by_id(session, transcript.room_id)
         if room and room.webhook_url:
             logger.info(
                 "Dispatching webhook",
@@ -405,10 +418,10 @@ async def task_send_webhook_if_needed(*, transcript_id: str):
 
 @shared_task
 @asynctask
-async def task_pipeline_file_process(*, transcript_id: str):
+@with_session
+async def task_pipeline_file_process(session, *, transcript_id: str):
     """Celery task for file pipeline processing"""
-
-    transcript = await transcripts_controller.get_by_id(transcript_id)
+    transcript = await transcripts_controller.get_by_id(session, transcript_id)
     if not transcript:
         raise Exception(f"Transcript {transcript_id} not found")
 

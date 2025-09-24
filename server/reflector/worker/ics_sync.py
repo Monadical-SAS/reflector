@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.asynctask import asynctask
 from reflector.db.calendar_events import calendar_events_controller
@@ -11,15 +12,17 @@ from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import SyncStatus, ics_sync_service
 from reflector.whereby import create_meeting, upload_logo
+from reflector.worker.session_decorator import with_session
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
 
 @shared_task
 @asynctask
-async def sync_room_ics(room_id: str):
+@with_session
+async def sync_room_ics(session: AsyncSession, room_id: str):
     try:
-        room = await rooms_controller.get_by_id(room_id)
+        room = await rooms_controller.get_by_id(session, room_id)
         if not room:
             logger.warning("Room not found for ICS sync", room_id=room_id)
             return
@@ -29,7 +32,7 @@ async def sync_room_ics(room_id: str):
             return
 
         logger.info("Starting ICS sync for room", room_id=room_id, room_name=room.name)
-        result = await ics_sync_service.sync_room_calendar(room)
+        result = await ics_sync_service.sync_room_calendar(session, room)
 
         if result["status"] == SyncStatus.SUCCESS:
             logger.info(
@@ -55,11 +58,12 @@ async def sync_room_ics(room_id: str):
 
 @shared_task
 @asynctask
-async def sync_all_ics_calendars():
+@with_session
+async def sync_all_ics_calendars(session: AsyncSession):
     try:
         logger.info("Starting sync for all ICS-enabled rooms")
 
-        ics_enabled_rooms = await rooms_controller.get_ics_enabled()
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
         logger.info(f"Found {len(ics_enabled_rooms)} rooms with ICS enabled")
 
         for room in ics_enabled_rooms:
@@ -86,10 +90,14 @@ def _should_sync(room) -> bool:
 MEETING_DEFAULT_DURATION = timedelta(hours=1)
 
 
-async def create_upcoming_meetings_for_event(event, create_window, room_id, room):
+async def create_upcoming_meetings_for_event(
+    session: AsyncSession, event, create_window, room_id, room
+):
     if event.start_time <= create_window:
         return
-    existing_meeting = await meetings_controller.get_by_calendar_event(event.id)
+    existing_meeting = await meetings_controller.get_by_calendar_event(
+        session, event.id
+    )
 
     if existing_meeting:
         return
@@ -112,6 +120,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
         await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
         meeting = await meetings_controller.create(
+            session,
             id=whereby_meeting["meetingId"],
             room_name=whereby_meeting["roomName"],
             room_url=whereby_meeting["roomUrl"],
@@ -144,7 +153,8 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
 
 @shared_task
 @asynctask
-async def create_upcoming_meetings():
+@with_session
+async def create_upcoming_meetings(session: AsyncSession):
     async with RedisAsyncLock("create_upcoming_meetings", skip_if_locked=True) as lock:
         if not lock.acquired:
             logger.warning(
@@ -155,19 +165,20 @@ async def create_upcoming_meetings():
         try:
             logger.info("Starting creation of upcoming meetings")
 
-            ics_enabled_rooms = await rooms_controller.get_ics_enabled()
+            ics_enabled_rooms = await rooms_controller.get_ics_enabled(session)
             now = datetime.now(timezone.utc)
             create_window = now - timedelta(minutes=6)
 
             for room in ics_enabled_rooms:
                 events = await calendar_events_controller.get_upcoming(
+                    session,
                     room.id,
                     minutes_ahead=7,
                 )
 
                 for event in events:
                     await create_upcoming_meetings_for_event(
-                        event, create_window, room.id, room
+                        session, event, create_window, room.id, room
                     )
             logger.info("Completed pre-creation check for upcoming meetings")
 

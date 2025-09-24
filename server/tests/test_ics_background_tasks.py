@@ -4,9 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from icalendar import Calendar, Event
 
-from reflector.db import get_database
 from reflector.db.calendar_events import calendar_events_controller
-from reflector.db.rooms import rooms, rooms_controller
+from reflector.db.rooms import rooms_controller
 from reflector.services.ics_sync import ics_sync_service
 from reflector.worker.ics_sync import (
     _should_sync,
@@ -15,8 +14,9 @@ from reflector.worker.ics_sync import (
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_task():
+async def test_sync_room_ics_task(db_session):
     room = await rooms_controller.add(
+        db_session,
         name="task-test-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -30,6 +30,7 @@ async def test_sync_room_ics_task():
         ics_url="https://calendar.example.com/task.ics",
         ics_enabled=True,
     )
+    await db_session.flush()
 
     cal = Calendar()
     event = Event()
@@ -45,21 +46,22 @@ async def test_sync_room_ics_task():
     ics_content = cal.to_ical().decode("utf-8")
 
     with patch(
-        "reflector.services.ics_sync.ICSFetchService.fetch_ics", new_callable=AsyncMock
+        "reflector.services.ics_sync.ICSFetchService.fetch_ics",
+        new_callable=AsyncMock,
     ) as mock_fetch:
         mock_fetch.return_value = ics_content
 
-        # Call the service directly instead of the Celery task to avoid event loop issues
-        await ics_sync_service.sync_room_calendar(room)
+        await ics_sync_service.sync_room_calendar(db_session, room)
 
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
         assert len(events) == 1
         assert events[0].ics_uid == "task-event-1"
 
 
 @pytest.mark.asyncio
-async def test_sync_room_ics_disabled():
+async def test_sync_room_ics_disabled(db_session):
     room = await rooms_controller.add(
+        db_session,
         name="disabled-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -73,16 +75,16 @@ async def test_sync_room_ics_disabled():
         ics_enabled=False,
     )
 
-    # Test that disabled rooms are skipped by the service
-    result = await ics_sync_service.sync_room_calendar(room)
+    result = await ics_sync_service.sync_room_calendar(db_session, room)
 
-    events = await calendar_events_controller.get_by_room(room.id)
+    events = await calendar_events_controller.get_by_room(db_session, room.id)
     assert len(events) == 0
 
 
 @pytest.mark.asyncio
-async def test_sync_all_ics_calendars():
+async def test_sync_all_ics_calendars(db_session):
     room1 = await rooms_controller.add(
+        db_session,
         name="sync-all-1",
         user_id="test-user",
         zulip_auto_post=False,
@@ -98,6 +100,7 @@ async def test_sync_all_ics_calendars():
     )
 
     room2 = await rooms_controller.add(
+        db_session,
         name="sync-all-2",
         user_id="test-user",
         zulip_auto_post=False,
@@ -113,6 +116,7 @@ async def test_sync_all_ics_calendars():
     )
 
     room3 = await rooms_controller.add(
+        db_session,
         name="sync-all-3",
         user_id="test-user",
         zulip_auto_post=False,
@@ -127,17 +131,11 @@ async def test_sync_all_ics_calendars():
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        # Directly call the sync_all logic without the Celery wrapper
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled(db_session)
 
-        for room_data in all_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
+        for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room_id)
+                sync_room_ics.delay(room.id)
 
         assert mock_delay.call_count == 2
         called_room_ids = [call.args[0] for call in mock_delay.call_args_list]
@@ -163,10 +161,11 @@ async def test_should_sync_logic():
 
 
 @pytest.mark.asyncio
-async def test_sync_respects_fetch_interval():
+async def test_sync_respects_fetch_interval(db_session):
     now = datetime.now(timezone.utc)
 
     room1 = await rooms_controller.add(
+        db_session,
         name="interval-test-1",
         user_id="test-user",
         zulip_auto_post=False,
@@ -183,11 +182,13 @@ async def test_sync_respects_fetch_interval():
     )
 
     await rooms_controller.update(
+        db_session,
         room1,
         {"ics_last_sync": now - timedelta(seconds=100)},
     )
 
     room2 = await rooms_controller.add(
+        db_session,
         name="interval-test-2",
         user_id="test-user",
         zulip_auto_post=False,
@@ -204,30 +205,26 @@ async def test_sync_respects_fetch_interval():
     )
 
     await rooms_controller.update(
+        db_session,
         room2,
         {"ics_last_sync": now - timedelta(seconds=100)},
     )
 
     with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
-        # Test the sync logic without the Celery wrapper
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
-        )
-        all_rooms = await get_database().fetch_all(query)
+        ics_enabled_rooms = await rooms_controller.get_ics_enabled(db_session)
 
-        for room_data in all_rooms:
-            room_id = room_data["id"]
-            room = await rooms_controller.get_by_id(room_id)
+        for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room_id)
+                sync_room_ics.delay(room.id)
 
         assert mock_delay.call_count == 1
         assert mock_delay.call_args[0][0] == room2.id
 
 
 @pytest.mark.asyncio
-async def test_sync_handles_errors_gracefully():
+async def test_sync_handles_errors_gracefully(db_session):
     room = await rooms_controller.add(
+        db_session,
         name="error-task-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -247,9 +244,8 @@ async def test_sync_handles_errors_gracefully():
     ) as mock_fetch:
         mock_fetch.side_effect = Exception("Network error")
 
-        # Call the service directly to test error handling
-        result = await ics_sync_service.sync_room_calendar(room)
+        result = await ics_sync_service.sync_room_calendar(db_session, room)
         assert result["status"] == "error"
 
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
         assert len(events) == 0

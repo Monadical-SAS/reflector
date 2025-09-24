@@ -1,61 +1,79 @@
-from datetime import datetime
-from typing import Literal
+from datetime import datetime, timezone
 
-import sqlalchemy as sa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.db import get_database, metadata
+from reflector.db.base import RecordingModel
 from reflector.utils import generate_uuid4
-
-recordings = sa.Table(
-    "recording",
-    metadata,
-    sa.Column("id", sa.String, primary_key=True),
-    sa.Column("bucket_name", sa.String, nullable=False),
-    sa.Column("object_key", sa.String, nullable=False),
-    sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
-    sa.Column(
-        "status",
-        sa.String,
-        nullable=False,
-        server_default="pending",
-    ),
-    sa.Column("meeting_id", sa.String),
-    sa.Index("idx_recording_meeting_id", "meeting_id"),
-)
 
 
 class Recording(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
-    bucket_name: str
+    meeting_id: str
+    url: str
     object_key: str
-    recorded_at: datetime
-    status: Literal["pending", "processing", "completed", "failed"] = "pending"
-    meeting_id: str | None = None
+    duration: float | None = None
+    created_at: datetime
 
 
 class RecordingController:
-    async def create(self, recording: Recording):
-        query = recordings.insert().values(**recording.model_dump())
-        await get_database().execute(query)
+    async def create(
+        self,
+        session: AsyncSession,
+        meeting_id: str,
+        url: str,
+        object_key: str,
+        duration: float | None = None,
+        created_at: datetime | None = None,
+    ):
+        if created_at is None:
+            created_at = datetime.now(timezone.utc)
+
+        recording = Recording(
+            meeting_id=meeting_id,
+            url=url,
+            object_key=object_key,
+            duration=duration,
+            created_at=created_at,
+        )
+        new_recording = RecordingModel(**recording.model_dump())
+        session.add(new_recording)
+        await session.commit()
         return recording
 
-    async def get_by_id(self, id: str) -> Recording:
-        query = recordings.select().where(recordings.c.id == id)
-        result = await get_database().fetch_one(query)
-        return Recording(**result) if result else None
+    async def get_by_id(
+        self, session: AsyncSession, recording_id: str
+    ) -> Recording | None:
+        """
+        Get a recording by id
+        """
+        query = select(RecordingModel).where(RecordingModel.id == recording_id)
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        return Recording.model_validate(row)
 
-    async def get_by_object_key(self, bucket_name: str, object_key: str) -> Recording:
-        query = recordings.select().where(
-            recordings.c.bucket_name == bucket_name,
-            recordings.c.object_key == object_key,
-        )
-        result = await get_database().fetch_one(query)
-        return Recording(**result) if result else None
+    async def get_by_meeting_id(
+        self, session: AsyncSession, meeting_id: str
+    ) -> list[Recording]:
+        """
+        Get all recordings for a meeting
+        """
+        query = select(RecordingModel).where(RecordingModel.meeting_id == meeting_id)
+        result = await session.execute(query)
+        return [Recording.model_validate(row) for row in result.scalars().all()]
 
-    async def remove_by_id(self, id: str) -> None:
-        query = recordings.delete().where(recordings.c.id == id)
-        await get_database().execute(query)
+    async def remove_by_id(self, session: AsyncSession, recording_id: str) -> None:
+        """
+        Remove a recording by id
+        """
+        query = delete(RecordingModel).where(RecordingModel.id == recording_id)
+        await session.execute(query)
+        await session.commit()
 
 
 recordings_controller = RecordingController()

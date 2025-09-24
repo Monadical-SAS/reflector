@@ -2,80 +2,18 @@ from datetime import datetime
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
-from sqlalchemy.dialects.postgresql import JSONB
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.db import get_database, metadata
+from reflector.db.base import MeetingConsentModel, MeetingModel
 from reflector.db.rooms import Room
 from reflector.utils import generate_uuid4
 
-meetings = sa.Table(
-    "meeting",
-    metadata,
-    sa.Column("id", sa.String, primary_key=True),
-    sa.Column("room_name", sa.String),
-    sa.Column("room_url", sa.String),
-    sa.Column("host_room_url", sa.String),
-    sa.Column("start_date", sa.DateTime(timezone=True)),
-    sa.Column("end_date", sa.DateTime(timezone=True)),
-    sa.Column(
-        "room_id",
-        sa.String,
-        sa.ForeignKey("room.id", ondelete="CASCADE"),
-        nullable=True,
-    ),
-    sa.Column("is_locked", sa.Boolean, nullable=False, server_default=sa.false()),
-    sa.Column("room_mode", sa.String, nullable=False, server_default="normal"),
-    sa.Column("recording_type", sa.String, nullable=False, server_default="cloud"),
-    sa.Column(
-        "recording_trigger",
-        sa.String,
-        nullable=False,
-        server_default="automatic-2nd-participant",
-    ),
-    sa.Column(
-        "num_clients",
-        sa.Integer,
-        nullable=False,
-        server_default=sa.text("0"),
-    ),
-    sa.Column(
-        "is_active",
-        sa.Boolean,
-        nullable=False,
-        server_default=sa.true(),
-    ),
-    sa.Column(
-        "calendar_event_id",
-        sa.String,
-        sa.ForeignKey(
-            "calendar_event.id",
-            ondelete="SET NULL",
-            name="fk_meeting_calendar_event_id",
-        ),
-    ),
-    sa.Column("calendar_metadata", JSONB),
-    sa.Index("idx_meeting_room_id", "room_id"),
-    sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
-)
-
-meeting_consent = sa.Table(
-    "meeting_consent",
-    metadata,
-    sa.Column("id", sa.String, primary_key=True),
-    sa.Column(
-        "meeting_id",
-        sa.String,
-        sa.ForeignKey("meeting.id", ondelete="CASCADE"),
-        nullable=False,
-    ),
-    sa.Column("user_id", sa.String),
-    sa.Column("consent_given", sa.Boolean, nullable=False),
-    sa.Column("consent_timestamp", sa.DateTime(timezone=True), nullable=False),
-)
-
 
 class MeetingConsent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     meeting_id: str
     user_id: str | None = None
@@ -84,6 +22,8 @@ class MeetingConsent(BaseModel):
 
 
 class Meeting(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     room_name: str
     room_url: str
@@ -106,6 +46,7 @@ class Meeting(BaseModel):
 class MeetingController:
     async def create(
         self,
+        session: AsyncSession,
         id: str,
         room_name: str,
         room_url: str,
@@ -131,170 +72,198 @@ class MeetingController:
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
         )
-        query = meetings.insert().values(**meeting.model_dump())
-        await get_database().execute(query)
+        new_meeting = MeetingModel(**meeting.model_dump())
+        session.add(new_meeting)
+        await session.commit()
         return meeting
 
-    async def get_all_active(self) -> list[Meeting]:
-        query = meetings.select().where(meetings.c.is_active)
-        return await get_database().fetch_all(query)
+    async def get_all_active(self, session: AsyncSession) -> list[Meeting]:
+        query = select(MeetingModel).where(MeetingModel.is_active)
+        result = await session.execute(query)
+        return [Meeting.model_validate(row) for row in result.scalars().all()]
 
     async def get_by_room_name(
         self,
+        session: AsyncSession,
         room_name: str,
     ) -> Meeting | None:
         """
         Get a meeting by room name.
         For backward compatibility, returns the most recent meeting.
         """
-        end_date = getattr(meetings.c, "end_date")
         query = (
-            meetings.select()
-            .where(meetings.c.room_name == room_name)
-            .order_by(end_date.desc())
+            select(MeetingModel)
+            .where(MeetingModel.room_name == room_name)
+            .order_by(MeetingModel.end_date.desc())
         )
-        result = await get_database().fetch_one(query)
-        if not result:
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
             return None
+        return Meeting.model_validate(row)
 
-        return Meeting(**result)
-
-    async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
+    async def get_active(
+        self, session: AsyncSession, room: Room, current_time: datetime
+    ) -> Meeting | None:
         """
         Get latest active meeting for a room.
         For backward compatibility, returns the most recent active meeting.
         """
-        end_date = getattr(meetings.c, "end_date")
         query = (
-            meetings.select()
+            select(MeetingModel)
             .where(
                 sa.and_(
-                    meetings.c.room_id == room.id,
-                    meetings.c.end_date > current_time,
-                    meetings.c.is_active,
+                    MeetingModel.room_id == room.id,
+                    MeetingModel.end_date > current_time,
+                    MeetingModel.is_active,
                 )
             )
-            .order_by(end_date.desc())
+            .order_by(MeetingModel.end_date.desc())
         )
-        result = await get_database().fetch_one(query)
-        if not result:
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
             return None
-
-        return Meeting(**result)
+        return Meeting.model_validate(row)
 
     async def get_all_active_for_room(
-        self, room: Room, current_time: datetime
+        self, session: AsyncSession, room: Room, current_time: datetime
     ) -> list[Meeting]:
-        end_date = getattr(meetings.c, "end_date")
         query = (
-            meetings.select()
+            select(MeetingModel)
             .where(
                 sa.and_(
-                    meetings.c.room_id == room.id,
-                    meetings.c.end_date > current_time,
-                    meetings.c.is_active,
+                    MeetingModel.room_id == room.id,
+                    MeetingModel.end_date > current_time,
+                    MeetingModel.is_active,
                 )
             )
-            .order_by(end_date.desc())
+            .order_by(MeetingModel.end_date.desc())
         )
-        results = await get_database().fetch_all(query)
-        return [Meeting(**result) for result in results]
+        result = await session.execute(query)
+        return [Meeting.model_validate(row) for row in result.scalars().all()]
 
     async def get_active_by_calendar_event(
-        self, room: Room, calendar_event_id: str, current_time: datetime
+        self,
+        session: AsyncSession,
+        room: Room,
+        calendar_event_id: str,
+        current_time: datetime,
     ) -> Meeting | None:
         """
         Get active meeting for a specific calendar event.
         """
-        query = meetings.select().where(
+        query = select(MeetingModel).where(
             sa.and_(
-                meetings.c.room_id == room.id,
-                meetings.c.calendar_event_id == calendar_event_id,
-                meetings.c.end_date > current_time,
-                meetings.c.is_active,
+                MeetingModel.room_id == room.id,
+                MeetingModel.calendar_event_id == calendar_event_id,
+                MeetingModel.end_date > current_time,
+                MeetingModel.is_active,
             )
         )
-        result = await get_database().fetch_one(query)
-        if not result:
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
             return None
-        return Meeting(**result)
+        return Meeting.model_validate(row)
 
-    async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
-        query = meetings.select().where(meetings.c.id == meeting_id)
-        result = await get_database().fetch_one(query)
-        if not result:
+    async def get_by_id(
+        self, session: AsyncSession, meeting_id: str, **kwargs
+    ) -> Meeting | None:
+        query = select(MeetingModel).where(MeetingModel.id == meeting_id)
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
             return None
-        return Meeting(**result)
+        return Meeting.model_validate(row)
 
-    async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
-        query = meetings.select().where(
-            meetings.c.calendar_event_id == calendar_event_id
+    async def get_by_calendar_event(
+        self, session: AsyncSession, calendar_event_id: str
+    ) -> Meeting | None:
+        query = select(MeetingModel).where(
+            MeetingModel.calendar_event_id == calendar_event_id
         )
-        result = await get_database().fetch_one(query)
-        if not result:
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
             return None
-        return Meeting(**result)
+        return Meeting.model_validate(row)
 
-    async def update_meeting(self, meeting_id: str, **kwargs):
-        query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
-        await get_database().execute(query)
+    async def update_meeting(self, session: AsyncSession, meeting_id: str, **kwargs):
+        query = (
+            update(MeetingModel).where(MeetingModel.id == meeting_id).values(**kwargs)
+        )
+        await session.execute(query)
+        await session.commit()
 
 
 class MeetingConsentController:
-    async def get_by_meeting_id(self, meeting_id: str) -> list[MeetingConsent]:
-        query = meeting_consent.select().where(
-            meeting_consent.c.meeting_id == meeting_id
+    async def get_by_meeting_id(
+        self, session: AsyncSession, meeting_id: str
+    ) -> list[MeetingConsent]:
+        query = select(MeetingConsentModel).where(
+            MeetingConsentModel.meeting_id == meeting_id
         )
-        results = await get_database().fetch_all(query)
-        return [MeetingConsent(**result) for result in results]
+        result = await session.execute(query)
+        return [MeetingConsent.model_validate(row) for row in result.scalars().all()]
 
     async def get_by_meeting_and_user(
-        self, meeting_id: str, user_id: str
+        self, session: AsyncSession, meeting_id: str, user_id: str
     ) -> MeetingConsent | None:
         """Get existing consent for a specific user and meeting"""
-        query = meeting_consent.select().where(
-            meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.user_id == user_id,
+        query = select(MeetingConsentModel).where(
+            sa.and_(
+                MeetingConsentModel.meeting_id == meeting_id,
+                MeetingConsentModel.user_id == user_id,
+            )
         )
-        result = await get_database().fetch_one(query)
-        if result is None:
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if row is None:
             return None
-        return MeetingConsent(**result)
+        return MeetingConsent.model_validate(row)
 
-    async def upsert(self, consent: MeetingConsent) -> MeetingConsent:
+    async def upsert(
+        self, session: AsyncSession, consent: MeetingConsent
+    ) -> MeetingConsent:
         if consent.user_id:
             # For authenticated users, check if consent already exists
             # not transactional but we're ok with that; the consents ain't deleted anyways
             existing = await self.get_by_meeting_and_user(
-                consent.meeting_id, consent.user_id
+                session, consent.meeting_id, consent.user_id
             )
             if existing:
                 query = (
-                    meeting_consent.update()
-                    .where(meeting_consent.c.id == existing.id)
+                    update(MeetingConsentModel)
+                    .where(MeetingConsentModel.id == existing.id)
                     .values(
                         consent_given=consent.consent_given,
                         consent_timestamp=consent.consent_timestamp,
                     )
                 )
-                await get_database().execute(query)
+            await session.execute(query)
+            await session.commit()
 
-                existing.consent_given = consent.consent_given
-                existing.consent_timestamp = consent.consent_timestamp
-                return existing
+            existing.consent_given = consent.consent_given
+            existing.consent_timestamp = consent.consent_timestamp
+            return existing
 
-        query = meeting_consent.insert().values(**consent.model_dump())
-        await get_database().execute(query)
+        new_consent = MeetingConsentModel(**consent.model_dump())
+        session.add(new_consent)
+        await session.commit()
         return consent
 
-    async def has_any_denial(self, meeting_id: str) -> bool:
+    async def has_any_denial(self, session: AsyncSession, meeting_id: str) -> bool:
         """Check if any participant denied consent for this meeting"""
-        query = meeting_consent.select().where(
-            meeting_consent.c.meeting_id == meeting_id,
-            meeting_consent.c.consent_given.is_(False),
+        query = select(MeetingConsentModel).where(
+            sa.and_(
+                MeetingConsentModel.meeting_id == meeting_id,
+                MeetingConsentModel.consent_given.is_(False),
+            )
         )
-        result = await get_database().fetch_one(query)
-        return result is not None
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        return row is not None
 
 
 meetings_controller = MeetingController()

@@ -3,59 +3,19 @@ from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Literal
 
-import sqlalchemy
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
-from sqlalchemy.sql import false, or_
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import or_
 
-from reflector.db import get_database, metadata
+from reflector.db.base import RoomModel
 from reflector.utils import generate_uuid4
-
-rooms = sqlalchemy.Table(
-    "room",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String, nullable=False, unique=True),
-    sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=False),
-    sqlalchemy.Column(
-        "zulip_auto_post", sqlalchemy.Boolean, nullable=False, server_default=false()
-    ),
-    sqlalchemy.Column("zulip_stream", sqlalchemy.String),
-    sqlalchemy.Column("zulip_topic", sqlalchemy.String),
-    sqlalchemy.Column(
-        "is_locked", sqlalchemy.Boolean, nullable=False, server_default=false()
-    ),
-    sqlalchemy.Column(
-        "room_mode", sqlalchemy.String, nullable=False, server_default="normal"
-    ),
-    sqlalchemy.Column(
-        "recording_type", sqlalchemy.String, nullable=False, server_default="cloud"
-    ),
-    sqlalchemy.Column(
-        "recording_trigger",
-        sqlalchemy.String,
-        nullable=False,
-        server_default="automatic-2nd-participant",
-    ),
-    sqlalchemy.Column(
-        "is_shared", sqlalchemy.Boolean, nullable=False, server_default=false()
-    ),
-    sqlalchemy.Column("webhook_url", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("webhook_secret", sqlalchemy.String, nullable=True),
-    sqlalchemy.Column("ics_url", sqlalchemy.Text),
-    sqlalchemy.Column("ics_fetch_interval", sqlalchemy.Integer, server_default="300"),
-    sqlalchemy.Column(
-        "ics_enabled", sqlalchemy.Boolean, nullable=False, server_default=false()
-    ),
-    sqlalchemy.Column("ics_last_sync", sqlalchemy.DateTime(timezone=True)),
-    sqlalchemy.Column("ics_last_etag", sqlalchemy.Text),
-    sqlalchemy.Index("idx_room_is_shared", "is_shared"),
-    sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
-)
 
 
 class Room(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     name: str
     user_id: str
@@ -82,6 +42,7 @@ class Room(BaseModel):
 class RoomController:
     async def get_all(
         self,
+        session: AsyncSession,
         user_id: str | None = None,
         order_by: str | None = None,
         return_query: bool = False,
@@ -95,14 +56,14 @@ class RoomController:
         Parameters:
         - `order_by`: field to order by, e.g. "-created_at"
         """
-        query = rooms.select()
+        query = select(RoomModel)
         if user_id is not None:
-            query = query.where(or_(rooms.c.user_id == user_id, rooms.c.is_shared))
+            query = query.where(or_(RoomModel.user_id == user_id, RoomModel.is_shared))
         else:
-            query = query.where(rooms.c.is_shared)
+            query = query.where(RoomModel.is_shared)
 
         if order_by is not None:
-            field = getattr(rooms.c, order_by[1:])
+            field = getattr(RoomModel, order_by[1:])
             if order_by.startswith("-"):
                 field = field.desc()
             query = query.order_by(field)
@@ -110,11 +71,12 @@ class RoomController:
         if return_query:
             return query
 
-        results = await get_database().fetch_all(query)
-        return results
+        result = await session.execute(query)
+        return [Room.model_validate(row) for row in result.scalars().all()]
 
     async def add(
         self,
+        session: AsyncSession,
         name: str,
         user_id: str,
         zulip_auto_post: bool,
@@ -154,23 +116,27 @@ class RoomController:
             ics_fetch_interval=ics_fetch_interval,
             ics_enabled=ics_enabled,
         )
-        query = rooms.insert().values(**room.model_dump())
+        new_room = RoomModel(**room.model_dump())
+        session.add(new_room)
         try:
-            await get_database().execute(query)
+            await session.flush()
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
         return room
 
-    async def update(self, room: Room, values: dict, mutate=True):
+    async def update(
+        self, session: AsyncSession, room: Room, values: dict, mutate=True
+    ):
         """
         Update a room fields with key/values in values
         """
         if values.get("webhook_url") and not values.get("webhook_secret"):
             values["webhook_secret"] = secrets.token_urlsafe(32)
 
-        query = rooms.update().where(rooms.c.id == room.id).values(**values)
+        query = update(RoomModel).where(RoomModel.id == room.id).values(**values)
         try:
-            await get_database().execute(query)
+            await session.execute(query)
+            await session.flush()
         except IntegrityError:
             raise HTTPException(status_code=400, detail="Room name is not unique")
 
@@ -178,67 +144,79 @@ class RoomController:
             for key, value in values.items():
                 setattr(room, key, value)
 
-    async def get_by_id(self, room_id: str, **kwargs) -> Room | None:
+    async def get_by_id(
+        self, session: AsyncSession, room_id: str, **kwargs
+    ) -> Room | None:
         """
         Get a room by id
         """
-        query = rooms.select().where(rooms.c.id == room_id)
+        query = select(RoomModel).where(RoomModel.id == room_id)
         if "user_id" in kwargs:
-            query = query.where(rooms.c.user_id == kwargs["user_id"])
-        result = await get_database().fetch_one(query)
-        if not result:
+            query = query.where(RoomModel.user_id == kwargs["user_id"])
+        result = await session.execute(query)
+        row = result.scalars().first()
+        if not row:
             return None
-        return Room(**result)
+        return Room.model_validate(row)
 
-    async def get_by_name(self, room_name: str, **kwargs) -> Room | None:
+    async def get_by_name(
+        self, session: AsyncSession, room_name: str, **kwargs
+    ) -> Room | None:
         """
         Get a room by name
         """
-        query = rooms.select().where(rooms.c.name == room_name)
+        query = select(RoomModel).where(RoomModel.name == room_name)
         if "user_id" in kwargs:
-            query = query.where(rooms.c.user_id == kwargs["user_id"])
-        result = await get_database().fetch_one(query)
-        if not result:
+            query = query.where(RoomModel.user_id == kwargs["user_id"])
+        result = await session.execute(query)
+        row = result.scalars().first()
+        if not row:
             return None
-        return Room(**result)
+        return Room.model_validate(row)
 
-    async def get_by_id_for_http(self, meeting_id: str, user_id: str | None) -> Room:
+    async def get_by_id_for_http(
+        self, session: AsyncSession, meeting_id: str, user_id: str | None
+    ) -> Room:
         """
         Get a room by ID for HTTP request.
 
         If not found, it will raise a 404 error.
         """
-        query = rooms.select().where(rooms.c.id == meeting_id)
-        result = await get_database().fetch_one(query)
-        if not result:
+        query = select(RoomModel).where(RoomModel.id == meeting_id)
+        result = await session.execute(query)
+        row = result.scalars().first()
+        if not row:
             raise HTTPException(status_code=404, detail="Room not found")
 
-        room = Room(**result)
+        room = Room.model_validate(row)
 
         return room
 
-    async def get_ics_enabled(self) -> list[Room]:
-        query = rooms.select().where(
-            rooms.c.ics_enabled == True, rooms.c.ics_url != None
+    async def get_ics_enabled(self, session: AsyncSession) -> list[Room]:
+        query = select(RoomModel).where(
+            RoomModel.ics_enabled == True, RoomModel.ics_url != None
         )
-        results = await get_database().fetch_all(query)
-        return [Room(**result) for result in results]
+        result = await session.execute(query)
+        results = result.scalars().all()
+        return [Room(**row.__dict__) for row in results]
 
     async def remove_by_id(
         self,
+        session: AsyncSession,
         room_id: str,
         user_id: str | None = None,
     ) -> None:
         """
         Remove a room by id
         """
-        room = await self.get_by_id(room_id, user_id=user_id)
+        room = await self.get_by_id(session, room_id, user_id=user_id)
         if not room:
             return
         if user_id is not None and room.user_id != user_id:
             return
-        query = rooms.delete().where(rooms.c.id == room_id)
-        await get_database().execute(query)
+        query = delete(RoomModel).where(RoomModel.id == room_id)
+        await session.execute(query)
+        await session.flush()
 
 
 rooms_controller = RoomController()

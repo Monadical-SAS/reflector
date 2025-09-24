@@ -1,8 +1,20 @@
+import asyncio
 import os
+import sys
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    if sys.platform.startswith("win") and sys.version_info[:2] >= (3, 8):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -35,7 +47,6 @@ def docker_compose_file(pytestconfig):
 
 @pytest.fixture(scope="session")
 def postgres_service(docker_ip, docker_services):
-    """Ensure that PostgreSQL service is up and responsive."""
     port = docker_services.port_for("postgres_test", 5432)
 
     def is_responsive():
@@ -56,7 +67,6 @@ def postgres_service(docker_ip, docker_services):
 
     docker_services.wait_until_responsive(timeout=30.0, pause=0.1, check=is_responsive)
 
-    # Return connection parameters
     return {
         "host": docker_ip,
         "port": port,
@@ -66,20 +76,27 @@ def postgres_service(docker_ip, docker_services):
     }
 
 
-@pytest.fixture(scope="function", autouse=True)
-@pytest.mark.asyncio
-async def setup_database(postgres_service):
-    from reflector.db import engine, metadata, get_database  # noqa
+@pytest.fixture(scope="session")
+def _database_url(postgres_service):
+    db_config = postgres_service
+    DATABASE_URL = (
+        f"postgresql+asyncpg://{db_config['user']}:{db_config['password']}"
+        f"@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
+    )
 
-    metadata.drop_all(bind=engine)
-    metadata.create_all(bind=engine)
-    database = get_database()
+    # Override settings
+    from reflector.settings import settings
 
-    try:
-        await database.connect()
-        yield
-    finally:
-        await database.disconnect()
+    settings.DATABASE_URL = DATABASE_URL
+
+    return DATABASE_URL
+
+
+@pytest.fixture(scope="session")
+def init_database():
+    from reflector.db import Base
+
+    return Base.metadata.create_all
 
 
 @pytest.fixture
@@ -327,8 +344,17 @@ def celery_includes():
     ]
 
 
+@pytest.fixture(autouse=True)
+async def ensure_db_session_in_app(db_session):
+    async def mock_get_session():
+        yield db_session
+
+    with patch("reflector.db._get_session", side_effect=mock_get_session):
+        yield
+
+
 @pytest.fixture
-async def client():
+async def client(db_session):
     from httpx import AsyncClient
 
     from reflector.app import app
@@ -347,7 +373,7 @@ def fake_mp3_upload():
 
 
 @pytest.fixture
-async def fake_transcript_with_topics(tmpdir, client):
+async def fake_transcript_with_topics(tmpdir, client, db_session):
     import shutil
     from pathlib import Path
 
@@ -363,10 +389,10 @@ async def fake_transcript_with_topics(tmpdir, client):
     assert response.status_code == 200
     tid = response.json()["id"]
 
-    transcript = await transcripts_controller.get_by_id(tid)
+    transcript = await transcripts_controller.get_by_id(db_session, tid)
     assert transcript is not None
 
-    await transcripts_controller.update(transcript, {"status": "ended"})
+    await transcripts_controller.update(db_session, transcript, {"status": "ended"})
 
     # manually copy a file at the expected location
     audio_filename = transcript.audio_mp3_filename
@@ -376,6 +402,7 @@ async def fake_transcript_with_topics(tmpdir, client):
 
     # create some topics
     await transcripts_controller.upsert_topic(
+        db_session,
         transcript,
         TranscriptTopic(
             title="Topic 1",
@@ -389,6 +416,7 @@ async def fake_transcript_with_topics(tmpdir, client):
         ),
     )
     await transcripts_controller.upsert_topic(
+        db_session,
         transcript,
         TranscriptTopic(
             title="Topic 2",

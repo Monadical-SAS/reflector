@@ -55,6 +55,7 @@ import httpx
 import pytz
 import structlog
 from icalendar import Calendar, Event
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.rooms import Room, rooms_controller
@@ -294,7 +295,7 @@ class ICSSyncService:
     def __init__(self):
         self.fetch_service = ICSFetchService()
 
-    async def sync_room_calendar(self, room: Room) -> SyncResult:
+    async def sync_room_calendar(self, session: AsyncSession, room: Room) -> SyncResult:
         async with RedisAsyncLock(
             f"ics_sync_room:{room.id}", skip_if_locked=True
         ) as lock:
@@ -305,9 +306,11 @@ class ICSSyncService:
                     "reason": "Sync already in progress",
                 }
 
-            return await self._sync_room_calendar(room)
+            return await self._sync_room_calendar(session, room)
 
-    async def _sync_room_calendar(self, room: Room) -> SyncResult:
+    async def _sync_room_calendar(
+        self, session: AsyncSession, room: Room
+    ) -> SyncResult:
         if not room.ics_enabled or not room.ics_url:
             return {"status": SyncStatus.SKIPPED, "reason": "ICS not configured"}
 
@@ -340,10 +343,11 @@ class ICSSyncService:
             events, total_events = self.fetch_service.extract_room_events(
                 calendar, room.name, room_url
             )
-            sync_result = await self._sync_events_to_database(room.id, events)
+            sync_result = await self._sync_events_to_database(session, room.id, events)
 
             # Update room sync metadata
             await rooms_controller.update(
+                session,
                 room,
                 {
                     "ics_last_sync": datetime.now(timezone.utc),
@@ -372,7 +376,7 @@ class ICSSyncService:
         return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
     async def _sync_events_to_database(
-        self, room_id: str, events: list[EventData]
+        self, session: AsyncSession, room_id: str, events: list[EventData]
     ) -> SyncStats:
         created = 0
         updated = 0
@@ -382,7 +386,7 @@ class ICSSyncService:
         for event_data in events:
             calendar_event = CalendarEvent(room_id=room_id, **event_data)
             existing = await calendar_events_controller.get_by_ics_uid(
-                room_id, event_data["ics_uid"]
+                session, room_id, event_data["ics_uid"]
             )
 
             if existing:
@@ -390,12 +394,12 @@ class ICSSyncService:
             else:
                 created += 1
 
-            await calendar_events_controller.upsert(calendar_event)
+            await calendar_events_controller.upsert(session, calendar_event)
             current_ics_uids.append(event_data["ics_uid"])
 
         # Soft delete events that are no longer in calendar
         deleted = await calendar_events_controller.soft_delete_missing(
-            room_id, current_ics_uids
+            session, room_id, current_ics_uids
         )
 
         return {

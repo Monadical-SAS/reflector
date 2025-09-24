@@ -5,12 +5,13 @@ from typing import Annotated, Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
-from fastapi_pagination.ext.databases import apaginate
+from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from redis.exceptions import LockError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
-from reflector.db import get_database
+from reflector.db import get_session
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
@@ -176,27 +177,27 @@ def parse_datetime_with_timezone(iso_string: str) -> datetime:
 @router.get("/rooms", response_model=Page[RoomDetails])
 async def rooms_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> list[RoomDetails]:
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
 
-    return await apaginate(
-        get_database(),
-        await rooms_controller.get_all(
-            user_id=user_id, order_by="-created_at", return_query=True
-        ),
+    query = await rooms_controller.get_all(
+        session, user_id=user_id, order_by="-created_at", return_query=True
     )
+    return await paginate(session, query)
 
 
 @router.get("/rooms/{room_id}", response_model=RoomDetails)
 async def rooms_get(
     room_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
+    room = await rooms_controller.get_by_id_for_http(session, room_id, user_id=user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     return room
@@ -206,9 +207,10 @@ async def rooms_get(
 async def rooms_get_by_name(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
@@ -230,10 +232,12 @@ async def rooms_get_by_name(
 async def rooms_create(
     room: CreateRoom,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
 
     return await rooms_controller.add(
+        session,
         name=room.name,
         user_id=user_id,
         zulip_auto_post=room.zulip_auto_post,
@@ -257,13 +261,14 @@ async def rooms_update(
     room_id: str,
     info: UpdateRoom,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
+    room = await rooms_controller.get_by_id_for_http(session, room_id, user_id=user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     values = info.dict(exclude_unset=True)
-    await rooms_controller.update(room, values)
+    await rooms_controller.update(session, room, values)
     return room
 
 
@@ -271,12 +276,13 @@ async def rooms_update(
 async def rooms_delete(
     room_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_id(room_id, user_id=user_id)
+    room = await rooms_controller.get_by_id(session, room_id, user_id=user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-    await rooms_controller.remove_by_id(room.id, user_id=user_id)
+    await rooms_controller.remove_by_id(session, room.id, user_id=user_id)
     return DeletionStatus(status="ok")
 
 
@@ -285,9 +291,10 @@ async def rooms_create_meeting(
     room_name: str,
     info: CreateRoomMeeting,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
@@ -303,7 +310,7 @@ async def rooms_create_meeting(
             meeting = None
             if not info.allow_duplicated:
                 meeting = await meetings_controller.get_active(
-                    room=room, current_time=current_time
+                    session, room=room, current_time=current_time
                 )
 
             if meeting is None:
@@ -314,6 +321,7 @@ async def rooms_create_meeting(
                 await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
 
                 meeting = await meetings_controller.create(
+                    session,
                     id=whereby_meeting["meetingId"],
                     room_name=whereby_meeting["roomName"],
                     room_url=whereby_meeting["roomUrl"],
@@ -340,11 +348,12 @@ async def rooms_create_meeting(
 async def rooms_test_webhook(
     room_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     """Test webhook configuration by sending a sample payload."""
     user_id = user["sub"] if user else None
 
-    room = await rooms_controller.get_by_id(room_id)
+    room = await rooms_controller.get_by_id(session, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
@@ -361,9 +370,10 @@ async def rooms_test_webhook(
 async def rooms_sync_ics(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -376,7 +386,7 @@ async def rooms_sync_ics(
     if not room.ics_enabled or not room.ics_url:
         raise HTTPException(status_code=400, detail="ICS not configured for this room")
 
-    result = await ics_sync_service.sync_room_calendar(room)
+    result = await ics_sync_service.sync_room_calendar(session, room)
 
     if result["status"] == "error":
         raise HTTPException(
@@ -390,9 +400,10 @@ async def rooms_sync_ics(
 async def rooms_ics_status(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -407,7 +418,7 @@ async def rooms_ics_status(
         next_sync = room.ics_last_sync + timedelta(seconds=room.ics_fetch_interval)
 
     events = await calendar_events_controller.get_by_room(
-        room.id, include_deleted=False
+        session, room.id, include_deleted=False
     )
 
     return ICSStatus(
@@ -423,15 +434,16 @@ async def rooms_ics_status(
 async def rooms_list_meetings(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
     events = await calendar_events_controller.get_by_room(
-        room.id, include_deleted=False
+        session, room.id, include_deleted=False
     )
 
     if user_id != room.user_id:
@@ -449,15 +461,16 @@ async def rooms_list_upcoming_meetings(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
     minutes_ahead: int = 120,
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
     events = await calendar_events_controller.get_upcoming(
-        room.id, minutes_ahead=minutes_ahead
+        session, room.id, minutes_ahead=minutes_ahead
     )
 
     if user_id != room.user_id:
@@ -472,16 +485,17 @@ async def rooms_list_upcoming_meetings(
 async def rooms_list_active_meetings(
     room_name: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
     current_time = datetime.now(timezone.utc)
     meetings = await meetings_controller.get_all_active_for_room(
-        room=room, current_time=current_time
+        session, room=room, current_time=current_time
     )
 
     # Hide host URLs from non-owners
@@ -497,15 +511,16 @@ async def rooms_get_meeting(
     room_name: str,
     meeting_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     """Get a single meeting by ID within a specific room."""
     user_id = user["sub"] if user else None
 
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(session, meeting_id)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
@@ -525,14 +540,15 @@ async def rooms_join_meeting(
     room_name: str,
     meeting_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_name(room_name)
+    room = await rooms_controller.get_by_name(session, room_name)
 
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(session, meeting_id)
 
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")

@@ -49,11 +49,12 @@ class ThreadedUvicorn:
 
 
 @pytest.fixture
-def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
+def appserver(tmpdir, database, celery_session_app, celery_session_worker):
     import threading
 
     from reflector.app import app
-    from reflector.db import get_database
+
+    # Database connection handled by SQLAlchemy engine
     from reflector.settings import settings
 
     DATA_DIR = settings.DATA_DIR
@@ -77,13 +78,8 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
             server_instance = Server(config)
 
             async def start_server():
-                # Initialize database connection in this event loop
-                database = get_database()
-                await database.connect()
-                try:
-                    await server_instance.serve()
-                finally:
-                    await database.disconnect()
+                # Database connections managed by SQLAlchemy engine
+                await server_instance.serve()
 
             # Signal that server is starting
             server_started.set()
@@ -115,12 +111,6 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
     settings.DATA_DIR = DATA_DIR
 
 
-@pytest.fixture(scope="session")
-def celery_includes():
-    return ["reflector.pipelines.main_live_pipeline"]
-
-
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
@@ -168,7 +158,7 @@ async def test_transcript_rtc_and_websocket(
             except Exception as e:
                 print(f"Test websocket: EXCEPTION {e}")
             finally:
-                ws.close()
+                await ws.close()
                 print("Test websocket: DISCONNECTED")
 
     websocket_task = asyncio.get_event_loop().create_task(websocket_task())
@@ -285,7 +275,6 @@ async def test_transcript_rtc_and_websocket(
     assert audio_resp.headers["Content-Type"] == "audio/mpeg"
 
 
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio

@@ -2,45 +2,17 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
-from sqlalchemy.dialects.postgresql import JSONB
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import delete, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.db import get_database, metadata
+from reflector.db.base import CalendarEventModel
 from reflector.utils import generate_uuid4
-
-calendar_events = sa.Table(
-    "calendar_event",
-    metadata,
-    sa.Column("id", sa.String, primary_key=True),
-    sa.Column(
-        "room_id",
-        sa.String,
-        sa.ForeignKey("room.id", ondelete="CASCADE", name="fk_calendar_event_room_id"),
-        nullable=False,
-    ),
-    sa.Column("ics_uid", sa.Text, nullable=False),
-    sa.Column("title", sa.Text),
-    sa.Column("description", sa.Text),
-    sa.Column("start_time", sa.DateTime(timezone=True), nullable=False),
-    sa.Column("end_time", sa.DateTime(timezone=True), nullable=False),
-    sa.Column("attendees", JSONB),
-    sa.Column("location", sa.Text),
-    sa.Column("ics_raw_data", sa.Text),
-    sa.Column("last_synced", sa.DateTime(timezone=True), nullable=False),
-    sa.Column("is_deleted", sa.Boolean, nullable=False, server_default=sa.false()),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-    sa.UniqueConstraint("room_id", "ics_uid", name="uq_room_calendar_event"),
-    sa.Index("idx_calendar_event_room_start", "room_id", "start_time"),
-    sa.Index(
-        "idx_calendar_event_deleted",
-        "is_deleted",
-        postgresql_where=sa.text("NOT is_deleted"),
-    ),
-)
 
 
 class CalendarEvent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str = Field(default_factory=generate_uuid4)
     room_id: str
     ics_uid: str
@@ -58,124 +30,157 @@ class CalendarEvent(BaseModel):
 
 
 class CalendarEventController:
-    async def get_by_room(
+    async def get_upcoming_events(
         self,
+        session: AsyncSession,
         room_id: str,
-        include_deleted: bool = False,
-        start_after: datetime | None = None,
-        end_before: datetime | None = None,
+        current_time: datetime,
+        buffer_minutes: int = 15,
     ) -> list[CalendarEvent]:
-        query = calendar_events.select().where(calendar_events.c.room_id == room_id)
-
-        if not include_deleted:
-            query = query.where(calendar_events.c.is_deleted == False)
-
-        if start_after:
-            query = query.where(calendar_events.c.start_time >= start_after)
-
-        if end_before:
-            query = query.where(calendar_events.c.end_time <= end_before)
-
-        query = query.order_by(calendar_events.c.start_time.asc())
-
-        results = await get_database().fetch_all(query)
-        return [CalendarEvent(**result) for result in results]
-
-    async def get_upcoming(
-        self, room_id: str, minutes_ahead: int = 120
-    ) -> list[CalendarEvent]:
-        """Get upcoming events for a room within the specified minutes, including currently happening events."""
-        now = datetime.now(timezone.utc)
-        future_time = now + timedelta(minutes=minutes_ahead)
+        buffer_time = current_time + timedelta(minutes=buffer_minutes)
 
         query = (
-            calendar_events.select()
+            select(CalendarEventModel)
             .where(
                 sa.and_(
-                    calendar_events.c.room_id == room_id,
-                    calendar_events.c.is_deleted == False,
-                    calendar_events.c.start_time <= future_time,
-                    calendar_events.c.end_time >= now,
+                    CalendarEventModel.room_id == room_id,
+                    CalendarEventModel.start_time <= buffer_time,
+                    CalendarEventModel.end_time > current_time,
                 )
             )
-            .order_by(calendar_events.c.start_time.asc())
+            .order_by(CalendarEventModel.start_time)
         )
 
-        results = await get_database().fetch_all(query)
-        return [CalendarEvent(**result) for result in results]
+        result = await session.execute(query)
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
 
-    async def get_by_ics_uid(self, room_id: str, ics_uid: str) -> CalendarEvent | None:
-        query = calendar_events.select().where(
+    async def get_by_id(
+        self, session: AsyncSession, event_id: str
+    ) -> CalendarEvent | None:
+        query = select(CalendarEventModel).where(CalendarEventModel.id == event_id)
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        return CalendarEvent.model_validate(row)
+
+    async def get_by_ics_uid(
+        self, session: AsyncSession, room_id: str, ics_uid: str
+    ) -> CalendarEvent | None:
+        query = select(CalendarEventModel).where(
             sa.and_(
-                calendar_events.c.room_id == room_id,
-                calendar_events.c.ics_uid == ics_uid,
+                CalendarEventModel.room_id == room_id,
+                CalendarEventModel.ics_uid == ics_uid,
             )
         )
-        result = await get_database().fetch_one(query)
-        return CalendarEvent(**result) if result else None
+        result = await session.execute(query)
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        return CalendarEvent.model_validate(row)
 
-    async def upsert(self, event: CalendarEvent) -> CalendarEvent:
-        existing = await self.get_by_ics_uid(event.room_id, event.ics_uid)
+    async def upsert(
+        self, session: AsyncSession, event: CalendarEvent
+    ) -> CalendarEvent:
+        existing = await self.get_by_ics_uid(session, event.room_id, event.ics_uid)
 
         if existing:
-            event.id = existing.id
-            event.created_at = existing.created_at
             event.updated_at = datetime.now(timezone.utc)
-
             query = (
-                calendar_events.update()
-                .where(calendar_events.c.id == existing.id)
-                .values(**event.model_dump())
+                update(CalendarEventModel)
+                .where(CalendarEventModel.id == existing.id)
+                .values(**event.model_dump(exclude={"id"}))
             )
+            await session.execute(query)
+            await session.commit()
+            return event
         else:
-            query = calendar_events.insert().values(**event.model_dump())
+            new_event = CalendarEventModel(**event.model_dump())
+            session.add(new_event)
+            await session.commit()
+            return event
 
-        await get_database().execute(query)
-        return event
-
-    async def soft_delete_missing(
-        self, room_id: str, current_ics_uids: list[str]
+    async def delete_old_events(
+        self, session: AsyncSession, room_id: str, cutoff_date: datetime
     ) -> int:
-        """Soft delete future events that are no longer in the calendar."""
-        now = datetime.now(timezone.utc)
-
-        select_query = calendar_events.select().where(
+        query = delete(CalendarEventModel).where(
             sa.and_(
-                calendar_events.c.room_id == room_id,
-                calendar_events.c.start_time > now,
-                calendar_events.c.is_deleted == False,
-                calendar_events.c.ics_uid.notin_(current_ics_uids)
-                if current_ics_uids
-                else True,
+                CalendarEventModel.room_id == room_id,
+                CalendarEventModel.end_time < cutoff_date,
             )
         )
+        result = await session.execute(query)
+        await session.commit()
+        return result.rowcount
 
-        to_delete = await get_database().fetch_all(select_query)
-        delete_count = len(to_delete)
-
-        if delete_count > 0:
-            update_query = (
-                calendar_events.update()
-                .where(
-                    sa.and_(
-                        calendar_events.c.room_id == room_id,
-                        calendar_events.c.start_time > now,
-                        calendar_events.c.is_deleted == False,
-                        calendar_events.c.ics_uid.notin_(current_ics_uids)
-                        if current_ics_uids
-                        else True,
-                    )
+    async def delete_events_not_in_list(
+        self, session: AsyncSession, room_id: str, keep_ics_uids: list[str]
+    ) -> int:
+        if not keep_ics_uids:
+            query = delete(CalendarEventModel).where(
+                CalendarEventModel.room_id == room_id
+            )
+        else:
+            query = delete(CalendarEventModel).where(
+                sa.and_(
+                    CalendarEventModel.room_id == room_id,
+                    CalendarEventModel.ics_uid.notin_(keep_ics_uids),
                 )
-                .values(is_deleted=True, updated_at=now)
             )
 
-            await get_database().execute(update_query)
+        result = await session.execute(query)
+        await session.commit()
+        return result.rowcount
 
-        return delete_count
+    async def get_by_room(
+        self, session: AsyncSession, room_id: str, include_deleted: bool = True
+    ) -> list[CalendarEvent]:
+        query = select(CalendarEventModel).where(CalendarEventModel.room_id == room_id)
+        if not include_deleted:
+            query = query.where(CalendarEventModel.is_deleted == False)
+        result = await session.execute(query)
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
 
-    async def delete_by_room(self, room_id: str) -> int:
-        query = calendar_events.delete().where(calendar_events.c.room_id == room_id)
-        result = await get_database().execute(query)
+    async def get_upcoming(
+        self, session: AsyncSession, room_id: str, minutes_ahead: int = 120
+    ) -> list[CalendarEvent]:
+        now = datetime.now(timezone.utc)
+        buffer_time = now + timedelta(minutes=minutes_ahead)
+
+        query = (
+            select(CalendarEventModel)
+            .where(
+                sa.and_(
+                    CalendarEventModel.room_id == room_id,
+                    CalendarEventModel.start_time <= buffer_time,
+                    CalendarEventModel.end_time > now,
+                    CalendarEventModel.is_deleted == False,
+                )
+            )
+            .order_by(CalendarEventModel.start_time)
+        )
+
+        result = await session.execute(query)
+        return [CalendarEvent.model_validate(row) for row in result.scalars().all()]
+
+    async def soft_delete_missing(
+        self, session: AsyncSession, room_id: str, current_ics_uids: list[str]
+    ) -> int:
+        query = (
+            update(CalendarEventModel)
+            .where(
+                sa.and_(
+                    CalendarEventModel.room_id == room_id,
+                    CalendarEventModel.ics_uid.notin_(current_ics_uids)
+                    if current_ics_uids
+                    else True,
+                    CalendarEventModel.end_time > datetime.now(timezone.utc),
+                )
+            )
+            .values(is_deleted=True)
+        )
+        result = await session.execute(query)
+        await session.commit()
         return result.rowcount
 
 

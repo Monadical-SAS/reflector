@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture
-async def fake_transcript(tmpdir, client):
+async def fake_transcript(tmpdir, client, db_session):
     from reflector.settings import settings
     from reflector.views.transcripts import transcripts_controller
 
@@ -16,10 +16,10 @@ async def fake_transcript(tmpdir, client):
     assert response.status_code == 200
     tid = response.json()["id"]
 
-    transcript = await transcripts_controller.get_by_id(tid)
+    transcript = await transcripts_controller.get_by_id(db_session, tid)
     assert transcript is not None
 
-    await transcripts_controller.update(transcript, {"status": "ended"})
+    await transcripts_controller.update(db_session, transcript, {"status": "ended"})
 
     # manually copy a file at the expected location
     audio_filename = transcript.audio_mp3_filename

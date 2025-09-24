@@ -1,8 +1,10 @@
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
+from reflector.db import get_session
 from reflector.db.transcripts import transcripts_controller
 
 from .rtc_offer import RtcOffer, rtc_offer_base
@@ -16,10 +18,11 @@ async def transcript_record_webrtc(
     params: RtcOffer,
     request: Request,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     if transcript.locked:

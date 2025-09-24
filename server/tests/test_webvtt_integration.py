@@ -1,13 +1,14 @@
 """Integration tests for WebVTT auto-update functionality in Transcript model."""
 
 import pytest
+from sqlalchemy import select
 
-from reflector.db import get_database
+from reflector.db.base import TranscriptModel
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptController,
     TranscriptTopic,
-    transcripts,
+    transcripts_controller,
 )
 from reflector.processors.types import Word
 
@@ -16,30 +17,35 @@ from reflector.processors.types import Word
 class TestWebVTTAutoUpdate:
     """Test that WebVTT field auto-updates when Transcript is created or modified."""
 
-    async def test_webvtt_not_updated_on_transcript_creation_without_topics(self):
+    async def test_webvtt_not_updated_on_transcript_creation_without_topics(
+        self, db_session
+    ):
         """WebVTT should be None when creating transcript without topics."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
 
         try:
-            result = await get_database().fetch_one(
-                transcripts.select().where(transcripts.c.id == transcript.id)
+            result = await db_session.execute(
+                select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
+            row = result.scalar_one_or_none()
 
-            assert result is not None
-            assert result["webvtt"] is None
+            assert row is not None
+            assert row.webvtt is None
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)
 
-    async def test_webvtt_updated_on_upsert_topic(self):
+    async def test_webvtt_updated_on_upsert_topic(self, db_session):
         """WebVTT should update when upserting topics via upsert_topic method."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
@@ -56,14 +62,15 @@ class TestWebVTTAutoUpdate:
                 ],
             )
 
-            await controller.upsert_topic(transcript, topic)
+            await transcripts_controller.upsert_topic(db_session, transcript, topic)
 
-            result = await get_database().fetch_one(
-                transcripts.select().where(transcripts.c.id == transcript.id)
+            result = await db_session.execute(
+                select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
+            row = result.scalar_one_or_none()
 
-            assert result is not None
-            webvtt = result["webvtt"]
+            assert row is not None
+            webvtt = row.webvtt
 
             assert webvtt is not None
             assert "WEBVTT" in webvtt
@@ -71,13 +78,14 @@ class TestWebVTTAutoUpdate:
             assert "<v Speaker0>" in webvtt
 
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)
 
-    async def test_webvtt_updated_on_direct_topics_update(self):
+    async def test_webvtt_updated_on_direct_topics_update(self, db_session):
         """WebVTT should update when updating topics field directly."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
@@ -96,28 +104,32 @@ class TestWebVTTAutoUpdate:
                 }
             ]
 
-            await controller.update(transcript, {"topics": topics_data})
-
-            # Fetch from DB
-            result = await get_database().fetch_one(
-                transcripts.select().where(transcripts.c.id == transcript.id)
+            await transcripts_controller.update(
+                db_session, transcript, {"topics": topics_data}
             )
 
-            assert result is not None
-            webvtt = result["webvtt"]
+            # Fetch from DB
+            result = await db_session.execute(
+                select(TranscriptModel).where(TranscriptModel.id == transcript.id)
+            )
+            row = result.scalar_one_or_none()
+
+            assert row is not None
+            webvtt = row.webvtt
 
             assert webvtt is not None
             assert "WEBVTT" in webvtt
             assert "First sentence" in webvtt
 
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)
 
-    async def test_webvtt_updated_manually_with_handle_topics_update(self):
+    async def test_webvtt_updated_manually_with_handle_topics_update(self, db_session):
         """Test that _handle_topics_update works when called manually."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
@@ -138,15 +150,16 @@ class TestWebVTTAutoUpdate:
 
             values = {"topics": transcript.topics_dump()}
 
-            await controller.update(transcript, values)
+            await transcripts_controller.update(db_session, transcript, values)
 
             # Fetch from DB
-            result = await get_database().fetch_one(
-                transcripts.select().where(transcripts.c.id == transcript.id)
+            result = await db_session.execute(
+                select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
+            row = result.scalar_one_or_none()
 
-            assert result is not None
-            webvtt = result["webvtt"]
+            assert row is not None
+            webvtt = row.webvtt
 
             assert webvtt is not None
             assert "WEBVTT" in webvtt
@@ -154,13 +167,14 @@ class TestWebVTTAutoUpdate:
             assert "<v Speaker0>" in webvtt
 
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)
 
-    async def test_webvtt_update_with_non_sequential_topics_fails(self):
+    async def test_webvtt_update_with_non_sequential_topics_fails(self, db_session):
         """Test that non-sequential topics raise assertion error."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
@@ -186,13 +200,14 @@ class TestWebVTTAutoUpdate:
             assert "Words are not in sequence" in str(exc_info.value)
 
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)
 
-    async def test_multiple_speakers_in_webvtt(self):
+    async def test_multiple_speakers_in_webvtt(self, db_session):
         """Test WebVTT generation with multiple speakers."""
-        controller = TranscriptController()
+        # Using global transcripts_controller
 
-        transcript = await controller.add(
+        transcript = await transcripts_controller.add(
+            db_session,
             name="Test Transcript",
             source_kind=SourceKind.FILE,
         )
@@ -213,15 +228,16 @@ class TestWebVTTAutoUpdate:
             transcript.upsert_topic(topic)
             values = {"topics": transcript.topics_dump()}
 
-            await controller.update(transcript, values)
+            await transcripts_controller.update(db_session, transcript, values)
 
             # Fetch from DB
-            result = await get_database().fetch_one(
-                transcripts.select().where(transcripts.c.id == transcript.id)
+            result = await db_session.execute(
+                select(TranscriptModel).where(TranscriptModel.id == transcript.id)
             )
+            row = result.scalar_one_or_none()
 
-            assert result is not None
-            webvtt = result["webvtt"]
+            assert row is not None
+            webvtt = row.webvtt
 
             assert webvtt is not None
             assert "<v Speaker0>" in webvtt
@@ -231,4 +247,4 @@ class TestWebVTTAutoUpdate:
             assert "Goodbye" in webvtt
 
         finally:
-            await controller.remove_by_id(transcript.id)
+            await transcripts_controller.remove_by_id(db_session, transcript.id)

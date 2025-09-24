@@ -11,6 +11,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Literal
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from reflector.db import get_session_factory
 from reflector.db.transcripts import SourceKind, TranscriptTopic, transcripts_controller
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import (
@@ -50,6 +53,7 @@ TranscriptId = str
 # common interface for every flow: it needs an Entry in db with specific ceremony (file path + status + actual file in file system)
 # ideally we want to get rid of it at some point
 async def prepare_entry(
+    session: AsyncSession,
     source_path: str,
     source_language: str,
     target_language: str,
@@ -57,6 +61,7 @@ async def prepare_entry(
     file_path = Path(source_path)
 
     transcript = await transcripts_controller.add(
+        session,
         file_path.name,
         # note that the real file upload has SourceKind: LIVE for the reason of it's an error
         source_kind=SourceKind.FILE,
@@ -78,16 +83,20 @@ async def prepare_entry(
     logger.info(f"Copied {source_path} to {upload_path}")
 
     # pipelines expect entity status "uploaded"
-    await transcripts_controller.update(transcript, {"status": "uploaded"})
+    await transcripts_controller.update(session, transcript, {"status": "uploaded"})
 
     return transcript.id
 
 
 # same reason as prepare_entry
 async def extract_result_from_entry(
-    transcript_id: TranscriptId, output_path: str
+    session: AsyncSession,
+    transcript_id: TranscriptId,
+    output_path: str,
 ) -> None:
-    post_final_transcript = await transcripts_controller.get_by_id(transcript_id)
+    post_final_transcript = await transcripts_controller.get_by_id(
+        session, transcript_id
+    )
 
     # assert post_final_transcript.status == "ended"
     # File pipeline doesn't set status to "ended", only live pipeline does https://github.com/Monadical-SAS/reflector/issues/582
@@ -115,6 +124,7 @@ async def extract_result_from_entry(
 
 
 async def process_live_pipeline(
+    session: AsyncSession,
     transcript_id: TranscriptId,
 ):
     """Process transcript_id with transcription and diarization"""
@@ -123,7 +133,9 @@ async def process_live_pipeline(
     await live_pipeline_process(transcript_id=transcript_id)
     print(f"Processing complete for transcript {transcript_id}", file=sys.stderr)
 
-    pre_final_transcript = await transcripts_controller.get_by_id(transcript_id)
+    pre_final_transcript = await transcripts_controller.get_by_id(
+        session, transcript_id
+    )
 
     # assert documented behaviour: after process, the pipeline isn't ended. this is the reason of calling pipeline_post
     assert pre_final_transcript.status != "ended"
@@ -160,21 +172,17 @@ async def process(
     pipeline: Literal["live", "file"],
     output_path: str = None,
 ):
-    from reflector.db import get_database
-
-    database = get_database()
-    # db connect is a part of ceremony
-    await database.connect()
-
-    try:
+    session_factory = get_session_factory()
+    async with session_factory() as session:
         transcript_id = await prepare_entry(
+            session,
             source_path,
             source_language,
             target_language,
         )
 
         pipeline_handlers = {
-            "live": process_live_pipeline,
+            "live": lambda tid: process_live_pipeline(session, tid),
             "file": process_file_pipeline,
         }
 
@@ -184,9 +192,7 @@ async def process(
 
         await handler(transcript_id)
 
-        await extract_result_from_entry(transcript_id, output_path)
-    finally:
-        await database.disconnect()
+        await extract_result_from_entry(session, transcript_id, output_path)
 
 
 if __name__ == "__main__":

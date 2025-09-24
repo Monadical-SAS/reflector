@@ -10,6 +10,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 from redis.exceptions import LockError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
@@ -20,6 +21,7 @@ from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
+from reflector.worker.session_decorator import with_session
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -75,30 +77,39 @@ def process_messages():
 
 @shared_task
 @asynctask
-async def process_recording(bucket_name: str, object_key: str):
+@with_session
+async def process_recording(session: AsyncSession, bucket_name: str, object_key: str):
     logger.info("Processing recording: %s/%s", bucket_name, object_key)
 
     # extract a guid and a datetime from the object key
     room_name = f"/{object_key[:36]}"
     recorded_at = parse_datetime_with_timezone(object_key[37:57])
 
-    meeting = await meetings_controller.get_by_room_name(room_name)
-    room = await rooms_controller.get_by_id(meeting.room_id)
+    meeting = await meetings_controller.get_by_room_name(session, room_name)
+    if not meeting:
+        logger.warning("Room not found, may be deleted ?", room_name=room_name)
+        return
 
-    recording = await recordings_controller.get_by_object_key(bucket_name, object_key)
+    room = await rooms_controller.get_by_id(session, meeting.room_id)
+
+    recording = await recordings_controller.get_by_object_key(
+        session, bucket_name, object_key
+    )
     if not recording:
         recording = await recordings_controller.create(
+            session,
             Recording(
                 bucket_name=bucket_name,
                 object_key=object_key,
                 recorded_at=recorded_at,
                 meeting_id=meeting.id,
-            )
+            ),
         )
 
-    transcript = await transcripts_controller.get_by_recording_id(recording.id)
+    transcript = await transcripts_controller.get_by_recording_id(session, recording.id)
     if transcript:
         await transcripts_controller.update(
+            session,
             transcript,
             {
                 "topics": [],
@@ -106,6 +117,7 @@ async def process_recording(bucket_name: str, object_key: str):
         )
     else:
         transcript = await transcripts_controller.add(
+            session,
             "",
             source_kind=SourceKind.ROOM,
             source_language="en",
@@ -141,14 +153,15 @@ async def process_recording(bucket_name: str, object_key: str):
     finally:
         container.close()
 
-    await transcripts_controller.update(transcript, {"status": "uploaded"})
+    await transcripts_controller.update(session, transcript, {"status": "uploaded"})
 
     task_pipeline_file_process.delay(transcript_id=transcript.id)
 
 
 @shared_task
 @asynctask
-async def process_meetings():
+@with_session
+async def process_meetings(session: AsyncSession):
     """
     Checks which meetings are still active and deactivates those that have ended.
 
@@ -165,7 +178,7 @@ async def process_meetings():
     process the same meeting simultaneously.
     """
     logger.info("Processing meetings")
-    meetings = await meetings_controller.get_all_active()
+    meetings = await meetings_controller.get_all_active(session)
     current_time = datetime.now(timezone.utc)
     redis_client = get_redis_client()
     processed_count = 0
@@ -218,7 +231,9 @@ async def process_meetings():
                 logger_.debug("Meeting not yet started, keep it")
 
             if should_deactivate:
-                await meetings_controller.update_meeting(meeting.id, is_active=False)
+                await meetings_controller.update_meeting(
+                    session, meeting.id, is_active=False
+                )
                 logger_.info("Meeting is deactivated")
 
             processed_count += 1
@@ -240,7 +255,8 @@ async def process_meetings():
 
 @shared_task
 @asynctask
-async def reprocess_failed_recordings():
+@with_session
+async def reprocess_failed_recordings(session: AsyncSession):
     """
     Find recordings in the S3 bucket and check if they have proper transcriptions.
     If not, requeue them for processing.
@@ -271,7 +287,7 @@ async def reprocess_failed_recordings():
                     continue
 
                 recording = await recordings_controller.get_by_object_key(
-                    bucket_name, object_key
+                    session, bucket_name, object_key
                 )
                 if not recording:
                     logger.info(f"Queueing recording for processing: {object_key}")
@@ -282,10 +298,12 @@ async def reprocess_failed_recordings():
                 transcript = None
                 try:
                     transcript = await transcripts_controller.get_by_recording_id(
-                        recording.id
+                        session, recording.id
                     )
                 except ValidationError:
-                    await transcripts_controller.remove_by_recording_id(recording.id)
+                    await transcripts_controller.remove_by_recording_id(
+                        session, recording.id
+                    )
                     logger.warning(
                         f"Removed invalid transcript for recording: {recording.id}"
                     )

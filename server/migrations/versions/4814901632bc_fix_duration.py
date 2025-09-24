@@ -36,9 +36,7 @@ def upgrade() -> None:
 
     # select only the one with duration = 0
     results = bind.execute(
-        select([transcript.c.id, transcript.c.duration]).where(
-            transcript.c.duration == 0
-        )
+        select(transcript.c.id, transcript.c.duration).where(transcript.c.duration == 0)
     )
 
     data_dir = Path(settings.DATA_DIR)

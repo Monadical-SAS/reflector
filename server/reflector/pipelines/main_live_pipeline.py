@@ -20,9 +20,11 @@ import av
 import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import BoundLogger as Logger
 
 from reflector.asynctask import asynctask
+from reflector.db import get_session_factory
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -62,6 +64,7 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.worker.session_decorator import with_session_and_transcript
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
     get_zulip_message,
@@ -96,9 +99,10 @@ def get_transcript(func):
     @functools.wraps(func)
     async def wrapper(**kwargs):
         transcript_id = kwargs.pop("transcript_id")
-        transcript = await transcripts_controller.get_by_id(transcript_id=transcript_id)
+        async with get_session_factory()() as session:
+            transcript = await transcripts_controller.get_by_id(session, transcript_id)
         if not transcript:
-            raise Exception("Transcript {transcript_id} not found")
+            raise Exception(f"Transcript {transcript_id} not found")
 
         # Enhanced logger with Celery task context
         tlogger = logger.bind(transcript_id=transcript.id)
@@ -139,11 +143,9 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
             self._ws_manager = get_ws_manager()
         return self._ws_manager
 
-    async def get_transcript(self) -> Transcript:
+    async def get_transcript(self, session: AsyncSession) -> Transcript:
         # fetch the transcript
-        result = await transcripts_controller.get_by_id(
-            transcript_id=self.transcript_id
-        )
+        result = await transcripts_controller.get_by_id(session, self.transcript_id)
         if not result:
             raise Exception("Transcript not found")
         return result
@@ -175,8 +177,8 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
     @asynccontextmanager
     async def transaction(self):
         async with self.lock_transaction():
-            async with transcripts_controller.transaction():
-                yield
+            async with get_session_factory()() as session:
+                yield session
 
     @broadcast_to_sockets
     async def on_status(self, status):
@@ -207,13 +209,17 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
 
         # when the status of the pipeline changes, update the transcript
         async with self._lock:
-            return await transcripts_controller.set_status(self.transcript_id, status)
+            async with get_session_factory()() as session:
+                return await transcripts_controller.set_status(
+                    session, self.transcript_id, status
+                )
 
     @broadcast_to_sockets
     async def on_transcript(self, data):
-        async with self.transaction():
-            transcript = await self.get_transcript()
+        async with self.transaction() as session:
+            transcript = await self.get_transcript(session)
             return await transcripts_controller.append_event(
+                session,
                 transcript=transcript,
                 event="TRANSCRIPT",
                 data=TranscriptText(text=data.text, translation=data.translation),
@@ -230,10 +236,11 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         )
         if isinstance(data, TitleSummaryWithIdProcessorType):
             topic.id = data.id
-        async with self.transaction():
-            transcript = await self.get_transcript()
-            await transcripts_controller.upsert_topic(transcript, topic)
+        async with self.transaction() as session:
+            transcript = await self.get_transcript(session)
+            await transcripts_controller.upsert_topic(session, transcript, topic)
             return await transcripts_controller.append_event(
+                session,
                 transcript=transcript,
                 event="TOPIC",
                 data=topic,
@@ -242,16 +249,18 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
     @broadcast_to_sockets
     async def on_title(self, data):
         final_title = TranscriptFinalTitle(title=data.title)
-        async with self.transaction():
-            transcript = await self.get_transcript()
+        async with self.transaction() as session:
+            transcript = await self.get_transcript(session)
             if not transcript.title:
                 await transcripts_controller.update(
+                    session,
                     transcript,
                     {
                         "title": final_title.title,
                     },
                 )
             return await transcripts_controller.append_event(
+                session,
                 transcript=transcript,
                 event="FINAL_TITLE",
                 data=final_title,
@@ -260,15 +269,17 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
     @broadcast_to_sockets
     async def on_long_summary(self, data):
         final_long_summary = TranscriptFinalLongSummary(long_summary=data.long_summary)
-        async with self.transaction():
-            transcript = await self.get_transcript()
+        async with self.transaction() as session:
+            transcript = await self.get_transcript(session)
             await transcripts_controller.update(
+                session,
                 transcript,
                 {
                     "long_summary": final_long_summary.long_summary,
                 },
             )
             return await transcripts_controller.append_event(
+                session,
                 transcript=transcript,
                 event="FINAL_LONG_SUMMARY",
                 data=final_long_summary,
@@ -279,15 +290,17 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         final_short_summary = TranscriptFinalShortSummary(
             short_summary=data.short_summary
         )
-        async with self.transaction():
-            transcript = await self.get_transcript()
+        async with self.transaction() as session:
+            transcript = await self.get_transcript(session)
             await transcripts_controller.update(
+                session,
                 transcript,
                 {
                     "short_summary": final_short_summary.short_summary,
                 },
             )
             return await transcripts_controller.append_event(
+                session,
                 transcript=transcript,
                 event="FINAL_SHORT_SUMMARY",
                 data=final_short_summary,
@@ -295,29 +308,30 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
 
     @broadcast_to_sockets
     async def on_duration(self, data):
-        async with self.transaction():
+        async with self.transaction() as session:
             duration = TranscriptDuration(duration=data)
 
-            transcript = await self.get_transcript()
+            transcript = await self.get_transcript(session)
             await transcripts_controller.update(
+                session,
                 transcript,
                 {
                     "duration": duration.duration,
                 },
             )
             return await transcripts_controller.append_event(
-                transcript=transcript, event="DURATION", data=duration
+                session, transcript=transcript, event="DURATION", data=duration
             )
 
     @broadcast_to_sockets
     async def on_waveform(self, data):
-        async with self.transaction():
+        async with self.transaction() as session:
             waveform = TranscriptWaveform(waveform=data)
 
-            transcript = await self.get_transcript()
+            transcript = await self.get_transcript(session)
 
             return await transcripts_controller.append_event(
-                transcript=transcript, event="WAVEFORM", data=waveform
+                session, transcript=transcript, event="WAVEFORM", data=waveform
             )
 
 
@@ -330,7 +344,8 @@ class PipelineMainLive(PipelineMainBase):
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
-        transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            transcript = await self.get_transcript(session)
 
         processors = [
             AudioFileWriterProcessor(
@@ -378,7 +393,8 @@ class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
         # now let's start the pipeline by pushing information to the
         # first processor diarization processor
         # XXX translation is lost when converting our data model to the processor model
-        transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            transcript = await self.get_transcript(session)
 
         # diarization works only if the file is uploaded to an external storage
         if transcript.audio_location == "local":
@@ -411,7 +427,8 @@ class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
 
     async def create(self) -> Pipeline:
         # get transcript
-        self._transcript = transcript = await self.get_transcript()
+        async with get_session_factory()() as session:
+            self._transcript = transcript = await self.get_transcript(session)
 
         # create pipeline
         processors = self.get_processors()
@@ -516,8 +533,7 @@ async def pipeline_convert_to_mp3(transcript: Transcript, logger: Logger):
     logger.info("Convert to mp3 done")
 
 
-@get_transcript
-async def pipeline_upload_mp3(transcript: Transcript, logger: Logger):
+async def pipeline_upload_mp3(session, transcript: Transcript, logger: Logger):
     if not settings.TRANSCRIPT_STORAGE_BACKEND:
         logger.info("No storage backend configured, skipping mp3 upload")
         return
@@ -535,7 +551,7 @@ async def pipeline_upload_mp3(transcript: Transcript, logger: Logger):
         return
 
     # Upload to external storage and delete the file
-    await transcripts_controller.move_mp3_to_storage(transcript)
+    await transcripts_controller.move_mp3_to_storage(session, transcript)
 
     logger.info("Upload mp3 done")
 
@@ -564,20 +580,23 @@ async def pipeline_summaries(transcript: Transcript, logger: Logger):
     logger.info("Summaries done")
 
 
-@get_transcript
-async def cleanup_consent(transcript: Transcript, logger: Logger):
+async def cleanup_consent(session, transcript: Transcript, logger: Logger):
     logger.info("Starting consent cleanup")
 
     consent_denied = False
     recording = None
     try:
         if transcript.recording_id:
-            recording = await recordings_controller.get_by_id(transcript.recording_id)
+            recording = await recordings_controller.get_by_id(
+                session, transcript.recording_id
+            )
             if recording and recording.meeting_id:
-                meeting = await meetings_controller.get_by_id(recording.meeting_id)
+                meeting = await meetings_controller.get_by_id(
+                    session, recording.meeting_id
+                )
                 if meeting:
                     consent_denied = await meeting_consent_controller.has_any_denial(
-                        meeting.id
+                        session, meeting.id
                     )
     except Exception as e:
         logger.error(f"Failed to get fetch consent: {e}", exc_info=e)
@@ -606,7 +625,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
             logger.error(f"Failed to delete Whereby recording: {e}", exc_info=e)
 
     # non-transactional, files marked for deletion not actually deleted is possible
-    await transcripts_controller.update(transcript, {"audio_deleted": True})
+    await transcripts_controller.update(session, transcript, {"audio_deleted": True})
     # 2. Delete processed audio from transcript storage S3 bucket
     if transcript.audio_location == "storage":
         storage = get_transcripts_storage()
@@ -630,15 +649,14 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
     logger.info("Consent cleanup done")
 
 
-@get_transcript
-async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
+async def pipeline_post_to_zulip(session, transcript: Transcript, logger: Logger):
     logger.info("Starting post to zulip")
 
     if not transcript.recording_id:
         logger.info("Transcript has no recording")
         return
 
-    recording = await recordings_controller.get_by_id(transcript.recording_id)
+    recording = await recordings_controller.get_by_id(session, transcript.recording_id)
     if not recording:
         logger.info("Recording not found")
         return
@@ -647,12 +665,12 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
         logger.info("Recording has no meeting")
         return
 
-    meeting = await meetings_controller.get_by_id(recording.meeting_id)
+    meeting = await meetings_controller.get_by_id(session, recording.meeting_id)
     if not meeting:
         logger.info("No meeting found for this recording")
         return
 
-    room = await rooms_controller.get_by_id(meeting.room_id)
+    room = await rooms_controller.get_by_id(session, meeting.room_id)
     if not room:
         logger.error(f"Missing room for a meeting {meeting.id}")
         return
@@ -678,7 +696,7 @@ async def pipeline_post_to_zulip(transcript: Transcript, logger: Logger):
                 room.zulip_stream, room.zulip_topic, message
             )
             await transcripts_controller.update(
-                transcript, {"zulip_message_id": response["id"]}
+                session, transcript, {"zulip_message_id": response["id"]}
             )
 
     logger.info("Posted to zulip")
@@ -709,8 +727,11 @@ async def task_pipeline_convert_to_mp3(*, transcript_id: str):
 
 @shared_task
 @asynctask
-async def task_pipeline_upload_mp3(*, transcript_id: str):
-    await pipeline_upload_mp3(transcript_id=transcript_id)
+@with_session_and_transcript
+async def task_pipeline_upload_mp3(
+    session, *, transcript: Transcript, logger: Logger, transcript_id: str
+):
+    await pipeline_upload_mp3(session, transcript=transcript, logger=logger)
 
 
 @shared_task
@@ -733,14 +754,20 @@ async def task_pipeline_final_summaries(*, transcript_id: str):
 
 @shared_task
 @asynctask
-async def task_cleanup_consent(*, transcript_id: str):
-    await cleanup_consent(transcript_id=transcript_id)
+@with_session_and_transcript
+async def task_cleanup_consent(
+    session, *, transcript: Transcript, logger: Logger, transcript_id: str
+):
+    await cleanup_consent(session, transcript=transcript, logger=logger)
 
 
 @shared_task
 @asynctask
-async def task_pipeline_post_to_zulip(*, transcript_id: str):
-    await pipeline_post_to_zulip(transcript_id=transcript_id)
+@with_session_and_transcript
+async def task_pipeline_post_to_zulip(
+    session, *, transcript: Transcript, logger: Logger, transcript_id: str
+):
+    await pipeline_post_to_zulip(session, transcript=transcript, logger=logger)
 
 
 def pipeline_post(*, transcript_id: str):
@@ -772,14 +799,16 @@ def pipeline_post(*, transcript_id: str):
 async def pipeline_process(transcript: Transcript, logger: Logger):
     try:
         if transcript.audio_location == "storage":
-            await transcripts_controller.download_mp3_from_storage(transcript)
-            transcript.audio_waveform_filename.unlink(missing_ok=True)
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "topics": [],
-                },
-            )
+            async with get_session_factory()() as session:
+                await transcripts_controller.download_mp3_from_storage(transcript)
+                transcript.audio_waveform_filename.unlink(missing_ok=True)
+                await transcripts_controller.update(
+                    session,
+                    transcript,
+                    {
+                        "topics": [],
+                    },
+                )
 
         # open audio
         audio_filename = next(transcript.data_path.glob("upload.*"), None)
@@ -811,12 +840,14 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
 
     except Exception as exc:
         logger.error("Pipeline error", exc_info=exc)
-        await transcripts_controller.update(
-            transcript,
-            {
-                "status": "error",
-            },
-        )
+        async with get_session_factory()() as session:
+            await transcripts_controller.update(
+                session,
+                transcript,
+                {
+                    "status": "error",
+                },
+            )
         raise
 
     logger.info("Pipeline ended")

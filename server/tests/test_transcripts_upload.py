@@ -4,7 +4,6 @@ import time
 import pytest
 
 
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio

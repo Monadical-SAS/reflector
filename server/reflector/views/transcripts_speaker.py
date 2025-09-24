@@ -8,8 +8,10 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
+from reflector.db import get_session
 from reflector.db.transcripts import transcripts_controller
 
 router = APIRouter()
@@ -36,10 +38,11 @@ async def transcript_assign_speaker(
     transcript_id: str,
     assignment: SpeakerAssignment,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> SpeakerAssignmentStatus:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     if not transcript:
@@ -79,7 +82,9 @@ async def transcript_assign_speaker(
         # if the participant does not have a speaker, create one
         if participant.speaker is None:
             participant.speaker = transcript.find_empty_speaker()
-            await transcripts_controller.upsert_participant(transcript, participant)
+            await transcripts_controller.upsert_participant(
+                session, transcript, participant
+            )
 
         speaker = participant.speaker
 
@@ -100,6 +105,7 @@ async def transcript_assign_speaker(
     for topic in changed_topics:
         transcript.upsert_topic(topic)
     await transcripts_controller.update(
+        session,
         transcript,
         {
             "topics": transcript.topics_dump(),
@@ -114,10 +120,11 @@ async def transcript_merge_speaker(
     transcript_id: str,
     merge: SpeakerMerge,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ) -> SpeakerAssignmentStatus:
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     if not transcript:
@@ -163,6 +170,7 @@ async def transcript_merge_speaker(
     for topic in changed_topics:
         transcript.upsert_topic(topic)
     await transcripts_controller.update(
+        session,
         transcript,
         {
             "topics": transcript.topics_dump(),

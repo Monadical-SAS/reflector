@@ -134,9 +134,10 @@ async def test_ics_fetch_service_extract_room_events():
 
 
 @pytest.mark.asyncio
-async def test_ics_sync_service_sync_room_calendar():
+async def test_ics_sync_service_sync_room_calendar(db_session):
     # Create room
     room = await rooms_controller.add(
+        db_session,
         name="sync-test",
         user_id="test-user",
         zulip_auto_post=False,
@@ -150,6 +151,7 @@ async def test_ics_sync_service_sync_room_calendar():
         ics_url="https://calendar.example.com/test.ics",
         ics_enabled=True,
     )
+    await db_session.flush()
 
     # Mock ICS content
     cal = Calendar()
@@ -175,7 +177,7 @@ async def test_ics_sync_service_sync_room_calendar():
         mock_fetch.return_value = ics_content
 
         # First sync
-        result = await sync_service.sync_room_calendar(room)
+        result = await sync_service.sync_room_calendar(db_session, room)
 
         assert result["status"] == "success"
         assert result["events_found"] == 1
@@ -184,18 +186,20 @@ async def test_ics_sync_service_sync_room_calendar():
         assert result["events_deleted"] == 0
 
         # Verify event was created
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
         assert len(events) == 1
         assert events[0].ics_uid == "sync-event-1"
         assert events[0].title == "Sync Test Meeting"
 
         # Second sync with same content (should be unchanged)
         # Refresh room to get updated etag and force sync by setting old sync time
-        room = await rooms_controller.get_by_id(room.id)
+        room = await rooms_controller.get_by_id(db_session, room.id)
         await rooms_controller.update(
-            room, {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)}
+            db_session,
+            room,
+            {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)},
         )
-        result = await sync_service.sync_room_calendar(room)
+        result = await sync_service.sync_room_calendar(db_session, room)
         assert result["status"] == "unchanged"
 
         # Third sync with updated event
@@ -206,15 +210,15 @@ async def test_ics_sync_service_sync_room_calendar():
         mock_fetch.return_value = ics_content
 
         # Force sync by clearing etag
-        await rooms_controller.update(room, {"ics_last_etag": None})
+        await rooms_controller.update(db_session, room, {"ics_last_etag": None})
 
-        result = await sync_service.sync_room_calendar(room)
+        result = await sync_service.sync_room_calendar(db_session, room)
         assert result["status"] == "success"
         assert result["events_created"] == 0
         assert result["events_updated"] == 1
 
         # Verify event was updated
-        events = await calendar_events_controller.get_by_room(room.id)
+        events = await calendar_events_controller.get_by_room(db_session, room.id)
         assert len(events) == 1
         assert events[0].title == "Updated Meeting Title"
 
@@ -247,7 +251,7 @@ async def test_ics_sync_service_skip_disabled():
     room.ics_enabled = False
     room.ics_url = "https://calendar.example.com/test.ics"
 
-    result = await service.sync_room_calendar(room)
+    result = await service.sync_room_calendar(MagicMock(), room)
     assert result["status"] == "skipped"
     assert result["reason"] == "ICS not configured"
 
@@ -255,15 +259,16 @@ async def test_ics_sync_service_skip_disabled():
     room.ics_enabled = True
     room.ics_url = None
 
-    result = await service.sync_room_calendar(room)
+    result = await service.sync_room_calendar(MagicMock(), room)
     assert result["status"] == "skipped"
     assert result["reason"] == "ICS not configured"
 
 
 @pytest.mark.asyncio
-async def test_ics_sync_service_error_handling():
+async def test_ics_sync_service_error_handling(db_session):
     # Create room
     room = await rooms_controller.add(
+        db_session,
         name="error-test",
         user_id="test-user",
         zulip_auto_post=False,
@@ -277,6 +282,7 @@ async def test_ics_sync_service_error_handling():
         ics_url="https://calendar.example.com/error.ics",
         ics_enabled=True,
     )
+    await db_session.flush()
 
     sync_service = ICSSyncService()
 
@@ -285,6 +291,6 @@ async def test_ics_sync_service_error_handling():
     ) as mock_fetch:
         mock_fetch.side_effect = Exception("Network error")
 
-        result = await sync_service.sync_room_calendar(room)
+        result = await sync_service.sync_room_calendar(db_session, room)
         assert result["status"] == "error"
         assert "Network error" in result["error"]

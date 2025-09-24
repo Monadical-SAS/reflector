@@ -3,8 +3,10 @@ from typing import Annotated, Optional
 import av
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import reflector.auth as auth
+from reflector.db import get_session
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 
@@ -22,10 +24,11 @@ async def transcript_record_upload(
     total_chunks: int,
     chunk: UploadFile,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
 ):
     user_id = user["sub"] if user else None
     transcript = await transcripts_controller.get_by_id_for_http(
-        transcript_id, user_id=user_id
+        session, transcript_id, user_id=user_id
     )
 
     if transcript.locked:
@@ -89,7 +92,7 @@ async def transcript_record_upload(
         container.close()
 
     # set the status to "uploaded"
-    await transcripts_controller.update(transcript, {"status": "uploaded"})
+    await transcripts_controller.update(session, transcript, {"status": "uploaded"})
 
     # launch a background task to process the file
     task_pipeline_file_process.delay(transcript_id=transcript_id)
