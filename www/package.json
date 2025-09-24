@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build-production": "next build --experimental-build-mode compile",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",

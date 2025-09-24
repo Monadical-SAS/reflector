@@ -1,0 +1,39 @@
+# Production Docker Compose configuration for Frontend
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  web:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
+    image: reflector-frontend:latest
+    environment:
+      - KV_URL=${KV_URL:-redis://redis:6379}
+      - SITE_URL=${SITE_URL}
+      - API_URL=${API_URL}
+      - WEBSOCKET_URL=${WEBSOCKET_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-changeme-in-production}
+      - AUTHENTIK_ISSUER=${AUTHENTIK_ISSUER}
+      - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
+      - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
+      - AUTHENTIK_REFRESH_TOKEN_URL=${AUTHENTIK_REFRESH_TOKEN_URL}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_IGNORE_API_RESOLUTION_ERROR=${SENTRY_IGNORE_API_RESOLUTION_ERROR:-1}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

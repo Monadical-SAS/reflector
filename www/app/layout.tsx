@@ -6,7 +6,10 @@ import ErrorMessage from "./(errors)/errorMessage";
 import { RecordingConsentProvider } from "./recordingConsentContext";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { Providers } from "./providers";
-import { assertExistsAndNonEmptyString } from "./lib/utils";
+import { getNextEnvVar } from "./lib/nextBuild";
+import { getClientEnv } from "./lib/clientEnv";
+
+export const dynamic = "force-dynamic";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -21,13 +24,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-const NEXT_PUBLIC_SITE_URL = assertExistsAndNonEmptyString(
-  process.env.NEXT_PUBLIC_SITE_URL,
-  "NEXT_PUBLIC_SITE_URL required",
-);
+const SITE_URL = getNextEnvVar("SITE_URL");
+const env = getClientEnv();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(NEXT_PUBLIC_SITE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: "%s – Reflector",
     default: "Reflector - AI-Powered Meeting Transcriptions by Monadical",
@@ -74,15 +75,16 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en" className={poppins.className} suppressHydrationWarning>
-      <body className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}>
-        <RecordingConsentProvider>
-          <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
-            <ErrorProvider>
-              <ErrorMessage />
-              <Providers>{children}</Providers>
-            </ErrorProvider>
-          </ErrorBoundary>
-        </RecordingConsentProvider>
+      <body
+        className={"h-[100svh] w-[100svw] overflow-x-hidden relative"}
+        data-env={JSON.stringify(env)}
+      >
+        <ErrorBoundary fallback={<p>"something went really wrong"</p>}>
+          <ErrorProvider>
+            <ErrorMessage />
+            <Providers>{children}</Providers>
+          </ErrorProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

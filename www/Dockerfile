@@ -24,7 +24,8 @@ COPY --link  . .
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # If using npm comment out above and use below instead
-RUN pnpm build
+# next.js has the feature of excluding build step planned https://github.com/vercel/next.js/discussions/46544
+RUN pnpm build-production
 # RUN npm run build
 
 # Production image, copy all the files and run next
@@ -51,6 +52,10 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT 3000
-ENV HOSTNAME localhost
+ENV HOSTNAME 0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health \
+  || exit 1
 
 CMD ["node", "server.js"]

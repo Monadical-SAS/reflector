@@ -1,3 +1,11 @@
+import {
+  FEATURE_BROWSE_ENV_NAME,
+  FEATURE_PRIVACY_ENV_NAME,
+  FEATURE_REQUIRE_LOGIN_ENV_NAME,
+  FEATURE_ROOMS_ENV_NAME,
+  FEATURE_SEND_TO_ZULIP_ENV_NAME,
+} from "./clientEnv";
+
 export const FEATURES = [
   "requireLogin",
   "privacy",
@@ -26,26 +34,25 @@ function parseBooleanEnv(
   return value.toLowerCase() === "true";
 }
 
-// WARNING: keep process.env.* as-is, next.js won't see them if you generate dynamically
 const features: Features = {
   requireLogin: parseBooleanEnv(
-    process.env.NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN,
+    process.env[FEATURE_REQUIRE_LOGIN_ENV_NAME],
     DEFAULT_FEATURES.requireLogin,
   ),
   privacy: parseBooleanEnv(
-    process.env.NEXT_PUBLIC_FEATURE_PRIVACY,
+    process.env[FEATURE_PRIVACY_ENV_NAME],
     DEFAULT_FEATURES.privacy,
   ),
   browse: parseBooleanEnv(
-    process.env.NEXT_PUBLIC_FEATURE_BROWSE,
+    process.env[FEATURE_BROWSE_ENV_NAME],
     DEFAULT_FEATURES.browse,
   ),
   sendToZulip: parseBooleanEnv(
-    process.env.NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP,
+    process.env[FEATURE_SEND_TO_ZULIP_ENV_NAME],
     DEFAULT_FEATURES.sendToZulip,
   ),
   rooms: parseBooleanEnv(
-    process.env.NEXT_PUBLIC_FEATURE_ROOMS,
+    process.env[FEATURE_ROOMS_ENV_NAME],
     DEFAULT_FEATURES.rooms,
   ),
 };

@@ -274,15 +274,31 @@ export function RoomTable({
                       <IconButton
                         aria-label="Force sync calendar"
                         onClick={() =>
-                          handleForceSync(parseNonEmptyString(room.name))
+                          handleForceSync(
+                            parseNonEmptyString(
+                              room.name,
+                              true,
+                              "panic! room.name is required",
+                            ),
+                          )
                         }
                         size="sm"
                         variant="ghost"
                         disabled={syncingRooms.has(
-                          parseNonEmptyString(room.name),
+                          parseNonEmptyString(
+                            room.name,
+                            true,
+                            "panic! room.name is required",
+                          ),
                         )}
                       >
-                        {syncingRooms.has(parseNonEmptyString(room.name)) ? (
+                        {syncingRooms.has(
+                          parseNonEmptyString(
+                            room.name,
+                            true,
+                            "panic! room.name is required",
+                          ),
+                        ) ? (
                           <Spinner size="sm" />
                         ) : (
                           <CalendarSyncIcon />
@@ -297,7 +313,13 @@ export function RoomTable({
                       <IconButton
                         aria-label="Copy URL"
                         onClick={() =>
-                          onCopyUrl(parseNonEmptyString(room.name))
+                          onCopyUrl(
+                            parseNonEmptyString(
+                              room.name,
+                              true,
+                              "panic! room.name is required",
+                            ),
+                          )
                         }
                         size="sm"
                         variant="ghost"

@@ -151,7 +151,7 @@ All endpoints prefixed `/v1/`:
 
 **Frontend** (`www/.env`):
 - `NEXTAUTH_URL`, `NEXTAUTH_SECRET` - Authentication configuration
-- `NEXT_PUBLIC_REFLECTOR_API_URL` - Backend API endpoint
+- `REFLECTOR_API_URL` - Backend API endpoint
 - `REFLECTOR_DOMAIN_CONFIG` - Feature flags and domain settings
 
 ## Testing Strategy

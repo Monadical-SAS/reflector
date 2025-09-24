@@ -833,7 +833,13 @@ export default function RoomsList() {
                     <Field.Root>
                       <ICSSettings
                         roomName={
-                          room.name ? parseNonEmptyString(room.name) : null
+                          room.name
+                            ? parseNonEmptyString(
+                                room.name,
+                                true,
+                                "panic! room.name required",
+                              )
+                            : null
                         }
                         icsUrl={room.icsUrl}
                         icsEnabled={room.icsEnabled}

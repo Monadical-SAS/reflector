@@ -200,7 +200,13 @@ export default function ICSSettings({
               <HStack gap={0} position="relative" width="100%">
                 <Input
                   ref={roomUrlInputRef}
-                  value={roomAbsoluteUrl(parseNonEmptyString(roomName))}
+                  value={roomAbsoluteUrl(
+                    parseNonEmptyString(
+                      roomName,
+                      true,
+                      "panic! roomName is required",
+                    ),
+                  )}
                   readOnly
                   onClick={handleRoomUrlClick}
                   cursor="pointer"
