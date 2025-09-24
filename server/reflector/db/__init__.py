@@ -38,8 +38,14 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
     return _session_factory
 
 
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
+async def _get_session() -> AsyncGenerator[AsyncSession, None]:
+    # necessary implementation to ease mocking on pytest
     async with get_session_factory()() as session:
+        yield session
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async for session in _get_session():
         yield session
 
 

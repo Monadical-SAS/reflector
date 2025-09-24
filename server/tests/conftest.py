@@ -344,6 +344,15 @@ def celery_includes():
     ]
 
 
+@pytest.fixture(autouse=True)
+async def ensure_db_session_in_app(db_session):
+    async def mock_get_session():
+        yield db_session
+
+    with patch("reflector.db._get_session", side_effect=mock_get_session):
+        yield
+
+
 @pytest.fixture
 async def client(db_session):
     from httpx import AsyncClient

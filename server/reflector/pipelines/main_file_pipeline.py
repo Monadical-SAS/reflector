@@ -13,6 +13,7 @@ from pathlib import Path
 import av
 import structlog
 from celery import chain, shared_task
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.asynctask import asynctask
 from reflector.db import get_session_factory
@@ -317,12 +318,9 @@ class PipelineMainFile(PipelineMainBase):
             self.logger.error(f"Diarization failed: {e}")
             return None
 
-    async def generate_waveform(self, audio_path: Path):
+    async def generate_waveform(self, session: AsyncSession, audio_path: Path):
         """Generate and save waveform"""
-        async with get_session_factory()() as session:
-            transcript = await transcripts_controller.get_by_id(
-                session, self.transcript_id
-            )
+        transcript = await transcripts_controller.get_by_id(session, self.transcript_id)
 
         processor = AudioWaveformProcessor(
             audio_path=audio_path,
