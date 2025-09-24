@@ -49,7 +49,7 @@ class ThreadedUvicorn:
 
 
 @pytest.fixture
-def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker):
+def appserver(tmpdir, database, celery_session_app, celery_session_worker):
     import threading
 
     from reflector.app import app
@@ -111,7 +111,6 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
     settings.DATA_DIR = DATA_DIR
 
 
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
@@ -276,7 +275,6 @@ async def test_transcript_rtc_and_websocket(
     assert audio_resp.headers["Content-Type"] == "audio/mpeg"
 
 
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio

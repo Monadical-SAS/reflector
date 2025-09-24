@@ -77,7 +77,7 @@ async def transcript_add_participant(
                 )
 
     obj = await transcripts_controller.upsert_participant(
-        transcript, TranscriptParticipant(**participant.dict())
+        session, transcript, TranscriptParticipant(**participant.dict())
     )
     return Participant.model_validate(obj)
 
@@ -136,7 +136,7 @@ async def transcript_update_participant(
     fields = participant.dict(exclude_unset=True)
     obj = obj.copy(update=fields)
 
-    await transcripts_controller.upsert_participant(transcript, obj)
+    await transcripts_controller.upsert_participant(session, transcript, obj)
     return Participant.model_validate(obj)
 
 
@@ -151,5 +151,5 @@ async def transcript_delete_participant(
     transcript = await transcripts_controller.get_by_id_for_http(
         session, transcript_id, user_id=user_id
     )
-    await transcripts_controller.delete_participant(transcript, participant_id)
+    await transcripts_controller.delete_participant(session, transcript, participant_id)
     return DeletionStatus(status="ok")

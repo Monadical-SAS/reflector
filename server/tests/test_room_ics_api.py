@@ -89,9 +89,10 @@ async def test_update_room_ics_configuration(authenticated_client):
 
 
 @pytest.mark.asyncio
-async def test_trigger_ics_sync(authenticated_client):
+async def test_trigger_ics_sync(authenticated_client, db_session):
     client = authenticated_client
     room = await rooms_controller.add(
+        db_session,
         name="sync-api-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -133,8 +134,9 @@ async def test_trigger_ics_sync(authenticated_client):
 
 
 @pytest.mark.asyncio
-async def test_trigger_ics_sync_unauthorized(client):
+async def test_trigger_ics_sync_unauthorized(client, db_session):
     room = await rooms_controller.add(
+        db_session,
         name="sync-unauth-room",
         user_id="owner-123",
         zulip_auto_post=False,
@@ -155,9 +157,10 @@ async def test_trigger_ics_sync_unauthorized(client):
 
 
 @pytest.mark.asyncio
-async def test_trigger_ics_sync_not_configured(authenticated_client):
+async def test_trigger_ics_sync_not_configured(authenticated_client, db_session):
     client = authenticated_client
     room = await rooms_controller.add(
+        db_session,
         name="sync-not-configured",
         user_id="test-user",
         zulip_auto_post=False,
@@ -177,9 +180,10 @@ async def test_trigger_ics_sync_not_configured(authenticated_client):
 
 
 @pytest.mark.asyncio
-async def test_get_ics_status(authenticated_client):
+async def test_get_ics_status(authenticated_client, db_session):
     client = authenticated_client
     room = await rooms_controller.add(
+        db_session,
         name="status-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -197,6 +201,7 @@ async def test_get_ics_status(authenticated_client):
 
     now = datetime.now(timezone.utc)
     await rooms_controller.update(
+        db_session,
         room,
         {"ics_last_sync": now, "ics_last_etag": "test-etag"},
     )
@@ -210,8 +215,9 @@ async def test_get_ics_status(authenticated_client):
 
 
 @pytest.mark.asyncio
-async def test_get_ics_status_unauthorized(client):
+async def test_get_ics_status_unauthorized(client, db_session):
     room = await rooms_controller.add(
+        db_session,
         name="status-unauth",
         user_id="owner-456",
         zulip_auto_post=False,
@@ -232,9 +238,10 @@ async def test_get_ics_status_unauthorized(client):
 
 
 @pytest.mark.asyncio
-async def test_list_room_meetings(authenticated_client):
+async def test_list_room_meetings(authenticated_client, db_session):
     client = authenticated_client
     room = await rooms_controller.add(
+        db_session,
         name="meetings-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -255,7 +262,7 @@ async def test_list_room_meetings(authenticated_client):
         start_time=now - timedelta(hours=2),
         end_time=now - timedelta(hours=1),
     )
-    await calendar_events_controller.upsert(event1)
+    await calendar_events_controller.upsert(db_session, event1)
 
     event2 = CalendarEvent(
         room_id=room.id,
@@ -266,7 +273,7 @@ async def test_list_room_meetings(authenticated_client):
         end_time=now + timedelta(hours=2),
         attendees=[{"email": "test@example.com"}],
     )
-    await calendar_events_controller.upsert(event2)
+    await calendar_events_controller.upsert(db_session, event2)
 
     response = await client.get(f"/rooms/{room.name}/meetings")
     assert response.status_code == 200
@@ -279,8 +286,9 @@ async def test_list_room_meetings(authenticated_client):
 
 
 @pytest.mark.asyncio
-async def test_list_room_meetings_non_owner(client):
+async def test_list_room_meetings_non_owner(client, db_session):
     room = await rooms_controller.add(
+        db_session,
         name="meetings-privacy",
         user_id="owner-789",
         zulip_auto_post=False,
@@ -302,7 +310,7 @@ async def test_list_room_meetings_non_owner(client):
         end_time=datetime.now(timezone.utc) + timedelta(hours=2),
         attendees=[{"email": "private@example.com"}],
     )
-    await calendar_events_controller.upsert(event)
+    await calendar_events_controller.upsert(db_session, event)
 
     response = await client.get(f"/rooms/{room.name}/meetings")
     assert response.status_code == 200
@@ -314,9 +322,10 @@ async def test_list_room_meetings_non_owner(client):
 
 
 @pytest.mark.asyncio
-async def test_list_upcoming_meetings(authenticated_client):
+async def test_list_upcoming_meetings(authenticated_client, db_session):
     client = authenticated_client
     room = await rooms_controller.add(
+        db_session,
         name="upcoming-room",
         user_id="test-user",
         zulip_auto_post=False,
@@ -338,7 +347,7 @@ async def test_list_upcoming_meetings(authenticated_client):
         start_time=now - timedelta(hours=1),
         end_time=now - timedelta(minutes=30),
     )
-    await calendar_events_controller.upsert(past_event)
+    await calendar_events_controller.upsert(db_session, past_event)
 
     soon_event = CalendarEvent(
         room_id=room.id,
@@ -347,7 +356,7 @@ async def test_list_upcoming_meetings(authenticated_client):
         start_time=now + timedelta(minutes=15),
         end_time=now + timedelta(minutes=45),
     )
-    await calendar_events_controller.upsert(soon_event)
+    await calendar_events_controller.upsert(db_session, soon_event)
 
     later_event = CalendarEvent(
         room_id=room.id,
@@ -356,7 +365,7 @@ async def test_list_upcoming_meetings(authenticated_client):
         start_time=now + timedelta(hours=2),
         end_time=now + timedelta(hours=3),
     )
-    await calendar_events_controller.upsert(later_event)
+    await calendar_events_controller.upsert(db_session, later_event)
 
     response = await client.get(f"/rooms/{room.name}/meetings/upcoming")
     assert response.status_code == 200

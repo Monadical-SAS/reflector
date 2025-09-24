@@ -82,7 +82,9 @@ async def transcript_assign_speaker(
         # if the participant does not have a speaker, create one
         if participant.speaker is None:
             participant.speaker = transcript.find_empty_speaker()
-            await transcripts_controller.upsert_participant(transcript, participant)
+            await transcripts_controller.upsert_participant(
+                session, transcript, participant
+            )
 
         speaker = participant.speaker
 

@@ -23,7 +23,6 @@ async def client(app_lifespan):
     )
 
 
-@pytest.mark.usefixtures("setup_database")
 @pytest.mark.usefixtures("celery_session_app")
 @pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio

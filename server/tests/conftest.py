@@ -402,6 +402,7 @@ async def fake_transcript_with_topics(tmpdir, client, db_session):
 
     # create some topics
     await transcripts_controller.upsert_topic(
+        db_session,
         transcript,
         TranscriptTopic(
             title="Topic 1",
@@ -415,6 +416,7 @@ async def fake_transcript_with_topics(tmpdir, client, db_session):
         ),
     )
     await transcripts_controller.upsert_topic(
+        db_session,
         transcript,
         TranscriptTopic(
             title="Topic 2",
