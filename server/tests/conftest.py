@@ -345,7 +345,7 @@ def celery_includes():
 
 
 @pytest.fixture
-async def client():
+async def client(db_session):
     from httpx import AsyncClient
 
     from reflector.app import app
@@ -364,7 +364,7 @@ def fake_mp3_upload():
 
 
 @pytest.fixture
-async def fake_transcript_with_topics(tmpdir, client):
+async def fake_transcript_with_topics(tmpdir, client, db_session):
     import shutil
     from pathlib import Path
 
@@ -380,7 +380,7 @@ async def fake_transcript_with_topics(tmpdir, client):
     assert response.status_code == 200
     tid = response.json()["id"]
 
-    transcript = await transcripts_controller.get_by_id(tid)
+    transcript = await transcripts_controller.get_by_id(db_session, tid)
     assert transcript is not None
 
     await transcripts_controller.update(transcript, {"status": "ended"})

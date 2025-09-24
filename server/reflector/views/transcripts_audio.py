@@ -34,6 +34,7 @@ async def transcript_get_audio_mp3(
     request: Request,
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    session: AsyncSession = Depends(get_session),
     token: str | None = None,
 ):
     user_id = user["sub"] if user else None
@@ -88,7 +89,7 @@ async def transcript_get_audio_mp3(
 
     return range_requests_response(
         request,
-        transcript.audio_mp3_filename,
+        transcript.audio_mp3_filename.as_posix(),
         content_type="audio/mpeg",
         content_disposition=f"attachment; filename={filename}",
     )
@@ -108,4 +109,8 @@ async def transcript_get_audio_waveform(
     if not transcript.audio_waveform_filename.exists():
         raise HTTPException(status_code=404, detail="Audio not found")
 
-    return transcript.audio_waveform
+    audio_waveform = transcript.audio_waveform
+    if not audio_waveform:
+        raise HTTPException(status_code=404, detail="Audio waveform not found")
+
+    return audio_waveform
