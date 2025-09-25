@@ -9,16 +9,15 @@ from datetime import datetime, timedelta, timezone
 from typing import TypedDict
 
 import structlog
-from celery import shared_task
 from pydantic.types import PositiveInt
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.asynctask import asynctask
 from reflector.db.base import MeetingModel, RecordingModel, TranscriptModel
 from reflector.db.transcripts import transcripts_controller
 from reflector.settings import settings
 from reflector.storage import get_recordings_storage
+from reflector.worker.app import taskiq_broker
 from reflector.worker.session_decorator import with_session
 
 logger = structlog.get_logger(__name__)
@@ -156,11 +155,7 @@ async def cleanup_old_public_data(
     return stats
 
 
-@shared_task(
-    autoretry_for=(Exception,),
-    retry_kwargs={"max_retries": 3, "countdown": 300},
-)
-@asynctask
+@taskiq_broker.task
 @with_session
 async def cleanup_old_public_data_task(session: AsyncSession, days: int | None = None):
     await cleanup_old_public_data(session, days=days)

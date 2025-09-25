@@ -590,8 +590,11 @@ class TranscriptController:
         """
         A context manager for database transaction
         """
-        async with session.begin():
+        if session.in_transaction():
             yield
+        else:
+            async with session.begin():
+                yield
 
     async def append_event(
         self,

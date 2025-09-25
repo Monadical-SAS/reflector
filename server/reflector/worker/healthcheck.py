@@ -1,13 +1,13 @@
 import httpx
 import structlog
-from celery import shared_task
 
 from reflector.settings import settings
+from reflector.worker.app import taskiq_broker
 
 logger = structlog.get_logger(__name__)
 
 
-@shared_task
+@taskiq_broker.task
 def healthcheck_ping():
     url = settings.HEALTHCHECK_URL
     if not url:

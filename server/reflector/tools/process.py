@@ -7,13 +7,12 @@ import asyncio
 import json
 import shutil
 import sys
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.db import get_session_factory
+from reflector.db import get_session_context
 from reflector.db.transcripts import SourceKind, TranscriptTopic, transcripts_controller
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import (
@@ -140,13 +139,7 @@ async def process_live_pipeline(
     # assert documented behaviour: after process, the pipeline isn't ended. this is the reason of calling pipeline_post
     assert pre_final_transcript.status != "ended"
 
-    # at this point, diarization is running but we have no access to it. run diarization in parallel - one will hopefully win after polling
-    result = live_pipeline_post(transcript_id=transcript_id)
-
-    # result.ready() blocks even without await; it mutates result also
-    while not result.ready():
-        print(f"Status: {result.state}")
-        time.sleep(2)
+    await live_pipeline_post(transcript_id=transcript_id)
 
 
 async def process_file_pipeline(
@@ -154,13 +147,7 @@ async def process_file_pipeline(
 ):
     """Process audio/video file using the optimized file pipeline"""
 
-    # task_pipeline_file_process is a Celery task, need to use .delay() for async execution
-    result = task_pipeline_file_process.delay(transcript_id=transcript_id)
-
-    # Wait for the Celery task to complete
-    while not result.ready():
-        print(f"File pipeline status: {result.state}", file=sys.stderr)
-        time.sleep(2)
+    await task_pipeline_file_process.kiq(transcript_id=transcript_id)
 
     logger.info("File pipeline processing complete")
 
@@ -172,8 +159,7 @@ async def process(
     pipeline: Literal["live", "file"],
     output_path: str = None,
 ):
-    session_factory = get_session_factory()
-    async with session_factory() as session:
+    async with get_session_context() as session:
         transcript_id = await prepare_entry(
             session,
             source_path,

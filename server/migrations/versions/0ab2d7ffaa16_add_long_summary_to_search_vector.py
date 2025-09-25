@@ -23,14 +23,16 @@ def upgrade() -> None:
     op.drop_column("transcript", "search_vector_en")
 
     # Recreate the search vector column with long_summary included
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE transcript ADD COLUMN search_vector_en tsvector
         GENERATED ALWAYS AS (
             setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
             setweight(to_tsvector('english', coalesce(long_summary, '')), 'B') ||
             setweight(to_tsvector('english', coalesce(webvtt, '')), 'C')
         ) STORED
-    """)
+    """
+    )
 
     # Recreate the GIN index for the search vector
     op.create_index(
@@ -47,13 +49,15 @@ def downgrade() -> None:
     op.drop_column("transcript", "search_vector_en")
 
     # Recreate the original search vector column without long_summary
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE transcript ADD COLUMN search_vector_en tsvector
         GENERATED ALWAYS AS (
             setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
             setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')
         ) STORED
-    """)
+    """
+    )
 
     # Recreate the GIN index for the search vector
     op.create_index(

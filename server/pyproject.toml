@@ -26,7 +26,6 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=6.1.0",
     "sentencepiece>=0.1.99",
     "protobuf>=4.24.3",
-    "celery>=5.3.4",
     "redis>=5.0.1",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.6",
@@ -39,6 +38,8 @@ dependencies = [
     "pytest-env>=1.1.5",
     "webvtt-py>=0.5.0",
     "icalendar>=6.0.0",
+    "taskiq>=0.11.18",
+    "taskiq-redis>=1.1.0",
 ]
 
 [dependency-groups]
@@ -55,7 +56,6 @@ tests = [
     "pytest>=7.4.0",
     "httpx-ws>=0.4.1",
     "pytest-httpx>=0.23.1",
-    "pytest-celery>=0.0.0",
     "pytest-recording>=0.13.4",
     "pytest-docker>=3.2.3",
     "asgi-lifespan>=2.1.0",

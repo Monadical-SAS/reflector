@@ -94,7 +94,6 @@ async def transcript_record_upload(
     # set the status to "uploaded"
     await transcripts_controller.update(session, transcript, {"status": "uploaded"})
 
-    # launch a background task to process the file
-    task_pipeline_file_process.delay(transcript_id=transcript_id)
+    await task_pipeline_file_process.kiq(transcript_id=transcript_id)
 
     return UploadStatus(status="ok")

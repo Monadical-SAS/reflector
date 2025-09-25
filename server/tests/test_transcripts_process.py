@@ -1,8 +1,10 @@
-import asyncio
-import time
+import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+# Set environment for TaskIQ to use InMemoryBroker
+os.environ["ENVIRONMENT"] = "pytest"
 
 
 @pytest.fixture
@@ -23,8 +25,16 @@ async def client(app_lifespan):
     )
 
 
-@pytest.mark.usefixtures("celery_session_app")
-@pytest.mark.usefixtures("celery_session_worker")
+@pytest.fixture
+async def taskiq_broker():
+    from reflector.worker.app import taskiq_broker
+
+    # Broker is already initialized as InMemoryBroker due to ENVIRONMENT=pytest
+    await taskiq_broker.startup()
+    yield taskiq_broker
+    await taskiq_broker.shutdown()
+
+
 @pytest.mark.asyncio
 async def test_transcript_process(
     tmpdir,
@@ -34,7 +44,10 @@ async def test_transcript_process(
     dummy_file_diarization,
     dummy_storage,
     client,
+    taskiq_broker,
+    db_session,
 ):
+    print("IN TEST", db_session)
     # create a transcript
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
@@ -55,18 +68,14 @@ async def test_transcript_process(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-    # wait for processing to finish (max 1 minute)
-    timeout_seconds = 60
-    start_time = time.monotonic()
-    while (time.monotonic() - start_time) < timeout_seconds:
-        # fetch the transcript and check if it is ended
-        resp = await client.get(f"/transcripts/{tid}")
-        assert resp.status_code == 200
-        if resp.json()["status"] in ("ended", "error"):
-            break
-        await asyncio.sleep(1)
-    else:
-        pytest.fail(f"Initial processing timed out after {timeout_seconds} seconds")
+    # Wait for all tasks to complete since we're using InMemoryBroker
+    await taskiq_broker.wait_all()
+
+    # Ensure it's finished ok
+    resp = await client.get(f"/transcripts/{tid}")
+    assert resp.status_code == 200
+    print(resp.json())
+    assert resp.json()["status"] in ("ended", "error")
 
     # restart the processing
     response = await client.post(
@@ -74,20 +83,15 @@ async def test_transcript_process(
     )
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    await asyncio.sleep(2)
 
-    # wait for processing to finish (max 1 minute)
-    timeout_seconds = 60
-    start_time = time.monotonic()
-    while (time.monotonic() - start_time) < timeout_seconds:
-        # fetch the transcript and check if it is ended
-        resp = await client.get(f"/transcripts/{tid}")
-        assert resp.status_code == 200
-        if resp.json()["status"] in ("ended", "error"):
-            break
-        await asyncio.sleep(1)
-    else:
-        pytest.fail(f"Restart processing timed out after {timeout_seconds} seconds")
+    # Wait for all tasks to complete since we're using InMemoryBroker
+    await taskiq_broker.wait_all()
+
+    # Ensure it's finished ok
+    resp = await client.get(f"/transcripts/{tid}")
+    assert resp.status_code == 200
+    print(resp.json())
+    assert resp.json()["status"] in ("ended", "error")
 
     # check the transcript is ended
     transcript = resp.json()

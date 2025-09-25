@@ -21,13 +21,15 @@ def upgrade() -> None:
     if conn.dialect.name != "postgresql":
         return
 
-    op.execute("""
+    op.execute(
+        """
         ALTER TABLE transcript ADD COLUMN search_vector_en tsvector
         GENERATED ALWAYS AS (
             setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
             setweight(to_tsvector('english', coalesce(webvtt, '')), 'B')
         ) STORED
-    """)
+    """
+    )
 
     op.create_index(
         "idx_transcript_search_vector_en",

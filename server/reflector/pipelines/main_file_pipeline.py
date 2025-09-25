@@ -12,11 +12,8 @@ from pathlib import Path
 
 import av
 import structlog
-from celery import chain, shared_task
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.asynctask import asynctask
-from reflector.db import get_session_factory
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     SourceKind,
@@ -28,8 +25,8 @@ from reflector.logger import logger
 from reflector.pipelines.main_live_pipeline import (
     PipelineMainBase,
     broadcast_to_sockets,
-    task_cleanup_consent,
-    task_pipeline_post_to_zulip,
+    task_cleanup_consent_taskiq,
+    task_pipeline_post_to_zulip_taskiq,
 )
 from reflector.processors import (
     AudioFileWriterProcessor,
@@ -55,8 +52,9 @@ from reflector.processors.types import (
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
-from reflector.worker.session_decorator import with_session
-from reflector.worker.webhook import send_transcript_webhook
+from reflector.worker.app import taskiq_broker
+from reflector.worker.session_decorator import catch_exception, with_session
+from reflector.worker.webhook import send_transcript_webhook_taskiq
 
 
 class EmptyPipeline:
@@ -98,31 +96,29 @@ class PipelineMainFile(PipelineMainBase):
             )
 
     @broadcast_to_sockets
-    async def set_status(self, transcript_id: str, status: TranscriptStatus):
-        async with self.lock_transaction():
-            async with get_session_factory()() as session:
-                return await transcripts_controller.set_status(
-                    session, transcript_id, status
-                )
+    async def set_status(
+        self,
+        session: AsyncSession,
+        transcript_id: str,
+        status: TranscriptStatus,
+    ):
+        return await transcripts_controller.set_status(session, transcript_id, status)
 
-    async def process(self, file_path: Path):
+    async def process(self, session: AsyncSession, file_path: Path):
         """Main entry point for file processing"""
         self.logger.info(f"Starting file pipeline for {file_path}")
 
-        async with get_session_factory()() as session:
-            transcript = await transcripts_controller.get_by_id(
-                session, self.transcript_id
-            )
+        transcript = await transcripts_controller.get_by_id(session, self.transcript_id)
 
-            # Clear transcript as we're going to regenerate everything
-            await transcripts_controller.update(
-                session,
-                transcript,
-                {
-                    "events": [],
-                    "topics": [],
-                },
-            )
+        # Clear transcript as we're going to regenerate everything
+        await transcripts_controller.update(
+            session,
+            transcript,
+            {
+                "events": [],
+                "topics": [],
+            },
+        )
 
         # Extract audio and write to transcript location
         audio_path = await self.extract_and_write_audio(file_path, transcript)
@@ -141,8 +137,7 @@ class PipelineMainFile(PipelineMainBase):
 
         self.logger.info("File pipeline complete")
 
-        async with get_session_factory()() as session:
-            await transcripts_controller.set_status(session, transcript.id, "ended")
+        await transcripts_controller.set_status(session, transcript.id, "ended")
 
     async def extract_and_write_audio(
         self, file_path: Path, transcript: Transcript
@@ -393,11 +388,9 @@ class PipelineMainFile(PipelineMainBase):
         await processor.flush()
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def task_send_webhook_if_needed(session, *, transcript_id: str):
-    """Send webhook if this is a room recording with webhook configured"""
     transcript = await transcripts_controller.get_by_id(session, transcript_id)
     if not transcript:
         return
@@ -411,25 +404,23 @@ async def task_send_webhook_if_needed(session, *, transcript_id: str):
                 room_id=room.id,
                 webhook_url=room.webhook_url,
             )
-            send_transcript_webhook.delay(
+            await send_transcript_webhook_taskiq.kiq(
                 transcript_id, room.id, event_id=uuid.uuid4().hex
             )
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
+@catch_exception
 @with_session
-async def task_pipeline_file_process(session, *, transcript_id: str):
-    """Celery task for file pipeline processing"""
+async def task_pipeline_file_process(session: AsyncSession, *, transcript_id: str):
     transcript = await transcripts_controller.get_by_id(session, transcript_id)
     if not transcript:
         raise Exception(f"Transcript {transcript_id} not found")
 
     pipeline = PipelineMainFile(transcript_id=transcript_id)
     try:
-        await pipeline.set_status(transcript_id, "processing")
+        await pipeline.set_status(session, transcript_id, "processing")
 
-        # Find the file to process
         audio_file = next(transcript.data_path.glob("upload.*"), None)
         if not audio_file:
             audio_file = next(transcript.data_path.glob("audio.*"), None)
@@ -437,16 +428,17 @@ async def task_pipeline_file_process(session, *, transcript_id: str):
         if not audio_file:
             raise Exception("No audio file found to process")
 
-        await pipeline.process(audio_file)
+        await pipeline.process(session, audio_file)
 
     except Exception:
-        await pipeline.set_status(transcript_id, "error")
+        try:
+            await pipeline.set_status(session, transcript_id, "error")
+        except:
+            logger.error(
+                "Error setting status in task_pipeline_file_process during exception, ignoring it"
+            )
         raise
 
-    # Run post-processing chain: consent cleanup -> zulip -> webhook
-    post_chain = chain(
-        task_cleanup_consent.si(transcript_id=transcript_id),
-        task_pipeline_post_to_zulip.si(transcript_id=transcript_id),
-        task_send_webhook_if_needed.si(transcript_id=transcript_id),
-    )
-    post_chain.delay()
+    await task_cleanup_consent_taskiq.kiq(transcript_id=transcript_id)
+    await task_pipeline_post_to_zulip_taskiq.kiq(transcript_id=transcript_id)
+    await task_send_webhook_if_needed.kiq(transcript_id=transcript_id)

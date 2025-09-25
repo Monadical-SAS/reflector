@@ -130,15 +130,15 @@ async def test_sync_all_ics_calendars(db_session):
         ics_enabled=False,
     )
 
-    with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
+    with patch("reflector.worker.ics_sync.sync_room_ics.kiq") as mock_kiq:
         ics_enabled_rooms = await rooms_controller.get_ics_enabled(db_session)
 
         for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room.id)
+                await sync_room_ics.kiq(room.id)
 
-        assert mock_delay.call_count == 2
-        called_room_ids = [call.args[0] for call in mock_delay.call_args_list]
+        assert mock_kiq.call_count == 2
+        called_room_ids = [call.args[0] for call in mock_kiq.call_args_list]
         assert room1.id in called_room_ids
         assert room2.id in called_room_ids
         assert room3.id not in called_room_ids
@@ -210,15 +210,15 @@ async def test_sync_respects_fetch_interval(db_session):
         {"ics_last_sync": now - timedelta(seconds=100)},
     )
 
-    with patch("reflector.worker.ics_sync.sync_room_ics.delay") as mock_delay:
+    with patch("reflector.worker.ics_sync.sync_room_ics.kiq") as mock_kiq:
         ics_enabled_rooms = await rooms_controller.get_ics_enabled(db_session)
 
         for room in ics_enabled_rooms:
             if room and _should_sync(room):
-                sync_room_ics.delay(room.id)
+                await sync_room_ics.kiq(room.id)
 
-        assert mock_delay.call_count == 1
-        assert mock_delay.call_args[0][0] == room2.id
+        assert mock_kiq.call_count == 1
+        assert mock_kiq.call_args[0][0] == room2.id
 
 
 @pytest.mark.asyncio

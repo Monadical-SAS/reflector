@@ -1,24 +1,21 @@
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from celery import shared_task
-from celery.utils.log import get_task_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from reflector.asynctask import asynctask
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import SyncStatus, ics_sync_service
 from reflector.whereby import create_meeting, upload_logo
+from reflector.worker.app import taskiq_broker
 from reflector.worker.session_decorator import with_session
 
-logger = structlog.wrap_logger(get_task_logger(__name__))
+logger = structlog.get_logger(__name__)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def sync_room_ics(session: AsyncSession, room_id: str):
     try:
@@ -56,8 +53,7 @@ async def sync_room_ics(session: AsyncSession, room_id: str):
         logger.error("Unexpected error during ICS sync", room_id=room_id, error=str(e))
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def sync_all_ics_calendars(session: AsyncSession):
     try:
@@ -71,7 +67,7 @@ async def sync_all_ics_calendars(session: AsyncSession):
                 logger.debug("Skipping room, not time to sync yet", room_id=room.id)
                 continue
 
-            sync_room_ics.delay(room.id)
+            await sync_room_ics.kiq(room.id)
 
         logger.info("Queued sync tasks for all eligible rooms")
 
@@ -151,8 +147,7 @@ async def create_upcoming_meetings_for_event(
         )
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def create_upcoming_meetings(session: AsyncSession):
     async with RedisAsyncLock("create_upcoming_meetings", skip_if_locked=True) as lock:

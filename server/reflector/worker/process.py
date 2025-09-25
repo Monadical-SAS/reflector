@@ -6,8 +6,6 @@ from urllib.parse import unquote
 import av
 import boto3
 import structlog
-from celery import shared_task
-from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 from redis.exceptions import LockError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,13 +15,13 @@ from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
-from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
+from reflector.worker.app import taskiq_broker
 from reflector.worker.session_decorator import with_session
 
-logger = structlog.wrap_logger(get_task_logger(__name__))
+logger = structlog.get_logger(__name__)
 
 
 def parse_datetime_with_timezone(iso_string: str) -> datetime:
@@ -34,8 +32,8 @@ def parse_datetime_with_timezone(iso_string: str) -> datetime:
     return dt
 
 
-@shared_task
-def process_messages():
+@taskiq_broker.task
+async def process_messages():
     queue_url = settings.AWS_PROCESS_RECORDING_QUEUE_URL
     if not queue_url:
         logger.warning("No process recording queue url")
@@ -66,7 +64,7 @@ def process_messages():
                 if record["eventName"].startswith("ObjectCreated"):
                     bucket = record["s3"]["bucket"]["name"]
                     key = unquote(record["s3"]["object"]["key"])
-                    process_recording.delay(bucket, key)
+                    await process_recording.kiq(bucket, key)
 
             sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)
             logger.info("Processed and deleted message: %s", message)
@@ -75,8 +73,7 @@ def process_messages():
         logger.error("process_messages", error=str(e))
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def process_recording(session: AsyncSession, bucket_name: str, object_key: str):
     logger.info("Processing recording: %s/%s", bucket_name, object_key)
@@ -155,11 +152,10 @@ async def process_recording(session: AsyncSession, bucket_name: str, object_key:
 
     await transcripts_controller.update(session, transcript, {"status": "uploaded"})
 
-    task_pipeline_file_process.delay(transcript_id=transcript.id)
+    await task_pipeline_file_process.kiq(transcript_id=transcript.id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def process_meetings(session: AsyncSession):
     """
@@ -253,8 +249,7 @@ async def process_meetings(session: AsyncSession):
     )
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session
 async def reprocess_failed_recordings(session: AsyncSession):
     """
@@ -291,7 +286,7 @@ async def reprocess_failed_recordings(session: AsyncSession):
                 )
                 if not recording:
                     logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
+                    await process_recording.kiq(bucket_name, object_key)
                     reprocessed_count += 1
                     continue
 
@@ -310,7 +305,7 @@ async def reprocess_failed_recordings(session: AsyncSession):
 
                 if transcript is None or transcript.status == "error":
                     logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
+                    await process_recording.kiq(bucket_name, object_key)
                     reprocessed_count += 1
 
     except Exception as e:

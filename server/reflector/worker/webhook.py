@@ -8,18 +8,16 @@ from datetime import datetime, timezone
 
 import httpx
 import structlog
-from celery import shared_task
-from celery.utils.log import get_task_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import transcripts_controller
-from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.settings import settings
 from reflector.utils.webvtt import topics_to_webvtt
+from reflector.worker.app import taskiq_broker
 from reflector.worker.session_decorator import with_session
 
-logger = structlog.wrap_logger(get_task_logger(__name__))
+logger = structlog.get_logger(__name__)
 
 
 def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> str:
@@ -33,30 +31,23 @@ def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> s
     return hmac_obj.hexdigest()
 
 
-@shared_task(
-    bind=True,
-    max_retries=30,
-    default_retry_delay=60,
-    retry_backoff=True,
-    retry_backoff_max=3600,  # Max 1 hour between retries
-)
-@asynctask
+@taskiq_broker.task
 @with_session
-async def send_transcript_webhook(
-    self,
+async def send_transcript_webhook_taskiq(
     transcript_id: str,
     room_id: str,
     event_id: str,
     session: AsyncSession,
 ):
+    retry_count = 0
+
     log = logger.bind(
         transcript_id=transcript_id,
         room_id=room_id,
-        retry_count=self.request.retries,
+        retry_count=retry_count,
     )
 
     try:
-        # Fetch transcript and room
         transcript = await transcripts_controller.get_by_id(session, transcript_id)
         if not transcript:
             log.error("Transcript not found, skipping webhook")
@@ -71,11 +62,9 @@ async def send_transcript_webhook(
             log.info("No webhook URL configured for room, skipping")
             return
 
-        # Generate WebVTT content from topics
         topics_data = []
 
         if transcript.topics:
-            # Build topics data with diarized content per topic
             for topic in transcript.topics:
                 topic_webvtt = topics_to_webvtt([topic]) if topic.words else ""
                 topics_data.append(
@@ -88,7 +77,6 @@ async def send_transcript_webhook(
                     }
                 )
 
-        # Build webhook payload
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
         participants = [
             {"id": p.id, "name": p.name, "speaker": p.speaker}
@@ -120,16 +108,14 @@ async def send_transcript_webhook(
             },
         }
 
-        # Convert to JSON
         payload_json = json.dumps(payload_data, separators=(",", ":"))
         payload_bytes = payload_json.encode("utf-8")
 
-        # Generate signature if secret is configured
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "Reflector-Webhook/1.0",
             "X-Webhook-Event": "transcript.completed",
-            "X-Webhook-Retry": str(self.request.retries),
+            "X-Webhook-Retry": str(retry_count),
         }
 
         if room.webhook_secret:
@@ -139,7 +125,6 @@ async def send_transcript_webhook(
             )
             headers["X-Webhook-Signature"] = f"t={timestamp},v1={signature}"
 
-        # Send webhook with timeout
         async with httpx.AsyncClient(timeout=30.0) as client:
             log.info(
                 "Sending webhook",
@@ -165,26 +150,22 @@ async def send_transcript_webhook(
         log.error(
             "Webhook failed with HTTP error",
             status_code=e.response.status_code,
-            response_text=e.response.text[:500],  # First 500 chars
+            response_text=e.response.text[:500],
         )
 
-        # Don't retry on client errors (4xx)
         if 400 <= e.response.status_code < 500:
             log.error("Client error, not retrying")
             return
 
-        # Retry on server errors (5xx)
-        raise self.retry(exc=e)
+        raise
 
     except (httpx.ConnectError, httpx.TimeoutException) as e:
-        # Retry on network errors
         log.error("Webhook failed with connection error", error=str(e))
-        raise self.retry(exc=e)
+        raise
 
     except Exception as e:
-        # Retry on unexpected errors
         log.exception("Unexpected error in webhook task", error=str(e))
-        raise self.retry(exc=e)
+        raise
 
 
 async def test_webhook(room_id: str) -> dict:

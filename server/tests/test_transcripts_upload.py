@@ -4,8 +4,6 @@ import time
 import pytest
 
 
-@pytest.mark.usefixtures("celery_session_app")
-@pytest.mark.usefixtures("celery_session_worker")
 @pytest.mark.asyncio
 async def test_transcript_upload_file(
     tmpdir,

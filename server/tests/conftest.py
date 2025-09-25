@@ -1,7 +1,6 @@
 import asyncio
 import os
 import sys
-from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
@@ -322,26 +321,60 @@ async def dummy_storage():
         yield
 
 
-@pytest.fixture(scope="session")
-def celery_enable_logging():
-    return True
+# from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+# from sqlalchemy.orm import sessionmaker
 
 
-@pytest.fixture(scope="session")
-def celery_config():
-    with NamedTemporaryFile() as f:
-        yield {
-            "broker_url": "memory://",
-            "result_backend": f"db+sqlite:///{f.name}",
-        }
+# @pytest.fixture()
+# async def db_connection(sqla_engine):
+#     connection = await sqla_engine.connect()
+#     try:
+#         yield connection
+#     finally:
+#         await connection.close()
 
 
-@pytest.fixture(scope="session")
-def celery_includes():
-    return [
-        "reflector.pipelines.main_live_pipeline",
-        "reflector.pipelines.main_file_pipeline",
-    ]
+# @pytest.fixture()
+# async def db_session_maker(db_connection):
+#     Session = async_sessionmaker(
+#         db_connection,
+#         expire_on_commit=False,
+#         class_=AsyncSession,
+#     )
+#     yield Session
+
+
+# @pytest.fixture()
+# async def db_session(db_session_maker, db_connection):
+#     """
+#     Fixture that returns a SQLAlchemy session with a SAVEPOINT, and the rollback to it
+#     after the test completes.
+#     """
+#     session = db_session_maker(
+#         bind=db_connection,
+#         join_transaction_mode="create_savepoint",
+#     )
+
+#     try:
+#         yield session
+#     finally:
+#         await session.close()
+
+
+# @pytest.fixture(autouse=True)
+# async def ensure_db_session_in_app(db_connection, db_session_maker):
+#     async def mock_get_session():
+#         session = db_session_maker(
+#             bind=db_connection, join_transaction_mode="create_savepoint"
+#         )
+
+#         try:
+#             yield session
+#         finally:
+#             await session.close()
+
+#     with patch("reflector.db._get_session", side_effect=mock_get_session):
+#         yield
 
 
 @pytest.fixture(autouse=True)
@@ -370,6 +403,18 @@ def fake_mp3_upload():
     ) as mock_move:
         mock_move.return_value = True
         yield
+
+
+@pytest.fixture
+async def taskiq_broker():
+    from reflector.worker.app import taskiq_broker
+
+    await taskiq_broker.startup()
+
+    try:
+        yield taskiq_broker
+    finally:
+        await taskiq_broker.shutdown()
 
 
 @pytest.fixture

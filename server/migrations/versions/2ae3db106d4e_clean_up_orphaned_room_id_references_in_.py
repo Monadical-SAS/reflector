@@ -19,12 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Set room_id to NULL for meetings that reference non-existent rooms
-    op.execute("""
+    op.execute(
+        """
         UPDATE meeting
         SET room_id = NULL
         WHERE room_id IS NOT NULL
           AND room_id NOT IN (SELECT id FROM room WHERE id IS NOT NULL)
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

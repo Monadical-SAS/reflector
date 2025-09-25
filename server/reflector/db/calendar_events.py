@@ -171,9 +171,11 @@ class CalendarEventController:
             .where(
                 sa.and_(
                     CalendarEventModel.room_id == room_id,
-                    CalendarEventModel.ics_uid.notin_(current_ics_uids)
-                    if current_ics_uids
-                    else True,
+                    (
+                        CalendarEventModel.ics_uid.notin_(current_ics_uids)
+                        if current_ics_uids
+                        else True
+                    ),
                     CalendarEventModel.end_time > datetime.now(timezone.utc),
                 )
             )

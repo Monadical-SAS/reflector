@@ -9,11 +9,10 @@ async def export_db(filename: str) -> None:
     filename = pathlib.Path(filename).resolve()
     settings.DATABASE_URL = f"sqlite:///{filename}"
 
-    from reflector.db import get_session_factory
+    from reflector.db import get_session_context
     from reflector.db.transcripts import transcripts_controller
 
-    session_factory = get_session_factory()
-    async with session_factory() as session:
+    async with get_session_context() as session:
         transcripts = await transcripts_controller.get_all(session)
 
     def export_transcript(transcript, output_dir):

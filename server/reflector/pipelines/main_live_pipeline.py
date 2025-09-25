@@ -18,13 +18,11 @@ from typing import Generic
 
 import av
 import boto3
-from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import BoundLogger as Logger
 
-from reflector.asynctask import asynctask
-from reflector.db import get_session_factory
+from reflector.db import get_session_context
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -64,6 +62,7 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.worker.app import taskiq_broker
 from reflector.worker.session_decorator import with_session_and_transcript
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
@@ -99,21 +98,12 @@ def get_transcript(func):
     @functools.wraps(func)
     async def wrapper(**kwargs):
         transcript_id = kwargs.pop("transcript_id")
-        async with get_session_factory()() as session:
+        async with get_session_context() as session:
             transcript = await transcripts_controller.get_by_id(session, transcript_id)
         if not transcript:
             raise Exception(f"Transcript {transcript_id} not found")
 
-        # Enhanced logger with Celery task context
         tlogger = logger.bind(transcript_id=transcript.id)
-        if current_task:
-            tlogger = tlogger.bind(
-                task_id=current_task.request.id,
-                task_name=current_task.name,
-                worker_hostname=current_task.request.hostname,
-                task_retries=current_task.request.retries,
-                transcript_id=transcript_id,
-            )
 
         try:
             result = await func(transcript=transcript, logger=tlogger, **kwargs)
@@ -177,8 +167,13 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
     @asynccontextmanager
     async def transaction(self):
         async with self.lock_transaction():
-            async with get_session_factory()() as session:
-                yield session
+            async with get_session_context() as session:
+                print(">>> SESSION USING", session, session.in_transaction())
+                if session.in_transaction():
+                    yield session
+                else:
+                    async with session.begin():
+                        yield session
 
     @broadcast_to_sockets
     async def on_status(self, status):
@@ -209,7 +204,7 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
 
         # when the status of the pipeline changes, update the transcript
         async with self._lock:
-            async with get_session_factory()() as session:
+            async with get_session_context() as session:
                 return await transcripts_controller.set_status(
                     session, self.transcript_id, status
                 )
@@ -344,7 +339,7 @@ class PipelineMainLive(PipelineMainBase):
     async def create(self) -> Pipeline:
         # create a context for the whole rtc transaction
         # add a customised logger to the context
-        async with get_session_factory()() as session:
+        async with get_session_context() as session:
             transcript = await self.get_transcript(session)
 
         processors = [
@@ -393,7 +388,7 @@ class PipelineMainDiarization(PipelineMainBase[AudioDiarizationInput]):
         # now let's start the pipeline by pushing information to the
         # first processor diarization processor
         # XXX translation is lost when converting our data model to the processor model
-        async with get_session_factory()() as session:
+        async with get_session_context() as session:
             transcript = await self.get_transcript(session)
 
         # diarization works only if the file is uploaded to an external storage
@@ -427,7 +422,7 @@ class PipelineMainFromTopics(PipelineMainBase[TitleSummaryWithIdProcessorType]):
 
     async def create(self) -> Pipeline:
         # get transcript
-        async with get_session_factory()() as session:
+        async with get_session_context() as session:
             self._transcript = transcript = await self.get_transcript(session)
 
         # create pipeline
@@ -707,26 +702,22 @@ async def pipeline_post_to_zulip(session, transcript: Transcript, logger: Logger
 # ===================================================================
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_remove_upload(*, transcript_id: str):
     await pipeline_remove_upload(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_waveform(*, transcript_id: str):
     await pipeline_waveform(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_convert_to_mp3(*, transcript_id: str):
     await pipeline_convert_to_mp3(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session_and_transcript
 async def task_pipeline_upload_mp3(
     session, *, transcript: Transcript, logger: Logger, transcript_id: str
@@ -734,26 +725,22 @@ async def task_pipeline_upload_mp3(
     await pipeline_upload_mp3(session, transcript=transcript, logger=logger)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_diarization(*, transcript_id: str):
     await pipeline_diarization(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_title(*, transcript_id: str):
     await pipeline_title(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_final_summaries(*, transcript_id: str):
     await pipeline_summaries(transcript_id=transcript_id)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session_and_transcript
 async def task_cleanup_consent(
     session, *, transcript: Transcript, logger: Logger, transcript_id: str
@@ -761,8 +748,7 @@ async def task_cleanup_consent(
     await cleanup_consent(session, transcript=transcript, logger=logger)
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 @with_session_and_transcript
 async def task_pipeline_post_to_zulip(
     session, *, transcript: Transcript, logger: Logger, transcript_id: str
@@ -770,36 +756,48 @@ async def task_pipeline_post_to_zulip(
     await pipeline_post_to_zulip(session, transcript=transcript, logger=logger)
 
 
-def pipeline_post(*, transcript_id: str):
-    """
-    Run the post pipeline
-    """
-    chain_mp3_and_diarize = (
-        task_pipeline_waveform.si(transcript_id=transcript_id)
-        | task_pipeline_convert_to_mp3.si(transcript_id=transcript_id)
-        | task_pipeline_upload_mp3.si(transcript_id=transcript_id)
-        | task_pipeline_remove_upload.si(transcript_id=transcript_id)
-        | task_pipeline_diarization.si(transcript_id=transcript_id)
-        | task_cleanup_consent.si(transcript_id=transcript_id)
-    )
-    chain_title_preview = task_pipeline_title.si(transcript_id=transcript_id)
-    chain_final_summaries = task_pipeline_final_summaries.si(
-        transcript_id=transcript_id
+@taskiq_broker.task
+@with_session_and_transcript
+async def task_cleanup_consent_taskiq(
+    session, *, transcript: Transcript, logger: Logger, transcript_id: str
+):
+    await cleanup_consent(session, transcript=transcript, logger=logger)
+
+
+@taskiq_broker.task
+@with_session_and_transcript
+async def task_pipeline_post_to_zulip_taskiq(
+    session, *, transcript: Transcript, logger: Logger, transcript_id: str
+):
+    await pipeline_post_to_zulip(session, transcript=transcript, logger=logger)
+
+
+async def pipeline_post(*, transcript_id: str):
+    await task_pipeline_post_sequential.kiq(transcript_id=transcript_id)
+
+
+@taskiq_broker.task
+async def task_pipeline_post_sequential(*, transcript_id: str):
+    await task_pipeline_waveform.kiq(transcript_id=transcript_id)
+    await task_pipeline_convert_to_mp3.kiq(transcript_id=transcript_id)
+    await task_pipeline_upload_mp3.kiq(transcript_id=transcript_id)
+    await task_pipeline_remove_upload.kiq(transcript_id=transcript_id)
+    await task_pipeline_diarization.kiq(transcript_id=transcript_id)
+    await task_cleanup_consent.kiq(transcript_id=transcript_id)
+
+    await asyncio.gather(
+        task_pipeline_title.kiq(transcript_id=transcript_id),
+        task_pipeline_final_summaries.kiq(transcript_id=transcript_id),
     )
 
-    chain = chord(
-        group(chain_mp3_and_diarize, chain_title_preview),
-        chain_final_summaries,
-    ) | task_pipeline_post_to_zulip.si(transcript_id=transcript_id)
-
-    return chain.delay()
+    await task_pipeline_post_to_zulip.kiq(transcript_id=transcript_id)
 
 
 @get_transcript
 async def pipeline_process(transcript: Transcript, logger: Logger):
     try:
         if transcript.audio_location == "storage":
-            async with get_session_factory()() as session:
+            async with get_session_context() as session:
                 await transcripts_controller.download_mp3_from_storage(transcript)
                 transcript.audio_waveform_filename.unlink(missing_ok=True)
                 await transcripts_controller.update(
@@ -840,7 +838,7 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
 
     except Exception as exc:
         logger.error("Pipeline error", exc_info=exc)
-        async with get_session_factory()() as session:
+        async with get_session_context() as session:
             await transcripts_controller.update(
                 session,
                 transcript,
@@ -853,7 +851,6 @@ async def pipeline_process(transcript: Transcript, logger: Logger):
     logger.info("Pipeline ended")
 
 
-@shared_task
-@asynctask
+@taskiq_broker.task
 async def task_pipeline_process(*, transcript_id: str):
     return await pipeline_process(transcript_id=transcript_id)

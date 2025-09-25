@@ -248,15 +248,21 @@ class ICSFetchService:
                         )
                         att_data: AttendeeData = {
                             "email": clean_email,
-                            "name": att.params.get("CN")
-                            if hasattr(att, "params") and email == email_parts[0]
-                            else None,
-                            "status": att.params.get("PARTSTAT")
-                            if hasattr(att, "params") and email == email_parts[0]
-                            else None,
-                            "role": att.params.get("ROLE")
-                            if hasattr(att, "params") and email == email_parts[0]
-                            else None,
+                            "name": (
+                                att.params.get("CN")
+                                if hasattr(att, "params") and email == email_parts[0]
+                                else None
+                            ),
+                            "status": (
+                                att.params.get("PARTSTAT")
+                                if hasattr(att, "params") and email == email_parts[0]
+                                else None
+                            ),
+                            "role": (
+                                att.params.get("ROLE")
+                                if hasattr(att, "params") and email == email_parts[0]
+                                else None
+                            ),
                         }
                         final_attendees.append(att_data)
             else:
@@ -264,9 +270,9 @@ class ICSFetchService:
                 att_data: AttendeeData = {
                     "email": email_str,
                     "name": att.params.get("CN") if hasattr(att, "params") else None,
-                    "status": att.params.get("PARTSTAT")
-                    if hasattr(att, "params")
-                    else None,
+                    "status": (
+                        att.params.get("PARTSTAT") if hasattr(att, "params") else None
+                    ),
                     "role": att.params.get("ROLE") if hasattr(att, "params") else None,
                 }
                 final_attendees.append(att_data)
@@ -281,9 +287,9 @@ class ICSFetchService:
             )
             org_data: AttendeeData = {
                 "email": org_email,
-                "name": organizer.params.get("CN")
-                if hasattr(organizer, "params")
-                else None,
+                "name": (
+                    organizer.params.get("CN") if hasattr(organizer, "params") else None
+                ),
                 "role": "ORGANIZER",
             }
             final_attendees.append(org_data)

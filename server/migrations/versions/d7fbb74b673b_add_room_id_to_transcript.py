@@ -27,7 +27,8 @@ def upgrade() -> None:
 
     # Populate room_id for existing ROOM-type transcripts
     # This joins through recording -> meeting -> room to get the room_id
-    op.execute("""
+    op.execute(
+        """
         UPDATE transcript AS t
         SET room_id = r.id
         FROM recording rec
@@ -36,11 +37,13 @@ def upgrade() -> None:
         WHERE t.recording_id = rec.id
         AND t.source_kind = 'room'
         AND t.room_id IS NULL
-    """)
+    """
+    )
 
     # Fix missing meeting_id for ROOM-type transcripts
     # The meeting_id field exists but was never populated
-    op.execute("""
+    op.execute(
+        """
         UPDATE transcript AS t
         SET meeting_id = rec.meeting_id
         FROM recording rec
@@ -48,7 +51,8 @@ def upgrade() -> None:
         AND t.source_kind = 'room'
         AND t.meeting_id IS NULL
         AND rec.meeting_id IS NOT NULL
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

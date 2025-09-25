@@ -88,8 +88,8 @@ app.include_router(zulip_router, prefix="/v1")
 app.include_router(whereby_router, prefix="/v1")
 add_pagination(app)
 
-# prepare celery
-from reflector.worker import app as celery_app  # noqa
+# prepare taskiq
+from reflector.worker import app as taskiq_app  # noqa
 
 
 # simpler openapi id

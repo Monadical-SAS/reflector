@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
@@ -45,6 +46,18 @@ async def _get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Get a database session, fastapi dependency injection style
+    """
+    async for session in _get_session():
+        yield session
+
+
+@asynccontextmanager
+async def get_session_context():
+    """
+    Get a database session as an async context manager
+    """
     async for session in _get_session():
         yield session
 
