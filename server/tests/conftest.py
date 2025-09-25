@@ -377,6 +377,29 @@ async def dummy_storage():
 #         yield
 
 
+# @pytest.fixture()
+# async def db_session(sqla_engine):
+#     """
+#     Fixture that returns a SQLAlchemy session with a SAVEPOINT, and the rollback to it
+#     after the test completes.
+#     """
+#     from sqlalchemy.ext.asyncio import AsyncSession
+#     from sqlalchemy.orm import sessionmaker
+
+#     connection = await sqla_engine.connect()
+#     trans = await connection.begin()
+
+#     Session = sessionmaker(connection, expire_on_commit=False, class_=AsyncSession)
+#     session = Session()
+
+#     try:
+#         yield session
+#     finally:
+#         await session.close()
+#         await trans.rollback()
+#         await connection.close()
+
+
 @pytest.fixture(autouse=True)
 async def ensure_db_session_in_app(db_session):
     async def mock_get_session():

@@ -71,16 +71,13 @@ def with_session_and_transcript(func: F) -> F:
             )
 
         async with get_session_context() as session:
-            # Fetch the transcript
             transcript = await transcripts_controller.get_by_id(session, transcript_id)
             if not transcript:
                 raise Exception(f"Transcript {transcript_id} not found")
 
-            # Create enhanced logger
             tlogger = logger.bind(transcript_id=transcript.id)
 
             try:
-                # Pass session, transcript, and logger to the decorated function
                 return await func(
                     session, transcript=transcript, logger=tlogger, *args, **kwargs
                 )

@@ -431,6 +431,7 @@ async def task_pipeline_file_process(session: AsyncSession, *, transcript_id: st
         await pipeline.process(session, audio_file)
 
     except Exception:
+        logger.error("Error while processing the file", exc_info=True)
         try:
             await pipeline.set_status(session, transcript_id, "error")
         except:

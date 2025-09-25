@@ -2,7 +2,6 @@ import enum
 import json
 import os
 import shutil
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -481,7 +480,12 @@ class TranscriptController:
     # TODO investigate why mutate= is used. it's used in one place currently, maybe because of ORM field updates.
     # using mutate=True is discouraged
     async def update(
-        self, session: AsyncSession, transcript: Transcript, values: dict, mutate=False
+        self,
+        session: AsyncSession,
+        transcript: Transcript,
+        values: dict,
+        commit=True,
+        mutate=False,
     ) -> Transcript:
         """
         Update a transcript fields with key/values in values.
@@ -495,7 +499,8 @@ class TranscriptController:
             .values(**values)
         )
         await session.execute(query)
-        await session.commit()
+        if commit:
+            await session.commit()
         if mutate:
             for key, value in values.items():
                 setattr(transcript, key, value)
@@ -585,29 +590,21 @@ class TranscriptController:
         await session.execute(query)
         await session.commit()
 
-    @asynccontextmanager
-    async def transaction(self, session: AsyncSession):
-        """
-        A context manager for database transaction
-        """
-        if session.in_transaction():
-            yield
-        else:
-            async with session.begin():
-                yield
-
     async def append_event(
         self,
         session: AsyncSession,
         transcript: Transcript,
         event: str,
         data: Any,
+        commit=True,
     ) -> TranscriptEvent:
         """
         Append an event to a transcript
         """
         resp = transcript.add_event(event=event, data=data)
-        await self.update(session, transcript, {"events": transcript.events_dump()})
+        await self.update(
+            session, transcript, {"events": transcript.events_dump()}, commit=commit
+        )
         return resp
 
     async def upsert_topic(
@@ -702,19 +699,25 @@ class TranscriptController:
 
         Will add an event STATUS + update the status field of transcript
         """
-        async with self.transaction(session):
-            transcript = await self.get_by_id(session, transcript_id)
-            if not transcript:
-                raise Exception(f"Transcript {transcript_id} not found")
-            if transcript.status == status:
-                return
-            resp = await self.append_event(
-                session,
-                transcript=transcript,
-                event="STATUS",
-                data=StrValue(value=status),
-            )
-            await self.update(session, transcript, {"status": status})
+        transcript = await self.get_by_id(session, transcript_id)
+        if not transcript:
+            raise Exception(f"Transcript {transcript_id} not found")
+        if transcript.status == status:
+            return
+        resp = await self.append_event(
+            session,
+            transcript=transcript,
+            event="STATUS",
+            data=StrValue(value=status),
+            commit=False,
+        )
+        await self.update(
+            session,
+            transcript,
+            {"status": status},
+            commit=False,
+        )
+        await session.commit()
         return resp
 
 
