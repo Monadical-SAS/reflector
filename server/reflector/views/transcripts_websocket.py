@@ -4,8 +4,10 @@ Transcripts websocket API
 
 """
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from reflector.db import get_session
 from reflector.db.transcripts import transcripts_controller
 from reflector.ws_manager import get_ws_manager
 
@@ -21,6 +23,7 @@ async def transcript_get_websocket_events(transcript_id: str):
 async def transcript_events_websocket(
     transcript_id: str,
     websocket: WebSocket,
+    session: AsyncSession = Depends(get_session),
     # user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     # user_id = user["sub"] if user else None
