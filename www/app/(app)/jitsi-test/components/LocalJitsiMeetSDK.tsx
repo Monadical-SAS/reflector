@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useRef } from "react";
-import { JaaSMeeting } from "@jitsi/react-sdk";
+import { useCallback, useRef, useEffect } from "react";
+import { JitsiMeeting } from "@jitsi/react-sdk";
 import { Box } from "@chakra-ui/react";
-import { getAppId } from "../utils/jitsiConfig";
 import {
   JitsiParticipant,
   JitsiRecordingStatus,
@@ -15,8 +14,7 @@ import {
 } from "../utils/types";
 import { toaster } from "../../../components/ui/toaster";
 
-interface JitsiMeetSDKProps {
-  jwt: string;
+interface LocalJitsiMeetSDKProps {
   roomName: string;
   displayName: string;
   email?: string;
@@ -29,8 +27,33 @@ interface JitsiMeetSDKProps {
   onError?: (error: Error) => void;
 }
 
-export default function JitsiMeetSDK({
-  jwt,
+// Event collector URL - change this to match your Docker setup
+const EVENT_COLLECTOR_URL =
+  process.env.NEXT_PUBLIC_EVENT_COLLECTOR_URL || "http://localhost:3002";
+const JITSI_DOMAIN = process.env.NEXT_PUBLIC_JITSI_DOMAIN || "jitsi.local";
+
+// Send events to our event collector
+async function sendEventToCollector(type: string, roomName: string, data: any) {
+  try {
+    await fetch(`${EVENT_COLLECTOR_URL}/webhook/client`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type,
+        roomName,
+        data,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          source: "frontend",
+        },
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to send event to collector:", error);
+  }
+}
+
+export default function LocalJitsiMeetSDK({
   roomName,
   displayName,
   email,
@@ -41,110 +64,51 @@ export default function JitsiMeetSDK({
   onParticipantLeft,
   onRecordingStatusChanged,
   onError,
-}: JitsiMeetSDKProps): JSX.Element {
+}: LocalJitsiMeetSDKProps): JSX.Element {
   const apiRef = useRef<JitsiMeetExternalAPI | null>(null);
+
+  // Check recording status periodically
+  useEffect(() => {
+    const checkRecordingStatus = async () => {
+      if (!roomName) return;
+
+      try {
+        const response = await fetch(
+          `${EVENT_COLLECTOR_URL}/events/${roomName}`,
+        );
+        const data = await response.json();
+
+        const recordingEvents = data.events.filter(
+          (e: any) =>
+            e.type === "recording_started" || e.type === "recording_stopped",
+        );
+
+        if (recordingEvents.length > 0) {
+          const latestRecording = recordingEvents[0];
+          console.log("📹 Latest recording event:", latestRecording);
+        }
+      } catch (error) {
+        console.error("Failed to check recording status:", error);
+      }
+    };
+
+    // Check every 5 seconds
+    const interval = setInterval(checkRecordingStatus, 5000);
+    checkRecordingStatus(); // Initial check
+
+    return () => clearInterval(interval);
+  }, [roomName]);
 
   const handleApiReady = useCallback(
     (externalApi: JitsiMeetExternalAPI) => {
       apiRef.current = externalApi;
 
-      // ===== COMPREHENSIVE EVENT LOGGING =====
-      console.log("🎯 Jitsi API Ready - Adding comprehensive event listeners");
+      console.log("🎯 Local Jitsi API Ready");
+      sendEventToCollector("api_ready", roomName, { displayName });
 
-      // Define all possible Jitsi events for logging
-      const ALL_JITSI_EVENTS = [
-        // Audio/Video Events
-        "audioAvailabilityChanged",
-        "audioMuteStatusChanged",
-        "videoAvailabilityChanged",
-        "videoMuteStatusChanged",
-        "videoQualityChanged",
-        "screenSharingStatusChanged",
-        "audioOnlyChanged",
-
-        // Participant Events
-        "participantJoined",
-        "participantLeft",
-        "participantKickedOut",
-        "participantRoleChanged",
-        "displayNameChange",
-        "emailChange",
-        "avatarChanged",
-        "dominantSpeakerChanged",
-        "raiseHandUpdated",
-
-        // Conference Events
-        "videoConferenceJoined",
-        "videoConferenceLeft",
-        "conferenceCreatedTimestamp",
-        "passwordRequired",
-        "subjectChange",
-        "breakoutRoomsUpdated",
-
-        // Communication Events
-        "chatUpdated",
-        "incomingMessage",
-        "outgoingMessage",
-        "endpointTextMessageReceived",
-        "nonParticipantMessageReceived",
-
-        // Error and Device Events
-        "cameraError",
-        "micError",
-        "errorOccurred",
-        "browserSupport",
-        "deviceListChanged",
-        "suspendDetected",
-        "peerConnectionFailure",
-
-        // Moderation Events
-        "moderationStatusChanged",
-        "moderationParticipantApproved",
-        "moderationParticipantRejected",
-        "notificationTriggered",
-        "knockingParticipant",
-
-        // UI and Layout Events
-        "largeVideoChanged",
-        "tileViewChanged",
-        "toolbarButtonClicked",
-        "filmstripDisplayChanged",
-
-        // Recording and Transcription
-        "recordingStatusChanged",
-        "recordingLinkAvailable",
-        "transcribingStatusChanged",
-        "transcriptionChunkReceived",
-
-        // Advanced Features
-        "whiteboardStatusChanged",
-        "p2pStatusChanged",
-        "faceLandmarkDetected",
-        "log",
-
-        // Other events
-        "readyToClose",
-      ];
-
-      // Add listener for EVERY event with detailed logging
-      ALL_JITSI_EVENTS.forEach((eventName) => {
-        externalApi.addListener(eventName, (eventData: any) => {
-          console.log(`📡 JITSI EVENT: ${eventName}`, {
-            timestamp: new Date().toISOString(),
-            eventName,
-            eventData: JSON.stringify(eventData, null, 2),
-            rawData: eventData,
-          });
-        });
-      });
-
-      console.log(
-        `✅ Added listeners for ${ALL_JITSI_EVENTS.length} Jitsi events`,
-      );
-      // ===== END COMPREHENSIVE EVENT LOGGING =====
-
-      // Add event listeners (existing functionality)
+      // Add comprehensive event listeners
       externalApi.addListener("readyToClose", () => {
+        sendEventToCollector("ready_to_close", roomName, {});
         if (onMeetingEnd) {
           onMeetingEnd();
         }
@@ -157,6 +121,7 @@ export default function JitsiMeetSDK({
             id: event.id,
             displayName: event.displayName || "Guest",
           };
+          sendEventToCollector("participant_joined", roomName, { participant });
           if (onParticipantJoined) {
             onParticipantJoined(participant);
           }
@@ -170,6 +135,7 @@ export default function JitsiMeetSDK({
             id: event.id,
             displayName: event.displayName || "Guest",
           };
+          sendEventToCollector("participant_left", roomName, { participant });
           if (onParticipantLeft) {
             onParticipantLeft(participant);
           }
@@ -179,6 +145,8 @@ export default function JitsiMeetSDK({
       externalApi.addListener(
         "videoConferenceJoined",
         (event: JitsiVideoConferenceEvent) => {
+          sendEventToCollector("videoConferenceJoined", roomName, event);
+
           toaster.create({
             placement: "top",
             duration: 3000,
@@ -194,12 +162,27 @@ export default function JitsiMeetSDK({
                 gap={2}
                 boxShadow="lg"
               >
-                Successfully joined the meeting
+                Successfully joined the meeting on local Jitsi
               </Box>
             ),
           });
+
+          // Try to start recording after joining
+          console.log("🎬 Attempting to start recording...");
+          try {
+            externalApi.executeCommand("startRecording", {
+              mode: "file",
+              shouldShare: false,
+            });
+          } catch (error) {
+            console.error("Failed to start recording:", error);
+          }
         },
       );
+
+      externalApi.addListener("videoConferenceLeft", () => {
+        sendEventToCollector("videoConferenceLeft", roomName, {});
+      });
 
       externalApi.addListener(
         "recordingStatusChanged",
@@ -208,6 +191,11 @@ export default function JitsiMeetSDK({
             on: event.on,
             mode: event.mode,
           };
+
+          sendEventToCollector("recording_status_changed", roomName, {
+            status,
+          });
+
           if (onRecordingStatusChanged) {
             onRecordingStatusChanged(status);
           }
@@ -227,7 +215,7 @@ export default function JitsiMeetSDK({
                 gap={2}
                 boxShadow="lg"
               >
-                {status.on ? "Recording started" : "Recording stopped"}
+                {status.on ? "🔴 Recording started" : "⏹️ Recording stopped"}
               </Box>
             ),
           });
@@ -236,12 +224,37 @@ export default function JitsiMeetSDK({
 
       externalApi.addListener("errorOccurred", (error: JitsiErrorEvent) => {
         console.error("Jitsi error:", error);
+        sendEventToCollector("error_occurred", roomName, { error });
         if (onError) {
           onError(new Error(error.message || "Unknown Jitsi error"));
         }
       });
+
+      // Log all events for debugging
+      const allEvents = [
+        "audioAvailabilityChanged",
+        "audioMuteStatusChanged",
+        "videoAvailabilityChanged",
+        "videoMuteStatusChanged",
+        "screenSharingStatusChanged",
+        "tileViewChanged",
+        "chatUpdated",
+        "incomingMessage",
+        "outgoingMessage",
+        "dominantSpeakerChanged",
+        "raiseHandUpdated",
+      ];
+
+      allEvents.forEach((eventName) => {
+        externalApi.addListener(eventName, (data: any) => {
+          console.log(`📡 Local Jitsi Event: ${eventName}`, data);
+          sendEventToCollector(eventName, roomName, data);
+        });
+      });
     },
     [
+      roomName,
+      displayName,
       onMeetingEnd,
       onParticipantJoined,
       onParticipantLeft,
@@ -267,6 +280,19 @@ export default function JitsiMeetSDK({
     liveStreamingEnabled: false,
     fileRecordingsEnabled: true,
     requireDisplayName: false,
+    enableInsecureRoomNameWarning: false,
+    // Important: Enable recording
+    recordingService: {
+      enabled: true,
+      mode: "file",
+    },
+    // Disable some features for local testing
+    analytics: {
+      disabled: true,
+    },
+    p2p: {
+      enabled: false,
+    },
   };
 
   const interfaceConfigOverwrite = {
@@ -297,24 +323,25 @@ export default function JitsiMeetSDK({
     email,
   };
 
-  // Get the app ID from environment
-  let appId: string;
-  try {
-    appId = getAppId();
-  } catch (error) {
-    console.error("Failed to get app ID:", error);
-    if (onError) {
-      onError(new Error("Jitsi configuration error"));
-    }
-    return <Box>Error: Jitsi not configured</Box>;
-  }
-
   return (
     <Box width="100%" height="100vh">
-      <JaaSMeeting
-        appId={appId}
+      <Box
+        position="absolute"
+        top="10px"
+        right="10px"
+        bg="blue.500"
+        color="white"
+        px={3}
+        py={1}
+        borderRadius="md"
+        fontSize="sm"
+        zIndex={100}
+      >
+        🏠 Local Jitsi: {JITSI_DOMAIN}
+      </Box>
+      <JitsiMeeting
+        domain={JITSI_DOMAIN}
         roomName={roomName}
-        jwt={jwt}
         configOverwrite={configOverwrite}
         interfaceConfigOverwrite={interfaceConfigOverwrite}
         userInfo={userInfo}

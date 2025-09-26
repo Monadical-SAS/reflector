@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react";
 import JitsiControls from "./components/JitsiControls";
 import JitsiMeetSDK from "./components/JitsiMeetSDK";
+import LocalJitsiMeetSDK from "./components/LocalJitsiMeetSDK";
 import {
   MeetingConfig,
   MeetingState,
@@ -178,18 +179,35 @@ export default function JitsiTestPage(): JSX.Element {
           </VStack>
         </Box>
 
-        <JitsiMeetSDK
-          jwt={meetingState.token}
-          roomName={meetingState.config.roomName}
-          displayName={meetingState.config.displayName}
-          email={meetingState.config.email}
-          startWithAudioMuted={meetingState.config.startWithAudioMuted}
-          startWithVideoMuted={meetingState.config.startWithVideoMuted}
-          onMeetingEnd={handleMeetingEnd}
-          onParticipantJoined={handleParticipantJoined}
-          onParticipantLeft={handleParticipantLeft}
-          onRecordingStatusChanged={handleRecordingStatusChanged}
-        />
+        {/* Check if we should use local Jitsi */}
+        {process.env.NEXT_PUBLIC_USE_LOCAL_JITSI === "true" ||
+        (typeof window !== "undefined" &&
+          window.location.search.includes("local=true")) ? (
+          <LocalJitsiMeetSDK
+            roomName={meetingState.config.roomName}
+            displayName={meetingState.config.displayName}
+            email={meetingState.config.email}
+            startWithAudioMuted={meetingState.config.startWithAudioMuted}
+            startWithVideoMuted={meetingState.config.startWithVideoMuted}
+            onMeetingEnd={handleMeetingEnd}
+            onParticipantJoined={handleParticipantJoined}
+            onParticipantLeft={handleParticipantLeft}
+            onRecordingStatusChanged={handleRecordingStatusChanged}
+          />
+        ) : (
+          <JitsiMeetSDK
+            jwt={meetingState.token}
+            roomName={meetingState.config.roomName}
+            displayName={meetingState.config.displayName}
+            email={meetingState.config.email}
+            startWithAudioMuted={meetingState.config.startWithAudioMuted}
+            startWithVideoMuted={meetingState.config.startWithVideoMuted}
+            onMeetingEnd={handleMeetingEnd}
+            onParticipantJoined={handleParticipantJoined}
+            onParticipantLeft={handleParticipantLeft}
+            onRecordingStatusChanged={handleRecordingStatusChanged}
+          />
+        )}
       </Box>
     );
   }

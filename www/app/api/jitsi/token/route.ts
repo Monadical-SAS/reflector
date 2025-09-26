@@ -7,6 +7,7 @@ import {
   isValidUserId,
   isValidEmail,
 } from "../../../(app)/jitsi-test/utils/validation";
+import { assertExists } from "../../../lib/utils";
 
 const APP_ID = process.env.JITSI_APP_ID;
 if (!APP_ID) {
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const payload: JitsiJWTPayload = {
       aud: "jitsi",
       iss: "chat",
-      sub: APP_ID,
+      sub: assertExists(APP_ID),
       exp,
       nbf,
       room: body.roomName, // Specific room access
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           livestreaming: body.features?.livestreaming ? "true" : "false",
           recording: body.features?.recording ? "true" : "false",
           transcription: body.features?.transcription ? "true" : "false",
-          "outbound-call": "false",
+          "sip-outbound-call": "false",
         },
       },
       iat,
