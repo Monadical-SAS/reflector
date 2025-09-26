@@ -1,5 +1,3 @@
-from contextlib import asynccontextmanager
-
 import pytest
 
 
@@ -19,7 +17,7 @@ async def test_transcript_create(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_get_update_name(client):
+async def test_transcript_get_update_name(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["name"] == "test"
@@ -40,7 +38,7 @@ async def test_transcript_get_update_name(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_get_update_locked(client):
+async def test_transcript_get_update_locked(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["locked"] is False
@@ -61,7 +59,7 @@ async def test_transcript_get_update_locked(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_get_update_summary(client):
+async def test_transcript_get_update_summary(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["long_summary"] is None
@@ -89,7 +87,7 @@ async def test_transcript_get_update_summary(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_get_update_title(client):
+async def test_transcript_get_update_title(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["title"] is None
@@ -127,56 +125,6 @@ async def test_transcripts_list_anonymous(client):
         settings.PUBLIC_MODE = False
 
 
-@asynccontextmanager
-async def authenticated_client_ctx():
-    from reflector.app import app
-    from reflector.auth import current_user, current_user_optional
-
-    app.dependency_overrides[current_user] = lambda: {
-        "sub": "randomuserid",
-        "email": "test@mail.com",
-    }
-    app.dependency_overrides[current_user_optional] = lambda: {
-        "sub": "randomuserid",
-        "email": "test@mail.com",
-    }
-    yield
-    del app.dependency_overrides[current_user]
-    del app.dependency_overrides[current_user_optional]
-
-
-@asynccontextmanager
-async def authenticated_client2_ctx():
-    from reflector.app import app
-    from reflector.auth import current_user, current_user_optional
-
-    app.dependency_overrides[current_user] = lambda: {
-        "sub": "randomuserid2",
-        "email": "test@mail.com",
-    }
-    app.dependency_overrides[current_user_optional] = lambda: {
-        "sub": "randomuserid2",
-        "email": "test@mail.com",
-    }
-    yield
-    del app.dependency_overrides[current_user]
-    del app.dependency_overrides[current_user_optional]
-
-
-@pytest.fixture
-@pytest.mark.asyncio
-async def authenticated_client():
-    async with authenticated_client_ctx():
-        yield
-
-
-@pytest.fixture
-@pytest.mark.asyncio
-async def authenticated_client2():
-    async with authenticated_client2_ctx():
-        yield
-
-
 @pytest.mark.asyncio
 async def test_transcripts_list_authenticated(authenticated_client, client):
     # XXX this test is a bit fragile, as it depends on the storage which
@@ -199,7 +147,7 @@ async def test_transcripts_list_authenticated(authenticated_client, client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_delete(client):
+async def test_transcript_delete(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "testdel1"})
     assert response.status_code == 200
     assert response.json()["name"] == "testdel1"
@@ -214,7 +162,7 @@ async def test_transcript_delete(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_mark_reviewed(client):
+async def test_transcript_mark_reviewed(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["name"] == "test"
