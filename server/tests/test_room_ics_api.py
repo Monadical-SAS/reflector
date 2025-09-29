@@ -11,14 +11,21 @@ from reflector.db.rooms import rooms_controller
 @pytest.fixture
 async def authenticated_client(client):
     from reflector.app import app
-    from reflector.auth import current_user_optional
+    from reflector.auth import current_user, current_user_optional
 
+    app.dependency_overrides[current_user] = lambda: {
+        "sub": "test-user",
+        "email": "test@example.com",
+    }
     app.dependency_overrides[current_user_optional] = lambda: {
         "sub": "test-user",
         "email": "test@example.com",
     }
-    yield client
-    del app.dependency_overrides[current_user_optional]
+    try:
+        yield client
+    finally:
+        del app.dependency_overrides[current_user]
+        del app.dependency_overrides[current_user_optional]
 
 
 @pytest.mark.asyncio
