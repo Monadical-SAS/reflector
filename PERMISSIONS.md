@@ -30,12 +30,12 @@ This document describes permissions for authenticated vs anonymous users across 
 
 - Browse `/browse`:
 
-  - Feature-gated by `NEXT_PUBLIC_FEATURE_BROWSE`. If disabled, redirects to home.
+  - Feature-gated by `FEATURE_BROWSE`. If disabled, redirects to home.
   - Requires login when `requireLogin` is true.
 
 - Rooms `/rooms`:
 
-  - Feature-gated by `NEXT_PUBLIC_FEATURE_ROOMS`. If disabled, redirects to home.
+  - Feature-gated by `FEATURE_ROOMS`. If disabled, redirects to home.
   - Requires login when `requireLogin` is true.
 
 - Room by name `/[roomName]`:
@@ -247,11 +247,11 @@ Endpoints:
 
 ### Feature flags (frontend)
 
-- `requireLogin` (`NEXT_PUBLIC_FEATURE_REQUIRE_LOGIN`): if true, middleware enforces auth on `/`, `/transcripts(.*)`, `/browse(.*)`, `/rooms(.*)`.
-- `browse` (`NEXT_PUBLIC_FEATURE_BROWSE`): controls access to `/browse`; disabled → redirect to home.
-- `rooms` (`NEXT_PUBLIC_FEATURE_ROOMS`): controls access to `/rooms`; disabled → redirect to home.
-- `sendToZulip` (`NEXT_PUBLIC_FEATURE_SEND_TO_ZULIP`): UI feature; backend endpoints remain available but UI may hide actions.
-- `privacy` (`NEXT_PUBLIC_FEATURE_PRIVACY`): UI-only display feature.
+- `requireLogin` (`FEATURE_REQUIRE_LOGIN`): if true, middleware enforces auth on `/`, `/transcripts(.*)`, `/browse(.*)`, `/rooms(.*)`.
+- `browse` (`FEATURE_BROWSE`): controls access to `/browse`; disabled → redirect to home.
+- `rooms` (`FEATURE_ROOMS`): controls access to `/rooms`; disabled → redirect to home.
+- `sendToZulip` (`FEATURE_SEND_TO_ZULIP`): UI feature; backend endpoints remain available but UI may hide actions.
+- `privacy` (`FEATURE_PRIVACY`): UI-only display feature.
 
 ### Environment toggles (backend)
 
