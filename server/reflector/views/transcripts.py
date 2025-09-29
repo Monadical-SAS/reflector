@@ -9,8 +9,6 @@ from pydantic import BaseModel, Field, constr, field_serializer
 
 import reflector.auth as auth
 from reflector.db import get_database
-from reflector.db.meetings import meetings_controller
-from reflector.db.rooms import rooms_controller
 from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
@@ -344,12 +342,14 @@ async def transcript_get(
 async def transcript_update(
     transcript_id: str,
     info: UpdateTranscript,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     updated_transcript = await transcripts_controller.update(transcript, values)
     return updated_transcript
@@ -358,18 +358,14 @@ async def transcript_update(
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)
 async def transcript_delete(
     transcript_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-
-    if transcript.meeting_id:
-        meeting = await meetings_controller.get_by_id(transcript.meeting_id)
-        room = await rooms_controller.get_by_id(meeting.room_id)
-        if room.is_shared:
-            user_id = None
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
     return DeletionStatus(status="ok")
@@ -443,15 +439,16 @@ async def transcript_post_to_zulip(
     stream: str,
     topic: str,
     include_topics: bool,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
     content = get_zulip_message(transcript, include_topics)
 
     message_updated = False

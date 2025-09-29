@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_transcript_participants(client):
+async def test_transcript_participants(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["participants"] == []
@@ -39,7 +39,7 @@ async def test_transcript_participants(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_participants_same_speaker(client):
+async def test_transcript_participants_same_speaker(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["participants"] == []
@@ -62,7 +62,7 @@ async def test_transcript_participants_same_speaker(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_participants_update_name(client):
+async def test_transcript_participants_update_name(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["participants"] == []
@@ -100,7 +100,7 @@ async def test_transcript_participants_update_name(client):
 
 
 @pytest.mark.asyncio
-async def test_transcript_participants_update_speaker(client):
+async def test_transcript_participants_update_speaker(authenticated_client, client):
     response = await client.post("/transcripts", json={"name": "test"})
     assert response.status_code == 200
     assert response.json()["participants"] == []

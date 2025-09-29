@@ -199,6 +199,8 @@ async def rooms_get(
     room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+    if not room.is_shared and (user_id is None or room.user_id != user_id):
+        raise HTTPException(status_code=403, detail="Room access denied")
     return room
 
 
@@ -229,9 +231,9 @@ async def rooms_get_by_name(
 @router.post("/rooms", response_model=Room)
 async def rooms_create(
     room: CreateRoom,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
 
     return await rooms_controller.add(
         name=room.name,
@@ -256,12 +258,14 @@ async def rooms_create(
 async def rooms_update(
     room_id: str,
     info: UpdateRoom,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     room = await rooms_controller.get_by_id_for_http(room_id, user_id=user_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+    if room.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     await rooms_controller.update(room, values)
     return room
@@ -270,12 +274,14 @@ async def rooms_update(
 @router.delete("/rooms/{room_id}", response_model=DeletionStatus)
 async def rooms_delete(
     room_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
-    room = await rooms_controller.get_by_id(room_id, user_id=user_id)
+    user_id = user["sub"]
+    room = await rooms_controller.get_by_id(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+    if room.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     await rooms_controller.remove_by_id(room.id, user_id=user_id)
     return DeletionStatus(status="ok")
 
@@ -339,16 +345,16 @@ async def rooms_create_meeting(
 @router.post("/rooms/{room_id}/webhook/test", response_model=WebhookTestResult)
 async def rooms_test_webhook(
     room_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
     """Test webhook configuration by sending a sample payload."""
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
 
     room = await rooms_controller.get_by_id(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    if user_id and room.user_id != user_id:
+    if room.user_id != user_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to test this room's webhook"
         )
