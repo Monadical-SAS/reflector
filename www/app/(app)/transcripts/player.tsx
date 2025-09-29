@@ -33,17 +33,27 @@ export default function Player(props: PlayerProps) {
   const topicsRef = useRef(props.topics);
   const [firstRender, setFirstRender] = useState<boolean>(true);
 
-  const keyHandler = (e) => {
-    if (e.key == " ") {
+  const shouldIgnoreHotkeys = (target: EventTarget | null) => {
+    return (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement
+    );
+  };
+
+  const keyHandler = (e: KeyboardEvent) => {
+    if (e.key === " ") {
+      if (e.repeat) return;
+      if (shouldIgnoreHotkeys(e.target)) return;
+      e.preventDefault();
       wavesurfer?.playPause();
     }
   };
   useEffect(() => {
-    document.addEventListener("keyup", keyHandler);
+    document.addEventListener("keydown", keyHandler);
     return () => {
-      document.removeEventListener("keyup", keyHandler);
+      document.removeEventListener("keydown", keyHandler);
     };
-  });
+  }, [wavesurfer]);
 
   // Waveform setup
   useEffect(() => {

@@ -1,0 +1,10 @@
+services:
+  reflector_gpu:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./cache:/root/.cache

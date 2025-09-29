@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useError } from "../(errors)/errorContext";
 import type { components } from "../reflector-api";
 import { shouldShowError } from "../lib/errorUtils";
@@ -6,30 +6,31 @@ import { shouldShowError } from "../lib/errorUtils";
 type Meeting = components["schemas"]["Meeting"];
 import { useRoomsCreateMeeting } from "../lib/apiHooks";
 import { notFound } from "next/navigation";
+import { ApiError } from "../api/_error";
 
 type ErrorMeeting = {
-  error: Error;
+  error: ApiError;
   loading: false;
   response: null;
   reload: () => void;
 };
 
 type LoadingMeeting = {
+  error: null;
   response: null;
   loading: true;
-  error: false;
   reload: () => void;
 };
 
 type SuccessMeeting = {
+  error: null;
   response: Meeting;
   loading: false;
-  error: null;
   reload: () => void;
 };
 
-const useRoomMeeting = (
-  roomName: string | null | undefined,
+const useRoomDefaultMeeting = (
+  roomName: string | null,
 ): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
   const [response, setResponse] = useState<Meeting | null>(null);
   const [reload, setReload] = useState(0);
@@ -37,16 +38,24 @@ const useRoomMeeting = (
   const createMeetingMutation = useRoomsCreateMeeting();
   const reloadHandler = () => setReload((prev) => prev + 1);
 
+  // this is to undupe dev mode room creation
+  const creatingRef = useRef(false);
+
   useEffect(() => {
     if (!roomName) return;
+    if (creatingRef.current) return;
 
     const createMeeting = async () => {
+      creatingRef.current = true;
       try {
         const result = await createMeetingMutation.mutateAsync({
           params: {
             path: {
               room_name: roomName,
             },
+          },
+          body: {
+            allow_duplicated: false,
           },
         });
         setResponse(result);
@@ -60,14 +69,16 @@ const useRoomMeeting = (
         } else {
           setError(error);
         }
+      } finally {
+        creatingRef.current = false;
       }
     };
 
-    createMeeting();
+    createMeeting().then(() => {});
   }, [roomName, reload]);
 
   const loading = createMeetingMutation.isPending && !response;
-  const error = createMeetingMutation.error as Error | null;
+  const error = createMeetingMutation.error;
 
   return { response, loading, error, reload: reloadHandler } as
     | ErrorMeeting
@@ -75,4 +86,4 @@ const useRoomMeeting = (
     | SuccessMeeting;
 };
 
-export default useRoomMeeting;
+export default useRoomDefaultMeeting;

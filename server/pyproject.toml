@@ -12,7 +12,6 @@ dependencies = [
     "requests>=2.31.0",
     "aiortc>=1.5.0",
     "sortedcontainers>=2.4.0",
-    "loguru>=0.7.0",
     "pydantic-settings>=2.0.2",
     "structlog>=23.1.0",
     "uvicorn[standard]>=0.23.1",
@@ -27,7 +26,6 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=6.1.0",
     "sentencepiece>=0.1.99",
     "protobuf>=4.24.3",
-    "profanityfilter>=2.0.6",
     "celery>=5.3.4",
     "redis>=5.0.1",
     "python-jose[cryptography]>=3.3.0",
@@ -40,6 +38,7 @@ dependencies = [
     "llama-index-llms-openai-like>=0.4.0",
     "pytest-env>=1.1.5",
     "webvtt-py>=0.5.0",
+    "icalendar>=6.0.0",
 ]
 
 [dependency-groups]
@@ -120,7 +119,7 @@ addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
-    "gpu_modal: mark test to run only with GPU Modal endpoints (deselect with '-m \"not gpu_modal\"')",
+    "model_api: tests for the unified model-serving HTTP API (backend- and hardware-agnostic)",
 ]
 
 [tool.ruff.lint]
@@ -132,7 +131,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "reflector/processors/summary/summary_builder.py" = ["E501"]
-"gpu/**.py" = ["PLC0415"]
+"gpu/modal_deployments/**.py" = ["PLC0415"]
 "reflector/tools/**.py" = ["PLC0415"]
 "migrations/versions/**.py" = ["PLC0415"]
 "tests/**.py" = ["PLC0415"]

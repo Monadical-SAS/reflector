@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.13.1](https://github.com/Monadical-SAS/reflector/compare/v0.13.0...v0.13.1) (2025-09-22)
+
+
+### Bug Fixes
+
+* TypeError on not all arguments converted during string formatting in logger ([#667](https://github.com/Monadical-SAS/reflector/issues/667)) ([565a629](https://github.com/Monadical-SAS/reflector/commit/565a62900f5a02fc946b68f9269a42190ed70ab6))
+
+## [0.13.0](https://github.com/Monadical-SAS/reflector/compare/v0.12.1...v0.13.0) (2025-09-19)
+
+
+### Features
+
+* room form edit with enter ([#662](https://github.com/Monadical-SAS/reflector/issues/662)) ([47716f6](https://github.com/Monadical-SAS/reflector/commit/47716f6e5ddee952609d2fa0ffabdfa865286796))
+
+
+### Bug Fixes
+
+* invalid cleanup call ([#660](https://github.com/Monadical-SAS/reflector/issues/660)) ([0abcebf](https://github.com/Monadical-SAS/reflector/commit/0abcebfc9491f87f605f21faa3e53996fafedd9a))
+
+## [0.12.1](https://github.com/Monadical-SAS/reflector/compare/v0.12.0...v0.12.1) (2025-09-17)
+
+
+### Bug Fixes
+
+* production blocked because having existing meeting with room_id null ([#657](https://github.com/Monadical-SAS/reflector/issues/657)) ([870e860](https://github.com/Monadical-SAS/reflector/commit/870e8605171a27155a9cbee215eeccb9a8d6c0a2))
+
+## [0.12.0](https://github.com/Monadical-SAS/reflector/compare/v0.11.0...v0.12.0) (2025-09-17)
+
+
+### Features
+
+* calendar integration ([#608](https://github.com/Monadical-SAS/reflector/issues/608)) ([6f680b5](https://github.com/Monadical-SAS/reflector/commit/6f680b57954c688882c4ed49f40f161c52a00a24))
+* self-hosted gpu api ([#636](https://github.com/Monadical-SAS/reflector/issues/636)) ([ab859d6](https://github.com/Monadical-SAS/reflector/commit/ab859d65a6bded904133a163a081a651b3938d42))
+
+
+### Bug Fixes
+
+* ignore player hotkeys for text inputs ([#646](https://github.com/Monadical-SAS/reflector/issues/646)) ([fa049e8](https://github.com/Monadical-SAS/reflector/commit/fa049e8d068190ce7ea015fd9fcccb8543f54a3f))
+
+## [0.11.0](https://github.com/Monadical-SAS/reflector/compare/v0.10.0...v0.11.0) (2025-09-16)
+
+
+### Features
+
+* remove profanity filter that was there for conference ([#652](https://github.com/Monadical-SAS/reflector/issues/652)) ([b42f7cf](https://github.com/Monadical-SAS/reflector/commit/b42f7cfc606783afcee792590efcc78b507468ab))
+
+
+### Bug Fixes
+
+* zulip and consent handler on the file pipeline ([#645](https://github.com/Monadical-SAS/reflector/issues/645)) ([5f143fe](https://github.com/Monadical-SAS/reflector/commit/5f143fe3640875dcb56c26694254a93189281d17))
+* zulip stream and topic selection in share dialog ([#644](https://github.com/Monadical-SAS/reflector/issues/644)) ([c546e69](https://github.com/Monadical-SAS/reflector/commit/c546e69739e68bb74fbc877eb62609928e5b8de6))
+
 ## [0.10.0](https://github.com/Monadical-SAS/reflector/compare/v0.9.0...v0.10.0) (2025-09-11)
 
 
