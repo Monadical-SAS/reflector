@@ -14,7 +14,10 @@ import {
   Textarea,
   Spacer,
 } from "@chakra-ui/react";
-import { LuPen } from "react-icons/lu";
+import { LuPen, LuCopy, LuCheck } from "react-icons/lu";
+import { buildTranscriptWithTopics } from "../buildTranscriptWithTopics";
+import { useTranscriptParticipants } from "../../../lib/apiHooks";
+import { toaster } from "../../../components/ui/toaster";
 import { useError } from "../../../(errors)/errorContext";
 import ShareAndPrivacy from "../shareAndPrivacy";
 
@@ -33,6 +36,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
 
   const { setError } = useError();
   const updateTranscriptMutation = useTranscriptUpdate();
+  const participantsQuery = useTranscriptParticipants(
+    props.transcriptResponse?.id || null,
+  );
 
   useEffect(() => {
     setEditedSummary(props.transcriptResponse?.long_summary || "");
@@ -125,6 +131,50 @@ export default function FinalSummary(props: FinalSummaryProps) {
         {!isEditMode && (
           <>
             <Spacer />
+            <IconButton
+              aria-label="Copy Transcript"
+              size="sm"
+              variant="subtle"
+              onClick={() => {
+                const text = buildTranscriptWithTopics(
+                  props.topicsResponse || [],
+                  participantsQuery?.data || null,
+                  props.transcriptResponse?.title || null,
+                );
+                if (!text) return;
+                navigator.clipboard
+                  .writeText(text)
+                  .then(() => {
+                    toaster
+                      .create({
+                        placement: "top",
+                        duration: 2500,
+                        render: () => (
+                          <div className="chakra-ui-light">
+                            <div
+                              style={{
+                                background: "#38A169",
+                                color: "white",
+                                padding: "8px 12px",
+                                borderRadius: 6,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                boxShadow: "rgba(0,0,0,0.25) 0px 4px 12px",
+                              }}
+                            >
+                              <LuCheck /> Transcript copied
+                            </div>
+                          </div>
+                        ),
+                      })
+                      .then(() => {});
+                  })
+                  .catch(() => {});
+              }}
+            >
+              <LuCopy />
+            </IconButton>
             <IconButton
               aria-label="Edit Summary"
               onClick={onEditClick}
