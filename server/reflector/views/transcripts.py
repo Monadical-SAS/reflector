@@ -348,7 +348,7 @@ async def transcript_update(
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
-    if transcript.user_id is not None and transcript.user_id != user_id:
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
         raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     updated_transcript = await transcripts_controller.update(transcript, values)
@@ -364,8 +364,7 @@ async def transcript_delete(
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-
-    if transcript.user_id is None or transcript.user_id != user_id:
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
         raise HTTPException(status_code=403, detail="Not authorized")
 
     await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
@@ -448,9 +447,8 @@ async def transcript_post_to_zulip(
     )
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-    if transcript.user_id is not None and transcript.user_id != user_id:
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
         raise HTTPException(status_code=403, detail="Not authorized")
-
     content = get_zulip_message(transcript, include_topics)
 
     message_updated = False

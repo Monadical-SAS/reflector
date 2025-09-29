@@ -647,6 +647,19 @@ class TranscriptController:
         query = transcripts.delete().where(transcripts.c.recording_id == recording_id)
         await get_database().execute(query)
 
+    @staticmethod
+    def user_can_mutate(transcript: Transcript, user_id: str | None) -> bool:
+        """
+        Returns True if the given user is allowed to modify the transcript.
+
+        Policy:
+        - Anonymous transcripts (user_id is None) cannot be modified via API
+        - Only the owner (matching user_id) can modify their transcript
+        """
+        if transcript.user_id is None:
+            return False
+        return user_id and transcript.user_id == user_id
+
     @asynccontextmanager
     async def transaction(self):
         """
