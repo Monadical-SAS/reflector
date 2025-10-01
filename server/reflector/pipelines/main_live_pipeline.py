@@ -85,6 +85,18 @@ def broadcast_to_sockets(func):
             message=resp.model_dump(mode="json"),
         )
 
+        transcript = await transcripts_controller.get_by_id(self.transcript_id)
+        if transcript and transcript.user_id:
+            await self.ws_manager.send_json(
+                room_id=f"user:{transcript.user_id}",
+                message={
+                    "event": "TRANSCRIPT_STATUS"
+                    if resp.event == "STATUS"
+                    else resp.event,
+                    "data": {"id": self.transcript_id, **resp.data},
+                },
+            )
+
     return wrapper
 
 

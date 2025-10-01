@@ -32,6 +32,7 @@ from reflector.db.transcripts import (
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
+from reflector.ws_manager import get_ws_manager
 from reflector.zulip import (
     InvalidMessageError,
     get_zulip_message,
@@ -211,13 +212,21 @@ async def transcripts_create(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     user_id = user["sub"] if user else None
-    return await transcripts_controller.add(
+    transcript = await transcripts_controller.add(
         info.name,
         source_kind=info.source_kind or SourceKind.LIVE,
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
     )
+
+    if user_id:
+        await get_ws_manager().send_json(
+            room_id=f"user:{user_id}",
+            message={"event": "TRANSCRIPT_CREATED", "data": {"id": created.id}},
+        )
+
+    return transcript
 
 
 # ==============================================================
@@ -368,6 +377,10 @@ async def transcript_delete(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
+    await get_ws_manager().send_json(
+        room_id=f"user:{user_id}",
+        message={"event": "TRANSCRIPT_DELETED", "data": {"id": transcript.id}},
+    )
     return DeletionStatus(status="ok")
 
 
