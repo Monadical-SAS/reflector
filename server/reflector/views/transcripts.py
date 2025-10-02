@@ -223,7 +223,7 @@ async def transcripts_create(
     if user_id:
         await get_ws_manager().send_json(
             room_id=f"user:{user_id}",
-            message={"event": "TRANSCRIPT_CREATED", "data": {"id": created.id}},
+            message={"event": "TRANSCRIPT_CREATED", "data": {"id": transcript.id}},
         )
 
     return transcript
