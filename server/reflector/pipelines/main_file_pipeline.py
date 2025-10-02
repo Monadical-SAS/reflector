@@ -131,7 +131,7 @@ class PipelineMainFile(PipelineMainBase):
 
         self.logger.info("File pipeline complete")
 
-        await transcripts_controller.set_status(transcript.id, "ended")
+        await self.set_status(transcript.id, "ended")
 
     async def extract_and_write_audio(
         self, file_path: Path, transcript: Transcript

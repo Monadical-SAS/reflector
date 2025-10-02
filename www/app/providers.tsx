@@ -11,6 +11,7 @@ import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./lib/AuthProvider";
 import { SessionProvider as SessionProviderNextAuth } from "next-auth/react";
 import { RecordingConsentProvider } from "./recordingConsentContext";
+import { UserEventsProvider } from "./lib/UserEventsProvider";
 
 const WherebyProvider = dynamic(
   () =>
@@ -28,10 +29,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             <ChakraProvider value={system}>
               <RecordingConsentProvider>
-                <WherebyProvider>
-                  {children}
-                  <Toaster />
-                </WherebyProvider>
+                <UserEventsProvider>
+                  <WherebyProvider>
+                    {children}
+                    <Toaster />
+                  </WherebyProvider>
+                </UserEventsProvider>
               </RecordingConsentProvider>
             </ChakraProvider>
           </AuthProvider>
