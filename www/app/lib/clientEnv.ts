@@ -31,6 +31,7 @@ export type EnvFeaturePartial = {
 export type ClientEnvCommon = EnvFeaturePartial & {
   API_URL: NonEmptyString;
   WEBSOCKET_URL: NonEmptyString | null;
+  JITSI_APP_ID: NonEmptyString | null;
 };
 
 let clientEnv: ClientEnvCommon | null = null;
@@ -75,6 +76,7 @@ export const getClientEnvServer = (): ClientEnvCommon => {
     return {
       API_URL: getNextEnvVar("API_URL"),
       WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+      JITSI_APP_ID: parseNonEmptyString(process.env.JITSI_APP_ID),
       ...features,
     };
   }
@@ -82,6 +84,7 @@ export const getClientEnvServer = (): ClientEnvCommon => {
   clientEnv = {
     API_URL: getNextEnvVar("API_URL"),
     WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+    JITSI_APP_ID: parseNonEmptyString(process.env.JITSI_APP_ID),
     ...features,
   };
   return clientEnv;

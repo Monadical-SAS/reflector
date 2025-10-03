@@ -1,0 +1,13 @@
+# Jitsi local development files
+recordings/
+ssl/*.pem
+ssl/*.key
+ssl/*.crt
+ssl/*.csr
+prosody/
+jicofo/
+jvb/
+jibri/
+event-collector/node_modules/
+event-collector/dist/
+.env
