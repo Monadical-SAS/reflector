@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { $api, WEBSOCKET_URL } from "./apiClient";
+import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
 
 type UserEvent = {
@@ -38,7 +38,9 @@ class UserEventsStore {
       this.listeners.forEach((listener) => {
         try {
           listener(event);
-        } catch {}
+        } catch (err) {
+          console.error("UserEvents listener error", err);
+        }
       });
     };
     ws.onopen = () => {
@@ -67,9 +69,13 @@ class UserEventsStore {
       this.refCount = Math.max(0, this.refCount - 1);
       if (this.refCount === 0) {
         this.closeTimeoutId = window.setTimeout(() => {
-          try {
-            this.socket?.close();
-          } catch {}
+          if (this.socket) {
+            try {
+              this.socket.close();
+            } catch (err) {
+              console.warn("Error closing user events socket", err);
+            }
+          }
           this.socket = null;
           this.closeTimeoutId = null;
         }, 1000);
@@ -91,17 +97,26 @@ export function UserEventsProvider({
   const detachRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (auth.status !== "authenticated") {
+    // Only tear down when the user is truly unauthenticated
+    if (auth.status === "unauthenticated") {
       if (detachRef.current) {
         try {
           detachRef.current();
-        } catch {}
+        } catch (err) {
+          console.warn("Error detaching UserEvents listener", err);
+        }
         detachRef.current = null;
       }
       tokenRef.current = null;
       return;
     }
 
+    // During loading/refreshing, keep the existing connection intact
+    if (auth.status !== "authenticated") {
+      return;
+    }
+
+    // Authenticated: pin the initial token for the lifetime of this WS connection
     if (!tokenRef.current && (auth as any).accessToken) {
       tokenRef.current = (auth as any).accessToken as string;
     }
@@ -110,50 +125,66 @@ export function UserEventsProvider({
       pinnedToken ? `?token=${encodeURIComponent(pinnedToken)}` : ""
     }`;
 
+    // Ensure a single shared connection
     sharedStore.ensureConnection(url);
 
-    const onMessage = (event: MessageEvent) => {
-      try {
-        const msg: UserEvent = JSON.parse(event.data);
-        const eventName = msg.event;
-        const transcriptId = (msg.data as any).id as string;
+    // Subscribe once; avoid re-subscribing during transient status changes
+    if (!detachRef.current) {
+      const onMessage = (event: MessageEvent) => {
+        try {
+          const msg: UserEvent = JSON.parse(event.data);
+          const eventName = msg.event;
+          const transcriptId = (msg.data as any).id as string;
 
-        const invalidateList = () =>
-          queryClient.invalidateQueries({
-            predicate: (query) => {
-              const key = query.queryKey;
-              return key.some(
-                (k) =>
-                  typeof k === "string" && k.includes("/v1/transcripts/search"),
-              );
-            },
-          });
+          const invalidateList = () =>
+            queryClient.invalidateQueries({
+              predicate: (query) => {
+                const key = query.queryKey;
+                return key.some(
+                  (k) =>
+                    typeof k === "string" &&
+                    k.includes("/v1/transcripts/search"),
+                );
+              },
+            });
 
-        switch (eventName) {
-          case "TRANSCRIPT_CREATED":
-          case "TRANSCRIPT_DELETED":
-          case "TRANSCRIPT_STATUS":
-          case "FINAL_TITLE":
-          case "DURATION":
-            invalidateList();
-            break;
+          switch (eventName) {
+            case "TRANSCRIPT_CREATED":
+            case "TRANSCRIPT_DELETED":
+            case "TRANSCRIPT_STATUS":
+            case "FINAL_TITLE":
+            case "DURATION":
+              invalidateList();
+              break;
 
-          default:
-            // Ignore other content events for list updates
-            break;
+            default:
+              // Ignore other content events for list updates
+              break;
+          }
+        } catch (err) {
+          console.warn("Invalid user event message", event.data);
         }
-      } catch {}
-    };
+      };
 
-    const unsubscribe = sharedStore.subscribe(onMessage);
-    detachRef.current = unsubscribe;
+      const unsubscribe = sharedStore.subscribe(onMessage);
+      detachRef.current = unsubscribe;
+    }
+  }, [auth.status, queryClient]);
+
+  // On unmount, detach the listener and clear the pinned token
+  useEffect(() => {
     return () => {
       if (detachRef.current) {
-        detachRef.current();
+        try {
+          detachRef.current();
+        } catch (err) {
+          console.warn("Error detaching UserEvents listener on unmount", err);
+        }
         detachRef.current = null;
       }
+      tokenRef.current = null;
     };
-  }, [auth.status, queryClient]);
+  }, []);
 
   return <>{children}</>;
 }
