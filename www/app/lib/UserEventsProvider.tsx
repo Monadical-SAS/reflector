@@ -17,7 +17,7 @@ class UserEventsStore {
   private closeTimeoutId: number | null = null;
   private isConnecting = false;
 
-  ensureConnection(url: string) {
+  ensureConnection(url: string, subprotocols?: string[]) {
     if (typeof window === "undefined") return;
     if (this.closeTimeoutId !== null) {
       clearTimeout(this.closeTimeoutId);
@@ -32,7 +32,7 @@ class UserEventsStore {
       return;
     }
     this.isConnecting = true;
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(url, subprotocols || []);
     this.socket = ws;
     ws.onmessage = (event: MessageEvent) => {
       this.listeners.forEach((listener) => {
@@ -121,12 +121,13 @@ export function UserEventsProvider({
       tokenRef.current = (auth as any).accessToken as string;
     }
     const pinnedToken = tokenRef.current;
-    const url = `${WEBSOCKET_URL}/v1/events${
-      pinnedToken ? `?token=${encodeURIComponent(pinnedToken)}` : ""
-    }`;
+    const url = `${WEBSOCKET_URL}/v1/events`;
 
     // Ensure a single shared connection
-    sharedStore.ensureConnection(url);
+    sharedStore.ensureConnection(
+      url,
+      pinnedToken ? ["bearer", pinnedToken] : undefined,
+    );
 
     // Subscribe once; avoid re-subscribing during transient status changes
     if (!detachRef.current) {
