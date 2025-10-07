@@ -2,7 +2,7 @@
 
 import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 
@@ -40,6 +40,13 @@ export function useRoomsList(page: number = 1) {
 
 type SourceKind = components["schemas"]["SourceKind"];
 
+export const TRANSCRIPT_SEARCH_URL = "/v1/transcripts/search" as const;
+
+export const invalidateTranscriptLists = (queryClient: QueryClient) =>
+  queryClient.invalidateQueries({
+    queryKey: ["get", TRANSCRIPT_SEARCH_URL],
+  });
+
 export function useTranscriptsSearch(
   q: string = "",
   options: {
@@ -51,7 +58,7 @@ export function useTranscriptsSearch(
 ) {
   return $api.useQuery(
     "get",
-    "/v1/transcripts/search",
+    TRANSCRIPT_SEARCH_URL,
     {
       params: {
         query: {
@@ -76,7 +83,7 @@ export function useTranscriptDelete() {
   return $api.useMutation("delete", "/v1/transcripts/{transcript_id}", {
     onSuccess: () => {
       return queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/transcripts/search"],
+        queryKey: ["get", TRANSCRIPT_SEARCH_URL],
       });
     },
     onError: (error) => {
@@ -613,7 +620,7 @@ export function useTranscriptCreate() {
   return $api.useMutation("post", "/v1/transcripts", {
     onSuccess: () => {
       return queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/transcripts/search"],
+        queryKey: ["get", TRANSCRIPT_SEARCH_URL],
       });
     },
     onError: (error) => {

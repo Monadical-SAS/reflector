@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
 import { z } from "zod";
+import { invalidateTranscriptLists, TRANSCRIPT_SEARCH_URL } from "./apiHooks";
 
 const UserEvent = z.object({
   event: z.string(),
@@ -138,17 +139,7 @@ export function UserEventsProvider({
           const msg = UserEvent.parse(JSON.parse(event.data));
           const eventName = msg.event;
 
-          const invalidateList = () =>
-            queryClient.invalidateQueries({
-              predicate: (query) => {
-                const key = query.queryKey;
-                return key.some(
-                  (k) =>
-                    typeof k === "string" &&
-                    k.includes("/v1/transcripts/search"),
-                );
-              },
-            });
+          const invalidateList = () => invalidateTranscriptLists(queryClient);
 
           switch (eventName) {
             case "TRANSCRIPT_CREATED":
@@ -156,7 +147,7 @@ export function UserEventsProvider({
             case "TRANSCRIPT_STATUS":
             case "FINAL_TITLE":
             case "DURATION":
-              invalidateList();
+              invalidateList().then(() => {});
               break;
 
             default:
