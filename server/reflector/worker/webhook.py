@@ -88,12 +88,15 @@ async def send_transcript_webhook(
 
         # Fetch meeting and calendar event if they exist
         calendar_event = None
-        if transcript.meeting_id:
-            meeting = await meetings_controller.get_by_id(transcript.meeting_id)
-            if meeting and meeting.calendar_event_id:
-                calendar_event = await calendar_events_controller.get_by_id(
-                    meeting.calendar_event_id
-                )
+        try:
+            if transcript.meeting_id:
+                meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+                if meeting and meeting.calendar_event_id:
+                    calendar_event = await calendar_events_controller.get_by_id(
+                        meeting.calendar_event_id
+                    )
+        except Exception as e:
+            logger.error("Error fetching meeting or calendar event", error=str(e))
 
         # Build webhook payload
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
