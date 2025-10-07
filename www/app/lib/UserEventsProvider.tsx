@@ -4,11 +4,13 @@ import React, { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
+import { z } from "zod";
 
-type UserEvent = {
-  event: string;
-  data: any;
-};
+const UserEvent = z.object({
+  event: z.string(),
+});
+
+type UserEvent = z.TypeOf<typeof UserEvent>;
 
 class UserEventsStore {
   private socket: WebSocket | null = null;
@@ -133,9 +135,8 @@ export function UserEventsProvider({
     if (!detachRef.current) {
       const onMessage = (event: MessageEvent) => {
         try {
-          const msg: UserEvent = JSON.parse(event.data);
+          const msg = UserEvent.parse(JSON.parse(event.data));
           const eventName = msg.event;
-          const transcriptId = (msg.data as any).id as string;
 
           const invalidateList = () =>
             queryClient.invalidateQueries({
