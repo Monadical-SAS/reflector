@@ -7,6 +7,9 @@ from reflector.ws_manager import get_ws_manager
 
 router = APIRouter()
 
+# Close code for unauthorized WebSocket connections
+UNAUTHORISED = 4401
+
 
 @router.websocket("/events")
 async def user_events_websocket(websocket: WebSocket):
@@ -25,12 +28,11 @@ async def user_events_websocket(websocket: WebSocket):
             payload = JWTAuth().verify_token(token)
             user_id = payload.get("sub")
         except Exception:
-            # Invalid token: close with 4401 Unauthorized
-            await websocket.close(code=4401)
+            await websocket.close(code=UNAUTHORISED)
             return
     else:
         # No auth provided: close with 4401 Unauthorized
-        await websocket.close(code=4401)
+        await websocket.close(code=UNAUTHORISED)
         return
 
     # Subscribe to user-specific room if available
@@ -39,7 +41,7 @@ async def user_events_websocket(websocket: WebSocket):
 
     # Only accept here if we are NOT using the shared manager (which accepts itself)
     if not room_id:
-        await websocket.close(code=4401)
+        await websocket.close(code=UNAUTHORISED)
         return
     else:
         await ws_manager.add_user_to_room(
