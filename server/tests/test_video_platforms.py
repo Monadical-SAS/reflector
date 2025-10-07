@@ -7,7 +7,7 @@ import pytest
 
 from reflector.db.rooms import Room
 from reflector.video_platforms.base import MeetingData, VideoPlatformConfig
-from reflector.video_platforms.daily import DailyClient
+from reflector.video_platforms.dailyco import DailyCoClient
 from reflector.video_platforms.mock import MockPlatformClient
 from reflector.video_platforms.registry import get_platform_client
 from reflector.video_platforms.whereby import WherebyClient
@@ -42,10 +42,10 @@ class TestPlatformFactory:
         client = get_platform_client("whereby", config)
         assert isinstance(client, WherebyClient)
 
-    def test_create_daily_client(self, config):
+    def test_create_dailyco_client(self, config):
         """Test creating Daily.co client."""
-        client = get_platform_client("daily", config)
-        assert isinstance(client, DailyClient)
+        client = get_platform_client("dailyco", config)
+        assert isinstance(client, DailyCoClient)
 
     def test_create_mock_client(self, config):
         """Test creating mock client."""
@@ -122,15 +122,15 @@ class TestMockPlatformClient:
         assert result is False
 
 
-class TestDailyClient:
+class TestDailyCoClient:
     """Test Daily.co platform client."""
 
     @pytest.fixture
-    def daily_client(self, config):
-        return DailyClient(config)
+    def dailyco_client(self, config):
+        return DailyCoClient(config)
 
     @pytest.mark.asyncio
-    async def test_create_meeting_success(self, daily_client, mock_room):
+    async def test_create_meeting_success(self, dailyco_client, mock_room):
         """Test successful meeting creation."""
         end_date = datetime.utcnow() + timedelta(hours=1)
 
@@ -143,11 +143,11 @@ class TestDailyClient:
         }
 
         with patch.object(
-            daily_client, "_make_request", new_callable=AsyncMock
+            dailyco_client, "_make_request", new_callable=AsyncMock
         ) as mock_request:
             mock_request.return_value = mock_response
 
-            meeting_data = await daily_client.create_meeting(
+            meeting_data = await dailyco_client.create_meeting(
                 room_name_prefix="test", end_date=end_date, room=mock_room
             )
 
@@ -165,7 +165,7 @@ class TestDailyClient:
             assert "/rooms" in call_args[0][1]
 
     @pytest.mark.asyncio
-    async def test_get_room_sessions_success(self, daily_client):
+    async def test_get_room_sessions_success(self, dailyco_client):
         """Test successful room sessions retrieval."""
         mock_response = {
             "data": [
@@ -179,48 +179,48 @@ class TestDailyClient:
         }
 
         with patch.object(
-            daily_client, "_make_request", new_callable=AsyncMock
+            dailyco_client, "_make_request", new_callable=AsyncMock
         ) as mock_request:
             mock_request.return_value = mock_response
 
-            sessions = await daily_client.get_room_sessions("test-room")
+            sessions = await dailyco_client.get_room_sessions("test-room")
 
             assert isinstance(sessions, list)
             assert len(sessions) == 1
             assert sessions[0]["id"] == "session-1"
 
     @pytest.mark.asyncio
-    async def test_delete_room_success(self, daily_client):
+    async def test_delete_room_success(self, dailyco_client):
         """Test successful room deletion."""
         with patch.object(
-            daily_client, "_make_request", new_callable=AsyncMock
+            dailyco_client, "_make_request", new_callable=AsyncMock
         ) as mock_request:
             mock_request.return_value = {"deleted": True}
 
-            result = await daily_client.delete_room("test-room")
+            result = await dailyco_client.delete_room("test-room")
 
             assert result is True
             mock_request.assert_called_once_with("DELETE", "/rooms/test-room")
 
-    def test_verify_webhook_signature_valid(self, daily_client):
+    def test_verify_webhook_signature_valid(self, dailyco_client):
         """Test webhook signature verification with valid HMAC."""
         import hashlib
         import hmac
 
         payload = b'{"event": "participant.joined"}'
         expected_signature = hmac.new(
-            daily_client.webhook_secret.encode(), payload, hashlib.sha256
+            dailyco_client.webhook_secret.encode(), payload, hashlib.sha256
         ).hexdigest()
 
-        result = daily_client.verify_webhook_signature(payload, expected_signature)
+        result = dailyco_client.verify_webhook_signature(payload, expected_signature)
         assert result is True
 
-    def test_verify_webhook_signature_invalid(self, daily_client):
+    def test_verify_webhook_signature_invalid(self, dailyco_client):
         """Test webhook signature verification with invalid HMAC."""
         payload = b'{"event": "participant.joined"}'
         invalid_signature = "invalid-signature"
 
-        result = daily_client.verify_webhook_signature(payload, invalid_signature)
+        result = dailyco_client.verify_webhook_signature(payload, invalid_signature)
         assert result is False
 
 
@@ -296,10 +296,10 @@ class TestPlatformIntegration:
         mock_client = get_platform_client("mock", config)
         mock_meeting = await mock_client.create_meeting("test", end_date, mock_room)
 
-        # Test with Daily platform (mocked)
-        daily_client = get_platform_client("daily", config)
+        # Test with Daily.co platform (mocked)
+        dailyco_client = get_platform_client("dailyco", config)
         with patch.object(
-            daily_client, "_make_request", new_callable=AsyncMock
+            dailyco_client, "_make_request", new_callable=AsyncMock
         ) as mock_request:
             mock_request.return_value = {
                 "url": "https://test.daily.co/test-room",
@@ -307,16 +307,16 @@ class TestPlatformIntegration:
                 "api_created": True,
             }
 
-            daily_meeting = await daily_client.create_meeting(
+            dailyco_meeting = await dailyco_client.create_meeting(
                 "test", end_date, mock_room
             )
 
         # Both should return MeetingData objects with consistent fields
         assert isinstance(mock_meeting, MeetingData)
-        assert isinstance(daily_meeting, MeetingData)
+        assert isinstance(dailyco_meeting, MeetingData)
 
         # Both should have required fields
-        for meeting in [mock_meeting, daily_meeting]:
+        for meeting in [mock_meeting, dailyco_meeting]:
             assert hasattr(meeting, "room_url")
             assert hasattr(meeting, "host_room_url")
             assert hasattr(meeting, "room_name")

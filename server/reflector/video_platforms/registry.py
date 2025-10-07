@@ -30,12 +30,12 @@ def get_available_platforms() -> list[str]:
 
 # Auto-register built-in platforms
 def _register_builtin_platforms():
-    from .daily import DailyClient
+    from .dailyco import DailyCoClient
     from .mock import MockPlatformClient
     from .whereby import WherebyClient
 
     register_platform("whereby", WherebyClient)
-    register_platform("daily", DailyClient)
+    register_platform("dailyco", DailyCoClient)
     register_platform("mock", MockPlatformClient)
 
 

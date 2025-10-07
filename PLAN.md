@@ -19,10 +19,10 @@ This plan outlines a systematic migration from Whereby to Daily.co, focusing on 
 - [ ] Create Daily.co account and obtain API credentials (PENDING - User to provide)
 - [x] Add environment variables to `.env` files:
   ```bash
-  DAILY_API_KEY=your-api-key
-  DAILY_WEBHOOK_SECRET=your-webhook-secret
-  DAILY_SUBDOMAIN=your-subdomain
-  AWS_DAILY_ROLE_ARN=arn:aws:iam::xxx:role/daily-recording
+  DAILYCO_API_KEY=your-api-key
+  DAILYCO_WEBHOOK_SECRET=your-webhook-secret
+  DAILYCO_SUBDOMAIN=your-subdomain
+  AWS_DAILYCO_ROLE_ARN=arn:aws:iam::xxx:role/dailyco-recording
   ```
 - [ ] Set up Daily.co webhook endpoint in dashboard (PENDING - Credentials needed)
 - [ ] Configure S3 bucket permissions for Daily.co (PENDING - Credentials needed)
@@ -45,8 +45,8 @@ This plan outlines a systematic migration from Whereby to Daily.co, focusing on 
 
 - [x] Implement feature flag in backend settings:
   ```python
-  DAILY_MIGRATION_ENABLED = env.bool("DAILY_MIGRATION_ENABLED", False)
-  DAILY_MIGRATION_ROOM_IDS = env.list("DAILY_MIGRATION_ROOM_IDS", [])
+  DAILYCO_MIGRATION_ENABLED = env.bool("DAILYCO_MIGRATION_ENABLED", False)
+  DAILYCO_MIGRATION_ROOM_IDS = env.list("DAILYCO_MIGRATION_ROOM_IDS", [])
   ```
 - [x] Add platform selection logic to room creation
 - [ ] Create admin UI to toggle platform per room (FUTURE - Not in Phase 1)
@@ -66,7 +66,7 @@ This plan outlines a systematic migration from Whereby to Daily.co, focusing on 
 ### 2.1 Webhook Handler
 **Owner**: Backend Developer
 
-- [x] Create `server/reflector/views/daily.py` webhook endpoint
+- [x] Create `server/reflector/views/dailyco.py` webhook endpoint
 - [x] Implement HMAC signature verification
 - [x] Handle events:
   - `participant.joined`
@@ -111,13 +111,13 @@ This plan outlines a systematic migration from Whereby to Daily.co, focusing on 
   // www/app/[roomName]/components/RoomContainer.tsx
   export default function RoomContainer({ params }) {
     const platform = meeting.response.platform || "whereby";
-    if (platform === 'daily') {
-      return <DailyRoom meeting={meeting.response} />
+    if (platform === 'dailyco') {
+      return <DailyCoRoom meeting={meeting.response} />
     }
     return <WherebyRoom meeting={meeting.response} />
   }
   ```
-- [x] Implement `DailyRoom` component with:
+- [x] Implement `DailyCoRoom` component with:
   - Call initialization using DailyIframe
   - Recording consent flow
   - Leave meeting handling

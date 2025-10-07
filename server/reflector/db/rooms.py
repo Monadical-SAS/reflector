@@ -62,7 +62,7 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
-    platform: Literal["whereby", "daily"] = "whereby"
+    platform: Literal["whereby", "dailyco"] = "whereby"
 
 
 class RoomController:

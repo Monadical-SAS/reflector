@@ -10,10 +10,10 @@ from reflector.db.rooms import Room
 from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
 
 
-class DailyClient(VideoPlatformClient):
+class DailyCoClient(VideoPlatformClient):
     """Daily.co video platform implementation."""
 
-    PLATFORM_NAME = "daily"
+    PLATFORM_NAME = "dailyco"
     TIMEOUT = 10  # seconds
     BASE_URL = "https://api.daily.co/v1"
 

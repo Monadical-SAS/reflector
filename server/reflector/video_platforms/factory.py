@@ -19,14 +19,14 @@ def get_platform_config(platform: str) -> VideoPlatformConfig:
             aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
             aws_access_key_secret=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
         )
-    elif platform == "daily":
+    elif platform == "dailyco":
         return VideoPlatformConfig(
-            api_key=settings.DAILY_API_KEY or "",
-            webhook_secret=settings.DAILY_WEBHOOK_SECRET or "",
-            subdomain=settings.DAILY_SUBDOMAIN,
-            s3_bucket=settings.AWS_DAILY_S3_BUCKET,
-            s3_region=settings.AWS_DAILY_S3_REGION,
-            aws_role_arn=settings.AWS_DAILY_ROLE_ARN,
+            api_key=settings.DAILYCO_API_KEY or "",
+            webhook_secret=settings.DAILYCO_WEBHOOK_SECRET or "",
+            subdomain=settings.DAILYCO_SUBDOMAIN,
+            s3_bucket=settings.AWS_DAILYCO_S3_BUCKET,
+            s3_region=settings.AWS_DAILYCO_S3_REGION,
+            aws_role_arn=settings.AWS_DAILYCO_ROLE_ARN,
         )
     else:
         raise ValueError(f"Unknown platform: {platform}")
@@ -40,13 +40,13 @@ def create_platform_client(platform: str) -> VideoPlatformClient:
 
 def get_platform_for_room(room_id: Optional[str] = None) -> str:
     """Determine which platform to use for a room based on feature flags."""
-    # If Daily migration is disabled, always use Whereby
-    if not settings.DAILY_MIGRATION_ENABLED:
+    # If Daily.co migration is disabled, always use Whereby
+    if not settings.DAILYCO_MIGRATION_ENABLED:
         return "whereby"
 
-    # If a specific room is in the migration list, use Daily
-    if room_id and room_id in settings.DAILY_MIGRATION_ROOM_IDS:
-        return "daily"
+    # If a specific room is in the migration list, use Daily.co
+    if room_id and room_id in settings.DAILYCO_MIGRATION_ROOM_IDS:
+        return "dailyco"
 
     # Otherwise use the default platform
     return settings.DEFAULT_VIDEO_PLATFORM

@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { Box, Spinner } from "@chakra-ui/react";
 import WherebyRoom from "./WherebyRoom";
-import DailyRoom from "./DailyRoom";
+import DailyCoRoom from "./DailyCoRoom";
 import useRoomMeeting from "../useRoomMeeting";
 
 export type RoomDetails = {
@@ -43,8 +43,8 @@ export default function RoomContainer({ params }: RoomDetails) {
   // @ts-ignore - platform field may not be in types yet
   const platform = meeting.response.platform || "whereby";
 
-  if (platform === "daily") {
-    return <DailyRoom meeting={meeting.response} />;
+  if (platform === "dailyco") {
+    return <DailyCoRoom meeting={meeting.response} />;
   }
 
   // Default to Whereby for backward compatibility

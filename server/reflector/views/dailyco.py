@@ -13,7 +13,7 @@ from reflector.settings import settings
 router = APIRouter()
 
 
-class DailyWebhookEvent(BaseModel):
+class DailyCoWebhookEvent(BaseModel):
     """Daily.co webhook event structure."""
 
     type: str
@@ -22,28 +22,28 @@ class DailyWebhookEvent(BaseModel):
     data: Dict[str, Any]
 
 
-def verify_daily_webhook_signature(body: bytes, signature: str) -> bool:
+def verify_dailyco_webhook_signature(body: bytes, signature: str) -> bool:
     """Verify Daily.co webhook signature using HMAC-SHA256."""
-    if not signature or not settings.DAILY_WEBHOOK_SECRET:
+    if not signature or not settings.DAILYCO_WEBHOOK_SECRET:
         return False
 
     try:
         expected = hmac.new(
-            settings.DAILY_WEBHOOK_SECRET.encode(), body, sha256
+            settings.DAILYCO_WEBHOOK_SECRET.encode(), body, sha256
         ).hexdigest()
         return hmac.compare_digest(expected, signature)
     except Exception:
         return False
 
 
-@router.post("/daily_webhook")
-async def daily_webhook(event: DailyWebhookEvent, request: Request):
+@router.post("/dailyco_webhook")
+async def dailyco_webhook(event: DailyCoWebhookEvent, request: Request):
     """Handle Daily.co webhook events."""
     # Verify webhook signature for security
     body = await request.body()
     signature = request.headers.get("X-Daily-Signature", "")
 
-    if not verify_daily_webhook_signature(body, signature):
+    if not verify_dailyco_webhook_signature(body, signature):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     # Handle participant events
@@ -61,7 +61,7 @@ async def daily_webhook(event: DailyWebhookEvent, request: Request):
     return {"status": "ok"}
 
 
-async def _handle_participant_joined(event: DailyWebhookEvent):
+async def _handle_participant_joined(event: DailyCoWebhookEvent):
     """Handle participant joined event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -76,7 +76,7 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         )
 
 
-async def _handle_participant_left(event: DailyWebhookEvent):
+async def _handle_participant_left(event: DailyCoWebhookEvent):
     """Handle participant left event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -91,7 +91,7 @@ async def _handle_participant_left(event: DailyWebhookEvent):
         )
 
 
-async def _handle_recording_started(event: DailyWebhookEvent):
+async def _handle_recording_started(event: DailyCoWebhookEvent):
     """Handle recording started event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -103,7 +103,7 @@ async def _handle_recording_started(event: DailyWebhookEvent):
         print(f"Recording started for meeting {meeting.id} in room {room_name}")
 
 
-async def _handle_recording_ready(event: DailyWebhookEvent):
+async def _handle_recording_ready(event: DailyCoWebhookEvent):
     """Handle recording ready for download event."""
     room_name = event.data.get("room", {}).get("name")
     recording_data = event.data.get("recording", {})
@@ -134,7 +134,7 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
             )
 
 
-async def _handle_recording_error(event: DailyWebhookEvent):
+async def _handle_recording_error(event: DailyCoWebhookEvent):
     """Handle recording error event."""
     room_name = event.data.get("room", {}).get("name")
     error = event.data.get("error", "Unknown error")

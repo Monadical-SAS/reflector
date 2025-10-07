@@ -85,7 +85,7 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
-    platform: Literal["whereby", "daily"] = "whereby"
+    platform: Literal["whereby", "dailyco"] = "whereby"
 
 
 class MeetingController:

@@ -18,7 +18,7 @@ interface Meeting {
   platform?: string;
 }
 
-interface DailyRoomProps {
+interface DailyCoRoomProps {
   meeting: Meeting;
 }
 
@@ -154,7 +154,7 @@ const recordingTypeRequiresConsent = (recordingType: string) => {
   return recordingType === "cloud";
 };
 
-export default function DailyRoom({ meeting }: DailyRoomProps) {
+export default function DailyCoRoom({ meeting }: DailyCoRoomProps) {
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
   const [callFrame, setCallFrame] = useState<DailyIframe | null>(null);
