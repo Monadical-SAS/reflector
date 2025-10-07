@@ -398,6 +398,10 @@ async def ws_manager_in_memory(monkeypatch):
     monkeypatch.setattr(
         "reflector.views.transcripts_websocket.get_ws_manager", _get_ws_manager
     )
+    monkeypatch.setattr(
+        "reflector.views.user_websocket.get_ws_manager", _get_ws_manager
+    )
+    monkeypatch.setattr("reflector.views.transcripts.get_ws_manager", _get_ws_manager)
 
     # Websocket auth: avoid OAuth2 on websocket dependencies; allow anonymous
     import reflector.auth as auth

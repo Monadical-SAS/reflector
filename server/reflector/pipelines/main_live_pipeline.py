@@ -85,6 +85,20 @@ def broadcast_to_sockets(func):
             message=resp.model_dump(mode="json"),
         )
 
+        transcript = await transcripts_controller.get_by_id(self.transcript_id)
+        if transcript and transcript.user_id:
+            # Emit only relevant events to the user room to avoid noisy updates.
+            # Allowed: STATUS, FINAL_TITLE, DURATION. All are prefixed with TRANSCRIPT_
+            allowed_user_events = {"STATUS", "FINAL_TITLE", "DURATION"}
+            if resp.event in allowed_user_events:
+                await self.ws_manager.send_json(
+                    room_id=f"user:{transcript.user_id}",
+                    message={
+                        "event": f"TRANSCRIPT_{resp.event}",
+                        "data": {"id": self.transcript_id, **resp.data},
+                    },
+                )
+
     return wrapper
 
 
