@@ -18,35 +18,32 @@ async def user_events_websocket(websocket: WebSocket):
     parts = [p.strip() for p in raw_subprotocol.split(",") if p.strip()]
     token: Optional[str] = None
     negotiated_subprotocol: Optional[str] = None
-    if len(parts) >= 2 and parts[0] == "bearer":
+    if len(parts) >= 2 and parts[0].lower() == "bearer":
         negotiated_subprotocol = "bearer"
         token = parts[1]
 
     user_id: Optional[str] = None
-    if token:
-        try:
-            payload = JWTAuth().verify_token(token)
-            user_id = payload.get("sub")
-        except Exception:
-            await websocket.close(code=UNAUTHORISED)
-            return
-    else:
-        # No auth provided: close with 4401 Unauthorized
+    if not token:
         await websocket.close(code=UNAUTHORISED)
         return
 
-    # Subscribe to user-specific room if available
-    room_id = f"user:{user_id}" if user_id else None
+    try:
+        payload = JWTAuth().verify_token(token)
+        user_id = payload.get("sub")
+    except Exception:
+        await websocket.close(code=UNAUTHORISED)
+        return
+
+    if not user_id:
+        await websocket.close(code=UNAUTHORISED)
+        return
+
+    room_id = f"user:{user_id}"
     ws_manager = get_ws_manager()
 
-    # Only accept here if we are NOT using the shared manager (which accepts itself)
-    if not room_id:
-        await websocket.close(code=UNAUTHORISED)
-        return
-    else:
-        await ws_manager.add_user_to_room(
-            room_id, websocket, subprotocol=negotiated_subprotocol
-        )
+    await ws_manager.add_user_to_room(
+        room_id, websocket, subprotocol=negotiated_subprotocol
+    )
 
     try:
         while True:
