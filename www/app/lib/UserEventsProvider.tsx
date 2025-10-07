@@ -145,8 +145,8 @@ export function UserEventsProvider({
             case "TRANSCRIPT_CREATED":
             case "TRANSCRIPT_DELETED":
             case "TRANSCRIPT_STATUS":
-            case "FINAL_TITLE":
-            case "DURATION":
+            case "TRANSCRIPT_FINAL_TITLE":
+            case "TRANSCRIPT_DURATION":
               invalidateList().then(() => {});
               break;
 
