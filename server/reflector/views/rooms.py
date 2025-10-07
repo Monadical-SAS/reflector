@@ -14,6 +14,7 @@ from reflector.db import database
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.settings import settings
+from reflector.video_platforms.base import Platform
 from reflector.video_platforms.factory import (
     create_platform_client,
     get_platform_for_room,
@@ -37,7 +38,7 @@ class Room(BaseModel):
     recording_type: str
     recording_trigger: str
     is_shared: bool
-    platform: str
+    platform: Platform
 
 
 class Meeting(BaseModel):
@@ -48,7 +49,7 @@ class Meeting(BaseModel):
     start_date: datetime
     end_date: datetime
     recording_type: Literal["none", "local", "cloud"] = "cloud"
-    platform: str
+    platform: Platform
 
 
 class CreateRoom(BaseModel):

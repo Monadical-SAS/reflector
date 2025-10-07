@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlite3 import IntegrityError
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -9,6 +9,9 @@ from sqlalchemy.sql import false, or_
 
 from reflector.db import database, metadata
 from reflector.utils import generate_uuid4
+
+if TYPE_CHECKING:
+    from reflector.video_platforms.base import Platform
 
 rooms = sqlalchemy.Table(
     "room",
@@ -62,7 +65,7 @@ class Room(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
-    platform: Literal["whereby", "dailyco"] = "whereby"
+    platform: "Platform" = "whereby"
 
 
 class RoomController:
@@ -111,7 +114,7 @@ class RoomController:
         recording_type: str,
         recording_trigger: str,
         is_shared: bool,
-        platform: str = "whereby",
+        platform: "Platform" = "whereby",
     ):
         """
         Add a new room

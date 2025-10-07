@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -8,6 +8,9 @@ from pydantic import BaseModel, Field
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
 from reflector.utils import generate_uuid4
+
+if TYPE_CHECKING:
+    from reflector.video_platforms.base import Platform
 
 meetings = sa.Table(
     "meeting",
@@ -85,7 +88,7 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
-    platform: Literal["whereby", "dailyco"] = "whereby"
+    platform: "Platform" = "whereby"
 
 
 class MeetingController:

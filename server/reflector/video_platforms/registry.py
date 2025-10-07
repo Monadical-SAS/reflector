@@ -1,18 +1,18 @@
 from typing import Dict, Type
 
-from .base import VideoPlatformClient, VideoPlatformConfig
+from .base import Platform, VideoPlatformClient, VideoPlatformConfig
 
 # Registry of available video platforms
-_PLATFORMS: Dict[str, Type[VideoPlatformClient]] = {}
+_PLATFORMS: Dict[Platform, Type[VideoPlatformClient]] = {}
 
 
-def register_platform(name: str, client_class: Type[VideoPlatformClient]):
+def register_platform(name: Platform, client_class: Type[VideoPlatformClient]):
     """Register a video platform implementation."""
     _PLATFORMS[name.lower()] = client_class
 
 
 def get_platform_client(
-    platform: str, config: VideoPlatformConfig
+    platform: Platform, config: VideoPlatformConfig
 ) -> VideoPlatformClient:
     """Get a video platform client instance."""
     platform_lower = platform.lower()
@@ -23,7 +23,7 @@ def get_platform_client(
     return client_class(config)
 
 
-def get_available_platforms() -> list[str]:
+def get_available_platforms() -> list[Platform]:
     """Get list of available platform names."""
     return list(_PLATFORMS.keys())
 

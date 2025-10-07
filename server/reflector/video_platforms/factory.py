@@ -4,11 +4,11 @@ from typing import Optional
 
 from reflector.settings import settings
 
-from .base import VideoPlatformClient, VideoPlatformConfig
+from .base import Platform, VideoPlatformClient, VideoPlatformConfig
 from .registry import get_platform_client
 
 
-def get_platform_config(platform: str) -> VideoPlatformConfig:
+def get_platform_config(platform: Platform) -> VideoPlatformConfig:
     """Get configuration for a specific platform."""
     if platform == "whereby":
         return VideoPlatformConfig(
@@ -32,13 +32,13 @@ def get_platform_config(platform: str) -> VideoPlatformConfig:
         raise ValueError(f"Unknown platform: {platform}")
 
 
-def create_platform_client(platform: str) -> VideoPlatformClient:
+def create_platform_client(platform: Platform) -> VideoPlatformClient:
     """Create a video platform client instance."""
     config = get_platform_config(platform)
     return get_platform_client(platform, config)
 
 
-def get_platform_for_room(room_id: Optional[str] = None) -> str:
+def get_platform_for_room(room_id: Optional[str] = None) -> Platform:
     """Determine which platform to use for a room based on feature flags."""
     # If Daily.co migration is disabled, always use Whereby
     if not settings.DAILYCO_MIGRATION_ENABLED:
