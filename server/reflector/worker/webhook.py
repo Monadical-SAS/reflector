@@ -136,10 +136,14 @@ async def send_transcript_webhook(
                 "id": calendar_event.id,
                 "ics_uid": calendar_event.ics_uid,
                 "title": calendar_event.title,
-                "start_time": calendar_event.start_time.isoformat() if calendar_event.start_time else None,
-                "end_time": calendar_event.end_time.isoformat() if calendar_event.end_time else None,
+                "start_time": calendar_event.start_time.isoformat()
+                if calendar_event.start_time
+                else None,
+                "end_time": calendar_event.end_time.isoformat()
+                if calendar_event.end_time
+                else None,
             }
-    
+
             # Add optional fields only if they exist
             if calendar_event.description:
                 calendar_data["description"] = calendar_event.description
@@ -147,7 +151,7 @@ async def send_transcript_webhook(
                 calendar_data["location"] = calendar_event.location
             if calendar_event.attendees:
                 calendar_data["attendees"] = calendar_event.attendees
-        
+
             payload_data["calendar_event"] = calendar_data
 
         # Convert to JSON
