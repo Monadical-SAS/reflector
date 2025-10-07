@@ -16,7 +16,6 @@ type UserEvent = z.TypeOf<typeof UserEvent>;
 class UserEventsStore {
   private socket: WebSocket | null = null;
   private listeners: Set<(event: MessageEvent) => void> = new Set();
-  private refCount = 0;
   private closeTimeoutId: number | null = null;
   private isConnecting = false;
 
@@ -62,15 +61,13 @@ class UserEventsStore {
 
   subscribe(listener: (event: MessageEvent) => void): () => void {
     this.listeners.add(listener);
-    this.refCount += 1;
     if (this.closeTimeoutId !== null) {
       clearTimeout(this.closeTimeoutId);
       this.closeTimeoutId = null;
     }
     return () => {
       this.listeners.delete(listener);
-      this.refCount = Math.max(0, this.refCount - 1);
-      if (this.refCount === 0) {
+      if (this.listeners.size === 0) {
         this.closeTimeoutId = window.setTimeout(() => {
           if (this.socket) {
             try {
@@ -120,8 +117,8 @@ export function UserEventsProvider({
     }
 
     // Authenticated: pin the initial token for the lifetime of this WS connection
-    if (!tokenRef.current && (auth as any).accessToken) {
-      tokenRef.current = (auth as any).accessToken as string;
+    if (!tokenRef.current && auth.accessToken) {
+      tokenRef.current = auth.accessToken;
     }
     const pinnedToken = tokenRef.current;
     const url = `${WEBSOCKET_URL}/v1/events`;
