@@ -11,6 +11,8 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
+from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask
@@ -84,6 +86,15 @@ async def send_transcript_webhook(
                     }
                 )
 
+        # Fetch meeting and calendar event if they exist
+        calendar_event = None
+        if transcript.meeting_id:
+            meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+            if meeting and meeting.calendar_event_id:
+                calendar_event = await calendar_events_controller.get_by_id(
+                    meeting.calendar_event_id
+                )
+
         # Build webhook payload
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
         participants = [
@@ -115,6 +126,19 @@ async def send_transcript_webhook(
                 "name": room.name,
             },
         }
+
+        # Add calendar event data if present
+        if calendar_event:
+            payload_data["calendar_event"] = {
+                "id": calendar_event.id,
+                "ics_uid": calendar_event.ics_uid,
+                "title": calendar_event.title,
+                "description": calendar_event.description,
+                "start_time": calendar_event.start_time.isoformat(),
+                "end_time": calendar_event.end_time.isoformat(),
+                "location": calendar_event.location,
+                "attendees": calendar_event.attendees,
+            }
 
         # Convert to JSON
         payload_json = json.dumps(payload_data, separators=(",", ":"))
