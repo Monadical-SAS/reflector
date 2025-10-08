@@ -68,6 +68,8 @@ import type {
   V1ZulipGetTopicsResponse,
   V1WherebyWebhookData,
   V1WherebyWebhookResponse,
+  V1WebhookData,
+  V1WebhookResponse,
 } from "./types.gen";
 
 export class DefaultService {
@@ -850,6 +852,26 @@ export class DefaultService {
     return this.httpRequest.request({
       method: "POST",
       url: "/v1/whereby",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    });
+  }
+
+  /**
+   * Webhook
+   * Handle Daily webhook events.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public v1Webhook(data: V1WebhookData): CancelablePromise<V1WebhookResponse> {
+    return this.httpRequest.request({
+      method: "POST",
+      url: "/v1/daily/webhook",
       body: data.requestBody,
       mediaType: "application/json",
       errors: {

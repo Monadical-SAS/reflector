@@ -5,7 +5,7 @@
 ### 1. Platform Abstraction Layer (`server/reflector/video_platforms/`)
 - **base.py**: Abstract interface defining all platform operations
 - **whereby.py**: Whereby implementation wrapping existing functionality
-- **dailyco.py**: Daily.co client implementation (ready for testing when credentials available)
+- **daily.py**: Daily client implementation (ready for testing when credentials available)
 - **mock.py**: Mock implementation for unit testing
 - **registry.py**: Platform registration and discovery
 - **factory.py**: Factory methods for creating platform clients
@@ -18,27 +18,27 @@
 ### 3. Configuration
 - **Settings**: Added Daily.co configuration variables
 - **Feature Flags**:
-  - `DAILYCO_MIGRATION_ENABLED`: Master switch for migration
-  - `DAILYCO_MIGRATION_ROOM_IDS`: List of specific rooms to migrate
+  - `DAILY_MIGRATION_ENABLED`: Master switch for migration
+  - `DAILY_MIGRATION_ROOM_IDS`: List of specific rooms to migrate
   - `DEFAULT_VIDEO_PLATFORM`: Default platform when migration enabled
 
 ### 4. Backend API Updates
 - **Room Creation**: Now assigns platform based on feature flags
 - **Meeting Creation**: Uses platform abstraction instead of direct Whereby calls
 - **Response Models**: Include platform field
-- **Webhook Handler**: Added Daily.co webhook endpoint at `/v1/dailyco_webhook`
+- **Webhook Handler**: Added Daily webhook endpoint at `/v1/daily/webhook`
 
 ### 5. Frontend Components (`www/app/[roomName]/components/`)
 - **RoomContainer.tsx**: Platform-agnostic container that routes to appropriate component
 - **WherebyRoom.tsx**: Extracted existing Whereby functionality with consent management
-- **DailyCoRoom.tsx**: Daily.co implementation using DailyIframe
+- **DailyRoom.tsx**: Daily implementation using DailyIframe
 - **Dependencies**: Added `@daily-co/daily-js` and `@daily-co/daily-react`
 
 ## How It Works
 
 1. **Platform Selection**:
-   - If `DAILYCO_MIGRATION_ENABLED=false` → Always use Whereby
-   - If enabled and room ID in `DAILYCO_MIGRATION_ROOM_IDS` → Use Daily.co
+   - If `DAILY_MIGRATION_ENABLED=false` → Always use Whereby
+   - If enabled and room ID in `DAILY_MIGRATION_ROOM_IDS` → Use Daily
    - Otherwise → Use `DEFAULT_VIDEO_PLATFORM`
 
 2. **Meeting Creation Flow**:
@@ -59,11 +59,11 @@
 
 1. **Set Environment Variables**:
    ```bash
-   DAILYCO_API_KEY=your-key
-   DAILYCO_WEBHOOK_SECRET=your-secret
-   DAILYCO_SUBDOMAIN=your-subdomain
-   AWS_DAILYCO_S3_BUCKET=your-bucket
-   AWS_DAILYCO_ROLE_ARN=your-role
+   DAILY_API_KEY=your-key
+   DAILY_WEBHOOK_SECRET=your-secret
+   DAILY_SUBDOMAIN=your-subdomain
+   AWS_DAILY_S3_BUCKET=your-bucket
+   AWS_DAILY_ROLE_ARN=your-role
    ```
 
 2. **Run Database Migration**:
@@ -75,13 +75,13 @@
 3. **Test Platform Creation**:
    ```python
    from reflector.video_platforms.factory import create_platform_client
-   client = create_platform_client("dailyco")
+   client = create_platform_client("daily")
    # Test operations...
    ```
 
 ### 6. Testing & Validation (`server/tests/`)
 - **test_video_platforms.py**: Comprehensive unit tests for all platform clients
-- **test_dailyco_webhook.py**: Integration tests for Daily.co webhook handling
+- **test_daily_webhook.py**: Integration tests for Daily webhook handling
 - **utils/video_platform_test_utils.py**: Testing utilities and helpers
 - **Mock Testing**: Full test coverage using mock platform client
 - **Webhook Testing**: HMAC signature validation and event processing tests
@@ -106,10 +106,10 @@ Daily.co webhooks are configured via API (no dashboard interface). Use the Daily
 ```bash
 # Configure webhook endpoint
 curl -X POST https://api.daily.co/v1/webhook-endpoints \
-  -H "Authorization: Bearer ${DAILYCO_API_KEY}" \
+  -H "Authorization: Bearer ${DAILY_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://yourdomain.com/v1/dailyco_webhook",
+    "url": "https://yourdomain.com/v1/daily/webhook",
     "events": [
       "participant.joined",
       "participant.left",
@@ -166,7 +166,7 @@ Daily.co uses HMAC-SHA256 for webhook verification:
 import hmac
 import hashlib
 
-def verify_dailyco_webhook(body: bytes, signature: str, secret: str) -> bool:
+def verify_webhook_signature(body: bytes, signature: str) -> bool:
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 ```
@@ -200,10 +200,10 @@ async def process_recording_from_url(recording_url: str, meeting_id: str, record
 uv run pytest tests/test_video_platforms.py -v
 
 # Run webhook integration tests
-uv run pytest tests/test_dailyco_webhook.py -v
+uv run pytest tests/test_daily_webhook.py -v
 
 # Run with coverage
-uv run pytest tests/test_video_platforms.py tests/test_dailyco_webhook.py --cov=reflector.video_platforms --cov=reflector.views.dailyco
+uv run pytest tests/test_video_platforms.py tests/test_daily_webhook.py --cov=reflector.video_platforms --cov=reflector.views.daily
 ```
 
 ### Manual Testing with Mock Platform
@@ -231,7 +231,7 @@ print(f"Created meeting: {meeting.room_url}")
 
 ```python
 # Test webhook payload processing
-from reflector.views.dailyco import dailyco_webhook
+from reflector.views.daily import webhook
 from reflector.worker.process import process_recording_from_url
 
 # Simulate webhook event

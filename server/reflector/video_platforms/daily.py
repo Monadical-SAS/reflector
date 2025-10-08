@@ -1,21 +1,23 @@
 import hmac
 from datetime import datetime
 from hashlib import sha256
+from http import HTTPStatus
 from typing import Any, Dict, Optional
 
 import httpx
 
 from reflector.db.rooms import Room
 
-from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
+from .base import MeetingData, Platform, RecordingType, VideoPlatformClient, VideoPlatformConfig
 
 
-class DailyCoClient(VideoPlatformClient):
-    """Daily.co video platform implementation."""
-
-    PLATFORM_NAME = "dailyco"
-    TIMEOUT = 10  # seconds
+class DailyClient(VideoPlatformClient):
+    PLATFORM_NAME: Platform = "daily"
+    TIMEOUT = 10
     BASE_URL = "https://api.daily.co/v1"
+    TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
+    RECORDING_NONE: RecordingType = "none"
+    RECORDING_CLOUD: RecordingType = "cloud"
 
     def __init__(self, config: VideoPlatformConfig):
         super().__init__(config)
@@ -28,14 +30,14 @@ class DailyCoClient(VideoPlatformClient):
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> MeetingData:
         """Create a Daily.co room."""
-        room_name = f"{room_name_prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        room_name = f"{room_name_prefix}-{datetime.now().strftime(self.TIMESTAMP_FORMAT)}"
 
         data = {
             "name": room_name,
             "privacy": "private" if room.is_locked else "public",
             "properties": {
                 "enable_recording": room.recording_type
-                if room.recording_type != "none"
+                if room.recording_type != self.RECORDING_NONE
                 else False,
                 "enable_chat": True,
                 "enable_screenshare": True,
@@ -46,7 +48,7 @@ class DailyCoClient(VideoPlatformClient):
         }
 
         # Configure S3 bucket for cloud recordings
-        if room.recording_type == "cloud" and self.config.s3_bucket:
+        if room.recording_type == self.RECORDING_CLOUD and self.config.s3_bucket:
             data["properties"]["recordings_bucket"] = {
                 "bucket_name": self.config.s3_bucket,
                 "bucket_region": self.config.s3_region,
@@ -107,7 +109,7 @@ class DailyCoClient(VideoPlatformClient):
                 timeout=self.TIMEOUT,
             )
             # Daily.co returns 200 for success, 404 if room doesn't exist
-            return response.status_code in (200, 404)
+            return response.status_code in (HTTPStatus.OK, HTTPStatus.NOT_FOUND)
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         """Daily.co doesn't support custom logos per room - this is a no-op."""

@@ -10,10 +10,10 @@ import pytest
 from httpx import AsyncClient
 
 from reflector.app import app
-from reflector.views.dailyco import DailyCoWebhookEvent
+from reflector.views.daily import DailyWebhookEvent
 
 
-class TestDailyCoWebhookIntegration:
+class TestDailyWebhookIntegration:
     """Test Daily.co webhook endpoint integration."""
 
     @pytest.fixture
@@ -28,7 +28,7 @@ class TestDailyCoWebhookIntegration:
         room.id = "test-room-123"
         room.name = "Test Room"
         room.recording_type = "cloud"
-        room.platform = "dailyco"
+        room.platform = "daily"
         return room
 
     @pytest.fixture
@@ -37,7 +37,7 @@ class TestDailyCoWebhookIntegration:
         meeting = MagicMock()
         meeting.id = "test-meeting-456"
         meeting.room_id = "test-room-123"
-        meeting.platform = "dailyco"
+        meeting.platform = "daily"
         meeting.room_name = "test-room-123-abc"
         return meeting
 
@@ -74,8 +74,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -87,7 +87,7 @@ class TestDailyCoWebhookIntegration:
                 ) as _mock_update:
                     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                         response = await ac.post(
-                            "/dailyco_webhook",
+                            "/daily/webhook",
                             json=event_data,
                             headers={"X-Daily-Signature": signature},
                         )
@@ -115,8 +115,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -125,7 +125,7 @@ class TestDailyCoWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -150,8 +150,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -163,7 +163,7 @@ class TestDailyCoWebhookIntegration:
                 ) as _mock_update:
                     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                         response = await ac.post(
-                            "/dailyco_webhook",
+                            "/daily/webhook",
                             json=event_data,
                             headers={"X-Daily-Signature": signature},
                         )
@@ -190,8 +190,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -208,7 +208,7 @@ class TestDailyCoWebhookIntegration:
                             app=app, base_url="http://test/v1"
                         ) as ac:
                             response = await ac.post(
-                                "/dailyco_webhook",
+                                "/daily/webhook",
                                 json=event_data,
                                 headers={"X-Daily-Signature": signature},
                             )
@@ -228,12 +228,12 @@ class TestDailyCoWebhookIntegration:
         """Test webhook with invalid signature is rejected."""
         event_data = self.create_webhook_event("participant.joined")
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                 response = await ac.post(
-                    "/daily_webhook",
+                    "/daily/webhook",
                     json=event_data,
                     headers={"X-Daily-Signature": "invalid-signature"},
                 )
@@ -247,7 +247,7 @@ class TestDailyCoWebhookIntegration:
         event_data = self.create_webhook_event("participant.joined")
 
         async with AsyncClient(app=app, base_url="http://test/v1") as ac:
-            response = await ac.post("/daily_webhook", json=event_data)
+            response = await ac.post("/daily/webhook", json=event_data)
 
             assert response.status_code == 401
             assert "Missing signature" in response.json()["detail"]
@@ -262,8 +262,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -272,7 +272,7 @@ class TestDailyCoWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -288,8 +288,8 @@ class TestDailyCoWebhookIntegration:
         payload = json.dumps(event_data).encode()
         signature = self.create_webhook_signature(payload, webhook_secret)
 
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             with patch(
                 "reflector.db.meetings.meetings_controller.get_by_room_name"
@@ -298,7 +298,7 @@ class TestDailyCoWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -310,12 +310,12 @@ class TestDailyCoWebhookIntegration:
     @pytest.mark.asyncio
     async def test_webhook_malformed_json(self, webhook_secret):
         """Test webhook with malformed JSON."""
-        with patch("reflector.views.dailyco.settings") as mock_settings:
-            mock_settings.DAILYCO_WEBHOOK_SECRET = webhook_secret
+        with patch("reflector.views.daily.settings") as mock_settings:
+            mock_settings.DAILY_WEBHOOK_SECRET = webhook_secret
 
             async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                 response = await ac.post(
-                    "/daily_webhook",
+                    "/daily/webhook",
                     content="invalid json",
                     headers={
                         "Content-Type": "application/json",
@@ -345,7 +345,7 @@ class TestWebhookEventValidation:
             },
         }
 
-        event = DailyCoWebhookEvent(**event_data)
+        event = DailyWebhookEvent(**event_data)
         assert event.type == "participant.joined"
         assert event.data["room"]["name"] == "test-room"
         assert event.data["participant"]["id"] == "participant-123"
@@ -359,7 +359,7 @@ class TestWebhookEventValidation:
             "data": {"room": {"name": "test-room"}},
         }
 
-        event = DailyCoWebhookEvent(**event_data)
+        event = DailyWebhookEvent(**event_data)
         assert event.type == "room.created"
         assert event.data["room"]["name"] == "test-room"
 
@@ -381,7 +381,7 @@ class TestWebhookEventValidation:
             },
         }
 
-        event = DailyCoWebhookEvent(**event_data)
+        event = DailyWebhookEvent(**event_data)
         assert event.type == "recording.ready-to-download"
         assert event.data["recording"]["id"] == "recording-123"
         assert (

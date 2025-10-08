@@ -8,13 +8,14 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from reflector.db.meetings import meetings_controller
+from reflector.logger import logger
 from reflector.settings import settings
 
 router = APIRouter()
 
 
-class DailyCoWebhookEvent(BaseModel):
-    """Daily.co webhook event structure."""
+class DailyWebhookEvent(BaseModel):
+    """Daily webhook event structure."""
 
     type: str
     id: str
@@ -22,28 +23,28 @@ class DailyCoWebhookEvent(BaseModel):
     data: Dict[str, Any]
 
 
-def verify_dailyco_webhook_signature(body: bytes, signature: str) -> bool:
-    """Verify Daily.co webhook signature using HMAC-SHA256."""
-    if not signature or not settings.DAILYCO_WEBHOOK_SECRET:
+def verify_webhook_signature(body: bytes, signature: str) -> bool:
+    """Verify Daily webhook signature using HMAC-SHA256."""
+    if not signature or not settings.DAILY_WEBHOOK_SECRET:
         return False
 
     try:
         expected = hmac.new(
-            settings.DAILYCO_WEBHOOK_SECRET.encode(), body, sha256
+            settings.DAILY_WEBHOOK_SECRET.encode(), body, sha256
         ).hexdigest()
         return hmac.compare_digest(expected, signature)
     except Exception:
         return False
 
 
-@router.post("/dailyco_webhook")
-async def dailyco_webhook(event: DailyCoWebhookEvent, request: Request):
-    """Handle Daily.co webhook events."""
+@router.post("/webhook")
+async def webhook(event: DailyWebhookEvent, request: Request):
+    """Handle Daily webhook events."""
     # Verify webhook signature for security
     body = await request.body()
     signature = request.headers.get("X-Daily-Signature", "")
 
-    if not verify_dailyco_webhook_signature(body, signature):
+    if not verify_webhook_signature(body, signature):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     # Handle participant events
@@ -61,7 +62,7 @@ async def dailyco_webhook(event: DailyCoWebhookEvent, request: Request):
     return {"status": "ok"}
 
 
-async def _handle_participant_joined(event: DailyCoWebhookEvent):
+async def _handle_participant_joined(event: DailyWebhookEvent):
     """Handle participant joined event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -76,7 +77,7 @@ async def _handle_participant_joined(event: DailyCoWebhookEvent):
         )
 
 
-async def _handle_participant_left(event: DailyCoWebhookEvent):
+async def _handle_participant_left(event: DailyWebhookEvent):
     """Handle participant left event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -91,7 +92,7 @@ async def _handle_participant_left(event: DailyCoWebhookEvent):
         )
 
 
-async def _handle_recording_started(event: DailyCoWebhookEvent):
+async def _handle_recording_started(event: DailyWebhookEvent):
     """Handle recording started event."""
     room_name = event.data.get("room", {}).get("name")
     if not room_name:
@@ -100,10 +101,15 @@ async def _handle_recording_started(event: DailyCoWebhookEvent):
     meeting = await meetings_controller.get_by_room_name(room_name)
     if meeting:
         # Log recording start for debugging
-        print(f"Recording started for meeting {meeting.id} in room {room_name}")
+        logger.info(
+            "Recording started",
+            meeting_id=meeting.id,
+            room_name=room_name,
+            platform="daily",
+        )
 
 
-async def _handle_recording_ready(event: DailyCoWebhookEvent):
+async def _handle_recording_ready(event: DailyWebhookEvent):
     """Handle recording ready for download event."""
     room_name = event.data.get("room", {}).get("name")
     recording_data = event.data.get("recording", {})
@@ -129,12 +135,15 @@ async def _handle_recording_ready(event: DailyCoWebhookEvent):
             )
         except ImportError:
             # Handle case where worker tasks aren't available
-            print(
-                f"Warning: Could not queue recording processing for meeting {meeting.id}"
+            logger.warning(
+                "Could not queue recording processing",
+                meeting_id=meeting.id,
+                room_name=room_name,
+                platform="daily",
             )
 
 
-async def _handle_recording_error(event: DailyCoWebhookEvent):
+async def _handle_recording_error(event: DailyWebhookEvent):
     """Handle recording error event."""
     room_name = event.data.get("room", {}).get("name")
     error = event.data.get("error", "Unknown error")
@@ -142,4 +151,10 @@ async def _handle_recording_error(event: DailyCoWebhookEvent):
     if room_name:
         meeting = await meetings_controller.get_by_room_name(room_name)
         if meeting:
-            print(f"Recording error for meeting {meeting.id}: {error}")
+            logger.error(
+                "Recording error",
+                meeting_id=meeting.id,
+                room_name=room_name,
+                error=error,
+                platform="daily",
+            )

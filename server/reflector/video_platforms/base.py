@@ -6,19 +6,18 @@ from pydantic import BaseModel
 
 from reflector.db.rooms import Room
 
-# Supported video platforms
-Platform = Literal["whereby", "dailyco"]
+Platform = Literal["whereby", "daily"]
+
+RecordingType = Literal["none", "local", "cloud"]
 
 
 class MeetingData(BaseModel):
-    """Standardized meeting data returned by all platforms."""
-
     meeting_id: str
     room_name: str
     room_url: str
     host_room_url: str
     platform: Platform
-    extra_data: Dict[str, Any] = {}  # Platform-specific data
+    extra_data: Dict[str, Any] = {}
 
 
 class VideoPlatformConfig(BaseModel):

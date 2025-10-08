@@ -1,18 +1,14 @@
-"""Mock video platform client for testing."""
-
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 from reflector.db.rooms import Room
 
-from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
+from .base import MeetingData, Platform, VideoPlatformClient, VideoPlatformConfig
 
 
 class MockPlatformClient(VideoPlatformClient):
-    """Mock video platform implementation for testing."""
-
-    PLATFORM_NAME = "mock"
+    PLATFORM_NAME: Platform = "whereby"
 
     def __init__(self, config: VideoPlatformConfig):
         super().__init__(config)
@@ -41,12 +37,12 @@ class MockPlatformClient(VideoPlatformClient):
             "is_active": True,
         }
 
-        return MeetingData(
+        return MeetingData.model_construct(
             meeting_id=meeting_id,
             room_name=room_name,
             room_url=room_url,
             host_room_url=host_room_url,
-            platform=self.PLATFORM_NAME,
+            platform="mock",
             extra_data={"mock": True},
         )
 

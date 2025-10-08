@@ -1,4 +1,8 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+Platform = Literal["whereby", "daily"]
 
 
 class Settings(BaseSettings):
@@ -101,18 +105,18 @@ class Settings(BaseSettings):
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
 
-    # Daily.co integration
-    DAILYCO_API_KEY: str | None = None
-    DAILYCO_WEBHOOK_SECRET: str | None = None
-    DAILYCO_SUBDOMAIN: str | None = None
-    AWS_DAILYCO_S3_BUCKET: str | None = None
-    AWS_DAILYCO_S3_REGION: str = "us-west-2"
-    AWS_DAILYCO_ROLE_ARN: str | None = None
+    # Daily integration
+    DAILY_API_KEY: str | None = None
+    DAILY_WEBHOOK_SECRET: str | None = None
+    DAILY_SUBDOMAIN: str | None = None
+    AWS_DAILY_S3_BUCKET: str | None = None
+    AWS_DAILY_S3_REGION: str = "us-west-2"
+    AWS_DAILY_ROLE_ARN: str | None = None
 
     # Video platform migration feature flags
-    DAILYCO_MIGRATION_ENABLED: bool = True
-    DAILYCO_MIGRATION_ROOM_IDS: list[str] = []
-    DEFAULT_VIDEO_PLATFORM: str = "dailyco"
+    DAILY_MIGRATION_ENABLED: bool = True
+    DAILY_MIGRATION_ROOM_IDS: list[str] = []
+    DEFAULT_VIDEO_PLATFORM: Platform = "daily"
 
     # Zulip integration
     ZULIP_REALM: str | None = None

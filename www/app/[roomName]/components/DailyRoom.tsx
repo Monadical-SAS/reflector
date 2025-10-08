@@ -8,17 +8,13 @@ import useSessionStatus from "../../lib/useSessionStatus";
 import { useRecordingConsent } from "../../recordingConsentContext";
 import useApi from "../../lib/useApi";
 import { FaBars } from "react-icons/fa6";
-import DailyIframe from "@daily-co/daily-js";
+import DailyIframe, { DailyCall } from "@daily-co/daily-js";
+import type { Meeting, recording_type } from "../../api/types.gen";
 
-interface Meeting {
-  id: string;
-  room_url: string;
-  host_room_url?: string;
-  recording_type: string;
-  platform?: string;
-}
+const CONSENT_BUTTON_TOP_OFFSET = "56px";
+const TOAST_CHECK_INTERVAL_MS = 100;
 
-interface DailyCoRoomProps {
+interface DailyRoomProps {
   meeting: Meeting;
 }
 
@@ -110,7 +106,7 @@ function ConsentDialogButton({ meetingId }: { meetingId: string }) {
           setModalOpen(false);
           clearInterval(checkToastStatus);
         }
-      }, 100);
+      }, TOAST_CHECK_INTERVAL_MS);
     });
 
     // Handle escape key to close the toast
@@ -137,7 +133,7 @@ function ConsentDialogButton({ meetingId }: { meetingId: string }) {
   return (
     <Button
       position="absolute"
-      top="56px"
+      top={CONSENT_BUTTON_TOP_OFFSET}
       left="8px"
       zIndex={1000}
       colorPalette="blue"
@@ -150,14 +146,14 @@ function ConsentDialogButton({ meetingId }: { meetingId: string }) {
   );
 }
 
-const recordingTypeRequiresConsent = (recordingType: string) => {
+const recordingTypeRequiresConsent = (recordingType: recording_type | undefined) => {
   return recordingType === "cloud";
 };
 
-export default function DailyCoRoom({ meeting }: DailyCoRoomProps) {
+export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
   const { isLoading, isAuthenticated } = useSessionStatus();
-  const [callFrame, setCallFrame] = useState<DailyIframe | null>(null);
+  const [callFrame, setCallFrame] = useState<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const roomUrl = meeting?.host_room_url
