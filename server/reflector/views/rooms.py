@@ -17,7 +17,11 @@ from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
-from reflector.whereby import create_meeting, upload_logo
+from reflector.video_platforms.base import Platform
+from reflector.video_platforms.factory import (
+    create_platform_client,
+    get_platform_for_room,
+)
 from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
@@ -41,6 +45,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: Optional[datetime] = None
     ics_last_etag: Optional[str] = None
+    platform: Platform = "whereby"
 
 
 class RoomDetails(Room):
@@ -68,6 +73,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    platform: Platform = "whereby"
 
 
 class CreateRoom(BaseModel):
@@ -85,6 +91,7 @@ class CreateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
+    platform: Optional[Platform] = None
 
 
 class UpdateRoom(BaseModel):
@@ -102,6 +109,7 @@ class UpdateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
+    platform: Optional[Platform] = None
 
 
 class CreateRoomMeeting(BaseModel):
@@ -251,6 +259,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
+        platform=room.platform,
     )
 
 
@@ -315,26 +324,43 @@ async def rooms_create_meeting(
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
 
-                whereby_meeting = await create_meeting("", end_date=end_date, room=room)
+                # Determine which platform to use
+                platform = get_platform_for_room(room.id, room.platform)
+                client = create_platform_client(platform)
 
-                await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+                # Create meeting via platform abstraction
+                meeting_data = await client.create_meeting(
+                    room.name, end_date=end_date, room=room
+                )
+
+                # Upload logo if supported by platform
+                await client.upload_logo(meeting_data.room_name, "./images/logo.png")
 
                 meeting = await meetings_controller.create(
-                    id=whereby_meeting["meetingId"],
-                    room_name=whereby_meeting["roomName"],
-                    room_url=whereby_meeting["roomUrl"],
-                    host_room_url=whereby_meeting["hostRoomUrl"],
-                    start_date=parse_datetime_with_timezone(
-                        whereby_meeting["startDate"]
-                    ),
-                    end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
+                    id=meeting_data.meeting_id,
+                    room_name=meeting_data.room_name,
+                    room_url=meeting_data.room_url,
+                    host_room_url=meeting_data.host_room_url,
+                    start_date=current_time,
+                    end_date=end_date,
                     room=room,
+                    platform=platform,
                 )
     except LockError:
         logger.warning("Failed to acquire lock for room %s within timeout", room_name)
         raise HTTPException(
             status_code=503, detail="Meeting creation in progress, please try again"
         )
+
+    if meeting.platform == "daily" and room.recording_trigger != "none":
+        client = create_platform_client(meeting.platform)
+        token = await client.create_meeting_token(
+            meeting.room_name, enable_recording=True
+        )
+        meeting = meeting.model_copy()
+        meeting.room_url += f"?t={token}"
+        if meeting.host_room_url:
+            meeting.host_room_url += f"?t={token}"
 
     if user_id != room.user_id:
         meeting.host_room_url = ""

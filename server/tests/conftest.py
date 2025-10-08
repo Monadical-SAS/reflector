@@ -7,6 +7,16 @@ import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
+def register_mock_platform():
+    from mocks.mock_platform import MockPlatformClient
+
+    from reflector.video_platforms.registry import register_platform
+
+    register_platform("whereby", MockPlatformClient)
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
 def settings_configuration():
     # theses settings are linked to monadical for pytest-recording
     # if a fork is done, they have to provide their own url when cassettes needs to be updated
