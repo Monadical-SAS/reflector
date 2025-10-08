@@ -11,6 +11,8 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
+from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask
@@ -84,6 +86,18 @@ async def send_transcript_webhook(
                     }
                 )
 
+        # Fetch meeting and calendar event if they exist
+        calendar_event = None
+        try:
+            if transcript.meeting_id:
+                meeting = await meetings_controller.get_by_id(transcript.meeting_id)
+                if meeting and meeting.calendar_event_id:
+                    calendar_event = await calendar_events_controller.get_by_id(
+                        meeting.calendar_event_id
+                    )
+        except Exception as e:
+            logger.error("Error fetching meeting or calendar event", error=str(e))
+
         # Build webhook payload
         frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
         participants = [
@@ -115,6 +129,33 @@ async def send_transcript_webhook(
                 "name": room.name,
             },
         }
+
+        # Always include calendar_event field, even if no event is present
+        payload_data["calendar_event"] = {}
+
+        # Add calendar event data if present
+        if calendar_event:
+            calendar_data = {
+                "id": calendar_event.id,
+                "ics_uid": calendar_event.ics_uid,
+                "title": calendar_event.title,
+                "start_time": calendar_event.start_time.isoformat()
+                if calendar_event.start_time
+                else None,
+                "end_time": calendar_event.end_time.isoformat()
+                if calendar_event.end_time
+                else None,
+            }
+
+            # Add optional fields only if they exist
+            if calendar_event.description:
+                calendar_data["description"] = calendar_event.description
+            if calendar_event.location:
+                calendar_data["location"] = calendar_event.location
+            if calendar_event.attendees:
+                calendar_data["attendees"] = calendar_event.attendees
+
+            payload_data["calendar_event"] = calendar_data
 
         # Convert to JSON
         payload_json = json.dumps(payload_data, separators=(",", ":"))
