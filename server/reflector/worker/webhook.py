@@ -130,6 +130,9 @@ async def send_transcript_webhook(
             },
         }
 
+        # Always include calendar_event field, even if no event is present
+        payload_data["calendar_event"] = {}
+
         # Add calendar event data if present
         if calendar_event:
             calendar_data = {
