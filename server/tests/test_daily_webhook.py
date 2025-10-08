@@ -84,10 +84,10 @@ class TestDailyWebhookIntegration:
 
                 with patch(
                     "reflector.db.meetings.meetings_controller.update_meeting"
-                ) as mock_update:
+                ) as _mock_update:
                     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                         response = await ac.post(
-                            "/daily_webhook",
+                            "/daily/webhook",
                             json=event_data,
                             headers={"X-Daily-Signature": signature},
                         )
@@ -125,7 +125,7 @@ class TestDailyWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -160,10 +160,10 @@ class TestDailyWebhookIntegration:
 
                 with patch(
                     "reflector.db.meetings.meetings_controller.update_meeting"
-                ) as mock_update:
+                ) as _mock_update:
                     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                         response = await ac.post(
-                            "/daily_webhook",
+                            "/daily/webhook",
                             json=event_data,
                             headers={"X-Daily-Signature": signature},
                         )
@@ -200,7 +200,7 @@ class TestDailyWebhookIntegration:
 
                 with patch(
                     "reflector.db.meetings.meetings_controller.update_meeting"
-                ) as mock_update_url:
+                ) as _mock_update_url:
                     with patch(
                         "reflector.worker.process.process_recording_from_url.delay"
                     ) as mock_process:
@@ -208,7 +208,7 @@ class TestDailyWebhookIntegration:
                             app=app, base_url="http://test/v1"
                         ) as ac:
                             response = await ac.post(
-                                "/daily_webhook",
+                                "/daily/webhook",
                                 json=event_data,
                                 headers={"X-Daily-Signature": signature},
                             )
@@ -233,7 +233,7 @@ class TestDailyWebhookIntegration:
 
             async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                 response = await ac.post(
-                    "/daily_webhook",
+                    "/daily/webhook",
                     json=event_data,
                     headers={"X-Daily-Signature": "invalid-signature"},
                 )
@@ -247,7 +247,7 @@ class TestDailyWebhookIntegration:
         event_data = self.create_webhook_event("participant.joined")
 
         async with AsyncClient(app=app, base_url="http://test/v1") as ac:
-            response = await ac.post("/daily_webhook", json=event_data)
+            response = await ac.post("/daily/webhook", json=event_data)
 
             assert response.status_code == 401
             assert "Missing signature" in response.json()["detail"]
@@ -272,7 +272,7 @@ class TestDailyWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -298,7 +298,7 @@ class TestDailyWebhookIntegration:
 
                 async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                     response = await ac.post(
-                        "/daily_webhook",
+                        "/daily/webhook",
                         json=event_data,
                         headers={"X-Daily-Signature": signature},
                     )
@@ -315,7 +315,7 @@ class TestDailyWebhookIntegration:
 
             async with AsyncClient(app=app, base_url="http://test/v1") as ac:
                 response = await ac.post(
-                    "/daily_webhook",
+                    "/daily/webhook",
                     content="invalid json",
                     headers={
                         "Content-Type": "application/json",

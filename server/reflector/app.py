@@ -87,7 +87,7 @@ app.include_router(transcripts_process_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
 app.include_router(zulip_router, prefix="/v1")
 app.include_router(whereby_router, prefix="/v1")
-app.include_router(daily_router, prefix="/v1")
+app.include_router(daily_router, prefix="/v1/daily")
 add_pagination(app)
 
 # prepare celery

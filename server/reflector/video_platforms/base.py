@@ -1,21 +1,23 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel
 
 from reflector.db.rooms import Room
 
+Platform = Literal["whereby", "daily"]
+
+RecordingType = Literal["none", "local", "cloud"]
+
 
 class MeetingData(BaseModel):
-    """Standardized meeting data returned by all platforms."""
-
     meeting_id: str
     room_name: str
     room_url: str
     host_room_url: str
-    platform: str
-    extra_data: Dict[str, Any] = {}  # Platform-specific data
+    platform: Platform
+    extra_data: Dict[str, Any] = {}
 
 
 class VideoPlatformConfig(BaseModel):
@@ -35,7 +37,7 @@ class VideoPlatformConfig(BaseModel):
 class VideoPlatformClient(ABC):
     """Abstract base class for video platform integrations."""
 
-    PLATFORM_NAME: str = ""
+    PLATFORM_NAME: Platform
 
     def __init__(self, config: VideoPlatformConfig):
         self.config = config

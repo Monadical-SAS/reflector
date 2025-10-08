@@ -8,14 +8,7 @@ import useSessionStatus from "../../lib/useSessionStatus";
 import { useRecordingConsent } from "../../recordingConsentContext";
 import useApi from "../../lib/useApi";
 import { FaBars } from "react-icons/fa6";
-
-interface Meeting {
-  id: string;
-  room_url: string;
-  host_room_url?: string;
-  recording_type: string;
-  platform?: string;
-}
+import type { Meeting, recording_type } from "../../api/types.gen";
 
 interface WherebyRoomProps {
   meeting: Meeting;
@@ -214,7 +207,7 @@ function ConsentDialogButton({
   );
 }
 
-const recordingTypeRequiresConsent = (recordingType: string) => {
+const recordingTypeRequiresConsent = (recordingType: recording_type | undefined) => {
   return recordingType === "cloud";
 };
 

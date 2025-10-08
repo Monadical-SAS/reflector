@@ -43,7 +43,7 @@ class TestPlatformFactory:
         assert isinstance(client, WherebyClient)
 
     def test_create_daily_client(self, config):
-        """Test creating Daily.co client."""
+        """Test creating Daily client."""
         client = get_platform_client("daily", config)
         assert isinstance(client, DailyClient)
 
@@ -123,7 +123,7 @@ class TestMockPlatformClient:
 
 
 class TestDailyClient:
-    """Test Daily.co platform client."""
+    """Test Daily platform client."""
 
     @pytest.fixture
     def daily_client(self, config):

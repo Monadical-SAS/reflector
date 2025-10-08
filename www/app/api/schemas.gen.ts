@@ -129,6 +129,32 @@ export const $CreateTranscript = {
   title: "CreateTranscript",
 } as const;
 
+export const $DailyWebhookEvent = {
+  properties: {
+    type: {
+      type: "string",
+      title: "Type",
+    },
+    id: {
+      type: "string",
+      title: "Id",
+    },
+    ts: {
+      type: "integer",
+      title: "Ts",
+    },
+    data: {
+      additionalProperties: true,
+      type: "object",
+      title: "Data",
+    },
+  },
+  type: "object",
+  required: ["type", "id", "ts", "data"],
+  title: "DailyWebhookEvent",
+  description: "Daily webhook event structure.",
+} as const;
+
 export const $DeletionStatus = {
   properties: {
     status: {
@@ -209,7 +235,6 @@ export const $GetTranscript = {
     },
     created_at: {
       type: "string",
-      format: "date-time",
       title: "Created At",
     },
     share_mode: {
@@ -395,7 +420,6 @@ export const $GetTranscriptMinimal = {
     },
     created_at: {
       type: "string",
-      format: "date-time",
       title: "Created At",
     },
     share_mode: {
@@ -723,6 +747,11 @@ export const $Meeting = {
       title: "Recording Type",
       default: "cloud",
     },
+    platform: {
+      type: "string",
+      enum: ["whereby", "daily"],
+      title: "Platform",
+    },
   },
   type: "object",
   required: [
@@ -732,6 +761,7 @@ export const $Meeting = {
     "host_room_url",
     "start_date",
     "end_date",
+    "platform",
   ],
   title: "Meeting",
 } as const;
@@ -758,8 +788,15 @@ export const $Page_GetTranscriptMinimal_ = {
       title: "Items",
     },
     total: {
-      type: "integer",
-      minimum: 0,
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Total",
     },
     page: {
@@ -800,7 +837,7 @@ export const $Page_GetTranscriptMinimal_ = {
     },
   },
   type: "object",
-  required: ["items", "total", "page", "size"],
+  required: ["items", "page", "size"],
   title: "Page[GetTranscriptMinimal]",
 } as const;
 
@@ -814,8 +851,15 @@ export const $Page_Room_ = {
       title: "Items",
     },
     total: {
-      type: "integer",
-      minimum: 0,
+      anyOf: [
+        {
+          type: "integer",
+          minimum: 0,
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Total",
     },
     page: {
@@ -856,7 +900,7 @@ export const $Page_Room_ = {
     },
   },
   type: "object",
-  required: ["items", "total", "page", "size"],
+  required: ["items", "page", "size"],
   title: "Page[Room]",
 } as const;
 
@@ -938,6 +982,11 @@ export const $Room = {
       type: "boolean",
       title: "Is Shared",
     },
+    platform: {
+      type: "string",
+      enum: ["whereby", "daily"],
+      title: "Platform",
+    },
   },
   type: "object",
   required: [
@@ -953,6 +1002,7 @@ export const $Room = {
     "recording_type",
     "recording_trigger",
     "is_shared",
+    "platform",
   ],
   title: "Room",
 } as const;
@@ -1397,6 +1447,7 @@ export const $WherebyWebhookEvent = {
       title: "Type",
     },
     data: {
+      additionalProperties: true,
       type: "object",
       title: "Data",
     },

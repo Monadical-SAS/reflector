@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from reflector.db import database, metadata
 from reflector.db.rooms import Room
+from reflector.settings import Platform
 from reflector.utils import generate_uuid4
 
 meetings = sa.Table(
@@ -85,7 +86,7 @@ class Meeting(BaseModel):
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
-    platform: Literal["whereby", "daily"] = "whereby"
+    platform: Platform = "whereby"
 
 
 class MeetingController:

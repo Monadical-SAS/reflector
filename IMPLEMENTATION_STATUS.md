@@ -5,7 +5,7 @@
 ### 1. Platform Abstraction Layer (`server/reflector/video_platforms/`)
 - **base.py**: Abstract interface defining all platform operations
 - **whereby.py**: Whereby implementation wrapping existing functionality
-- **daily.py**: Daily.co client implementation (ready for testing when credentials available)
+- **daily.py**: Daily client implementation (ready for testing when credentials available)
 - **mock.py**: Mock implementation for unit testing
 - **registry.py**: Platform registration and discovery
 - **factory.py**: Factory methods for creating platform clients
@@ -26,12 +26,12 @@
 - **Room Creation**: Now assigns platform based on feature flags
 - **Meeting Creation**: Uses platform abstraction instead of direct Whereby calls
 - **Response Models**: Include platform field
-- **Webhook Handler**: Added Daily.co webhook endpoint at `/v1/daily_webhook`
+- **Webhook Handler**: Added Daily webhook endpoint at `/v1/daily/webhook`
 
 ### 5. Frontend Components (`www/app/[roomName]/components/`)
 - **RoomContainer.tsx**: Platform-agnostic container that routes to appropriate component
 - **WherebyRoom.tsx**: Extracted existing Whereby functionality with consent management
-- **DailyRoom.tsx**: Daily.co implementation using DailyIframe
+- **DailyRoom.tsx**: Daily implementation using DailyIframe
 - **Dependencies**: Added `@daily-co/daily-js` and `@daily-co/daily-react`
 
 ## How It Works
@@ -81,7 +81,7 @@
 
 ### 6. Testing & Validation (`server/tests/`)
 - **test_video_platforms.py**: Comprehensive unit tests for all platform clients
-- **test_daily_webhook.py**: Integration tests for Daily.co webhook handling
+- **test_daily_webhook.py**: Integration tests for Daily webhook handling
 - **utils/video_platform_test_utils.py**: Testing utilities and helpers
 - **Mock Testing**: Full test coverage using mock platform client
 - **Webhook Testing**: HMAC signature validation and event processing tests
@@ -109,7 +109,7 @@ curl -X POST https://api.daily.co/v1/webhook-endpoints \
   -H "Authorization: Bearer ${DAILY_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://yourdomain.com/v1/daily_webhook",
+    "url": "https://yourdomain.com/v1/daily/webhook",
     "events": [
       "participant.joined",
       "participant.left",
@@ -166,7 +166,7 @@ Daily.co uses HMAC-SHA256 for webhook verification:
 import hmac
 import hashlib
 
-def verify_daily_webhook(body: bytes, signature: str, secret: str) -> bool:
+def verify_webhook_signature(body: bytes, signature: str) -> bool:
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
 ```
@@ -231,7 +231,7 @@ print(f"Created meeting: {meeting.room_url}")
 
 ```python
 # Test webhook payload processing
-from reflector.views.daily import daily_webhook
+from reflector.views.daily import webhook
 from reflector.worker.process import process_recording_from_url
 
 # Simulate webhook event

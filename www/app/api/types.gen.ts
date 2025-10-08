@@ -32,6 +32,18 @@ export type CreateTranscript = {
   target_language?: string;
 };
 
+/**
+ * Daily webhook event structure.
+ */
+export type DailyWebhookEvent = {
+  type: string;
+  id: string;
+  ts: number;
+  data: {
+    [key: string]: unknown;
+  };
+};
+
 export type DeletionStatus = {
   status: string;
 };
@@ -131,9 +143,12 @@ export type Meeting = {
   start_date: string;
   end_date: string;
   recording_type?: "none" | "local" | "cloud";
+  platform: "whereby" | "daily";
 };
 
 export type recording_type = "none" | "local" | "cloud";
+
+export type platform = "whereby" | "daily";
 
 export type MeetingConsentRequest = {
   consent_given: boolean;
@@ -141,7 +156,7 @@ export type MeetingConsentRequest = {
 
 export type Page_GetTranscriptMinimal_ = {
   items: Array<GetTranscriptMinimal>;
-  total: number;
+  total?: number | null;
   page: number | null;
   size: number | null;
   pages?: number | null;
@@ -149,7 +164,7 @@ export type Page_GetTranscriptMinimal_ = {
 
 export type Page_Room_ = {
   items: Array<Room>;
-  total: number;
+  total?: number | null;
   page: number | null;
   size: number | null;
   pages?: number | null;
@@ -174,6 +189,7 @@ export type Room = {
   recording_type: string;
   recording_trigger: string;
   is_shared: boolean;
+  platform: "whereby" | "daily";
 };
 
 export type RtcOffer = {
@@ -507,6 +523,12 @@ export type V1WherebyWebhookData = {
 };
 
 export type V1WherebyWebhookResponse = unknown;
+
+export type V1WebhookData = {
+  requestBody: DailyWebhookEvent;
+};
+
+export type V1WebhookResponse = unknown;
 
 export type $OpenApiTs = {
   "/metrics": {
@@ -974,6 +996,21 @@ export type $OpenApiTs = {
   "/v1/whereby": {
     post: {
       req: V1WherebyWebhookData;
+      res: {
+        /**
+         * Successful Response
+         */
+        200: unknown;
+        /**
+         * Validation Error
+         */
+        422: HTTPValidationError;
+      };
+    };
+  };
+  "/v1/daily/webhook": {
+    post: {
+      req: V1WebhookData;
       res: {
         /**
          * Successful Response

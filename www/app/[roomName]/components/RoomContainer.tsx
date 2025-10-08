@@ -39,8 +39,6 @@ export default function RoomContainer({ params }: RoomDetails) {
     return <LoadingSpinner />;
   }
 
-  // Determine platform from meeting response
-  // @ts-ignore - platform field may not be in types yet
   const platform = meeting.response.platform || "whereby";
 
   if (platform === "daily") {
