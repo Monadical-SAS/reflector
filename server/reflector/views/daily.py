@@ -1,5 +1,6 @@
 """Daily.co webhook handler endpoint."""
 
+import json
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Request
@@ -20,6 +21,16 @@ class DailyWebhookEvent(BaseModel):
     id: str
     payload: Dict[str, Any]
     event_ts: float
+
+
+def _extract_room_name(event: DailyWebhookEvent) -> str | None:
+    """Extract room name from Daily event payload.
+
+    Daily.co API inconsistency:
+    - participant.* events use "room" field
+    - recording.* events use "room_name" field
+    """
+    return event.payload.get("room_name") or event.payload.get("room")
 
 
 @router.post("/webhook")
@@ -44,8 +55,6 @@ async def webhook(request: Request):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     # Parse the JSON body
-    import json
-
     try:
         body_json = json.loads(body)
     except json.JSONDecodeError:
@@ -80,22 +89,18 @@ async def webhook(request: Request):
 
 async def _handle_participant_joined(event: DailyWebhookEvent):
     """Handle participant joined event."""
-    room_name = event.payload.get("room")
+    room_name = _extract_room_name(event)
     if not room_name:
         logger.warning("participant.joined: no room in payload", payload=event.payload)
         return
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     if meeting:
-        current_count = getattr(meeting, "num_clients", 0)
-        await meetings_controller.update_meeting(
-            meeting.id, num_clients=current_count + 1
-        )
+        await meetings_controller.increment_num_clients(meeting.id)
         logger.info(
             "Participant joined",
             meeting_id=meeting.id,
             room_name=room_name,
-            num_clients=current_count + 1,
             recording_type=meeting.recording_type,
             recording_trigger=meeting.recording_trigger,
         )
@@ -105,22 +110,18 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
 
 async def _handle_participant_left(event: DailyWebhookEvent):
     """Handle participant left event."""
-    room_name = event.payload.get("room")
+    room_name = _extract_room_name(event)
     if not room_name:
         return
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     if meeting:
-        current_count = getattr(meeting, "num_clients", 0)
-        await meetings_controller.update_meeting(
-            meeting.id, num_clients=max(0, current_count - 1)
-        )
+        await meetings_controller.decrement_num_clients(meeting.id)
 
 
 async def _handle_recording_started(event: DailyWebhookEvent):
     """Handle recording started event."""
-    # Daily.co inconsistency: participant.* uses "room", recording.* uses "room_name"
-    room_name = event.payload.get("room_name") or event.payload.get("room")
+    room_name = _extract_room_name(event)
     if not room_name:
         logger.warning(
             "recording.started: no room_name in payload", payload=event.payload
@@ -142,7 +143,7 @@ async def _handle_recording_started(event: DailyWebhookEvent):
 
 async def _handle_recording_ready(event: DailyWebhookEvent):
     """Handle recording ready for download event."""
-    room_name = event.payload.get("room")
+    room_name = _extract_room_name(event)
     recording_id = event.payload.get("recording_id")
     download_link = event.payload.get("download_link")
 
@@ -170,7 +171,7 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
 async def _handle_recording_error(event: DailyWebhookEvent):
     """Handle recording error event."""
-    room_name = event.payload.get("room")
+    room_name = _extract_room_name(event)
     error = event.payload.get("error", "Unknown error")
 
     if room_name:

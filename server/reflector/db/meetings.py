@@ -249,6 +249,28 @@ class MeetingController:
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
 
+    async def increment_num_clients(self, meeting_id: str):
+        """Atomically increment participant count."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(num_clients=meetings.c.num_clients + 1)
+        )
+        await get_database().execute(query)
+
+    async def decrement_num_clients(self, meeting_id: str):
+        """Atomically decrement participant count (min 0)."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(
+                num_clients=sa.case(
+                    (meetings.c.num_clients > 0, meetings.c.num_clients - 1), else_=0
+                )
+            )
+        )
+        await get_database().execute(query)
+
 
 class MeetingConsentController:
     async def get_by_meeting_id(self, meeting_id: str) -> list[MeetingConsent]:
