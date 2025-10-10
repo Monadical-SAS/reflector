@@ -58,13 +58,14 @@ class DailyClient(VideoPlatformClient):
         }
 
         # Configure S3 bucket for recordings
-        if room.recording_type != self.RECORDING_NONE and self.config.s3_bucket:
-            data["properties"]["recordings_bucket"] = {
-                "bucket_name": self.config.s3_bucket,
-                "bucket_region": self.config.s3_region,
-                "assume_role_arn": self.config.aws_role_arn,
-                "allow_api_access": True,
-            }
+        # NOTE: Not checking room.recording_type - figure out later if conditional needed
+        assert self.config.s3_bucket, "S3 bucket must be configured"
+        data["properties"]["recordings_bucket"] = {
+            "bucket_name": self.config.s3_bucket,
+            "bucket_region": self.config.s3_region,
+            "assume_role_arn": self.config.aws_role_arn,
+            "allow_api_access": True,
+        }
 
         from reflector.logger import logger
 

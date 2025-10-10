@@ -1,38 +1,13 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Literal, Optional
-
-from pydantic import BaseModel
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from reflector.platform_types import Platform
 
+from .models import MeetingData, VideoPlatformConfig
+
 if TYPE_CHECKING:
     from reflector.db.rooms import Room
-
-RecordingType = Literal["none", "local", "cloud"]
-
-
-class MeetingData(BaseModel):
-    meeting_id: str
-    room_name: str
-    room_url: str
-    host_room_url: str
-    platform: Platform
-    extra_data: Dict[str, Any] = {}
-
-
-class VideoPlatformConfig(BaseModel):
-    """Configuration for a video platform."""
-
-    api_key: str
-    webhook_secret: str
-    api_url: Optional[str] = None
-    subdomain: Optional[str] = None
-    s3_bucket: Optional[str] = None
-    s3_region: Optional[str] = None
-    aws_role_arn: Optional[str] = None
-    aws_access_key_id: Optional[str] = None
-    aws_access_key_secret: Optional[str] = None
 
 
 class VideoPlatformClient(ABC):

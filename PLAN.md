@@ -213,15 +213,28 @@ server/reflector/db/recordings.py        # Recording model
 
 ### Step 1.3: Define Standard Data Models
 
+**Create `server/reflector/platform_types.py` (separate file to avoid circular imports):**
+
+```python
+"""Platform type definitions.
+
+Separate file to prevent circular import issues when db models and
+video platform code need to reference the Platform type.
+"""
+
+from typing import Literal
+
+Platform = Literal["whereby", "daily"]
+```
+
 **Create `server/reflector/video_platforms/models.py`:**
 
 ```python
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
-
-Platform = Literal["whereby", "daily"]
+from reflector.platform_types import Platform
 
 
 class MeetingData(BaseModel):
@@ -976,7 +989,9 @@ DEFAULT_VIDEO_PLATFORM: Literal["whereby", "daily"] = "whereby"  # Default to Wh
 
 ### Step 2.8: Update Database Schema
 
-**Create migration: `server/migrations/versions/YYYYMMDDHHMMSS_add_platform_support.py`**
+**Create migration: `server/migrations/versions/<alembic-id>_add_platform_support.py`**
+
+Note: Alembic generates revision IDs automatically (e.g., `1e49625677e4_add_platform_support.py`)
 
 ```bash
 cd server
@@ -1239,21 +1254,22 @@ class DailyClient(VideoPlatformClient):
         }
 
         # Configure recording if enabled
-        if room.recording_type == "cloud":
-            data["properties"]["enable_recording"] = "cloud"
-
-            # Configure S3 recording destination if bucket configured
-            if self.config.s3_bucket and self.config.aws_role_arn:
-                data["properties"]["recordings_bucket"] = {
-                    "bucket_name": self.config.s3_bucket,
-                    "bucket_region": self.config.s3_region,
-                    "assume_role_arn": self.config.aws_role_arn,
-                    "allow_api_access": True,
-                }
-        elif room.recording_type == "local":
-            data["properties"]["enable_recording"] = "local"
+        # NOTE: Daily.co always uses "raw-tracks" for better transcription quality
+        # (multiple WebM files instead of single MP4)
+        if room.recording_type != "none":
+            data["properties"]["enable_recording"] = "raw-tracks"
         else:
             data["properties"]["enable_recording"] = False
+
+        # Configure S3 bucket for recordings
+        # NOTE: Not checking room.recording_type - figure out later if conditional needed
+        assert self.config.s3_bucket, "S3 bucket must be configured"
+        data["properties"]["recordings_bucket"] = {
+            "bucket_name": self.config.s3_bucket,
+            "bucket_region": self.config.s3_region,
+            "assume_role_arn": self.config.aws_role_arn,
+            "allow_api_access": True,
+        }
 
         # Make API request
         async with httpx.AsyncClient() as client:
@@ -1370,7 +1386,50 @@ class DailyClient(VideoPlatformClient):
 
         # Constant-time comparison
         return hmac.compare_digest(expected_sig, signature)
+
+    async def create_meeting_token(self, room_name: str, enable_recording: bool) -> str:
+        """Create JWT meeting token with optional auto-recording.
+
+        Daily.co supports token-based meeting configuration, which allows
+        per-participant settings like auto-starting cloud recording.
+
+        This is used instead of room-level recording config for more control.
+        """
+        data = {"properties": {"room_name": room_name}}
+
+        if enable_recording:
+            data["properties"]["start_cloud_recording"] = True
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.BASE_URL}/meeting-tokens",
+                headers=self.headers,
+                json=data,
+                timeout=self.TIMEOUT,
+            )
+            response.raise_for_status()
+            return response.json()["token"]
 ```
+
+**Token-Based Auto-Recording (Critical Addition)**
+
+After creating a Daily.co meeting, append JWT token to URLs for auto-recording:
+
+```python
+# In rooms.py after create_meeting
+if meeting.platform == "daily" and room.recording_trigger != "none":
+    client = create_platform_client(meeting.platform)
+    token = await client.create_meeting_token(
+        meeting.room_name, enable_recording=True
+    )
+    meeting.room_url += f"?t={token}"
+    meeting.host_room_url += f"?t={token}"
+```
+
+**Why tokens instead of room config:**
+- Room-level `enable_recording` only enables the capability
+- Token with `start_cloud_recording: true` actually starts it
+- Provides per-participant control (future: host-only recording)
 
 ### Step 3.2: Register Daily.co Client
 
@@ -1584,6 +1643,11 @@ app.include_router(daily.router, prefix="/v1/daily", tags=["daily"])
 ```
 
 ### Step 3.4: Create Recording Processing Task
+
+**⚠️ NEXT STEP - NOT YET IMPLEMENTED**
+
+The `process_recording_from_url` task described below is the next implementation step.
+It handles downloading Daily.co recordings from webhook URLs into the existing transcription pipeline.
 
 **Update `server/reflector/worker/process.py`:**
 
@@ -2342,6 +2406,7 @@ export DEFAULT_VIDEO_PLATFORM=whereby
 ## Appendix A: File Checklist
 
 ### Backend Files (New)
+- [ ] `server/reflector/platform_types.py` (Platform literal type - separate to avoid circular imports)
 - [ ] `server/reflector/video_platforms/__init__.py`
 - [ ] `server/reflector/video_platforms/base.py`
 - [ ] `server/reflector/video_platforms/models.py`
@@ -2351,7 +2416,7 @@ export DEFAULT_VIDEO_PLATFORM=whereby
 - [ ] `server/reflector/video_platforms/daily.py`
 - [ ] `server/reflector/video_platforms/mock.py`
 - [ ] `server/reflector/views/daily.py`
-- [ ] `server/migrations/versions/YYYYMMDDHHMMSS_add_platform_support.py`
+- [ ] `server/migrations/versions/<alembic-id>_add_platform_support.py` (e.g., `1e49625677e4_...`)
 
 ### Backend Files (Modified)
 - [ ] `server/reflector/settings.py`

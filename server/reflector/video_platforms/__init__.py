@@ -5,7 +5,8 @@ It allows seamless switching between providers (Whereby, Daily.co, etc.) without
 changing the core application logic.
 """
 
-from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
+from .base import VideoPlatformClient
+from .models import MeetingData, VideoPlatformConfig
 from .registry import get_platform_client, register_platform
 
 __all__ = [
