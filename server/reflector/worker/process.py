@@ -240,6 +240,95 @@ async def process_meetings():
 
 @shared_task
 @asynctask
+async def process_daily_recording(meeting_id: str, recording_id: str, tracks: list):
+    """Stub processor for Daily.co recordings - writes fake transcription/diarization.
+
+    Args:
+        meeting_id: Meeting ID
+        recording_id: Recording ID from Daily.co webhook
+        tracks: List of track dicts from Daily.co webhook
+                [{type: 'audio'|'video', s3Key: str, size: int}, ...]
+    """
+    logger.info(
+        "Processing Daily.co recording (STUB)",
+        meeting_id=meeting_id,
+        recording_id=recording_id,
+        num_tracks=len(tracks),
+    )
+
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        raise Exception(f"Meeting {meeting_id} not found")
+
+    room = await rooms_controller.get_by_id(meeting.room_id)
+
+    # Find first audio track for Recording entity
+    audio_track = next((t for t in tracks if t["type"] == "audio"), None)
+    if not audio_track:
+        raise Exception(f"No audio tracks found in {len(tracks)} tracks")
+
+    # Create Recording entry
+    recording = await recordings_controller.create(
+        Recording(
+            id=recording_id,
+            bucket_name=settings.AWS_DAILY_S3_BUCKET,
+            object_key=audio_track["s3Key"],
+            recorded_at=datetime.now(timezone.utc),
+            meeting_id=meeting.id,
+            status="completed",
+        )
+    )
+
+    logger.info(
+        "Created recording",
+        recording_id=recording.id,
+        s3_key=audio_track["s3Key"],
+    )
+
+    # Create Transcript entry
+    transcript = await transcripts_controller.add(
+        "",
+        source_kind=SourceKind.ROOM,
+        source_language="en",
+        target_language="en",
+        user_id=room.user_id,
+        recording_id=recording.id,
+        share_mode="public",
+        meeting_id=meeting.id,
+        room_id=room.id,
+    )
+
+    logger.info("Created transcript", transcript_id=transcript.id)
+
+    # Generate fake data (fish argument)
+    from reflector.worker.daily_stub_data import get_stub_transcript_data
+
+    stub_data = get_stub_transcript_data()
+
+    # Update transcript with fake data
+    await transcripts_controller.update(
+        transcript,
+        {
+            "topics": stub_data["topics"],
+            "participants": stub_data["participants"],
+            "title": stub_data["title"],
+            "short_summary": stub_data["short_summary"],
+            "long_summary": stub_data["long_summary"],
+            "duration": stub_data["duration"],
+            "status": "ended",
+        },
+    )
+
+    logger.info(
+        "Daily.co recording processed (STUB)",
+        transcript_id=transcript.id,
+        duration=stub_data["duration"],
+        num_topics=len(stub_data["topics"]),
+    )
+
+
+@shared_task
+@asynctask
 async def reprocess_failed_recordings():
     """
     Find recordings in the S3 bucket and check if they have proper transcriptions.

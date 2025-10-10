@@ -1,5 +1,23 @@
 # Daily.co Integration Test Plan
 
+## ⚠️ IMPORTANT: Stub Implementation
+
+**This test validates Daily.co webhook integration with MOCK transcription data.**
+
+The actual audio/video files are recorded to S3, but transcription/diarization is NOT performed. Instead:
+- A **stub processor** generates fake transcript with predetermined text ("The Great Fish Eating Argument")
+- All database entities (recording, transcript, topics, participants, words) are created with **fake "fish" conversation data**
+- This allows testing the complete webhook → database flow WITHOUT expensive GPU processing
+
+**Expected transcript content:**
+- Title: "The Great Fish Eating Argument"
+- Participants: "Fish Eater" (speaker 0), "Annoying Person" (speaker 1)
+- Transcription: Nonsensical argument about eating fish (see `reflector/worker/daily_stub_data.py`)
+
+**Next implementation step:** Replace stub with real transcription pipeline (download tracks from S3, merge audio, run Whisper/diarization).
+
+---
+
 ## Prerequisites
 
 **1. Environment Variables** (check in `.env.development.local`):
@@ -126,38 +144,79 @@ curl -s -X GET "https://api.daily.co/v1/rooms/$ROOM_NAME" \
 
 ## Test 4: Browser UI Test (Playwright MCP)
 
+**Using Claude Code MCP tools:**
+
 **Load room:**
-```javascript
-await page.goto('http://localhost:3000/test2');
-await new Promise(f => setTimeout(f, 12000));  // Wait for load
+```
+Use: mcp__playwright__browser_navigate
+Input: {"url": "http://localhost:3000/test2"}
+
+Then wait 12 seconds for iframe to load
 ```
 
 **Verify Daily.co iframe loaded:**
-```javascript
-const iframes = document.querySelectorAll('iframe');
-// Expected: 1 iframe with src containing "monadical.daily.co"
+```
+Use: mcp__playwright__browser_snapshot
+
+Expected in snapshot:
+- iframe element with src containing "monadical.daily.co"
+- Daily.co pre-call UI visible
 ```
 
 **Take screenshot:**
-```javascript
-await page.screenshot({ path: 'test2-before-join.png' });
-// Expected: Daily.co pre-call UI visible
+```
+Use: mcp__playwright__browser_take_screenshot
+Input: {"filename": "test2-before-join.png"}
+
+Expected: Daily.co pre-call UI with "Join" button visible
 ```
 
 **Join meeting:**
-```javascript
-await page.locator('iframe').contentFrame().getByRole('button', { name: 'Join' }).click();
-await new Promise(f => setTimeout(f, 5000));
+```
+Note: Daily.co iframe interaction requires clicking inside iframe.
+Use: mcp__playwright__browser_click
+Input: {"element": "Join button in Daily.co iframe", "ref": "<ref-from-snapshot>"}
+
+Then wait 5 seconds for call to connect
 ```
 
 **Verify in-call:**
-```javascript
-await page.screenshot({ path: 'test2-in-call.png' });
-// Expected: "Waiting for others to join" or participant video visible
+```
+Use: mcp__playwright__browser_take_screenshot
+Input: {"filename": "test2-in-call.png"}
+
+Expected: "Waiting for others to join" or participant video visible
 ```
 
 **Leave meeting:**
+```
+Use: mcp__playwright__browser_click
+Input: {"element": "Leave button in Daily.co iframe", "ref": "<ref-from-snapshot>"}
+```
+
+---
+
+**Alternative: JavaScript snippets (for manual testing):**
+
 ```javascript
+await page.goto('http://localhost:3000/test2');
+await new Promise(f => setTimeout(f, 12000));  // Wait for load
+
+// Verify iframe
+const iframes = document.querySelectorAll('iframe');
+// Expected: 1 iframe with src containing "monadical.daily.co"
+
+// Screenshot
+await page.screenshot({ path: 'test2-before-join.png' });
+
+// Join
+await page.locator('iframe').contentFrame().getByRole('button', { name: 'Join' }).click();
+await new Promise(f => setTimeout(f, 5000));
+
+// In-call screenshot
+await page.screenshot({ path: 'test2-in-call.png' });
+
+// Leave
 await page.locator('iframe').contentFrame().getByRole('button', { name: 'Leave' }).click();
 ```
 
@@ -250,7 +309,142 @@ Tracks: 2 files
 
 ---
 
-## Test 7: Recording Type Verification
+## Test 7: Database Check - Recording and Transcript
+
+**Check recording created:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT id, bucket_name, object_key, status, meeting_id, recorded_at
+   FROM recording
+   ORDER BY recorded_at DESC LIMIT 1;"
+```
+
+**Expected:**
+```
+id: <recording-id-from-webhook>
+bucket_name: reflector-dailyco-local
+object_key: monadical/test2-<timestamp>/<recording-timestamp>-<uuid>-cam-audio-<track-start>.webm
+status: completed
+meeting_id: <meeting-id>
+recorded_at: <recent-timestamp>
+```
+
+**Check transcript created:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT id, title, status, duration, recording_id, meeting_id, room_id
+   FROM transcript
+   ORDER BY created_at DESC LIMIT 1;"
+```
+
+**Expected:**
+```
+id: <transcript-id>
+title: The Great Fish Eating Argument
+status: ended
+duration: ~200-300 seconds (depends on fish text parsing)
+recording_id: <same-as-recording-id-above>
+meeting_id: <meeting-id>
+room_id: 552640fd-16f2-4162-9526-8cf40cd2357e
+```
+
+**Check transcript topics (stub data):**
+```bash
+TRANSCRIPT_ID=$(docker-compose exec -T postgres psql -U reflector -d reflector -t -c \
+  "SELECT id FROM transcript ORDER BY created_at DESC LIMIT 1;")
+
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT
+     jsonb_array_length(topics) as num_topics,
+     jsonb_array_length(participants) as num_participants,
+     short_summary,
+     title
+   FROM transcript
+   WHERE id = '$TRANSCRIPT_ID';"
+```
+
+**Expected:**
+```
+num_topics: 3
+num_participants: 2
+short_summary: Two people argue about eating fish
+title: The Great Fish Eating Argument
+```
+
+**Check topics contain fish text:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT topics->0->'title', topics->0->'summary', topics->0->'transcript'
+   FROM transcript
+   ORDER BY created_at DESC LIMIT 1;" | head -20
+```
+
+**Expected output should contain:**
+```
+Fish Argument Part 1
+Argument about eating fish continues (part 1)
+Fish for dinner are nothing wrong with you? There's nothing...
+```
+
+**Check participants:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT participants FROM transcript ORDER BY created_at DESC LIMIT 1;" \
+  | python3 -c "import sys, json; data=json.loads(sys.stdin.read()); print(json.dumps(data, indent=2))"
+```
+
+**Expected:**
+```json
+[
+  {
+    "id": "<uuid>",
+    "speaker": 0,
+    "name": "Fish Eater"
+  },
+  {
+    "id": "<uuid>",
+    "speaker": 1,
+    "name": "Annoying Person"
+  }
+]
+```
+
+**Check word-level data:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT jsonb_array_length(topics->0->'words') as num_words_first_topic
+   FROM transcript
+   ORDER BY created_at DESC LIMIT 1;"
+```
+
+**Expected:**
+```
+num_words_first_topic: ~100-150 (varies based on topic chunking)
+```
+
+**Verify speaker diarization in words:**
+```bash
+docker-compose exec -T postgres psql -U reflector -d reflector -c \
+  "SELECT
+     topics->0->'words'->0->>'text' as first_word,
+     topics->0->'words'->0->>'speaker' as speaker,
+     topics->0->'words'->0->>'start' as start_time,
+     topics->0->'words'->0->>'end' as end_time
+   FROM transcript
+   ORDER BY created_at DESC LIMIT 1;"
+```
+
+**Expected:**
+```
+first_word: Fish
+speaker: 0 or 1 (depends on parsing)
+start_time: 0.0
+end_time: 0.35 (approximate)
+```
+
+---
+
+## Test 8: Recording Type Verification
 
 **Check what Daily.co received:**
 ```bash
@@ -367,3 +561,10 @@ Recording: raw-tracks
 - [x] S3 contains 2 files: audio (.webm) and video (.webm)
 - [x] S3 path: `monadical/test2-{timestamp}/{recording-start-ts}-{participant-uuid}-cam-{audio|video}-{track-start-ts}`
 - [x] Database `num_clients` increments/decrements correctly
+- [x] **Database recording entry created** with correct S3 path and status `completed`
+- [x] **Database transcript entry created** with status `ended`
+- [x] **Transcript has stub data**: title "The Great Fish Eating Argument"
+- [x] **Transcript has 3 topics** about fish argument
+- [x] **Transcript has 2 participants**: "Fish Eater" (speaker 0) and "Annoying Person" (speaker 1)
+- [x] **Topics contain word-level data** with timestamps and speaker IDs
+- [x] **Total duration** ~200-300 seconds based on fish text parsing

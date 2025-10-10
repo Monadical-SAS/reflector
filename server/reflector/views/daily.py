@@ -142,31 +142,54 @@ async def _handle_recording_started(event: DailyWebhookEvent):
 
 
 async def _handle_recording_ready(event: DailyWebhookEvent):
-    """Handle recording ready for download event."""
+    """Handle recording ready for download event.
+
+    Daily.co webhook payload for raw-tracks recordings:
+    {
+      "recording_id": "...",
+      "room_name": "test2-20251009192341",
+      "tracks": [
+        {"type": "audio", "s3Key": "monadical/test2-.../uuid-cam-audio-123.webm", "size": 400000},
+        {"type": "video", "s3Key": "monadical/test2-.../uuid-cam-video-456.webm", "size": 30000000}
+      ]
+    }
+    """
     room_name = _extract_room_name(event)
     recording_id = event.payload.get("recording_id")
-    download_link = event.payload.get("download_link")
+    tracks = event.payload.get("tracks", [])
 
-    if not room_name or not download_link:
+    if not room_name or not tracks:
+        logger.warning(
+            "recording.ready-to-download: missing room_name or tracks",
+            room_name=room_name,
+            has_tracks=bool(tracks),
+            payload=event.payload,
+        )
         return
 
     meeting = await meetings_controller.get_by_room_name(room_name)
-    if meeting:
-        try:
-            from reflector.worker.process import process_recording_from_url
+    if not meeting:
+        logger.warning(
+            "recording.ready-to-download: meeting not found", room_name=room_name
+        )
+        return
 
-            process_recording_from_url.delay(
-                recording_url=download_link,
-                meeting_id=meeting.id,
-                recording_id=recording_id or event.id,
-            )
-        except ImportError:
-            logger.warning(
-                "Could not queue recording processing",
-                meeting_id=meeting.id,
-                room_name=room_name,
-                platform="daily",
-            )
+    logger.info(
+        "Recording ready for download",
+        meeting_id=meeting.id,
+        room_name=room_name,
+        recording_id=recording_id,
+        num_tracks=len(tracks),
+        platform="daily",
+    )
+
+    from reflector.worker.process import process_daily_recording
+
+    process_daily_recording.delay(
+        meeting_id=meeting.id,
+        recording_id=recording_id or event.id,
+        tracks=tracks,
+    )
 
 
 async def _handle_recording_error(event: DailyWebhookEvent):
