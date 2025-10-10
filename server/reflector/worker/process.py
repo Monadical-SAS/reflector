@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import unquote
 
@@ -17,6 +18,9 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
+from reflector.pipelines.main_multitrack_pipeline import (
+    task_pipeline_multitrack_process,
+)
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
@@ -145,6 +149,139 @@ async def process_recording(bucket_name: str, object_key: str):
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     task_pipeline_file_process.delay(transcript_id=transcript.id)
+
+
+@shared_task
+@asynctask
+async def process_multitrack_recording(bucket_name: str, prefix: str):
+    logger.info(
+        "Processing multitrack recording",
+        bucket=bucket_name,
+        prefix=prefix,
+        room_name="daily",
+    )
+
+    try:
+        effective_room_name = "/daily"
+        dir_name = prefix.rstrip("/").split("/")[-1]
+        ts_match = re.search(r"(\d{14})$", dir_name)
+        if ts_match:
+            ts = ts_match.group(1)
+            recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
+                tzinfo=timezone.utc
+            )
+        else:
+            try:
+                recorded_at = parse_datetime_with_timezone(dir_name)
+            except Exception:
+                recorded_at = datetime.now(timezone.utc)
+    except Exception:
+        logger.warning("Could not parse recorded_at from prefix, using now()")
+        effective_room_name = "/daily"
+        recorded_at = datetime.now(timezone.utc)
+
+    meeting = await meetings_controller.get_by_room_name(effective_room_name)
+    if meeting:
+        room = await rooms_controller.get_by_id(meeting.room_id)
+    else:
+        room = await rooms_controller.get_by_name(effective_room_name.lstrip("/"))
+        if not room:
+            raise Exception(f"Room not found: {effective_room_name}")
+        start_date = recorded_at
+        end_date = recorded_at
+        try:
+            dummy = await meetings_controller.create(
+                id=room.id + "-" + recorded_at.strftime("%Y%m%d%H%M%S"),
+                room_name=effective_room_name,
+                room_url=f"{effective_room_name}",
+                host_room_url=f"{effective_room_name}",
+                start_date=start_date,
+                end_date=end_date,
+                room=room,
+            )
+            meeting = dummy
+        except Exception as e:
+            logger.warning("Failed to create dummy meeting", error=str(e))
+            meeting = None
+
+    recording = await recordings_controller.get_by_object_key(bucket_name, prefix)
+    if not recording:
+        recording = await recordings_controller.create(
+            Recording(
+                bucket_name=bucket_name,
+                object_key=prefix,
+                recorded_at=recorded_at,
+                meeting_id=meeting.id if meeting else None,
+            )
+        )
+
+    transcript = await transcripts_controller.get_by_recording_id(recording.id)
+    if transcript:
+        await transcripts_controller.update(
+            transcript,
+            {
+                "topics": [],
+            },
+        )
+    else:
+        transcript = await transcripts_controller.add(
+            "",
+            source_kind=SourceKind.ROOM,
+            source_language="en",
+            target_language="en",
+            user_id=room.user_id,
+            recording_id=recording.id,
+            share_mode="public",
+            meeting_id=meeting.id if meeting else None,
+            room_id=room.id,
+        )
+
+    s3 = boto3.client(
+        "s3",
+        region_name=settings.RECORDING_STORAGE_AWS_REGION,
+        aws_access_key_id=settings.RECORDING_STORAGE_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY,
+    )
+
+    paginator = s3.get_paginator("list_objects_v2")
+    raw_prefix = prefix.rstrip("/")
+    prefixes = [raw_prefix, raw_prefix + "/"]
+
+    all_keys_set: set[str] = set()
+    for pref in prefixes:
+        for page in paginator.paginate(Bucket=bucket_name, Prefix=pref):
+            contents = page.get("Contents", [])
+            for obj in contents:
+                key = obj["Key"]
+                if not key.startswith(pref):
+                    continue
+                if pref.endswith("/"):
+                    rel = key[len(pref) :]
+                    if not rel or rel.endswith("/") or "/" in rel:
+                        continue
+                else:
+                    if key == pref:
+                        all_keys_set.add(key)
+                        continue
+                all_keys_set.add(key)
+
+    all_keys = sorted(all_keys_set)
+    logger.info(
+        "S3 list immediate files",
+        prefixes=prefixes,
+        total_keys=len(all_keys),
+        sample=all_keys[:5],
+    )
+
+    track_keys: list[str] = all_keys[:]
+
+    if not track_keys:
+        logger.info("No objects found under prefix", prefixes=prefixes)
+        raise Exception("No audio tracks found under prefix")
+
+    task_pipeline_multitrack_process.delay(
+        transcript_id=transcript.id, bucket_name=bucket_name, prefix=prefix
+    )
 
 
 @shared_task
