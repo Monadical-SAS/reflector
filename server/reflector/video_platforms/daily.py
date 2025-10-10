@@ -7,14 +7,10 @@ from typing import Any, Dict, Optional
 import httpx
 
 from reflector.db.rooms import Room
+from reflector.platform_types import Platform
 
-from .base import (
-    MeetingData,
-    Platform,
-    RecordingType,
-    VideoPlatformClient,
-    VideoPlatformConfig,
-)
+from .base import VideoPlatformClient
+from .models import MeetingData, RecordingType, VideoPlatformConfig
 
 
 class DailyClient(VideoPlatformClient):
@@ -169,6 +165,7 @@ class DailyClient(VideoPlatformClient):
 
         if enable_recording:
             data["properties"]["start_cloud_recording"] = True
+            data["properties"]["enable_recording_ui"] = False
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
