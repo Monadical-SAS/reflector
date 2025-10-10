@@ -20,6 +20,7 @@ from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
+from reflector.worker.daily_stub_data import get_stub_transcript_data
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -240,8 +241,13 @@ async def process_meetings():
 
 @shared_task
 @asynctask
-async def process_daily_recording(meeting_id: str, recording_id: str, tracks: list):
+async def process_daily_recording(
+    meeting_id: str, recording_id: str, tracks: list[dict]
+) -> None:
     """Stub processor for Daily.co recordings - writes fake transcription/diarization.
+
+    Handles webhook retries by checking if recording already exists.
+    Validates track structure before processing.
 
     Args:
         meeting_id: Meeting ID
@@ -256,14 +262,41 @@ async def process_daily_recording(meeting_id: str, recording_id: str, tracks: li
         num_tracks=len(tracks),
     )
 
+    # Check if recording already exists (webhook retry case)
+    existing_recording = await recordings_controller.get_by_id(recording_id)
+    if existing_recording:
+        logger.warning(
+            "Recording already exists, skipping processing (likely webhook retry)",
+            recording_id=recording_id,
+        )
+        return
+
     meeting = await meetings_controller.get_by_id(meeting_id)
     if not meeting:
         raise Exception(f"Meeting {meeting_id} not found")
 
     room = await rooms_controller.get_by_id(meeting.room_id)
 
+    # Validate bucket configuration
+    if not settings.AWS_DAILY_S3_BUCKET:
+        raise ValueError("AWS_DAILY_S3_BUCKET not configured for Daily.co processing")
+
+    # Validate and parse tracks
+    # Import at runtime to avoid circular dependency (daily.py imports from process.py)
+    from reflector.views.daily import DailyTrack  # noqa: PLC0415
+
+    try:
+        validated_tracks = [DailyTrack(**t) for t in tracks]
+    except Exception as e:
+        logger.error(
+            "Invalid track structure from Daily.co webhook",
+            error=str(e),
+            tracks=tracks,
+        )
+        raise ValueError(f"Invalid track structure: {e}")
+
     # Find first audio track for Recording entity
-    audio_track = next((t for t in tracks if t["type"] == "audio"), None)
+    audio_track = next((t for t in validated_tracks if t.type == "audio"), None)
     if not audio_track:
         raise Exception(f"No audio tracks found in {len(tracks)} tracks")
 
@@ -272,7 +305,7 @@ async def process_daily_recording(meeting_id: str, recording_id: str, tracks: li
         Recording(
             id=recording_id,
             bucket_name=settings.AWS_DAILY_S3_BUCKET,
-            object_key=audio_track["s3Key"],
+            object_key=audio_track.s3Key,
             recorded_at=datetime.now(timezone.utc),
             meeting_id=meeting.id,
             status="completed",
@@ -282,7 +315,7 @@ async def process_daily_recording(meeting_id: str, recording_id: str, tracks: li
     logger.info(
         "Created recording",
         recording_id=recording.id,
-        s3_key=audio_track["s3Key"],
+        s3_key=audio_track.s3Key,
     )
 
     # Create Transcript entry
@@ -300,9 +333,7 @@ async def process_daily_recording(meeting_id: str, recording_id: str, tracks: li
 
     logger.info("Created transcript", transcript_id=transcript.id)
 
-    # Generate fake data (fish argument)
-    from reflector.worker.daily_stub_data import get_stub_transcript_data
-
+    # Generate fake data
     stub_data = get_stub_transcript_data()
 
     # Update transcript with fake data

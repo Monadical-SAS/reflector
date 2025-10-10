@@ -1,7 +1,7 @@
 """Daily.co webhook handler endpoint."""
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -11,6 +11,14 @@ from reflector.logger import logger
 from reflector.video_platforms.factory import create_platform_client
 
 router = APIRouter()
+
+
+class DailyTrack(BaseModel):
+    """Daily.co recording track (audio or video file)."""
+
+    type: Literal["audio", "video"]
+    s3Key: str
+    size: int
 
 
 class DailyWebhookEvent(BaseModel):
@@ -156,14 +164,25 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
     """
     room_name = _extract_room_name(event)
     recording_id = event.payload.get("recording_id")
-    tracks = event.payload.get("tracks", [])
+    tracks_raw = event.payload.get("tracks", [])
 
-    if not room_name or not tracks:
+    if not room_name or not tracks_raw:
         logger.warning(
             "recording.ready-to-download: missing room_name or tracks",
             room_name=room_name,
-            has_tracks=bool(tracks),
+            has_tracks=bool(tracks_raw),
             payload=event.payload,
+        )
+        return
+
+    # Validate tracks structure
+    try:
+        tracks = [DailyTrack(**t) for t in tracks_raw]
+    except Exception as e:
+        logger.error(
+            "recording.ready-to-download: invalid tracks structure",
+            error=str(e),
+            tracks=tracks_raw,
         )
         return
 
@@ -183,12 +202,14 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         platform="daily",
     )
 
-    from reflector.worker.process import process_daily_recording
+    # Import at runtime to avoid circular dependency (process.py imports from daily.py)
+    from reflector.worker.process import process_daily_recording  # noqa: PLC0415
 
+    # Convert Pydantic models to dicts for Celery serialization
     process_daily_recording.delay(
         meeting_id=meeting.id,
         recording_id=recording_id or event.id,
-        tracks=tracks,
+        tracks=[t.model_dump() for t in tracks],
     )
 
 

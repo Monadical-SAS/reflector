@@ -1,8 +1,15 @@
 """Stub data for Daily.co testing - Fish conversation"""
 
 import re
+from typing import Any
 
+from reflector.processors.types import Word
 from reflector.utils import generate_uuid4
+
+# Constants for stub data generation
+MIN_WORD_DURATION = 0.3  # Base duration per word in seconds
+WORD_LENGTH_MULTIPLIER = 0.05  # Additional duration per character
+NUM_STUB_TOPICS = 3  # Number of topics to generate
 
 # The fish argument text - 2 speakers arguing about eating fish
 FISH_TEXT = """Fish for dinner are nothing wrong with you? There's nothing wrong with me. Wrong with you? Would you shut up? There's nothing wrong with me. I'm just trying to. There's nothing wrong with me. I'm trying to eat a fish. Wrong with you trying to eat a fish and it falls off the plate. Would you shut up? You're bothering me. More than a fish is bothering me. Would you shut up and leave me alone? What's your problem? I'm just trying to eat a fish is wrong with you. I'm only trying to eat a fish. Would you shut up? Wrong with you. There's nothing wrong with me. There's nothing wrong with me. Wrong with you. There's nothing wrong with me. Wrong with you. There's nothing wrong with me. Would you shut up and let me eat my fish? Wrong with you. Shut up! What is wrong with you? Would you just shut up? What's your problem? Would you shut up with you? What is wrong with you? Wrong with me? I'm just trying to get my attention. Did you shut up? You're bothering me. Would you shut up? You're beginning to bug me. What's your problem? Just trying to eat my fish. Stay on the plate. Would you shut up? Just trying to eat my fish.
@@ -12,10 +19,10 @@ I'm gonna hit you with my problem. You're worse than this fish. You're more of a
 What is wrong with you? What's your problem? Problem? I just want to eat my fish. Wrong with you. What's wrong with you? I don't have a problem. You shut up! What's wrong with you? Just shut up! What's wrong with you? Shut up! What is wrong with you? I'm trying to eat a fish. I'm trying to eat a fish and it falls off the plate. Would you shut up? What is wrong with you? Would you shut up? Is wrong with you? Would you just shut up? What is wrong with you? Would you just shut? Is wrong with you? What's your problem? You just shut. What is wrong with you? Trying to eat my fish. Would you be quiet? What's your problem? Would you just shut up? Eat my fish. I can't even eat it. Don't stay on the plate. What's your problem? Would you shut up? What is wrong with you? What is wrong with you? Would you just shut up? What's your problem? What is wrong with you? I'm gonna hit you with my fish if you don't shut up. What's your problem? Would you shut up? What's wrong with you? What is wrong? Shut up! What's your problem?"""
 
 
-def parse_fish_text():
+def parse_fish_text() -> list[Word]:
     """Parse fish text into words with timestamps and speakers.
 
-    Returns a list of words: [{"text": str, "start": float, "end": float, "speaker": int}]
+    Returns list of Word objects with text, start/end timestamps, and speaker ID.
 
     Speaker assignment heuristic:
     - Speaker 0 (eating fish): "fish", "eat", "trying", "problem", "I"
@@ -34,12 +41,16 @@ def parse_fish_text():
                 + (sentences[i + 1] if i + 1 < len(sentences) else "")
             )
 
-    words = []
+    words: list[Word] = []
     current_time = 0.0
 
     for sentence in full_sentences:
         if not sentence.strip():
             continue
+
+        # TODO: Delete this heuristic-based speaker detection when real diarization is implemented.
+        # This overly complex pattern matching is only for stub test data.
+        # Real implementation should use actual speaker diarization from audio processing.
 
         # Determine speaker based on content
         sentence_lower = sentence.lower()
@@ -88,15 +99,15 @@ def parse_fish_text():
         # Split sentence into words
         sentence_words = sentence.split()
         for word in sentence_words:
-            word_duration = 0.3 + (len(word) * 0.05)  # ~0.3-0.5s per word
+            word_duration = MIN_WORD_DURATION + (len(word) * WORD_LENGTH_MULTIPLIER)
 
             words.append(
-                {
-                    "text": word + " ",  # Add space
-                    "start": current_time,
-                    "end": current_time + word_duration,
-                    "speaker": speaker,
-                }
+                Word(
+                    text=word + " ",  # Add space
+                    start=current_time,
+                    end=current_time + word_duration,
+                    speaker=speaker,
+                )
             )
 
             current_time += word_duration
@@ -104,22 +115,21 @@ def parse_fish_text():
     return words
 
 
-def generate_fake_topics(words):
+def generate_fake_topics(words: list[Word]) -> list[dict[str, Any]]:
     """Generate fake topics from words.
 
-    Splits into ~3 topics based on timestamp.
+    Splits into equal topics based on word count.
+    Returns list of topic dicts for database storage.
     """
     if not words:
         return []
 
-    total_duration = words[-1]["end"]
-    chunk_size = len(words) // 3
+    chunk_size = len(words) // NUM_STUB_TOPICS
+    topics: list[dict[str, Any]] = []
 
-    topics = []
-
-    for i in range(3):
+    for i in range(NUM_STUB_TOPICS):
         start_idx = i * chunk_size
-        end_idx = (i + 1) * chunk_size if i < 2 else len(words)
+        end_idx = (i + 1) * chunk_size if i < NUM_STUB_TOPICS - 1 else len(words)
 
         if start_idx >= len(words):
             break
@@ -130,10 +140,10 @@ def generate_fake_topics(words):
             "id": generate_uuid4(),
             "title": f"Fish Argument Part {i+1}",
             "summary": f"Argument about eating fish continues (part {i+1})",
-            "timestamp": chunk_words[0]["start"],
-            "duration": chunk_words[-1]["end"] - chunk_words[0]["start"],
-            "transcript": "".join(w["text"] for w in chunk_words),
-            "words": chunk_words,
+            "timestamp": chunk_words[0].start,
+            "duration": chunk_words[-1].end - chunk_words[0].start,
+            "transcript": "".join(w.text for w in chunk_words),
+            "words": [w.model_dump() for w in chunk_words],
         }
 
         topics.append(topic)
@@ -141,18 +151,19 @@ def generate_fake_topics(words):
     return topics
 
 
-def generate_fake_participants():
-    """Generate fake participants."""
+def generate_fake_participants() -> list[dict[str, Any]]:
+    """Generate fake participants for stub transcript."""
     return [
         {"id": generate_uuid4(), "speaker": 0, "name": "Fish Eater"},
         {"id": generate_uuid4(), "speaker": 1, "name": "Annoying Person"},
     ]
 
 
-def get_stub_transcript_data():
+def get_stub_transcript_data() -> dict[str, Any]:
     """Get complete stub transcript data for Daily.co testing.
 
     Returns dict with topics, participants, title, summaries, duration.
+    All data is fake/predetermined for testing webhook flow without GPU processing.
     """
     words = parse_fish_text()
     topics = generate_fake_topics(words)
@@ -164,5 +175,5 @@ def get_stub_transcript_data():
         "title": "The Great Fish Eating Argument",
         "short_summary": "Two people argue about eating fish",
         "long_summary": "An extended argument between someone trying to eat fish and another person who won't stop asking what's wrong. The fish keeps falling off the plate.",
-        "duration": words[-1]["end"] if words else 0.0,
+        "duration": words[-1].end if words else 0.0,
     }
