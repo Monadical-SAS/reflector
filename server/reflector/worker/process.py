@@ -239,6 +239,75 @@ async def process_meetings():
     )
 
 
+async def convert_audio_and_waveform(transcript) -> None:
+    """Convert WebM to MP3 and generate waveform for Daily.co recordings.
+
+    This bypasses the full file pipeline which would overwrite stub data.
+    """
+    try:
+        logger.info(
+            "Converting audio to MP3 and generating waveform",
+            transcript_id=transcript.id,
+        )
+
+        # Import processors we need
+        from reflector.processors import AudioFileWriterProcessor
+        from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
+
+        upload_path = transcript.data_path / "upload.webm"
+        mp3_path = transcript.audio_mp3_filename
+
+        # Convert WebM to MP3
+        mp3_writer = AudioFileWriterProcessor(path=mp3_path)
+
+        container = av.open(str(upload_path))
+        for frame in container.decode(audio=0):
+            await mp3_writer.push(frame)
+        await mp3_writer.flush()
+        container.close()
+
+        logger.info(
+            "Converted WebM to MP3",
+            transcript_id=transcript.id,
+            mp3_size=mp3_path.stat().st_size,
+        )
+
+        # Generate waveform
+        waveform_processor = AudioWaveformProcessor(
+            audio_path=mp3_path,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Create minimal pipeline object for processor (matching EmptyPipeline from main_file_pipeline.py)
+        class MinimalPipeline:
+            def __init__(self, logger_instance):
+                self.logger = logger_instance
+
+            def get_pref(self, k, d=None):
+                return d
+
+        waveform_processor.set_pipeline(MinimalPipeline(logger))
+        await waveform_processor.flush()
+
+        logger.info(
+            "Generated waveform",
+            transcript_id=transcript.id,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Update transcript status to ended (successful)
+        await transcripts_controller.update(transcript, {"status": "ended"})
+
+    except Exception as e:
+        logger.error(
+            "Failed to convert audio or generate waveform",
+            transcript_id=transcript.id,
+            error=str(e),
+        )
+        # Keep status as uploaded even if conversion fails
+        pass
+
+
 @shared_task
 @asynctask
 async def process_daily_recording(
@@ -333,6 +402,45 @@ async def process_daily_recording(
 
     logger.info("Created transcript", transcript_id=transcript.id)
 
+    # Download audio file from Daily.co S3 for playback
+    upload_filename = transcript.data_path / "upload.webm"
+    upload_filename.parent.mkdir(parents=True, exist_ok=True)
+
+    s3 = boto3.client(
+        "s3",
+        region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+        aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+    )
+
+    try:
+        logger.info(
+            "Downloading audio from Daily.co S3",
+            bucket=settings.AWS_DAILY_S3_BUCKET,
+            key=audio_track.s3Key,
+        )
+        with open(upload_filename, "wb") as f:
+            s3.download_fileobj(settings.AWS_DAILY_S3_BUCKET, audio_track.s3Key, f)
+
+        # Validate audio file
+        container = av.open(upload_filename.as_posix())
+        try:
+            if not len(container.streams.audio):
+                raise Exception("File has no audio stream")
+        finally:
+            container.close()
+
+        logger.info("Audio file downloaded and validated", file=str(upload_filename))
+    except Exception as e:
+        logger.error(
+            "Failed to download or validate audio file",
+            error=str(e),
+            bucket=settings.AWS_DAILY_S3_BUCKET,
+            key=audio_track.s3Key,
+        )
+        # Continue with stub data even if audio download fails
+        pass
+
     # Generate fake data
     stub_data = get_stub_transcript_data()
 
@@ -346,7 +454,7 @@ async def process_daily_recording(
             "short_summary": stub_data["short_summary"],
             "long_summary": stub_data["long_summary"],
             "duration": stub_data["duration"],
-            "status": "ended",
+            "status": "uploaded" if upload_filename.exists() else "ended",
         },
     )
 
@@ -355,7 +463,13 @@ async def process_daily_recording(
         transcript_id=transcript.id,
         duration=stub_data["duration"],
         num_topics=len(stub_data["topics"]),
+        has_audio=upload_filename.exists(),
     )
+
+    # Convert WebM to MP3 and generate waveform without full pipeline
+    # (full pipeline would overwrite our stub transcription data)
+    if upload_filename.exists():
+        await convert_audio_and_waveform(transcript)
 
 
 @shared_task

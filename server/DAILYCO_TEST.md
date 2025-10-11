@@ -6,6 +6,7 @@
 
 The actual audio/video files are recorded to S3, but transcription/diarization is NOT performed. Instead:
 - A **stub processor** generates fake transcript with predetermined text ("The Great Fish Eating Argument")
+- **Audio track is downloaded from Daily.co S3** to local storage for playback in the frontend
 - All database entities (recording, transcript, topics, participants, words) are created with **fake "fish" conversation data**
 - This allows testing the complete webhook → database flow WITHOUT expensive GPU processing
 
@@ -13,8 +14,14 @@ The actual audio/video files are recorded to S3, but transcription/diarization i
 - Title: "The Great Fish Eating Argument"
 - Participants: "Fish Eater" (speaker 0), "Annoying Person" (speaker 1)
 - Transcription: Nonsensical argument about eating fish (see `reflector/worker/daily_stub_data.py`)
+- Audio file: Downloaded WebM from Daily.co S3 (stored in `data/{transcript_id}/upload.webm`)
 
-**Next implementation step:** Replace stub with real transcription pipeline (download tracks from S3, merge audio, run Whisper/diarization).
+**File processing pipeline** then:
+- Converts WebM to MP3 format (for frontend audio player)
+- Generates waveform visualization data (audio.json)
+- These files enable proper frontend transcript page display
+
+**Next implementation step:** Replace stub with real transcription pipeline (merge audio tracks, run Whisper/diarization).
 
 ---
 
@@ -341,11 +348,21 @@ docker-compose exec -T postgres psql -U reflector -d reflector -c \
 ```
 id: <transcript-id>
 title: The Great Fish Eating Argument
-status: ended
+status: uploaded  (audio file downloaded for playback)
 duration: ~200-300 seconds (depends on fish text parsing)
 recording_id: <same-as-recording-id-above>
 meeting_id: <meeting-id>
 room_id: 552640fd-16f2-4162-9526-8cf40cd2357e
+```
+
+**Verify audio file exists:**
+```bash
+ls -lh data/<transcript-id>/upload.webm
+```
+
+**Expected:**
+```
+-rw-r--r-- 1 user staff ~100-200K Oct 10 18:48 upload.webm
 ```
 
 **Check transcript topics (stub data):**
@@ -562,9 +579,13 @@ Recording: raw-tracks
 - [x] S3 path: `monadical/test2-{timestamp}/{recording-start-ts}-{participant-uuid}-cam-{audio|video}-{track-start-ts}`
 - [x] Database `num_clients` increments/decrements correctly
 - [x] **Database recording entry created** with correct S3 path and status `completed`
-- [x] **Database transcript entry created** with status `ended`
+- [x] **Database transcript entry created** with status `uploaded`
+- [x] **Audio file downloaded** to `data/{transcript_id}/upload.webm` (~100-200KB)
 - [x] **Transcript has stub data**: title "The Great Fish Eating Argument"
 - [x] **Transcript has 3 topics** about fish argument
 - [x] **Transcript has 2 participants**: "Fish Eater" (speaker 0) and "Annoying Person" (speaker 1)
 - [x] **Topics contain word-level data** with timestamps and speaker IDs
 - [x] **Total duration** ~200-300 seconds based on fish text parsing
+- [x] **MP3 and waveform files generated** by file processing pipeline
+- [x] **Frontend transcript page loads** without "Failed to load audio" error
+- [x] **Audio player functional** with working playback and waveform visualization
