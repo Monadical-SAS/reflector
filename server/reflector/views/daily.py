@@ -8,7 +8,9 @@ from pydantic import BaseModel
 
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger
+from reflector.settings import settings
 from reflector.video_platforms.factory import create_platform_client
+from reflector.worker.process import process_multitrack_recording
 
 router = APIRouter()
 
@@ -207,14 +209,22 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         platform="daily",
     )
 
-    # Import at runtime to avoid circular dependency (process.py imports from daily.py)
-    from reflector.worker.process import process_daily_recording  # noqa: PLC0415
+    bucket_name = settings.AWS_DAILY_S3_BUCKET
+    if not bucket_name:
+        logger.error(
+            "AWS_DAILY_S3_BUCKET not configured; cannot process Daily recording"
+        )
+        return
 
-    # Convert Pydantic models to dicts for Celery serialization
-    process_daily_recording.delay(
-        meeting_id=meeting.id,
-        recording_id=recording_id or event.id,
-        tracks=[t.model_dump() for t in tracks],
+    if not settings.DAILY_SUBDOMAIN:
+        logger.error(
+            "DAILY_SUBDOMAIN not configured; cannot compute S3 prefix from room name"
+        )
+        return
+    prefix = f"{settings.DAILY_SUBDOMAIN}/{room_name}"
+
+    process_multitrack_recording.delay(
+        bucket_name=bucket_name, prefix=prefix, meeting_id=meeting.id
     )
 
 
