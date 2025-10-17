@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+  "/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Health */
+    get: operations["health"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/metrics": {
     parameters: {
       query?: never;
@@ -587,6 +604,52 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/user/tokens": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Tokens
+     * @description List all tokens for the current user
+     */
+    get: operations["v1_list_tokens"];
+    put?: never;
+    /**
+     * Create Token
+     * @description Create a new API token for the current user.
+     *
+     *     NOTE: For creating tokens for other users, use manual DB insertion.
+     */
+    post: operations["v1_create_token"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/user/tokens/{token_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Token
+     * @description Delete a token owned by the current user
+     */
+    delete: operations["v1_delete_token"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/zulip/streams": {
     parameters: {
       query?: never;
@@ -758,6 +821,27 @@ export interface components {
        * @default false
        */
       allow_duplicated: boolean | null;
+    };
+    /** CreateTokenRequest */
+    CreateTokenRequest: {
+      /** Name */
+      name?: string | null;
+    };
+    /** CreateTokenResponse */
+    CreateTokenResponse: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string;
+      /** Name */
+      name: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Token */
+      token: string;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -1352,6 +1436,20 @@ export interface components {
      * @enum {string}
      */
     SyncStatus: "success" | "unchanged" | "error" | "skipped";
+    /** TokenResponse */
+    TokenResponse: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string;
+      /** Name */
+      name: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** Topic */
     Topic: {
       /** Name */
@@ -1509,6 +1607,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  health: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+    };
+  };
   metrics: {
     parameters: {
       query?: never;
@@ -2895,6 +3013,90 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["UserInfo"] | null;
+        };
+      };
+    };
+  };
+  v1_list_tokens: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenResponse"][];
+        };
+      };
+    };
+  };
+  v1_create_token: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTokenRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreateTokenResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_delete_token: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        token_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
