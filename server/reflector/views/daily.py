@@ -8,7 +8,9 @@ from pydantic import BaseModel
 
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger
+from reflector.settings import settings
 from reflector.video_platforms.factory import create_platform_client
+from reflector.worker.process import process_multitrack_recording
 
 router = APIRouter()
 
@@ -191,30 +193,28 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         )
         return
 
-    meeting = await meetings_controller.get_by_room_name(room_name)
-    if not meeting:
-        logger.warning(
-            "recording.ready-to-download: meeting not found", room_name=room_name
-        )
-        return
-
     logger.info(
         "Recording ready for download",
-        meeting_id=meeting.id,
         room_name=room_name,
         recording_id=recording_id,
         num_tracks=len(tracks),
         platform="daily",
     )
 
-    # Import at runtime to avoid circular dependency (process.py imports from daily.py)
-    from reflector.worker.process import process_daily_recording  # noqa: PLC0415
+    bucket_name = settings.AWS_DAILY_S3_BUCKET
+    if not bucket_name:
+        logger.error(
+            "AWS_DAILY_S3_BUCKET not configured; cannot process Daily recording"
+        )
+        return
 
-    # Convert Pydantic models to dicts for Celery serialization
-    process_daily_recording.delay(
-        meeting_id=meeting.id,
-        recording_id=recording_id or event.id,
-        tracks=[t.model_dump() for t in tracks],
+    track_keys = [t.s3Key for t in tracks if t.type == "audio"]
+
+    process_multitrack_recording.delay(
+        bucket_name=bucket_name,
+        room_name=room_name,
+        recording_id=recording_id,
+        track_keys=track_keys,
     )
 
 
