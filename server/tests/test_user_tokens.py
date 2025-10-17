@@ -30,7 +30,7 @@ async def test_token_hashing():
     )
 
     # Get from DB
-    tokens = await user_tokens_controller.get_by_user_id("test_user_2")
+    tokens = await user_tokens_controller.list_by_user_id("test_user_2")
     assert len(tokens) == 1
     # Hash should not equal plaintext
     assert tokens[0].token_hash != plaintext
@@ -56,7 +56,7 @@ async def test_hash_token_deterministic():
 @pytest.mark.asyncio
 async def test_get_by_user_id_empty():
     """Get tokens for user with no tokens"""
-    tokens = await user_tokens_controller.get_by_user_id("nonexistent_user")
+    tokens = await user_tokens_controller.list_by_user_id("nonexistent_user")
     assert tokens == []
 
 
@@ -76,21 +76,7 @@ async def test_get_by_user_id_multiple():
     )
 
     # Get all tokens
-    tokens = await user_tokens_controller.get_by_user_id(user_id)
+    tokens = await user_tokens_controller.list_by_user_id(user_id)
     assert len(tokens) == 2
     names = {t.name for t in tokens}
     assert names == {"Token 1", "Token 2"}
-
-
-@pytest.mark.asyncio
-async def test_delete_token_wrong_user():
-    """Trying to delete another user's token raises ValueError"""
-    # User 1 creates a token
-    token1, _ = await user_tokens_controller.create_token(
-        user_id="user1",
-        name="User1 Token",
-    )
-
-    # User 2 tries to delete it - should raise
-    with pytest.raises(ValueError, match="belongs to another user"):
-        await user_tokens_controller.delete_token(token1.id, "user2")

@@ -27,8 +27,6 @@ uv run python scripts/create_token.py <user_id> <token_name>
 # Example for OAuth user:
 uv run python scripts/create_token.py "e7d4f2a8-9b3c-4d1e-8f6a" "Production Token"
 
-# Example for service account (arbitrary ID):
-uv run python scripts/create_token.py "monitoring-bot" "Monitoring Service Token"
 ```
 
 ### Using API Tokens

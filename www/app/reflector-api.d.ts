@@ -611,18 +611,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /**
-     * List Tokens
-     * @description List all tokens for the current user
-     */
+    /** List Tokens */
     get: operations["v1_list_tokens"];
     put?: never;
-    /**
-     * Create Token
-     * @description Create a new API token for the current user.
-     *
-     *     NOTE: For creating tokens for other users, use manual DB insertion.
-     */
+    /** Create Token */
     post: operations["v1_create_token"];
     delete?: never;
     options?: never;
@@ -640,10 +632,7 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /**
-     * Delete Token
-     * @description Delete a token owned by the current user
-     */
+    /** Delete Token */
     delete: operations["v1_delete_token"];
     options?: never;
     head?: never;
@@ -1529,8 +1518,6 @@ export interface components {
       sub: string;
       /** Email */
       email: string | null;
-      /** Email Verified */
-      email_verified: boolean | null;
     };
     /** ValidationError */
     ValidationError: {

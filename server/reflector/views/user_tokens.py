@@ -1,28 +1,31 @@
 from datetime import datetime
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 import reflector.auth as auth
 from reflector.db.user_tokens import user_tokens_controller
+from reflector.utils.string import NonEmptyString
 
 router = APIRouter()
+logger = structlog.get_logger(__name__)
 
 
 class CreateTokenRequest(BaseModel):
-    name: str | None = None
+    name: NonEmptyString | None = None
 
 
 class TokenResponse(BaseModel):
-    id: str
-    user_id: str
-    name: str | None
+    id: NonEmptyString
+    user_id: NonEmptyString
+    name: NonEmptyString | None
     created_at: datetime
 
 
 class CreateTokenResponse(TokenResponse):
-    token: str
+    token: NonEmptyString
 
 
 @router.post("/user/tokens", response_model=CreateTokenResponse)
@@ -44,19 +47,22 @@ async def create_token(
 async def list_tokens(
     user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    tokens = await user_tokens_controller.get_by_user_id(user["sub"])
+    tokens = await user_tokens_controller.list_by_user_id(user["sub"])
     return [TokenResponse(**t.model_dump()) for t in tokens]
 
 
 @router.delete("/user/tokens/{token_id}")
 async def delete_token(
-    token_id: str,
+    token_id: NonEmptyString,
     user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
     try:
-        success = await user_tokens_controller.delete_token(token_id, user["sub"])
-        if not success:
-            raise HTTPException(status_code=404, detail="Token not found")
-        return {"status": "ok"}
+        r = await user_tokens_controller.delete_token(token_id, user["sub"])
+        if r == "not-yours" or r == "not-here":
+            raise HTTPException(status_code=404)
+        if r is None:
+            return {"status": "ok"}
+        logger.error(f"token deletion panic: delete_token result not known: {r}")
+        raise HTTPException(status_code=500)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))

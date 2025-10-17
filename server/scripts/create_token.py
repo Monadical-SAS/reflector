@@ -12,9 +12,10 @@ import sys
 
 from reflector.db import get_database
 from reflector.db.user_tokens import user_tokens_controller
+from reflector.utils.string import NonEmptyString
 
 
-async def create_token_for_user(user_id: str, name: str):
+async def create_token_for_user(user_id: NonEmptyString, name: NonEmptyString):
     """Create API token for a user"""
     await get_database().connect()
 

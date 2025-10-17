@@ -2,6 +2,7 @@ import hmac
 import secrets
 from datetime import datetime, timezone
 from hashlib import sha256
+from typing import Literal, Union
 
 import sqlalchemy
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from reflector.db import get_database, metadata
 from reflector.settings import settings
 from reflector.utils import generate_uuid4
+from reflector.utils.string import NonEmptyString
 
 user_tokens = sqlalchemy.Table(
     "user_token",
@@ -24,49 +26,52 @@ user_tokens = sqlalchemy.Table(
 
 
 class UserToken(BaseModel):
-    id: str = Field(default_factory=generate_uuid4)
-    user_id: str
-    token_hash: str
-    name: str | None = None
+    id: NonEmptyString = Field(default_factory=generate_uuid4)
+    user_id: NonEmptyString
+    token_hash: NonEmptyString
+    name: NonEmptyString | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserTokenController:
     @staticmethod
-    def generate_token() -> str:
+    def generate_token() -> NonEmptyString:
         return secrets.token_urlsafe(48)
 
     @staticmethod
-    def hash_token(token: str) -> str:
+    def hash_token(token: NonEmptyString) -> str:
         return hmac.new(
             settings.SECRET_KEY.encode(), token.encode(), digestmod=sha256
         ).hexdigest()
 
+    @classmethod
     async def create_token(
-        self,
-        user_id: str,
-        name: str | None = None,
-    ) -> tuple[UserToken, str]:
+        cls,
+        user_id: NonEmptyString,
+        name: NonEmptyString | None = None,
+    ) -> tuple[UserToken, NonEmptyString]:
         """Returns (UserToken, plaintext_token). Plaintext shown only once."""
-        plaintext = self.generate_token()
+        plaintext = cls.generate_token()
         token = UserToken(
             user_id=user_id,
-            token_hash=self.hash_token(plaintext),
+            token_hash=cls.hash_token(plaintext),
             name=name,
         )
         query = user_tokens.insert().values(**token.model_dump())
         await get_database().execute(query)
         return token, plaintext
 
-    async def verify_token(self, plaintext_token: str) -> UserToken | None:
-        token_hash = self.hash_token(plaintext_token)
+    @classmethod
+    async def verify_token(cls, plaintext_token: NonEmptyString) -> UserToken | None:
+        token_hash = cls.hash_token(plaintext_token)
         query = user_tokens.select().where(
             user_tokens.c.token_hash == token_hash,
         )
         result = await get_database().fetch_one(query)
         return UserToken(**result) if result else None
 
-    async def get_by_user_id(self, user_id: str) -> list[UserToken]:
+    @staticmethod
+    async def list_by_user_id(user_id: NonEmptyString) -> list[UserToken]:
         query = (
             user_tokens.select()
             .where(user_tokens.c.user_id == user_id)
@@ -75,19 +80,23 @@ class UserTokenController:
         results = await get_database().fetch_all(query)
         return [UserToken(**r) for r in results]
 
-    async def delete_token(self, token_id: str, user_id: str) -> bool:
-        check = user_tokens.select().where(user_tokens.c.id == token_id)
-        existing = await get_database().fetch_one(check)
+    @staticmethod
+    async def delete_token(
+        token_id: NonEmptyString, user_id: NonEmptyString
+    ) -> Union[None, Literal["not-yours", "not-here"]]:
+        existing = await get_database().fetch_one(
+            user_tokens.select().where(user_tokens.c.id == token_id)
+        )
 
         if not existing:
-            return False  # Token doesn't exist - idempotent
+            return "not-here"
 
         if existing["user_id"] != user_id:
-            raise ValueError(f"Token {token_id} belongs to another user")
+            return "not-yours"
 
         query = user_tokens.delete().where(user_tokens.c.id == token_id)
         await get_database().execute(query)
-        return True  # If we get here, the token was deleted
+        return None
 
 
 user_tokens_controller = UserTokenController()

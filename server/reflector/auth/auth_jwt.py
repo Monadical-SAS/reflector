@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
@@ -29,7 +29,6 @@ class JWTException(Exception):
 class UserInfo(BaseModel):
     sub: str
     email: Optional[str] = None
-    email_verified: Optional[bool] = None
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -66,23 +65,32 @@ async def _authenticate_user(
     api_key: Optional[str],
     jwtauth: JWTAuth,
 ) -> UserInfo | None:
+    user_infos: List[UserInfo] = []
     if api_key:
         user_token = await user_tokens_controller.verify_token(api_key)
         if user_token:
-            return UserInfo(sub=user_token.user_id, email=None, email_verified=None)
+            user_infos.append(UserInfo(sub=user_token.user_id, email=None))
 
     if jwt_token:
         try:
             payload = jwtauth.verify_token(jwt_token)
             sub = payload["sub"]
             email = payload["email"]
-            email_verified = payload.get("email_verified", None)
-            return UserInfo(sub=sub, email=email, email_verified=email_verified)
+            user_infos.append(UserInfo(sub=sub, email=email))
         except JWTError as e:
             logger.error(f"JWT error: {e}")
             raise HTTPException(status_code=401, detail="Invalid authentication")
 
-    return None
+    if len(user_infos) == 0:
+        return None
+
+    if len(set([x.sub for x in user_infos])) > 1:
+        raise JWTException(
+            status_code=401,
+            detail="Invalid authentication: more than one user provided",
+        )
+
+    return user_infos[0]
 
 
 async def current_user(
