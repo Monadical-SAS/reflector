@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import unquote
 
@@ -17,9 +18,13 @@ from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import SourceKind, transcripts_controller
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
+from reflector.pipelines.main_multitrack_pipeline import (
+    task_pipeline_multitrack_process,
+)
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.whereby import get_room_sessions
+from reflector.worker.daily_stub_data import get_stub_transcript_data
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -148,6 +153,96 @@ async def process_recording(bucket_name: str, object_key: str):
 
 @shared_task
 @asynctask
+async def process_multitrack_recording(
+    bucket_name: str,
+    room_name: str,
+    recording_id: str,
+    track_keys: list[str],
+):
+    logger.info(
+        "Processing multitrack recording",
+        bucket=bucket_name,
+        room_name=room_name,
+        recording_id=recording_id,
+        provided_keys=len(track_keys),
+    )
+
+    if not track_keys:
+        logger.warning("No audio track keys provided")
+        return
+
+    recorded_at = datetime.now(timezone.utc)
+    try:
+        if track_keys:
+            folder = os.path.basename(os.path.dirname(track_keys[0]))
+            ts_match = re.search(r"(\d{14})$", folder)
+            if ts_match:
+                ts = ts_match.group(1)
+                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
+                    tzinfo=timezone.utc
+                )
+    except Exception:
+        logger.warning("Could not parse recorded_at from keys, using now()")
+
+    room_name = room_name.split("-", 1)[0]
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise Exception(f"Room not found: {room_name}")
+
+    meeting = await meetings_controller.create(
+        id=recording_id,
+        room_name=room_name,
+        room_url=room.name,
+        host_room_url=room.name,
+        start_date=recorded_at,
+        end_date=recorded_at,
+        room=room,
+        platform=room.platform,
+    )
+
+    recording = await recordings_controller.get_by_id(recording_id)
+    if not recording:
+        object_key_dir = os.path.dirname(track_keys[0]) if track_keys else ""
+        recording = await recordings_controller.create(
+            Recording(
+                id=recording_id,
+                bucket_name=bucket_name,
+                object_key=object_key_dir,
+                recorded_at=recorded_at,
+                meeting_id=meeting.id,
+            )
+        )
+
+    transcript = await transcripts_controller.get_by_recording_id(recording.id)
+    if transcript:
+        await transcripts_controller.update(
+            transcript,
+            {
+                "topics": [],
+            },
+        )
+    else:
+        transcript = await transcripts_controller.add(
+            "",
+            source_kind=SourceKind.ROOM,
+            source_language="en",
+            target_language="en",
+            user_id=room.user_id,
+            recording_id=recording.id,
+            share_mode="public",
+            meeting_id=meeting.id,
+            room_id=room.id,
+        )
+
+    task_pipeline_multitrack_process.delay(
+        transcript_id=transcript.id,
+        bucket_name=bucket_name,
+        track_keys=track_keys,
+    )
+
+
+@shared_task
+@asynctask
 async def process_meetings():
     """
     Checks which meetings are still active and deactivates those that have ended.
@@ -236,6 +331,239 @@ async def process_meetings():
         processed_count=processed_count,
         skipped_count=skipped_count,
     )
+
+
+async def convert_audio_and_waveform(transcript) -> None:
+    """Convert WebM to MP3 and generate waveform for Daily.co recordings.
+
+    This bypasses the full file pipeline which would overwrite stub data.
+    """
+    try:
+        logger.info(
+            "Converting audio to MP3 and generating waveform",
+            transcript_id=transcript.id,
+        )
+
+        # Import processors we need
+        from reflector.processors import AudioFileWriterProcessor
+        from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
+
+        upload_path = transcript.data_path / "upload.webm"
+        mp3_path = transcript.audio_mp3_filename
+
+        # Convert WebM to MP3
+        mp3_writer = AudioFileWriterProcessor(path=mp3_path)
+
+        container = av.open(str(upload_path))
+        for frame in container.decode(audio=0):
+            await mp3_writer.push(frame)
+        await mp3_writer.flush()
+        container.close()
+
+        logger.info(
+            "Converted WebM to MP3",
+            transcript_id=transcript.id,
+            mp3_size=mp3_path.stat().st_size,
+        )
+
+        # Generate waveform
+        waveform_processor = AudioWaveformProcessor(
+            audio_path=mp3_path,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Create minimal pipeline object for processor (matching EmptyPipeline from main_file_pipeline.py)
+        class MinimalPipeline:
+            def __init__(self, logger_instance):
+                self.logger = logger_instance
+
+            def get_pref(self, k, d=None):
+                return d
+
+        waveform_processor.set_pipeline(MinimalPipeline(logger))
+        await waveform_processor.flush()
+
+        logger.info(
+            "Generated waveform",
+            transcript_id=transcript.id,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Update transcript status to ended (successful)
+        await transcripts_controller.update(transcript, {"status": "ended"})
+
+    except Exception as e:
+        logger.error(
+            "Failed to convert audio or generate waveform",
+            transcript_id=transcript.id,
+            error=str(e),
+        )
+        # Keep status as uploaded even if conversion fails
+        pass
+
+
+@shared_task
+@asynctask
+async def process_daily_recording(
+    meeting_id: str, recording_id: str, tracks: list[dict]
+) -> None:
+    """Stub processor for Daily.co recordings - writes fake transcription/diarization.
+
+    Handles webhook retries by checking if recording already exists.
+    Validates track structure before processing.
+
+    Args:
+        meeting_id: Meeting ID
+        recording_id: Recording ID from Daily.co webhook
+        tracks: List of track dicts from Daily.co webhook
+                [{type: 'audio'|'video', s3Key: str, size: int}, ...]
+    """
+    logger.info(
+        "Processing Daily.co recording (STUB)",
+        meeting_id=meeting_id,
+        recording_id=recording_id,
+        num_tracks=len(tracks),
+    )
+
+    # Check if recording already exists (webhook retry case)
+    existing_recording = await recordings_controller.get_by_id(recording_id)
+    if existing_recording:
+        logger.warning(
+            "Recording already exists, skipping processing (likely webhook retry)",
+            recording_id=recording_id,
+        )
+        return
+
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        raise Exception(f"Meeting {meeting_id} not found")
+
+    room = await rooms_controller.get_by_id(meeting.room_id)
+
+    # Validate bucket configuration
+    if not settings.AWS_DAILY_S3_BUCKET:
+        raise ValueError("AWS_DAILY_S3_BUCKET not configured for Daily.co processing")
+
+    # Validate and parse tracks
+    # Import at runtime to avoid circular dependency (daily.py imports from process.py)
+    from reflector.views.daily import DailyTrack  # noqa: PLC0415
+
+    try:
+        validated_tracks = [DailyTrack(**t) for t in tracks]
+    except Exception as e:
+        logger.error(
+            "Invalid track structure from Daily.co webhook",
+            error=str(e),
+            tracks=tracks,
+        )
+        raise ValueError(f"Invalid track structure: {e}")
+
+    # Find first audio track for Recording entity
+    audio_track = next((t for t in validated_tracks if t.type == "audio"), None)
+    if not audio_track:
+        raise Exception(f"No audio tracks found in {len(tracks)} tracks")
+
+    # Create Recording entry
+    recording = await recordings_controller.create(
+        Recording(
+            id=recording_id,
+            bucket_name=settings.AWS_DAILY_S3_BUCKET,
+            object_key=audio_track.s3Key,
+            recorded_at=datetime.now(timezone.utc),
+            meeting_id=meeting.id,
+            status="completed",
+        )
+    )
+
+    logger.info(
+        "Created recording",
+        recording_id=recording.id,
+        s3_key=audio_track.s3Key,
+    )
+
+    # Create Transcript entry
+    transcript = await transcripts_controller.add(
+        "",
+        source_kind=SourceKind.ROOM,
+        source_language="en",
+        target_language="en",
+        user_id=room.user_id,
+        recording_id=recording.id,
+        share_mode="public",
+        meeting_id=meeting.id,
+        room_id=room.id,
+    )
+
+    logger.info("Created transcript", transcript_id=transcript.id)
+
+    # Download audio file from Daily.co S3 for playback
+    upload_filename = transcript.data_path / "upload.webm"
+    upload_filename.parent.mkdir(parents=True, exist_ok=True)
+
+    s3 = boto3.client(
+        "s3",
+        region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+        aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+    )
+
+    try:
+        logger.info(
+            "Downloading audio from Daily.co S3",
+            bucket=settings.AWS_DAILY_S3_BUCKET,
+            key=audio_track.s3Key,
+        )
+        with open(upload_filename, "wb") as f:
+            s3.download_fileobj(settings.AWS_DAILY_S3_BUCKET, audio_track.s3Key, f)
+
+        # Validate audio file
+        container = av.open(upload_filename.as_posix())
+        try:
+            if not len(container.streams.audio):
+                raise Exception("File has no audio stream")
+        finally:
+            container.close()
+
+        logger.info("Audio file downloaded and validated", file=str(upload_filename))
+    except Exception as e:
+        logger.error(
+            "Failed to download or validate audio file",
+            error=str(e),
+            bucket=settings.AWS_DAILY_S3_BUCKET,
+            key=audio_track.s3Key,
+        )
+        # Continue with stub data even if audio download fails
+        pass
+
+    # Generate fake data
+    stub_data = get_stub_transcript_data()
+
+    # Update transcript with fake data
+    await transcripts_controller.update(
+        transcript,
+        {
+            "topics": stub_data["topics"],
+            "participants": stub_data["participants"],
+            "title": stub_data["title"],
+            "short_summary": stub_data["short_summary"],
+            "long_summary": stub_data["long_summary"],
+            "duration": stub_data["duration"],
+            "status": "uploaded" if upload_filename.exists() else "ended",
+        },
+    )
+
+    logger.info(
+        "Daily.co recording processed (STUB)",
+        transcript_id=transcript.id,
+        duration=stub_data["duration"],
+        num_topics=len(stub_data["topics"]),
+        has_audio=upload_filename.exists(),
+    )
+
+    # Convert WebM to MP3 and generate waveform without full pipeline
+    # (full pipeline would overwrite our stub transcription data)
+    if upload_filename.exists():
+        await convert_audio_and_waveform(transcript)
 
 
 @shared_task

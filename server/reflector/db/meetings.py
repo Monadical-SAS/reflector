@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
+from reflector.platform_types import Platform
 from reflector.utils import generate_uuid4
 
 meetings = sa.Table(
@@ -55,6 +56,12 @@ meetings = sa.Table(
         ),
     ),
     sa.Column("calendar_metadata", JSONB),
+    sa.Column(
+        "platform",
+        sa.String,
+        nullable=False,
+        server_default="whereby",
+    ),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -94,13 +101,14 @@ class Meeting(BaseModel):
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
-    recording_trigger: Literal[
+    recording_trigger: Literal[  # whereby-specific
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    platform: Platform = "whereby"
 
 
 class MeetingController:
@@ -115,6 +123,7 @@ class MeetingController:
         room: Room,
         calendar_event_id: str | None = None,
         calendar_metadata: dict[str, Any] | None = None,
+        platform: Platform = "whereby",
     ):
         meeting = Meeting(
             id=id,
@@ -130,6 +139,7 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
+            platform=platform,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
@@ -237,6 +247,28 @@ class MeetingController:
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
+        await get_database().execute(query)
+
+    async def increment_num_clients(self, meeting_id: str):
+        """Atomically increment participant count."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(num_clients=meetings.c.num_clients + 1)
+        )
+        await get_database().execute(query)
+
+    async def decrement_num_clients(self, meeting_id: str):
+        """Atomically decrement participant count (min 0)."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(
+                num_clients=sa.case(
+                    (meetings.c.num_clients > 0, meetings.c.num_clients - 1), else_=0
+                )
+            )
+        )
         await get_database().execute(query)
 
 
