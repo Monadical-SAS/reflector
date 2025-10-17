@@ -193,16 +193,8 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         )
         return
 
-    meeting = await meetings_controller.get_by_room_name(room_name)
-    if not meeting:
-        logger.warning(
-            "recording.ready-to-download: meeting not found", room_name=room_name
-        )
-        return
-
     logger.info(
         "Recording ready for download",
-        meeting_id=meeting.id,
         room_name=room_name,
         recording_id=recording_id,
         num_tracks=len(tracks),
@@ -216,15 +208,13 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         )
         return
 
-    if not settings.DAILY_SUBDOMAIN:
-        logger.error(
-            "DAILY_SUBDOMAIN not configured; cannot compute S3 prefix from room name"
-        )
-        return
-    prefix = f"{settings.DAILY_SUBDOMAIN}/{room_name}"
+    track_keys = [t.s3Key for t in tracks if t.type == "audio"]
 
     process_multitrack_recording.delay(
-        bucket_name=bucket_name, prefix=prefix, meeting_id=meeting.id
+        bucket_name=bucket_name,
+        room_name=room_name,
+        recording_id=recording_id,
+        track_keys=track_keys,
     )
 
 

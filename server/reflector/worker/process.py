@@ -153,43 +153,61 @@ async def process_recording(bucket_name: str, object_key: str):
 
 @shared_task
 @asynctask
-async def process_multitrack_recording(bucket_name: str, prefix: str, meeting_id: str):
+async def process_multitrack_recording(
+    bucket_name: str,
+    room_name: str,
+    recording_id: str,
+    track_keys: list[str],
+):
     logger.info(
         "Processing multitrack recording",
         bucket=bucket_name,
-        prefix=prefix,
-        meeting_id=meeting_id,
+        room_name=room_name,
+        recording_id=recording_id,
+        provided_keys=len(track_keys),
     )
 
-    # Parse an approximate recorded_at from the prefix directory name
+    if not track_keys:
+        logger.warning("No audio track keys provided")
+        return
+
+    recorded_at = datetime.now(timezone.utc)
     try:
-        dir_name = prefix.rstrip("/").split("/")[-1]
-        ts_match = re.search(r"(\d{14})$", dir_name)
-        if ts_match:
-            ts = ts_match.group(1)
-            recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
-                tzinfo=timezone.utc
-            )
-        else:
-            try:
-                recorded_at = parse_datetime_with_timezone(dir_name)
-            except Exception:
-                recorded_at = datetime.now(timezone.utc)
+        if track_keys:
+            folder = os.path.basename(os.path.dirname(track_keys[0]))
+            ts_match = re.search(r"(\d{14})$", folder)
+            if ts_match:
+                ts = ts_match.group(1)
+                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
+                    tzinfo=timezone.utc
+                )
     except Exception:
-        logger.warning("Could not parse recorded_at from prefix, using now()")
-        recorded_at = datetime.now(timezone.utc)
+        logger.warning("Could not parse recorded_at from keys, using now()")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
-    if not meeting:
-        raise Exception(f"Meeting not found: {meeting_id}")
-    room = await rooms_controller.get_by_id(meeting.room_id)
+    room_name = room_name.split("-", 1)[0]
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise Exception(f"Room not found: {room_name}")
 
-    recording = await recordings_controller.get_by_object_key(bucket_name, prefix)
+    meeting = await meetings_controller.create(
+        id=recording_id,
+        room_name=room_name,
+        room_url=room.name,
+        host_room_url=room.name,
+        start_date=recorded_at,
+        end_date=recorded_at,
+        room=room,
+        platform=room.platform,
+    )
+
+    recording = await recordings_controller.get_by_id(recording_id)
     if not recording:
+        object_key_dir = os.path.dirname(track_keys[0]) if track_keys else ""
         recording = await recordings_controller.create(
             Recording(
+                id=recording_id,
                 bucket_name=bucket_name,
-                object_key=prefix,
+                object_key=object_key_dir,
                 recorded_at=recorded_at,
                 meeting_id=meeting.id,
             )
@@ -216,51 +234,10 @@ async def process_multitrack_recording(bucket_name: str, prefix: str, meeting_id
             room_id=room.id,
         )
 
-    s3 = boto3.client(
-        "s3",
-        region_name=settings.RECORDING_STORAGE_AWS_REGION,
-        aws_access_key_id=settings.RECORDING_STORAGE_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY,
-    )
-
-    paginator = s3.get_paginator("list_objects_v2")
-    raw_prefix = prefix.rstrip("/")
-    prefixes = [raw_prefix, raw_prefix + "/"]
-
-    all_keys_set: set[str] = set()
-    for pref in prefixes:
-        for page in paginator.paginate(Bucket=bucket_name, Prefix=pref):
-            contents = page.get("Contents", [])
-            for obj in contents:
-                key = obj["Key"]
-                if not key.startswith(pref):
-                    continue
-                if pref.endswith("/"):
-                    rel = key[len(pref) :]
-                    if not rel or rel.endswith("/") or "/" in rel:
-                        continue
-                else:
-                    if key == pref:
-                        all_keys_set.add(key)
-                        continue
-                all_keys_set.add(key)
-
-    all_keys = sorted(all_keys_set)
-    logger.info(
-        "S3 list immediate files",
-        prefixes=prefixes,
-        total_keys=len(all_keys),
-        sample=all_keys[:5],
-    )
-
-    track_keys: list[str] = all_keys[:]
-
-    if not track_keys:
-        logger.info("No objects found under prefix", prefixes=prefixes)
-        raise Exception("No audio tracks found under prefix")
-
     task_pipeline_multitrack_process.delay(
-        transcript_id=transcript.id, bucket_name=bucket_name, prefix=prefix
+        transcript_id=transcript.id,
+        bucket_name=bucket_name,
+        track_keys=track_keys,
     )
 
 
