@@ -29,7 +29,7 @@ import reflector.db.meetings  # noqa
 import reflector.db.recordings  # noqa
 import reflector.db.rooms  # noqa
 import reflector.db.transcripts  # noqa
-import reflector.db.user_tokens  # noqa
+import reflector.db.user_api_keys  # noqa
 
 kwargs = {}
 if "postgres" not in settings.DATABASE_URL:

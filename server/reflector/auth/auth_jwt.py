@@ -5,7 +5,7 @@ from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from reflector.db.user_tokens import user_tokens_controller
+from reflector.db.user_api_keys import user_api_keys_controller
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -67,9 +67,9 @@ async def _authenticate_user(
 ) -> UserInfo | None:
     user_infos: List[UserInfo] = []
     if api_key:
-        user_token = await user_tokens_controller.verify_token(api_key)
-        if user_token:
-            user_infos.append(UserInfo(sub=user_token.user_id, email=None))
+        user_api_key = await user_api_keys_controller.verify_key(api_key)
+        if user_api_key:
+            user_infos.append(UserInfo(sub=user_api_key.user_id, email=None))
 
     if jwt_token:
         try:

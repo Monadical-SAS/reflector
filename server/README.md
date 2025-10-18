@@ -1,4 +1,4 @@
-## API Token Management
+## API Key Management
 
 ### Finding Your User ID
 
@@ -8,32 +8,20 @@ curl -H "Authorization: Bearer <your_jwt>" http://localhost:1250/v1/me
 # Returns: {"sub": "your-oauth-sub-here", "email": "...", ...}
 ```
 
-### Creating API Tokens
+### Creating API Keys
 
-#### For yourself (via API):
 ```bash
-curl -X POST http://localhost:1250/v1/user/tokens \
+curl -X POST http://localhost:1250/v1/user/api-keys \
   -H "Authorization: Bearer <your_jwt>" \
   -H "Content-Type: application/json" \
-  -d '{"name": "My API Token"}'
+  -d '{"name": "My API Key"}'
 ```
 
-#### For any user (via script - no auth required):
-```bash
-# Requires database access
-cd server
-uv run python scripts/create_token.py <user_id> <token_name>
-
-# Example for OAuth user:
-uv run python scripts/create_token.py "e7d4f2a8-9b3c-4d1e-8f6a" "Production Token"
-
-```
-
-### Using API Tokens
+### Using API Keys
 
 ```bash
 # Use X-API-Key header instead of Authorization
-curl -H "X-API-Key: <your_token>" http://localhost:1250/v1/transcripts
+curl -H "X-API-Key: <your_api_key>" http://localhost:1250/v1/transcripts
 ```
 
 ## AWS S3/SQS usage clarification
