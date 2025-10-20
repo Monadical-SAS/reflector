@@ -11,6 +11,7 @@ router = APIRouter()
 class UserInfo(BaseModel):
     sub: str
     email: Optional[str]
+    email_verified: Optional[bool]
 
 
 @router.get("/me")
