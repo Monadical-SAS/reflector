@@ -1,3 +1,29 @@
+## API Key Management
+
+### Finding Your User ID
+
+```bash
+# Get your OAuth sub (user ID) - requires authentication
+curl -H "Authorization: Bearer <your_jwt>" http://localhost:1250/v1/me
+# Returns: {"sub": "your-oauth-sub-here", "email": "...", ...}
+```
+
+### Creating API Keys
+
+```bash
+curl -X POST http://localhost:1250/v1/user/api-keys \
+  -H "Authorization: Bearer <your_jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My API Key"}'
+```
+
+### Using API Keys
+
+```bash
+# Use X-API-Key header instead of Authorization
+curl -H "X-API-Key: <your_api_key>" http://localhost:1250/v1/transcripts
+```
+
 ## AWS S3/SQS usage clarification
 
 Whereby.com uploads recordings directly to our S3 bucket when meetings end.
