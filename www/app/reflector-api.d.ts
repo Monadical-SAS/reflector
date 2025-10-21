@@ -1518,8 +1518,6 @@ export interface components {
       sub: string;
       /** Email */
       email: string | null;
-      /** Email Verified */
-      email_verified: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
