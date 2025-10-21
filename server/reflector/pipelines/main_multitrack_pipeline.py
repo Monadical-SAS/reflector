@@ -27,6 +27,7 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptTopicDetectorProcessor,
 )
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_transcript import FileTranscriptInput
 from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.types import TitleSummary
@@ -279,6 +280,23 @@ class PipelineMainMultitrack(PipelineMainBase):
             await mp3_writer.flush()
         except Exception as e:
             self.logger.error("Mixdown failed", error=str(e))
+
+        # Generate waveform for the mixed audio if present
+        try:
+            if transcript.audio_mp3_filename.exists():
+                waveform_processor = AudioWaveformProcessor(
+                    audio_path=transcript.audio_mp3_filename,
+                    waveform_path=transcript.audio_waveform_filename,
+                )
+                waveform_processor.set_pipeline(self.empty_pipeline)
+                await waveform_processor.flush()
+            else:
+                self.logger.warning(
+                    "Waveform skipped - mixed MP3 not found",
+                    path=str(transcript.audio_mp3_filename),
+                )
+        except Exception as e:
+            self.logger.error("Waveform generation failed", error=str(e))
 
         speaker_transcripts: list[TranscriptType] = []
         for idx, key in enumerate(track_keys):
