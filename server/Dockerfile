@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # builder install base dependencies
 WORKDIR /tmp
-RUN apt-get update && apt-get install -y curl && apt-get clean
+RUN apt-get update && apt-get install -y curl ffmpeg && apt-get clean
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin/:$PATH"

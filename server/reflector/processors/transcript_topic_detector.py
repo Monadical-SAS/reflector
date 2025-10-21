@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
@@ -34,8 +34,14 @@ TOPIC_PROMPT = dedent(
 class TopicResponse(BaseModel):
     """Structured response for topic detection"""
 
-    title: str = Field(description="A descriptive title for the topic being discussed")
-    summary: str = Field(description="A concise 1-2 sentence summary of the discussion")
+    model_config = ConfigDict(populate_by_name=True)
+
+    title: str = Field(
+        description="A descriptive title for the topic being discussed", alias="Title"
+    )
+    summary: str = Field(
+        description="A concise 1-2 sentence summary of the discussion", alias="Summary"
+    )
 
 
 class TranscriptTopicDetectorProcessor(Processor):

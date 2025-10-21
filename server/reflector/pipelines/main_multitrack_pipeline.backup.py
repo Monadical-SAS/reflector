@@ -12,7 +12,6 @@ from reflector.asynctask import asynctask
 from reflector.db.transcripts import (
     TranscriptStatus,
     TranscriptText,
-    TranscriptWaveform,
     transcripts_controller,
 )
 from reflector.logger import logger
@@ -28,7 +27,6 @@ from reflector.processors import (
     TranscriptFinalTitleProcessor,
     TranscriptTopicDetectorProcessor,
 )
-from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_transcript import FileTranscriptInput
 from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.types import TitleSummary
@@ -57,145 +55,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
         self.empty_pipeline = EmptyPipeline(logger=self.logger)
-
-    async def pad_track_for_transcription(
-        self,
-        track_data: bytes,
-        track_idx: int,
-        storage,
-    ) -> tuple[bytes, str]:
-        """
-        Pad a single track with silence based on stream metadata start_time.
-        This ensures Whisper timestamps will be relative to recording start.
-        Uses ffmpeg subprocess approach proven to work with python-raw-tracks-align.
-
-        Returns: (padded_data, storage_url)
-        """
-        import json
-        import math
-        import subprocess
-        import tempfile
-
-        if not track_data:
-            return b"", ""
-
-        transcript = await self.get_transcript()
-
-        # Create temp files for ffmpeg processing
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as input_file:
-            input_file.write(track_data)
-            input_file_path = input_file.name
-
-        output_file_path = input_file_path.replace(".webm", "_padded.webm")
-
-        try:
-            # Get stream metadata using ffprobe
-            ffprobe_cmd = [
-                "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "stream=start_time",
-                "-of",
-                "json",
-                input_file_path,
-            ]
-
-            result = subprocess.run(
-                ffprobe_cmd, capture_output=True, text=True, check=True
-            )
-            metadata = json.loads(result.stdout)
-
-            # Extract start_time from stream metadata
-            start_time_seconds = 0.0
-            if metadata.get("streams") and len(metadata["streams"]) > 0:
-                start_time_str = metadata["streams"][0].get("start_time", "0")
-                start_time_seconds = float(start_time_str)
-
-            self.logger.info(
-                f"Track {track_idx} stream metadata: start_time={start_time_seconds:.3f}s",
-                track_idx=track_idx,
-            )
-
-            # If no padding needed, use original
-            if start_time_seconds <= 0:
-                storage_path = f"file_pipeline/{transcript.id}/tracks/original_track_{track_idx}.webm"
-                await storage.put_file(storage_path, track_data)
-                url = await storage.get_file_url(storage_path)
-                return track_data, url
-
-            # Calculate delay in milliseconds
-            delay_ms = math.floor(start_time_seconds * 1000)
-
-            # Run ffmpeg to pad the audio while maintaining WebM/Opus format for Modal compatibility
-            # ffmpeg quirk: aresample needs to come before adelay in the filter chain
-            ffmpeg_cmd = [
-                "ffmpeg",
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-y",  # overwrite output
-                "-i",
-                input_file_path,
-                "-af",
-                f"aresample=async=1,adelay={delay_ms}:all=true",
-                "-c:a",
-                "libopus",  # Keep Opus codec for Modal compatibility
-                "-b:a",
-                "128k",  # Standard bitrate for Opus
-                output_file_path,
-            ]
-
-            self.logger.info(
-                f"Padding track {track_idx} with {delay_ms}ms delay using ffmpeg",
-                track_idx=track_idx,
-                delay_ms=delay_ms,
-                command=" ".join(ffmpeg_cmd),
-            )
-
-            result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                self.logger.error(
-                    f"ffmpeg padding failed for track {track_idx}",
-                    track_idx=track_idx,
-                    stderr=result.stderr,
-                    returncode=result.returncode,
-                )
-                raise Exception(f"ffmpeg padding failed: {result.stderr}")
-
-            # Read the padded output
-            with open(output_file_path, "rb") as f:
-                padded_data = f.read()
-
-            # Store padded track
-            storage_path = (
-                f"file_pipeline/{transcript.id}/tracks/padded_track_{track_idx}.webm"
-            )
-            await storage.put_file(storage_path, padded_data)
-            padded_url = await storage.get_file_url(storage_path)
-
-            self.logger.info(
-                f"Successfully padded track {track_idx} with {start_time_seconds:.3f}s offset, stored at {storage_path}",
-                track_idx=track_idx,
-                delay_ms=delay_ms,
-                padded_url=padded_url,
-                padded_size=len(padded_data),
-            )
-
-            return padded_data, padded_url
-
-        finally:
-            # Clean up temp files
-            import os
-
-            try:
-                os.unlink(input_file_path)
-            except:
-                pass
-            try:
-                os.unlink(output_file_path)
-            except:
-                pass
 
     async def mixdown_tracks(
         self,
@@ -369,14 +228,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         async with self.lock_transaction():
             return await transcripts_controller.set_status(transcript_id, status)
 
-    async def on_waveform(self, data):
-        async with self.transaction():
-            waveform = TranscriptWaveform(waveform=data)
-            transcript = await self.get_transcript()
-            return await transcripts_controller.append_event(
-                transcript=transcript, event="WAVEFORM", data=waveform
-            )
-
     async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
 
@@ -401,90 +252,95 @@ class PipelineMainMultitrack(PipelineMainBase):
                 )
                 track_datas.append(b"")
 
-        # PAD TRACKS FIRST - this creates full-length tracks with correct timeline
-        padded_track_datas: list[bytes] = []
-        padded_track_urls: list[str] = []
-        for idx, data in enumerate(track_datas):
-            if not data:
-                padded_track_datas.append(b"")
-                padded_track_urls.append("")
+        # Extract offsets from Daily.co filename timestamps
+        # Format: {rec_start_ts}-{uuid}-{media_type}-{track_start_ts}.{ext}
+        # Example: 1760988935484-uuid-cam-audio-1760988935922
+        import re
+
+        offsets_seconds: list[float] = []
+        recording_start_ts: int | None = None
+
+        for key in track_keys:
+            # Parse Daily.co raw-tracks filename pattern
+            match = re.search(r"(\d+)-([0-9a-f-]{36})-(cam-audio)-(\d+)", key)
+            if not match:
+                self.logger.warning(
+                    "Track key doesn't match Daily.co pattern, using 0.0 offset",
+                    key=key,
+                )
+                offsets_seconds.append(0.0)
                 continue
 
-            padded_data, padded_url = await self.pad_track_for_transcription(
-                data, idx, storage
+            rec_start_ts = int(match.group(1))
+            track_start_ts = int(match.group(4))
+
+            # Validate all tracks belong to same recording
+            if recording_start_ts is None:
+                recording_start_ts = rec_start_ts
+            elif rec_start_ts != recording_start_ts:
+                self.logger.error(
+                    "Track belongs to different recording",
+                    key=key,
+                    expected_start=recording_start_ts,
+                    got_start=rec_start_ts,
+                )
+                offsets_seconds.append(0.0)
+                continue
+
+            # Calculate offset in seconds
+            offset_ms = track_start_ts - rec_start_ts
+            offset_s = offset_ms / 1000.0
+
+            self.logger.info(
+                "Parsed track offset from filename",
+                key=key,
+                recording_start=rec_start_ts,
+                track_start=track_start_ts,
+                offset_seconds=offset_s,
             )
-            padded_track_datas.append(padded_data)
-            padded_track_urls.append(padded_url)
-            self.logger.info(f"Padded track {idx} for transcription: {padded_url}")
 
-        # Mixdown PADDED tracks (already aligned with timeline) into transcript.audio_mp3_filename
+            offsets_seconds.append(max(0.0, offset_s))
+
+        # Mixdown all available tracks into transcript.audio_mp3_filename, preserving sample rate
         try:
-            # Ensure data directory exists
-            transcript.data_path.mkdir(parents=True, exist_ok=True)
-
             mp3_writer = AudioFileWriterProcessor(
                 path=str(transcript.audio_mp3_filename)
             )
-            # Use PADDED tracks with NO additional offsets (already aligned by padding)
-            await self.mixdown_tracks(
-                padded_track_datas, mp3_writer, offsets_seconds=None
-            )
+            await self.mixdown_tracks(track_datas, mp3_writer, offsets_seconds)
             await mp3_writer.flush()
-
-            # Upload the mixed audio to S3 for web playback
-            if transcript.audio_mp3_filename.exists():
-                mp3_data = transcript.audio_mp3_filename.read_bytes()
-                storage_path = f"{transcript.id}/audio.mp3"
-                await storage.put_file(storage_path, mp3_data)
-                mp3_url = await storage.get_file_url(storage_path)
-
-                # Update transcript to indicate audio is in storage
-                await transcripts_controller.update(
-                    transcript, {"audio_location": "storage"}
-                )
-
-                self.logger.info(
-                    f"Uploaded mixed audio to storage",
-                    storage_path=storage_path,
-                    size=len(mp3_data),
-                    url=mp3_url,
-                )
-            else:
-                self.logger.warning("Mixdown file does not exist after processing")
         except Exception as e:
-            self.logger.error("Mixdown failed", error=str(e), exc_info=True)
+            self.logger.error("Mixdown failed", error=str(e))
 
-        # Generate waveform from the mixed audio file
-        if transcript.audio_mp3_filename.exists():
+        speaker_transcripts: list[TranscriptType] = []
+        for idx, key in enumerate(track_keys):
+            ext = ".mp4"
+
             try:
-                self.logger.info("Generating waveform from mixed audio")
-                waveform_processor = AudioWaveformProcessor(
-                    audio_path=transcript.audio_mp3_filename,
-                    waveform_path=transcript.audio_waveform_filename,
-                    on_waveform=self.on_waveform,
-                )
-                waveform_processor.set_pipeline(self.empty_pipeline)
-                await waveform_processor.flush()
-                self.logger.info("Waveform generated successfully")
+                obj = s3.get_object(Bucket=bucket_name, Key=key)
+                data = obj["Body"].read()
             except Exception as e:
                 self.logger.error(
-                    "Waveform generation failed", error=str(e), exc_info=True
+                    "Skipping track - cannot read S3 object", key=key, error=str(e)
                 )
+                continue
 
-        # Transcribe PADDED tracks - timestamps will be automatically correct!
-        speaker_transcripts: list[TranscriptType] = []
-        for idx, padded_url in enumerate(padded_track_urls):
-            if not padded_url:
+            storage_path = f"file_pipeline/{transcript.id}/tracks/track_{idx}{ext}"
+            try:
+                await storage.put_file(storage_path, data)
+                audio_url = await storage.get_file_url(storage_path)
+            except Exception as e:
+                self.logger.error(
+                    "Skipping track - cannot upload to storage", key=key, error=str(e)
+                )
                 continue
 
             try:
-                # Transcribe the PADDED track
-                t = await self.transcribe_file(padded_url, transcript.source_language)
+                t = await self.transcribe_file(audio_url, transcript.source_language)
             except Exception as e:
                 self.logger.error(
                     "Transcription via default backend failed, trying local whisper",
-                    track_idx=idx,
-                    url=padded_url,
+                    key=key,
+                    url=audio_url,
                     error=str(e),
                 )
                 try:
@@ -498,7 +354,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                     fallback.on(capture_result)
                     await fallback.push(
                         FileTranscriptInput(
-                            audio_url=padded_url, language=transcript.source_language
+                            audio_url=audio_url, language=transcript.source_language
                         )
                     )
                     await fallback.flush()
@@ -508,37 +364,34 @@ class PipelineMainMultitrack(PipelineMainBase):
                 except Exception as e2:
                     self.logger.error(
                         "Skipping track - transcription failed after fallback",
-                        track_idx=idx,
-                        url=padded_url,
+                        key=key,
+                        url=audio_url,
                         error=str(e2),
                     )
                     continue
 
             if not t.words:
                 continue
-
-            # NO OFFSET ADJUSTMENT NEEDED!
-            # Timestamps are already correct because we transcribed padded tracks
-            # Just set speaker ID
+            # Shift word timestamps by the track's offset so all are relative to 00:00
+            track_offset = offsets_seconds[idx] if idx < len(offsets_seconds) else 0.0
             for w in t.words:
+                try:
+                    if hasattr(w, "start") and w.start is not None:
+                        w.start = float(w.start) + track_offset
+                    if hasattr(w, "end") and w.end is not None:
+                        w.end = float(w.end) + track_offset
+                except Exception:
+                    pass
                 w.speaker = idx
-
             speaker_transcripts.append(t)
-            self.logger.info(
-                f"Track {idx} transcribed successfully with {len(t.words)} words",
-                track_idx=idx,
-            )
 
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
-        # Merge all words and sort by timestamp
         merged_words = []
         for t in speaker_transcripts:
             merged_words.extend(t.words)
-        merged_words.sort(
-            key=lambda w: w.start if hasattr(w, "start") and w.start is not None else 0
-        )
+        merged_words.sort(key=lambda w: w.start)
 
         merged_transcript = TranscriptType(words=merged_words, translation=None)
 
