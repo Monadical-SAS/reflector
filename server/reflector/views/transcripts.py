@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
-from pydantic import BaseModel, Field, constr, field_serializer
+from pydantic import BaseModel, Discriminator, Field, constr, field_serializer
 
 import reflector.auth as auth
 from reflector.db import get_database
@@ -31,7 +31,14 @@ from reflector.db.transcripts import (
 )
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
+from reflector.schemas.transcript_formats import TranscriptFormat, TranscriptSegment
 from reflector.settings import settings
+from reflector.utils.transcript_formats import (
+    topics_to_webvtt_named,
+    transcript_to_json_segments,
+    transcript_to_text,
+    transcript_to_text_timestamped,
+)
 from reflector.ws_manager import get_ws_manager
 from reflector.zulip import (
     InvalidMessageError,
@@ -88,8 +95,82 @@ class GetTranscriptMinimal(BaseModel):
     audio_deleted: bool | None = None
 
 
-class GetTranscript(GetTranscriptMinimal):
+class GetTranscriptWithParticipants(GetTranscriptMinimal):
     participants: list[TranscriptParticipant] | None
+
+
+class GetTranscriptWithText(GetTranscriptWithParticipants):
+    """
+    Transcript response with plain text format.
+
+    Format: Speaker names followed by their dialogue, one line per segment.
+    Example:
+        John Smith: Hello everyone
+        Jane Doe: Hi there
+    """
+
+    transcript_format: Literal["text"] = "text"
+    transcript: str
+
+
+class GetTranscriptWithTextTimestamped(GetTranscriptWithParticipants):
+    """
+    Transcript response with timestamped text format.
+
+    Format: [MM:SS] timestamp prefix before each speaker and dialogue.
+    Example:
+        [00:00] John Smith: Hello everyone
+        [00:05] Jane Doe: Hi there
+    """
+
+    transcript_format: Literal["text-timestamped"] = "text-timestamped"
+    transcript: str
+
+
+class GetTranscriptWithWebVTTNamed(GetTranscriptWithParticipants):
+    """
+    Transcript response in WebVTT subtitle format with participant names.
+
+    Format: Standard WebVTT with voice tags using participant names.
+    Example:
+        WEBVTT
+
+        00:00:00.000 --> 00:00:05.000
+        <v John Smith>Hello everyone
+    """
+
+    transcript_format: Literal["webvtt-named"] = "webvtt-named"
+    transcript: str
+
+
+class GetTranscriptWithJSON(GetTranscriptWithParticipants):
+    """
+    Transcript response as structured JSON segments.
+
+    Format: Array of segment objects with speaker info, text, and timing.
+    Example:
+        [
+            {
+                "speaker": 0,
+                "speaker_name": "John Smith",
+                "text": "Hello everyone",
+                "start": 0.0,
+                "end": 5.0
+            }
+        ]
+    """
+
+    transcript_format: Literal["json"] = "json"
+    transcript: list[TranscriptSegment]
+
+
+GetTranscript = Annotated[
+    GetTranscriptWithText
+    | GetTranscriptWithTextTimestamped
+    | GetTranscriptWithWebVTTNamed
+    | GetTranscriptWithJSON,
+    Discriminator("transcript_format"),
+]
 
 
 class CreateTranscript(BaseModel):
@@ -206,7 +287,7 @@ async def transcripts_search(
     )
 
 
-@router.post("/transcripts", response_model=GetTranscript)
+@router.post("/transcripts", response_model=GetTranscriptWithParticipants)
 async def transcripts_create(
     info: CreateTranscript,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
@@ -340,14 +421,70 @@ class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
 async def transcript_get(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    transcript_format: TranscriptFormat = "text",
 ):
     user_id = user["sub"] if user else None
-    return await transcripts_controller.get_by_id_for_http(
+    transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
 
+    base_data = {
+        "id": transcript.id,
+        "user_id": transcript.user_id,
+        "name": transcript.name,
+        "status": transcript.status,
+        "locked": transcript.locked,
+        "duration": transcript.duration,
+        "title": transcript.title,
+        "short_summary": transcript.short_summary,
+        "long_summary": transcript.long_summary,
+        "created_at": transcript.created_at,
+        "share_mode": transcript.share_mode,
+        "source_language": transcript.source_language,
+        "target_language": transcript.target_language,
+        "reviewed": transcript.reviewed,
+        "meeting_id": transcript.meeting_id,
+        "source_kind": transcript.source_kind,
+        "room_id": transcript.room_id,
+        "audio_deleted": transcript.audio_deleted,
+        "participants": transcript.participants,
+    }
 
-@router.patch("/transcripts/{transcript_id}", response_model=GetTranscript)
+    if transcript_format == "text":
+        return GetTranscriptWithText(
+            **base_data,
+            transcript_format="text",
+            transcript=transcript_to_text(transcript.topics, transcript.participants),
+        )
+    elif transcript_format == "text-timestamped":
+        return GetTranscriptWithTextTimestamped(
+            **base_data,
+            transcript_format="text-timestamped",
+            transcript=transcript_to_text_timestamped(
+                transcript.topics, transcript.participants
+            ),
+        )
+    elif transcript_format == "webvtt-named":
+        return GetTranscriptWithWebVTTNamed(
+            **base_data,
+            transcript_format="webvtt-named",
+            transcript=topics_to_webvtt_named(
+                transcript.topics, transcript.participants
+            ),
+        )
+    elif transcript_format == "json":
+        return GetTranscriptWithJSON(
+            **base_data,
+            transcript_format="json",
+            transcript=transcript_to_json_segments(
+                transcript.topics, transcript.participants
+            ),
+        )
+
+
+@router.patch(
+    "/transcripts/{transcript_id}", response_model=GetTranscriptWithParticipants
+)
 async def transcript_update(
     transcript_id: str,
     info: UpdateTranscript,
