@@ -34,8 +34,16 @@ TOPIC_PROMPT = dedent(
 class TopicResponse(BaseModel):
     """Structured response for topic detection"""
 
-    title: str = Field(description="A descriptive title for the topic being discussed")
-    summary: str = Field(description="A concise 1-2 sentence summary of the discussion")
+    title: str = Field(
+        description="A descriptive title for the topic being discussed",
+        validation_alias="Title",
+    )
+    summary: str = Field(
+        description="A concise 1-2 sentence summary of the discussion",
+        validation_alias="Summary",
+    )
+
+    model_config = {"populate_by_name": True}
 
 
 class TranscriptTopicDetectorProcessor(Processor):

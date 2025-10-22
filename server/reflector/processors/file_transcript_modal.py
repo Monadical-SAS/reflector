@@ -56,6 +56,16 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
                 },
                 follow_redirects=True,
             )
+
+            if response.status_code != 200:
+                error_body = response.text
+                self.logger.error(
+                    "Modal API error",
+                    audio_url=data.audio_url,
+                    status_code=response.status_code,
+                    error_body=error_body,
+                )
+
             response.raise_for_status()
             result = response.json()
 
