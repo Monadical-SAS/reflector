@@ -60,9 +60,10 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
             if response.status_code != 200:
                 error_body = response.text
                 self.logger.error(
-                    f"Modal API error: HTTP {response.status_code} - {error_body[:1000]}",
+                    "Modal API error",
                     audio_url=data.audio_url,
                     status_code=response.status_code,
+                    error_body=error_body,
                 )
 
             response.raise_for_status()
