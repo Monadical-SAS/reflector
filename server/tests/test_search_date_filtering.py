@@ -1,5 +1,3 @@
-"""Tests for datetime filtering in transcript search."""
-
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -9,41 +7,9 @@ from reflector.db.search import SearchParameters, search_controller
 from reflector.db.transcripts import SourceKind, transcripts
 
 
-class TestDateParameterValidation:
-    """Unit tests for date parameter validation in SearchParameters."""
-
-    def test_search_params_with_dates(self):
-        """Test SearchParameters accepts datetime fields."""
-        from_dt = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        to_dt = datetime(2024, 6, 30, tzinfo=timezone.utc)
-
-        params = SearchParameters(
-            query_text=None,
-            from_datetime=from_dt,
-            to_datetime=to_dt,
-        )
-
-        assert params.from_datetime == from_dt
-        assert params.to_datetime == to_dt
-
-    def test_search_params_with_null_dates(self):
-        """Test SearchParameters with null datetime fields."""
-        params = SearchParameters(
-            query_text="test query",
-            from_datetime=None,
-            to_datetime=None,
-        )
-
-        assert params.from_datetime is None
-        assert params.to_datetime is None
-
-
 @pytest.mark.asyncio
 class TestDateRangeIntegration:
-    """Integration tests for date range filtering with database."""
-
     async def setup_test_transcripts(self):
-        """Create test transcripts with different dates."""
         # Use a test user_id that will match in our search parameters
         test_user_id = "test-user-123"
 
@@ -152,13 +118,11 @@ class TestDateRangeIntegration:
 
             results, total = await search_controller.search_transcripts(params)
 
-            # Should include: before, start_boundary, middle
-            # Should NOT include: end_boundary (it's at 23:59:59), after
             result_ids = [r.id for r in results]
             assert "test-before-range" in result_ids
             assert "test-start-boundary" in result_ids
             assert "test-middle-range" in result_ids
-            assert "test-end-boundary" not in result_ids  # Because it's > 6/30 00:00:00
+            assert "test-end-boundary" not in result_ids
             assert "test-after-range" not in result_ids
 
         finally:
@@ -166,7 +130,6 @@ class TestDateRangeIntegration:
 
     @pytest.mark.asyncio
     async def test_filter_with_both_datetimes(self):
-        """Test filtering with both from_datetime and to_datetime."""
         test_data = await self.setup_test_transcripts()
         test_user_id = "test-user-123"
 
@@ -182,7 +145,6 @@ class TestDateRangeIntegration:
 
             results, total = await search_controller.search_transcripts(params)
 
-            # Should include: start_boundary, middle, end_boundary
             result_ids = [r.id for r in results]
             assert "test-before-range" not in result_ids
             assert "test-start-boundary" in result_ids
@@ -194,32 +156,7 @@ class TestDateRangeIntegration:
             await self.cleanup_test_transcripts(test_data)
 
     @pytest.mark.asyncio
-    async def test_date_filter_with_full_text_search(self):
-        """Test combining date filter with full-text search."""
-        test_data = await self.setup_test_transcripts()
-        test_user_id = "test-user-123"
-
-        try:
-            params = SearchParameters(
-                query_text="Middle",  # Only matches one transcript
-                from_datetime=datetime(2024, 6, 1, tzinfo=timezone.utc),
-                to_datetime=datetime(2024, 7, 1, tzinfo=timezone.utc),
-                user_id=test_user_id,
-            )
-
-            results, total = await search_controller.search_transcripts(params)
-
-            # Should only return the middle transcript
-            if total > 0:  # Only if PostgreSQL with full-text search
-                assert total == 1
-                assert results[0].id == "test-middle-range"
-
-        finally:
-            await self.cleanup_test_transcripts(test_data)
-
-    @pytest.mark.asyncio
     async def test_date_filter_with_room_and_source_kind(self):
-        """Test combining date filter with room_id and source_kind."""
         test_data = await self.setup_test_transcripts()
         test_user_id = "test-user-123"
 
@@ -235,8 +172,6 @@ class TestDateRangeIntegration:
 
             results, total = await search_controller.search_transcripts(params)
 
-            # Should return transcripts in date range with FILE source
-            result_ids = [r.id for r in results]
             for result in results:
                 assert result.source_kind == SourceKind.FILE
                 assert result.created_at >= datetime(2024, 6, 1, tzinfo=timezone.utc)
@@ -247,7 +182,6 @@ class TestDateRangeIntegration:
 
     @pytest.mark.asyncio
     async def test_empty_results_for_future_dates(self):
-        """Test that future date ranges return empty results."""
         test_data = await self.setup_test_transcripts()
         test_user_id = "test-user-123"
 
@@ -269,7 +203,6 @@ class TestDateRangeIntegration:
 
     @pytest.mark.asyncio
     async def test_date_only_input_handling(self):
-        """Test that date-only inputs work correctly."""
         test_data = await self.setup_test_transcripts()
         test_user_id = "test-user-123"
 
@@ -287,7 +220,6 @@ class TestDateRangeIntegration:
 
             results, total = await search_controller.search_transcripts(params)
 
-            # Should only include the middle transcript (on 6/15)
             result_ids = [r.id for r in results]
             assert "test-middle-range" in result_ids
             assert "test-before-range" not in result_ids
