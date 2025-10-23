@@ -1,5 +1,8 @@
 import asyncio
 import io
+import math
+import os
+import tempfile
 from fractions import Fraction
 
 import av
@@ -11,6 +14,7 @@ from celery import chain, shared_task
 from reflector.asynctask import asynctask
 from reflector.db.transcripts import (
     TranscriptStatus,
+    TranscriptWaveform,
     transcripts_controller,
 )
 from reflector.logger import logger
@@ -56,6 +60,215 @@ class PipelineMainMultitrack(PipelineMainBase):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
         self.empty_pipeline = EmptyPipeline(logger=self.logger)
+
+    async def pad_track_for_transcription(
+        self,
+        track_data: bytes,
+        track_idx: int,
+        storage,
+    ) -> tuple[bytes, str]:
+        """
+        Pad a single track with silence based on stream metadata start_time.
+        This ensures Whisper timestamps will be relative to recording start.
+        Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus.
+
+        Returns: (padded_data, storage_url)
+        """
+
+        if not track_data:
+            return b"", ""
+
+        transcript = await self.get_transcript()
+
+        # Create temp files for processing
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as input_file:
+            input_file.write(track_data)
+            input_file_path = input_file.name
+
+        output_file_path = input_file_path.replace(".webm", "_padded.webm")
+
+        try:
+            # Get stream start time using PyAV (avoid external ffprobe)
+            start_time_seconds = 0.0
+            try:
+                with av.open(input_file_path) as container:
+                    # Prefer the first audio stream if present
+                    audio_streams = [s for s in container.streams if s.type == "audio"]
+                    stream = audio_streams[0] if audio_streams else container.streams[0]
+
+                    # 1) Use stream.start_time in stream.time_base units
+                    if stream.start_time is not None and stream.time_base is not None:
+                        start_time_seconds = float(stream.start_time * stream.time_base)
+
+                    # 2) Fallback to container-level start_time (in av.time_base units)
+                    if (start_time_seconds <= 0) and (container.start_time is not None):
+                        start_time_seconds = float(container.start_time * av.time_base)
+
+                    # 3) Fallback to first packet DTS in stream.time_base
+                    if start_time_seconds <= 0:
+                        for packet in container.demux(stream):
+                            if packet.dts is not None:
+                                start_time_seconds = float(
+                                    packet.dts * stream.time_base
+                                )
+                                break
+            except Exception as e:
+                self.logger.warning(
+                    "PyAV metadata read failed; assuming 0 start_time", error=str(e)
+                )
+                start_time_seconds = 0.0
+
+            self.logger.info(
+                f"Track {track_idx} stream metadata: start_time={start_time_seconds:.3f}s",
+                track_idx=track_idx,
+            )
+
+            # If no padding needed, use original
+            if start_time_seconds <= 0:
+                storage_path = f"file_pipeline/{transcript.id}/tracks/original_track_{track_idx}.webm"
+                await storage.put_file(storage_path, track_data)
+                url = await storage.get_file_url(storage_path)
+                return track_data, url
+
+            # Calculate delay in milliseconds
+            delay_ms = math.floor(start_time_seconds * 1000)
+
+            # Build a PyAV filter graph that mirrors:
+            #   aresample=async=1,adelay=DELAY_MS:all=true
+            # Maintain WebM/Opus output (Modal compatibility) at 48kHz, 128k bitrate.
+            self.logger.info(
+                f"Padding track {track_idx} with {delay_ms}ms delay using PyAV",
+                track_idx=track_idx,
+                delay_ms=delay_ms,
+            )
+
+            try:
+                # Open input and prepare output container
+                with (
+                    av.open(input_file_path) as in_container,
+                    av.open(output_file_path, "w") as out_container,
+                ):
+                    # Pick first audio stream
+                    in_stream = next(
+                        (s for s in in_container.streams if s.type == "audio"), None
+                    )
+                    if in_stream is None:
+                        raise Exception("No audio stream in input file")
+
+                    # Use standard Opus sample rate
+                    out_sample_rate = 48000
+
+                    # Create Opus audio stream
+                    out_stream = out_container.add_stream(
+                        "libopus", rate=out_sample_rate
+                    )
+                    # 128 kbps target (Opus), matching previous configuration
+                    out_stream.bit_rate = 128000
+
+                    # Build filter graph: abuffer -> aresample (async=1) -> adelay -> sink
+                    graph = av.filter.Graph()
+
+                    # We'll feed s16/stereo/48k frames to abuffer
+                    abuf_args = (
+                        f"time_base=1/{out_sample_rate}:"
+                        f"sample_rate={out_sample_rate}:"
+                        f"sample_fmt=s16:"
+                        f"channel_layout=stereo"
+                    )
+                    src = graph.add("abuffer", args=abuf_args, name="src")
+                    aresample_f = graph.add("aresample", args="async=1", name="ares")
+
+                    # adelay requires one delay value per channel separated by '|'
+                    delays_arg = f"{delay_ms}|{delay_ms}"
+                    adelay_f = graph.add(
+                        "adelay", args=f"delays={delays_arg}:all=1", name="delay"
+                    )
+                    sink = graph.add("abuffersink", name="sink")
+
+                    src.link_to(aresample_f)
+                    aresample_f.link_to(adelay_f)
+                    adelay_f.link_to(sink)
+                    graph.configure()
+
+                    # Resample incoming frames to s16/stereo/48k for graph and encoder
+                    resampler = AudioResampler(
+                        format="s16", layout="stereo", rate=out_sample_rate
+                    )
+
+                    # Decode -> resample -> push through graph -> encode Opus
+                    for frame in in_container.decode(in_stream):
+                        out_frames = resampler.resample(frame) or []
+                        for rframe in out_frames:
+                            rframe.sample_rate = out_sample_rate
+                            rframe.time_base = Fraction(1, out_sample_rate)
+                            src.push(rframe)
+
+                            # Drain available frames from sink and encode
+                            while True:
+                                try:
+                                    f_out = sink.pull()
+                                except Exception:
+                                    break
+                                f_out.sample_rate = out_sample_rate
+                                f_out.time_base = Fraction(1, out_sample_rate)
+                                for packet in out_stream.encode(f_out):
+                                    out_container.mux(packet)
+
+                    # Flush filter graph and encoder
+                    src.push(None)
+                    while True:
+                        try:
+                            f_out = sink.pull()
+                        except Exception:
+                            break
+                        f_out.sample_rate = out_sample_rate
+                        f_out.time_base = Fraction(1, out_sample_rate)
+                        for packet in out_stream.encode(f_out):
+                            out_container.mux(packet)
+
+                    for packet in out_stream.encode(None):
+                        out_container.mux(packet)
+            except Exception as e:
+                self.logger.error(
+                    "PyAV padding failed for track",
+                    track_idx=track_idx,
+                    delay_ms=delay_ms,
+                    error=str(e),
+                )
+                raise
+
+            # Read the padded output
+            with open(output_file_path, "rb") as f:
+                padded_data = f.read()
+
+            # Store padded track
+            storage_path = (
+                f"file_pipeline/{transcript.id}/tracks/padded_track_{track_idx}.webm"
+            )
+            await storage.put_file(storage_path, padded_data)
+            padded_url = await storage.get_file_url(storage_path)
+
+            self.logger.info(
+                f"Successfully padded track {track_idx} with {start_time_seconds:.3f}s offset, stored at {storage_path}",
+                track_idx=track_idx,
+                delay_ms=delay_ms,
+                padded_url=padded_url,
+                padded_size=len(padded_data),
+            )
+
+            return padded_data, padded_url
+
+        finally:
+            # Clean up temp files
+
+            try:
+                os.unlink(input_file_path)
+            except:
+                pass
+            try:
+                os.unlink(output_file_path)
+            except:
+                pass
 
     async def mixdown_tracks(
         self,
@@ -230,6 +443,14 @@ class PipelineMainMultitrack(PipelineMainBase):
         async with self.lock_transaction():
             return await transcripts_controller.set_status(transcript_id, status)
 
+    async def on_waveform(self, data):
+        async with self.transaction():
+            waveform = TranscriptWaveform(waveform=data)
+            transcript = await self.get_transcript()
+            return await transcripts_controller.append_event(
+                transcript=transcript, event="WAVEFORM", data=waveform
+            )
+
     async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
 
@@ -254,38 +475,64 @@ class PipelineMainMultitrack(PipelineMainBase):
                 )
                 track_datas.append(b"")
 
-        # Estimate offsets from first frame PTS, aligned to track_keys
-        offsets_seconds: list[float] = []
-        for data, key in zip(track_datas, track_keys):
-            off_s = 0.0
-            if data:
-                try:
-                    c = av.open(io.BytesIO(data))
-                    try:
-                        for frame in c.decode(audio=0):
-                            if frame.pts is not None and frame.time_base:
-                                off_s = float(frame.pts * frame.time_base)
-                            break
-                    finally:
-                        c.close()
-                except Exception:
-                    pass
-            offsets_seconds.append(max(0.0, float(off_s)))
+        # PAD TRACKS FIRST - this creates full-length tracks with correct timeline
+        padded_track_datas: list[bytes] = []
+        padded_track_urls: list[str] = []
+        for idx, data in enumerate(track_datas):
+            if not data:
+                padded_track_datas.append(b"")
+                padded_track_urls.append("")
+                continue
 
-        # Mixdown all available tracks into transcript.audio_mp3_filename, preserving sample rate
+            padded_data, padded_url = await self.pad_track_for_transcription(
+                data, idx, storage
+            )
+            padded_track_datas.append(padded_data)
+            padded_track_urls.append(padded_url)
+            self.logger.info(f"Padded track {idx} for transcription: {padded_url}")
+
+        # Mixdown PADDED tracks (already aligned with timeline) into transcript.audio_mp3_filename
         try:
+            # Ensure data directory exists
+            transcript.data_path.mkdir(parents=True, exist_ok=True)
+
             mp3_writer = AudioFileWriterProcessor(
                 path=str(transcript.audio_mp3_filename),
                 on_duration=self.on_duration,
             )
-            await self.mixdown_tracks(track_datas, mp3_writer, offsets_seconds)
+            # Use PADDED tracks with NO additional offsets (already aligned by padding)
+            await self.mixdown_tracks(
+                padded_track_datas, mp3_writer, offsets_seconds=None
+            )
             await mp3_writer.flush()
-        except Exception as e:
-            self.logger.error("Mixdown failed", error=str(e))
 
-        # Generate waveform for the mixed audio if present
-        try:
+            # Upload the mixed audio to S3 for web playback
             if transcript.audio_mp3_filename.exists():
+                mp3_data = transcript.audio_mp3_filename.read_bytes()
+                storage_path = f"{transcript.id}/audio.mp3"
+                await storage.put_file(storage_path, mp3_data)
+                mp3_url = await storage.get_file_url(storage_path)
+
+                # Update transcript to indicate audio is in storage
+                await transcripts_controller.update(
+                    transcript, {"audio_location": "storage"}
+                )
+
+                self.logger.info(
+                    f"Uploaded mixed audio to storage",
+                    storage_path=storage_path,
+                    size=len(mp3_data),
+                    url=mp3_url,
+                )
+            else:
+                self.logger.warning("Mixdown file does not exist after processing")
+        except Exception as e:
+            self.logger.error("Mixdown failed", error=str(e), exc_info=True)
+
+        # Generate waveform from the mixed audio file
+        if transcript.audio_mp3_filename.exists():
+            try:
+                self.logger.info("Generating waveform from mixed audio")
                 waveform_processor = AudioWaveformProcessor(
                     audio_path=transcript.audio_mp3_filename,
                     waveform_path=transcript.audio_waveform_filename,
@@ -293,44 +540,26 @@ class PipelineMainMultitrack(PipelineMainBase):
                 )
                 waveform_processor.set_pipeline(self.empty_pipeline)
                 await waveform_processor.flush()
-            else:
-                self.logger.warning(
-                    "Waveform skipped - mixed MP3 not found",
-                    path=str(transcript.audio_mp3_filename),
+                self.logger.info("Waveform generated successfully")
+            except Exception as e:
+                self.logger.error(
+                    "Waveform generation failed", error=str(e), exc_info=True
                 )
-        except Exception as e:
-            self.logger.error("Waveform generation failed", error=str(e))
 
+        # Transcribe PADDED tracks - timestamps will be automatically correct!
         speaker_transcripts: list[TranscriptType] = []
-        for idx, key in enumerate(track_keys):
-            ext = ".mp4"
-
-            try:
-                obj = s3.get_object(Bucket=bucket_name, Key=key)
-                data = obj["Body"].read()
-            except Exception as e:
-                self.logger.error(
-                    "Skipping track - cannot read S3 object", key=key, error=str(e)
-                )
-                continue
-
-            storage_path = f"file_pipeline/{transcript.id}/tracks/track_{idx}{ext}"
-            try:
-                await storage.put_file(storage_path, data)
-                audio_url = await storage.get_file_url(storage_path)
-            except Exception as e:
-                self.logger.error(
-                    "Skipping track - cannot upload to storage", key=key, error=str(e)
-                )
+        for idx, padded_url in enumerate(padded_track_urls):
+            if not padded_url:
                 continue
 
             try:
-                t = await self.transcribe_file(audio_url, transcript.source_language)
+                # Transcribe the PADDED track
+                t = await self.transcribe_file(padded_url, transcript.source_language)
             except Exception as e:
                 self.logger.error(
                     "Transcription via default backend failed, trying local whisper",
-                    key=key,
-                    url=audio_url,
+                    track_idx=idx,
+                    url=padded_url,
                     error=str(e),
                 )
                 try:
@@ -344,7 +573,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                     fallback.on(capture_result)
                     await fallback.push(
                         FileTranscriptInput(
-                            audio_url=audio_url, language=transcript.source_language
+                            audio_url=padded_url, language=transcript.source_language
                         )
                     )
                     await fallback.flush()
@@ -354,34 +583,37 @@ class PipelineMainMultitrack(PipelineMainBase):
                 except Exception as e2:
                     self.logger.error(
                         "Skipping track - transcription failed after fallback",
-                        key=key,
-                        url=audio_url,
+                        track_idx=idx,
+                        url=padded_url,
                         error=str(e2),
                     )
                     continue
 
             if not t.words:
                 continue
-            # Shift word timestamps by the track's offset so all are relative to 00:00
-            track_offset = offsets_seconds[idx] if idx < len(offsets_seconds) else 0.0
+
+            # NO OFFSET ADJUSTMENT NEEDED!
+            # Timestamps are already correct because we transcribed padded tracks
+            # Just set speaker ID
             for w in t.words:
-                try:
-                    if hasattr(w, "start") and w.start is not None:
-                        w.start = float(w.start) + track_offset
-                    if hasattr(w, "end") and w.end is not None:
-                        w.end = float(w.end) + track_offset
-                except Exception:
-                    pass
                 w.speaker = idx
+
             speaker_transcripts.append(t)
+            self.logger.info(
+                f"Track {idx} transcribed successfully with {len(t.words)} words",
+                track_idx=idx,
+            )
 
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
+        # Merge all words and sort by timestamp
         merged_words = []
         for t in speaker_transcripts:
             merged_words.extend(t.words)
-        merged_words.sort(key=lambda w: w.start)
+        merged_words.sort(
+            key=lambda w: w.start if hasattr(w, "start") and w.start is not None else 0
+        )
 
         merged_transcript = TranscriptType(words=merged_words, translation=None)
 
