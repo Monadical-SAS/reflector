@@ -133,14 +133,14 @@ SearchOffsetParam = Annotated[
     SearchOffsetBase, Query(description="Number of results to skip")
 ]
 
-FromParam = Annotated[
+SearchFromDatetimeParam = Annotated[
     AwareDatetime | None,
     Query(
         alias="from",
         description="Filter transcripts created on or after this datetime (ISO 8601 with timezone)",
     ),
 ]
-ToParam = Annotated[
+SearchToDatetimeParam = Annotated[
     AwareDatetime | None,
     Query(
         alias="to",
@@ -189,8 +189,8 @@ async def transcripts_search(
     offset: SearchOffsetParam = 0,
     room_id: Optional[str] = None,
     source_kind: Optional[SourceKind] = None,
-    from_datetime: FromParam = None,
-    to_datetime: ToParam = None,
+    from_datetime: SearchFromDatetimeParam = None,
+    to_datetime: SearchToDatetimeParam = None,
     user: Annotated[
         Optional[auth.UserInfo], Depends(auth.current_user_optional)
     ] = None,
