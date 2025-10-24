@@ -26,8 +26,8 @@ import {
 import { featureEnabled } from "../../lib/features";
 
 type ShareZulipProps = {
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
   disabled: boolean;
 };
 
@@ -88,14 +88,14 @@ export default function ShareZulip(props: ShareZulipProps & BoxProps) {
   }, [stream, streams]);
 
   const handleSendToZulip = async () => {
-    if (!props.transcriptResponse) return;
+    if (!props.transcript) return;
 
     if (stream && topic) {
       try {
         await postToZulipMutation.mutateAsync({
           params: {
             path: {
-              transcript_id: props.transcriptResponse.id,
+              transcript_id: props.transcript.id,
             },
             query: {
               stream,
