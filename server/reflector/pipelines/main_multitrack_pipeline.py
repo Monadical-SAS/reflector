@@ -72,6 +72,49 @@ class PipelineMainMultitrack(PipelineMainBase):
         This ensures Whisper timestamps will be relative to recording start.
         Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus.
 
+        Daily.co raw-tracks timing - Two approaches:
+
+            CURRENT APPROACH (PyAV metadata):
+            The WebM stream.start_time field encodes MEETING-RELATIVE timing:
+            - t=0: When Daily.co recording started (first participant joined)
+            - start_time=8.13s: This participant's track began 8.13s after recording started
+            - Purpose: Enables track alignment without external manifest files
+
+            This is NOT:
+            - Stream-internal offset (first packet timestamp relative to stream start)
+            - Absolute/wall-clock time
+            - Recording duration
+
+            ALTERNATIVE APPROACH (filename parsing - commit 3bae9076):
+            Daily.co filenames contain Unix timestamps (milliseconds):
+            Format: {recording_start_ts}-{participant_id}-cam-audio-{track_start_ts}.webm
+            Example: 1760988935484-52f7f48b-fbab-431f-9a50-87b9abfc8255-cam-audio-1760988935922.webm
+
+            Can calculate offset: (track_start_ts - recording_start_ts) / 1000
+            - Track 0: (1760988935922 - 1760988935484) / 1000 = 0.438s
+            - Track 1: (1760988943823 - 1760988935484) / 1000 = 8.339s
+
+            TIME DIFFERENCE: PyAV metadata vs filename timestamps differ by ~209ms:
+            - Track 0: filename=438ms, metadata=229ms (diff: 209ms)
+            - Track 1: filename=8339ms, metadata=8130ms (diff: 209ms)
+
+            Consistent delta suggests network/encoding delay. PyAV metadata is ground truth
+            (represents when audio stream actually started vs when file upload initiated).
+
+            Example with 2 participants:
+                Track A: start_time=0.2s → Joined 200ms after recording began
+                Track B: start_time=8.1s → Joined 8.1 seconds later
+
+                After padding:
+                    Track A: [0.2s silence] + [speech...]
+                    Track B: [8.1s silence] + [speech...]
+
+                Whisper transcription timestamps are now synchronized:
+                    Track A word at 5.0s → happened at meeting t=5.0s
+                    Track B word at 10.0s → happened at meeting t=10.0s
+
+                Merging just sorts by timestamp - no offset calculation needed.
+
         Returns: (padded_data, storage_url)
         """
 
@@ -88,187 +131,242 @@ class PipelineMainMultitrack(PipelineMainBase):
         output_file_path = input_file_path.replace(".webm", "_padded.webm")
 
         try:
-            # Get stream start time using PyAV (avoid external ffprobe)
-            start_time_seconds = 0.0
-            try:
-                with av.open(input_file_path) as container:
-                    # Prefer the first audio stream if present
-                    audio_streams = [s for s in container.streams if s.type == "audio"]
-                    stream = audio_streams[0] if audio_streams else container.streams[0]
-
-                    # 1) Use stream.start_time in stream.time_base units
-                    if stream.start_time is not None and stream.time_base is not None:
-                        start_time_seconds = float(stream.start_time * stream.time_base)
-
-                    # 2) Fallback to container-level start_time (in av.time_base units)
-                    if (start_time_seconds <= 0) and (container.start_time is not None):
-                        start_time_seconds = float(container.start_time * av.time_base)
-
-                    # 3) Fallback to first packet DTS in stream.time_base
-                    if start_time_seconds <= 0:
-                        for packet in container.demux(stream):
-                            if packet.dts is not None:
-                                start_time_seconds = float(
-                                    packet.dts * stream.time_base
-                                )
-                                break
-            except Exception as e:
-                self.logger.warning(
-                    "PyAV metadata read failed; assuming 0 start_time", error=str(e)
-                )
-                start_time_seconds = 0.0
-
-            self.logger.info(
-                f"Track {track_idx} stream metadata: start_time={start_time_seconds:.3f}s",
-                track_idx=track_idx,
+            # Extract meeting-relative start time from WebM metadata
+            start_time_seconds = self._extract_stream_start_time(
+                input_file_path, track_idx
             )
 
-            # If no padding needed, use original
+            # If no padding needed, store original track
             if start_time_seconds <= 0:
                 storage_path = f"file_pipeline/{transcript.id}/tracks/original_track_{track_idx}.webm"
                 await storage.put_file(storage_path, track_data)
                 url = await storage.get_file_url(storage_path)
                 return track_data, url
 
-            # Calculate delay in milliseconds
-            delay_ms = math.floor(start_time_seconds * 1000)
-
-            # Build a PyAV filter graph that mirrors:
-            #   aresample=async=1,adelay=DELAY_MS:all=true
-            # Maintain WebM/Opus output (Modal compatibility) at 48kHz, 128k bitrate.
-            self.logger.info(
-                f"Padding track {track_idx} with {delay_ms}ms delay using PyAV",
-                track_idx=track_idx,
-                delay_ms=delay_ms,
+            # Apply padding using PyAV filter graph
+            self._apply_audio_padding(
+                input_file_path, output_file_path, start_time_seconds, track_idx
             )
 
-            try:
-                # Open input and prepare output container
-                with (
-                    av.open(input_file_path) as in_container,
-                    av.open(output_file_path, "w") as out_container,
-                ):
-                    # Pick first audio stream
-                    in_stream = next(
-                        (s for s in in_container.streams if s.type == "audio"), None
-                    )
-                    if in_stream is None:
-                        raise Exception("No audio stream in input file")
-
-                    # Use standard Opus sample rate
-                    out_sample_rate = 48000
-
-                    # Create Opus audio stream
-                    out_stream = out_container.add_stream(
-                        "libopus", rate=out_sample_rate
-                    )
-                    # 128 kbps target (Opus), matching previous configuration
-                    out_stream.bit_rate = 128000
-
-                    # Build filter graph: abuffer -> aresample (async=1) -> adelay -> sink
-                    graph = av.filter.Graph()
-
-                    # We'll feed s16/stereo/48k frames to abuffer
-                    abuf_args = (
-                        f"time_base=1/{out_sample_rate}:"
-                        f"sample_rate={out_sample_rate}:"
-                        f"sample_fmt=s16:"
-                        f"channel_layout=stereo"
-                    )
-                    src = graph.add("abuffer", args=abuf_args, name="src")
-                    aresample_f = graph.add("aresample", args="async=1", name="ares")
-
-                    # adelay requires one delay value per channel separated by '|'
-                    delays_arg = f"{delay_ms}|{delay_ms}"
-                    adelay_f = graph.add(
-                        "adelay", args=f"delays={delays_arg}:all=1", name="delay"
-                    )
-                    sink = graph.add("abuffersink", name="sink")
-
-                    src.link_to(aresample_f)
-                    aresample_f.link_to(adelay_f)
-                    adelay_f.link_to(sink)
-                    graph.configure()
-
-                    # Resample incoming frames to s16/stereo/48k for graph and encoder
-                    resampler = AudioResampler(
-                        format="s16", layout="stereo", rate=out_sample_rate
-                    )
-
-                    # Decode -> resample -> push through graph -> encode Opus
-                    for frame in in_container.decode(in_stream):
-                        out_frames = resampler.resample(frame) or []
-                        for rframe in out_frames:
-                            rframe.sample_rate = out_sample_rate
-                            rframe.time_base = Fraction(1, out_sample_rate)
-                            src.push(rframe)
-
-                            # Drain available frames from sink and encode
-                            while True:
-                                try:
-                                    f_out = sink.pull()
-                                except Exception:
-                                    break
-                                f_out.sample_rate = out_sample_rate
-                                f_out.time_base = Fraction(1, out_sample_rate)
-                                for packet in out_stream.encode(f_out):
-                                    out_container.mux(packet)
-
-                    # Flush filter graph and encoder
-                    src.push(None)
-                    while True:
-                        try:
-                            f_out = sink.pull()
-                        except Exception:
-                            break
-                        f_out.sample_rate = out_sample_rate
-                        f_out.time_base = Fraction(1, out_sample_rate)
-                        for packet in out_stream.encode(f_out):
-                            out_container.mux(packet)
-
-                    for packet in out_stream.encode(None):
-                        out_container.mux(packet)
-            except Exception as e:
-                self.logger.error(
-                    "PyAV padding failed for track",
-                    track_idx=track_idx,
-                    delay_ms=delay_ms,
-                    error=str(e),
-                )
-                raise
-
-            # Read the padded output
+            # Read padded output
             with open(output_file_path, "rb") as f:
                 padded_data = f.read()
 
-            # Store padded track
-            storage_path = (
-                f"file_pipeline/{transcript.id}/tracks/padded_track_{track_idx}.webm"
-            )
-            await storage.put_file(storage_path, padded_data)
-            padded_url = await storage.get_file_url(storage_path)
-
-            self.logger.info(
-                f"Successfully padded track {track_idx} with {start_time_seconds:.3f}s offset, stored at {storage_path}",
-                track_idx=track_idx,
-                delay_ms=delay_ms,
-                padded_url=padded_url,
-                padded_size=len(padded_data),
-            )
-
-            return padded_data, padded_url
+            # Store padded track to S3
+            return await self._store_padded_track(padded_data, track_idx, storage)
 
         finally:
             # Clean up temp files
-
             try:
                 os.unlink(input_file_path)
-            except:
-                pass
+            except OSError as e:
+                self.logger.warning(
+                    "Failed to cleanup temp input file",
+                    path=input_file_path,
+                    error=str(e),
+                )
             try:
                 os.unlink(output_file_path)
-            except:
-                pass
+            except OSError as e:
+                self.logger.warning(
+                    "Failed to cleanup temp output file",
+                    path=output_file_path,
+                    error=str(e),
+                )
+
+    def _extract_stream_start_time(self, input_file_path: str, track_idx: int) -> float:
+        """
+        Extract meeting-relative start time from WebM stream metadata.
+
+        Uses PyAV to read stream.start_time from WebM container (not filename parsing).
+        This is more accurate than filename timestamps by ~209ms due to network/encoding delays.
+
+        Alternative approach (removed in commit 3bae9076 → 7d239fe3):
+        - Parse Unix timestamps from filename: {rec_start}-{uuid}-cam-audio-{track_start}.webm
+        - Calculate offset: (track_start - rec_start) / 1000
+        - Applied offset AFTER transcription (manual timestamp adjustment)
+
+        Current approach is preferred because:
+        - PyAV metadata is ground truth (when stream actually started)
+        - Padding BEFORE transcription produces correct timestamps automatically
+        - No manual offset calculation needed during merge
+
+        Returns: start_time in seconds (0.0 if not found or error)
+        """
+        start_time_seconds = 0.0
+        try:
+            with av.open(input_file_path) as container:
+                # Prefer the first audio stream if present
+                audio_streams = [s for s in container.streams if s.type == "audio"]
+                stream = audio_streams[0] if audio_streams else container.streams[0]
+
+                # 1) Use stream.start_time in stream.time_base units
+                if stream.start_time is not None and stream.time_base is not None:
+                    start_time_seconds = float(stream.start_time * stream.time_base)
+
+                # 2) Fallback to container-level start_time (in av.time_base units)
+                if (start_time_seconds <= 0) and (container.start_time is not None):
+                    start_time_seconds = float(container.start_time * av.time_base)
+
+                # 3) Fallback to first packet DTS in stream.time_base
+                if start_time_seconds <= 0:
+                    for packet in container.demux(stream):
+                        if packet.dts is not None:
+                            start_time_seconds = float(packet.dts * stream.time_base)
+                            break
+        except Exception as e:
+            self.logger.warning(
+                "PyAV metadata read failed; assuming 0 start_time",
+                track_idx=track_idx,
+                error=str(e),
+            )
+            start_time_seconds = 0.0
+
+        self.logger.info(
+            f"Track {track_idx} stream metadata: start_time={start_time_seconds:.3f}s",
+            track_idx=track_idx,
+        )
+        return start_time_seconds
+
+    def _apply_audio_padding(
+        self,
+        input_file_path: str,
+        output_file_path: str,
+        start_time_seconds: float,
+        track_idx: int,
+    ) -> None:
+        """
+        Apply silence padding to audio track using PyAV filter graph.
+        Writes padded audio to output_file_path.
+
+        Raises: Exception if padding fails
+        """
+        delay_ms = math.floor(start_time_seconds * 1000)
+
+        self.logger.info(
+            f"Padding track {track_idx} with {delay_ms}ms delay using PyAV",
+            track_idx=track_idx,
+            delay_ms=delay_ms,
+        )
+
+        try:
+            # Open input and prepare output container
+            with (
+                av.open(input_file_path) as in_container,
+                av.open(output_file_path, "w") as out_container,
+            ):
+                # Pick first audio stream
+                in_stream = next(
+                    (s for s in in_container.streams if s.type == "audio"), None
+                )
+                if in_stream is None:
+                    raise Exception("No audio stream in input file")
+
+                # Use standard Opus sample rate
+                out_sample_rate = 48000
+
+                # Create Opus audio stream
+                out_stream = out_container.add_stream("libopus", rate=out_sample_rate)
+                # 128 kbps target (Opus), matching previous configuration
+                out_stream.bit_rate = 128000
+
+                # Build filter graph: abuffer -> aresample (async=1) -> adelay -> sink
+                graph = av.filter.Graph()
+
+                # We'll feed s16/stereo/48k frames to abuffer
+                abuf_args = (
+                    f"time_base=1/{out_sample_rate}:"
+                    f"sample_rate={out_sample_rate}:"
+                    f"sample_fmt=s16:"
+                    f"channel_layout=stereo"
+                )
+                src = graph.add("abuffer", args=abuf_args, name="src")
+                aresample_f = graph.add("aresample", args="async=1", name="ares")
+
+                # adelay requires one delay value per channel separated by '|'
+                delays_arg = f"{delay_ms}|{delay_ms}"
+                adelay_f = graph.add(
+                    "adelay", args=f"delays={delays_arg}:all=1", name="delay"
+                )
+                sink = graph.add("abuffersink", name="sink")
+
+                src.link_to(aresample_f)
+                aresample_f.link_to(adelay_f)
+                adelay_f.link_to(sink)
+                graph.configure()
+
+                # Resample incoming frames to s16/stereo/48k for graph and encoder
+                resampler = AudioResampler(
+                    format="s16", layout="stereo", rate=out_sample_rate
+                )
+
+                # Decode -> resample -> push through graph -> encode Opus
+                for frame in in_container.decode(in_stream):
+                    out_frames = resampler.resample(frame) or []
+                    for rframe in out_frames:
+                        rframe.sample_rate = out_sample_rate
+                        rframe.time_base = Fraction(1, out_sample_rate)
+                        src.push(rframe)
+
+                        # Drain available frames from sink and encode
+                        while True:
+                            try:
+                                f_out = sink.pull()
+                            except Exception:
+                                break
+                            f_out.sample_rate = out_sample_rate
+                            f_out.time_base = Fraction(1, out_sample_rate)
+                            for packet in out_stream.encode(f_out):
+                                out_container.mux(packet)
+
+                # Flush filter graph and encoder
+                src.push(None)
+                while True:
+                    try:
+                        f_out = sink.pull()
+                    except Exception:
+                        break
+                    f_out.sample_rate = out_sample_rate
+                    f_out.time_base = Fraction(1, out_sample_rate)
+                    for packet in out_stream.encode(f_out):
+                        out_container.mux(packet)
+
+                for packet in out_stream.encode(None):
+                    out_container.mux(packet)
+        except Exception as e:
+            self.logger.error(
+                "PyAV padding failed for track",
+                track_idx=track_idx,
+                delay_ms=delay_ms,
+                error=str(e),
+                exc_info=True,
+            )
+            raise
+
+    async def _store_padded_track(
+        self, padded_data: bytes, track_idx: int, storage
+    ) -> tuple[bytes, str]:
+        """
+        Store padded track to S3 and return data + URL.
+
+        Returns: (padded_data, storage_url)
+        """
+        transcript = await self.get_transcript()
+
+        storage_path = (
+            f"file_pipeline/{transcript.id}/tracks/padded_track_{track_idx}.webm"
+        )
+        await storage.put_file(storage_path, padded_data)
+        padded_url = await storage.get_file_url(storage_path)
+
+        self.logger.info(
+            f"Successfully padded track {track_idx}, stored at {storage_path}",
+            track_idx=track_idx,
+            padded_url=padded_url,
+            padded_size=len(padded_data),
+        )
+
+        return padded_data, padded_url
 
     async def mixdown_tracks(
         self,
@@ -471,9 +569,26 @@ class PipelineMainMultitrack(PipelineMainBase):
                 track_datas.append(obj["Body"].read())
             except Exception as e:
                 self.logger.warning(
-                    "Skipping track - cannot read S3 object", key=key, error=str(e)
+                    "Skipping track - cannot read S3 object",
+                    key=key,
+                    error=str(e),
+                    exc_info=True,
                 )
                 track_datas.append(b"")
+
+        # Early validation: fail fast if all downloads failed
+        valid_track_count = sum(1 for d in track_datas if d)
+        if valid_track_count == 0:
+            raise Exception(
+                f"Failed to download all {len(track_keys)} tracks from S3 bucket {bucket_name}"
+            )
+        if valid_track_count < len(track_keys):
+            self.logger.warning(
+                f"Only {valid_track_count}/{len(track_keys)} tracks downloaded successfully",
+                valid_count=valid_track_count,
+                total_count=len(track_keys),
+                failed_count=len(track_keys) - valid_track_count,
+            )
 
         # PAD TRACKS FIRST - this creates full-length tracks with correct timeline
         padded_track_datas: list[bytes] = []
