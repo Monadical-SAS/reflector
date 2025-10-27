@@ -210,7 +210,6 @@ async def process_multitrack_recording(
                 object_key=object_key_dir,
                 recorded_at=recorded_at,
                 meeting_id=meeting.id,
-                is_multitrack=True,
                 track_keys=track_keys,
             )
         )

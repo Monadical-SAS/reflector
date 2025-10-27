@@ -56,8 +56,8 @@ async def transcript_process(
         recording = await recordings_controller.get_by_id(transcript.recording_id)
         if recording:
             bucket_name = recording.bucket_name
-            run_multitrack = bool(getattr(recording, "is_multitrack", False))
             track_keys = list(getattr(recording, "track_keys", []) or [])
+            run_multitrack = bool(track_keys)
 
     if run_multitrack and bucket_name and track_keys:
         task_pipeline_multitrack_process.delay(

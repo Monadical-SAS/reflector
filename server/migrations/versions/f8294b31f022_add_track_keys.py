@@ -20,18 +20,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     with op.batch_alter_table("recording", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "is_multitrack",
-                sa.Boolean(),
-                nullable=False,
-                server_default=sa.text("false"),
-            )
-        )
         batch_op.add_column(sa.Column("track_keys", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:
     with op.batch_alter_table("recording", schema=None) as batch_op:
         batch_op.drop_column("track_keys")
-        batch_op.drop_column("is_multitrack")

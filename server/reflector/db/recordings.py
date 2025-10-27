@@ -21,9 +21,6 @@ recordings = sa.Table(
         server_default="pending",
     ),
     sa.Column("meeting_id", sa.String),
-    sa.Column(
-        "is_multitrack", sa.Boolean, nullable=False, server_default=sa.text("false")
-    ),
     sa.Column("track_keys", sa.JSON, nullable=True),
     sa.Index("idx_recording_meeting_id", "meeting_id"),
 )
@@ -36,7 +33,6 @@ class Recording(BaseModel):
     recorded_at: datetime
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
-    is_multitrack: bool = False
     track_keys: list[str] | None = None
 
 
