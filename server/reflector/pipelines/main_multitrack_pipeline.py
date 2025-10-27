@@ -193,17 +193,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         Uses PyAV to read stream.start_time from WebM container (not filename parsing).
         This is more accurate than filename timestamps by ~209ms due to network/encoding delays.
 
-        Alternative approach (removed in commit 3bae9076 → 7d239fe3):
-        - Parse Unix timestamps from filename: {rec_start}-{uuid}-cam-audio-{track_start}.webm
-        - Calculate offset: (track_start - rec_start) / 1000
-        - Applied offset AFTER transcription (manual timestamp adjustment)
-
-        Current approach is preferred because:
-        - PyAV metadata is ground truth (when stream actually started)
-        - Padding BEFORE transcription produces correct timestamps automatically
-        - No manual offset calculation needed during merge
-
-        Returns: start_time in seconds (0.0 if not found or error)
         """
         start_time_seconds = 0.0
         try:
