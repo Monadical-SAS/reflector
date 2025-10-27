@@ -210,8 +210,13 @@ async def process_multitrack_recording(
                 object_key=object_key_dir,
                 recorded_at=recorded_at,
                 meeting_id=meeting.id,
+                is_multitrack=True,
+                track_keys=track_keys,
             )
         )
+    else:
+        # Recording already exists; assume metadata was set at creation time
+        pass
 
     transcript = await transcripts_controller.get_by_recording_id(recording.id)
     if transcript:

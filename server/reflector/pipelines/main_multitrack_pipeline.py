@@ -552,6 +552,16 @@ class PipelineMainMultitrack(PipelineMainBase):
     async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
 
+        # Clear transcript as we're going to regenerate everything
+        async with self.transaction():
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "events": [],
+                    "topics": [],
+                },
+            )
+
         s3 = boto3.client(
             "s3",
             region_name=settings.RECORDING_STORAGE_AWS_REGION,
@@ -722,7 +732,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
-        # Merge all words and sort by timestamp
+        # Merge all words and sort by timestamp (monotonic invariant before topic detection)
         merged_words = []
         for t in speaker_transcripts:
             merged_words.extend(t.words)
