@@ -562,18 +562,11 @@ class PipelineMainMultitrack(PipelineMainBase):
                 )
                 track_datas.append(b"")
 
-        # Early validation: fail fast if all downloads failed
+        # Early validation: fail fast if any downloads failed
         valid_track_count = sum(1 for d in track_datas if d)
-        if valid_track_count == 0:
-            raise Exception(
-                f"Failed to download all {len(track_keys)} tracks from S3 bucket {bucket_name}"
-            )
         if valid_track_count < len(track_keys):
-            self.logger.warning(
-                f"Only {valid_track_count}/{len(track_keys)} tracks downloaded successfully",
-                valid_count=valid_track_count,
-                total_count=len(track_keys),
-                failed_count=len(track_keys) - valid_track_count,
+            raise Exception(
+                f"Failed to download {len(track_keys) - valid_track_count}/{len(track_keys)} tracks from S3 bucket {bucket_name}"
             )
 
         # PAD TRACKS FIRST - this creates full-length tracks with correct timeline
