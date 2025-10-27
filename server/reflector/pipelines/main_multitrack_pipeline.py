@@ -25,6 +25,7 @@ from reflector.pipelines.main_live_pipeline import (
     task_cleanup_consent,
     task_pipeline_post_to_zulip,
 )
+from reflector.pipelines.transcription_helpers import transcribe_file_with_processor
 from reflector.processors import (
     AudioFileWriterProcessor,
     TranscriptFinalSummaryProcessor,
@@ -32,14 +33,13 @@ from reflector.processors import (
     TranscriptTopicDetectorProcessor,
 )
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
-from reflector.processors.file_transcript import FileTranscriptInput
-from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import (
     Transcript as TranscriptType,
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.storage.base import Storage
 
 
 class EmptyPipeline:
@@ -65,7 +65,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         self,
         track_data: bytes,
         track_idx: int,
-        storage,
+        storage: Storage,
     ) -> tuple[bytes, str]:
         """
         Pad a single track with silence based on stream metadata start_time.
@@ -585,16 +585,13 @@ class PipelineMainMultitrack(PipelineMainBase):
             padded_track_urls.append(padded_url)
             self.logger.info(f"Padded track {idx} for transcription: {padded_url}")
 
-        # Mixdown PADDED tracks (already aligned with timeline) into transcript.audio_mp3_filename
         try:
-            # Ensure data directory exists
             transcript.data_path.mkdir(parents=True, exist_ok=True)
 
             mp3_writer = AudioFileWriterProcessor(
                 path=str(transcript.audio_mp3_filename),
                 on_duration=self.on_duration,
             )
-            # Use PADDED tracks with NO additional offsets (already aligned by padding)
             await self.mixdown_tracks(
                 padded_track_datas, mp3_writer, offsets_seconds=None
             )
@@ -623,7 +620,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         except Exception as e:
             self.logger.error("Mixdown failed", error=str(e), exc_info=True)
 
-        # Generate waveform from the mixed audio file
         if transcript.audio_mp3_filename.exists():
             try:
                 self.logger.info("Generating waveform from mixed audio")
@@ -640,14 +636,12 @@ class PipelineMainMultitrack(PipelineMainBase):
                     "Waveform generation failed", error=str(e), exc_info=True
                 )
 
-        # Transcribe PADDED tracks - timestamps will be automatically correct!
         speaker_transcripts: list[TranscriptType] = []
         for idx, padded_url in enumerate(padded_track_urls):
             if not padded_url:
                 continue
 
             try:
-                # Transcribe the PADDED track
                 t = await self.transcribe_file(padded_url, transcript.source_language)
             except Exception as e:
                 self.logger.error(
@@ -657,23 +651,9 @@ class PipelineMainMultitrack(PipelineMainBase):
                     error=str(e),
                 )
                 try:
-                    fallback = FileTranscriptAutoProcessor(name="whisper")
-                    result = None
-
-                    async def capture_result(r):
-                        nonlocal result
-                        result = r
-
-                    fallback.on(capture_result)
-                    await fallback.push(
-                        FileTranscriptInput(
-                            audio_url=padded_url, language=transcript.source_language
-                        )
+                    t = await transcribe_file_with_processor(
+                        padded_url, transcript.source_language, processor_name="whisper"
                     )
-                    await fallback.flush()
-                    if not result:
-                        raise Exception("No transcript captured in fallback")
-                    t = result
                 except Exception as e2:
                     self.logger.error(
                         "Skipping track - transcription failed after fallback",
@@ -686,9 +666,6 @@ class PipelineMainMultitrack(PipelineMainBase):
             if not t.words:
                 continue
 
-            # NO OFFSET ADJUSTMENT NEEDED!
-            # Timestamps are already correct because we transcribed padded tracks
-            # Just set speaker ID
             for w in t.words:
                 w.speaker = idx
 
@@ -744,23 +721,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         await self.set_status(transcript.id, "ended")
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
-        processor = FileTranscriptAutoProcessor()
-        input_data = FileTranscriptInput(audio_url=audio_url, language=language)
-
-        result: TranscriptType | None = None
-
-        async def capture_result(transcript):
-            nonlocal result
-            result = transcript
-
-        processor.on(capture_result)
-        await processor.push(input_data)
-        await processor.flush()
-
-        if not result:
-            raise ValueError("No transcript captured")
-
-        return result
+        return await transcribe_file_with_processor(audio_url, language)
 
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str

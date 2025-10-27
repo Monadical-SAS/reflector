@@ -29,6 +29,7 @@ from reflector.pipelines.main_live_pipeline import (
     task_cleanup_consent,
     task_pipeline_post_to_zulip,
 )
+from reflector.pipelines.transcription_helpers import transcribe_file_with_processor
 from reflector.processors import (
     AudioFileWriterProcessor,
     TranscriptFinalSummaryProcessor,
@@ -38,8 +39,6 @@ from reflector.processors import (
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_diarization import FileDiarizationInput
 from reflector.processors.file_diarization_auto import FileDiarizationAutoProcessor
-from reflector.processors.file_transcript import FileTranscriptInput
-from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.transcript_diarization_assembler import (
     TranscriptDiarizationAssemblerInput,
     TranscriptDiarizationAssemblerProcessor,
@@ -262,24 +261,7 @@ class PipelineMainFile(PipelineMainBase):
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
         """Transcribe complete file"""
-        processor = FileTranscriptAutoProcessor()
-        input_data = FileTranscriptInput(audio_url=audio_url, language=language)
-
-        # Store result for retrieval
-        result: TranscriptType | None = None
-
-        async def capture_result(transcript):
-            nonlocal result
-            result = transcript
-
-        processor.on(capture_result)
-        await processor.push(input_data)
-        await processor.flush()
-
-        if not result:
-            raise ValueError("No transcript captured")
-
-        return result
+        return await transcribe_file_with_processor(audio_url, language)
 
     async def diarize_file(self, audio_url: str) -> list[DiarizationSegment] | None:
         """Get diarization for file"""
