@@ -72,6 +72,9 @@ class PipelineMainMultitrack(PipelineMainBase):
         This ensures Whisper timestamps will be relative to recording start.
         Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus.
 
+        Stores padded track temporarily to S3 to generate URL for Modal API transcription.
+        These temporary files should be cleaned up after transcription completes.
+
         Daily.co raw-tracks timing - Two approaches:
 
             CURRENT APPROACH (PyAV metadata):
@@ -85,7 +88,7 @@ class PipelineMainMultitrack(PipelineMainBase):
             - Absolute/wall-clock time
             - Recording duration
 
-            ALTERNATIVE APPROACH (filename parsing - commit 3bae9076):
+            ALTERNATIVE APPROACH (filename parsing):
             Daily.co filenames contain Unix timestamps (milliseconds):
             Format: {recording_start_ts}-{participant_id}-cam-audio-{track_start_ts}.webm
             Example: 1760988935484-52f7f48b-fbab-431f-9a50-87b9abfc8255-cam-audio-1760988935922.webm
@@ -115,7 +118,7 @@ class PipelineMainMultitrack(PipelineMainBase):
 
                 Merging just sorts by timestamp - no offset calculation needed.
 
-        Returns: (padded_data, storage_url)
+        Returns: (padded_data, temp_url_for_transcription)
         """
 
         if not track_data:
@@ -123,7 +126,6 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         transcript = await self.get_transcript()
 
-        # Create temp files for processing
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as input_file:
             input_file.write(track_data)
             input_file_path = input_file.name
@@ -131,32 +133,42 @@ class PipelineMainMultitrack(PipelineMainBase):
         output_file_path = input_file_path.replace(".webm", "_padded.webm")
 
         try:
-            # Extract meeting-relative start time from WebM metadata
             start_time_seconds = self._extract_stream_start_time(
                 input_file_path, track_idx
             )
 
-            # If no padding needed, store original track
+            # Determine data to transcribe (original or padded)
             if start_time_seconds <= 0:
-                storage_path = f"file_pipeline/{transcript.id}/tracks/original_track_{track_idx}.webm"
-                await storage.put_file(storage_path, track_data)
-                url = await storage.get_file_url(storage_path)
-                return track_data, url
+                self.logger.info(
+                    f"Track {track_idx} requires no padding (start_time={start_time_seconds}s)",
+                    track_idx=track_idx,
+                )
+                data_for_transcription = track_data
+            else:
+                self._apply_audio_padding(
+                    input_file_path, output_file_path, start_time_seconds, track_idx
+                )
 
-            # Apply padding using PyAV filter graph
-            self._apply_audio_padding(
-                input_file_path, output_file_path, start_time_seconds, track_idx
+                with open(output_file_path, "rb") as f:
+                    data_for_transcription = f.read()
+
+                self.logger.info(
+                    f"Successfully padded track {track_idx}",
+                    track_idx=track_idx,
+                    start_time_seconds=start_time_seconds,
+                    padded_size=len(data_for_transcription),
+                )
+
+            # Store temporarily for Modal API (requires URL)
+            storage_path = (
+                f"file_pipeline/{transcript.id}/tracks/temp_track_{track_idx}.webm"
             )
+            await storage.put_file(storage_path, data_for_transcription)
+            temp_url = await storage.get_file_url(storage_path)
 
-            # Read padded output
-            with open(output_file_path, "rb") as f:
-                padded_data = f.read()
-
-            # Store padded track to S3
-            return await self._store_padded_track(padded_data, track_idx, storage)
+            return data_for_transcription, temp_url
 
         finally:
-            # Clean up temp files
             try:
                 os.unlink(input_file_path)
             except OSError as e:
@@ -342,31 +354,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                 exc_info=True,
             )
             raise
-
-    async def _store_padded_track(
-        self, padded_data: bytes, track_idx: int, storage
-    ) -> tuple[bytes, str]:
-        """
-        Store padded track to S3 and return data + URL.
-
-        Returns: (padded_data, storage_url)
-        """
-        transcript = await self.get_transcript()
-
-        storage_path = (
-            f"file_pipeline/{transcript.id}/tracks/padded_track_{track_idx}.webm"
-        )
-        await storage.put_file(storage_path, padded_data)
-        padded_url = await storage.get_file_url(storage_path)
-
-        self.logger.info(
-            f"Successfully padded track {track_idx}, stored at {storage_path}",
-            track_idx=track_idx,
-            padded_url=padded_url,
-            padded_size=len(padded_data),
-        )
-
-        return padded_data, padded_url
 
     async def mixdown_tracks(
         self,
@@ -721,6 +708,26 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
+
+        self.logger.info(f"Cleaning up {len(padded_track_urls)} temporary S3 files")
+        cleanup_tasks = []
+        for idx, url in enumerate(padded_track_urls):
+            if url:
+                storage_path = (
+                    f"file_pipeline/{transcript.id}/tracks/temp_track_{idx}.webm"
+                )
+                cleanup_tasks.append(storage.delete_file(storage_path))
+
+        if cleanup_tasks:
+            cleanup_results = await asyncio.gather(
+                *cleanup_tasks, return_exceptions=True
+            )
+            for idx, result in enumerate(cleanup_results):
+                if isinstance(result, Exception):
+                    self.logger.warning(
+                        f"Failed to cleanup temp track file {idx}",
+                        error=str(result),
+                    )
 
         # Merge all words and sort by timestamp
         merged_words = []
