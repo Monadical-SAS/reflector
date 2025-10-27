@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from reflector.db.rooms import Room
+from reflector.logger import logger
 from reflector.platform_types import Platform
 
 from .base import VideoPlatformClient
@@ -53,8 +54,6 @@ class DailyClient(VideoPlatformClient):
             },
         }
 
-        # Configure S3 bucket for recordings
-        # NOTE: Not checking room.recording_type - figure out later if conditional needed
         assert self.config.s3_bucket, "S3 bucket must be configured"
         data["properties"]["recordings_bucket"] = {
             "bucket_name": self.config.s3_bucket,
@@ -62,8 +61,6 @@ class DailyClient(VideoPlatformClient):
             "assume_role_arn": self.config.aws_role_arn,
             "allow_api_access": True,
         }
-
-        from reflector.logger import logger
 
         async with httpx.AsyncClient() as client:
             response = await client.post(

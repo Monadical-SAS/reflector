@@ -56,6 +56,7 @@ class WherebyClient(VideoPlatformClient):
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
+                # creates a transient room + meeting https://docs.whereby.com/reference/whereby-rest-api-reference/meetings
                 f"{self.config.api_url}/meetings",
                 headers=self.headers,
                 json=data,

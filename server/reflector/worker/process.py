@@ -190,6 +190,8 @@ async def process_multitrack_recording(
         raise Exception(f"Room not found: {room_name}")
 
     meeting = await meetings_controller.create(
+        # daily.co doesn't provide an adequate (Daily)Meeting<->(Daily)Recording mapping https://docs.daily.co/reference/rest-api/webhooks/events
+        # we ignore Daily Meeting entity, assuming 1 meeting = 1 recording
         id=recording_id,
         room_name=room_name,
         room_url=room.name,
