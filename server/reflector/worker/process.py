@@ -23,6 +23,8 @@ from reflector.pipelines.main_multitrack_pipeline import (
 )
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
+from reflector.utils import generate_uuid4
+from reflector.utils.daily import DailyRoomName, extract_base_room_name
 from reflector.whereby import get_room_sessions
 from reflector.worker.daily_stub_data import get_stub_transcript_data
 
@@ -155,14 +157,14 @@ async def process_recording(bucket_name: str, object_key: str):
 @asynctask
 async def process_multitrack_recording(
     bucket_name: str,
-    room_name: str,
+    daily_room_name: DailyRoomName,
     recording_id: str,
     track_keys: list[str],
 ):
     logger.info(
         "Processing multitrack recording",
         bucket=bucket_name,
-        room_name=room_name,
+        room_name=daily_room_name,
         recording_id=recording_id,
         provided_keys=len(track_keys),
     )
@@ -184,23 +186,39 @@ async def process_multitrack_recording(
     except Exception:
         logger.warning("Could not parse recorded_at from keys, using now()")
 
-    room_name = room_name.split("-", 1)[0]
-    room = await rooms_controller.get_by_name(room_name)
-    if not room:
-        raise Exception(f"Room not found: {room_name}")
+    meeting = await meetings_controller.get_by_room_name(daily_room_name)
 
-    meeting = await meetings_controller.create(
-        # daily.co doesn't provide an adequate (Daily)Meeting<->(Daily)Recording mapping https://docs.daily.co/reference/rest-api/webhooks/events
-        # we ignore Daily Meeting entity, assuming 1 meeting = 1 recording
-        id=recording_id,
-        room_name=room_name,
-        room_url=room.name,
-        host_room_url=room.name,
-        start_date=recorded_at,
-        end_date=recorded_at,
-        room=room,
-        platform=room.platform,
-    )
+    room_name_base = extract_base_room_name(daily_room_name)
+
+    room = await rooms_controller.get_by_name(room_name_base)
+    if not room:
+        raise Exception(f"Room not found: {room_name_base}")
+
+    if not meeting:
+        # Fallback: Create Meeting if webhook arrived before frontend
+        logger.info(
+            "Creating Meeting from webhook (frontend didn't create it yet)",
+            room_name=daily_room_name,
+            recording_id=recording_id,
+        )
+
+        meeting = await meetings_controller.create(
+            id=generate_uuid4(),
+            room_name=daily_room_name,
+            room_url=room.name,
+            host_room_url=room.name,
+            start_date=recorded_at,
+            end_date=recorded_at,
+            room=room,
+            platform=room.platform,
+        )
+    else:
+        logger.info(
+            "Found existing Meeting for recording",
+            meeting_id=meeting.id,
+            room_name=daily_room_name,
+            recording_id=recording_id,
+        )
 
     recording = await recordings_controller.get_by_id(recording_id)
     if not recording:

@@ -10,6 +10,7 @@ from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.platform_types import Platform
 
+from ..utils.string import NonEmptyString
 from .base import VideoPlatformClient
 from .models import MeetingData, RecordingType, VideoPlatformConfig
 
@@ -30,14 +31,10 @@ class DailyClient(VideoPlatformClient):
         }
 
     async def create_meeting(
-        self, room_name_prefix: str, end_date: datetime, room: Room
+        self, room_name_prefix: NonEmptyString, end_date: datetime, room: Room
     ) -> MeetingData:
-        """Create a Daily.co room."""
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
-        if room_name_prefix:
-            room_name = f"{room_name_prefix}-{timestamp}"
-        else:
-            room_name = f"room-{timestamp}"
+        room_name = f"{room_name_prefix}-{timestamp}"
 
         data = {
             "name": room_name,

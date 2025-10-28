@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger
 from reflector.settings import settings
+from reflector.utils.daily import DailyRoomName
 from reflector.video_platforms.factory import create_platform_client
 from reflector.worker.process import process_multitrack_recording
 
@@ -33,7 +34,7 @@ class DailyWebhookEvent(BaseModel):
     event_ts: float
 
 
-def _extract_room_name(event: DailyWebhookEvent) -> str | None:
+def _extract_room_name(event: DailyWebhookEvent) -> DailyRoomName | None:
     """Extract room name from Daily event payload.
 
     Daily.co API inconsistency:
@@ -104,23 +105,25 @@ async def webhook(request: Request):
 
 async def _handle_participant_joined(event: DailyWebhookEvent):
     """Handle participant joined event."""
-    room_name = _extract_room_name(event)
-    if not room_name:
+    daily_room_name = _extract_room_name(event)
+    if not daily_room_name:
         logger.warning("participant.joined: no room in payload", payload=event.payload)
         return
 
-    meeting = await meetings_controller.get_by_room_name(room_name)
+    meeting = await meetings_controller.get_by_room_name(daily_room_name)
     if meeting:
         await meetings_controller.increment_num_clients(meeting.id)
         logger.info(
             "Participant joined",
             meeting_id=meeting.id,
-            room_name=room_name,
+            room_name=daily_room_name,
             recording_type=meeting.recording_type,
             recording_trigger=meeting.recording_trigger,
         )
     else:
-        logger.warning("participant.joined: meeting not found", room_name=room_name)
+        logger.warning(
+            "participant.joined: meeting not found", room_name=daily_room_name
+        )
 
 
 async def _handle_participant_left(event: DailyWebhookEvent):
@@ -182,7 +185,6 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         )
         return
 
-    # Validate tracks structure
     try:
         tracks = [DailyTrack(**t) for t in tracks_raw]
     except Exception as e:
@@ -212,7 +214,7 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
     process_multitrack_recording.delay(
         bucket_name=bucket_name,
-        room_name=room_name,
+        daily_room_name=room_name,
         recording_id=recording_id,
         track_keys=track_keys,
     )
