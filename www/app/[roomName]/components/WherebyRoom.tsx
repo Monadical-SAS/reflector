@@ -18,7 +18,6 @@ interface WherebyRoomProps {
   meeting: Meeting;
 }
 
-// Whereby-specific consent button wrapper
 function WherebyConsentDialogButton({
   meetingId,
   wherebyRef,

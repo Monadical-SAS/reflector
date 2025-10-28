@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Box } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import DailyIframe, { DailyCall } from "@daily-co/daily-js";
@@ -21,8 +21,6 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
   const auth = useAuth();
   const status = auth.status;
-  const isAuthenticated = status === "authenticated";
-  const [callFrame, setCallFrame] = useState<DailyCall | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const roomUrl = meeting?.host_room_url || meeting?.room_url;
@@ -63,10 +61,6 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
 
         frame.on("left-meeting", handleLeave);
         await frame.join({ url: roomUrl });
-
-        if (!destroyed) {
-          setCallFrame(frame);
-        }
       } catch (error) {
         console.error("Error creating Daily frame:", error);
       }
