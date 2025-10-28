@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Recreate Daily.co webhook (fixes circuit-breaker FAILED state)."""
 
 import asyncio
 import sys
@@ -13,7 +12,6 @@ from reflector.settings import settings
 
 
 async def recreate_webhook(webhook_url: str):
-    """Delete all webhooks and create new one."""
     if not settings.DAILY_API_KEY:
         print("Error: DAILY_API_KEY not set")
         return 1

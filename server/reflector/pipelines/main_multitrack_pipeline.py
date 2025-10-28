@@ -54,8 +54,6 @@ class EmptyPipeline:
 
 
 class PipelineMainMultitrack(PipelineMainBase):
-    """Process multiple participant tracks for a transcript without mixing audio."""
-
     def __init__(self, transcript_id: str):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
@@ -70,10 +68,8 @@ class PipelineMainMultitrack(PipelineMainBase):
         """
         Pad a single track with silence based on stream metadata start_time.
         This ensures Whisper timestamps will be relative to recording start.
-        Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus.
-
-        Stores padded track temporarily to S3 to generate URL for Modal API transcription.
-        These temporary files should be cleaned up after transcription completes.
+        Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus
+        Stores padded track temporarily to S3 for Modal API transcription.
 
         Daily.co raw-tracks timing - Two approaches:
 
@@ -117,8 +113,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                     Track B word at 10.0s → happened at meeting t=10.0s
 
                 Merging just sorts by timestamp - no offset calculation needed.
-
-        Returns: (padded_data, temp_url_for_transcription)
         """
 
         if not track_data:
@@ -136,8 +130,6 @@ class PipelineMainMultitrack(PipelineMainBase):
             start_time_seconds = self._extract_stream_start_time(
                 input_file_path, track_idx
             )
-
-            # Determine data to transcribe (original or padded)
             if start_time_seconds <= 0:
                 self.logger.info(
                     f"Track {track_idx} requires no padding (start_time={start_time_seconds}s)",
@@ -158,8 +150,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                     start_time_seconds=start_time_seconds,
                     padded_size=len(data_for_transcription),
                 )
-
-            # Store temporarily for Modal API (requires URL)
             storage_path = (
                 f"file_pipeline/{transcript.id}/tracks/temp_track_{track_idx}.webm"
             )
@@ -189,19 +179,14 @@ class PipelineMainMultitrack(PipelineMainBase):
     def _extract_stream_start_time(self, input_file_path: str, track_idx: int) -> float:
         """
         Extract meeting-relative start time from WebM stream metadata.
-
-        Uses PyAV to read stream.start_time from WebM container (not filename parsing).
-        This is more accurate than filename timestamps by ~209ms due to network/encoding delays.
-
+        Uses PyAV to read stream.start_time from WebM container.
+        More accurate than filename timestamps by ~209ms due to network/encoding delays.
         """
         start_time_seconds = 0.0
         try:
             with av.open(input_file_path) as container:
-                # Prefer the first audio stream if present
                 audio_streams = [s for s in container.streams if s.type == "audio"]
                 stream = audio_streams[0] if audio_streams else container.streams[0]
-
-                # 1) Use stream.start_time in stream.time_base units
                 if stream.start_time is not None and stream.time_base is not None:
                     start_time_seconds = float(stream.start_time * stream.time_base)
 
@@ -236,12 +221,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         start_time_seconds: float,
         track_idx: int,
     ) -> None:
-        """
-        Apply silence padding to audio track using PyAV filter graph.
-        Writes padded audio to output_file_path.
-
-        Raises: Exception if padding fails
-        """
+        """Apply silence padding to audio track using PyAV filter graph"""
         delay_ms = math.floor(start_time_seconds * 1000)
 
         self.logger.info(
@@ -251,12 +231,10 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
 
         try:
-            # Open input and prepare output container
             with (
                 av.open(input_file_path) as in_container,
                 av.open(output_file_path, "w") as out_container,
             ):
-                # Pick first audio stream
                 in_stream = next(
                     (s for s in in_container.streams if s.type == "audio"), None
                 )
@@ -266,15 +244,10 @@ class PipelineMainMultitrack(PipelineMainBase):
                 # Use standard Opus sample rate
                 out_sample_rate = 48000
 
-                # Create Opus audio stream
                 out_stream = out_container.add_stream("libopus", rate=out_sample_rate)
-                # 128 kbps target (Opus), matching previous configuration
                 out_stream.bit_rate = 128000
-
-                # Build filter graph: abuffer -> aresample (async=1) -> adelay -> sink
                 graph = av.filter.Graph()
 
-                # We'll feed s16/stereo/48k frames to abuffer
                 abuf_args = (
                     f"time_base=1/{out_sample_rate}:"
                     f"sample_rate={out_sample_rate}:"
@@ -283,7 +256,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                 )
                 src = graph.add("abuffer", args=abuf_args, name="src")
                 aresample_f = graph.add("aresample", args="async=1", name="ares")
-
                 # adelay requires one delay value per channel separated by '|'
                 delays_arg = f"{delay_ms}|{delay_ms}"
                 adelay_f = graph.add(
@@ -296,11 +268,9 @@ class PipelineMainMultitrack(PipelineMainBase):
                 adelay_f.link_to(sink)
                 graph.configure()
 
-                # Resample incoming frames to s16/stereo/48k for graph and encoder
                 resampler = AudioResampler(
                     format="s16", layout="stereo", rate=out_sample_rate
                 )
-
                 # Decode -> resample -> push through graph -> encode Opus
                 for frame in in_container.decode(in_stream):
                     out_frames = resampler.resample(frame) or []
@@ -309,7 +279,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                         rframe.time_base = Fraction(1, out_sample_rate)
                         src.push(rframe)
 
-                        # Drain available frames from sink and encode
                         while True:
                             try:
                                 f_out = sink.pull()
@@ -320,7 +289,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                             for packet in out_stream.encode(f_out):
                                 out_container.mux(packet)
 
-                # Flush filter graph and encoder
                 src.push(None)
                 while True:
                     try:
@@ -350,11 +318,8 @@ class PipelineMainMultitrack(PipelineMainBase):
         writer: AudioFileWriterProcessor,
         offsets_seconds: list[float] | None = None,
     ) -> None:
-        """
-        Minimal multi-track mixdown using a PyAV filter graph (amix), no resampling.
-        """
+        """Minimal multi-track mixdown using PyAV filter graph (amix)"""
 
-        # Discover target sample rate from first decodable frame
         target_sample_rate: int | None = None
         for data in track_datas:
             if not data:
@@ -375,7 +340,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         if not target_sample_rate:
             self.logger.warning("Mixdown skipped - no decodable audio frames found")
             return
-
         # Build PyAV filter graph:
         # N abuffer (s32/stereo)
         #   -> optional adelay per input (for alignment)
@@ -385,7 +349,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         graph = av.filter.Graph()
         inputs = []
         valid_track_datas = [d for d in track_datas if d]
-        # Align offsets list with the filtered inputs (skip empties)
         input_offsets_seconds = None
         if offsets_seconds is not None:
             input_offsets_seconds = [
@@ -443,8 +406,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         mixer.link_to(fmt)
         fmt.link_to(sink)
         graph.configure()
-
-        # Open containers for decoding
         containers = []
         for i, d in enumerate(valid_track_datas):
             try:
@@ -455,18 +416,15 @@ class PipelineMainMultitrack(PipelineMainBase):
                     "Mixdown: failed to open container", input=i, error=str(e)
                 )
                 containers.append(None)
-        # Filter out Nones for decoders
         containers = [c for c in containers if c is not None]
         decoders = [c.decode(audio=0) for c in containers]
         active = [True] * len(decoders)
-        # Per-input resamplers to enforce s32/stereo at the same rate (no resample of rate)
         resamplers = [
             AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
             for _ in decoders
         ]
 
         try:
-            # Round-robin feed frames into graph, pull mixed frames as they become available
             while any(active):
                 for i, (dec, is_active) in enumerate(zip(decoders, active)):
                     if not is_active:
@@ -477,9 +435,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                         active[i] = False
                         continue
 
-                    # Enforce same sample rate; convert format/layout to s16/stereo (no resample)
                     if frame.sample_rate != target_sample_rate:
-                        # Skip frames with differing rate
                         continue
                     out_frames = resamplers[i].resample(frame) or []
                     for rf in out_frames:
@@ -487,7 +443,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                         rf.time_base = Fraction(1, target_sample_rate)
                         inputs[i].push(rf)
 
-                    # Drain available mixed frames
                     while True:
                         try:
                             mixed = sink.pull()
@@ -497,7 +452,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                         mixed.time_base = Fraction(1, target_sample_rate)
                         await writer.push(mixed)
 
-            # Signal EOF to inputs and drain remaining
             for in_ctx in inputs:
                 in_ctx.push(None)
             while True:
@@ -527,8 +481,6 @@ class PipelineMainMultitrack(PipelineMainBase):
 
     async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
-
-        # Clear transcript as we're going to regenerate everything
         async with self.transaction():
             await transcripts_controller.update(
                 transcript,
@@ -561,15 +513,12 @@ class PipelineMainMultitrack(PipelineMainBase):
                     exc_info=True,
                 )
                 track_datas.append(b"")
-
-        # Early validation: fail fast if any downloads failed
         valid_track_count = sum(1 for d in track_datas if d)
         if valid_track_count < len(track_keys):
             raise Exception(
                 f"Failed to download {len(track_keys) - valid_track_count}/{len(track_keys)} tracks from S3 bucket {bucket_name}"
             )
 
-        # PAD TRACKS FIRST - this creates full-length tracks with correct timeline
         padded_track_datas: list[bytes] = []
         padded_track_urls: list[str] = []
         for idx, data in enumerate(track_datas):
@@ -596,15 +545,12 @@ class PipelineMainMultitrack(PipelineMainBase):
                 padded_track_datas, mp3_writer, offsets_seconds=None
             )
             await mp3_writer.flush()
-
-            # Upload the mixed audio to S3 for web playback
             if transcript.audio_mp3_filename.exists():
                 mp3_data = transcript.audio_mp3_filename.read_bytes()
                 storage_path = f"{transcript.id}/audio.mp3"
                 await storage.put_file(storage_path, mp3_data)
                 mp3_url = await storage.get_file_url(storage_path)
 
-                # Update transcript to indicate audio is in storage
                 await transcripts_controller.update(
                     transcript, {"audio_location": "storage"}
                 )
@@ -697,8 +643,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                         f"Failed to cleanup temp track file {idx}",
                         error=str(result),
                     )
-
-        # Merge all words and sort by timestamp (monotonic invariant before topic detection)
         merged_words = []
         for t in speaker_transcripts:
             merged_words.extend(t.words)

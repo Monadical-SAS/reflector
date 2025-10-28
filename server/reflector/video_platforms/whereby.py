@@ -14,8 +14,6 @@ from .base import MeetingData, Platform, VideoPlatformClient, VideoPlatformConfi
 
 
 class WherebyClient(VideoPlatformClient):
-    """Whereby video platform implementation."""
-
     PLATFORM_NAME: Platform = "whereby"
     TIMEOUT = 10  # seconds
     MAX_ELAPSED_TIME = 60 * 1000  # 1 minute in milliseconds
@@ -30,7 +28,6 @@ class WherebyClient(VideoPlatformClient):
     async def create_meeting(
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> MeetingData:
-        """Create a Whereby meeting."""
         data = {
             "isLocked": room.is_locked,
             "roomNamePrefix": room_name_prefix,
@@ -40,7 +37,6 @@ class WherebyClient(VideoPlatformClient):
             "fields": ["hostRoomUrl"],
         }
 
-        # Add recording configuration if cloud recording is enabled
         if room.recording_type == "cloud":
             data["recording"] = {
                 "type": room.recording_type,
@@ -56,7 +52,6 @@ class WherebyClient(VideoPlatformClient):
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                # creates a transient room + meeting https://docs.whereby.com/reference/whereby-rest-api-reference/meetings
                 f"{self.config.api_url}/meetings",
                 headers=self.headers,
                 json=data,
@@ -75,7 +70,6 @@ class WherebyClient(VideoPlatformClient):
         )
 
     async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
-        """Get Whereby room session information."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.config.api_url}/insights/room-sessions?roomName={room_name}",
@@ -86,11 +80,9 @@ class WherebyClient(VideoPlatformClient):
             return response.json()
 
     async def delete_room(self, room_name: str) -> bool:
-        """Whereby doesn't support room deletion - meetings expire automatically."""
         return True
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
-        """Upload logo to Whereby room."""
         async with httpx.AsyncClient() as client:
             with open(logo_path, "rb") as f:
                 response = await client.put(
@@ -107,7 +99,6 @@ class WherebyClient(VideoPlatformClient):
     def verify_webhook_signature(
         self, body: bytes, signature: str, timestamp: Optional[str] = None
     ) -> bool:
-        """Verify Whereby webhook signature."""
         if not signature:
             return False
 
@@ -117,13 +108,11 @@ class WherebyClient(VideoPlatformClient):
 
         ts, sig = matches.groups()
 
-        # Check timestamp to prevent replay attacks
         current_time = int(time.time() * 1000)
         diff_time = current_time - int(ts) * 1000
         if diff_time >= self.MAX_ELAPSED_TIME:
             return False
 
-        # Verify signature
         body_dict = json.loads(body)
         signed_payload = f"{ts}.{json.dumps(body_dict, separators=(',', ':'))}"
         hmac_obj = hmac.new(

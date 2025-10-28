@@ -1,5 +1,3 @@
-"""Factory for creating video platform clients based on configuration."""
-
 from typing import Optional
 
 from reflector.settings import settings
@@ -9,7 +7,6 @@ from .registry import get_platform_client
 
 
 def get_platform_config(platform: Platform) -> VideoPlatformConfig:
-    """Get configuration for a specific platform."""
     if platform == "whereby":
         if not settings.WHEREBY_API_KEY:
             raise ValueError(
@@ -49,7 +46,6 @@ def get_platform_config(platform: Platform) -> VideoPlatformConfig:
 
 
 def create_platform_client(platform: Platform) -> VideoPlatformClient:
-    """Create a video platform client instance."""
     config = get_platform_config(platform)
     return get_platform_client(platform, config)
 
@@ -57,24 +53,13 @@ def create_platform_client(platform: Platform) -> VideoPlatformClient:
 def get_platform_for_room(
     room_id: Optional[str] = None, room_platform: Optional[Platform] = None
 ) -> Platform:
-    """Determine which platform to use for a room.
-
-    Priority order (highest to lowest):
-    1. DAILY_MIGRATION_ROOM_IDS - env var override for testing/migration
-    2. room_platform - database persisted platform choice
-    3. DEFAULT_VIDEO_PLATFORM - env var fallback
-    """
-    # If Daily migration is disabled, always use Whereby
     if not settings.DAILY_MIGRATION_ENABLED:
         return "whereby"
 
-    # Highest priority: If room is in migration list, use Daily (env var override)
     if room_id and room_id in settings.DAILY_MIGRATION_ROOM_IDS:
         return "daily"
 
-    # Second priority: Use room's persisted platform from database
     if room_platform:
         return room_platform
 
-    # Fallback: Use default platform from env var
     return settings.DEFAULT_VIDEO_PLATFORM

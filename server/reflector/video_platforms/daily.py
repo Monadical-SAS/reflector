@@ -1,3 +1,4 @@
+import base64
 import hmac
 from datetime import datetime
 from hashlib import sha256
@@ -31,8 +32,6 @@ class DailyClient(VideoPlatformClient):
             "Content-Type": "application/json",
         }
 
-    # method naming to conform to OOP best practices
-    # daily.co meeting cannot be created https://docs.daily.co/reference/rest-api/meetings by us
     async def create_meeting(
         self, room_name_prefix: NonEmptyString, end_date: datetime, room: Room
     ) -> MeetingData:
@@ -86,7 +85,6 @@ class DailyClient(VideoPlatformClient):
             response.raise_for_status()
             result = response.json()
 
-        # Format response to match our standard
         room_url = result["url"]
 
         return MeetingData(
@@ -99,7 +97,6 @@ class DailyClient(VideoPlatformClient):
         )
 
     async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
-        """Get Daily.co room information."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.BASE_URL}/rooms/{room_name}",
@@ -110,7 +107,6 @@ class DailyClient(VideoPlatformClient):
             return response.json()
 
     async def get_room_presence(self, room_name: str) -> Dict[str, Any]:
-        """Get real-time participant data - Daily.co specific feature."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.BASE_URL}/rooms/{room_name}/presence",
@@ -121,18 +117,15 @@ class DailyClient(VideoPlatformClient):
             return response.json()
 
     async def delete_room(self, room_name: str) -> bool:
-        """Delete a Daily.co room."""
         async with httpx.AsyncClient() as client:
             response = await client.delete(
                 f"{self.BASE_URL}/rooms/{room_name}",
                 headers=self.headers,
                 timeout=self.TIMEOUT,
             )
-            # Daily.co returns 200 for success, 404 if room doesn't exist
             return response.status_code in (HTTPStatus.OK, HTTPStatus.NOT_FOUND)
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
-        """Daily.co doesn't support custom logos per room - this is a no-op."""
         return True
 
     def verify_webhook_signature(
@@ -150,8 +143,6 @@ class DailyClient(VideoPlatformClient):
             return False
 
         try:
-            import base64
-
             secret_bytes = base64.b64decode(self.config.webhook_secret)
 
             signed_content = timestamp.encode() + b"." + body
@@ -160,13 +151,13 @@ class DailyClient(VideoPlatformClient):
             expected_b64 = base64.b64encode(expected).decode()
 
             return hmac.compare_digest(expected_b64, signature)
-        except Exception:
+        except Exception as e:
+            logger.error("Daily.co webhook signature verification failed", exc_info=e)
             return False
 
     async def create_meeting_token(
         self, room_name: DailyRoomName, enable_recording: bool
     ) -> str:
-        """Create meeting token for auto-recording."""
         data = {"properties": {"room_name": room_name}}
 
         if enable_recording:

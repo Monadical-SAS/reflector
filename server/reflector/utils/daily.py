@@ -1,13 +1,5 @@
-"""
-Daily.co-specific utility functions.
-
-This module provides utilities for working with Daily.co platform specifics,
-such as parsing room names and handling Daily.co conventions.
-"""
-
 import re
 
-# Daily.co room name created with /rooms POST has name "roomNameWeProvided-timestamp"
 DailyRoomName = str
 
 

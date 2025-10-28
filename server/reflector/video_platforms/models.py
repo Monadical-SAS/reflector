@@ -1,8 +1,3 @@
-"""Video platform data models.
-
-Standard data models used across all video platform implementations.
-"""
-
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -13,8 +8,6 @@ RecordingType = Literal["none", "local", "cloud"]
 
 
 class MeetingData(BaseModel):
-    """Standardized meeting data returned by all providers."""
-
     platform: Platform
     meeting_id: str = Field(description="Platform-specific meeting identifier")
     room_url: str = Field(description="URL for participants to join")
@@ -35,8 +28,6 @@ class MeetingData(BaseModel):
 
 
 class VideoPlatformConfig(BaseModel):
-    """Platform-agnostic configuration model."""
-
     api_key: str
     webhook_secret: str
     api_url: Optional[str] = None

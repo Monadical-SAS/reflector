@@ -330,16 +330,13 @@ async def rooms_create_meeting(
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
 
-                # Determine which platform to use
                 platform = get_platform_for_room(room.id, room.platform)
                 client = create_platform_client(platform)
 
-                # Create meeting via platform abstraction
                 meeting_data = await client.create_meeting(
                     room.name, end_date=end_date, room=room
                 )
 
-                # Upload logo if supported by platform
                 await client.upload_logo(meeting_data.room_name, "./images/logo.png")
 
                 meeting = await meetings_controller.create(

@@ -1,5 +1,3 @@
-"""Daily.co webhook handler endpoint."""
-
 import json
 from typing import Any, Dict, Literal
 
@@ -17,16 +15,12 @@ router = APIRouter()
 
 
 class DailyTrack(BaseModel):
-    """Daily.co recording track (audio or video file)."""
-
     type: Literal["audio", "video"]
     s3Key: str
     size: int
 
 
 class DailyWebhookEvent(BaseModel):
-    """Daily webhook event structure."""
-
     version: str
     type: str
     id: str
@@ -104,7 +98,6 @@ async def webhook(request: Request):
 
 
 async def _handle_participant_joined(event: DailyWebhookEvent):
-    """Handle participant joined event."""
     daily_room_name = _extract_room_name(event)
     if not daily_room_name:
         logger.warning("participant.joined: no room in payload", payload=event.payload)
@@ -127,7 +120,6 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
 
 
 async def _handle_participant_left(event: DailyWebhookEvent):
-    """Handle participant left event."""
     room_name = _extract_room_name(event)
     if not room_name:
         return
@@ -138,7 +130,6 @@ async def _handle_participant_left(event: DailyWebhookEvent):
 
 
 async def _handle_recording_started(event: DailyWebhookEvent):
-    """Handle recording started event."""
     room_name = _extract_room_name(event)
     if not room_name:
         logger.warning(
@@ -221,7 +212,6 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
 
 async def _handle_recording_error(event: DailyWebhookEvent):
-    """Handle recording error event."""
     room_name = _extract_room_name(event)
     error = event.payload.get("error", "Unknown error")
 

@@ -1,7 +1,3 @@
-"""
-Helper utilities for file transcription across pipelines.
-"""
-
 from reflector.processors.file_transcript import FileTranscriptInput
 from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.types import Transcript as TranscriptType
@@ -12,21 +8,6 @@ async def transcribe_file_with_processor(
     language: str,
     processor_name: str | None = None,
 ) -> TranscriptType:
-    """
-    Transcribe an audio file using FileTranscriptAutoProcessor.
-
-    Args:
-        audio_url: URL to the audio file (must be publicly accessible)
-        language: Language code (e.g., "en", "es")
-        processor_name: Optional processor name (e.g., "whisper", "modal").
-                       If None, uses default auto-selection.
-
-    Returns:
-        TranscriptType with words and optional translation
-
-    Raises:
-        ValueError: If no transcript was captured from the processor
-    """
     processor = (
         FileTranscriptAutoProcessor(name=processor_name)
         if processor_name
