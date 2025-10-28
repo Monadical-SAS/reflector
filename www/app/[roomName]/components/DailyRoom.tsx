@@ -91,9 +91,9 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   return (
     <Box position="relative" width="100vw" height="100vh">
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      {recordingTypeRequiresConsent(meeting.recording_type) && (
-        <ConsentDialogButton meetingId={meeting.id} />
-      )}
+      {meeting.recording_type &&
+        recordingTypeRequiresConsent(meeting.recording_type) &&
+        meeting.id && <ConsentDialogButton meetingId={meeting.id} />}
     </Box>
   );
 }

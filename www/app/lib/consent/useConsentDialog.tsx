@@ -17,14 +17,15 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
     null,
   );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
       if (keydownHandlerRef.current) {
         document.removeEventListener("keydown", keydownHandlerRef.current);
+        keydownHandlerRef.current = null;
       }
     };
   }, []);
@@ -71,20 +72,6 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
       ),
     });
 
-    // Monitor toast dismissal
-    toastId.then((id) => {
-      intervalRef.current = setInterval(() => {
-        if (!toaster.isActive(id)) {
-          setModalOpen(false);
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-        }
-      }, TOAST_CHECK_INTERVAL_MS);
-    });
-
-    // Handle escape key
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         toastId.then((id) => toaster.dismiss(id));
@@ -94,11 +81,16 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
     keydownHandlerRef.current = handleKeyDown;
     document.addEventListener("keydown", handleKeyDown);
 
-    // Cleanup when toast is dismissed
     toastId.then((id) => {
-      const checkDismissal = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         if (!toaster.isActive(id)) {
-          clearInterval(checkDismissal);
+          setModalOpen(false);
+
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+
           if (keydownHandlerRef.current) {
             document.removeEventListener("keydown", keydownHandlerRef.current);
             keydownHandlerRef.current = null;
@@ -106,7 +98,7 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
         }
       }, TOAST_CHECK_INTERVAL_MS);
     });
-  }, [meetingId, handleConsent, modalOpen]);
+  }, [handleConsent, modalOpen]);
 
   return {
     showConsentModal,

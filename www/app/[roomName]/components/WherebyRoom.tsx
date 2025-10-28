@@ -18,37 +18,7 @@ interface WherebyRoomProps {
   meeting: Meeting;
 }
 
-// Whereby-specific focus management for consent dialog
-const useWherebyConsentFocusManagement = (
-  wherebyRef: RefObject<HTMLElement>,
-  shouldManageFocus: boolean,
-) => {
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!shouldManageFocus) return;
-
-    const handleWherebyReady = () => {
-      console.log("whereby ready - consent button should handle focus");
-      previousFocusRef.current = document.activeElement as HTMLElement;
-    };
-
-    const element = wherebyRef.current;
-    if (element) {
-      element.addEventListener("ready", handleWherebyReady);
-    } else {
-      console.warn(
-        "whereby ref not available for focus management - focus management disabled",
-      );
-    }
-
-    return () => {
-      element?.removeEventListener("ready", handleWherebyReady);
-      previousFocusRef.current?.focus();
-    };
-  }, [wherebyRef, shouldManageFocus]);
-};
-
+// Whereby-specific consent button wrapper
 function WherebyConsentDialogButton({
   meetingId,
   wherebyRef,
@@ -56,13 +26,25 @@ function WherebyConsentDialogButton({
   meetingId: NonEmptyString;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
-  const { consentState, hasConsent, consentLoading } =
-    useConsentDialog(meetingId);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  const shouldManageFocus =
-    consentState.ready && !hasConsent(meetingId) && !consentLoading;
+  useEffect(() => {
+    const element = wherebyRef.current;
+    if (!element) return;
 
-  useWherebyConsentFocusManagement(wherebyRef, shouldManageFocus);
+    const handleWherebyReady = () => {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+    };
+
+    element.addEventListener("ready", handleWherebyReady);
+
+    return () => {
+      element.removeEventListener("ready", handleWherebyReady);
+      if (previousFocusRef.current && document.activeElement === element) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [wherebyRef]);
 
   return <BaseConsentDialogButton meetingId={meetingId} />;
 }
