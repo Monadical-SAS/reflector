@@ -104,9 +104,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
     try:
         end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
 
-        # Use platform abstraction to create meeting
-        platform = room.platform
-        client = create_platform_client(platform)
+        client = create_platform_client(room.platform)
 
         meeting_data = await client.create_meeting(
             "",
@@ -129,7 +127,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
                 "description": event.description,
                 "attendees": event.attendees,
             },
-            platform=platform,
+            platform=room.platform,
         )
 
         logger.info(

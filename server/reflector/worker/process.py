@@ -21,9 +21,10 @@ from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.main_multitrack_pipeline import (
     task_pipeline_multitrack_process,
 )
+from reflector.processors import AudioFileWriterProcessor
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
-from reflector.utils import generate_uuid4
 from reflector.utils.daily import DailyRoomName, extract_base_room_name
 from reflector.whereby import get_room_sessions
 
@@ -172,18 +173,21 @@ async def process_multitrack_recording(
         logger.warning("No audio track keys provided")
         return
 
-    recorded_at = datetime.now(timezone.utc)
+    tz = timezone.utc
+    recorded_at = datetime.now(tz)
     try:
         if track_keys:
             folder = os.path.basename(os.path.dirname(track_keys[0]))
             ts_match = re.search(r"(\d{14})$", folder)
             if ts_match:
                 ts = ts_match.group(1)
-                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(
-                    tzinfo=timezone.utc
-                )
-    except Exception:
-        logger.warning("Could not parse recorded_at from keys, using now()")
+                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(tzinfo=tz)
+    except Exception as e:
+        logger.warning(
+            f"Could not parse recorded_at from keys, using now() {recorded_at}",
+            e,
+            exc_info=True,
+        )
 
     meeting = await meetings_controller.get_by_room_name(daily_room_name)
 
@@ -194,30 +198,14 @@ async def process_multitrack_recording(
         raise Exception(f"Room not found: {room_name_base}")
 
     if not meeting:
-        # Fallback: Create Meeting if webhook arrived before frontend
-        logger.info(
-            "Creating Meeting from webhook (frontend didn't create it yet)",
-            room_name=daily_room_name,
-            recording_id=recording_id,
-        )
+        raise Exception(f"Meeting not found: {room_name_base}")
 
-        meeting = await meetings_controller.create(
-            id=generate_uuid4(),
-            room_name=daily_room_name,
-            room_url=room.name,
-            host_room_url=room.name,
-            start_date=recorded_at,
-            end_date=recorded_at,
-            room=room,
-            platform=room.platform,
-        )
-    else:
-        logger.info(
-            "Found existing Meeting for recording",
-            meeting_id=meeting.id,
-            room_name=daily_room_name,
-            recording_id=recording_id,
-        )
+    logger.info(
+        "Found existing Meeting for recording",
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+        recording_id=recording_id,
+    )
 
     recording = await recordings_controller.get_by_id(recording_id)
     if not recording:
@@ -366,10 +354,6 @@ async def convert_audio_and_waveform(transcript) -> None:
             "Converting audio to MP3 and generating waveform",
             transcript_id=transcript.id,
         )
-
-        # Import processors we need
-        from reflector.processors import AudioFileWriterProcessor
-        from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 
         upload_path = transcript.data_path / "upload.webm"
         mp3_path = transcript.audio_mp3_filename
