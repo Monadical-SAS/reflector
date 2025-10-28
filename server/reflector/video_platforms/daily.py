@@ -10,6 +10,7 @@ from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.platform_types import Platform
 
+from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
 from .base import VideoPlatformClient
 from .models import MeetingData, RecordingType, VideoPlatformConfig
@@ -30,9 +31,18 @@ class DailyClient(VideoPlatformClient):
             "Content-Type": "application/json",
         }
 
+    # method naming to conform to OOP best practices
+    # daily.co meeting cannot be created https://docs.daily.co/reference/rest-api/meetings by us
     async def create_meeting(
         self, room_name_prefix: NonEmptyString, end_date: datetime, room: Room
     ) -> MeetingData:
+        """
+        Daily.co rooms vs meetings:
+        - We create a NEW Daily.co room for each Reflector meeting
+        - Daily.co meeting/session starts automatically when first participant joins
+        - Room auto-deletes after exp time
+        - Meeting.room_name stores the timestamped Daily.co room name
+        """
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
         room_name = f"{room_name_prefix}-{timestamp}"
 
@@ -153,7 +163,9 @@ class DailyClient(VideoPlatformClient):
         except Exception:
             return False
 
-    async def create_meeting_token(self, room_name: str, enable_recording: bool) -> str:
+    async def create_meeting_token(
+        self, room_name: DailyRoomName, enable_recording: bool
+    ) -> str:
         """Create meeting token for auto-recording."""
         data = {"properties": {"room_name": room_name}}
 
