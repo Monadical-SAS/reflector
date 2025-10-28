@@ -27,6 +27,7 @@ from reflector.views.transcripts_upload import router as transcripts_upload_rout
 from reflector.views.transcripts_webrtc import router as transcripts_webrtc_router
 from reflector.views.transcripts_websocket import router as transcripts_websocket_router
 from reflector.views.user import router as user_router
+from reflector.views.user_api_keys import router as user_api_keys_router
 from reflector.views.user_websocket import router as user_ws_router
 from reflector.views.whereby import router as whereby_router
 from reflector.views.zulip import router as zulip_router
@@ -92,6 +93,7 @@ app.include_router(transcripts_websocket_router, prefix="/v1")
 app.include_router(transcripts_webrtc_router, prefix="/v1")
 app.include_router(transcripts_process_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
+app.include_router(user_api_keys_router, prefix="/v1")
 app.include_router(user_ws_router, prefix="/v1")
 app.include_router(zulip_router, prefix="/v1")
 app.include_router(whereby_router, prefix="/v1")

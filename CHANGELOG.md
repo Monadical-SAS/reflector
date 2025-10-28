@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.0](https://github.com/Monadical-SAS/reflector/compare/v0.15.0...v0.16.0) (2025-10-24)
+
+
+### Features
+
+* search date filter ([#710](https://github.com/Monadical-SAS/reflector/issues/710)) ([962c40e](https://github.com/Monadical-SAS/reflector/commit/962c40e2b6428ac42fd10aea926782d7a6f3f902))
+
+## [0.15.0](https://github.com/Monadical-SAS/reflector/compare/v0.14.0...v0.15.0) (2025-10-20)
+
+
+### Features
+
+* api tokens  ([#705](https://github.com/Monadical-SAS/reflector/issues/705)) ([9a258ab](https://github.com/Monadical-SAS/reflector/commit/9a258abc0209b0ac3799532a507ea6a9125d703a))
+
 ## [0.14.0](https://github.com/Monadical-SAS/reflector/compare/v0.13.1...v0.14.0) (2025-10-08)
 
 

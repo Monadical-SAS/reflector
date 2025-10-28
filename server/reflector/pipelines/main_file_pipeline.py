@@ -408,7 +408,12 @@ async def task_pipeline_file_process(*, transcript_id: str):
 
         await pipeline.process(audio_file)
 
-    except Exception:
+    except Exception as e:
+        logger.error(
+            f"File pipeline failed for transcript {transcript_id}: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+            transcript_id=transcript_id,
+        )
         await pipeline.set_status(transcript_id, "error")
         raise
 

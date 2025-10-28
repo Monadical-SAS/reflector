@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
-from pydantic import BaseModel, Field, constr, field_serializer
+from pydantic import AwareDatetime, BaseModel, Field, constr, field_serializer
 
 import reflector.auth as auth
 from reflector.db import get_database
@@ -133,6 +133,21 @@ SearchOffsetParam = Annotated[
     SearchOffsetBase, Query(description="Number of results to skip")
 ]
 
+SearchFromDatetimeParam = Annotated[
+    AwareDatetime | None,
+    Query(
+        alias="from",
+        description="Filter transcripts created on or after this datetime (ISO 8601 with timezone)",
+    ),
+]
+SearchToDatetimeParam = Annotated[
+    AwareDatetime | None,
+    Query(
+        alias="to",
+        description="Filter transcripts created on or before this datetime (ISO 8601 with timezone)",
+    ),
+]
+
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
@@ -174,17 +189,22 @@ async def transcripts_search(
     offset: SearchOffsetParam = 0,
     room_id: Optional[str] = None,
     source_kind: Optional[SourceKind] = None,
+    from_datetime: SearchFromDatetimeParam = None,
+    to_datetime: SearchToDatetimeParam = None,
     user: Annotated[
         Optional[auth.UserInfo], Depends(auth.current_user_optional)
     ] = None,
 ):
-    """
-    Full-text search across transcript titles and content.
-    """
+    """Full-text search across transcript titles and content."""
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
+
+    if from_datetime and to_datetime and from_datetime > to_datetime:
+        raise HTTPException(
+            status_code=400, detail="'from' must be less than or equal to 'to'"
+        )
 
     search_params = SearchParameters(
         query_text=parse_search_query_param(q),
@@ -193,6 +213,8 @@ async def transcripts_search(
         user_id=user_id,
         room_id=room_id,
         source_kind=source_kind,
+        from_datetime=from_datetime,
+        to_datetime=to_datetime,
     )
 
     results, total = await search_controller.search_transcripts(search_params)
