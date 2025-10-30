@@ -116,6 +116,16 @@ class DailyClient(VideoPlatformClient):
             response.raise_for_status()
             return response.json()
 
+    async def get_meeting_participants(self, meeting_id: str) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.BASE_URL}/meetings/{meeting_id}/participants",
+                headers=self.headers,
+                timeout=self.TIMEOUT,
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def delete_room(self, room_name: str) -> bool:
         async with httpx.AsyncClient() as client:
             response = await client.delete(

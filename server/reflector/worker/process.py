@@ -15,7 +15,11 @@ from redis.exceptions import LockError
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
-from reflector.db.transcripts import SourceKind, transcripts_controller
+from reflector.db.transcripts import (
+    SourceKind,
+    TranscriptParticipant,
+    transcripts_controller,
+)
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.main_multitrack_pipeline import (
@@ -26,6 +30,7 @@ from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
 from reflector.utils.daily import DailyRoomName, extract_base_room_name
+from reflector.video_platforms.factory import create_platform_client
 from reflector.whereby import get_room_sessions
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
@@ -109,6 +114,7 @@ async def process_recording(bucket_name: str, object_key: str):
             transcript,
             {
                 "topics": [],
+                "participants": [],
             },
         )
     else:
@@ -230,6 +236,7 @@ async def process_multitrack_recording(
             transcript,
             {
                 "topics": [],
+                "participants": [],
             },
         )
     else:
@@ -244,6 +251,35 @@ async def process_multitrack_recording(
             meeting_id=meeting.id,
             room_id=room.id,
         )
+
+    try:
+        daily_client = create_platform_client("daily")
+
+        id_to_name = {}
+        meeting_id = transcript.meeting_id
+        if meeting_id:
+            payload = await daily_client.get_meeting_participants(meeting_id)
+            for p in payload.get("data", []):
+                pid = p.get("participant_id")
+                name = p.get("user_name")
+                if pid and name:
+                    id_to_name[str(pid)] = str(name)
+
+        for idx, key in enumerate(track_keys):
+            base = os.path.basename(key)
+            m = re.search(r"\d{13,}-([0-9a-fA-F-]{36})-cam-audio-", base)
+            participant_id = m.group(1) if m else None
+
+            default_name = f"Speaker {idx}"
+            name = id_to_name.get(participant_id, default_name)
+
+            participant = TranscriptParticipant(
+                id=participant_id, speaker=idx, name=name
+            )
+            await transcripts_controller.upsert_participant(transcript, participant)
+
+    except Exception as e:
+        logger.warning("Failed to map participant names", error=str(e), exc_info=True)
 
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
