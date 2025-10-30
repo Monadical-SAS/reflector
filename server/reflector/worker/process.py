@@ -256,14 +256,39 @@ async def process_multitrack_recording(
         daily_client = create_platform_client("daily")
 
         id_to_name = {}
-        meeting_id = transcript.meeting_id
-        if meeting_id:
-            payload = await daily_client.get_meeting_participants(meeting_id)
-            for p in payload.get("data", []):
-                pid = p.get("participant_id")
-                name = p.get("user_name")
-                if pid and name:
-                    id_to_name[str(pid)] = str(name)
+
+        mtg_session_id = None
+        try:
+            rec_details = await daily_client.get_recording(recording_id)
+            mtg_session_id = rec_details.get("mtgSessionId")
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch Daily recording details",
+                error=str(e),
+                recording_id=recording_id,
+                exc_info=True,
+            )
+
+        if mtg_session_id:
+            try:
+                payload = await daily_client.get_meeting_participants(mtg_session_id)
+                for p in payload.get("data", []):
+                    pid = p.get("participant_id")
+                    name = p.get("user_name")
+                    if pid and name:
+                        id_to_name[pid] = name
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch Daily meeting participants",
+                    error=str(e),
+                    mtg_session_id=mtg_session_id,
+                    exc_info=True,
+                )
+        else:
+            logger.warning(
+                "No mtgSessionId found for recording; participant names may be generic",
+                recording_id=recording_id,
+            )
 
         for idx, key in enumerate(track_keys):
             base = os.path.basename(key)
