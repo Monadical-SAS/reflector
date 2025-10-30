@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import unquote
 
@@ -14,11 +15,22 @@ from redis.exceptions import LockError
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
-from reflector.db.transcripts import SourceKind, transcripts_controller
+from reflector.db.transcripts import (
+    SourceKind,
+    TranscriptParticipant,
+    transcripts_controller,
+)
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
+from reflector.pipelines.main_multitrack_pipeline import (
+    task_pipeline_multitrack_process,
+)
+from reflector.processors import AudioFileWriterProcessor
+from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
+from reflector.utils.daily import DailyRoomName, extract_base_room_name
+from reflector.video_platforms.factory import create_platform_client
 from reflector.whereby import get_room_sessions
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
@@ -102,6 +114,7 @@ async def process_recording(bucket_name: str, object_key: str):
             transcript,
             {
                 "topics": [],
+                "participants": [],
             },
         )
     else:
@@ -144,6 +157,160 @@ async def process_recording(bucket_name: str, object_key: str):
     await transcripts_controller.update(transcript, {"status": "uploaded"})
 
     task_pipeline_file_process.delay(transcript_id=transcript.id)
+
+
+@shared_task
+@asynctask
+async def process_multitrack_recording(
+    bucket_name: str,
+    daily_room_name: DailyRoomName,
+    recording_id: str,
+    track_keys: list[str],
+):
+    logger.info(
+        "Processing multitrack recording",
+        bucket=bucket_name,
+        room_name=daily_room_name,
+        recording_id=recording_id,
+        provided_keys=len(track_keys),
+    )
+
+    if not track_keys:
+        logger.warning("No audio track keys provided")
+        return
+
+    tz = timezone.utc
+    recorded_at = datetime.now(tz)
+    try:
+        if track_keys:
+            folder = os.path.basename(os.path.dirname(track_keys[0]))
+            ts_match = re.search(r"(\d{14})$", folder)
+            if ts_match:
+                ts = ts_match.group(1)
+                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(tzinfo=tz)
+    except Exception as e:
+        logger.warning(
+            f"Could not parse recorded_at from keys, using now() {recorded_at}",
+            e,
+            exc_info=True,
+        )
+
+    meeting = await meetings_controller.get_by_room_name(daily_room_name)
+
+    room_name_base = extract_base_room_name(daily_room_name)
+
+    room = await rooms_controller.get_by_name(room_name_base)
+    if not room:
+        raise Exception(f"Room not found: {room_name_base}")
+
+    if not meeting:
+        raise Exception(f"Meeting not found: {room_name_base}")
+
+    logger.info(
+        "Found existing Meeting for recording",
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+        recording_id=recording_id,
+    )
+
+    recording = await recordings_controller.get_by_id(recording_id)
+    if not recording:
+        object_key_dir = os.path.dirname(track_keys[0]) if track_keys else ""
+        recording = await recordings_controller.create(
+            Recording(
+                id=recording_id,
+                bucket_name=bucket_name,
+                object_key=object_key_dir,
+                recorded_at=recorded_at,
+                meeting_id=meeting.id,
+                track_keys=track_keys,
+            )
+        )
+    else:
+        # Recording already exists; assume metadata was set at creation time
+        pass
+
+    transcript = await transcripts_controller.get_by_recording_id(recording.id)
+    if transcript:
+        await transcripts_controller.update(
+            transcript,
+            {
+                "topics": [],
+                "participants": [],
+            },
+        )
+    else:
+        transcript = await transcripts_controller.add(
+            "",
+            source_kind=SourceKind.ROOM,
+            source_language="en",
+            target_language="en",
+            user_id=room.user_id,
+            recording_id=recording.id,
+            share_mode="public",
+            meeting_id=meeting.id,
+            room_id=room.id,
+        )
+
+    try:
+        daily_client = create_platform_client("daily")
+
+        id_to_name = {}
+
+        mtg_session_id = None
+        try:
+            rec_details = await daily_client.get_recording(recording_id)
+            mtg_session_id = rec_details.get("mtgSessionId")
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch Daily recording details",
+                error=str(e),
+                recording_id=recording_id,
+                exc_info=True,
+            )
+
+        if mtg_session_id:
+            try:
+                payload = await daily_client.get_meeting_participants(mtg_session_id)
+                for p in payload.get("data", []):
+                    pid = p.get("participant_id")
+                    name = p.get("user_name")
+                    if pid and name:
+                        id_to_name[pid] = name
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch Daily meeting participants",
+                    error=str(e),
+                    mtg_session_id=mtg_session_id,
+                    exc_info=True,
+                )
+        else:
+            logger.warning(
+                "No mtgSessionId found for recording; participant names may be generic",
+                recording_id=recording_id,
+            )
+
+        for idx, key in enumerate(track_keys):
+            base = os.path.basename(key)
+            m = re.search(r"\d{13,}-([0-9a-fA-F-]{36})-cam-audio-", base)
+            participant_id = m.group(1) if m else None
+
+            default_name = f"Speaker {idx}"
+            name = id_to_name.get(participant_id, default_name)
+
+            participant = TranscriptParticipant(
+                id=participant_id, speaker=idx, name=name
+            )
+            await transcripts_controller.upsert_participant(transcript, participant)
+
+    except Exception as e:
+        logger.warning("Failed to map participant names", error=str(e), exc_info=True)
+
+    task_pipeline_multitrack_process.delay(
+        transcript_id=transcript.id,
+        bucket_name=bucket_name,
+        track_keys=track_keys,
+    )
 
 
 @shared_task
@@ -236,6 +403,71 @@ async def process_meetings():
         processed_count=processed_count,
         skipped_count=skipped_count,
     )
+
+
+async def convert_audio_and_waveform(transcript) -> None:
+    """Convert WebM to MP3 and generate waveform for Daily.co recordings.
+
+    This bypasses the full file pipeline which would overwrite stub data.
+    """
+    try:
+        logger.info(
+            "Converting audio to MP3 and generating waveform",
+            transcript_id=transcript.id,
+        )
+
+        upload_path = transcript.data_path / "upload.webm"
+        mp3_path = transcript.audio_mp3_filename
+
+        # Convert WebM to MP3
+        mp3_writer = AudioFileWriterProcessor(path=mp3_path)
+
+        container = av.open(str(upload_path))
+        for frame in container.decode(audio=0):
+            await mp3_writer.push(frame)
+        await mp3_writer.flush()
+        container.close()
+
+        logger.info(
+            "Converted WebM to MP3",
+            transcript_id=transcript.id,
+            mp3_size=mp3_path.stat().st_size,
+        )
+
+        # Generate waveform
+        waveform_processor = AudioWaveformProcessor(
+            audio_path=mp3_path,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Create minimal pipeline object for processor (matching EmptyPipeline from main_file_pipeline.py)
+        class MinimalPipeline:
+            def __init__(self, logger_instance):
+                self.logger = logger_instance
+
+            def get_pref(self, k, d=None):
+                return d
+
+        waveform_processor.set_pipeline(MinimalPipeline(logger))
+        await waveform_processor.flush()
+
+        logger.info(
+            "Generated waveform",
+            transcript_id=transcript.id,
+            waveform_path=transcript.audio_waveform_filename,
+        )
+
+        # Update transcript status to ended (successful)
+        await transcripts_controller.update(transcript, {"status": "ended"})
+
+    except Exception as e:
+        logger.error(
+            "Failed to convert audio or generate waveform",
+            transcript_id=transcript.id,
+            error=str(e),
+        )
+        # Keep status as uploaded even if conversion fails
+        pass
 
 
 @shared_task

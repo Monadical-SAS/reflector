@@ -49,8 +49,9 @@ class TranscriptFinalSummaryProcessor(Processor):
         speakermap = {}
         if self.transcript:
             speakermap = {
-                participant["speaker"]: participant["name"]
-                for participant in self.transcript.participants
+                p.speaker: p.name
+                for p in (self.transcript.participants or [])
+                if p.speaker is not None and p.name
             }
 
         # build the transcript as a single string

@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
@@ -36,14 +36,12 @@ class TopicResponse(BaseModel):
 
     title: str = Field(
         description="A descriptive title for the topic being discussed",
-        validation_alias="Title",
+        validation_alias=AliasChoices("title", "Title"),
     )
     summary: str = Field(
         description="A concise 1-2 sentence summary of the discussion",
-        validation_alias="Summary",
+        validation_alias=AliasChoices("summary", "Summary"),
     )
-
-    model_config = {"populate_by_name": True}
 
 
 class TranscriptTopicDetectorProcessor(Processor):
