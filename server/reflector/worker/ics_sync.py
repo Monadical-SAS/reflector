@@ -7,7 +7,7 @@ from celery.utils.log import get_task_logger
 from reflector.asynctask import asynctask
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
-from reflector.db.rooms import rooms_controller
+from reflector.db.rooms import Room, rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import SyncStatus, ics_sync_service
 from reflector.video_platforms.factory import create_platform_client
@@ -86,17 +86,17 @@ def _should_sync(room) -> bool:
 MEETING_DEFAULT_DURATION = timedelta(hours=1)
 
 
-async def create_upcoming_meetings_for_event(event, create_window, room_id, room):
+async def create_upcoming_meetings_for_event(event, create_window, room: Room):
     if event.start_time <= create_window:
         return
-    existing_meeting = await meetings_controller.get_by_calendar_event(event.id)
+    existing_meeting = await meetings_controller.get_by_calendar_event(event.id, room)
 
     if existing_meeting:
         return
 
     logger.info(
         "Pre-creating meeting for calendar event",
-        room_id=room_id,
+        room_id=room.id,
         event_id=event.id,
         event_title=event.title,
     )
@@ -138,7 +138,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
     except Exception as e:
         logger.error(
             "Failed to pre-create meeting",
-            room_id=room_id,
+            room_id=room.id,
             event_id=event.id,
             error=str(e),
         )
@@ -168,9 +168,7 @@ async def create_upcoming_meetings():
                 )
 
                 for event in events:
-                    await create_upcoming_meetings_for_event(
-                        event, create_window, room.id, room
-                    )
+                    await create_upcoming_meetings_for_event(event, create_window, room)
             logger.info("Completed pre-creation check for upcoming meetings")
 
         except Exception as e:
