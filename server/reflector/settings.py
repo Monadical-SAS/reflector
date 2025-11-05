@@ -1,7 +1,7 @@
 from pydantic.types import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from reflector.platform_types import Platform
+from reflector.schemas.platform import Platform
 from reflector.utils.string import NonEmptyString
 
 

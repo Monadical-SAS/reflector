@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
 from reflector.db.rooms import Room, rooms
-from reflector.platform_types import Platform
+from reflector.schemas.platform import Platform
 from reflector.utils import generate_uuid4
 from reflector.video_platforms.factory import get_platform
 

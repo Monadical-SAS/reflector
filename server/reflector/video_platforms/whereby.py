@@ -10,7 +10,8 @@ import httpx
 
 from reflector.db.rooms import Room
 
-from .base import MeetingData, Platform, VideoPlatformClient, VideoPlatformConfig
+from ..schemas.platform import Platform
+from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
 
 
 class WherebyClient(VideoPlatformClient):

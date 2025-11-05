@@ -15,10 +15,10 @@ from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
+from reflector.schemas.platform import Platform
 from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
 from reflector.utils.url import add_query_param
-from reflector.video_platforms.base import Platform
 from reflector.video_platforms.factory import (
     create_platform_client,
     get_platform,

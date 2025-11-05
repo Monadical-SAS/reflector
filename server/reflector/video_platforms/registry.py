@@ -1,6 +1,7 @@
 from typing import Dict, Type
 
-from .base import Platform, VideoPlatformClient, VideoPlatformConfig
+from ..schemas.platform import Platform
+from .base import VideoPlatformClient, VideoPlatformConfig
 
 _PLATFORMS: Dict[Platform, Type[VideoPlatformClient]] = {}
 

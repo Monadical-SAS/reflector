@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
-from reflector.platform_types import Platform
+from reflector.schemas.platform import Platform
 from reflector.utils import generate_uuid4
 
 rooms = sqlalchemy.Table(

@@ -2,7 +2,7 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from reflector.platform_types import Platform
+from reflector.schemas.platform import Platform
 
 RecordingType = Literal["none", "local", "cloud"]
 

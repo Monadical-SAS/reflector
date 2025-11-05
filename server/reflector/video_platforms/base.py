@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from reflector.platform_types import Platform
-
+from ..schemas.platform import Platform
 from .models import MeetingData, VideoPlatformConfig
 
 if TYPE_CHECKING:

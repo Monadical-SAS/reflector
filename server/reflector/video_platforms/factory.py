@@ -2,7 +2,8 @@ from typing import Optional
 
 from reflector.settings import settings
 
-from .base import Platform, VideoPlatformClient, VideoPlatformConfig
+from ..schemas.platform import Platform
+from .base import VideoPlatformClient, VideoPlatformConfig
 from .registry import get_platform_client
 
 

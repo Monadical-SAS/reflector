@@ -9,8 +9,8 @@ import httpx
 
 from reflector.db.rooms import Room
 from reflector.logger import logger
-from reflector.platform_types import Platform
 
+from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
 from .base import VideoPlatformClient
