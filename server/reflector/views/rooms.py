@@ -21,7 +21,7 @@ from reflector.utils.url import add_query_param
 from reflector.video_platforms.base import Platform
 from reflector.video_platforms.factory import (
     create_platform_client,
-    get_platform_for_room,
+    get_platform,
 )
 from reflector.worker.webhook import test_webhook
 
@@ -199,7 +199,7 @@ async def rooms_list(
     )
 
     for room in paginated.items:
-        room.platform = get_platform_for_room(room.id, room.platform)
+        room.platform = get_platform(room.platform)
 
     return paginated
 
@@ -215,7 +215,7 @@ async def rooms_get(
         raise HTTPException(status_code=404, detail="Room not found")
     if not room.is_shared and (user_id is None or room.user_id != user_id):
         raise HTTPException(status_code=403, detail="Room access denied")
-    room.platform = get_platform_for_room(room.id, room.platform)
+    room.platform = get_platform(room.platform)
     return room
 
 
@@ -237,7 +237,7 @@ async def rooms_get_by_name(
         room_dict["webhook_url"] = None
         room_dict["webhook_secret"] = None
 
-    room_dict["platform"] = get_platform_for_room(room.id, room.platform)
+    room_dict["platform"] = get_platform(room.platform)
 
     return RoomDetails(**room_dict)
 
@@ -283,7 +283,7 @@ async def rooms_update(
         raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     await rooms_controller.update(room, values)
-    room.platform = get_platform_for_room(room.id, room.platform)
+    room.platform = get_platform(room.platform)
     return room
 
 
@@ -331,7 +331,7 @@ async def rooms_create_meeting(
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
 
-                platform = get_platform_for_room(room.id, room.platform)
+                platform = get_platform(room.platform)
                 client = create_platform_client(platform)
 
                 meeting_data = await client.create_meeting(
@@ -356,7 +356,7 @@ async def rooms_create_meeting(
             status_code=503, detail="Meeting creation in progress, please try again"
         )
 
-    meeting.platform = get_platform_for_room(room.id, room.platform)
+    meeting.platform = get_platform(room.platform)
 
     if meeting.platform == "daily" and room.recording_trigger != "none":
         client = create_platform_client(meeting.platform)
@@ -522,7 +522,7 @@ async def rooms_list_active_meetings(
         room=room, current_time=current_time
     )
 
-    effective_platform = get_platform_for_room(room.id, room.platform)
+    effective_platform = get_platform(room.platform)
     for meeting in meetings:
         meeting.platform = effective_platform
 
@@ -555,7 +555,7 @@ async def rooms_get_meeting(
             status_code=403, detail="Meeting does not belong to this room"
         )
 
-    meeting.platform = get_platform_for_room(room.id, room.platform)
+    meeting.platform = get_platform(room.platform)
 
     if user_id != room.user_id and not room.is_shared:
         meeting.host_room_url = ""
@@ -592,7 +592,7 @@ async def rooms_join_meeting(
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
 
-    meeting.platform = get_platform_for_room(room.id, room.platform)
+    meeting.platform = get_platform(room.platform)
 
     if user_id != room.user_id:
         meeting.host_room_url = ""

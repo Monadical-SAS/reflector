@@ -138,9 +138,7 @@ class Settings(BaseSettings):
     AWS_DAILY_S3_REGION: str = "us-west-2"
     AWS_DAILY_ROLE_ARN: str | None = None
 
-    # Platform Migration Feature Flags
-    DAILY_MIGRATION_ENABLED: bool = False
-    DAILY_MIGRATION_ROOM_IDS: list[str] = []
+    # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = "whereby"
 
     # Zulip integration

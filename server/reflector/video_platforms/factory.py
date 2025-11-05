@@ -50,15 +50,7 @@ def create_platform_client(platform: Platform) -> VideoPlatformClient:
     return get_platform_client(platform, config)
 
 
-def get_platform_for_room(
-    room_id: Optional[str] = None, room_platform: Optional[Platform] = None
-) -> Platform:
-    if not settings.DAILY_MIGRATION_ENABLED:
-        return "whereby"
-
-    if room_id and room_id in settings.DAILY_MIGRATION_ROOM_IDS:
-        return "daily"
-
+def get_platform(room_platform: Optional[Platform] = None) -> Platform:
     if room_platform:
         return room_platform
 

@@ -48,7 +48,6 @@ async def transcript_process(
         return ProcessStatus(status="already running")
 
     # Determine processing mode strictly from DB to avoid S3 scans
-    run_multitrack = False
     bucket_name = None
     track_keys: list[str] = []
 
@@ -57,9 +56,8 @@ async def transcript_process(
         if recording:
             bucket_name = recording.bucket_name
             track_keys = list(getattr(recording, "track_keys", []) or [])
-            run_multitrack = bool(track_keys)
 
-    if run_multitrack and bucket_name and track_keys:
+    if bucket_name:
         task_pipeline_multitrack_process.delay(
             transcript_id=transcript_id,
             bucket_name=bucket_name,

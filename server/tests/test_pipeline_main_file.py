@@ -181,7 +181,7 @@ async def mock_waveform_processor():
 async def mock_topic_detector():
     """Mock TranscriptTopicDetectorProcessor"""
     with patch(
-        "reflector.pipelines.main_file_pipeline.TranscriptTopicDetectorProcessor"
+        "reflector.pipelines.topic_processing.TranscriptTopicDetectorProcessor"
     ) as mock_topic_class:
         mock_topic = AsyncMock()
         mock_topic.set_pipeline = MagicMock()
@@ -218,7 +218,7 @@ async def mock_topic_detector():
 async def mock_title_processor():
     """Mock TranscriptFinalTitleProcessor"""
     with patch(
-        "reflector.pipelines.main_file_pipeline.TranscriptFinalTitleProcessor"
+        "reflector.pipelines.topic_processing.TranscriptFinalTitleProcessor"
     ) as mock_title_class:
         mock_title = AsyncMock()
         mock_title.set_pipeline = MagicMock()
@@ -247,7 +247,7 @@ async def mock_title_processor():
 async def mock_summary_processor():
     """Mock TranscriptFinalSummaryProcessor"""
     with patch(
-        "reflector.pipelines.main_file_pipeline.TranscriptFinalSummaryProcessor"
+        "reflector.pipelines.topic_processing.TranscriptFinalSummaryProcessor"
     ) as mock_summary_class:
         mock_summary = AsyncMock()
         mock_summary.set_pipeline = MagicMock()
