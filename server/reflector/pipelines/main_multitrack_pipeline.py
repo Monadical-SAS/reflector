@@ -579,40 +579,32 @@ class PipelineMainMultitrack(PipelineMainBase):
                 "Mixdown failed - no MP3 file generated. Cannot proceed without playable audio."
             )
 
-        if transcript.audio_mp3_filename.exists():
-            mp3_data = transcript.audio_mp3_filename.read_bytes()
-            storage_path = f"{transcript.id}/audio.mp3"
-            await storage.put_file(storage_path, mp3_data)
-            mp3_url = await storage.get_file_url(storage_path)
+        mp3_data = transcript.audio_mp3_filename.read_bytes()
+        storage_path = f"{transcript.id}/audio.mp3"
+        await storage.put_file(storage_path, mp3_data)
+        mp3_url = await storage.get_file_url(storage_path)
 
-            await transcripts_controller.update(
-                transcript, {"audio_location": "storage"}
+        await transcripts_controller.update(transcript, {"audio_location": "storage"})
+
+        self.logger.info(
+            f"Uploaded mixed audio to storage",
+            storage_path=storage_path,
+            size=len(mp3_data),
+            url=mp3_url,
+        )
+
+        try:
+            self.logger.info("Generating waveform from mixed audio")
+            waveform_processor = AudioWaveformProcessor(
+                audio_path=transcript.audio_mp3_filename,
+                waveform_path=transcript.audio_waveform_filename,
+                on_waveform=self.on_waveform,
             )
-
-            self.logger.info(
-                f"Uploaded mixed audio to storage",
-                storage_path=storage_path,
-                size=len(mp3_data),
-                url=mp3_url,
-            )
-        else:
-            self.logger.warning("Mixdown file does not exist after processing")
-
-        if transcript.audio_mp3_filename.exists():
-            try:
-                self.logger.info("Generating waveform from mixed audio")
-                waveform_processor = AudioWaveformProcessor(
-                    audio_path=transcript.audio_mp3_filename,
-                    waveform_path=transcript.audio_waveform_filename,
-                    on_waveform=self.on_waveform,
-                )
-                waveform_processor.set_pipeline(self.empty_pipeline)
-                await waveform_processor.flush()
-                self.logger.info("Waveform generated successfully")
-            except Exception as e:
-                self.logger.error(
-                    "Waveform generation failed", error=str(e), exc_info=True
-                )
+            waveform_processor.set_pipeline(self.empty_pipeline)
+            await waveform_processor.flush()
+            self.logger.info("Waveform generated successfully")
+        except Exception as e:
+            self.logger.error("Waveform generation failed", error=str(e), exc_info=True)
 
         # Transcribe each padded track directly from URLs
         speaker_transcripts: list[TranscriptType] = []
