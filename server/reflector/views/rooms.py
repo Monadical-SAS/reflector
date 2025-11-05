@@ -17,6 +17,7 @@ from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
+from reflector.utils.url import add_query_param
 from reflector.video_platforms.base import Platform
 from reflector.video_platforms.factory import (
     create_platform_client,
@@ -363,9 +364,9 @@ async def rooms_create_meeting(
             meeting.room_name, enable_recording=True
         )
         meeting = meeting.model_copy()
-        meeting.room_url += f"?t={token}"
+        meeting.room_url = add_query_param(meeting.room_url, "t", token)
         if meeting.host_room_url:
-            meeting.host_room_url += f"?t={token}"
+            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
 
     if user_id != room.user_id:
         meeting.host_room_url = ""

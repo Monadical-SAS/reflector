@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timezone
 from sqlite3 import IntegrityError
-from typing import Literal, Optional
+from typing import Literal
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -138,7 +138,7 @@ class RoomController:
         ics_url: str | None = None,
         ics_fetch_interval: int = 300,
         ics_enabled: bool = False,
-        platform: Optional[Platform] = None,
+        platform: Platform | None = None,
     ):
         """
         Add a new room

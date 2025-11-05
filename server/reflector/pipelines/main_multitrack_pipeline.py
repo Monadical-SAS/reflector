@@ -5,7 +5,6 @@ from fractions import Fraction
 
 import av
 import boto3
-import structlog
 from av.audio.resampler import AudioResampler
 from celery import chain, shared_task
 
@@ -16,6 +15,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
+from reflector.pipelines import topic_processing
 from reflector.pipelines.main_file_pipeline import task_send_webhook_if_needed
 from reflector.pipelines.main_live_pipeline import (
     PipelineMainBase,
@@ -24,12 +24,7 @@ from reflector.pipelines.main_live_pipeline import (
     task_pipeline_post_to_zulip,
 )
 from reflector.pipelines.transcription_helpers import transcribe_file_with_processor
-from reflector.processors import (
-    AudioFileWriterProcessor,
-    TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
-    TranscriptTopicDetectorProcessor,
-)
+from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
@@ -45,27 +40,11 @@ S3_UPLOAD_MAX_RETRIES = 3
 S3_PRESIGNED_URL_EXPIRATION_SECONDS = 7200  # 2 hours
 
 
-class EmptyPipeline:
-    """
-    Minimal pipeline stub for processors that don't need full pipeline integration.
-    Used when processors need pipeline interface but only for logging/preferences.
-    """
-
-    def __init__(self, logger: structlog.BoundLogger):
-        self.logger = logger
-
-    def get_pref(self, k, d=None):
-        return d
-
-    async def emit(self, event):
-        pass
-
-
 class PipelineMainMultitrack(PipelineMainBase):
     def __init__(self, transcript_id: str):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
-        self.empty_pipeline = EmptyPipeline(logger=self.logger)
+        self.empty_pipeline = topic_processing.EmptyPipeline(logger=self.logger)
 
     async def pad_track_for_transcription(
         self,
@@ -205,7 +184,9 @@ class PipelineMainMultitrack(PipelineMainBase):
                 error=str(e),
                 exc_info=True,
             )
-            return None
+            raise Exception(
+                f"Track {track_idx} padding failed - transcript would have incorrect timestamps"
+            ) from e
 
     def _extract_stream_start_time_from_container(
         self, container, track_idx: int
@@ -369,8 +350,8 @@ class PipelineMainMultitrack(PipelineMainBase):
                 break
 
         if not target_sample_rate:
-            self.logger.warning("Mixdown skipped - no decodable audio frames found")
-            return
+            self.logger.error("Mixdown failed - no decodable audio frames found")
+            raise Exception("Mixdown failed: No decodable audio frames in any track")
         # Build PyAV filter graph:
         # N abuffer (s32/stereo)
         #   -> optional adelay per input (for alignment)
@@ -396,8 +377,8 @@ class PipelineMainMultitrack(PipelineMainBase):
             inputs.append(in_ctx)
 
         if not inputs:
-            self.logger.warning("Mixdown skipped - no valid inputs for graph")
-            return
+            self.logger.error("Mixdown failed - no valid inputs for graph")
+            raise Exception("Mixdown failed: No valid inputs for filter graph")
 
         mixer = graph.add("amix", args=f"inputs={len(inputs)}:normalize=0", name="mix")
 
@@ -454,8 +435,8 @@ class PipelineMainMultitrack(PipelineMainBase):
                     )
 
             if not containers:
-                self.logger.warning("Mixdown: no valid containers opened")
-                return
+                self.logger.error("Mixdown failed - no valid containers opened")
+                raise Exception("Mixdown failed: Could not open any track containers")
 
             decoders = [c.decode(audio=0) for c in containers]
             active = [True] * len(decoders)
@@ -583,7 +564,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                 padded_track_urls.append("")
                 self.logger.warning(f"Track {idx} processing failed")
 
-        # Create transcript directory for output files
         transcript.data_path.mkdir(parents=True, exist_ok=True)
 
         # Mixdown tracks directly from URLs
@@ -593,6 +573,11 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
         await self.mixdown_tracks(padded_track_urls, mp3_writer, offsets_seconds=None)
         await mp3_writer.flush()
+
+        if not transcript.audio_mp3_filename.exists():
+            raise Exception(
+                "Mixdown failed - no MP3 file generated. Cannot proceed without playable audio."
+            )
 
         if transcript.audio_mp3_filename.exists():
             mp3_data = transcript.audio_mp3_filename.read_bytes()
@@ -669,6 +654,13 @@ class PipelineMainMultitrack(PipelineMainBase):
                 track_idx=idx,
             )
 
+        valid_track_count = len([url for url in padded_track_urls if url])
+        if valid_track_count > 0 and len(speaker_transcripts) != valid_track_count:
+            raise Exception(
+                f"Only {len(speaker_transcripts)}/{valid_track_count} tracks transcribed successfully. "
+                f"All tracks must succeed to avoid incomplete transcripts."
+            )
+
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
@@ -717,59 +709,31 @@ class PipelineMainMultitrack(PipelineMainBase):
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str
     ) -> list[TitleSummary]:
-        chunk_size = 300
-        topics: list[TitleSummary] = []
-
-        async def on_topic(topic: TitleSummary):
-            topics.append(topic)
-            return await self.on_topic(topic)
-
-        topic_detector = TranscriptTopicDetectorProcessor(callback=on_topic)
-        topic_detector.set_pipeline(self.empty_pipeline)
-
-        for i in range(0, len(transcript.words), chunk_size):
-            chunk_words = transcript.words[i : i + chunk_size]
-            if not chunk_words:
-                continue
-
-            chunk_transcript = TranscriptType(
-                words=chunk_words, translation=transcript.translation
-            )
-            await topic_detector.push(chunk_transcript)
-
-        await topic_detector.flush()
-        return topics
+        return await topic_processing.detect_topics(
+            transcript,
+            target_language,
+            on_topic_callback=self.on_topic,
+            empty_pipeline=self.empty_pipeline,
+        )
 
     async def generate_title(self, topics: list[TitleSummary]):
-        if not topics:
-            self.logger.warning("No topics for title generation")
-            return
-
-        processor = TranscriptFinalTitleProcessor(callback=self.on_title)
-        processor.set_pipeline(self.empty_pipeline)
-
-        for topic in topics:
-            await processor.push(topic)
-
-        await processor.flush()
+        return await topic_processing.generate_title(
+            topics,
+            on_title_callback=self.on_title,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
+        )
 
     async def generate_summaries(self, topics: list[TitleSummary]):
-        if not topics:
-            self.logger.warning("No topics for summary generation")
-            return
-
         transcript = await self.get_transcript()
-        processor = TranscriptFinalSummaryProcessor(
-            transcript=transcript,
-            callback=self.on_long_summary,
-            on_short_summary=self.on_short_summary,
+        return await topic_processing.generate_summaries(
+            topics,
+            transcript,
+            on_long_summary_callback=self.on_long_summary,
+            on_short_summary_callback=self.on_short_summary,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
         )
-        processor.set_pipeline(self.empty_pipeline)
-
-        for topic in topics:
-            await processor.push(topic)
-
-        await processor.flush()
 
 
 @shared_task

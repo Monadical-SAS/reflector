@@ -5,13 +5,15 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from reflector.db.meetings import meetings_controller
-from reflector.logger import logger
+from reflector.logger import logger as _logger
 from reflector.settings import settings
 from reflector.utils.daily import DailyRoomName
 from reflector.video_platforms.factory import create_platform_client
 from reflector.worker.process import process_multitrack_recording
 
 router = APIRouter()
+
+logger = _logger.bind(platform="daily")
 
 
 class DailyTrack(BaseModel):
@@ -93,6 +95,12 @@ async def webhook(request: Request):
         await _handle_recording_ready(event)
     elif event.type == "recording.error":
         await _handle_recording_error(event)
+    else:
+        logger.warning(
+            "Unhandled Daily webhook event type",
+            event_type=event.type,
+            payload=event.payload,
+        )
 
     return {"status": "ok"}
 

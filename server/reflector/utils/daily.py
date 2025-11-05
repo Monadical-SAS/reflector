@@ -1,9 +1,9 @@
-import re
+from reflector.utils.string import NonEmptyString
 
 DailyRoomName = str
 
 
-def extract_base_room_name(daily_room_name: DailyRoomName) -> str:
+def extract_base_room_name(daily_room_name: DailyRoomName) -> NonEmptyString:
     """
     Extract base room name from Daily.co timestamped room name.
 
@@ -21,8 +21,6 @@ def extract_base_room_name(daily_room_name: DailyRoomName) -> str:
     Returns:
         Base room name without timestamp suffix
     """
-    timestamp_match = re.search(r"-(\d{14})$", daily_room_name)
-    if timestamp_match:
-        return daily_room_name[: -len(timestamp_match.group(0))]
-    else:
-        raise ValueError(f"Invalid Daily.co room name {daily_room_name}")
+    base_name = daily_room_name.rsplit("-", 1)[0]
+    assert base_name, f"Extracted base name is empty from: {daily_room_name}"
+    return base_name

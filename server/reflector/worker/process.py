@@ -25,6 +25,7 @@ from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.main_multitrack_pipeline import (
     task_pipeline_multitrack_process,
 )
+from reflector.pipelines.topic_processing import EmptyPipeline
 from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import get_redis_client
@@ -434,21 +435,11 @@ async def convert_audio_and_waveform(transcript) -> None:
             mp3_size=mp3_path.stat().st_size,
         )
 
-        # Generate waveform
         waveform_processor = AudioWaveformProcessor(
             audio_path=mp3_path,
             waveform_path=transcript.audio_waveform_filename,
         )
-
-        # Create minimal pipeline object for processor (matching EmptyPipeline from main_file_pipeline.py)
-        class MinimalPipeline:
-            def __init__(self, logger_instance):
-                self.logger = logger_instance
-
-            def get_pref(self, k, d=None):
-                return d
-
-        waveform_processor.set_pipeline(MinimalPipeline(logger))
+        waveform_processor.set_pipeline(EmptyPipeline(logger))
         await waveform_processor.flush()
 
         logger.info(
