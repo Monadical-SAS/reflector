@@ -2,7 +2,7 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from reflector.schemas.platform import Platform
+from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 
 RecordingType = Literal["none", "local", "cloud"]
 
@@ -18,7 +18,7 @@ class MeetingData(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "platform": "whereby",
+                "platform": WHEREBY_PLATFORM,
                 "meeting_id": "12345678",
                 "room_url": "https://subdomain.whereby.com/room-20251008120000",
                 "host_room_url": "https://subdomain.whereby.com/room-20251008120000?roomKey=abc123",

@@ -6,9 +6,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
-from reflector.db.rooms import Room, rooms
-from reflector.schemas.platform import Platform
+from reflector.db.rooms import Room
+from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils import generate_uuid4
+from reflector.utils.string import assert_equal
 from reflector.video_platforms.factory import get_platform
 
 meetings = sa.Table(
@@ -61,7 +62,7 @@ meetings = sa.Table(
         "platform",
         sa.String,
         nullable=False,
-        server_default="whereby",
+        server_default=assert_equal(WHEREBY_PLATFORM, "whereby"),
     ),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
@@ -109,7 +110,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
-    platform: Platform = "whereby"
+    platform: Platform = WHEREBY_PLATFORM
 
 
 class MeetingController:
@@ -146,21 +147,9 @@ class MeetingController:
         return meeting
 
     async def get_all_active(self) -> list[Meeting]:
-        query = (
-            sa.select(meetings, rooms.c.platform.label("room_platform"))
-            .select_from(meetings.outerjoin(rooms, meetings.c.room_id == rooms.c.id))
-            .where(meetings.c.is_active)
-        )
+        query = meetings.select().where(meetings.c.is_active)
         results = await get_database().fetch_all(query)
-
-        enhanced_meetings = []
-        for result in results:
-            meeting_data = {k: v for k, v in result.items() if k != "room_platform"}
-            meeting = Meeting(**meeting_data)
-            self._enhance_with_room(meeting, result["room_platform"])
-            enhanced_meetings.append(meeting)
-
-        return enhanced_meetings
+        return [Meeting(**result) for result in results]
 
     async def get_by_room_name(
         self,
@@ -171,19 +160,14 @@ class MeetingController:
         For backward compatibility, returns the most recent meeting.
         """
         query = (
-            sa.select(meetings, rooms.c.platform.label("room_platform"))
-            .select_from(meetings.outerjoin(rooms, meetings.c.room_id == rooms.c.id))
+            meetings.select()
             .where(meetings.c.room_name == room_name)
             .order_by(meetings.c.end_date.desc())
         )
         result = await get_database().fetch_one(query)
         if not result:
             return None
-
-        meeting_data = {k: v for k, v in result.items() if k != "room_platform"}
-        meeting = Meeting(**meeting_data)
-        self._enhance_with_room(meeting, result["room_platform"])
-        return meeting
+        return Meeting(**result)
 
     async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         """
@@ -205,8 +189,7 @@ class MeetingController:
         result = await get_database().fetch_one(query)
         if not result:
             return None
-
-        return self._enhance_with_room(Meeting(**result), room)
+        return Meeting(**result)
 
     async def get_all_active_for_room(
         self, room: Room, current_time: datetime
@@ -224,7 +207,7 @@ class MeetingController:
             .order_by(end_date.desc())
         )
         results = await get_database().fetch_all(query)
-        return [self._enhance_with_room(Meeting(**result), room) for result in results]
+        return [Meeting(**result) for result in results]
 
     async def get_active_by_calendar_event(
         self, room: Room, calendar_event_id: str, current_time: datetime
@@ -243,7 +226,7 @@ class MeetingController:
         result = await get_database().fetch_one(query)
         if not result:
             return None
-        return self._enhance_with_room(Meeting(**result), room)
+        return Meeting(**result)
 
     async def get_by_id(
         self, meeting_id: str, room: Room | None = None
@@ -256,13 +239,7 @@ class MeetingController:
         result = await get_database().fetch_one(query)
         if not result:
             return None
-
-        meeting = Meeting(**result)
-
-        if room:
-            self._enhance_with_room(meeting, room)
-
-        return meeting
+        return Meeting(**result)
 
     async def get_by_calendar_event(
         self, calendar_event_id: str, room: Room
@@ -302,12 +279,6 @@ class MeetingController:
             )
         )
         await get_database().execute(query)
-
-    # MUTATES the argument, only for internal use
-    @staticmethod
-    def _enhance_with_room(meeting: Meeting, room_platform: Platform | None) -> Meeting:
-        meeting.platform = meeting.platform or get_platform(room_platform)
-        return meeting
 
 
 class MeetingConsentController:

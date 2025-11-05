@@ -46,7 +46,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: Optional[datetime] = None
     ics_last_etag: Optional[str] = None
-    platform: Platform = "whereby"
+    platform: Platform
 
 
 class RoomDetails(Room):
@@ -74,7 +74,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
-    platform: Platform = "whereby"
+    platform: Platform
 
 
 class CreateRoom(BaseModel):

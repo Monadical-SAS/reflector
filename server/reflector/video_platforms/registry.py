@@ -1,6 +1,6 @@
 from typing import Dict, Type
 
-from ..schemas.platform import Platform
+from ..schemas.platform import DAILY_PLATFORM, WHEREBY_PLATFORM, Platform
 from .base import VideoPlatformClient, VideoPlatformConfig
 
 _PLATFORMS: Dict[Platform, Type[VideoPlatformClient]] = {}
@@ -28,8 +28,8 @@ def _register_builtin_platforms():
     from .daily import DailyClient  # noqa: PLC0415
     from .whereby import WherebyClient  # noqa: PLC0415
 
-    register_platform("whereby", WherebyClient)
-    register_platform("daily", DailyClient)
+    register_platform(WHEREBY_PLATFORM, WherebyClient)
+    register_platform(DAILY_PLATFORM, DailyClient)
 
 
 _register_builtin_platforms()

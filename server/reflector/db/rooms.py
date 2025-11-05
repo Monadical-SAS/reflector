@@ -54,8 +54,8 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "platform",
         sqlalchemy.String,
-        nullable=False,
-        server_default="whereby",
+        nullable=True,
+        server_default=None,
     ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
@@ -84,7 +84,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
-    platform: Platform = "whereby"
+    platform: Platform | None = None
 
 
 class RoomController:
@@ -162,7 +162,7 @@ class RoomController:
             ics_url=ics_url,
             ics_fetch_interval=ics_fetch_interval,
             ics_enabled=ics_enabled,
-            platform=platform or "whereby",
+            platform=platform,
         )
         query = rooms.insert().values(**room.model_dump())
         try:

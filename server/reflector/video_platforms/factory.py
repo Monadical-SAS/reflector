@@ -2,13 +2,13 @@ from typing import Optional
 
 from reflector.settings import settings
 
-from ..schemas.platform import Platform
+from ..schemas.platform import WHEREBY_PLATFORM, Platform
 from .base import VideoPlatformClient, VideoPlatformConfig
 from .registry import get_platform_client
 
 
 def get_platform_config(platform: Platform) -> VideoPlatformConfig:
-    if platform == "whereby":
+    if platform == WHEREBY_PLATFORM:
         if not settings.WHEREBY_API_KEY:
             raise ValueError(
                 "WHEREBY_API_KEY is required when platform='whereby'. "

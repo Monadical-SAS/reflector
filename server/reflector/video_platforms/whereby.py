@@ -10,12 +10,12 @@ import httpx
 
 from reflector.db.rooms import Room
 
-from ..schemas.platform import Platform
+from ..schemas.platform import WHEREBY_PLATFORM, Platform
 from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
 
 
 class WherebyClient(VideoPlatformClient):
-    PLATFORM_NAME: Platform = "whereby"
+    PLATFORM_NAME: Platform = WHEREBY_PLATFORM
     TIMEOUT = 10  # seconds
     MAX_ELAPSED_TIME = 60 * 1000  # 1 minute in milliseconds
 

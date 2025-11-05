@@ -25,8 +25,8 @@ def upgrade() -> None:
             sa.Column(
                 "platform",
                 sa.String(),
-                nullable=False,
-                server_default="whereby",
+                nullable=True,
+                server_default=None,
             )
         )
 

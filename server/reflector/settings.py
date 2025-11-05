@@ -1,7 +1,7 @@
 from pydantic.types import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from reflector.schemas.platform import Platform
+from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils.string import NonEmptyString
 
 
@@ -139,7 +139,7 @@ class Settings(BaseSettings):
     AWS_DAILY_ROLE_ARN: str | None = None
 
     # Platform Configuration
-    DEFAULT_VIDEO_PLATFORM: Platform = "whereby"
+    DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
 
     # Zulip integration
     ZULIP_REALM: str | None = None

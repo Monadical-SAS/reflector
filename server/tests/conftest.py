@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
+from reflector.schemas.platform import WHEREBY_PLATFORM
+
 
 @pytest.fixture(scope="session", autouse=True)
 def register_mock_platform():
@@ -12,7 +14,7 @@ def register_mock_platform():
 
     from reflector.video_platforms.registry import register_platform
 
-    register_platform("whereby", MockPlatformClient)
+    register_platform(WHEREBY_PLATFORM, MockPlatformClient)
     yield
 
 
