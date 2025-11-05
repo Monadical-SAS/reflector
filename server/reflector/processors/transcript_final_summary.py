@@ -26,7 +26,25 @@ class TranscriptFinalSummaryProcessor(Processor):
     async def get_summary_builder(self, text) -> SummaryBuilder:
         builder = SummaryBuilder(self.llm, logger=self.logger)
         builder.set_transcript(text)
-        await builder.identify_participants()
+
+        # Use known participants if available, otherwise identify them
+        if self.transcript and self.transcript.participants:
+            # Extract participant names from the stored participants
+            participant_names = [p.name for p in self.transcript.participants if p.name]
+            if participant_names:
+                self.logger.info(
+                    f"Using {len(participant_names)} known participants from transcript"
+                )
+                builder.set_known_participants(participant_names)
+            else:
+                self.logger.info(
+                    "Participants field exists but is empty, identifying participants"
+                )
+                await builder.identify_participants()
+        else:
+            self.logger.info("No participants stored, identifying participants")
+            await builder.identify_participants()
+
         await builder.generate_summary()
         return builder
 
@@ -53,14 +71,25 @@ class TranscriptFinalSummaryProcessor(Processor):
                 for p in (self.transcript.participants or [])
                 if p.speaker is not None and p.name
             }
+            self.logger.info(
+                f"Built speaker map with {len(speakermap)} participants",
+                speakermap=speakermap,
+            )
 
         # build the transcript as a single string
-        # XXX: unsure if the participants name as replaced directly in speaker ?
+        # Replace speaker IDs with actual participant names if available
         text_transcript = []
+        unique_speakers = set()
         for topic in self.chunks:
             for segment in topic.transcript.as_segments():
                 name = speakermap.get(segment.speaker, f"Speaker {segment.speaker}")
+                unique_speakers.add((segment.speaker, name))
                 text_transcript.append(f"{name}: {segment.text}")
+
+        self.logger.info(
+            f"Built transcript with {len(unique_speakers)} unique speakers",
+            speakers=list(unique_speakers),
+        )
 
         text_transcript = "\n".join(text_transcript)
 
