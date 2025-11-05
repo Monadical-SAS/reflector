@@ -151,14 +151,6 @@ Whereby uses **AWS SQS** (via S3 notifications) to notify Reflector when files a
 
 **Daily.co (Webhook):** Daily explicitly tells system which files belong together in the webhook payload
 
-### Current Limitation
-
-Whereby integration currently processes single files only (not multitrack). To support Whereby multitrack, the system would need to:
-1. Scan S3 folder when notification received
-2. Group files by timestamp/pattern
-3. Wait for all tracks to arrive (debouncing)
-4. Trigger multitrack processing
-
 ---
 
 ## Implementation Files
