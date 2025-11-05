@@ -348,15 +348,12 @@ async def rooms_create_meeting(
                     start_date=current_time,
                     end_date=end_date,
                     room=room,
-                    platform=platform,
                 )
     except LockError:
         logger.warning("Failed to acquire lock for room %s within timeout", room_name)
         raise HTTPException(
             status_code=503, detail="Meeting creation in progress, please try again"
         )
-
-    meeting.platform = get_platform(room.platform)
 
     if meeting.platform == "daily" and room.recording_trigger != "none":
         client = create_platform_client(meeting.platform)
@@ -546,16 +543,9 @@ async def rooms_get_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-
-    if meeting.room_id != room.id:
-        raise HTTPException(
-            status_code=403, detail="Meeting does not belong to this room"
-        )
-
-    meeting.platform = get_platform(room.platform)
 
     if user_id != room.user_id and not room.is_shared:
         meeting.host_room_url = ""
@@ -575,15 +565,10 @@ async def rooms_join_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
 
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-
-    if meeting.room_id != room.id:
-        raise HTTPException(
-            status_code=403, detail="Meeting does not belong to this room"
-        )
 
     if not meeting.is_active:
         raise HTTPException(status_code=400, detail="Meeting is not active")
@@ -591,8 +576,6 @@ async def rooms_join_meeting(
     current_time = datetime.now(timezone.utc)
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
-
-    meeting.platform = get_platform(room.platform)
 
     if user_id != room.user_id:
         meeting.host_room_url = ""

@@ -9,6 +9,7 @@ from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
 from reflector.platform_types import Platform
 from reflector.utils import generate_uuid4
+from reflector.video_platforms.factory import get_platform
 
 meetings = sa.Table(
     "meeting",
@@ -123,7 +124,6 @@ class MeetingController:
         room: Room,
         calendar_event_id: str | None = None,
         calendar_metadata: dict[str, Any] | None = None,
-        platform: Platform = "whereby",
     ):
         meeting = Meeting(
             id=id,
@@ -139,7 +139,7 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
-            platform=platform,
+            platform=get_platform(room.platform),
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
@@ -229,12 +229,24 @@ class MeetingController:
             return None
         return Meeting(**result)
 
-    async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
+    async def get_by_id(
+        self, meeting_id: str, room: Room | None = None
+    ) -> Meeting | None:
         query = meetings.select().where(meetings.c.id == meeting_id)
+
+        if room:
+            query = query.where(meetings.c.room_id == room.id)
+
         result = await get_database().fetch_one(query)
         if not result:
             return None
-        return Meeting(**result)
+
+        meeting = Meeting(**result)
+
+        if room:
+            meeting.platform = get_platform(room.platform)
+
+        return meeting
 
     async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
         query = meetings.select().where(

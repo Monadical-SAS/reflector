@@ -127,7 +127,6 @@ async def create_upcoming_meetings_for_event(event, create_window, room_id, room
                 "description": event.description,
                 "attendees": event.attendees,
             },
-            platform=room.platform,
         )
 
         logger.info(

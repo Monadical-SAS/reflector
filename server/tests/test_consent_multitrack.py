@@ -39,7 +39,6 @@ async def test_consent_cleanup_deletes_multitrack_files():
         start_date=datetime.now(timezone.utc),
         end_date=datetime.now(timezone.utc),
         room=room,
-        platform="daily",
     )
 
     track_keys = [
@@ -126,7 +125,6 @@ async def test_consent_cleanup_handles_missing_track_keys():
         start_date=datetime.now(timezone.utc),
         end_date=datetime.now(timezone.utc),
         room=room,
-        platform="daily",
     )
 
     recording = await recordings_controller.create(
@@ -198,7 +196,6 @@ async def test_consent_cleanup_empty_track_keys_falls_back():
         start_date=datetime.now(timezone.utc),
         end_date=datetime.now(timezone.utc),
         room=room,
-        platform="daily",
     )
 
     recording = await recordings_controller.create(
@@ -271,7 +268,6 @@ async def test_consent_cleanup_partial_failure_doesnt_mark_deleted():
         start_date=datetime.now(timezone.utc),
         end_date=datetime.now(timezone.utc),
         room=room,
-        platform="daily",
     )
 
     track_keys = [
