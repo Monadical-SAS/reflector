@@ -111,6 +111,27 @@ Track 1:
 - Padding BEFORE transcription produces correct Whisper timestamps automatically
 - No manual offset adjustment needed during transcript merge
 
+### Why Re-encoding During Padding
+
+Padding coincidentally involves re-encoding, which is important for Daily.co + Whisper:
+
+**Problem:** Daily.co skips frames in recordings when microphone is muted or paused
+- WebM containers have gaps where audio frames should be
+- Whisper doesn't understand these gaps and produces incorrect timestamps
+- Example: 5s of audio with 2s muted → file has frames only for 3s, Whisper thinks duration is 3s
+
+**Solution:** Re-encoding via PyAV filter graph (`adelay` + `aresample`)
+- Restores missing frames as silence
+- Produces continuous audio stream without gaps
+- Whisper now sees correct duration and produces accurate timestamps
+
+**Why combined with padding:**
+- Already re-encoding for padding (adding initial silence)
+- More performant to do both operations in single PyAV pipeline
+- Padded values needed for mixdown anyway (creating final MP3)
+
+Implementation: `main_multitrack_pipeline.py:_apply_audio_padding_streaming()`
+
 ---
 
 ## Whereby (SQS-based)

@@ -1,8 +1,6 @@
 import asyncio
 import io
 import math
-import os
-import tempfile
 from fractions import Fraction
 
 import av
@@ -34,15 +32,25 @@ from reflector.processors import (
 )
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
-from reflector.processors.types import (
-    Transcript as TranscriptType,
-)
+from reflector.processors.types import Transcript as TranscriptType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
-from reflector.storage.base import Storage
+
+# Audio encoding constants
+OPUS_STANDARD_SAMPLE_RATE = 48000
+OPUS_DEFAULT_BIT_RATE = 128000
+
+# S3 operation constants
+S3_UPLOAD_MAX_RETRIES = 3
+S3_PRESIGNED_URL_EXPIRATION_SECONDS = 7200  # 2 hours
 
 
 class EmptyPipeline:
+    """
+    Minimal pipeline stub for processors that don't need full pipeline integration.
+    Used when processors need pipeline interface but only for logging/preferences.
+    """
+
     def __init__(self, logger: structlog.BoundLogger):
         self.logger = logger
 
@@ -61,15 +69,15 @@ class PipelineMainMultitrack(PipelineMainBase):
 
     async def pad_track_for_transcription(
         self,
-        track_data: bytes,
+        track_url: str,
         track_idx: int,
-        storage: Storage,
-    ) -> tuple[bytes, str]:
+        s3_client,
+        bucket_name: str,
+    ) -> str | None:
         """
         Pad a single track with silence based on stream metadata start_time.
-        This ensures Whisper timestamps will be relative to recording start.
-        Implemented with PyAV filter graph (aresample -> adelay) and encoded to WebM/Opus
-        Stores padded track temporarily to S3 for Modal API transcription.
+        Streams directly from S3 URL, processes in-memory, uploads to S3.
+        Returns presigned URL of padded track (or original URL if no padding needed).
 
         Daily.co raw-tracks timing - Two approaches:
 
@@ -113,70 +121,95 @@ class PipelineMainMultitrack(PipelineMainBase):
                     Track B word at 10.0s → happened at meeting t=10.0s
 
                 Merging just sorts by timestamp - no offset calculation needed.
+
+        Padding coincidentally involves re-encoding. It's important when we work with Daily.co + Whisper.
+        This is because Daily.co returns recordings with skipped frames e.g. when microphone muted.
+        Daily.co doesn't understand those frames and ignores them, causing timestamp issues in transcription.
+        Re-encoding restores those frames. We do padding and re-encoding together just because it's convenient and more performant:
+        we need padded values for mix mp3 anyways
         """
 
-        if not track_data:
-            return b"", ""
+        if not track_url:
+            return None
 
         transcript = await self.get_transcript()
 
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as input_file:
-            input_file.write(track_data)
-            input_file_path = input_file.name
-
-        output_file_path = input_file_path.replace(".webm", "_padded.webm")
-
         try:
-            start_time_seconds = self._extract_stream_start_time(
-                input_file_path, track_idx
-            )
-            if start_time_seconds <= 0:
-                self.logger.info(
-                    f"Track {track_idx} requires no padding (start_time={start_time_seconds}s)",
-                    track_idx=track_idx,
-                )
-                data_for_transcription = track_data
-            else:
-                self._apply_audio_padding(
-                    input_file_path, output_file_path, start_time_seconds, track_idx
+            with av.open(track_url) as in_container:
+                start_time_seconds = self._extract_stream_start_time_from_container(
+                    in_container, track_idx
                 )
 
-                with open(output_file_path, "rb") as f:
-                    data_for_transcription = f.read()
+                if start_time_seconds <= 0:
+                    self.logger.info(
+                        f"Track {track_idx} requires no padding (start_time={start_time_seconds}s)",
+                        track_idx=track_idx,
+                    )
+                    # No padding needed, return original URL
+                    return track_url
+
+                output_buffer = io.BytesIO()
+
+                self._apply_audio_padding_streaming(
+                    in_container, output_buffer, start_time_seconds, track_idx
+                )
+
+                output_buffer.seek(0)
+                storage_path = (
+                    f"file_pipeline/{transcript.id}/tracks/padded_{track_idx}.webm"
+                )
+
+                for attempt in range(S3_UPLOAD_MAX_RETRIES):
+                    try:
+                        s3_client.upload_fileobj(
+                            output_buffer, Bucket=bucket_name, Key=storage_path
+                        )
+                        break
+                    except Exception as e:
+                        if attempt == S3_UPLOAD_MAX_RETRIES - 1:
+                            self.logger.error(
+                                f"S3 upload failed after {S3_UPLOAD_MAX_RETRIES} attempts",
+                                track_idx=track_idx,
+                                storage_path=storage_path,
+                                error=str(e),
+                            )
+                            raise
+                        self.logger.warning(
+                            f"S3 upload attempt {attempt + 1} failed, retrying",
+                            track_idx=track_idx,
+                            error=str(e),
+                        )
+                        output_buffer.seek(0)  # Reset buffer for retry
+
+                # Return presigned URL
+                padded_url = s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={"Bucket": bucket_name, "Key": storage_path},
+                    ExpiresIn=S3_PRESIGNED_URL_EXPIRATION_SECONDS,
+                )
 
                 self.logger.info(
                     f"Successfully padded track {track_idx}",
                     track_idx=track_idx,
                     start_time_seconds=start_time_seconds,
-                    padded_size=len(data_for_transcription),
+                    padded_url=padded_url,
                 )
-            storage_path = (
-                f"file_pipeline/{transcript.id}/tracks/temp_track_{track_idx}.webm"
+
+                return padded_url
+
+        except Exception as e:
+            self.logger.error(
+                f"Failed to process track {track_idx}",
+                track_idx=track_idx,
+                url=track_url,
+                error=str(e),
+                exc_info=True,
             )
-            await storage.put_file(storage_path, data_for_transcription)
-            temp_url = await storage.get_file_url(storage_path)
+            return None
 
-            return data_for_transcription, temp_url
-
-        finally:
-            try:
-                os.unlink(input_file_path)
-            except OSError as e:
-                self.logger.warning(
-                    "Failed to cleanup temp input file",
-                    path=input_file_path,
-                    error=str(e),
-                )
-            try:
-                os.unlink(output_file_path)
-            except OSError as e:
-                self.logger.warning(
-                    "Failed to cleanup temp output file",
-                    path=output_file_path,
-                    error=str(e),
-                )
-
-    def _extract_stream_start_time(self, input_file_path: str, track_idx: int) -> float:
+    def _extract_stream_start_time_from_container(
+        self, container, track_idx: int
+    ) -> float:
         """
         Extract meeting-relative start time from WebM stream metadata.
         Uses PyAV to read stream.start_time from WebM container.
@@ -184,22 +217,23 @@ class PipelineMainMultitrack(PipelineMainBase):
         """
         start_time_seconds = 0.0
         try:
-            with av.open(input_file_path) as container:
-                audio_streams = [s for s in container.streams if s.type == "audio"]
-                stream = audio_streams[0] if audio_streams else container.streams[0]
-                if stream.start_time is not None and stream.time_base is not None:
-                    start_time_seconds = float(stream.start_time * stream.time_base)
+            audio_streams = [s for s in container.streams if s.type == "audio"]
+            stream = audio_streams[0] if audio_streams else container.streams[0]
 
-                # 2) Fallback to container-level start_time (in av.time_base units)
-                if (start_time_seconds <= 0) and (container.start_time is not None):
-                    start_time_seconds = float(container.start_time * av.time_base)
+            # 1) Try stream-level start_time (most reliable for Daily.co tracks)
+            if stream.start_time is not None and stream.time_base is not None:
+                start_time_seconds = float(stream.start_time * stream.time_base)
 
-                # 3) Fallback to first packet DTS in stream.time_base
-                if start_time_seconds <= 0:
-                    for packet in container.demux(stream):
-                        if packet.dts is not None:
-                            start_time_seconds = float(packet.dts * stream.time_base)
-                            break
+            # 2) Fallback to container-level start_time (in av.time_base units)
+            if (start_time_seconds <= 0) and (container.start_time is not None):
+                start_time_seconds = float(container.start_time * av.time_base)
+
+            # 3) Fallback to first packet DTS in stream.time_base
+            if start_time_seconds <= 0:
+                for packet in container.demux(stream):
+                    if packet.dts is not None:
+                        start_time_seconds = float(packet.dts * stream.time_base)
+                        break
         except Exception as e:
             self.logger.warning(
                 "PyAV metadata read failed; assuming 0 start_time",
@@ -214,43 +248,39 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
         return start_time_seconds
 
-    def _apply_audio_padding(
+    def _apply_audio_padding_streaming(
         self,
-        input_file_path: str,
-        output_file_path: str,
+        in_container,
+        output_buffer: io.BytesIO,
         start_time_seconds: float,
         track_idx: int,
     ) -> None:
-        """Apply silence padding to audio track using PyAV filter graph"""
+        """Apply silence padding to audio track using PyAV filter graph, streaming to memory buffer"""
         delay_ms = math.floor(start_time_seconds * 1000)
 
         self.logger.info(
-            f"Padding track {track_idx} with {delay_ms}ms delay using PyAV",
+            f"Padding track {track_idx} with {delay_ms}ms delay using PyAV streaming",
             track_idx=track_idx,
             delay_ms=delay_ms,
         )
 
         try:
-            with (
-                av.open(input_file_path) as in_container,
-                av.open(output_file_path, "w") as out_container,
-            ):
+            with av.open(output_buffer, "w", format="webm") as out_container:
                 in_stream = next(
                     (s for s in in_container.streams if s.type == "audio"), None
                 )
                 if in_stream is None:
-                    raise Exception("No audio stream in input file")
+                    raise Exception("No audio stream in input")
 
-                # Use standard Opus sample rate
-                out_sample_rate = 48000
-
-                out_stream = out_container.add_stream("libopus", rate=out_sample_rate)
-                out_stream.bit_rate = 128000
+                out_stream = out_container.add_stream(
+                    "libopus", rate=OPUS_STANDARD_SAMPLE_RATE
+                )
+                out_stream.bit_rate = OPUS_DEFAULT_BIT_RATE
                 graph = av.filter.Graph()
 
                 abuf_args = (
-                    f"time_base=1/{out_sample_rate}:"
-                    f"sample_rate={out_sample_rate}:"
+                    f"time_base=1/{OPUS_STANDARD_SAMPLE_RATE}:"
+                    f"sample_rate={OPUS_STANDARD_SAMPLE_RATE}:"
                     f"sample_fmt=s16:"
                     f"channel_layout=stereo"
                 )
@@ -269,14 +299,14 @@ class PipelineMainMultitrack(PipelineMainBase):
                 graph.configure()
 
                 resampler = AudioResampler(
-                    format="s16", layout="stereo", rate=out_sample_rate
+                    format="s16", layout="stereo", rate=OPUS_STANDARD_SAMPLE_RATE
                 )
                 # Decode -> resample -> push through graph -> encode Opus
                 for frame in in_container.decode(in_stream):
                     out_frames = resampler.resample(frame) or []
                     for rframe in out_frames:
-                        rframe.sample_rate = out_sample_rate
-                        rframe.time_base = Fraction(1, out_sample_rate)
+                        rframe.sample_rate = OPUS_STANDARD_SAMPLE_RATE
+                        rframe.time_base = Fraction(1, OPUS_STANDARD_SAMPLE_RATE)
                         src.push(rframe)
 
                         while True:
@@ -284,8 +314,8 @@ class PipelineMainMultitrack(PipelineMainBase):
                                 f_out = sink.pull()
                             except Exception:
                                 break
-                            f_out.sample_rate = out_sample_rate
-                            f_out.time_base = Fraction(1, out_sample_rate)
+                            f_out.sample_rate = OPUS_STANDARD_SAMPLE_RATE
+                            f_out.time_base = Fraction(1, OPUS_STANDARD_SAMPLE_RATE)
                             for packet in out_stream.encode(f_out):
                                 out_container.mux(packet)
 
@@ -295,8 +325,8 @@ class PipelineMainMultitrack(PipelineMainBase):
                         f_out = sink.pull()
                     except Exception:
                         break
-                    f_out.sample_rate = out_sample_rate
-                    f_out.time_base = Fraction(1, out_sample_rate)
+                    f_out.sample_rate = OPUS_STANDARD_SAMPLE_RATE
+                    f_out.time_base = Fraction(1, OPUS_STANDARD_SAMPLE_RATE)
                     for packet in out_stream.encode(f_out):
                         out_container.mux(packet)
 
@@ -314,26 +344,27 @@ class PipelineMainMultitrack(PipelineMainBase):
 
     async def mixdown_tracks(
         self,
-        track_datas: list[bytes],
+        track_urls: list[str],
         writer: AudioFileWriterProcessor,
         offsets_seconds: list[float] | None = None,
     ) -> None:
-        """Minimal multi-track mixdown using PyAV filter graph (amix)"""
+        """Minimal multi-track mixdown using PyAV filter graph (amix), streaming from S3 URLs"""
 
         target_sample_rate: int | None = None
-        for data in track_datas:
-            if not data:
+        for url in track_urls:
+            if not url:
                 continue
+            container = None
             try:
-                container = av.open(io.BytesIO(data))
-                try:
-                    for frame in container.decode(audio=0):
-                        target_sample_rate = frame.sample_rate
-                        break
-                finally:
-                    container.close()
+                container = av.open(url)
+                for frame in container.decode(audio=0):
+                    target_sample_rate = frame.sample_rate
+                    break
             except Exception:
                 continue
+            finally:
+                if container is not None:
+                    container.close()
             if target_sample_rate:
                 break
 
@@ -348,13 +379,13 @@ class PipelineMainMultitrack(PipelineMainBase):
         #   -> sink
         graph = av.filter.Graph()
         inputs = []
-        valid_track_datas = [d for d in track_datas if d]
+        valid_track_urls = [url for url in track_urls if url]
         input_offsets_seconds = None
         if offsets_seconds is not None:
             input_offsets_seconds = [
-                offsets_seconds[i] for i, d in enumerate(track_datas) if d
+                offsets_seconds[i] for i, url in enumerate(track_urls) if url
             ]
-        for idx, data in enumerate(valid_track_datas):
+        for idx, url in enumerate(valid_track_urls):
             args = (
                 f"time_base=1/{target_sample_rate}:"
                 f"sample_rate={target_sample_rate}:"
@@ -406,25 +437,33 @@ class PipelineMainMultitrack(PipelineMainBase):
         mixer.link_to(fmt)
         fmt.link_to(sink)
         graph.configure()
-        containers = []
-        for i, d in enumerate(valid_track_datas):
-            try:
-                c = av.open(io.BytesIO(d))
-                containers.append(c)
-            except Exception as e:
-                self.logger.warning(
-                    "Mixdown: failed to open container", input=i, error=str(e)
-                )
-                containers.append(None)
-        containers = [c for c in containers if c is not None]
-        decoders = [c.decode(audio=0) for c in containers]
-        active = [True] * len(decoders)
-        resamplers = [
-            AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
-            for _ in decoders
-        ]
 
+        containers = []
         try:
+            # Open all containers with cleanup guaranteed
+            for i, url in enumerate(valid_track_urls):
+                try:
+                    c = av.open(url)
+                    containers.append(c)
+                except Exception as e:
+                    self.logger.warning(
+                        "Mixdown: failed to open container from URL",
+                        input=i,
+                        url=url,
+                        error=str(e),
+                    )
+
+            if not containers:
+                self.logger.warning("Mixdown: no valid containers opened")
+                return
+
+            decoders = [c.decode(audio=0) for c in containers]
+            active = [True] * len(decoders)
+            resamplers = [
+                AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
+                for _ in decoders
+            ]
+
             while any(active):
                 for i, (dec, is_active) in enumerate(zip(decoders, active)):
                     if not is_active:
@@ -463,8 +502,13 @@ class PipelineMainMultitrack(PipelineMainBase):
                 mixed.time_base = Fraction(1, target_sample_rate)
                 await writer.push(mixed)
         finally:
+            # Cleanup all containers, even if processing failed
             for c in containers:
-                c.close()
+                if c is not None:
+                    try:
+                        c.close()
+                    except Exception:
+                        pass  # Best effort cleanup
 
     @broadcast_to_sockets
     async def set_status(self, transcript_id: str, status: TranscriptStatus):
@@ -499,72 +543,75 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         storage = get_transcripts_storage()
 
-        # Pre-download bytes for all tracks for mixing and transcription
-        track_datas: list[bytes] = []
+        # Generate presigned URLs for all raw tracks (no downloads!)
+        track_urls = []
         for key in track_keys:
-            try:
-                obj = s3.get_object(Bucket=bucket_name, Key=key)
-                track_datas.append(obj["Body"].read())
-            except Exception as e:
-                self.logger.warning(
-                    "Skipping track - cannot read S3 object",
-                    key=key,
-                    error=str(e),
-                    exc_info=True,
-                )
-                track_datas.append(b"")
-        valid_track_count = sum(1 for d in track_datas if d)
-        if valid_track_count < len(track_keys):
-            raise Exception(
-                f"Failed to download {len(track_keys) - valid_track_count}/{len(track_keys)} tracks from S3 bucket {bucket_name}"
+            url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": bucket_name, "Key": key},
+                ExpiresIn=S3_PRESIGNED_URL_EXPIRATION_SECONDS,
+            )
+            track_urls.append(url)
+            self.logger.info(
+                f"Generated presigned URL for track",
+                key=key,
             )
 
-        padded_track_datas: list[bytes] = []
+        # Process tracks: pad and upload to S3, returning presigned URLs
+        # Track which padded files we created for cleanup
+        created_padded_files = set()
         padded_track_urls: list[str] = []
-        for idx, data in enumerate(track_datas):
-            if not data:
-                padded_track_datas.append(b"")
+        for idx, url in enumerate(track_urls):
+            if not url:
                 padded_track_urls.append("")
                 continue
 
-            padded_data, padded_url = await self.pad_track_for_transcription(
-                data, idx, storage
+            # Pad and upload to S3, returns presigned URL (or original URL if no padding needed)
+            padded_url = await self.pad_track_for_transcription(
+                url, idx, s3, bucket_name
             )
-            padded_track_datas.append(padded_data)
-            padded_track_urls.append(padded_url)
-            self.logger.info(f"Padded track {idx} for transcription: {padded_url}")
-
-        try:
-            transcript.data_path.mkdir(parents=True, exist_ok=True)
-
-            mp3_writer = AudioFileWriterProcessor(
-                path=str(transcript.audio_mp3_filename),
-                on_duration=self.on_duration,
-            )
-            await self.mixdown_tracks(
-                padded_track_datas, mp3_writer, offsets_seconds=None
-            )
-            await mp3_writer.flush()
-            if transcript.audio_mp3_filename.exists():
-                mp3_data = transcript.audio_mp3_filename.read_bytes()
-                storage_path = f"{transcript.id}/audio.mp3"
-                await storage.put_file(storage_path, mp3_data)
-                mp3_url = await storage.get_file_url(storage_path)
-
-                await transcripts_controller.update(
-                    transcript, {"audio_location": "storage"}
-                )
-
-                self.logger.info(
-                    f"Uploaded mixed audio to storage",
-                    storage_path=storage_path,
-                    size=len(mp3_data),
-                    url=mp3_url,
-                )
+            if padded_url:
+                padded_track_urls.append(padded_url)
+                # Track if we created a new padded file (URL differs from original)
+                if padded_url != url:
+                    storage_path = (
+                        f"file_pipeline/{transcript.id}/tracks/padded_{idx}.webm"
+                    )
+                    created_padded_files.add(storage_path)
+                self.logger.info(f"Track {idx} processed, padded URL: {padded_url}")
             else:
-                self.logger.warning("Mixdown file does not exist after processing")
-        except Exception as e:
-            self.logger.error("Mixdown failed", error=str(e), exc_info=True)
+                padded_track_urls.append("")
+                self.logger.warning(f"Track {idx} processing failed")
+
+        # Create transcript directory for output files
+        transcript.data_path.mkdir(parents=True, exist_ok=True)
+
+        # Mixdown tracks directly from URLs
+        mp3_writer = AudioFileWriterProcessor(
+            path=str(transcript.audio_mp3_filename),
+            on_duration=self.on_duration,
+        )
+        await self.mixdown_tracks(padded_track_urls, mp3_writer, offsets_seconds=None)
+        await mp3_writer.flush()
+
+        if transcript.audio_mp3_filename.exists():
+            mp3_data = transcript.audio_mp3_filename.read_bytes()
+            storage_path = f"{transcript.id}/audio.mp3"
+            await storage.put_file(storage_path, mp3_data)
+            mp3_url = await storage.get_file_url(storage_path)
+
+            await transcripts_controller.update(
+                transcript, {"audio_location": "storage"}
+            )
+
+            self.logger.info(
+                f"Uploaded mixed audio to storage",
+                storage_path=storage_path,
+                size=len(mp3_data),
+                url=mp3_url,
+            )
+        else:
+            self.logger.warning("Mixdown file does not exist after processing")
 
         if transcript.audio_mp3_filename.exists():
             try:
@@ -582,6 +629,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                     "Waveform generation failed", error=str(e), exc_info=True
                 )
 
+        # Transcribe each padded track directly from URLs
         speaker_transcripts: list[TranscriptType] = []
         for idx, padded_url in enumerate(padded_track_urls):
             if not padded_url:
@@ -624,25 +672,24 @@ class PipelineMainMultitrack(PipelineMainBase):
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
-        self.logger.info(f"Cleaning up {len(padded_track_urls)} temporary S3 files")
+        # Cleanup temporary S3 padded files (only those we created)
+        self.logger.info(f"Cleaning up {len(created_padded_files)} temporary S3 files")
         cleanup_tasks = []
-        for idx, url in enumerate(padded_track_urls):
-            if url:
-                storage_path = (
-                    f"file_pipeline/{transcript.id}/tracks/temp_track_{idx}.webm"
-                )
-                cleanup_tasks.append(storage.delete_file(storage_path))
+        for storage_path in created_padded_files:
+            cleanup_tasks.append(storage.delete_file(storage_path))
 
         if cleanup_tasks:
             cleanup_results = await asyncio.gather(
                 *cleanup_tasks, return_exceptions=True
             )
-            for idx, result in enumerate(cleanup_results):
+            for storage_path, result in zip(created_padded_files, cleanup_results):
                 if isinstance(result, Exception):
                     self.logger.warning(
-                        f"Failed to cleanup temp track file {idx}",
+                        "Failed to cleanup temporary padded track",
+                        storage_path=storage_path,
                         error=str(result),
                     )
+
         merged_words = []
         for t in speaker_transcripts:
             merged_words.extend(t.words)
