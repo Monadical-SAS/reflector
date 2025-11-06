@@ -14,7 +14,6 @@ class AwsStorage(Storage):
         aws_secret_access_key: str,
         aws_bucket_name: str,
         aws_region: str,
-        aws_role_arn: str | None = None,  # Used by Daily.co, not by our storage client
     ):
         if not aws_access_key_id:
             raise ValueError("Storage `aws_storage` require `aws_access_key_id`")
@@ -50,7 +49,7 @@ class AwsStorage(Storage):
             if isinstance(data, bytes):
                 await client.put_object(Bucket=bucket, Key=s3filename, Body=data)
             else:
-                # boto3 reads file-like object in chunks (default 8MB via TransferConfig)
+                # boto3 reads file-like object in chunks
                 # avoids creating extra memory copy vs bytes.getvalue() approach
                 await client.upload_fileobj(data, Bucket=bucket, Key=s3filename)
 

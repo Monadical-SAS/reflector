@@ -130,7 +130,9 @@ async def mock_storage():
         async def _put_file(self, path, data):
             return None
 
-        async def _get_file_url(self, path):
+        async def _get_file_url(
+            self, path, operation: str = "get_object", expires_in: int = 3600
+        ):
             return f"http://test-storage/{path}"
 
         async def _get_file(self, path):
