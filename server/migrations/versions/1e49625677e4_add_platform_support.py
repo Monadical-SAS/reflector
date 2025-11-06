@@ -1,7 +1,7 @@
 """add_platform_support
 
 Revision ID: 1e49625677e4
-Revises: dc035ff72fd5
+Revises: 9e3f7b2a4c8e
 Create Date: 2025-10-08 13:17:29.943612
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "1e49625677e4"
-down_revision: Union[str, None] = "dc035ff72fd5"
+down_revision: Union[str, None] = "9e3f7b2a4c8e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
