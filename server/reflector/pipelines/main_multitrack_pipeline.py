@@ -575,27 +575,7 @@ class PipelineMainMultitrack(PipelineMainBase):
             if not padded_url:
                 continue
 
-            try:
-                t = await self.transcribe_file(padded_url, transcript.source_language)
-            except Exception as e:
-                self.logger.error(
-                    "Transcription via default backend failed, trying local whisper",
-                    track_idx=idx,
-                    url=padded_url,
-                    error=str(e),
-                )
-                try:
-                    t = await transcribe_file_with_processor(
-                        padded_url, transcript.source_language, processor_name="whisper"
-                    )
-                except Exception as e2:
-                    self.logger.error(
-                        "Skipping track - transcription failed after fallback",
-                        track_idx=idx,
-                        url=padded_url,
-                        error=str(e2),
-                    )
-                    continue
+            t = await self.transcribe_file(padded_url, transcript.source_language)
 
             if not t.words:
                 continue
