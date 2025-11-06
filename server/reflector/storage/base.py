@@ -1,4 +1,5 @@
 import importlib
+from typing import BinaryIO, Union
 
 from pydantic import BaseModel
 
@@ -36,10 +37,13 @@ class Storage:
 
         return cls._registry[name](**config)
 
-    async def put_file(self, filename: str, data: bytes) -> FileResult:
+    async def put_file(self, filename: str, data: Union[bytes, BinaryIO]) -> FileResult:
+        """Upload data to storage. Accepts bytes or file-like object."""
         return await self._put_file(filename, data)
 
-    async def _put_file(self, filename: str, data: bytes) -> FileResult:
+    async def _put_file(
+        self, filename: str, data: Union[bytes, BinaryIO]
+    ) -> FileResult:
         raise NotImplementedError
 
     async def delete_file(self, filename: str):
@@ -48,10 +52,14 @@ class Storage:
     async def _delete_file(self, filename: str):
         raise NotImplementedError
 
-    async def get_file_url(self, filename: str) -> str:
-        return await self._get_file_url(filename)
+    async def get_file_url(
+        self, filename: str, operation: str = "get_object", expires_in: int = 3600
+    ) -> str:
+        return await self._get_file_url(filename, operation, expires_in)
 
-    async def _get_file_url(self, filename: str) -> str:
+    async def _get_file_url(
+        self, filename: str, operation: str = "get_object", expires_in: int = 3600
+    ) -> str:
         raise NotImplementedError
 
     async def get_file(self, filename: str):

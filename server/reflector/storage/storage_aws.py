@@ -1,4 +1,7 @@
+from typing import BinaryIO, Union
+
 import aioboto3
+from botocore.config import Config
 
 from reflector.logger import logger
 from reflector.storage.base import FileResult, Storage
@@ -26,6 +29,7 @@ class AwsStorage(Storage):
         self.aws_folder = ""
         if "/" in aws_bucket_name:
             self.aws_bucket_name, self.aws_folder = aws_bucket_name.split("/", 1)
+        self.boto_config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
         self.session = aioboto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
@@ -33,27 +37,36 @@ class AwsStorage(Storage):
         )
         self.base_url = f"https://{aws_bucket_name}.s3.amazonaws.com/"
 
-    async def _put_file(self, filename: str, data: bytes) -> FileResult:
+    async def _put_file(
+        self, filename: str, data: Union[bytes, BinaryIO]
+    ) -> FileResult:
         bucket = self.aws_bucket_name
         folder = self.aws_folder
+        s3filename = f"{folder}/{filename}" if folder else filename
         logger.info(f"Uploading {filename} to S3 {bucket}/{folder}")
-        s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3") as client:
-            await client.put_object(
-                Bucket=bucket,
-                Key=s3filename,
-                Body=data,
-            )
 
-    async def _get_file_url(self, filename: str) -> FileResult:
+        async with self.session.client("s3", config=self.boto_config) as client:
+            if isinstance(data, bytes):
+                await client.put_object(Bucket=bucket, Key=s3filename, Body=data)
+            else:
+                # boto3 reads file-like object in chunks (default 8MB via TransferConfig)
+                # avoids creating extra memory copy vs bytes.getvalue() approach
+                await client.upload_fileobj(data, Bucket=bucket, Key=s3filename)
+
+        url = await self._get_file_url(filename)
+        return FileResult(filename=filename, url=url)
+
+    async def _get_file_url(
+        self, filename: str, operation: str = "get_object", expires_in: int = 3600
+    ) -> str:
         bucket = self.aws_bucket_name
         folder = self.aws_folder
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3") as client:
+        async with self.session.client("s3", config=self.boto_config) as client:
             presigned_url = await client.generate_presigned_url(
-                "get_object",
+                operation,
                 Params={"Bucket": bucket, "Key": s3filename},
-                ExpiresIn=3600,
+                ExpiresIn=expires_in,
             )
 
             return presigned_url
@@ -63,7 +76,7 @@ class AwsStorage(Storage):
         folder = self.aws_folder
         logger.info(f"Deleting {filename} from S3 {bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3") as client:
+        async with self.session.client("s3", config=self.boto_config) as client:
             await client.delete_object(Bucket=bucket, Key=s3filename)
 
     async def _get_file(self, filename: str):
@@ -71,7 +84,7 @@ class AwsStorage(Storage):
         folder = self.aws_folder
         logger.info(f"Downloading {filename} from S3 {bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3") as client:
+        async with self.session.client("s3", config=self.boto_config) as client:
             response = await client.get_object(Bucket=bucket, Key=s3filename)
             return await response["Body"].read()
 

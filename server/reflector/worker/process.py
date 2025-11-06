@@ -309,7 +309,6 @@ async def process_multitrack_recording(
 
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
-        bucket_name=bucket_name,
         track_keys=track_keys,
     )
 

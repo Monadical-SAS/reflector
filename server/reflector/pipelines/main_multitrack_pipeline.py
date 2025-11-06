@@ -4,7 +4,6 @@ import math
 from fractions import Fraction
 
 import av
-import boto3
 from av.audio.resampler import AudioResampler
 from celery import chain, shared_task
 
@@ -28,16 +27,15 @@ from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
-from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.utils.string import NonEmptyString
 
 # Audio encoding constants
 OPUS_STANDARD_SAMPLE_RATE = 48000
 OPUS_DEFAULT_BIT_RATE = 128000
 
-# S3 operation constants
-S3_UPLOAD_MAX_RETRIES = 3
-S3_PRESIGNED_URL_EXPIRATION_SECONDS = 7200  # 2 hours
+# Storage operation constants
+PRESIGNED_URL_EXPIRATION_SECONDS = 7200  # 2 hours
 
 
 class PipelineMainMultitrack(PipelineMainBase):
@@ -48,15 +46,19 @@ class PipelineMainMultitrack(PipelineMainBase):
 
     async def pad_track_for_transcription(
         self,
-        track_url: str,
+        track_url: NonEmptyString,
         track_idx: int,
-        s3_client,
-        bucket_name: str,
-    ) -> str | None:
+        storage,
+    ) -> NonEmptyString:
         """
         Pad a single track with silence based on stream metadata start_time.
-        Streams directly from S3 URL, processes in-memory, uploads to S3.
+        Downloads from S3 presigned URL, processes in-memory via PyAV, uploads to S3.
         Returns presigned URL of padded track (or original URL if no padding needed).
+
+        Memory usage:
+        - Pattern: fixed_overhead(2-5MB) + output_file_size
+        - PyAV streams input efficiently (no full download, verified)
+        - Output accumulates in BytesIO (equals encoded file size)
 
         Daily.co raw-tracks timing - Two approaches:
 
@@ -108,12 +110,10 @@ class PipelineMainMultitrack(PipelineMainBase):
         we need padded values for mix mp3 anyways
         """
 
-        if not track_url:
-            return None
-
         transcript = await self.get_transcript()
 
         try:
+            # PyAV streams input from S3 URL efficiently (2-5MB fixed overhead for codec/filters)
             with av.open(track_url) as in_container:
                 start_time_seconds = self._extract_stream_start_time_from_container(
                     in_container, track_idx
@@ -124,47 +124,25 @@ class PipelineMainMultitrack(PipelineMainBase):
                         f"Track {track_idx} requires no padding (start_time={start_time_seconds}s)",
                         track_idx=track_idx,
                     )
-                    # No padding needed, return original URL
                     return track_url
 
                 output_buffer = io.BytesIO()
 
-                self._apply_audio_padding_streaming(
+                self._apply_audio_padding_in_memory(
                     in_container, output_buffer, start_time_seconds, track_idx
                 )
 
-                output_buffer.seek(0)
                 storage_path = (
                     f"file_pipeline/{transcript.id}/tracks/padded_{track_idx}.webm"
                 )
 
-                for attempt in range(S3_UPLOAD_MAX_RETRIES):
-                    try:
-                        s3_client.upload_fileobj(
-                            output_buffer, Bucket=bucket_name, Key=storage_path
-                        )
-                        break
-                    except Exception as e:
-                        if attempt == S3_UPLOAD_MAX_RETRIES - 1:
-                            self.logger.error(
-                                f"S3 upload failed after {S3_UPLOAD_MAX_RETRIES} attempts",
-                                track_idx=track_idx,
-                                storage_path=storage_path,
-                                error=str(e),
-                            )
-                            raise
-                        self.logger.warning(
-                            f"S3 upload attempt {attempt + 1} failed, retrying",
-                            track_idx=track_idx,
-                            error=str(e),
-                        )
-                        output_buffer.seek(0)  # Reset buffer for retry
+                output_buffer.seek(0)
+                await storage.put_file(storage_path, output_buffer)
 
-                # Return presigned URL
-                padded_url = s3_client.generate_presigned_url(
-                    "get_object",
-                    Params={"Bucket": bucket_name, "Key": storage_path},
-                    ExpiresIn=S3_PRESIGNED_URL_EXPIRATION_SECONDS,
+                padded_url = await storage.get_file_url(
+                    storage_path,
+                    operation="get_object",
+                    expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
                 )
 
                 self.logger.info(
@@ -229,18 +207,18 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
         return start_time_seconds
 
-    def _apply_audio_padding_streaming(
+    def _apply_audio_padding_in_memory(
         self,
         in_container,
         output_buffer: io.BytesIO,
         start_time_seconds: float,
         track_idx: int,
     ) -> None:
-        """Apply silence padding to audio track using PyAV filter graph, streaming to memory buffer"""
+        """Apply silence padding to audio track using PyAV filter graph, writing to memory buffer"""
         delay_ms = math.floor(start_time_seconds * 1000)
 
         self.logger.info(
-            f"Padding track {track_idx} with {delay_ms}ms delay using PyAV streaming",
+            f"Padding track {track_idx} with {delay_ms}ms delay using PyAV",
             track_idx=track_idx,
             delay_ms=delay_ms,
         )
@@ -329,7 +307,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         writer: AudioFileWriterProcessor,
         offsets_seconds: list[float] | None = None,
     ) -> None:
-        """Minimal multi-track mixdown using PyAV filter graph (amix), streaming from S3 URLs"""
+        """Multi-track mixdown using PyAV filter graph (amix), reading from S3 presigned URLs"""
 
         target_sample_rate: int | None = None
         for url in track_urls:
@@ -504,7 +482,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                 transcript=transcript, event="WAVEFORM", data=waveform
             )
 
-    async def process(self, bucket_name: str, track_keys: list[str]):
+    async def process(self, track_keys: list[str]):
         transcript = await self.get_transcript()
         async with self.transaction():
             await transcripts_controller.update(
@@ -515,22 +493,15 @@ class PipelineMainMultitrack(PipelineMainBase):
                 },
             )
 
-        s3 = boto3.client(
-            "s3",
-            region_name=settings.RECORDING_STORAGE_AWS_REGION,
-            aws_access_key_id=settings.RECORDING_STORAGE_AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY,
-        )
-
         storage = get_transcripts_storage()
 
-        # Generate presigned URLs for all raw tracks (no downloads!)
-        track_urls = []
+        # Generate presigned URLs for PyAV to read tracks from S3
+        track_urls: list[str] = []
         for key in track_keys:
-            url = s3.generate_presigned_url(
-                "get_object",
-                Params={"Bucket": bucket_name, "Key": key},
-                ExpiresIn=S3_PRESIGNED_URL_EXPIRATION_SECONDS,
+            url = await storage.get_file_url(
+                key,
+                operation="get_object",
+                expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
             )
             track_urls.append(url)
             self.logger.info(
@@ -538,31 +509,19 @@ class PipelineMainMultitrack(PipelineMainBase):
                 key=key,
             )
 
-        # Process tracks: pad and upload to S3, returning presigned URLs
+        # Process tracks: pad and upload to storage, returning presigned URLs
         # Track which padded files we created for cleanup
         created_padded_files = set()
         padded_track_urls: list[str] = []
         for idx, url in enumerate(track_urls):
-            if not url:
-                padded_track_urls.append("")
-                continue
-
-            # Pad and upload to S3, returns presigned URL (or original URL if no padding needed)
-            padded_url = await self.pad_track_for_transcription(
-                url, idx, s3, bucket_name
-            )
-            if padded_url:
-                padded_track_urls.append(padded_url)
-                # Track if we created a new padded file (URL differs from original)
-                if padded_url != url:
-                    storage_path = (
-                        f"file_pipeline/{transcript.id}/tracks/padded_{idx}.webm"
-                    )
-                    created_padded_files.add(storage_path)
-                self.logger.info(f"Track {idx} processed, padded URL: {padded_url}")
-            else:
-                padded_track_urls.append("")
-                self.logger.warning(f"Track {idx} processing failed")
+            # Pad and upload to storage, returns presigned URL (or original URL if no padding needed)
+            padded_url = await self.pad_track_for_transcription(url, idx, storage)
+            padded_track_urls.append(padded_url)
+            # Track if we created a new padded file (URL differs from original)
+            if padded_url != url:
+                storage_path = f"file_pipeline/{transcript.id}/tracks/padded_{idx}.webm"
+                created_padded_files.add(storage_path)
+            self.logger.info(f"Track {idx} processed, padded URL: {padded_url}")
 
         transcript.data_path.mkdir(parents=True, exist_ok=True)
 
@@ -593,18 +552,15 @@ class PipelineMainMultitrack(PipelineMainBase):
             url=mp3_url,
         )
 
-        try:
-            self.logger.info("Generating waveform from mixed audio")
-            waveform_processor = AudioWaveformProcessor(
-                audio_path=transcript.audio_mp3_filename,
-                waveform_path=transcript.audio_waveform_filename,
-                on_waveform=self.on_waveform,
-            )
-            waveform_processor.set_pipeline(self.empty_pipeline)
-            await waveform_processor.flush()
-            self.logger.info("Waveform generated successfully")
-        except Exception as e:
-            self.logger.error("Waveform generation failed", error=str(e), exc_info=True)
+        self.logger.info("Generating waveform from mixed audio")
+        waveform_processor = AudioWaveformProcessor(
+            audio_path=transcript.audio_mp3_filename,
+            waveform_path=transcript.audio_waveform_filename,
+            on_waveform=self.on_waveform,
+        )
+        waveform_processor.set_pipeline(self.empty_pipeline)
+        await waveform_processor.flush()
+        self.logger.info("Waveform generated successfully")
 
         # Transcribe each padded track directly from URLs
         speaker_transcripts: list[TranscriptType] = []
@@ -731,12 +687,12 @@ class PipelineMainMultitrack(PipelineMainBase):
 @shared_task
 @asynctask
 async def task_pipeline_multitrack_process(
-    *, transcript_id: str, bucket_name: str, track_keys: list[str]
+    *, transcript_id: str, track_keys: list[str]
 ):
     pipeline = PipelineMainMultitrack(transcript_id=transcript_id)
     try:
         await pipeline.set_status(transcript_id, "processing")
-        await pipeline.process(bucket_name, track_keys)
+        await pipeline.process(track_keys)
     except Exception:
         await pipeline.set_status(transcript_id, "error")
         raise
