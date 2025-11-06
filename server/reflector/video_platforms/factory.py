@@ -38,9 +38,9 @@ def get_platform_config(platform: Platform) -> VideoPlatformConfig:
             api_key=settings.DAILY_API_KEY,
             webhook_secret=settings.DAILY_WEBHOOK_SECRET or "",
             subdomain=settings.DAILY_SUBDOMAIN,
-            s3_bucket=settings.AWS_DAILY_S3_BUCKET,
-            s3_region=settings.AWS_DAILY_S3_REGION,
-            aws_role_arn=settings.AWS_DAILY_ROLE_ARN,
+            s3_bucket=settings.RECORDING_STORAGE_AWS_BUCKET_NAME,
+            s3_region=settings.RECORDING_STORAGE_AWS_REGION,
+            aws_role_arn=settings.DAILY_STORAGE_AWS_ROLE_ARN,
         )
     else:
         raise ValueError(f"Unknown platform: {platform}")

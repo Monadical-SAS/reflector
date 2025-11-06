@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     RECORDING_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
+    # Daily.co specific AWS configuration
+    DAILY_STORAGE_AWS_ROLE_ARN: str | None = None
+
     # Translate into the target language
     TRANSLATION_BACKEND: str = "passthrough"
     TRANSLATE_URL: str | None = None
@@ -134,9 +137,6 @@ class Settings(BaseSettings):
     DAILY_API_KEY: str | None = None
     DAILY_WEBHOOK_SECRET: str | None = None
     DAILY_SUBDOMAIN: str | None = None
-    AWS_DAILY_S3_BUCKET: str | None = None
-    AWS_DAILY_S3_REGION: str = "us-west-2"
-    AWS_DAILY_ROLE_ARN: str | None = None
 
     # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM

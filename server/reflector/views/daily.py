@@ -66,13 +66,11 @@ async def webhook(request: Request):
             )
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
-    # Parse the JSON body
     try:
         body_json = json.loads(body)
     except json.JSONDecodeError:
         raise HTTPException(status_code=422, detail="Invalid JSON")
 
-    # Handle Daily's test event during webhook creation
     if body_json.get("test") == "test":
         logger.info("Received Daily webhook test event")
         return {"status": "ok"}
@@ -202,10 +200,10 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         platform="daily",
     )
 
-    bucket_name = settings.AWS_DAILY_S3_BUCKET
+    bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
     if not bucket_name:
         logger.error(
-            "AWS_DAILY_S3_BUCKET not configured; cannot process Daily recording"
+            "RECORDING_STORAGE_AWS_BUCKET_NAME not configured; cannot process Daily recording"
         )
         return
 

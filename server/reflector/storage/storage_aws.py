@@ -14,6 +14,7 @@ class AwsStorage(Storage):
         aws_secret_access_key: str,
         aws_bucket_name: str,
         aws_region: str,
+        aws_role_arn: str | None = None,  # Used by Daily.co, not by our storage client
     ):
         if not aws_access_key_id:
             raise ValueError("Storage `aws_storage` require `aws_access_key_id`")

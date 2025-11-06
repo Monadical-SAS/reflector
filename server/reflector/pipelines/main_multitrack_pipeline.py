@@ -27,7 +27,7 @@ from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
-from reflector.storage import get_transcripts_storage
+from reflector.storage import Storage, get_transcripts_storage
 from reflector.utils.string import NonEmptyString
 
 # Audio encoding constants
@@ -48,7 +48,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         self,
         track_url: NonEmptyString,
         track_idx: int,
-        storage,
+        storage: Storage,
     ) -> NonEmptyString:
         """
         Pad a single track with silence based on stream metadata start_time.
@@ -482,7 +482,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                 transcript=transcript, event="WAVEFORM", data=waveform
             )
 
-    async def process(self, track_keys: list[str]):
+    async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
         async with self.transaction():
             await transcripts_controller.update(
@@ -493,12 +493,17 @@ class PipelineMainMultitrack(PipelineMainBase):
                 },
             )
 
-        storage = get_transcripts_storage()
+        source_storage = Storage.get_instance(
+            name=bucket_name,
+            settings_prefix="RECORDING_STORAGE_",
+        )
+
+        transcript_storage = get_transcripts_storage()
 
         # Generate presigned URLs for PyAV to read tracks from S3
         track_urls: list[str] = []
         for key in track_keys:
-            url = await storage.get_file_url(
+            url = await source_storage.get_file_url(
                 key,
                 operation="get_object",
                 expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
@@ -515,7 +520,9 @@ class PipelineMainMultitrack(PipelineMainBase):
         padded_track_urls: list[str] = []
         for idx, url in enumerate(track_urls):
             # Pad and upload to storage, returns presigned URL (or original URL if no padding needed)
-            padded_url = await self.pad_track_for_transcription(url, idx, storage)
+            padded_url = await self.pad_track_for_transcription(
+                url, idx, transcript_storage
+            )
             padded_track_urls.append(padded_url)
             # Track if we created a new padded file (URL differs from original)
             if padded_url != url:
@@ -540,8 +547,8 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         mp3_data = transcript.audio_mp3_filename.read_bytes()
         storage_path = f"{transcript.id}/audio.mp3"
-        await storage.put_file(storage_path, mp3_data)
-        mp3_url = await storage.get_file_url(storage_path)
+        await transcript_storage.put_file(storage_path, mp3_data)
+        mp3_url = await transcript_storage.get_file_url(storage_path)
 
         await transcripts_controller.update(transcript, {"audio_location": "storage"})
 
@@ -616,7 +623,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         self.logger.info(f"Cleaning up {len(created_padded_files)} temporary S3 files")
         cleanup_tasks = []
         for storage_path in created_padded_files:
-            cleanup_tasks.append(storage.delete_file(storage_path))
+            cleanup_tasks.append(transcript_storage.delete_file(storage_path))
 
         if cleanup_tasks:
             cleanup_results = await asyncio.gather(
@@ -687,12 +694,12 @@ class PipelineMainMultitrack(PipelineMainBase):
 @shared_task
 @asynctask
 async def task_pipeline_multitrack_process(
-    *, transcript_id: str, track_keys: list[str]
+    *, transcript_id: str, bucket_name: str, track_keys: list[str]
 ):
     pipeline = PipelineMainMultitrack(transcript_id=transcript_id)
     try:
         await pipeline.set_status(transcript_id, "processing")
-        await pipeline.process(track_keys)
+        await pipeline.process(bucket_name, track_keys)
     except Exception:
         await pipeline.set_status(transcript_id, "error")
         raise
