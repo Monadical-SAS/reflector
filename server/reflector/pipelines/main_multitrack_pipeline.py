@@ -1,7 +1,8 @@
 import asyncio
-import io
 import math
+import tempfile
 from fractions import Fraction
+from pathlib import Path
 
 import av
 from av.audio.resampler import AudioResampler
@@ -52,13 +53,14 @@ class PipelineMainMultitrack(PipelineMainBase):
     ) -> NonEmptyString:
         """
         Pad a single track with silence based on stream metadata start_time.
-        Downloads from S3 presigned URL, processes in-memory via PyAV, uploads to S3.
+        Downloads from S3 presigned URL, processes via PyAV using tempfile, uploads to S3.
         Returns presigned URL of padded track (or original URL if no padding needed).
 
         Memory usage:
-        - Pattern: fixed_overhead(2-5MB) + output_file_size
+        - Pattern: fixed_overhead(2-5MB) for PyAV codec/filters
         - PyAV streams input efficiently (no full download, verified)
-        - Output accumulates in BytesIO (equals encoded file size)
+        - Output written to tempfile (disk-based, not memory)
+        - Upload streams from file handle (boto3 chunks, typically 5-10MB)
 
         Daily.co raw-tracks timing - Two approaches:
 
@@ -126,18 +128,28 @@ class PipelineMainMultitrack(PipelineMainBase):
                     )
                     return track_url
 
-                output_buffer = io.BytesIO()
+                # Use tempfile instead of BytesIO for better memory efficiency
+                # Reduces peak memory usage during encoding/upload
+                with tempfile.NamedTemporaryFile(
+                    suffix=".webm", delete=False
+                ) as temp_file:
+                    temp_path = temp_file.name
 
-                self._apply_audio_padding_in_memory(
-                    in_container, output_buffer, start_time_seconds, track_idx
-                )
+                try:
+                    self._apply_audio_padding_to_file(
+                        in_container, temp_path, start_time_seconds, track_idx
+                    )
 
-                storage_path = (
-                    f"file_pipeline/{transcript.id}/tracks/padded_{track_idx}.webm"
-                )
+                    storage_path = (
+                        f"file_pipeline/{transcript.id}/tracks/padded_{track_idx}.webm"
+                    )
 
-                output_buffer.seek(0)
-                await storage.put_file(storage_path, output_buffer)
+                    # Upload using file handle for streaming
+                    with open(temp_path, "rb") as padded_file:
+                        await storage.put_file(storage_path, padded_file)
+                finally:
+                    # Clean up temp file
+                    Path(temp_path).unlink(missing_ok=True)
 
                 padded_url = await storage.get_file_url(
                     storage_path,
@@ -207,14 +219,14 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
         return start_time_seconds
 
-    def _apply_audio_padding_in_memory(
+    def _apply_audio_padding_to_file(
         self,
         in_container,
-        output_buffer: io.BytesIO,
+        output_path: str,
         start_time_seconds: float,
         track_idx: int,
     ) -> None:
-        """Apply silence padding to audio track using PyAV filter graph, writing to memory buffer"""
+        """Apply silence padding to audio track using PyAV filter graph, writing to file"""
         delay_ms = math.floor(start_time_seconds * 1000)
 
         self.logger.info(
@@ -224,7 +236,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         )
 
         try:
-            with av.open(output_buffer, "w", format="webm") as out_container:
+            with av.open(output_path, "w", format="webm") as out_container:
                 in_stream = next(
                     (s for s in in_container.streams if s.type == "audio"), None
                 )
@@ -545,9 +557,12 @@ class PipelineMainMultitrack(PipelineMainBase):
                 "Mixdown failed - no MP3 file generated. Cannot proceed without playable audio."
             )
 
-        mp3_data = transcript.audio_mp3_filename.read_bytes()
         storage_path = f"{transcript.id}/audio.mp3"
-        await transcript_storage.put_file(storage_path, mp3_data)
+        # Use file handle streaming to avoid loading entire MP3 into memory
+        # boto3's upload_fileobj() will stream in chunks instead of loading all at once
+        mp3_size = transcript.audio_mp3_filename.stat().st_size
+        with open(transcript.audio_mp3_filename, "rb") as mp3_file:
+            await transcript_storage.put_file(storage_path, mp3_file)
         mp3_url = await transcript_storage.get_file_url(storage_path)
 
         await transcripts_controller.update(transcript, {"audio_location": "storage"})
@@ -555,7 +570,7 @@ class PipelineMainMultitrack(PipelineMainBase):
         self.logger.info(
             f"Uploaded mixed audio to storage",
             storage_path=storage_path,
-            size=len(mp3_data),
+            size=mp3_size,
             url=mp3_url,
         )
 
