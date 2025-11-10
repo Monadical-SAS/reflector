@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -11,6 +11,7 @@ import {
   Flex,
   IconButton,
   Code,
+  Dialog,
 } from "@chakra-ui/react";
 import { LuTrash2, LuCopy, LuPlus } from "react-icons/lu";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,7 +30,9 @@ export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(null);
+  const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   // Fetch API keys
   const { data: apiKeys, isLoading } = $api.useQuery("get", "/v1/user/api-keys");
@@ -108,11 +111,16 @@ export default function ApiKeysPage() {
     });
   };
 
-  const handleDelete = (keyId: string) => {
-    if (confirm("Are you sure you want to delete this API key?")) {
+  const handleDeleteRequest = (keyId: string) => {
+    setKeyToDelete(keyId);
+  };
+
+  const confirmDelete = () => {
+    if (keyToDelete) {
       deleteKeyMutation.mutate({
-        params: { path: { key_id: keyId } },
+        params: { path: { key_id: keyToDelete } },
       });
+      setKeyToDelete(null);
     }
   };
 
@@ -236,7 +244,7 @@ export default function ApiKeysPage() {
                       size="sm"
                       colorPalette="red"
                       variant="ghost"
-                      onClick={() => handleDelete(key.id)}
+                      onClick={() => handleDeleteRequest(key.id)}
                       loading={deleteKeyMutation.isPending}
                     >
                       <LuTrash2 />
@@ -248,6 +256,46 @@ export default function ApiKeysPage() {
           </Table.Root>
         )}
       </Box>
+
+      {/* Delete confirmation dialog */}
+      <Dialog.Root
+        open={!!keyToDelete}
+        onOpenChange={(e) => {
+          if (!e.open) setKeyToDelete(null);
+        }}
+        initialFocusEl={() => cancelRef.current}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header fontSize="lg" fontWeight="bold">
+              Delete API Key
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text>
+                Are you sure you want to delete this API key? This action cannot be undone.
+              </Text>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                ref={cancelRef}
+                onClick={() => setKeyToDelete(null)}
+                variant="outline"
+                colorPalette="gray"
+              >
+                Cancel
+              </Button>
+              <Button
+                colorPalette="red"
+                onClick={confirmDelete}
+                ml={3}
+              >
+                Delete
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   );
 }
