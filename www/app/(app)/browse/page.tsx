@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Flex,
   Spinner,
@@ -235,15 +235,26 @@ export default function TranscriptBrowser() {
 
   const pageSize = 20;
 
+  // must be json-able
+  const searchFilters = useMemo(
+    () => ({
+      q: urlSearchQuery,
+      extras: {
+        room_id: urlRoomId || undefined,
+        source_kind: urlSourceKind || undefined,
+      },
+    }),
+    [urlSearchQuery, urlRoomId, urlSourceKind],
+  );
+
   const {
     data: searchData,
     isLoading: searchLoading,
     refetch: reloadSearch,
-  } = useTranscriptsSearch(urlSearchQuery, {
+  } = useTranscriptsSearch(searchFilters.q, {
     limit: pageSize,
     offset: paginationPageTo0Based(page) * pageSize,
-    room_id: urlRoomId || undefined,
-    source_kind: urlSourceKind || undefined,
+    ...searchFilters.extras,
   });
 
   const results = searchData?.results || [];
@@ -254,6 +265,12 @@ export default function TranscriptBrowser() {
   const rooms = roomsData?.items || [];
 
   const totalPages = getTotalPages(totalResults, pageSize);
+
+  // reset pagination when search results change (detected by total change; good enough approximation)
+  useEffect(() => {
+    // operation is idempotent
+    setPage(FIRST_PAGE).then(() => {});
+  }, [JSON.stringify(searchFilters)]);
 
   const userName = useUserName();
   const [deletionLoading, setDeletionLoading] = useState(false);
