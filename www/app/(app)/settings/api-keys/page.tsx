@@ -160,7 +160,7 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <Box maxW="1200px" mx="auto" p={8}>
+    <Box maxW="800px" w="100%" mx="auto" p={8}>
       <Heading mb={2}>API Keys</Heading>
       <Text color="gray.600" mb={6}>
         Manage your API keys for programmatic access to Reflector
@@ -193,7 +193,13 @@ export default function ApiKeysPage() {
             again!
           </Text>
           <Flex gap={2} align="center">
-            <Code p={2} flex={1} fontSize="sm" bg="white" className="api-key-code">
+            <Code
+              p={2}
+              flex={1}
+              fontSize="sm"
+              bg="white"
+              className="api-key-code"
+            >
               {createdKey.key}
             </Code>
             <IconButton
