@@ -60,6 +60,18 @@ export default function ApiKeysPage() {
           </Box>
         ),
       });
+
+      // Focus and select the API key for easy copying after render
+      setTimeout(() => {
+        const keyElement = document.querySelector(".api-key-code");
+        if (keyElement) {
+          const range = document.createRange();
+          range.selectNodeContents(keyElement);
+          const selection = window.getSelection();
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      }, 100);
     },
     onError: () => {
       toaster.create({
@@ -181,7 +193,7 @@ export default function ApiKeysPage() {
             again!
           </Text>
           <Flex gap={2} align="center">
-            <Code p={2} flex={1} fontSize="sm" bg="white">
+            <Code p={2} flex={1} fontSize="sm" bg="white" className="api-key-code">
               {createdKey.key}
             </Code>
             <IconButton
