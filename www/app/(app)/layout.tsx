@@ -79,7 +79,11 @@ export default async function AppLayout({
           {featureEnabled("requireLogin") ? (
             <>
               &nbsp;·&nbsp;
-              <Link href="/settings/api-keys" as={NextLink} className="font-light px-2">
+              <Link
+                href="/settings/api-keys"
+                as={NextLink}
+                className="font-light px-2"
+              >
                 Settings
               </Link>
               &nbsp;·&nbsp;

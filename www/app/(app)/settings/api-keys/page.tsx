@@ -29,13 +29,18 @@ interface CreateApiKeyResponse {
 export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(null);
+  const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(
+    null,
+  );
   const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   // Fetch API keys
-  const { data: apiKeys, isLoading } = $api.useQuery("get", "/v1/user/api-keys");
+  const { data: apiKeys, isLoading } = $api.useQuery(
+    "get",
+    "/v1/user/api-keys",
+  );
 
   // Create API key mutation
   const createKeyMutation = $api.useMutation("post", "/v1/user/api-keys", {
@@ -49,7 +54,9 @@ export default function ApiKeysPage() {
         render: () => (
           <Box bg="green.500" color="white" px={4} py={3} borderRadius="md">
             <Text fontWeight="bold">API key created</Text>
-            <Text fontSize="sm">Make sure to copy it now - you won't see it again!</Text>
+            <Text fontSize="sm">
+              Make sure to copy it now - you won't see it again!
+            </Text>
           </Box>
         ),
       });
@@ -68,30 +75,36 @@ export default function ApiKeysPage() {
   });
 
   // Delete API key mutation
-  const deleteKeyMutation = $api.useMutation("delete", "/v1/user/api-keys/{key_id}", {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["get", "/v1/user/api-keys"] });
-      toaster.create({
-        duration: 3000,
-        render: () => (
-          <Box bg="green.500" color="white" px={4} py={3} borderRadius="md">
-            <Text fontWeight="bold">API key deleted</Text>
-          </Box>
-        ),
-      });
+  const deleteKeyMutation = $api.useMutation(
+    "delete",
+    "/v1/user/api-keys/{key_id}",
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["get", "/v1/user/api-keys"],
+        });
+        toaster.create({
+          duration: 3000,
+          render: () => (
+            <Box bg="green.500" color="white" px={4} py={3} borderRadius="md">
+              <Text fontWeight="bold">API key deleted</Text>
+            </Box>
+          ),
+        });
+      },
+      onError: () => {
+        toaster.create({
+          duration: 3000,
+          render: () => (
+            <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+              <Text fontWeight="bold">Error</Text>
+              <Text fontSize="sm">Failed to delete API key</Text>
+            </Box>
+          ),
+        });
+      },
     },
-    onError: () => {
-      toaster.create({
-        duration: 3000,
-        render: () => (
-          <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
-            <Text fontWeight="bold">Error</Text>
-            <Text fontSize="sm">Failed to delete API key</Text>
-          </Box>
-        ),
-      });
-    },
-  });
+  );
 
   const handleCreateKey = () => {
     createKeyMutation.mutate({
@@ -143,9 +156,18 @@ export default function ApiKeysPage() {
 
       {/* Show newly created key */}
       {createdKey && (
-        <Box mb={6} p={4} bg="green.50" borderWidth={1} borderColor="green.200" borderRadius="md">
+        <Box
+          mb={6}
+          p={4}
+          bg="green.50"
+          borderWidth={1}
+          borderColor="green.200"
+          borderRadius="md"
+        >
           <Flex justify="space-between" align="start" mb={2}>
-            <Heading size="sm" color="green.800">API Key Created</Heading>
+            <Heading size="sm" color="green.800">
+              API Key Created
+            </Heading>
             <Button
               size="sm"
               variant="ghost"
@@ -155,7 +177,8 @@ export default function ApiKeysPage() {
             </Button>
           </Flex>
           <Text mb={2} fontSize="sm" color="green.700">
-            Make sure to copy your API key now. You won't be able to see it again!
+            Make sure to copy your API key now. You won't be able to see it
+            again!
           </Text>
           <Flex gap={2} align="center">
             <Code p={2} flex={1} fontSize="sm" bg="white">
@@ -221,7 +244,9 @@ export default function ApiKeysPage() {
         {isLoading ? (
           <Text>Loading...</Text>
         ) : !apiKeys || apiKeys.length === 0 ? (
-          <Text color="gray.600">No API keys yet. Create one to get started.</Text>
+          <Text color="gray.600">
+            No API keys yet. Create one to get started.
+          </Text>
         ) : (
           <Table.Root>
             <Table.Header>
@@ -245,7 +270,11 @@ export default function ApiKeysPage() {
                       colorPalette="red"
                       variant="ghost"
                       onClick={() => handleDeleteRequest(key.id)}
-                      loading={deleteKeyMutation.isPending}
+                      loading={
+                        deleteKeyMutation.isPending &&
+                        deleteKeyMutation.variables?.params?.path?.key_id ===
+                          key.id
+                      }
                     >
                       <LuTrash2 />
                     </IconButton>
@@ -273,7 +302,8 @@ export default function ApiKeysPage() {
             </Dialog.Header>
             <Dialog.Body>
               <Text>
-                Are you sure you want to delete this API key? This action cannot be undone.
+                Are you sure you want to delete this API key? This action cannot
+                be undone.
               </Text>
             </Dialog.Body>
             <Dialog.Footer>
@@ -285,11 +315,7 @@ export default function ApiKeysPage() {
               >
                 Cancel
               </Button>
-              <Button
-                colorPalette="red"
-                onClick={confirmDelete}
-                ml={3}
-              >
+              <Button colorPalette="red" onClick={confirmDelete} ml={3}>
                 Delete
               </Button>
             </Dialog.Footer>
