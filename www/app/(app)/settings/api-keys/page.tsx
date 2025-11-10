@@ -36,16 +36,14 @@ export default function ApiKeysPage() {
   const queryClient = useQueryClient();
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  // Fetch API keys
   const { data: apiKeys, isLoading } = $api.useQuery(
     "get",
     "/v1/user/api-keys",
   );
 
-  // Create API key mutation
   const createKeyMutation = $api.useMutation("post", "/v1/user/api-keys", {
     onSuccess: (data) => {
-      setCreatedKey(data as CreateApiKeyResponse);
+      setCreatedKey(data);
       setNewKeyName("");
       setIsCreating(false);
       queryClient.invalidateQueries({ queryKey: ["get", "/v1/user/api-keys"] });
@@ -61,7 +59,6 @@ export default function ApiKeysPage() {
         ),
       });
 
-      // Focus and select the API key for easy copying after render
       setTimeout(() => {
         const keyElement = document.querySelector(".api-key-code");
         if (keyElement) {
@@ -86,7 +83,6 @@ export default function ApiKeysPage() {
     },
   });
 
-  // Delete API key mutation
   const deleteKeyMutation = $api.useMutation(
     "delete",
     "/v1/user/api-keys/{key_id}",
