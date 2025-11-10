@@ -200,10 +200,10 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
         platform="daily",
     )
 
-    bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
+    bucket_name = settings.DAILYCO_STORAGE_AWS_BUCKET_NAME
     if not bucket_name:
         logger.error(
-            "RECORDING_STORAGE_AWS_BUCKET_NAME not configured; cannot process Daily recording"
+            "DAILYCO_STORAGE_AWS_BUCKET_NAME not configured; cannot process Daily recording"
         )
         return
 

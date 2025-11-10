@@ -505,38 +505,30 @@ class PipelineMainMultitrack(PipelineMainBase):
                 },
             )
 
-        source_storage = Storage.get_instance(
-            name=bucket_name,
-            settings_prefix="RECORDING_STORAGE_",
-        )
+        source_storage = get_transcripts_storage()
+        transcript_storage = source_storage
 
-        transcript_storage = get_transcripts_storage()
-
-        # Generate presigned URLs for PyAV to read tracks from S3
         track_urls: list[str] = []
         for key in track_keys:
             url = await source_storage.get_file_url(
                 key,
                 operation="get_object",
                 expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
+                bucket=bucket_name,
             )
             track_urls.append(url)
             self.logger.info(
-                f"Generated presigned URL for track",
+                f"Generated presigned URL for track from {bucket_name}",
                 key=key,
             )
 
-        # Process tracks: pad and upload to storage, returning presigned URLs
-        # Track which padded files we created for cleanup
         created_padded_files = set()
         padded_track_urls: list[str] = []
         for idx, url in enumerate(track_urls):
-            # Pad and upload to storage, returns presigned URL (or original URL if no padding needed)
             padded_url = await self.pad_track_for_transcription(
                 url, idx, transcript_storage
             )
             padded_track_urls.append(padded_url)
-            # Track if we created a new padded file (URL differs from original)
             if padded_url != url:
                 storage_path = f"file_pipeline/{transcript.id}/tracks/padded_{idx}.webm"
                 created_padded_files.add(storage_path)
@@ -544,7 +536,6 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         transcript.data_path.mkdir(parents=True, exist_ok=True)
 
-        # Mixdown tracks directly from URLs
         mp3_writer = AudioFileWriterProcessor(
             path=str(transcript.audio_mp3_filename),
             on_duration=self.on_duration,
@@ -559,7 +550,6 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         storage_path = f"{transcript.id}/audio.mp3"
         # Use file handle streaming to avoid loading entire MP3 into memory
-        # boto3's upload_fileobj() will stream in chunks instead of loading all at once
         mp3_size = transcript.audio_mp3_filename.stat().st_size
         with open(transcript.audio_mp3_filename, "rb") as mp3_file:
             await transcript_storage.put_file(storage_path, mp3_file)
@@ -584,7 +574,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         await waveform_processor.flush()
         self.logger.info("Waveform generated successfully")
 
-        # Transcribe each padded track directly from URLs
         speaker_transcripts: list[TranscriptType] = []
         for idx, padded_url in enumerate(padded_track_urls):
             if not padded_url:
@@ -614,7 +603,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         if not speaker_transcripts:
             raise Exception("No valid track transcriptions")
 
-        # Cleanup temporary S3 padded files (only those we created)
         self.logger.info(f"Cleaning up {len(created_padded_files)} temporary S3 files")
         cleanup_tasks = []
         for storage_path in created_padded_files:
@@ -641,7 +629,6 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         merged_transcript = TranscriptType(words=merged_words, translation=None)
 
-        # Emit TRANSCRIPT event through the shared handler (persists and broadcasts)
         await self.on_transcript(merged_transcript)
 
         topics = await self.detect_topics(merged_transcript, transcript.target_language)

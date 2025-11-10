@@ -30,9 +30,9 @@ from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import get_redis_client
 from reflector.settings import settings
+from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import DailyRoomName, extract_base_room_name
 from reflector.video_platforms.factory import create_platform_client
-from reflector.whereby import get_room_sessions
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -135,15 +135,11 @@ async def process_recording(bucket_name: str, object_key: str):
     upload_filename = transcript.data_path / f"upload{extension}"
     upload_filename.parent.mkdir(parents=True, exist_ok=True)
 
-    s3 = boto3.client(
-        "s3",
-        region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
-        aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
-    )
+    storage = get_transcripts_storage()
+    file_data = await storage.get_file(object_key, bucket=bucket_name)
 
     with open(upload_filename, "wb") as f:
-        s3.download_fileobj(bucket_name, object_key, f)
+        f.write(file_data)
 
     container = av.open(upload_filename.as_posix())
     try:
@@ -357,7 +353,8 @@ async def process_meetings():
                 end_date = end_date.replace(tzinfo=timezone.utc)
 
             # This API call could be slow, extend lock if needed
-            response = await get_room_sessions(meeting.room_name)
+            client = create_platform_client(meeting.platform)
+            response = await client.get_room_sessions(meeting.room_name)
 
             try:
                 # Extend lock after slow operation to ensure we still hold it
@@ -470,53 +467,41 @@ async def reprocess_failed_recordings():
     """
     logger.info("Checking for recordings that need processing or reprocessing")
 
-    s3 = boto3.client(
-        "s3",
-        region_name=settings.TRANSCRIPT_STORAGE_AWS_REGION,
-        aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
-    )
+    storage = get_transcripts_storage()
+    bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
 
     reprocessed_count = 0
     try:
-        paginator = s3.get_paginator("list_objects_v2")
-        bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
-        pages = paginator.paginate(Bucket=bucket_name)
+        object_keys = await storage.list_objects(prefix="", bucket=bucket_name)
 
-        for page in pages:
-            if "Contents" not in page:
+        for object_key in object_keys:
+            if not object_key.endswith(".mp4"):
                 continue
 
-            for obj in page["Contents"]:
-                object_key = obj["Key"]
+            recording = await recordings_controller.get_by_object_key(
+                bucket_name, object_key
+            )
+            if not recording:
+                logger.info(f"Queueing recording for processing: {object_key}")
+                process_recording.delay(bucket_name, object_key)
+                reprocessed_count += 1
+                continue
 
-                if not (object_key.endswith(".mp4")):
-                    continue
-
-                recording = await recordings_controller.get_by_object_key(
-                    bucket_name, object_key
+            transcript = None
+            try:
+                transcript = await transcripts_controller.get_by_recording_id(
+                    recording.id
                 )
-                if not recording:
-                    logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
-                    reprocessed_count += 1
-                    continue
+            except ValidationError:
+                await transcripts_controller.remove_by_recording_id(recording.id)
+                logger.warning(
+                    f"Removed invalid transcript for recording: {recording.id}"
+                )
 
-                transcript = None
-                try:
-                    transcript = await transcripts_controller.get_by_recording_id(
-                        recording.id
-                    )
-                except ValidationError:
-                    await transcripts_controller.remove_by_recording_id(recording.id)
-                    logger.warning(
-                        f"Removed invalid transcript for recording: {recording.id}"
-                    )
-
-                if transcript is None or transcript.status == "error":
-                    logger.info(f"Queueing recording for processing: {object_key}")
-                    process_recording.delay(bucket_name, object_key)
-                    reprocessed_count += 1
+            if transcript is None or transcript.status == "error":
+                logger.info(f"Queueing recording for processing: {object_key}")
+                process_recording.delay(bucket_name, object_key)
+                reprocessed_count += 1
 
     except Exception as e:
         logger.error(f"Error checking S3 bucket: {str(e)}")

@@ -254,7 +254,6 @@ export default function TranscriptBrowser() {
   const rooms = roomsData?.items || [];
 
   const totalPages = getTotalPages(totalResults, pageSize);
-
   const userName = useUserName();
   const [deletionLoading, setDeletionLoading] = useState(false);
   const cancelRef = React.useRef(null);

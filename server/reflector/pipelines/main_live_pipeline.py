@@ -17,7 +17,6 @@ from contextlib import asynccontextmanager
 from typing import Generic
 
 import av
-import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
@@ -584,6 +583,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     consent_denied = False
     recording = None
+    meeting = None
     try:
         if transcript.recording_id:
             recording = await recordings_controller.get_by_id(transcript.recording_id)
@@ -605,21 +605,16 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     deletion_errors = []
     if recording and recording.bucket_name:
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
-        )
-
         keys_to_delete = []
         if recording.track_keys:
             keys_to_delete = recording.track_keys
         elif recording.object_key:
             keys_to_delete = [recording.object_key]
 
+        master_storage = get_transcripts_storage()
         for key in keys_to_delete:
             try:
-                s3_client.delete_object(Bucket=recording.bucket_name, Key=key)
+                await master_storage.delete_file(key, bucket=recording.bucket_name)
                 logger.info(f"Deleted recording file: {recording.bucket_name}/{key}")
             except Exception as e:
                 error_msg = f"Failed to delete {key}: {e}"

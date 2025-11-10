@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from reflector.db.rooms import Room
+from reflector.storage import get_whereby_storage
 
 from ..schemas.platform import WHEREBY_PLATFORM, Platform
 from .base import MeetingData, VideoPlatformClient, VideoPlatformConfig
@@ -39,13 +40,16 @@ class WherebyClient(VideoPlatformClient):
         }
 
         if room.recording_type == "cloud":
+            # Get storage config for passing credentials to Whereby API
+            whereby_storage = get_whereby_storage()
+            key_id, secret = whereby_storage.key_credentials
             data["recording"] = {
                 "type": room.recording_type,
                 "destination": {
                     "provider": "s3",
-                    "bucket": self.config.s3_bucket,
-                    "accessKeyId": self.config.aws_access_key_id,
-                    "accessKeySecret": self.config.aws_access_key_secret,
+                    "bucket": whereby_storage.bucket_name,
+                    "accessKeyId": key_id,
+                    "accessKeySecret": secret,
                     "fileFormat": "mp4",
                 },
                 "startTrigger": room.recording_trigger,

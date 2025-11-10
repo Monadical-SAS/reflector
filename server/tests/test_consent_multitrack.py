@@ -74,27 +74,25 @@ async def test_consent_cleanup_deletes_multitrack_files():
         )
     )
 
-    # Mock boto3 S3 client
-    with patch("reflector.pipelines.main_live_pipeline.boto3") as mock_boto3:
-        mock_s3_client = MagicMock()
-        mock_boto3.client.return_value = mock_s3_client
+    # Mock get_transcripts_storage (master credentials with bucket override)
+    with patch(
+        "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
+    ) as mock_get_transcripts_storage:
+        mock_master_storage = MagicMock()
+        mock_master_storage.delete_file = AsyncMock()
+        mock_get_transcripts_storage.return_value = mock_master_storage
 
-        # Mock storage
-        with patch(
-            "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
-        ) as mock_storage:
-            mock_storage.return_value.delete_file = AsyncMock()
+        await cleanup_consent(transcript_id=transcript.id)
 
-            await cleanup_consent(transcript_id=transcript.id)
-
-    assert mock_s3_client.delete_object.call_count == 3
-    deleted_keys = [
-        call[1]["Key"] for call in mock_s3_client.delete_object.call_args_list
-    ]
+    # Verify master storage was used with bucket override for all track keys
+    assert mock_master_storage.delete_file.call_count == 3
+    deleted_keys = []
+    for call_args in mock_master_storage.delete_file.call_args_list:
+        key = call_args[0][0]
+        bucket_kwarg = call_args[1].get("bucket")
+        deleted_keys.append(key)
+        assert bucket_kwarg == "test-bucket"  # Verify bucket override!
     assert set(deleted_keys) == set(track_keys)
-
-    for call in mock_s3_client.delete_object.call_args_list:
-        assert call[1]["Bucket"] == "test-bucket"
 
     updated_transcript = await transcripts_controller.get_by_id(transcript.id)
     assert updated_transcript.audio_deleted is True
@@ -154,21 +152,21 @@ async def test_consent_cleanup_handles_missing_track_keys():
         )
     )
 
-    # Mock boto3 S3 client
-    with patch("reflector.pipelines.main_live_pipeline.boto3") as mock_boto3:
-        mock_s3_client = MagicMock()
-        mock_boto3.client.return_value = mock_s3_client
+    # Mock get_transcripts_storage (master credentials with bucket override)
+    with patch(
+        "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
+    ) as mock_get_transcripts_storage:
+        mock_master_storage = MagicMock()
+        mock_master_storage.delete_file = AsyncMock()
+        mock_get_transcripts_storage.return_value = mock_master_storage
 
-        # Mock storage
-        with patch(
-            "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
-        ) as mock_storage:
-            mock_storage.return_value.delete_file = AsyncMock()
+        await cleanup_consent(transcript_id=transcript.id)
 
-            await cleanup_consent(transcript_id=transcript.id)
-
-    assert mock_s3_client.delete_object.call_count == 1
-    assert mock_s3_client.delete_object.call_args[1]["Key"] == recording.object_key
+    # Verify master storage was used with bucket override
+    assert mock_master_storage.delete_file.call_count == 1
+    call_args = mock_master_storage.delete_file.call_args
+    assert call_args[0][0] == recording.object_key
+    assert call_args[1].get("bucket") == "test-bucket"  # Verify bucket override!
 
 
 @pytest.mark.asyncio
@@ -225,22 +223,22 @@ async def test_consent_cleanup_empty_track_keys_falls_back():
         )
     )
 
-    # Mock boto3 S3 client
-    with patch("reflector.pipelines.main_live_pipeline.boto3") as mock_boto3:
-        mock_s3_client = MagicMock()
-        mock_boto3.client.return_value = mock_s3_client
+    # Mock get_transcripts_storage (master credentials with bucket override)
+    with patch(
+        "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
+    ) as mock_get_transcripts_storage:
+        mock_master_storage = MagicMock()
+        mock_master_storage.delete_file = AsyncMock()
+        mock_get_transcripts_storage.return_value = mock_master_storage
 
-        # Mock storage
-        with patch(
-            "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
-        ) as mock_storage:
-            mock_storage.return_value.delete_file = AsyncMock()
+        # Run cleanup
+        await cleanup_consent(transcript_id=transcript.id)
 
-            # Run cleanup
-            await cleanup_consent(transcript_id=transcript.id)
-
-    assert mock_s3_client.delete_object.call_count == 1
-    assert mock_s3_client.delete_object.call_args[1]["Key"] == recording.object_key
+    # Verify master storage was used with bucket override
+    assert mock_master_storage.delete_file.call_count == 1
+    call_args = mock_master_storage.delete_file.call_args
+    assert call_args[0][0] == recording.object_key
+    assert call_args[1].get("bucket") == "test-bucket"  # Verify bucket override!
 
 
 @pytest.mark.asyncio
@@ -303,30 +301,27 @@ async def test_consent_cleanup_partial_failure_doesnt_mark_deleted():
         )
     )
 
-    with patch("reflector.pipelines.main_live_pipeline.boto3") as mock_boto3:
-        mock_s3_client = MagicMock()
+    # Mock get_transcripts_storage (master credentials with bucket override) with partial failure
+    with patch(
+        "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
+    ) as mock_get_transcripts_storage:
+        mock_master_storage = MagicMock()
 
         call_count = 0
 
-        def delete_side_effect(**kwargs):
+        async def delete_side_effect(key, bucket=None):
             nonlocal call_count
             call_count += 1
             if call_count == 2:
                 raise Exception("S3 deletion failed")
-            return MagicMock()
 
-        mock_s3_client.delete_object.side_effect = delete_side_effect
-        mock_boto3.client.return_value = mock_s3_client
+        mock_master_storage.delete_file = AsyncMock(side_effect=delete_side_effect)
+        mock_get_transcripts_storage.return_value = mock_master_storage
 
-        # Mock storage
-        with patch(
-            "reflector.pipelines.main_live_pipeline.get_transcripts_storage"
-        ) as mock_storage:
-            mock_storage.return_value.delete_file = AsyncMock()
+        await cleanup_consent(transcript_id=transcript.id)
 
-            await cleanup_consent(transcript_id=transcript.id)
-
-    assert mock_s3_client.delete_object.call_count == 3
+    # Verify master storage was called with bucket override
+    assert mock_master_storage.delete_file.call_count == 3
 
     updated_transcript = await transcripts_controller.get_by_id(transcript.id)
     assert (

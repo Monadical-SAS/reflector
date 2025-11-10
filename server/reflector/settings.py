@@ -57,8 +57,17 @@ class Settings(BaseSettings):
     RECORDING_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
-    # Daily.co specific AWS configuration
-    DAILY_STORAGE_AWS_ROLE_ARN: str | None = None
+    # Platform-specific recording storage (follows {PREFIX}_STORAGE_AWS_{CREDENTIAL} pattern)
+    # Whereby storage configuration
+    WHEREBY_STORAGE_AWS_BUCKET_NAME: str | None = None
+    WHEREBY_STORAGE_AWS_REGION: str | None = None
+    WHEREBY_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
+    WHEREBY_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+
+    # Daily.co storage configuration
+    DAILYCO_STORAGE_AWS_BUCKET_NAME: str | None = None
+    DAILYCO_STORAGE_AWS_REGION: str | None = None
+    DAILYCO_STORAGE_AWS_ROLE_ARN: str | None = None
 
     # Translate into the target language
     TRANSLATION_BACKEND: str = "passthrough"
@@ -128,8 +137,6 @@ class Settings(BaseSettings):
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: NonEmptyString | None = None
     WHEREBY_WEBHOOK_SECRET: str | None = None
-    AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
-    AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
 

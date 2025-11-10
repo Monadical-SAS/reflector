@@ -1,3 +1,81 @@
+# Reflector Architecture: Whereby + Daily.co Recording Storage
+
+## System Overview
+
+```mermaid
+graph TB
+    subgraph "Actors"
+        APP[Our App<br/>Reflector]
+        WHEREBY[Whereby Service<br/>External]
+        DAILY[Daily.co Service<br/>External]
+    end
+
+    subgraph "AWS S3 Buckets"
+        TRANSCRIPT_BUCKET[Transcript Bucket<br/>reflector-transcripts<br/>Output: Processed MP3s]
+        WHEREBY_BUCKET[Whereby Bucket<br/>reflector-whereby-recordings<br/>Input: Raw MP4s]
+        DAILY_BUCKET[Daily.co Bucket<br/>reflector-dailyco-recordings<br/>Input: Raw WebM tracks]
+    end
+
+    subgraph "AWS Infrastructure"
+        SQS[SQS Queue<br/>Whereby notifications]
+    end
+
+    subgraph "Database"
+        DB[(PostgreSQL<br/>Recordings, Transcripts, Meetings)]
+    end
+
+    APP -->|Write processed| TRANSCRIPT_BUCKET
+    APP -->|Read/Delete| WHEREBY_BUCKET
+    APP -->|Read/Delete| DAILY_BUCKET
+    APP -->|Poll| SQS
+    APP -->|Store metadata| DB
+
+    WHEREBY -->|Write recordings| WHEREBY_BUCKET
+    WHEREBY_BUCKET -->|S3 Event| SQS
+    WHEREBY -->|Participant webhooks<br/>room.client.joined/left| APP
+
+    DAILY -->|Write recordings| DAILY_BUCKET
+    DAILY -->|Recording webhook<br/>recording.ready-to-download| APP
+```
+
+**Note on Webhook vs S3 Event for Recording Processing:**
+- **Whereby**: Uses S3 Events → SQS for recording availability (S3 as source of truth, no race conditions)
+- **Daily.co**: Uses webhooks for recording availability (more immediate, built-in reliability)
+- **Both**: Use webhooks for participant tracking (real-time updates)
+
+## Credentials & Permissions
+
+```mermaid
+graph LR
+    subgraph "Master Credentials"
+        MASTER[TRANSCRIPT_STORAGE_AWS_*<br/>Access Key ID + Secret]
+    end
+
+    subgraph "Whereby Upload Credentials"
+        WHEREBY_CREDS[AWS_WHEREBY_ACCESS_KEY_*<br/>Access Key ID + Secret]
+    end
+
+    subgraph "Daily.co Upload Role"
+        DAILY_ROLE[DAILY_STORAGE_AWS_ROLE_ARN<br/>IAM Role ARN]
+    end
+
+    subgraph "Our App Uses"
+        MASTER -->|Read/Write/Delete| TRANSCRIPT_BUCKET[Transcript Bucket]
+        MASTER -->|Read/Delete| WHEREBY_BUCKET[Whereby Bucket]
+        MASTER -->|Read/Delete| DAILY_BUCKET[Daily.co Bucket]
+        MASTER -->|Poll/Delete| SQS[SQS Queue]
+    end
+
+    subgraph "We Give To Services"
+        WHEREBY_CREDS -->|Passed in API call| WHEREBY_SERVICE[Whereby Service]
+        WHEREBY_SERVICE -->|Write Only| WHEREBY_BUCKET
+
+        DAILY_ROLE -->|Passed in API call| DAILY_SERVICE[Daily.co Service]
+        DAILY_SERVICE -->|Assume Role| DAILY_ROLE
+        DAILY_SERVICE -->|Write Only| DAILY_BUCKET
+    end
+```
+
 # Video Platform Recording Integration
 
 This document explains how Reflector receives and identifies multitrack audio recordings from different video platforms.
@@ -153,8 +231,4 @@ Whereby uses **AWS SQS** (via S3 notifications) to notify Reflector when files a
 
 ---
 
-## Implementation Files
 
-**Daily.co webhook handler:** `server/reflector/views/daily.py`
-**Whereby SQS processor:** `server/reflector/worker/process.py:process_messages()`
-**Multitrack pipeline:** `server/reflector/pipelines/main_multitrack_pipeline.py`

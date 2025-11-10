@@ -9,6 +9,7 @@ import httpx
 
 from reflector.db.rooms import Room
 from reflector.logger import logger
+from reflector.storage import get_dailyco_storage
 
 from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
@@ -60,11 +61,13 @@ class DailyClient(VideoPlatformClient):
             },
         }
 
-        assert self.config.s3_bucket, "S3 bucket must be configured"
+        # Get storage config for passing to Daily API
+        daily_storage = get_dailyco_storage()
+        assert daily_storage.bucket_name, "S3 bucket must be configured"
         data["properties"]["recordings_bucket"] = {
-            "bucket_name": self.config.s3_bucket,
-            "bucket_region": self.config.s3_region,
-            "assume_role_arn": self.config.aws_role_arn,
+            "bucket_name": daily_storage.bucket_name,
+            "bucket_region": daily_storage.region,
+            "assume_role_arn": daily_storage.role_credential,
             "allow_api_access": True,
         }
 
