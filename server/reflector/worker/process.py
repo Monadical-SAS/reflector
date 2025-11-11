@@ -33,20 +33,12 @@ from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import DailyRoomName, extract_base_room_name
 from reflector.video_platforms.factory import create_platform_client
-from reflector.video_platforms.whereby import (
+from reflector.video_platforms.whereby_utils import (
     parse_whereby_recording_filename,
     room_name_to_whereby_api_room_name,
 )
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
-
-
-def parse_datetime_with_timezone(iso_string: str) -> datetime:
-    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
-    dt = datetime.fromisoformat(iso_string)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
 
 
 @shared_task

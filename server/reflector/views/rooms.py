@@ -174,14 +174,6 @@ class CalendarEventResponse(BaseModel):
 router = APIRouter()
 
 
-def parse_datetime_with_timezone(iso_string: str) -> datetime:
-    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
-    dt = datetime.fromisoformat(iso_string)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
 @router.get("/rooms", response_model=Page[RoomDetails])
 async def rooms_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
