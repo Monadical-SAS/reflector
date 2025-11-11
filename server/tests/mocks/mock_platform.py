@@ -4,6 +4,7 @@ from typing import Any, Dict, Literal, Optional
 
 from reflector.db.rooms import Room
 from reflector.video_platforms.base import (
+    ROOM_PREFIX_SEPARATOR,
     MeetingData,
     VideoPlatformClient,
     VideoPlatformConfig,
@@ -24,7 +25,7 @@ class MockPlatformClient(VideoPlatformClient):
         self, room_name_prefix: str, end_date: datetime, room: Room
     ) -> MeetingData:
         meeting_id = str(uuid.uuid4())
-        room_name = f"{room_name_prefix}-{meeting_id[:8]}"
+        room_name = f"{room_name_prefix}{ROOM_PREFIX_SEPARATOR}{meeting_id[:8]}"
         room_url = f"https://mock.video/{room_name}"
         host_room_url = f"{room_url}?host=true"
 

@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ..schemas.platform import Platform
+from ..utils.string import NonEmptyString
 from .models import MeetingData, VideoPlatformConfig
 
 if TYPE_CHECKING:
     from reflector.db.rooms import Room
+
+# separator doesn't guarantee there's no more "ROOM_PREFIX_SEPARATOR" strings in room name
+ROOM_PREFIX_SEPARATOR = "-"
 
 
 class VideoPlatformClient(ABC):
@@ -17,12 +21,12 @@ class VideoPlatformClient(ABC):
 
     @abstractmethod
     async def create_meeting(
-        self, room_name_prefix: str, end_date: datetime, room: "Room"
+        self, room_name_prefix: NonEmptyString, end_date: datetime, room: "Room"
     ) -> MeetingData:
         pass
 
     @abstractmethod
-    async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
+    async def get_room_sessions(self, room_name: str) -> List[Any] | None:
         pass
 
     @abstractmethod

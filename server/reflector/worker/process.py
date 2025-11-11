@@ -33,6 +33,10 @@ from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import DailyRoomName, extract_base_room_name
 from reflector.video_platforms.factory import create_platform_client
+from reflector.video_platforms.whereby import (
+    parse_whereby_recording_filename,
+    room_name_to_whereby_api_room_name,
+)
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -86,14 +90,16 @@ def process_messages():
         logger.error("process_messages", error=str(e))
 
 
+# only whereby supported.
 @shared_task
 @asynctask
 async def process_recording(bucket_name: str, object_key: str):
     logger.info("Processing recording: %s/%s", bucket_name, object_key)
 
-    # extract a guid and a datetime from the object key
-    room_name = f"/{object_key[:36]}"
-    recorded_at = parse_datetime_with_timezone(object_key[37:57])
+    room_name_part, recorded_at = parse_whereby_recording_filename(object_key)
+
+    # we store whereby api room names, NOT whereby room names
+    room_name = room_name_to_whereby_api_room_name(room_name_part)
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     room = await rooms_controller.get_by_id(meeting.room_id)
@@ -328,7 +334,7 @@ async def process_meetings():
     Uses distributed locking to prevent race conditions when multiple workers
     process the same meeting simultaneously.
     """
-    logger.info("Processing meetings")
+    logger.debug("Processing meetings")
     meetings = await meetings_controller.get_all_active()
     current_time = datetime.now(timezone.utc)
     redis_client = get_redis_client()
@@ -354,7 +360,7 @@ async def process_meetings():
 
             # This API call could be slow, extend lock if needed
             client = create_platform_client(meeting.platform)
-            response = await client.get_room_sessions(meeting.room_name)
+            room_sessions = await client.get_room_sessions(meeting.room_name)
 
             try:
                 # Extend lock after slow operation to ensure we still hold it
@@ -363,7 +369,6 @@ async def process_meetings():
                 logger_.warning("Lost lock for meeting, skipping")
                 continue
 
-            room_sessions = response.get("results", [])
             has_active_sessions = room_sessions and any(
                 rs["endedAt"] is None for rs in room_sessions
             )
@@ -396,7 +401,7 @@ async def process_meetings():
             except LockError:
                 pass  # Lock already released or expired
 
-    logger.info(
+    logger.debug(
         "Processed meetings finished",
         processed_count=processed_count,
         skipped_count=skipped_count,

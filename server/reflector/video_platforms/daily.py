@@ -3,7 +3,7 @@ import hmac
 from datetime import datetime
 from hashlib import sha256
 from http import HTTPStatus
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -14,7 +14,7 @@ from reflector.storage import get_dailyco_storage
 from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
-from .base import VideoPlatformClient
+from .base import ROOM_PREFIX_SEPARATOR, VideoPlatformClient
 from .models import MeetingData, RecordingType, VideoPlatformConfig
 
 
@@ -44,7 +44,7 @@ class DailyClient(VideoPlatformClient):
         - Meeting.room_name stores the timestamped Daily.co room name
         """
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
-        room_name = f"{room_name_prefix}-{timestamp}"
+        room_name = f"{room_name_prefix}{ROOM_PREFIX_SEPARATOR}{timestamp}"
 
         data = {
             "name": room_name,
@@ -99,15 +99,9 @@ class DailyClient(VideoPlatformClient):
             extra_data=result,
         )
 
-    async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.BASE_URL}/rooms/{room_name}",
-                headers=self.headers,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()
+    async def get_room_sessions(self, room_name: str) -> List[Any] | None:
+        # no such api
+        return None
 
     async def get_room_presence(self, room_name: str) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
