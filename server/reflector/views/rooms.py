@@ -358,7 +358,9 @@ async def rooms_create_meeting(
     if meeting.platform == "daily" and room.recording_trigger != "none":
         client = create_platform_client(meeting.platform)
         token = await client.create_meeting_token(
-            meeting.room_name, enable_recording=True
+            meeting.room_name,
+            enable_recording=True,
+            user_id=user_id,
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)

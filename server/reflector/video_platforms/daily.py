@@ -179,13 +179,19 @@ class DailyClient(VideoPlatformClient):
             return False
 
     async def create_meeting_token(
-        self, room_name: DailyRoomName, enable_recording: bool
+        self,
+        room_name: DailyRoomName,
+        enable_recording: bool,
+        user_id: Optional[str] = None,
     ) -> str:
         data = {"properties": {"room_name": room_name}}
 
         if enable_recording:
             data["properties"]["start_cloud_recording"] = True
             data["properties"]["enable_recording_ui"] = False
+
+        if user_id:
+            data["properties"]["user_id"] = user_id
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
