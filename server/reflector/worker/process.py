@@ -462,13 +462,21 @@ async def convert_audio_and_waveform(transcript) -> None:
 @asynctask
 async def reprocess_failed_recordings():
     """
-    Find recordings in the S3 bucket and check if they have proper transcriptions.
+    Find recordings in Whereby S3 bucket and check if they have proper transcriptions.
     If not, requeue them for processing.
+
+    Note: Daily.co recordings are processed via webhooks, not this cron job.
     """
-    logger.info("Checking for recordings that need processing or reprocessing")
+    logger.info("Checking Whereby recordings that need processing or reprocessing")
+
+    if not settings.WHEREBY_STORAGE_AWS_BUCKET_NAME:
+        raise ValueError(
+            "WHEREBY_STORAGE_AWS_BUCKET_NAME required for Whereby recording reprocessing. "
+            "Set WHEREBY_STORAGE_AWS_BUCKET_NAME environment variable."
+        )
 
     storage = get_transcripts_storage()
-    bucket_name = settings.RECORDING_STORAGE_AWS_BUCKET_NAME
+    bucket_name = settings.WHEREBY_STORAGE_AWS_BUCKET_NAME
 
     reprocessed_count = 0
     try:

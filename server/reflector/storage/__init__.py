@@ -32,9 +32,6 @@ def get_whereby_storage() -> Storage:
 
     Do NOT use for our file operations - use get_transcripts_storage() instead.
     """
-    if settings.RECORDING_STORAGE_BACKEND != "aws":
-        return get_transcripts_storage()
-
     # Fail fast if platform-specific config missing
     if not settings.WHEREBY_STORAGE_AWS_BUCKET_NAME:
         raise ValueError(
@@ -61,9 +58,6 @@ def get_dailyco_storage() -> Storage:
 
     Do NOT use for our file operations - use get_transcripts_storage() instead.
     """
-    if settings.RECORDING_STORAGE_BACKEND != "aws":
-        return get_transcripts_storage()
-
     # Fail fast if platform-specific config missing
     if not settings.DAILYCO_STORAGE_AWS_BUCKET_NAME:
         raise ValueError(
@@ -73,20 +67,4 @@ def get_dailyco_storage() -> Storage:
     return Storage.get_instance(
         name="aws",
         settings_prefix="DAILYCO_STORAGE_",
-    )
-
-
-def get_recordings_storage() -> Storage:
-    """
-    Legacy function for backward compatibility.
-    Returns master credentials pointing to generic recording bucket.
-
-    DEPRECATED: Prefer get_transcripts_storage() with bucket override.
-    """
-    if not settings.RECORDING_STORAGE_BACKEND:
-        return get_transcripts_storage()
-
-    return Storage.get_instance(
-        name=settings.RECORDING_STORAGE_BACKEND,
-        settings_prefix="RECORDING_STORAGE_",
     )
