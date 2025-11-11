@@ -1,3 +1,5 @@
+import asyncio
+from functools import wraps
 from typing import BinaryIO, Union
 
 import aioboto3
@@ -5,7 +7,40 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from reflector.logger import logger
-from reflector.storage.base import FileResult, Storage
+from reflector.storage.base import FileResult, Storage, StoragePermissionError
+
+
+def handle_s3_client_errors(operation_name: str):
+    """Decorator to handle S3 ClientError with bucket-aware messaging.
+
+    Args:
+        operation_name: Human-readable operation name for error messages (e.g., "upload", "delete")
+    """
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            bucket = kwargs.get("bucket")
+            try:
+                return await func(self, *args, **kwargs)
+            except ClientError as e:
+                error_code = e.response.get("Error", {}).get("Code")
+                if error_code in ("AccessDenied", "NoSuchBucket"):
+                    actual_bucket = bucket or self._bucket_name
+                    bucket_context = (
+                        f"overridden bucket '{actual_bucket}'"
+                        if bucket
+                        else f"default bucket '{actual_bucket}'"
+                    )
+                    raise StoragePermissionError(
+                        f"S3 {operation_name} failed for {bucket_context}: {error_code}. "
+                        f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
+                    ) from e
+                raise
+
+        return wrapper
+
+    return decorator
 
 
 class AwsStorage(Storage):
@@ -27,6 +62,10 @@ class AwsStorage(Storage):
         if not aws_access_key_id and not aws_role_arn:
             raise ValueError(
                 "Storage `aws_storage` require either `aws_access_key_id` or `aws_role_arn`"
+            )
+        if aws_role_arn and (aws_access_key_id or aws_secret_access_key):
+            raise ValueError(
+                "Storage `aws_storage` cannot use both `aws_role_arn` and access keys"
             )
 
         super().__init__()
@@ -92,48 +131,33 @@ class AwsStorage(Storage):
             raise ValueError("Storage IAM role ARN not configured")
         return self._role_arn
 
+    @handle_s3_client_errors("upload")
     async def _put_file(
-        self, filename: str, data: Union[bytes, BinaryIO], bucket: str | None = None
+        self, filename: str, data: Union[bytes, BinaryIO], *, bucket: str | None = None
     ) -> FileResult:
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         s3filename = f"{folder}/{filename}" if folder else filename
         logger.info(f"Uploading {filename} to S3 {actual_bucket}/{folder}")
 
-        try:
-            async with self.session.client("s3", config=self.boto_config) as client:
-                if isinstance(data, bytes):
-                    await client.put_object(
-                        Bucket=actual_bucket, Key=s3filename, Body=data
-                    )
-                else:
-                    # boto3 reads file-like object in chunks
-                    # avoids creating extra memory copy vs bytes.getvalue() approach
-                    await client.upload_fileobj(
-                        data, Bucket=actual_bucket, Key=s3filename
-                    )
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("AccessDenied", "NoSuchBucket"):
-                bucket_context = (
-                    f"overridden bucket '{actual_bucket}'"
-                    if bucket
-                    else f"default bucket '{actual_bucket}'"
-                )
-                raise Exception(
-                    f"S3 upload failed for {bucket_context}: {error_code}. "
-                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
-                ) from e
-            raise
+        async with self.session.client("s3", config=self.boto_config) as client:
+            if isinstance(data, bytes):
+                await client.put_object(Bucket=actual_bucket, Key=s3filename, Body=data)
+            else:
+                # boto3 reads file-like object in chunks
+                # avoids creating extra memory copy vs bytes.getvalue() approach
+                await client.upload_fileobj(data, Bucket=actual_bucket, Key=s3filename)
 
         url = await self._get_file_url(filename, bucket=bucket)
         return FileResult(filename=filename, url=url)
 
+    @handle_s3_client_errors("presign")
     async def _get_file_url(
         self,
         filename: str,
         operation: str = "get_object",
         expires_in: int = 3600,
+        *,
         bucket: str | None = None,
     ) -> str:
         actual_bucket = bucket or self._bucket_name
@@ -148,53 +172,28 @@ class AwsStorage(Storage):
 
             return presigned_url
 
-    async def _delete_file(self, filename: str, bucket: str | None = None):
+    @handle_s3_client_errors("delete")
+    async def _delete_file(self, filename: str, *, bucket: str | None = None):
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         logger.info(f"Deleting {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        try:
-            async with self.session.client("s3", config=self.boto_config) as client:
-                await client.delete_object(Bucket=actual_bucket, Key=s3filename)
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("AccessDenied", "NoSuchBucket"):
-                bucket_context = (
-                    f"overridden bucket '{actual_bucket}'"
-                    if bucket
-                    else f"default bucket '{actual_bucket}'"
-                )
-                raise Exception(
-                    f"S3 delete failed for {bucket_context}: {error_code}. "
-                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
-                ) from e
-            raise
+        async with self.session.client("s3", config=self.boto_config) as client:
+            await client.delete_object(Bucket=actual_bucket, Key=s3filename)
 
-    async def _get_file(self, filename: str, bucket: str | None = None):
+    @handle_s3_client_errors("download")
+    async def _get_file(self, filename: str, *, bucket: str | None = None):
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         logger.info(f"Downloading {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        try:
-            async with self.session.client("s3", config=self.boto_config) as client:
-                response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
-                return await response["Body"].read()
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("AccessDenied", "NoSuchBucket"):
-                bucket_context = (
-                    f"overridden bucket '{actual_bucket}'"
-                    if bucket
-                    else f"default bucket '{actual_bucket}'"
-                )
-                raise Exception(
-                    f"S3 download failed for {bucket_context}: {error_code}. "
-                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
-                ) from e
-            raise
+        async with self.session.client("s3", config=self.boto_config) as client:
+            response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
+            return await response["Body"].read()
 
+    @handle_s3_client_errors("list_objects")
     async def _list_objects(
-        self, prefix: str = "", bucket: str | None = None
+        self, prefix: str = "", *, bucket: str | None = None
     ) -> list[str]:
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
@@ -203,73 +202,52 @@ class AwsStorage(Storage):
         logger.info(f"Listing objects from S3 {actual_bucket} with prefix '{s3prefix}'")
 
         keys = []
-        try:
-            async with self.session.client("s3", config=self.boto_config) as client:
-                paginator = client.get_paginator("list_objects_v2")
-                async for page in paginator.paginate(
-                    Bucket=actual_bucket, Prefix=s3prefix
-                ):
-                    if "Contents" in page:
-                        for obj in page["Contents"]:
-                            # Strip folder prefix from keys if present
-                            key = obj["Key"]
-                            if folder and key.startswith(f"{folder}/"):
+        async with self.session.client("s3", config=self.boto_config) as client:
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=actual_bucket, Prefix=s3prefix):
+                if "Contents" in page:
+                    for obj in page["Contents"]:
+                        # Strip folder prefix from keys if present
+                        key = obj["Key"]
+                        if folder:
+                            if key.startswith(f"{folder}/"):
                                 key = key[len(folder) + 1 :]
-                            keys.append(key)
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("AccessDenied", "NoSuchBucket"):
-                bucket_context = (
-                    f"overridden bucket '{actual_bucket}'"
-                    if bucket
-                    else f"default bucket '{actual_bucket}'"
-                )
-                raise Exception(
-                    f"S3 list_objects failed for {bucket_context}: {error_code}. "
-                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
-                ) from e
-            raise
+                            elif key == folder:
+                                # Skip folder marker itself
+                                continue
+                        keys.append(key)
 
         return keys
 
+    @handle_s3_client_errors("stream")
     async def _stream_to_fileobj(
-        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+        self, filename: str, fileobj: BinaryIO, *, bucket: str | None = None
     ):
         """Stream file from S3 directly to file object without loading into memory."""
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         logger.info(f"Streaming {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        try:
-            async with self.session.client("s3", config=self.boto_config) as client:
-                response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
-                # Stream response body in chunks to file object
-                # This avoids loading entire file into memory
-                body = response["Body"]
-                try:
-                    while True:
-                        chunk = await body.read(1024 * 1024)  # 1MB chunks
-                        if not chunk:
-                            break
-                        fileobj.write(chunk)
-                    fileobj.flush()
-                finally:
-                    # Ensure S3 response body is closed even if write fails
-                    if hasattr(body, "close"):
-                        body.close()
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("AccessDenied", "NoSuchBucket"):
-                bucket_context = (
-                    f"overridden bucket '{actual_bucket}'"
-                    if bucket
-                    else f"default bucket '{actual_bucket}'"
-                )
-                raise Exception(
-                    f"S3 stream failed for {bucket_context}: {error_code}. "
-                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
-                ) from e
-            raise
+        async with self.session.client("s3", config=self.boto_config) as client:
+            response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
+            # Stream response body in chunks to file object
+            # This avoids loading entire file into memory
+            body = response["Body"]
+            try:
+                while True:
+                    chunk = await body.read(1024 * 1024)  # 1MB chunks
+                    if not chunk:
+                        break
+                    fileobj.write(chunk)
+                fileobj.flush()
+            finally:
+                # Ensure S3 response body is closed even if write fails
+                if hasattr(body, "close"):
+                    close_fn = body.close
+                    if asyncio.iscoroutinefunction(close_fn):
+                        await close_fn()
+                    else:
+                        close_fn()
 
 
 Storage.register("aws", AwsStorage)

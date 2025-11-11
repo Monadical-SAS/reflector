@@ -6,6 +6,18 @@ from pydantic import BaseModel
 from reflector.settings import settings
 
 
+class StorageError(Exception):
+    """Base exception for storage operations."""
+
+    pass
+
+
+class StoragePermissionError(StorageError):
+    """Exception raised when storage operation fails due to permission issues."""
+
+    pass
+
+
 class FileResult(BaseModel):
     filename: str
     url: str
@@ -80,21 +92,21 @@ class Storage:
         raise NotImplementedError
 
     async def put_file(
-        self, filename: str, data: Union[bytes, BinaryIO], bucket: str | None = None
+        self, filename: str, data: Union[bytes, BinaryIO], *, bucket: str | None = None
     ) -> FileResult:
         """Upload data. bucket: override instance default if provided."""
-        return await self._put_file(filename, data, bucket)
+        return await self._put_file(filename, data, bucket=bucket)
 
     async def _put_file(
-        self, filename: str, data: Union[bytes, BinaryIO], bucket: str | None = None
+        self, filename: str, data: Union[bytes, BinaryIO], *, bucket: str | None = None
     ) -> FileResult:
         raise NotImplementedError
 
-    async def delete_file(self, filename: str, bucket: str | None = None):
+    async def delete_file(self, filename: str, *, bucket: str | None = None):
         """Delete file. bucket: override instance default if provided."""
-        return await self._delete_file(filename, bucket)
+        return await self._delete_file(filename, bucket=bucket)
 
-    async def _delete_file(self, filename: str, bucket: str | None = None):
+    async def _delete_file(self, filename: str, *, bucket: str | None = None):
         raise NotImplementedError
 
     async def get_file_url(
@@ -102,46 +114,48 @@ class Storage:
         filename: str,
         operation: str = "get_object",
         expires_in: int = 3600,
+        *,
         bucket: str | None = None,
     ) -> str:
         """Generate presigned URL. bucket: override instance default if provided."""
-        return await self._get_file_url(filename, operation, expires_in, bucket)
+        return await self._get_file_url(filename, operation, expires_in, bucket=bucket)
 
     async def _get_file_url(
         self,
         filename: str,
         operation: str = "get_object",
         expires_in: int = 3600,
+        *,
         bucket: str | None = None,
     ) -> str:
         raise NotImplementedError
 
-    async def get_file(self, filename: str, bucket: str | None = None):
+    async def get_file(self, filename: str, *, bucket: str | None = None):
         """Download file. bucket: override instance default if provided."""
-        return await self._get_file(filename, bucket)
+        return await self._get_file(filename, bucket=bucket)
 
-    async def _get_file(self, filename: str, bucket: str | None = None):
+    async def _get_file(self, filename: str, *, bucket: str | None = None):
         raise NotImplementedError
 
     async def list_objects(
-        self, prefix: str = "", bucket: str | None = None
+        self, prefix: str = "", *, bucket: str | None = None
     ) -> list[str]:
         """List object keys. bucket: override instance default if provided."""
-        return await self._list_objects(prefix, bucket)
+        return await self._list_objects(prefix, bucket=bucket)
 
     async def _list_objects(
-        self, prefix: str = "", bucket: str | None = None
+        self, prefix: str = "", *, bucket: str | None = None
     ) -> list[str]:
         raise NotImplementedError
 
     async def stream_to_fileobj(
-        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+        self, filename: str, fileobj: BinaryIO, *, bucket: str | None = None
     ):
         """Stream file directly to file object without loading into memory.
         bucket: override instance default if provided."""
-        return await self._stream_to_fileobj(filename, fileobj, bucket)
+        return await self._stream_to_fileobj(filename, fileobj, bucket=bucket)
 
     async def _stream_to_fileobj(
-        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+        self, filename: str, fileobj: BinaryIO, *, bucket: str | None = None
     ):
         raise NotImplementedError
