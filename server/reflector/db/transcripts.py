@@ -186,6 +186,7 @@ class TranscriptParticipant(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     speaker: int | None
     name: str
+    user_id: str | None = None
 
 
 class Transcript(BaseModel):

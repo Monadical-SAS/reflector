@@ -259,6 +259,7 @@ async def process_multitrack_recording(
         daily_client = create_platform_client("daily")
 
         id_to_name = {}
+        id_to_user_id = {}
 
         mtg_session_id = None
         try:
@@ -278,8 +279,11 @@ async def process_multitrack_recording(
                 for p in payload.get("data", []):
                     pid = p.get("participant_id")
                     name = p.get("user_name")
+                    user_id = p.get("user_id")
                     if pid and name:
                         id_to_name[pid] = name
+                    if pid and user_id:
+                        id_to_user_id[pid] = user_id
             except Exception as e:
                 logger.warning(
                     "Failed to fetch Daily meeting participants",
@@ -300,9 +304,10 @@ async def process_multitrack_recording(
 
             default_name = f"Speaker {idx}"
             name = id_to_name.get(participant_id, default_name)
+            user_id = id_to_user_id.get(participant_id)
 
             participant = TranscriptParticipant(
-                id=participant_id, speaker=idx, name=name
+                id=participant_id, speaker=idx, name=name, user_id=user_id
             )
             await transcripts_controller.upsert_participant(transcript, participant)
 
