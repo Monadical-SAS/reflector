@@ -133,3 +133,15 @@ class Storage:
         self, prefix: str = "", bucket: str | None = None
     ) -> list[str]:
         raise NotImplementedError
+
+    async def stream_to_fileobj(
+        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+    ):
+        """Stream file directly to file object without loading into memory.
+        bucket: override instance default if provided."""
+        return await self._stream_to_fileobj(filename, fileobj, bucket)
+
+    async def _stream_to_fileobj(
+        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+    ):
+        raise NotImplementedError

@@ -134,10 +134,14 @@ async def process_recording(bucket_name: str, object_key: str):
     upload_filename.parent.mkdir(parents=True, exist_ok=True)
 
     storage = get_transcripts_storage()
-    file_data = await storage.get_file(object_key, bucket=bucket_name)
 
-    with open(upload_filename, "wb") as f:
-        f.write(file_data)
+    try:
+        with open(upload_filename, "wb") as f:
+            await storage.stream_to_fileobj(object_key, f, bucket=bucket_name)
+    except Exception:
+        # Clean up partial file on stream failure
+        upload_filename.unlink(missing_ok=True)
+        raise
 
     container = av.open(upload_filename.as_posix())
     try:

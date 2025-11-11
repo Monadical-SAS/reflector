@@ -127,19 +127,26 @@ async def mock_storage():
     from reflector.storage.base import Storage
 
     class TestStorage(Storage):
-        async def _put_file(self, path, data):
+        async def _put_file(self, path, data, bucket=None):
             return None
 
         async def _get_file_url(
-            self, path, operation: str = "get_object", expires_in: int = 3600
+            self,
+            path,
+            operation: str = "get_object",
+            expires_in: int = 3600,
+            bucket=None,
         ):
             return f"http://test-storage/{path}"
 
-        async def _get_file(self, path):
+        async def _get_file(self, path, bucket=None):
             return b"test_audio_data"
 
-        async def _delete_file(self, path):
+        async def _delete_file(self, path, bucket=None):
             return None
+
+        async def _stream_to_fileobj(self, path, fileobj, bucket=None):
+            fileobj.write(b"test_audio_data")
 
     storage = TestStorage()
     # Add mock tracking for verification

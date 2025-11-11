@@ -232,5 +232,44 @@ class AwsStorage(Storage):
 
         return keys
 
+    async def _stream_to_fileobj(
+        self, filename: str, fileobj: BinaryIO, bucket: str | None = None
+    ):
+        """Stream file from S3 directly to file object without loading into memory."""
+        actual_bucket = bucket or self._bucket_name
+        folder = self.aws_folder
+        logger.info(f"Streaming {filename} from S3 {actual_bucket}/{folder}")
+        s3filename = f"{folder}/{filename}" if folder else filename
+        try:
+            async with self.session.client("s3", config=self.boto_config) as client:
+                response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
+                # Stream response body in chunks to file object
+                # This avoids loading entire file into memory
+                body = response["Body"]
+                try:
+                    while True:
+                        chunk = await body.read(1024 * 1024)  # 1MB chunks
+                        if not chunk:
+                            break
+                        fileobj.write(chunk)
+                    fileobj.flush()
+                finally:
+                    # Ensure S3 response body is closed even if write fails
+                    if hasattr(body, "close"):
+                        body.close()
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code in ("AccessDenied", "NoSuchBucket"):
+                bucket_context = (
+                    f"overridden bucket '{actual_bucket}'"
+                    if bucket
+                    else f"default bucket '{actual_bucket}'"
+                )
+                raise Exception(
+                    f"S3 stream failed for {bucket_context}: {error_code}. "
+                    f"Check TRANSCRIPT_STORAGE_AWS_* credentials have permission."
+                ) from e
+            raise
+
 
 Storage.register("aws", AwsStorage)
