@@ -74,8 +74,15 @@ async def setup_webhook(webhook_url: str):
 
             print(f"✓ Created webhook {webhook_uuid} (state: {result['state']})")
             print(f"  URL: {result['url']}")
+            print()
+            print("=" * 60)
+            print("IMPORTANT: Add this to your environment variables:")
+            print("=" * 60)
+            print(f"DAILY_WEBHOOK_UUID: {webhook_uuid}")
+            print("=" * 60)
+            print()
 
-            # Write UUID to .env file
+            # Try to write UUID to .env file
             env_file = Path(__file__).parent.parent / ".env"
             if env_file.exists():
                 lines = env_file.read_text().splitlines()
@@ -92,10 +99,9 @@ async def setup_webhook(webhook_url: str):
                     lines.append(f"DAILY_WEBHOOK_UUID={webhook_uuid}")
 
                 env_file.write_text("\n".join(lines) + "\n")
-                print(f"✓ Saved webhook UUID to .env")
+                print(f"✓ Also saved to local .env file")
             else:
-                print(f"⚠ .env file not found at {env_file}")
-                print(f"  Add to .env manually: DAILY_WEBHOOK_UUID={webhook_uuid}")
+                print(f"⚠ Local .env file not found - please add manually")
 
             return 0
 
