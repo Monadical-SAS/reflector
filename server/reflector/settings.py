@@ -135,6 +135,9 @@ class Settings(BaseSettings):
     DAILY_API_KEY: str | None = None
     DAILY_WEBHOOK_SECRET: str | None = None
     DAILY_SUBDOMAIN: str | None = None
+    DAILY_WEBHOOK_UUID: str | None = (
+        None  # Webhook UUID for this environment. Not used by production code
+    )
 
     # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
