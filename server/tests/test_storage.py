@@ -21,13 +21,12 @@ async def test_aws_storage_stream_to_fileobj():
         aws_secret_access_key="test-secret",
     )
 
-    # Mock AWS response with streaming body
-    mock_body = MagicMock()
-    mock_body.read = AsyncMock(side_effect=[b"chunk1", b"chunk2", b""])
+    # Mock download_fileobj to write data
+    async def mock_download(Bucket, Key, Fileobj, **kwargs):
+        Fileobj.write(b"chunk1chunk2")
 
-    mock_response = {"Body": mock_body}
     mock_client = AsyncMock()
-    mock_client.get_object = AsyncMock(return_value=mock_response)
+    mock_client.download_fileobj = AsyncMock(side_effect=mock_download)
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
@@ -40,11 +39,11 @@ async def test_aws_storage_stream_to_fileobj():
         await storage.stream_to_fileobj("test-file.mp4", output, bucket="test-bucket")
 
         # Assert
-        mock_client.get_object.assert_called_once_with(
-            Bucket="test-bucket", Key="test-file.mp4"
+        mock_client.download_fileobj.assert_called_once_with(
+            Bucket="test-bucket", Key="test-file.mp4", Fileobj=output
         )
 
-        # Check that data was written to output without being fully loaded in memory first
+        # Check that data was written to output
         output.seek(0)
         assert output.read() == b"chunk1chunk2"
 
@@ -59,12 +58,11 @@ async def test_aws_storage_stream_to_fileobj_with_folder():
         aws_secret_access_key="test-secret",
     )
 
-    mock_body = MagicMock()
-    mock_body.read = AsyncMock(side_effect=[b"data", b""])
+    async def mock_download(Bucket, Key, Fileobj, **kwargs):
+        Fileobj.write(b"data")
 
-    mock_response = {"Body": mock_body}
     mock_client = AsyncMock()
-    mock_client.get_object = AsyncMock(return_value=mock_response)
+    mock_client.download_fileobj = AsyncMock(side_effect=mock_download)
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
@@ -73,8 +71,8 @@ async def test_aws_storage_stream_to_fileobj_with_folder():
         await storage.stream_to_fileobj("file.mp4", output, bucket="other-bucket")
 
         # Should use folder prefix from instance config
-        mock_client.get_object.assert_called_once_with(
-            Bucket="other-bucket", Key="recordings/file.mp4"
+        mock_client.download_fileobj.assert_called_once_with(
+            Bucket="other-bucket", Key="recordings/file.mp4", Fileobj=output
         )
 
 
@@ -96,8 +94,8 @@ async def test_storage_base_class_stream_to_fileobj():
 
 
 @pytest.mark.asyncio
-async def test_aws_storage_stream_closes_body_on_write_error():
-    """Test that S3 body is properly closed even if write fails."""
+async def test_aws_storage_stream_uses_download_fileobj():
+    """Test that download_fileobj is called correctly."""
     storage = AwsStorage(
         aws_bucket_name="test-bucket",
         aws_region="us-east-1",
@@ -105,79 +103,22 @@ async def test_aws_storage_stream_closes_body_on_write_error():
         aws_secret_access_key="test-secret",
     )
 
-    # Mock body that will provide data
-    mock_body = MagicMock()
-    mock_body.read = AsyncMock(side_effect=[b"chunk1", b"chunk2", b""])
-    mock_body.close = MagicMock()
+    async def mock_download(Bucket, Key, Fileobj, **kwargs):
+        Fileobj.write(b"data")
 
-    mock_response = {"Body": mock_body}
     mock_client = AsyncMock()
-    mock_client.get_object = AsyncMock(return_value=mock_response)
+    mock_client.download_fileobj = AsyncMock(side_effect=mock_download)
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
-    # Create a fileobj that fails on second write
-    class FailingFileObj:
-        def __init__(self):
-            self.write_count = 0
-
-        def write(self, data):
-            self.write_count += 1
-            if self.write_count == 2:
-                raise IOError("Disk full")
-
-        def flush(self):
-            pass
-
-    failing_fileobj = FailingFileObj()
-
     with patch.object(storage.session, "client", return_value=mock_client):
-        with pytest.raises(IOError, match="Disk full"):
-            await storage.stream_to_fileobj("test.mp4", failing_fileobj)
+        output = io.BytesIO()
+        await storage.stream_to_fileobj("test.mp4", output)
 
-        # Verify body.close() was called even though write failed
-        mock_body.close.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_aws_storage_stream_flushes_fileobj_on_success():
-    """Test that fileobj is flushed after successful streaming."""
-    storage = AwsStorage(
-        aws_bucket_name="test-bucket",
-        aws_region="us-east-1",
-        aws_access_key_id="test-key",
-        aws_secret_access_key="test-secret",
-    )
-
-    mock_body = MagicMock()
-    mock_body.read = AsyncMock(side_effect=[b"data", b""])
-    mock_body.close = MagicMock()
-
-    mock_response = {"Body": mock_body}
-    mock_client = AsyncMock()
-    mock_client.get_object = AsyncMock(return_value=mock_response)
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-
-    # Track flush calls
-    class TrackingFileObj(io.BytesIO):
-        def __init__(self):
-            super().__init__()
-            self.flush_called = False
-
-        def flush(self):
-            self.flush_called = True
-            super().flush()
-
-    tracking_fileobj = TrackingFileObj()
-
-    with patch.object(storage.session, "client", return_value=mock_client):
-        await storage.stream_to_fileobj("test.mp4", tracking_fileobj)
-
-        # Verify flush was called
-        assert tracking_fileobj.flush_called
-        # Verify body was closed
-        mock_body.close.assert_called_once()
+        # Verify download_fileobj was called with correct parameters
+        mock_client.download_fileobj.assert_called_once_with(
+            Bucket="test-bucket", Key="test.mp4", Fileobj=output
+        )
 
 
 @pytest.mark.asyncio

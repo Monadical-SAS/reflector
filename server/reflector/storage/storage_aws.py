@@ -1,4 +1,3 @@
-import asyncio
 from functools import wraps
 from typing import BinaryIO, Union
 
@@ -229,25 +228,9 @@ class AwsStorage(Storage):
         logger.info(f"Streaming {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
         async with self.session.client("s3", config=self.boto_config) as client:
-            response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
-            # Stream response body in chunks to file object
-            # This avoids loading entire file into memory
-            body = response["Body"]
-            try:
-                while True:
-                    chunk = await body.read(1024 * 1024)  # 1MB chunks
-                    if not chunk:
-                        break
-                    fileobj.write(chunk)
-                fileobj.flush()
-            finally:
-                # Ensure S3 response body is closed even if write fails
-                if hasattr(body, "close"):
-                    close_fn = body.close
-                    if asyncio.iscoroutinefunction(close_fn):
-                        await close_fn()
-                    else:
-                        close_fn()
+            await client.download_fileobj(
+                Bucket=actual_bucket, Key=s3filename, Fileobj=fileobj
+            )
 
 
 Storage.register("aws", AwsStorage)
