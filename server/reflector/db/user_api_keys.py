@@ -84,7 +84,8 @@ class UserApiKeyController:
             (user_api_keys.c.id == key_id) & (user_api_keys.c.user_id == user_id)
         )
         result = await get_database().execute(query)
-        return result > 0
+        # asyncpg returns None for DELETE, consider it success if no exception
+        return result is None or result > 0
 
 
 user_api_keys_controller = UserApiKeyController()
