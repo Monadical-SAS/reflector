@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/Monadical-SAS/reflector/compare/v0.16.0...v0.17.0) (2025-11-13)
+
+
+### Features
+
+* add API key management UI ([#716](https://github.com/Monadical-SAS/reflector/issues/716)) ([372202b](https://github.com/Monadical-SAS/reflector/commit/372202b0e1a86823900b0aa77be1bfbc2893d8a1))
+* daily.co support as alternative to whereby ([#691](https://github.com/Monadical-SAS/reflector/issues/691)) ([1473fd8](https://github.com/Monadical-SAS/reflector/commit/1473fd82dc472c394cbaa2987212ad662a74bcac))
+
 ## [0.16.0](https://github.com/Monadical-SAS/reflector/compare/v0.15.0...v0.16.0) (2025-10-24)
 
 
