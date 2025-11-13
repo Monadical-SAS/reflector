@@ -54,8 +54,8 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "platform",
         sqlalchemy.String,
-        nullable=True,
-        server_default=None,
+        nullable=False,
+        server_default="whereby",
     ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
