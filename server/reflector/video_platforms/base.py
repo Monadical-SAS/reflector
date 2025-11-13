@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from ..schemas.platform import Platform
 from ..utils.string import NonEmptyString
-from .models import MeetingData, VideoPlatformConfig
+from .models import MeetingData, SessionData, VideoPlatformConfig
 
 if TYPE_CHECKING:
     from reflector.db.rooms import Room
@@ -26,7 +26,8 @@ class VideoPlatformClient(ABC):
         pass
 
     @abstractmethod
-    async def get_room_sessions(self, room_name: str) -> List[Any] | None:
+    async def get_room_sessions(self, room_name: str) -> list[SessionData]:
+        """Get session history for a room."""
         pass
 
     @abstractmethod

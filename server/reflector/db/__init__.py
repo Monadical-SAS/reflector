@@ -25,6 +25,7 @@ def get_database() -> databases.Database:
 
 # import models
 import reflector.db.calendar_events  # noqa
+import reflector.db.daily_participant_sessions  # noqa
 import reflector.db.meetings  # noqa
 import reflector.db.recordings  # noqa
 import reflector.db.rooms  # noqa
