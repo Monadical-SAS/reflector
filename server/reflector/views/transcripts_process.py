@@ -55,9 +55,18 @@ async def transcript_process(
         recording = await recordings_controller.get_by_id(transcript.recording_id)
         if recording:
             bucket_name = recording.bucket_name
-            track_keys = list(getattr(recording, "track_keys", []) or [])
+            track_keys = recording.track_keys
+            if track_keys is not None and len(track_keys) == 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No track keys found, must be either > 0 or None",
+                )
+            if track_keys is not None and not bucket_name:
+                raise HTTPException(
+                    status_code=500, detail="Bucket name must be specified"
+                )
 
-    if bucket_name:
+    if track_keys:
         task_pipeline_multitrack_process.delay(
             transcript_id=transcript_id,
             bucket_name=bucket_name,
