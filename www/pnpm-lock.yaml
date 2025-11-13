@@ -10,6 +10,9 @@ importers:
       "@chakra-ui/react":
         specifier: ^3.24.2
         version: 3.24.2(@emotion/react@11.14.0(@types/react@18.2.20)(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      "@daily-co/daily-js":
+        specifier: ^0.84.0
+        version: 0.84.0
       "@emotion/react":
         specifier: ^11.14.0
         version: 11.14.0(@types/react@18.2.20)(react@18.3.1)
@@ -486,6 +489,13 @@ packages:
         integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==,
       }
     engines: { node: ">=12" }
+
+  "@daily-co/daily-js@0.84.0":
+    resolution:
+      {
+        integrity: sha512-/ynXrMDDkRXhLlHxiFNf9QU5yw4ZGPr56wNARgja/Tiid71UIniundTavCNF5cMb2I1vNoMh7oEJ/q8stg/V7g==,
+      }
+    engines: { node: ">=10.0.0" }
 
   "@emnapi/core@1.4.5":
     resolution:
@@ -2293,12 +2303,26 @@ packages:
       }
     engines: { node: ">=18" }
 
+  "@sentry-internal/browser-utils@8.55.0":
+    resolution:
+      {
+        integrity: sha512-ROgqtQfpH/82AQIpESPqPQe0UyWywKJsmVIqi3c5Fh+zkds5LUxnssTj3yNd1x+kxaPDVB023jAP+3ibNgeNDw==,
+      }
+    engines: { node: ">=14.18" }
+
   "@sentry-internal/feedback@10.11.0":
     resolution:
       {
         integrity: sha512-ADey51IIaa29kepb8B7aSgSGSrcyT7QZdRsN1rhitefzrruHzpSUci5c2EPIvmWfKJq8Wnvukm9BHXZXAAIOzA==,
       }
     engines: { node: ">=18" }
+
+  "@sentry-internal/feedback@8.55.0":
+    resolution:
+      {
+        integrity: sha512-cP3BD/Q6pquVQ+YL+rwCnorKuTXiS9KXW8HNKu4nmmBAyf7urjs+F6Hr1k9MXP5yQ8W3yK7jRWd09Yu6DHWOiw==,
+      }
+    engines: { node: ">=14.18" }
 
   "@sentry-internal/replay-canvas@10.11.0":
     resolution:
@@ -2307,12 +2331,26 @@ packages:
       }
     engines: { node: ">=18" }
 
+  "@sentry-internal/replay-canvas@8.55.0":
+    resolution:
+      {
+        integrity: sha512-nIkfgRWk1091zHdu4NbocQsxZF1rv1f7bbp3tTIlZYbrH62XVZosx5iHAuZG0Zc48AETLE7K4AX9VGjvQj8i9w==,
+      }
+    engines: { node: ">=14.18" }
+
   "@sentry-internal/replay@10.11.0":
     resolution:
       {
         integrity: sha512-t4M2bxMp2rKGK/l7bkVWjN+xVw9H9V12jAeXmO/Fskz2RcG1ZNLQnKSx/W/zCRMk8k7xOQFsfiApq+zDN+ziKA==,
       }
     engines: { node: ">=18" }
+
+  "@sentry-internal/replay@8.55.0":
+    resolution:
+      {
+        integrity: sha512-roCDEGkORwolxBn8xAKedybY+Jlefq3xYmgN2fr3BTnsXjSYOPC7D1/mYqINBat99nDtvgFvNfRcZPiwwZ1hSw==,
+      }
+    engines: { node: ">=14.18" }
 
   "@sentry/babel-plugin-component-annotate@4.3.0":
     resolution:
@@ -2327,6 +2365,13 @@ packages:
         integrity: sha512-qemaKCJKJHHCyGBpdLq23xL5u9Xvir20XN7YFTnHcEq4Jvj0GoWsslxKi5cQB2JvpYn62WxTiDgVLeQlleZhSg==,
       }
     engines: { node: ">=18" }
+
+  "@sentry/browser@8.55.0":
+    resolution:
+      {
+        integrity: sha512-1A31mCEWCjaMxJt6qGUK+aDnLDcK6AwLAZnqpSchNysGni1pSn1RWSmk9TBF8qyTds5FH8B31H480uxMPUJ7Cw==,
+      }
+    engines: { node: ">=14.18" }
 
   "@sentry/bundler-plugin-core@4.3.0":
     resolution:
@@ -2420,6 +2465,13 @@ packages:
         integrity: sha512-39Rxn8cDXConx3+SKOCAhW+/hklM7UDaz+U1OFzFMDlT59vXSpfI6bcXtNiFDrbOxlQ2hX8yAqx8YRltgSftoA==,
       }
     engines: { node: ">=18" }
+
+  "@sentry/core@8.55.0":
+    resolution:
+      {
+        integrity: sha512-6g7jpbefjHYs821Z+EBJ8r4Z7LT5h80YSWRJaylGS4nW5W5Z2KXzpdnyFarv37O7QjauzVC2E+PABmpkw5/JGA==,
+      }
+    engines: { node: ">=14.18" }
 
   "@sentry/nextjs@10.11.0":
     resolution:
@@ -4028,6 +4080,12 @@ packages:
         integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==,
       }
     engines: { node: ">=8" }
+
+  bowser@2.12.1:
+    resolution:
+      {
+        integrity: sha512-z4rE2Gxh7tvshQ4hluIT7XcFrgLIQaw9X3A+kTTRdovCz5PMukm/0QC/BKSYPj3omF5Qfypn9O/c5kgpmvYUCw==,
+      }
 
   brace-expansion@1.1.12:
     resolution:
@@ -9288,6 +9346,14 @@ snapshots:
       "@jridgewell/trace-mapping": 0.3.9
     optional: true
 
+  "@daily-co/daily-js@0.84.0":
+    dependencies:
+      "@babel/runtime": 7.28.2
+      "@sentry/browser": 8.55.0
+      bowser: 2.12.1
+      dequal: 2.0.3
+      events: 3.3.0
+
   "@emnapi/core@1.4.5":
     dependencies:
       "@emnapi/wasi-threads": 1.0.4
@@ -10506,19 +10572,37 @@ snapshots:
     dependencies:
       "@sentry/core": 10.11.0
 
+  "@sentry-internal/browser-utils@8.55.0":
+    dependencies:
+      "@sentry/core": 8.55.0
+
   "@sentry-internal/feedback@10.11.0":
     dependencies:
       "@sentry/core": 10.11.0
+
+  "@sentry-internal/feedback@8.55.0":
+    dependencies:
+      "@sentry/core": 8.55.0
 
   "@sentry-internal/replay-canvas@10.11.0":
     dependencies:
       "@sentry-internal/replay": 10.11.0
       "@sentry/core": 10.11.0
 
+  "@sentry-internal/replay-canvas@8.55.0":
+    dependencies:
+      "@sentry-internal/replay": 8.55.0
+      "@sentry/core": 8.55.0
+
   "@sentry-internal/replay@10.11.0":
     dependencies:
       "@sentry-internal/browser-utils": 10.11.0
       "@sentry/core": 10.11.0
+
+  "@sentry-internal/replay@8.55.0":
+    dependencies:
+      "@sentry-internal/browser-utils": 8.55.0
+      "@sentry/core": 8.55.0
 
   "@sentry/babel-plugin-component-annotate@4.3.0": {}
 
@@ -10529,6 +10613,14 @@ snapshots:
       "@sentry-internal/replay": 10.11.0
       "@sentry-internal/replay-canvas": 10.11.0
       "@sentry/core": 10.11.0
+
+  "@sentry/browser@8.55.0":
+    dependencies:
+      "@sentry-internal/browser-utils": 8.55.0
+      "@sentry-internal/feedback": 8.55.0
+      "@sentry-internal/replay": 8.55.0
+      "@sentry-internal/replay-canvas": 8.55.0
+      "@sentry/core": 8.55.0
 
   "@sentry/bundler-plugin-core@4.3.0":
     dependencies:
@@ -10589,6 +10681,8 @@ snapshots:
       - supports-color
 
   "@sentry/core@10.11.0": {}
+
+  "@sentry/core@8.55.0": {}
 
   "@sentry/nextjs@10.11.0(@opentelemetry/context-async-hooks@2.1.0(@opentelemetry/api@1.9.0))(@opentelemetry/core@2.1.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.1.0(@opentelemetry/api@1.9.0))(next@15.5.3(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.90.0))(react@18.3.1)(webpack@5.101.3)":
     dependencies:
@@ -11966,6 +12060,8 @@ snapshots:
   base64-js@1.5.1: {}
 
   binary-extensions@2.3.0: {}
+
+  bowser@2.12.1: {}
 
   brace-expansion@1.1.12:
     dependencies:

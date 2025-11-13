@@ -696,6 +696,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/webhook": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Webhook
+     * @description Handle Daily webhook events.
+     */
+    post: operations["v1_webhook"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -852,6 +872,8 @@ export interface components {
        * @default false
        */
       ics_enabled: boolean;
+      /** Platform */
+      platform?: ("whereby" | "daily") | null;
     };
     /** CreateRoomMeeting */
     CreateRoomMeeting: {
@@ -876,6 +898,22 @@ export interface components {
        */
       target_language: string;
       source_kind?: components["schemas"]["SourceKind"] | null;
+    };
+    /**
+     * DailyWebhookEvent
+     * @description Daily webhook event structure.
+     */
+    DailyWebhookEvent: {
+      /** Type */
+      type: string;
+      /** Id */
+      id: string;
+      /** Ts */
+      ts: number;
+      /** Data */
+      data: {
+        [key: string]: unknown;
+      };
     };
     /** DeletionStatus */
     DeletionStatus: {
@@ -1193,6 +1231,12 @@ export interface components {
       calendar_metadata?: {
         [key: string]: unknown;
       } | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {
@@ -1279,6 +1323,12 @@ export interface components {
       ics_last_sync?: string | null;
       /** Ics Last Etag */
       ics_last_etag?: string | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
     };
     /** RoomDetails */
     RoomDetails: {
@@ -1325,6 +1375,12 @@ export interface components {
       ics_last_sync?: string | null;
       /** Ics Last Etag */
       ics_last_etag?: string | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
       /** Webhook Url */
       webhook_url: string | null;
       /** Webhook Secret */
@@ -1505,6 +1561,8 @@ export interface components {
       ics_fetch_interval?: number | null;
       /** Ics Enabled */
       ics_enabled?: boolean | null;
+      /** Platform */
+      platform?: ("whereby" | "daily") | null;
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -3168,6 +3226,39 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["WherebyWebhookEvent"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_webhook: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DailyWebhookEvent"];
       };
     };
     responses: {

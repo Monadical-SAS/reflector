@@ -15,9 +15,14 @@ from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
+from reflector.schemas.platform import Platform
 from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
-from reflector.whereby import create_meeting, upload_logo
+from reflector.utils.url import add_query_param
+from reflector.video_platforms.factory import (
+    create_platform_client,
+    get_platform,
+)
 from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
@@ -41,6 +46,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: Optional[datetime] = None
     ics_last_etag: Optional[str] = None
+    platform: Platform
 
 
 class RoomDetails(Room):
@@ -68,6 +74,7 @@ class Meeting(BaseModel):
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    platform: Platform
 
 
 class CreateRoom(BaseModel):
@@ -85,6 +92,7 @@ class CreateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
+    platform: Optional[Platform] = None
 
 
 class UpdateRoom(BaseModel):
@@ -102,6 +110,7 @@ class UpdateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
+    platform: Optional[Platform] = None
 
 
 class CreateRoomMeeting(BaseModel):
@@ -165,14 +174,6 @@ class CalendarEventResponse(BaseModel):
 router = APIRouter()
 
 
-def parse_datetime_with_timezone(iso_string: str) -> datetime:
-    """Parse ISO datetime string and ensure timezone awareness (defaults to UTC if naive)."""
-    dt = datetime.fromisoformat(iso_string)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
 @router.get("/rooms", response_model=Page[RoomDetails])
 async def rooms_list(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
@@ -182,12 +183,17 @@ async def rooms_list(
 
     user_id = user["sub"] if user else None
 
-    return await apaginate(
+    paginated = await apaginate(
         get_database(),
         await rooms_controller.get_all(
             user_id=user_id, order_by="-created_at", return_query=True
         ),
     )
+
+    for room in paginated.items:
+        room.platform = get_platform(room.platform)
+
+    return paginated
 
 
 @router.get("/rooms/{room_id}", response_model=RoomDetails)
@@ -201,6 +207,7 @@ async def rooms_get(
         raise HTTPException(status_code=404, detail="Room not found")
     if not room.is_shared and (user_id is None or room.user_id != user_id):
         raise HTTPException(status_code=403, detail="Room access denied")
+    room.platform = get_platform(room.platform)
     return room
 
 
@@ -214,16 +221,15 @@ async def rooms_get_by_name(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    # Convert to RoomDetails format (add webhook fields if user is owner)
     room_dict = room.__dict__.copy()
     if user_id == room.user_id:
-        # User is owner, include webhook details if available
         room_dict["webhook_url"] = getattr(room, "webhook_url", None)
         room_dict["webhook_secret"] = getattr(room, "webhook_secret", None)
     else:
-        # Non-owner, hide webhook details
         room_dict["webhook_url"] = None
         room_dict["webhook_secret"] = None
+
+    room_dict["platform"] = get_platform(room.platform)
 
     return RoomDetails(**room_dict)
 
@@ -251,6 +257,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
+        platform=room.platform,
     )
 
 
@@ -268,6 +275,7 @@ async def rooms_update(
         raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     await rooms_controller.update(room, values)
+    room.platform = get_platform(room.platform)
     return room
 
 
@@ -315,19 +323,22 @@ async def rooms_create_meeting(
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
 
-                whereby_meeting = await create_meeting("", end_date=end_date, room=room)
+                platform = get_platform(room.platform)
+                client = create_platform_client(platform)
 
-                await upload_logo(whereby_meeting["roomName"], "./images/logo.png")
+                meeting_data = await client.create_meeting(
+                    room.name, end_date=end_date, room=room
+                )
+
+                await client.upload_logo(meeting_data.room_name, "./images/logo.png")
 
                 meeting = await meetings_controller.create(
-                    id=whereby_meeting["meetingId"],
-                    room_name=whereby_meeting["roomName"],
-                    room_url=whereby_meeting["roomUrl"],
-                    host_room_url=whereby_meeting["hostRoomUrl"],
-                    start_date=parse_datetime_with_timezone(
-                        whereby_meeting["startDate"]
-                    ),
-                    end_date=parse_datetime_with_timezone(whereby_meeting["endDate"]),
+                    id=meeting_data.meeting_id,
+                    room_name=meeting_data.room_name,
+                    room_url=meeting_data.room_url,
+                    host_room_url=meeting_data.host_room_url,
+                    start_date=current_time,
+                    end_date=end_date,
                     room=room,
                 )
     except LockError:
@@ -335,6 +346,18 @@ async def rooms_create_meeting(
         raise HTTPException(
             status_code=503, detail="Meeting creation in progress, please try again"
         )
+
+    if meeting.platform == "daily" and room.recording_trigger != "none":
+        client = create_platform_client(meeting.platform)
+        token = await client.create_meeting_token(
+            meeting.room_name,
+            enable_recording=True,
+            user_id=user_id,
+        )
+        meeting = meeting.model_copy()
+        meeting.room_url = add_query_param(meeting.room_url, "t", token)
+        if meeting.host_room_url:
+            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
 
     if user_id != room.user_id:
         meeting.host_room_url = ""
@@ -490,7 +513,10 @@ async def rooms_list_active_meetings(
         room=room, current_time=current_time
     )
 
-    # Hide host URLs from non-owners
+    effective_platform = get_platform(room.platform)
+    for meeting in meetings:
+        meeting.platform = effective_platform
+
     if user_id != room.user_id:
         for meeting in meetings:
             meeting.host_room_url = ""
@@ -511,14 +537,9 @@ async def rooms_get_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-
-    if meeting.room_id != room.id:
-        raise HTTPException(
-            status_code=403, detail="Meeting does not belong to this room"
-        )
 
     if user_id != room.user_id and not room.is_shared:
         meeting.host_room_url = ""
@@ -538,15 +559,10 @@ async def rooms_join_meeting(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
-    meeting = await meetings_controller.get_by_id(meeting_id)
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
 
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-
-    if meeting.room_id != room.id:
-        raise HTTPException(
-            status_code=403, detail="Meeting does not belong to this room"
-        )
 
     if not meeting.is_active:
         raise HTTPException(status_code=400, detail="Meeting is not active")
@@ -555,7 +571,6 @@ async def rooms_join_meeting(
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
 
-    # Hide host URL from non-owners
     if user_id != room.user_id:
         meeting.host_room_url = ""
 

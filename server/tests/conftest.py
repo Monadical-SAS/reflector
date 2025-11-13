@@ -5,6 +5,18 @@ from unittest.mock import patch
 
 import pytest
 
+from reflector.schemas.platform import WHEREBY_PLATFORM
+
+
+@pytest.fixture(scope="session", autouse=True)
+def register_mock_platform():
+    from mocks.mock_platform import MockPlatformClient
+
+    from reflector.video_platforms.registry import register_platform
+
+    register_platform(WHEREBY_PLATFORM, MockPlatformClient)
+    yield
+
 
 @pytest.fixture(scope="session", autouse=True)
 def settings_configuration():

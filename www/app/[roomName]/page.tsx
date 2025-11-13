@@ -1,3 +1,3 @@
-import Room from "./room";
+import RoomContainer from "./components/RoomContainer";
 
-export default Room;
+export default RoomContainer;
