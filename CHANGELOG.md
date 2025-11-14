@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.0](https://github.com/Monadical-SAS/reflector/compare/v0.17.0...v0.18.0) (2025-11-14)
+
+
+### Features
+
+* daily QOL: participants dictionary ([#721](https://github.com/Monadical-SAS/reflector/issues/721)) ([b20cad7](https://github.com/Monadical-SAS/reflector/commit/b20cad76e69fb6a76405af299a005f1ddcf60eae))
+
+
+### Bug Fixes
+
+* add proccessing page to file upload and reprocessing ([#650](https://github.com/Monadical-SAS/reflector/issues/650)) ([28a7258](https://github.com/Monadical-SAS/reflector/commit/28a7258e45317b78e60e6397be2bc503647eaace))
+* copy transcript ([#674](https://github.com/Monadical-SAS/reflector/issues/674)) ([a9a4f32](https://github.com/Monadical-SAS/reflector/commit/a9a4f32324f66c838e081eee42bb9502f38c1db1))
+
 ## [0.17.0](https://github.com/Monadical-SAS/reflector/compare/v0.16.0...v0.17.0) (2025-11-13)
 
 
