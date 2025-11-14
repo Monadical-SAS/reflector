@@ -19,7 +19,7 @@ from reflector.db.meetings import meetings
 from reflector.db.recordings import recordings
 from reflector.db.transcripts import transcripts, transcripts_controller
 from reflector.settings import settings
-from reflector.storage import get_recordings_storage
+from reflector.storage import get_transcripts_storage
 
 logger = structlog.get_logger(__name__)
 
@@ -53,8 +53,8 @@ async def delete_single_transcript(
                 )
                 if recording:
                     try:
-                        await get_recordings_storage().delete_file(
-                            recording["object_key"]
+                        await get_transcripts_storage().delete_file(
+                            recording["object_key"], bucket=recording["bucket_name"]
                         )
                     except Exception as storage_error:
                         logger.warning(

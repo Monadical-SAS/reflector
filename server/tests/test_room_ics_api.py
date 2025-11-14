@@ -11,14 +11,21 @@ from reflector.db.rooms import rooms_controller
 @pytest.fixture
 async def authenticated_client(client):
     from reflector.app import app
-    from reflector.auth import current_user_optional
+    from reflector.auth import current_user, current_user_optional
 
+    app.dependency_overrides[current_user] = lambda: {
+        "sub": "test-user",
+        "email": "test@example.com",
+    }
     app.dependency_overrides[current_user_optional] = lambda: {
         "sub": "test-user",
         "email": "test@example.com",
     }
-    yield client
-    del app.dependency_overrides[current_user_optional]
+    try:
+        yield client
+    finally:
+        del app.dependency_overrides[current_user]
+        del app.dependency_overrides[current_user_optional]
 
 
 @pytest.mark.asyncio
@@ -41,6 +48,7 @@ async def test_create_room_with_ics_fields(authenticated_client):
             "ics_url": "https://calendar.example.com/test.ics",
             "ics_fetch_interval": 600,
             "ics_enabled": True,
+            "platform": "daily",
         },
     )
     assert response.status_code == 200
@@ -68,6 +76,7 @@ async def test_update_room_ics_configuration(authenticated_client):
             "is_shared": False,
             "webhook_url": "",
             "webhook_secret": "",
+            "platform": "daily",
         },
     )
     assert response.status_code == 200
@@ -104,6 +113,7 @@ async def test_trigger_ics_sync(authenticated_client):
         is_shared=False,
         ics_url="https://calendar.example.com/api.ics",
         ics_enabled=True,
+        platform="daily",
     )
 
     cal = Calendar()
@@ -147,6 +157,7 @@ async def test_trigger_ics_sync_unauthorized(client):
         is_shared=False,
         ics_url="https://calendar.example.com/api.ics",
         ics_enabled=True,
+        platform="daily",
     )
 
     response = await client.post(f"/rooms/{room.name}/ics/sync")
@@ -169,6 +180,7 @@ async def test_trigger_ics_sync_not_configured(authenticated_client):
         recording_trigger="automatic-2nd-participant",
         is_shared=False,
         ics_enabled=False,
+        platform="daily",
     )
 
     response = await client.post(f"/rooms/{room.name}/ics/sync")
@@ -193,6 +205,7 @@ async def test_get_ics_status(authenticated_client):
         ics_url="https://calendar.example.com/status.ics",
         ics_enabled=True,
         ics_fetch_interval=300,
+        platform="daily",
     )
 
     now = datetime.now(timezone.utc)
@@ -224,6 +237,7 @@ async def test_get_ics_status_unauthorized(client):
         is_shared=False,
         ics_url="https://calendar.example.com/status.ics",
         ics_enabled=True,
+        platform="daily",
     )
 
     response = await client.get(f"/rooms/{room.name}/ics/status")
@@ -245,6 +259,7 @@ async def test_list_room_meetings(authenticated_client):
         recording_type="cloud",
         recording_trigger="automatic-2nd-participant",
         is_shared=False,
+        platform="daily",
     )
 
     now = datetime.now(timezone.utc)
@@ -291,6 +306,7 @@ async def test_list_room_meetings_non_owner(client):
         recording_type="cloud",
         recording_trigger="automatic-2nd-participant",
         is_shared=False,
+        platform="daily",
     )
 
     event = CalendarEvent(
@@ -327,6 +343,7 @@ async def test_list_upcoming_meetings(authenticated_client):
         recording_type="cloud",
         recording_trigger="automatic-2nd-participant",
         is_shared=False,
+        platform="daily",
     )
 
     now = datetime.now(timezone.utc)

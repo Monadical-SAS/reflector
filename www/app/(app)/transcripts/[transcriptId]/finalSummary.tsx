@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 import Markdown from "react-markdown";
 import "../../../styles/markdown.css";
@@ -19,17 +19,15 @@ import { buildTranscriptWithTopics } from "../buildTranscriptWithTopics";
 import { useTranscriptParticipants } from "../../../lib/apiHooks";
 import { toaster } from "../../../components/ui/toaster";
 import { useError } from "../../../(errors)/errorContext";
-import ShareAndPrivacy from "../shareAndPrivacy";
 
 type FinalSummaryProps = {
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
-  onUpdate?: (newSummary) => void;
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
+  onUpdate: (newSummary: string) => void;
+  finalSummaryRef: React.Dispatch<React.SetStateAction<HTMLDivElement | null>>;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
-  const finalSummaryRef = useRef<HTMLParagraphElement>(null);
-
   const [isEditMode, setIsEditMode] = useState(false);
   const [preEditSummary, setPreEditSummary] = useState("");
   const [editedSummary, setEditedSummary] = useState("");
@@ -41,10 +39,10 @@ export default function FinalSummary(props: FinalSummaryProps) {
   );
 
   useEffect(() => {
-    setEditedSummary(props.transcriptResponse?.long_summary || "");
-  }, [props.transcriptResponse?.long_summary]);
+    setEditedSummary(props.transcript?.long_summary || "");
+  }, [props.transcript?.long_summary]);
 
-  if (!props.topicsResponse || !props.transcriptResponse) {
+  if (!props.topics || !props.transcript) {
     return null;
   }
 
@@ -60,9 +58,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
           long_summary: newSummary,
         },
       });
-      if (props.onUpdate) {
-        props.onUpdate(newSummary);
-      }
+      props.onUpdate(newSummary);
       console.log("Updated long summary:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update long summary:", err);
@@ -81,7 +77,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
   };
 
   const onSaveClick = () => {
-    updateSummary(editedSummary, props.transcriptResponse.id);
+    updateSummary(editedSummary, props.transcript.id);
     setIsEditMode(false);
   };
 
@@ -183,11 +179,6 @@ export default function FinalSummary(props: FinalSummaryProps) {
             >
               <LuPen />
             </IconButton>
-            <ShareAndPrivacy
-              finalSummaryRef={finalSummaryRef}
-              transcriptResponse={props.transcriptResponse}
-              topicsResponse={props.topicsResponse}
-            />
           </>
         )}
       </Flex>
@@ -203,7 +194,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
           mt={2}
         />
       ) : (
-        <div ref={finalSummaryRef} className="markdown">
+        <div ref={props.finalSummaryRef} className="markdown">
           <Markdown>{editedSummary}</Markdown>
         </div>
       )}

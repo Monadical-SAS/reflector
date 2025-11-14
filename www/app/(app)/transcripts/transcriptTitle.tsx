@@ -2,14 +2,22 @@ import { useState } from "react";
 import type { components } from "../../reflector-api";
 
 type UpdateTranscript = components["schemas"]["UpdateTranscript"];
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { useTranscriptUpdate } from "../../lib/apiHooks";
 import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
 import { LuPen } from "react-icons/lu";
+import ShareAndPrivacy from "./shareAndPrivacy";
 
 type TranscriptTitle = {
   title: string;
   transcriptId: string;
-  onUpdate?: (newTitle: string) => void;
+  onUpdate: (newTitle: string) => void;
+
+  // share props
+  transcript: GetTranscript | null;
+  topics: GetTranscriptTopic[] | null;
+  finalSummaryElement: HTMLDivElement | null;
 };
 
 const TranscriptTitle = (props: TranscriptTitle) => {
@@ -29,9 +37,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
         },
         body: requestBody,
       });
-      if (props.onUpdate) {
-        props.onUpdate(newTitle);
-      }
+      props.onUpdate(newTitle);
       console.log("Updated transcript title:", newTitle);
     } catch (err) {
       console.error("Failed to update transcript:", err);
@@ -62,11 +68,11 @@ const TranscriptTitle = (props: TranscriptTitle) => {
     }
     setIsEditing(false);
   };
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayedTitle(e.target.value);
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       updateTitle(displayedTitle, props.transcriptId);
       setIsEditing(false);
@@ -111,6 +117,13 @@ const TranscriptTitle = (props: TranscriptTitle) => {
           >
             <LuPen />
           </IconButton>
+          {props.transcript && props.topics && (
+            <ShareAndPrivacy
+              finalSummaryElement={props.finalSummaryElement}
+              transcript={props.transcript}
+              topics={props.topics}
+            />
+          )}
         </Flex>
       )}
     </>

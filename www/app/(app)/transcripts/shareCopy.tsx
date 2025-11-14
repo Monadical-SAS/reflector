@@ -7,15 +7,15 @@ import { buildTranscriptWithTopics } from "./buildTranscriptWithTopics";
 import { useTranscriptParticipants } from "../../lib/apiHooks";
 
 type ShareCopyProps = {
-  finalSummaryRef: any;
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
+  finalSummaryElement: HTMLDivElement | null;
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
 };
 
 export default function ShareCopy({
-  finalSummaryRef,
-  transcriptResponse,
-  topicsResponse,
+  finalSummaryElement,
+  transcript,
+  topics,
   ...boxProps
 }: ShareCopyProps & BoxProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
@@ -25,22 +25,23 @@ export default function ShareCopy({
   );
 
   const onCopySummaryClick = () => {
-    let text_to_copy = finalSummaryRef.current?.innerText;
+    const text_to_copy = finalSummaryElement?.innerText;
 
-    text_to_copy &&
+    if (text_to_copy) {
       navigator.clipboard.writeText(text_to_copy).then(() => {
         setIsCopiedSummary(true);
         // Reset the copied state after 2 seconds
         setTimeout(() => setIsCopiedSummary(false), 2000);
       });
+    }
   };
 
   const onCopyTranscriptClick = () => {
     const text_to_copy =
       buildTranscriptWithTopics(
-        topicsResponse || [],
+        topics || [],
         participantsQuery?.data || null,
-        transcriptResponse?.title || null,
+        transcript?.title || null,
       ) || "";
 
     text_to_copy &&

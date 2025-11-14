@@ -104,6 +104,11 @@ class CalendarEventController:
         results = await get_database().fetch_all(query)
         return [CalendarEvent(**result) for result in results]
 
+    async def get_by_id(self, event_id: str) -> CalendarEvent | None:
+        query = calendar_events.select().where(calendar_events.c.id == event_id)
+        result = await get_database().fetch_one(query)
+        return CalendarEvent(**result) if result else None
+
     async def get_by_ics_uid(self, room_id: str, ics_uid: str) -> CalendarEvent | None:
         query = calendar_events.select().where(
             sa.and_(

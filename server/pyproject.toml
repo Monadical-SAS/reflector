@@ -112,6 +112,7 @@ source = ["reflector"]
 [tool.pytest_env]
 ENVIRONMENT = "pytest"
 DATABASE_URL = "postgresql://test_user:test_password@localhost:15432/reflector_test"
+AUTH_BACKEND = "jwt"
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --disable-pytest-warnings --cov --cov-report html -v"

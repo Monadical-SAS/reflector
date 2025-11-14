@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
+from reflector.schemas.platform import Platform
 from reflector.utils import generate_uuid4
 
 rooms = sqlalchemy.Table(
@@ -50,6 +51,12 @@ rooms = sqlalchemy.Table(
     ),
     sqlalchemy.Column("ics_last_sync", sqlalchemy.DateTime(timezone=True)),
     sqlalchemy.Column("ics_last_etag", sqlalchemy.Text),
+    sqlalchemy.Column(
+        "platform",
+        sqlalchemy.String,
+        nullable=True,
+        server_default=None,
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
 )
@@ -66,7 +73,7 @@ class Room(BaseModel):
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
-    recording_trigger: Literal[
+    recording_trigger: Literal[  # whereby-specific
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     is_shared: bool = False
@@ -77,6 +84,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
+    platform: Platform | None = None
 
 
 class RoomController:
@@ -130,6 +138,7 @@ class RoomController:
         ics_url: str | None = None,
         ics_fetch_interval: int = 300,
         ics_enabled: bool = False,
+        platform: Platform | None = None,
     ):
         """
         Add a new room
@@ -153,6 +162,7 @@ class RoomController:
             ics_url=ics_url,
             ics_fetch_interval=ics_fetch_interval,
             ics_enabled=ics_enabled,
+            platform=platform,
         )
         query = rooms.insert().values(**room.model_dump())
         try:

@@ -56,12 +56,14 @@ async def transcript_get_participants(
 async def transcript_add_participant(
     transcript_id: str,
     participant: CreateParticipant,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ) -> Participant:
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if transcript.user_id is not None and transcript.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     # ensure the speaker is unique
     if participant.speaker is not None and transcript.participants is not None:
@@ -101,12 +103,14 @@ async def transcript_update_participant(
     transcript_id: str,
     participant_id: str,
     participant: UpdateParticipant,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ) -> Participant:
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if transcript.user_id is not None and transcript.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     # ensure the speaker is unique
     for p in transcript.participants:
@@ -138,11 +142,13 @@ async def transcript_update_participant(
 async def transcript_delete_participant(
     transcript_id: str,
     participant_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ) -> DeletionStatus:
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
+    if transcript.user_id is not None and transcript.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     await transcripts_controller.delete_participant(transcript, participant_id)
     return DeletionStatus(status="ok")

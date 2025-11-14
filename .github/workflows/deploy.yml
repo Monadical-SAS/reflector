@@ -1,4 +1,4 @@
-name: Deploy to Amazon ECS
+name: Build container/push to container registry
 
 on: [workflow_dispatch]
 

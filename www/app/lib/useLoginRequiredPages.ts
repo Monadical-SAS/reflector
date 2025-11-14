@@ -3,6 +3,7 @@ import { PROTECTED_PAGES } from "./auth";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { useEffect } from "react";
+import { featureEnabled } from "./features";
 
 const HOME = "/" as const;
 
@@ -13,7 +14,9 @@ export const useLoginRequiredPages = () => {
   const isNotLoggedIn = auth.status === "unauthenticated";
   // safety
   const isLastDestination = pathname === HOME;
-  const shouldRedirect = isNotLoggedIn && isProtected && !isLastDestination;
+  const requireLogin = featureEnabled("requireLogin");
+  const shouldRedirect =
+    requireLogin && isNotLoggedIn && isProtected && !isLastDestination;
   useEffect(() => {
     if (!shouldRedirect) return;
     // on the backend, the redirect goes straight to the auth provider, but we don't have it because it's hidden inside next-auth middleware

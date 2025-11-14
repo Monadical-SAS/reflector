@@ -1,8 +1,21 @@
 import importlib
+from typing import BinaryIO, Union
 
 from pydantic import BaseModel
 
 from reflector.settings import settings
+
+
+class StorageError(Exception):
+    """Base exception for storage operations."""
+
+    pass
+
+
+class StoragePermissionError(StorageError):
+    """Exception raised when storage operation fails due to permission issues."""
+
+    pass
 
 
 class FileResult(BaseModel):
@@ -36,26 +49,113 @@ class Storage:
 
         return cls._registry[name](**config)
 
-    async def put_file(self, filename: str, data: bytes) -> FileResult:
-        return await self._put_file(filename, data)
-
-    async def _put_file(self, filename: str, data: bytes) -> FileResult:
+    # Credential properties for API passthrough
+    @property
+    def bucket_name(self) -> str:
+        """Default bucket name for this storage instance."""
         raise NotImplementedError
 
-    async def delete_file(self, filename: str):
-        return await self._delete_file(filename)
-
-    async def _delete_file(self, filename: str):
+    @property
+    def region(self) -> str:
+        """AWS region for this storage instance."""
         raise NotImplementedError
 
-    async def get_file_url(self, filename: str) -> str:
-        return await self._get_file_url(filename)
+    @property
+    def access_key_id(self) -> str | None:
+        """AWS access key ID (None for role-based auth). Prefer key_credentials property."""
+        return None
 
-    async def _get_file_url(self, filename: str) -> str:
+    @property
+    def secret_access_key(self) -> str | None:
+        """AWS secret access key (None for role-based auth). Prefer key_credentials property."""
+        return None
+
+    @property
+    def role_arn(self) -> str | None:
+        """AWS IAM role ARN for role-based auth (None for key-based auth). Prefer role_credential property."""
+        return None
+
+    @property
+    def key_credentials(self) -> tuple[str, str]:
+        """
+        Get (access_key_id, secret_access_key) for key-based auth.
+        Raises ValueError if storage uses IAM role instead.
+        """
         raise NotImplementedError
 
-    async def get_file(self, filename: str):
-        return await self._get_file(filename)
+    @property
+    def role_credential(self) -> str:
+        """
+        Get IAM role ARN for role-based auth.
+        Raises ValueError if storage uses access keys instead.
+        """
+        raise NotImplementedError
 
-    async def _get_file(self, filename: str):
+    async def put_file(
+        self, filename: str, data: Union[bytes, BinaryIO], *, bucket: str | None = None
+    ) -> FileResult:
+        """Upload data. bucket: override instance default if provided."""
+        return await self._put_file(filename, data, bucket=bucket)
+
+    async def _put_file(
+        self, filename: str, data: Union[bytes, BinaryIO], *, bucket: str | None = None
+    ) -> FileResult:
+        raise NotImplementedError
+
+    async def delete_file(self, filename: str, *, bucket: str | None = None):
+        """Delete file. bucket: override instance default if provided."""
+        return await self._delete_file(filename, bucket=bucket)
+
+    async def _delete_file(self, filename: str, *, bucket: str | None = None):
+        raise NotImplementedError
+
+    async def get_file_url(
+        self,
+        filename: str,
+        operation: str = "get_object",
+        expires_in: int = 3600,
+        *,
+        bucket: str | None = None,
+    ) -> str:
+        """Generate presigned URL. bucket: override instance default if provided."""
+        return await self._get_file_url(filename, operation, expires_in, bucket=bucket)
+
+    async def _get_file_url(
+        self,
+        filename: str,
+        operation: str = "get_object",
+        expires_in: int = 3600,
+        *,
+        bucket: str | None = None,
+    ) -> str:
+        raise NotImplementedError
+
+    async def get_file(self, filename: str, *, bucket: str | None = None):
+        """Download file. bucket: override instance default if provided."""
+        return await self._get_file(filename, bucket=bucket)
+
+    async def _get_file(self, filename: str, *, bucket: str | None = None):
+        raise NotImplementedError
+
+    async def list_objects(
+        self, prefix: str = "", *, bucket: str | None = None
+    ) -> list[str]:
+        """List object keys. bucket: override instance default if provided."""
+        return await self._list_objects(prefix, bucket=bucket)
+
+    async def _list_objects(
+        self, prefix: str = "", *, bucket: str | None = None
+    ) -> list[str]:
+        raise NotImplementedError
+
+    async def stream_to_fileobj(
+        self, filename: str, fileobj: BinaryIO, *, bucket: str | None = None
+    ):
+        """Stream file directly to file object without loading into memory.
+        bucket: override instance default if provided."""
+        return await self._stream_to_fileobj(filename, fileobj, bucket=bucket)
+
+    async def _stream_to_fileobj(
+        self, filename: str, fileobj: BinaryIO, *, bucket: str | None = None
+    ):
         raise NotImplementedError
