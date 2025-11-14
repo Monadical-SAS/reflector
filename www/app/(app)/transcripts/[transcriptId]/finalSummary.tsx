@@ -35,7 +35,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
   const { setError } = useError();
   const updateTranscriptMutation = useTranscriptUpdate();
   const participantsQuery = useTranscriptParticipants(
-    props.transcriptResponse?.id || null,
+    props.transcript?.id || null,
   );
 
   useEffect(() => {
@@ -133,9 +133,9 @@ export default function FinalSummary(props: FinalSummaryProps) {
               variant="subtle"
               onClick={() => {
                 const text = buildTranscriptWithTopics(
-                  props.topicsResponse || [],
+                  props.topics || [],
                   participantsQuery?.data || null,
-                  props.transcriptResponse?.title || null,
+                  props.transcript?.title || null,
                 );
                 if (!text) return;
                 navigator.clipboard

@@ -20,9 +20,7 @@ export default function ShareCopy({
 }: ShareCopyProps & BoxProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
-  const participantsQuery = useTranscriptParticipants(
-    transcriptResponse?.id || null,
-  );
+  const participantsQuery = useTranscriptParticipants(transcript?.id || null);
 
   const onCopySummaryClick = () => {
     const text_to_copy = finalSummaryElement?.innerText;
