@@ -75,13 +75,13 @@ class DailyParticipantSessionController:
         return DailyParticipantSession(**result) if result else None
 
     async def get_open_session(
-        self, meeting_id: str, user_id: str
+        self, meeting_id: NonEmptyString, session_id: NonEmptyString
     ) -> DailyParticipantSession | None:
         """Get the open (not left) session for a user in a meeting."""
         query = daily_participant_sessions.select().where(
             sa.and_(
                 daily_participant_sessions.c.meeting_id == meeting_id,
-                daily_participant_sessions.c.user_id == user_id,
+                daily_participant_sessions.c.session_id == session_id,
                 daily_participant_sessions.c.left_at.is_(None),
             )
         )
@@ -89,7 +89,7 @@ class DailyParticipantSessionController:
 
         if len(results) > 1:
             raise ValueError(
-                f"Multiple open sessions for user {user_id} in meeting {meeting_id}: "
+                f"Multiple open sessions for daily session {session_id} in meeting {meeting_id}: "
                 f"found {len(results)} sessions"
             )
 
@@ -128,7 +128,7 @@ class DailyParticipantSessionController:
             )
 
         # Find existing open session (works around timestamp mismatch in webhooks)
-        existing = await self.get_open_session(session.meeting_id, session.user_id)
+        existing = await self.get_open_session(session.meeting_id, session.session_id)
 
         if existing:
             # Update existing open session
