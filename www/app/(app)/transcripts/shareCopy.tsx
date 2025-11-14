@@ -3,6 +3,8 @@ import type { components } from "../../reflector-api";
 type GetTranscript = components["schemas"]["GetTranscript"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { Button, BoxProps, Box } from "@chakra-ui/react";
+import { buildTranscriptWithTopics } from "./buildTranscriptWithTopics";
+import { useTranscriptParticipants } from "../../lib/apiHooks";
 
 type ShareCopyProps = {
   finalSummaryElement: HTMLDivElement | null;
@@ -18,6 +20,7 @@ export default function ShareCopy({
 }: ShareCopyProps & BoxProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
+  const participantsQuery = useTranscriptParticipants(transcript?.id || null);
 
   const onCopySummaryClick = () => {
     const text_to_copy = finalSummaryElement?.innerText;
@@ -32,12 +35,12 @@ export default function ShareCopy({
   };
 
   const onCopyTranscriptClick = () => {
-    let text_to_copy =
-      topics
-        ?.map((topic) => topic.transcript)
-        .join("\n\n")
-        .replace(/ +/g, " ")
-        .trim() || "";
+    const text_to_copy =
+      buildTranscriptWithTopics(
+        topics || [],
+        participantsQuery?.data || null,
+        transcript?.title || null,
+      ) || "";
 
     text_to_copy &&
       navigator.clipboard.writeText(text_to_copy).then(() => {
