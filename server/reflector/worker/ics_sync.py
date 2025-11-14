@@ -107,7 +107,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room: Room):
         client = create_platform_client(get_platform(room.platform))
 
         meeting_data = await client.create_meeting(
-            "",
+            room.name,
             end_date=end_date,
             room=room,
         )

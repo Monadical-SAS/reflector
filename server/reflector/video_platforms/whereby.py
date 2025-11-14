@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime
 from hashlib import sha256
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import httpx
 
@@ -13,11 +13,8 @@ from reflector.storage import get_whereby_storage
 
 from ..schemas.platform import WHEREBY_PLATFORM, Platform
 from ..utils.string import NonEmptyString
-from .base import (
-    MeetingData,
-    VideoPlatformClient,
-    VideoPlatformConfig,
-)
+from .base import VideoPlatformClient
+from .models import MeetingData, SessionData, VideoPlatformConfig
 from .whereby_utils import whereby_room_name_prefix
 
 
@@ -80,15 +77,50 @@ class WherebyClient(VideoPlatformClient):
             extra_data=result,
         )
 
-    async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
+    async def get_room_sessions(self, room_name: str) -> list[SessionData]:
+        """Get room session history from Whereby API.
+
+        Whereby API returns: [{"sessionId": "...", "startedAt": "...", "endedAt": "..." | null}, ...]
+        """
         async with httpx.AsyncClient() as client:
+            """
+                        {
+              "cursor": "text",
+              "results": [
+                {
+                  "roomSessionId": "e2f29530-46ec-4cee-8b27-e565cb5bb2e9",
+                  "roomName": "/room-prefix-793e9ec1-c686-423d-9043-9b7a10c553fd",
+                  "startedAt": "2025-01-01T00:00:00.000Z",
+                  "endedAt": "2025-01-01T01:00:00.000Z",
+                  "totalParticipantMinutes": 124,
+                  "totalRecorderMinutes": 120,
+                  "totalStreamerMinutes": 120,
+                  "totalUniqueParticipants": 4,
+                  "totalUniqueRecorders": 3,
+                  "totalUniqueStreamers": 2
+                }
+              ]
+            }"""
             response = await client.get(
                 f"{self.config.api_url}/insights/room-sessions?roomName={room_name}",
                 headers=self.headers,
                 timeout=self.TIMEOUT,
             )
             response.raise_for_status()
-            return response.json().get("results", [])
+            results = response.json().get("results", [])
+
+            return [
+                SessionData(
+                    session_id=s["roomSessionId"],
+                    started_at=datetime.fromisoformat(
+                        s["startedAt"].replace("Z", "+00:00")
+                    ),
+                    ended_at=datetime.fromisoformat(s["endedAt"].replace("Z", "+00:00"))
+                    if s.get("endedAt")
+                    else None,
+                )
+                for s in results
+            ]
 
     async def delete_room(self, room_name: str) -> bool:
         return True

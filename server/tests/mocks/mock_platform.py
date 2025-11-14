@@ -3,9 +3,11 @@ from datetime import datetime
 from typing import Any, Dict, Literal, Optional
 
 from reflector.db.rooms import Room
+from reflector.utils.string import NonEmptyString
 from reflector.video_platforms.base import (
     ROOM_PREFIX_SEPARATOR,
     MeetingData,
+    SessionData,
     VideoPlatformClient,
     VideoPlatformConfig,
 )
@@ -49,22 +51,18 @@ class MockPlatformClient(VideoPlatformClient):
             extra_data={"mock": True},
         )
 
-    async def get_room_sessions(self, room_name: str) -> Dict[str, Any]:
+    async def get_room_sessions(self, room_name: NonEmptyString) -> list[SessionData]:
         if room_name not in self._rooms:
-            return {"error": "Room not found"}
+            return []
 
         room_data = self._rooms[room_name]
-        return {
-            "roomName": room_name,
-            "sessions": [
-                {
-                    "sessionId": room_data["id"],
-                    "startTime": datetime.utcnow().isoformat(),
-                    "participants": room_data["participants"],
-                    "isActive": room_data["is_active"],
-                }
-            ],
-        }
+        return [
+            SessionData(
+                session_id=room_data["id"],
+                started_at=datetime.utcnow(),
+                ended_at=None if room_data["is_active"] else datetime.utcnow(),
+            )
+        ]
 
     async def delete_room(self, room_name: str) -> bool:
         if room_name in self._rooms:

@@ -1,9 +1,15 @@
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from reflector.db import get_database
+from reflector.db.daily_participant_sessions import (
+    DailyParticipantSession,
+    daily_participant_sessions_controller,
+)
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger as _logger
 from reflector.settings import settings
@@ -43,6 +49,24 @@ def _extract_room_name(event: DailyWebhookEvent) -> DailyRoomName | None:
 @router.post("/webhook")
 async def webhook(request: Request):
     """Handle Daily webhook events.
+
+    Example webhook payload:
+    {
+      "version": "1.0.0",
+      "type": "recording.ready-to-download",
+      "id": "rec-rtd-c3df927c-f738-4471-a2b7-066fa7e95a6b-1692124192",
+      "payload": {
+        "recording_id": "08fa0b24-9220-44c5-846c-3f116cf8e738",
+        "room_name": "Xcm97xRZ08b2dePKb78g",
+        "start_ts": 1692124183,
+        "status": "finished",
+        "max_participants": 1,
+        "duration": 9,
+        "share_token": "ntDCL5k98Ulq", #gitleaks:allow
+        "s3_key": "api-test-1j8fizhzd30c/Xcm97xRZ08b2dePKb78g/1692124183028"
+      },
+      "event_ts": 1692124192
+    }
 
     Daily.co circuit-breaker: After 3+ failed responses (4xx/5xx), webhook
     state→FAILED, stops sending events. Reset: scripts/recreate_daily_webhook.py
@@ -103,6 +127,32 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 
+"""
+{
+  "version": "1.0.0",
+  "type": "participant.joined",
+  "id": "ptcpt-join-6497c79b-f326-4942-aef8-c36a29140ad1-1708972279961",
+  "payload": {
+    "room": "test",
+    "user_id": "6497c79b-f326-4942-aef8-c36a29140ad1",
+    "user_name": "testuser",
+    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
+    "joined_at": 1708972279.96,
+    "will_eject_at": 1708972299.541,
+    "owner": false,
+    "permissions": {
+      "hasPresence": true,
+      "canSend": true,
+      "canReceive": { "base": true },
+      "canAdmin": false
+    }
+  },
+  "event_ts": 1708972279.961
+}
+
+"""
+
+
 async def _handle_participant_joined(event: DailyWebhookEvent):
     daily_room_name = _extract_room_name(event)
     if not daily_room_name:
@@ -110,29 +160,111 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         return
 
     meeting = await meetings_controller.get_by_room_name(daily_room_name)
-    if meeting:
-        await meetings_controller.increment_num_clients(meeting.id)
-        logger.info(
-            "Participant joined",
-            meeting_id=meeting.id,
-            room_name=daily_room_name,
-            recording_type=meeting.recording_type,
-            recording_trigger=meeting.recording_trigger,
-        )
-    else:
+    if not meeting:
         logger.warning(
             "participant.joined: meeting not found", room_name=daily_room_name
         )
+        return
+
+    payload = event.payload
+    logger.warning({"payload": payload})
+    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
+    session_id = f"{meeting.id}:{payload['session_id']}"
+
+    session = DailyParticipantSession(
+        id=session_id,
+        meeting_id=meeting.id,
+        room_id=meeting.room_id,
+        session_id=payload["session_id"],
+        user_id=payload.get("user_id", None),
+        user_name=payload["user_name"],
+        joined_at=joined_at,
+        left_at=None,
+    )
+
+    # num_clients serves as a projection/cache of active session count for Daily.co
+    # Both operations must succeed or fail together to maintain consistency
+    async with get_database().transaction():
+        await meetings_controller.increment_num_clients(meeting.id)
+        await daily_participant_sessions_controller.upsert_joined(session)
+
+    logger.info(
+        "Participant joined",
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+        user_id=payload.get("user_id", None),
+        user_name=payload.get("user_name"),
+        session_id=session_id,
+    )
+
+
+"""
+{
+  "version": "1.0.0",
+  "type": "participant.left",
+  "id": "ptcpt-left-16168c97-f973-4eae-9642-020fe3fda5db-1708972302986",
+  "payload": {
+    "room": "test",
+    "user_id": "16168c97-f973-4eae-9642-020fe3fda5db",
+    "user_name": "bipol",
+    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
+    "joined_at": 1708972291.567,
+    "will_eject_at": null,
+    "owner": false,
+    "permissions": {
+      "hasPresence": true,
+      "canSend": true,
+      "canReceive": { "base": true },
+      "canAdmin": false
+    },
+    "duration": 11.419000148773193
+  },
+  "event_ts": 1708972302.986
+}
+"""
 
 
 async def _handle_participant_left(event: DailyWebhookEvent):
     room_name = _extract_room_name(event)
     if not room_name:
+        logger.warning("participant.left: no room in payload", payload=event.payload)
         return
 
     meeting = await meetings_controller.get_by_room_name(room_name)
-    if meeting:
+    if not meeting:
+        logger.warning("participant.left: meeting not found", room_name=room_name)
+        return
+
+    payload = event.payload
+    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
+    left_at = datetime.fromtimestamp(event.event_ts, tz=timezone.utc)
+    session_id = f"{meeting.id}:{payload['session_id']}"
+
+    session = DailyParticipantSession(
+        id=session_id,
+        meeting_id=meeting.id,
+        room_id=meeting.room_id,
+        session_id=payload["session_id"],
+        user_id=payload.get("user_id", None),
+        user_name=payload["user_name"],
+        joined_at=joined_at,
+        left_at=left_at,
+    )
+
+    # num_clients serves as a projection/cache of active session count for Daily.co
+    # Both operations must succeed or fail together to maintain consistency
+    async with get_database().transaction():
         await meetings_controller.decrement_num_clients(meeting.id)
+        await daily_participant_sessions_controller.upsert_left(session)
+
+    logger.info(
+        "Participant left",
+        meeting_id=meeting.id,
+        room_name=room_name,
+        user_id=payload.get("user_id", None),
+        duration=payload.get("duration"),
+        session_id=session_id,
+    )
 
 
 async def _handle_recording_started(event: DailyWebhookEvent):

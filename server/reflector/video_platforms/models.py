@@ -1,18 +1,38 @@
+from datetime import datetime
 from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
+from reflector.utils.string import NonEmptyString
 
 RecordingType = Literal["none", "local", "cloud"]
 
 
+class SessionData(BaseModel):
+    """Platform-agnostic session data.
+
+    Represents a participant session in a meeting room, regardless of platform.
+    Used to determine if a meeting is still active or has ended.
+    """
+
+    session_id: NonEmptyString = Field(description="Unique session identifier")
+    started_at: datetime = Field(description="When session started (UTC)")
+    ended_at: datetime | None = Field(
+        description="When session ended (UTC), None if still active"
+    )
+
+
 class MeetingData(BaseModel):
     platform: Platform
-    meeting_id: str = Field(description="Platform-specific meeting identifier")
-    room_url: str = Field(description="URL for participants to join")
-    host_room_url: str = Field(description="URL for hosts (may be same as room_url)")
-    room_name: str = Field(description="Human-readable room name")
+    meeting_id: NonEmptyString = Field(
+        description="Platform-specific meeting identifier"
+    )
+    room_url: NonEmptyString = Field(description="URL for participants to join")
+    host_room_url: NonEmptyString = Field(
+        description="URL for hosts (may be same as room_url)"
+    )
+    room_name: NonEmptyString = Field(description="Human-readable room name")
     extra_data: Dict[str, Any] = Field(default_factory=dict)
 
     class Config:

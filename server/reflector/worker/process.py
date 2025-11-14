@@ -335,15 +335,15 @@ async def process_meetings():
     Uses distributed locking to prevent race conditions when multiple workers
     process the same meeting simultaneously.
     """
-    logger.debug("Processing meetings")
     meetings = await meetings_controller.get_all_active()
+    logger.info(f"Processing {len(meetings)} meetings")
     current_time = datetime.now(timezone.utc)
     redis_client = get_redis_client()
     processed_count = 0
     skipped_count = 0
-
     for meeting in meetings:
         logger_ = logger.bind(meeting_id=meeting.id, room_name=meeting.room_name)
+        logger_.info("Processing meeting")
         lock_key = f"meeting_process_lock:{meeting.id}"
         lock = redis_client.lock(lock_key, timeout=120)
 
@@ -359,21 +359,23 @@ async def process_meetings():
             if end_date.tzinfo is None:
                 end_date = end_date.replace(tzinfo=timezone.utc)
 
-            # This API call could be slow, extend lock if needed
             client = create_platform_client(meeting.platform)
             room_sessions = await client.get_room_sessions(meeting.room_name)
 
             try:
-                # Extend lock after slow operation to ensure we still hold it
+                # Extend lock after operation to ensure we still hold it
                 lock.extend(120, replace_ttl=True)
             except LockError:
                 logger_.warning("Lost lock for meeting, skipping")
                 continue
 
             has_active_sessions = room_sessions and any(
-                rs["endedAt"] is None for rs in room_sessions
+                s.ended_at is None for s in room_sessions
             )
             has_had_sessions = bool(room_sessions)
+            logger_.info(
+                f"found {has_active_sessions} active sessions, had {has_had_sessions}"
+            )
 
             if has_active_sessions:
                 logger_.debug("Meeting still has active sessions, keep it")
