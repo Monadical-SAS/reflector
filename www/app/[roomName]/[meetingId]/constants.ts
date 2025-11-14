@@ -1,0 +1,1 @@
+export const MEETING_DEFAULT_TIME_MINUTES = 60;

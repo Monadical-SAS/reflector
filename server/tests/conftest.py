@@ -1,8 +1,21 @@
 import os
+from contextlib import asynccontextmanager
 from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
+
+from reflector.schemas.platform import WHEREBY_PLATFORM
+
+
+@pytest.fixture(scope="session", autouse=True)
+def register_mock_platform():
+    from mocks.mock_platform import MockPlatformClient
+
+    from reflector.video_platforms.registry import register_platform
+
+    register_platform(WHEREBY_PLATFORM, MockPlatformClient)
+    yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -335,6 +348,166 @@ async def client():
 
     async with AsyncClient(app=app, base_url="http://test/v1") as ac:
         yield ac
+
+
+@pytest.fixture(autouse=True)
+async def ws_manager_in_memory(monkeypatch):
+    """Replace Redis-based WS manager with an in-memory implementation for tests."""
+    import asyncio
+    import json
+
+    from reflector.ws_manager import WebsocketManager
+
+    class _InMemorySubscriber:
+        def __init__(self, queue: asyncio.Queue):
+            self.queue = queue
+
+        async def get_message(self, ignore_subscribe_messages: bool = True):
+            try:
+                return await asyncio.wait_for(self.queue.get(), timeout=0.05)
+            except Exception:
+                return None
+
+    class InMemoryPubSubManager:
+        def __init__(self):
+            self.queues: dict[str, asyncio.Queue] = {}
+            self.connected = False
+
+        async def connect(self) -> None:
+            self.connected = True
+
+        async def disconnect(self) -> None:
+            self.connected = False
+
+        async def send_json(self, room_id: str, message: dict) -> None:
+            if room_id not in self.queues:
+                self.queues[room_id] = asyncio.Queue()
+            payload = json.dumps(message).encode("utf-8")
+            await self.queues[room_id].put(
+                {"channel": room_id.encode("utf-8"), "data": payload}
+            )
+
+        async def subscribe(self, room_id: str):
+            if room_id not in self.queues:
+                self.queues[room_id] = asyncio.Queue()
+            return _InMemorySubscriber(self.queues[room_id])
+
+        async def unsubscribe(self, room_id: str) -> None:
+            # keep queue for potential later resubscribe within same test
+            pass
+
+    pubsub = InMemoryPubSubManager()
+    ws_manager = WebsocketManager(pubsub_client=pubsub)
+
+    def _get_ws_manager():
+        return ws_manager
+
+    # Patch all places that imported get_ws_manager at import time
+    monkeypatch.setattr("reflector.ws_manager.get_ws_manager", _get_ws_manager)
+    monkeypatch.setattr(
+        "reflector.pipelines.main_live_pipeline.get_ws_manager", _get_ws_manager
+    )
+    monkeypatch.setattr(
+        "reflector.views.transcripts_websocket.get_ws_manager", _get_ws_manager
+    )
+    monkeypatch.setattr(
+        "reflector.views.user_websocket.get_ws_manager", _get_ws_manager
+    )
+    monkeypatch.setattr("reflector.views.transcripts.get_ws_manager", _get_ws_manager)
+
+    # Websocket auth: avoid OAuth2 on websocket dependencies; allow anonymous
+    import reflector.auth as auth
+
+    # Ensure FastAPI uses our override for routes that captured the original callable
+    from reflector.app import app as fastapi_app
+
+    try:
+        fastapi_app.dependency_overrides[auth.current_user_optional] = lambda: None
+    except Exception:
+        pass
+
+    # Stub Redis cache used by profanity filter to avoid external Redis
+    from reflector import redis_cache as rc
+
+    class _FakeRedis:
+        def __init__(self):
+            self._data = {}
+
+        def get(self, key):
+            value = self._data.get(key)
+            if value is None:
+                return None
+            if isinstance(value, bytes):
+                return value
+            return str(value).encode("utf-8")
+
+        def setex(self, key, duration, value):
+            # ignore duration for tests
+            if isinstance(value, bytes):
+                self._data[key] = value
+            else:
+                self._data[key] = str(value).encode("utf-8")
+
+    fake_redises: dict[int, _FakeRedis] = {}
+
+    def _get_redis_client(db=0):
+        if db not in fake_redises:
+            fake_redises[db] = _FakeRedis()
+        return fake_redises[db]
+
+    monkeypatch.setattr(rc, "get_redis_client", _get_redis_client)
+
+    yield
+
+
+@pytest.fixture
+@pytest.mark.asyncio
+async def authenticated_client():
+    async with authenticated_client_ctx():
+        yield
+
+
+@pytest.fixture
+@pytest.mark.asyncio
+async def authenticated_client2():
+    async with authenticated_client2_ctx():
+        yield
+
+
+@asynccontextmanager
+async def authenticated_client_ctx():
+    from reflector.app import app
+    from reflector.auth import current_user, current_user_optional
+
+    app.dependency_overrides[current_user] = lambda: {
+        "sub": "randomuserid",
+        "email": "test@mail.com",
+    }
+    app.dependency_overrides[current_user_optional] = lambda: {
+        "sub": "randomuserid",
+        "email": "test@mail.com",
+    }
+    yield
+    del app.dependency_overrides[current_user]
+    del app.dependency_overrides[current_user_optional]
+
+
+@asynccontextmanager
+async def authenticated_client2_ctx():
+    from reflector.app import app
+    from reflector.auth import current_user, current_user_optional
+
+    app.dependency_overrides[current_user] = lambda: {
+        "sub": "randomuserid2",
+        "email": "test@mail.com",
+    }
+    app.dependency_overrides[current_user_optional] = lambda: {
+        "sub": "randomuserid2",
+        "email": "test@mail.com",
+    }
+    yield
+    del app.dependency_overrides[current_user]
+    del app.dependency_overrides[current_user_optional]
 
 
 @pytest.fixture(scope="session")

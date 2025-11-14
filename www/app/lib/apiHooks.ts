@@ -2,7 +2,7 @@
 
 import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 
@@ -12,7 +12,7 @@ import { useAuth } from "./AuthProvider";
  * or, limitation or incorrect usage of .d type generator from json schema
  * */
 
-const useAuthReady = () => {
+export const useAuthReady = () => {
   const auth = useAuth();
 
   return {
@@ -40,6 +40,13 @@ export function useRoomsList(page: number = 1) {
 
 type SourceKind = components["schemas"]["SourceKind"];
 
+export const TRANSCRIPT_SEARCH_URL = "/v1/transcripts/search" as const;
+
+export const invalidateTranscriptLists = (queryClient: QueryClient) =>
+  queryClient.invalidateQueries({
+    queryKey: ["get", TRANSCRIPT_SEARCH_URL],
+  });
+
 export function useTranscriptsSearch(
   q: string = "",
   options: {
@@ -51,7 +58,7 @@ export function useTranscriptsSearch(
 ) {
   return $api.useQuery(
     "get",
-    "/v1/transcripts/search",
+    TRANSCRIPT_SEARCH_URL,
     {
       params: {
         query: {
@@ -75,8 +82,8 @@ export function useTranscriptDelete() {
 
   return $api.useMutation("delete", "/v1/transcripts/{transcript_id}", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/transcripts/search"],
+      return queryClient.invalidateQueries({
+        queryKey: ["get", TRANSCRIPT_SEARCH_URL],
       });
     },
     onError: (error) => {
@@ -102,7 +109,7 @@ export function useTranscriptGet(transcriptId: string | null) {
     {
       params: {
         path: {
-          transcript_id: transcriptId || "",
+          transcript_id: transcriptId!,
         },
       },
     },
@@ -120,7 +127,7 @@ export function useRoomGet(roomId: string | null) {
     "/v1/rooms/{room_id}",
     {
       params: {
-        path: { room_id: roomId || "" },
+        path: { room_id: roomId! },
       },
     },
     {
@@ -145,7 +152,7 @@ export function useRoomCreate() {
 
   return $api.useMutation("post", "/v1/rooms", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
       });
     },
@@ -188,7 +195,7 @@ export function useRoomDelete() {
 
   return $api.useMutation("delete", "/v1/rooms/{room_id}", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
       });
     },
@@ -236,7 +243,7 @@ export function useTranscriptUpdate() {
 
   return $api.useMutation("patch", "/v1/transcripts/{transcript_id}", {
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({
+      return queryClient.invalidateQueries({
         queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
           params: {
             path: { transcript_id: variables.params.path.transcript_id },
@@ -270,7 +277,7 @@ export function useTranscriptUploadAudio() {
     "/v1/transcripts/{transcript_id}/record/upload",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}",
@@ -327,7 +334,7 @@ export function useTranscriptTopics(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/topics",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -344,7 +351,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/topics/with-words",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -365,8 +372,8 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
     {
       params: {
         path: {
-          transcript_id: transcriptId || "",
-          topic_id: topicId || "",
+          transcript_id: transcriptId!,
+          topic_id: topicId!,
         },
       },
     },
@@ -384,7 +391,7 @@ export function useTranscriptParticipants(transcriptId: string | null) {
     "/v1/transcripts/{transcript_id}/participants",
     {
       params: {
-        path: { transcript_id: transcriptId || "" },
+        path: { transcript_id: transcriptId! },
       },
     },
     {
@@ -402,7 +409,7 @@ export function useTranscriptParticipantUpdate() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -430,7 +437,7 @@ export function useTranscriptParticipantCreate() {
     "/v1/transcripts/{transcript_id}/participants",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -458,7 +465,7 @@ export function useTranscriptParticipantDelete() {
     "/v1/transcripts/{transcript_id}/participants/{participant_id}",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
+        return queryClient.invalidateQueries({
           queryKey: $api.queryOptions(
             "get",
             "/v1/transcripts/{transcript_id}/participants",
@@ -486,28 +493,30 @@ export function useTranscriptSpeakerAssign() {
     "/v1/transcripts/{transcript_id}/speaker/assign",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+        return Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}/participants",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+            ).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}/participants",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
+            ).queryKey,
+          }),
+        ]);
       },
       onError: (error) => {
         setError(error as Error, "There was an error assigning the speaker");
@@ -525,28 +534,30 @@ export function useTranscriptSpeakerMerge() {
     "/v1/transcripts/{transcript_id}/speaker/merge",
     {
       onSuccess: (data, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+        return Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
-        queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/transcripts/{transcript_id}/participants",
-            {
-              params: {
-                path: { transcript_id: variables.params.path.transcript_id },
+            ).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: $api.queryOptions(
+              "get",
+              "/v1/transcripts/{transcript_id}/participants",
+              {
+                params: {
+                  path: { transcript_id: variables.params.path.transcript_id },
+                },
               },
-            },
-          ).queryKey,
-        });
+            ).queryKey,
+          }),
+        ]);
       },
       onError: (error) => {
         setError(error as Error, "There was an error merging speakers");
@@ -561,6 +572,29 @@ export function useMeetingAudioConsent() {
   return $api.useMutation("post", "/v1/meetings/{meeting_id}/consent", {
     onError: (error) => {
       setError(error as Error, "There was an error recording consent");
+    },
+  });
+}
+
+export function useMeetingDeactivate() {
+  const { setError } = useError();
+  const queryClient = useQueryClient();
+
+  return $api.useMutation("patch", `/v1/meetings/{meeting_id}/deactivate`, {
+    onError: (error) => {
+      setError(error as Error, "Failed to end meeting");
+    },
+    onSuccess: () => {
+      return queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return key.some(
+            (k) =>
+              typeof k === "string" &&
+              !!MEETING_LIST_PATH_PARTIALS.find((e) => k.includes(e)),
+          );
+        },
+      });
     },
   });
 }
@@ -585,8 +619,8 @@ export function useTranscriptCreate() {
 
   return $api.useMutation("post", "/v1/transcripts", {
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["get", "/v1/transcripts/search"],
+      return queryClient.invalidateQueries({
+        queryKey: ["get", TRANSCRIPT_SEARCH_URL],
       });
     },
     onError: (error) => {
@@ -600,13 +634,164 @@ export function useRoomsCreateMeeting() {
   const queryClient = useQueryClient();
 
   return $api.useMutation("post", "/v1/rooms/{room_name}/meeting", {
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
-      });
+    onSuccess: async (data, variables) => {
+      const roomName = variables.params.path.room_name;
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: $api.queryOptions(
+            "get",
+            "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
+            {
+              params: {
+                path: { room_name: roomName },
+              },
+            },
+          ).queryKey,
+        }),
+      ]);
     },
     onError: (error) => {
       setError(error as Error, "There was an error creating the meeting");
     },
   });
 }
+
+// Calendar integration hooks
+export function useRoomGetByName(roomName: string | null) {
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/name/{room_name}",
+    {
+      params: {
+        path: { room_name: roomName! },
+      },
+    },
+    {
+      enabled: !!roomName,
+    },
+  );
+}
+
+export function useRoomUpcomingMeetings(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/upcoming" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_UPCOMING_PATH_PARTIAL}`,
+    {
+      params: {
+        path: { room_name: roomName! },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
+
+const MEETINGS_PATH_PARTIAL = "meetings" as const;
+const MEETINGS_ACTIVE_PATH_PARTIAL = `${MEETINGS_PATH_PARTIAL}/active` as const;
+const MEETINGS_UPCOMING_PATH_PARTIAL =
+  `${MEETINGS_PATH_PARTIAL}/upcoming` as const;
+const MEETING_LIST_PATH_PARTIALS = [
+  MEETINGS_ACTIVE_PATH_PARTIAL,
+  MEETINGS_UPCOMING_PATH_PARTIAL,
+];
+
+export function useRoomActiveMeetings(roomName: string | null) {
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
+    {
+      params: {
+        path: { room_name: roomName! },
+      },
+    },
+    {
+      enabled: !!roomName,
+    },
+  );
+}
+
+export function useRoomGetMeeting(
+  roomName: string | null,
+  meetingId: string | null,
+) {
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}",
+    {
+      params: {
+        path: {
+          room_name: roomName!,
+          meeting_id: meetingId!,
+        },
+      },
+    },
+    {
+      enabled: !!roomName && !!meetingId,
+    },
+  );
+}
+
+export function useRoomJoinMeeting() {
+  const { setError } = useError();
+
+  return $api.useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/join",
+    {
+      onError: (error) => {
+        setError(error as Error, "There was an error joining the meeting");
+      },
+    },
+  );
+}
+
+export function useRoomIcsSync() {
+  const { setError } = useError();
+
+  return $api.useMutation("post", "/v1/rooms/{room_name}/ics/sync", {
+    onError: (error) => {
+      setError(error as Error, "There was an error syncing the calendar");
+    },
+  });
+}
+
+export function useRoomIcsStatus(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/ics/status",
+    {
+      params: {
+        path: { room_name: roomName! },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
+
+export function useRoomCalendarEvents(roomName: string | null) {
+  const { isAuthenticated } = useAuthReady();
+
+  return $api.useQuery(
+    "get",
+    "/v1/rooms/{room_name}/meetings",
+    {
+      params: {
+        path: { room_name: roomName! },
+      },
+    },
+    {
+      enabled: !!roomName && isAuthenticated,
+    },
+  );
+}
+// End of Calendar integration hooks

@@ -1,0 +1,33 @@
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+
+# Env and secrets
+.env
+.env.*
+*.env
+*.secret
+
+# Build / dist
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Coverage / test
+.pytest_cache/
+.coverage*
+htmlcov/
+
+# Modal local state (if any)
+modal_mounts/
+.modal_cache/

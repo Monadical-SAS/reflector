@@ -10,6 +10,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./lib/AuthProvider";
 import { SessionProvider as SessionProviderNextAuth } from "next-auth/react";
+import { RecordingConsentProvider } from "./recordingConsentContext";
+import { UserEventsProvider } from "./lib/UserEventsProvider";
 
 const WherebyProvider = dynamic(
   () =>
@@ -26,10 +28,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SessionProviderNextAuth>
           <AuthProvider>
             <ChakraProvider value={system}>
-              <WherebyProvider>
-                {children}
-                <Toaster />
-              </WherebyProvider>
+              <RecordingConsentProvider>
+                <UserEventsProvider>
+                  <WherebyProvider>
+                    {children}
+                    <Toaster />
+                  </WherebyProvider>
+                </UserEventsProvider>
+              </RecordingConsentProvider>
             </ChakraProvider>
           </AuthProvider>
         </SessionProviderNextAuth>

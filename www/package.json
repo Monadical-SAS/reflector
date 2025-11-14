@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build-production": "next build --experimental-build-mode compile",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
@@ -13,6 +14,7 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^3.24.2",
+    "@daily-co/daily-js": "^0.84.0",
     "@emotion/react": "^11.14.0",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
@@ -45,6 +47,7 @@
     "react-qr-code": "^2.0.12",
     "react-select-search": "^4.1.7",
     "redlock": "5.0.0-beta.2",
+    "remeda": "^2.31.1",
     "sass": "^1.63.6",
     "simple-peer": "^9.11.1",
     "tailwindcss": "^3.3.2",

@@ -1,7 +1,3 @@
-export function isDevelopment() {
-  return process.env.NEXT_PUBLIC_ENV === "development";
-}
-
 // Function to calculate WCAG contrast ratio
 export const getContrastRatio = (
   foreground: [number, number, number],
@@ -145,8 +141,15 @@ export const parseMaybeNonEmptyString = (
   s = trim ? s.trim() : s;
   return s.length > 0 ? (s as NonEmptyString) : null;
 };
-export const parseNonEmptyString = (s: string, trim = true): NonEmptyString =>
-  assertExists(parseMaybeNonEmptyString(s, trim), "Expected non-empty string");
+export const parseNonEmptyString = (
+  s: string,
+  trim = true,
+  e?: string,
+): NonEmptyString =>
+  assertExists(
+    parseMaybeNonEmptyString(s, trim),
+    "Expected non-empty string" + (e ? `: ${e}` : ""),
+  );
 
 export const assertExists = <T>(
   value: T | null | undefined,
@@ -173,4 +176,8 @@ export const assertExistsAndNonEmptyString = (
   value: string | null | undefined,
   err?: string,
 ): NonEmptyString =>
-  parseNonEmptyString(assertExists(value, err || "Expected non-empty string"));
+  parseNonEmptyString(
+    assertExists(value, err || "Expected non-empty string"),
+    true,
+    err,
+  );

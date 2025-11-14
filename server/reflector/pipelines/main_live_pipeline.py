@@ -17,7 +17,6 @@ from contextlib import asynccontextmanager
 from typing import Generic
 
 import av
-import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
@@ -84,6 +83,20 @@ def broadcast_to_sockets(func):
             room_id=self.ws_room_id,
             message=resp.model_dump(mode="json"),
         )
+
+        transcript = await transcripts_controller.get_by_id(self.transcript_id)
+        if transcript and transcript.user_id:
+            # Emit only relevant events to the user room to avoid noisy updates.
+            # Allowed: STATUS, FINAL_TITLE, DURATION. All are prefixed with TRANSCRIPT_
+            allowed_user_events = {"STATUS", "FINAL_TITLE", "DURATION"}
+            if resp.event in allowed_user_events:
+                await self.ws_manager.send_json(
+                    room_id=f"user:{transcript.user_id}",
+                    message={
+                        "event": f"TRANSCRIPT_{resp.event}",
+                        "data": {"id": self.transcript_id, **resp.data},
+                    },
+                )
 
     return wrapper
 
@@ -570,6 +583,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     consent_denied = False
     recording = None
+    meeting = None
     try:
         if transcript.recording_id:
             recording = await recordings_controller.get_by_id(transcript.recording_id)
@@ -580,8 +594,8 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                         meeting.id
                     )
     except Exception as e:
-        logger.error(f"Failed to get fetch consent: {e}", exc_info=e)
-        consent_denied = True
+        logger.error(f"Failed to fetch consent: {e}", exc_info=e)
+        raise
 
     if not consent_denied:
         logger.info("Consent approved, keeping all files")
@@ -589,25 +603,24 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     logger.info("Consent denied, cleaning up all related audio files")
 
-    if recording and recording.bucket_name and recording.object_key:
-        s3_whereby = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
-        )
-        try:
-            s3_whereby.delete_object(
-                Bucket=recording.bucket_name, Key=recording.object_key
-            )
-            logger.info(
-                f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to delete Whereby recording: {e}", exc_info=e)
+    deletion_errors = []
+    if recording and recording.bucket_name:
+        keys_to_delete = []
+        if recording.track_keys:
+            keys_to_delete = recording.track_keys
+        elif recording.object_key:
+            keys_to_delete = [recording.object_key]
 
-    # non-transactional, files marked for deletion not actually deleted is possible
-    await transcripts_controller.update(transcript, {"audio_deleted": True})
-    # 2. Delete processed audio from transcript storage S3 bucket
+        master_storage = get_transcripts_storage()
+        for key in keys_to_delete:
+            try:
+                await master_storage.delete_file(key, bucket=recording.bucket_name)
+                logger.info(f"Deleted recording file: {recording.bucket_name}/{key}")
+            except Exception as e:
+                error_msg = f"Failed to delete {key}: {e}"
+                logger.error(error_msg, exc_info=e)
+                deletion_errors.append(error_msg)
+
     if transcript.audio_location == "storage":
         storage = get_transcripts_storage()
         try:
@@ -616,18 +629,28 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted processed audio from storage: {transcript.storage_audio_path}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete processed audio: {e}", exc_info=e)
+            error_msg = f"Failed to delete processed audio: {e}"
+            logger.error(error_msg, exc_info=e)
+            deletion_errors.append(error_msg)
 
-    # 3. Delete local audio files
     try:
         if hasattr(transcript, "audio_mp3_filename") and transcript.audio_mp3_filename:
             transcript.audio_mp3_filename.unlink(missing_ok=True)
         if hasattr(transcript, "audio_wav_filename") and transcript.audio_wav_filename:
             transcript.audio_wav_filename.unlink(missing_ok=True)
     except Exception as e:
-        logger.error(f"Failed to delete local audio files: {e}", exc_info=e)
+        error_msg = f"Failed to delete local audio files: {e}"
+        logger.error(error_msg, exc_info=e)
+        deletion_errors.append(error_msg)
 
-    logger.info("Consent cleanup done")
+    if deletion_errors:
+        logger.warning(
+            f"Consent cleanup completed with {len(deletion_errors)} errors",
+            errors=deletion_errors,
+        )
+    else:
+        await transcripts_controller.update(transcript, {"audio_deleted": True})
+        logger.info("Consent cleanup done - all audio deleted")
 
 
 @get_transcript

@@ -139,14 +139,10 @@ async def test_cleanup_deletes_associated_meeting_and_recording():
         mock_settings.PUBLIC_DATA_RETENTION_DAYS = 7
 
         # Mock storage deletion
-        with patch("reflector.db.transcripts.get_transcripts_storage") as mock_storage:
+        with patch("reflector.worker.cleanup.get_transcripts_storage") as mock_storage:
             mock_storage.return_value.delete_file = AsyncMock()
-            with patch(
-                "reflector.worker.cleanup.get_recordings_storage"
-            ) as mock_rec_storage:
-                mock_rec_storage.return_value.delete_file = AsyncMock()
 
-                result = await cleanup_old_public_data()
+            result = await cleanup_old_public_data()
 
     # Check results
     assert result["transcripts_deleted"] == 1

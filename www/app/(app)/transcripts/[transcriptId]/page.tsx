@@ -50,6 +50,8 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     waiting || mp3.audioDeleted === true,
   );
   const useActiveTopic = useState<Topic | null>(null);
+  const [finalSummaryElement, setFinalSummaryElement] =
+    useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!waiting || !transcript.data) return;
@@ -173,9 +175,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 <TranscriptTitle
                   title={transcript.data?.title || "Unnamed Transcript"}
                   transcriptId={transcriptId}
-                  onUpdate={(newTitle) => {
+                  onUpdate={() => {
                     transcript.refetch().then(() => {});
                   }}
+                  transcript={transcript.data || null}
+                  topics={topics.topics}
+                  finalSummaryElement={finalSummaryElement}
                 />
               </Flex>
               {mp3.audioDeleted && (
@@ -197,11 +202,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           {transcript.data && topics.topics ? (
             <>
               <FinalSummary
-                transcriptResponse={transcript.data}
-                topicsResponse={topics.topics}
+                transcript={transcript.data}
+                topics={topics.topics}
                 onUpdate={() => {
-                  transcript.refetch();
+                  transcript.refetch().then(() => {});
                 }}
+                finalSummaryRef={setFinalSummaryElement}
               />
             </>
           ) : (

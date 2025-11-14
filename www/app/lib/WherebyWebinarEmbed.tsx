@@ -4,16 +4,16 @@ import "@whereby.com/browser-sdk/embed";
 import { Box, Button, HStack, Text, Link } from "@chakra-ui/react";
 import { toaster } from "../components/ui/toaster";
 
-interface WherebyEmbedProps {
+interface WherebyWebinarEmbedProps {
   roomUrl: string;
   onLeave?: () => void;
 }
 
-// currently used for webinars only
+// used for webinars only
 export default function WherebyWebinarEmbed({
   roomUrl,
   onLeave,
-}: WherebyEmbedProps) {
+}: WherebyWebinarEmbedProps) {
   const wherebyRef = useRef<HTMLElement>(null);
 
   // TODO extract common toast logic / styles to be used by consent toast on normal rooms

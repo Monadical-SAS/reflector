@@ -65,8 +65,13 @@ class WebsocketManager:
         self.tasks: dict = {}
         self.pubsub_client = pubsub_client
 
-    async def add_user_to_room(self, room_id: str, websocket: WebSocket) -> None:
-        await websocket.accept()
+    async def add_user_to_room(
+        self, room_id: str, websocket: WebSocket, subprotocol: str | None = None
+    ) -> None:
+        if subprotocol:
+            await websocket.accept(subprotocol=subprotocol)
+        else:
+            await websocket.accept()
 
         if room_id in self.rooms:
             self.rooms[room_id].append(websocket)

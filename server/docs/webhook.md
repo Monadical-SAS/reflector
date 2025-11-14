@@ -14,7 +14,7 @@ Webhooks are configured at the room level with two fields:
 
 ### `transcript.completed`
 
-Triggered when a transcript has been fully processed, including transcription, diarization, summarization, and topic detection.
+Triggered when a transcript has been fully processed, including transcription, diarization, summarization, topic detection and calendar event integration.
 
 ### `test`
 
@@ -128,6 +128,27 @@ This event includes a convenient URL for accessing the transcript:
   "room": {
     "id": "room-789",
     "name": "Product Team Room"
+  },
+  "calendar_event": {
+    "id": "calendar-event-123",
+    "ics_uid": "event-123",
+    "title": "Q3 Product Planning Meeting",
+    "start_time": "2025-08-27T12:00:00Z",
+    "end_time": "2025-08-27T12:30:00Z",
+    "description": "Team discussed Q3 product roadmap, prioritizing mobile app features and API improvements.",
+    "location": "Conference Room 1",
+    "attendees": [
+      {
+        "id": "participant-1",
+        "name": "John Doe",
+        "speaker": "Speaker 1"
+      },
+      {
+        "id": "participant-2",
+        "name": "Jane Smith",
+        "speaker": "Speaker 2"
+      }
+    ]
   }
 }
 ```
