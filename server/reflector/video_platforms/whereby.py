@@ -83,6 +83,24 @@ class WherebyClient(VideoPlatformClient):
         Whereby API returns: [{"sessionId": "...", "startedAt": "...", "endedAt": "..." | null}, ...]
         """
         async with httpx.AsyncClient() as client:
+            """
+                        {
+              "cursor": "text",
+              "results": [
+                {
+                  "roomSessionId": "e2f29530-46ec-4cee-8b27-e565cb5bb2e9",
+                  "roomName": "/room-prefix-793e9ec1-c686-423d-9043-9b7a10c553fd",
+                  "startedAt": "2025-01-01T00:00:00.000Z",
+                  "endedAt": "2025-01-01T01:00:00.000Z",
+                  "totalParticipantMinutes": 124,
+                  "totalRecorderMinutes": 120,
+                  "totalStreamerMinutes": 120,
+                  "totalUniqueParticipants": 4,
+                  "totalUniqueRecorders": 3,
+                  "totalUniqueStreamers": 2
+                }
+              ]
+            }"""
             response = await client.get(
                 f"{self.config.api_url}/insights/room-sessions?roomName={room_name}",
                 headers=self.headers,
@@ -93,7 +111,7 @@ class WherebyClient(VideoPlatformClient):
 
             return [
                 SessionData(
-                    session_id=s["sessionId"],
+                    session_id=s["roomSessionId"],
                     started_at=datetime.fromisoformat(
                         s["startedAt"].replace("Z", "+00:00")
                     ),
