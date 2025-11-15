@@ -6,53 +6,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import httpx
-
+from reflector.dailyco_api import DailyApiClient
 from reflector.settings import settings
 
 
 async def list_webhooks():
-    """
-    List all Daily.co webhooks for this account.
-    """
+    """List all Daily.co webhooks for this account using dailyco_api module."""
     if not settings.DAILY_API_KEY:
         print("Error: DAILY_API_KEY not set")
         return 1
 
-    headers = {
-        "Authorization": f"Bearer {settings.DAILY_API_KEY}",
-        "Content-Type": "application/json",
-    }
-
-    async with httpx.AsyncClient() as client:
+    async with DailyApiClient(api_key=settings.DAILY_API_KEY) as client:
         try:
-            """
-            Daily.co webhook list response format:
-            [
-              {
-                "uuid": "0b4e4c7c-5eaf-46fe-990b-a3752f5684f5",
-                "url": "{{webhook_url}}",
-                "hmac": "NQrSA5z0FkJ44QPrFerW7uCc5kdNLv3l2FDEKDanL1U=",
-                "basicAuth": null,
-                "eventTypes": [
-                  "recording.started",
-                  "recording.ready-to-download"
-                ],
-                "state": "ACTVIE",
-                "failedCount": 0,
-                "lastMomentPushed": "2023-08-15T18:29:52.000Z",
-                "domainId": "{{domain_id}}",
-                "createdAt": "2023-08-15T18:28:30.000Z",
-                "updatedAt": "2023-08-15T18:29:52.000Z"
-              }
-            ]
-            """
-            resp = await client.get(
-                "https://api.daily.co/v1/webhooks",
-                headers=headers,
-            )
-            resp.raise_for_status()
-            webhooks = resp.json()
+            webhooks = await client.list_webhooks()
 
             if not webhooks:
                 print("No webhooks found")
@@ -62,12 +28,12 @@ async def list_webhooks():
 
             for webhook in webhooks:
                 print("=" * 80)
-                print(f"UUID:         {webhook['uuid']}")
-                print(f"URL:          {webhook['url']}")
-                print(f"State:        {webhook['state']}")
-                print(f"Event Types:  {', '.join(webhook.get('eventTypes', []))}")
+                print(f"UUID:         {webhook.uuid}")
+                print(f"URL:          {webhook.url}")
+                print(f"State:        {webhook.state}")
+                print(f"Event Types:  {', '.join(webhook.eventTypes)}")
                 print(
-                    f"HMAC Secret:  {'✓ Configured' if webhook.get('hmac') else '✗ Not set'}"
+                    f"HMAC Secret:  {'✓ Configured' if webhook.hmac else '✗ Not set'}"
                 )
                 print()
 
@@ -78,12 +44,8 @@ async def list_webhooks():
 
             return 0
 
-        except httpx.HTTPStatusError as e:
-            print(f"Error fetching webhooks: {e}")
-            print(f"Response: {e.response.text}")
-            return 1
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            print(f"Error fetching webhooks: {e}")
             return 1
 
 
