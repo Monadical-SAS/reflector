@@ -582,7 +582,8 @@ class PipelineMainMultitrack(PipelineMainBase):
             t = await self.transcribe_file(padded_url, transcript.source_language)
 
             if not t.words:
-                continue
+                self.logger.debug(f"no words in track {idx}")
+                # not skipping, it may be silence or indistinguishable mumbling
 
             for w in t.words:
                 w.speaker = idx
