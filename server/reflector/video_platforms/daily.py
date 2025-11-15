@@ -1,12 +1,15 @@
-import base64
-import hmac
 from datetime import datetime
-from hashlib import sha256
-from http import HTTPStatus
 from typing import Any, Dict, Optional
 
-import httpx
-
+from reflector.dailyco_api import (
+    CreateMeetingTokenRequest,
+    CreateRoomRequest,
+    DailyApiClient,
+    MeetingTokenProperties,
+    RecordingsBucketConfig,
+    RoomProperties,
+    verify_webhook_signature,
+)
 from reflector.db.daily_participant_sessions import (
     daily_participant_sessions_controller,
 )
@@ -23,18 +26,18 @@ from .models import MeetingData, RecordingType, SessionData, VideoPlatformConfig
 
 class DailyClient(VideoPlatformClient):
     PLATFORM_NAME: Platform = "daily"
-    TIMEOUT = 10
-    BASE_URL = "https://api.daily.co/v1"
     TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
     RECORDING_NONE: RecordingType = "none"
     RECORDING_CLOUD: RecordingType = "cloud"
 
     def __init__(self, config: VideoPlatformConfig):
         super().__init__(config)
-        self.headers = {
-            "Authorization": f"Bearer {config.api_key}",
-            "Content-Type": "application/json",
-        }
+        # Initialize dailyco_api client
+        self._api_client = DailyApiClient(
+            api_key=config.api_key,
+            webhook_secret=config.webhook_secret,
+            timeout=10.0,
+        )
 
     async def create_meeting(
         self, room_name_prefix: NonEmptyString, end_date: datetime, room: Room
@@ -49,57 +52,46 @@ class DailyClient(VideoPlatformClient):
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
         room_name = f"{room_name_prefix}{ROOM_PREFIX_SEPARATOR}{timestamp}"
 
-        data = {
-            "name": room_name,
-            "privacy": "private" if room.is_locked else "public",
-            "properties": {
-                "enable_recording": "raw-tracks"
-                if room.recording_type != self.RECORDING_NONE
-                else False,
-                "enable_chat": True,
-                "enable_screenshare": True,
-                "start_video_off": False,
-                "start_audio_off": False,
-                "exp": int(end_date.timestamp()),
-            },
-        }
+        # Build room properties
+        properties = RoomProperties(
+            enable_recording="raw-tracks"
+            if room.recording_type != self.RECORDING_NONE
+            else False,
+            enable_chat=True,
+            enable_screenshare=True,
+            start_video_off=False,
+            start_audio_off=False,
+            exp=int(end_date.timestamp()),
+        )
 
         # Only configure recordings_bucket if recording is enabled
         if room.recording_type != self.RECORDING_NONE:
             daily_storage = get_dailyco_storage()
             assert daily_storage.bucket_name, "S3 bucket must be configured"
-            data["properties"]["recordings_bucket"] = {
-                "bucket_name": daily_storage.bucket_name,
-                "bucket_region": daily_storage.region,
-                "assume_role_arn": daily_storage.role_credential,
-                "allow_api_access": True,
-            }
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/rooms",
-                headers=self.headers,
-                json=data,
-                timeout=self.TIMEOUT,
+            properties.recordings_bucket = RecordingsBucketConfig(
+                bucket_name=daily_storage.bucket_name,
+                bucket_region=daily_storage.region,
+                assume_role_arn=daily_storage.role_credential,
+                allow_api_access=True,
             )
-            if response.status_code >= 400:
-                logger.error(
-                    "Daily.co API error",
-                    status_code=response.status_code,
-                    response_body=response.text,
-                    request_data=data,
-                )
-            response.raise_for_status()
-            result = response.json()
 
-        room_url = result["url"]
+        # Create room request
+        request = CreateRoomRequest(
+            name=room_name,
+            privacy="private" if room.is_locked else "public",
+            properties=properties,
+        )
+
+        # Call API
+        result = await self._api_client.create_room(request)
 
         return MeetingData(
-            meeting_id=result["id"],
-            room_name=result["name"],
-            room_url=room_url,
-            host_room_url=room_url,
+            meeting_id=result.id,
+            room_name=result.name,
+            room_url=result.url,
+            host_room_url=result.url,
             platform=self.PLATFORM_NAME,
-            extra_data=result,
+            extra_data=result.model_dump(),
         )
 
     async def get_room_sessions(self, room_name: str) -> list[SessionData]:
@@ -128,82 +120,23 @@ class DailyClient(VideoPlatformClient):
         ]
 
     async def get_room_presence(self, room_name: str) -> Dict[str, Any]:
-        """Get room presence/session data for a Daily.co room.
-
-        Example response:
-        {
-          "total_count": 1,
-          "data": [
-            {
-              "room": "w2pp2cf4kltgFACPKXmX",
-              "id": "d61cd7b2-a273-42b4-89bd-be763fd562c1",
-              "userId": "pbZ+ismP7dk=",
-              "userName": "Moishe",
-              "joinTime": "2023-01-01T20:53:19.000Z",
-              "duration": 2312
-            }
-          ]
-        }
-        """
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.BASE_URL}/rooms/{room_name}/presence",
-                headers=self.headers,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()
+        """Get room presence/session data for a Daily.co room."""
+        result = await self._api_client.get_room_presence(room_name)
+        return result.model_dump()
 
     async def get_meeting_participants(self, meeting_id: str) -> Dict[str, Any]:
-        """Get participant data for a specific Daily.co meeting.
-
-        Example response:
-        {
-          "data": [
-            {
-              "user_id": "4q47OTmqa/w=",
-              "participant_id": "d61cd7b2-a273-42b4-89bd-be763fd562c1",
-              "user_name": "Lindsey",
-              "join_time": 1672786813,
-              "duration": 150
-            },
-            {
-              "user_id": "pbZ+ismP7dk=",
-              "participant_id": "b3d56359-14d7-46af-ac8b-18f8c991f5f6",
-              "user_name": "Moishe",
-              "join_time": 1672786797,
-              "duration": 165
-            }
-          ]
-        }
-        """
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.BASE_URL}/meetings/{meeting_id}/participants",
-                headers=self.headers,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()
+        """Get participant data for a specific Daily.co meeting."""
+        result = await self._api_client.get_meeting_participants(meeting_id)
+        return result.model_dump()
 
     async def get_recording(self, recording_id: str) -> Dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.BASE_URL}/recordings/{recording_id}",
-                headers=self.headers,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()
+        result = await self._api_client.get_recording(recording_id)
+        return result.model_dump()
 
     async def delete_room(self, room_name: str) -> bool:
-        async with httpx.AsyncClient() as client:
-            response = await client.delete(
-                f"{self.BASE_URL}/rooms/{room_name}",
-                headers=self.headers,
-                timeout=self.TIMEOUT,
-            )
-            return response.status_code in (HTTPStatus.OK, HTTPStatus.NOT_FOUND)
+        """Delete a room (idempotent - succeeds even if room doesn't exist)."""
+        await self._api_client.delete_room(room_name)
+        return True
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         return True
@@ -211,29 +144,17 @@ class DailyClient(VideoPlatformClient):
     def verify_webhook_signature(
         self, body: bytes, signature: str, timestamp: Optional[str] = None
     ) -> bool:
-        """Verify Daily.co webhook signature.
-
-        Daily.co uses:
-        - X-Webhook-Signature header
-        - X-Webhook-Timestamp header
-        - Signature format: HMAC-SHA256(base64_decode(secret), timestamp + '.' + body)
-        - Result is base64 encoded
-        """
-        if not signature or not timestamp:
+        """Verify Daily.co webhook signature using dailyco_api module."""
+        if not self.config.webhook_secret:
+            logger.warning("Webhook secret not configured")
             return False
 
-        try:
-            secret_bytes = base64.b64decode(self.config.webhook_secret)
-
-            signed_content = timestamp.encode() + b"." + body
-
-            expected = hmac.new(secret_bytes, signed_content, sha256).digest()
-            expected_b64 = base64.b64encode(expected).decode()
-
-            return hmac.compare_digest(expected_b64, signature)
-        except Exception as e:
-            logger.error("Daily.co webhook signature verification failed", exc_info=e)
-            return False
+        return verify_webhook_signature(
+            body=body,
+            signature=signature,
+            timestamp=timestamp or "",
+            webhook_secret=self.config.webhook_secret,
+        )
 
     async def create_meeting_token(
         self,
@@ -241,21 +162,17 @@ class DailyClient(VideoPlatformClient):
         enable_recording: bool,
         user_id: Optional[str] = None,
     ) -> str:
-        data = {"properties": {"room_name": room_name}}
+        properties = MeetingTokenProperties(
+            room_name=room_name,
+            user_id=user_id,
+            start_cloud_recording=enable_recording,
+            enable_recording_ui=not enable_recording if enable_recording else True,
+        )
 
-        if enable_recording:
-            data["properties"]["start_cloud_recording"] = True
-            data["properties"]["enable_recording_ui"] = False
+        request = CreateMeetingTokenRequest(properties=properties)
+        result = await self._api_client.create_meeting_token(request)
+        return result.token
 
-        if user_id:
-            data["properties"]["user_id"] = user_id
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.BASE_URL}/meeting-tokens",
-                headers=self.headers,
-                json=data,
-                timeout=self.TIMEOUT,
-            )
-            response.raise_for_status()
-            return response.json()["token"]
+    async def close(self):
+        """Clean up API client resources."""
+        await self._api_client.close()
