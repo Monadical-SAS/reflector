@@ -641,7 +641,10 @@ class PipelineMainMultitrack(PipelineMainBase):
         await self.set_status(transcript.id, "ended")
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
-        return await transcribe_file_with_processor(audio_url, language)
+        # Daily.co multitrack recordings require VAD disabled due to pre-padded silence
+        return await transcribe_file_with_processor(
+            audio_url, language, disable_vad=True
+        )
 
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str

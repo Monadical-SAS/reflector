@@ -7,11 +7,12 @@ async def transcribe_file_with_processor(
     audio_url: str,
     language: str,
     processor_name: str | None = None,
+    disable_vad: bool = False,
 ) -> TranscriptType:
     processor = (
-        FileTranscriptAutoProcessor(name=processor_name)
+        FileTranscriptAutoProcessor(name=processor_name, disable_vad=disable_vad)
         if processor_name
-        else FileTranscriptAutoProcessor()
+        else FileTranscriptAutoProcessor(disable_vad=disable_vad)
     )
     input_data = FileTranscriptInput(audio_url=audio_url, language=language)
 

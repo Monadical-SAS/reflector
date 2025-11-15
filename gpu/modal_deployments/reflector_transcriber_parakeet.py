@@ -615,6 +615,10 @@ def web():
         model: str = Body(MODEL_NAME),
         language: str = Body("en", description="Language code (only 'en' supported)"),
         timestamp_offset: float = Body(0.0),
+        disable_vad: bool = Body(
+            False,
+            description="Disable voice activity detection preprocessing",
+        ),
     ):
         # Parakeet only supports English
         if language != "en":
@@ -625,10 +629,15 @@ def web():
         unique_filename, audio_suffix = download_audio_to_volume(audio_file_url)
 
         try:
-            func = transcriber_file.transcribe_segment.spawn(
-                filename=unique_filename,
-                timestamp_offset=timestamp_offset,
-            )
+            if disable_vad:
+                func = transcriber_live.transcribe_segment.spawn(
+                    filename=unique_filename,
+                )
+            else:
+                func = transcriber_file.transcribe_segment.spawn(
+                    filename=unique_filename,
+                    timestamp_offset=timestamp_offset,
+                )
             result = func.get()
             return result
         finally:
