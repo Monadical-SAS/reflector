@@ -582,7 +582,8 @@ class PipelineMainMultitrack(PipelineMainBase):
             t = await self.transcribe_file(padded_url, transcript.source_language)
 
             if not t.words:
-                continue
+                self.logger.debug(f"no words in track {idx}")
+                # not skipping, it may be silence or indistinguishable mumbling
 
             for w in t.words:
                 w.speaker = idx
@@ -641,7 +642,10 @@ class PipelineMainMultitrack(PipelineMainBase):
         await self.set_status(transcript.id, "ended")
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
-        return await transcribe_file_with_processor(audio_url, language)
+        # Daily.co multitrack recordings require VAD disabled due to pre-padded silence
+        return await transcribe_file_with_processor(
+            audio_url, language, disable_vad=True
+        )
 
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str

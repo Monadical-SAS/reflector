@@ -25,7 +25,9 @@ from reflector.settings import settings
 
 
 class FileTranscriptModalProcessor(FileTranscriptProcessor):
-    def __init__(self, modal_api_key: str | None = None, **kwargs):
+    def __init__(
+        self, modal_api_key: str | None = None, disable_vad: bool = False, **kwargs
+    ):
         super().__init__(**kwargs)
         if not settings.TRANSCRIPT_URL:
             raise Exception(
@@ -34,26 +36,34 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
         self.transcript_url = settings.TRANSCRIPT_URL
         self.file_timeout = settings.TRANSCRIPT_FILE_TIMEOUT
         self.modal_api_key = modal_api_key
+        self.disable_vad = disable_vad
 
     async def _transcript(self, data: FileTranscriptInput):
         """Send full file to Modal for transcription"""
         url = f"{self.transcript_url}/v1/audio/transcriptions-from-url"
 
-        self.logger.info(f"Starting file transcription from {data.audio_url}")
+        self.logger.debug(
+            "Starting file transcription",
+            audio_url=data.audio_url,
+            disable_vad=self.disable_vad,
+        )
 
         headers = {}
         if self.modal_api_key:
             headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
+        payload = {
+            "audio_file_url": data.audio_url,
+            "language": data.language,
+            "batch": True,
+            "disable_vad": self.disable_vad,
+        }
+
         async with httpx.AsyncClient(timeout=self.file_timeout) as client:
             response = await client.post(
                 url,
                 headers=headers,
-                json={
-                    "audio_file_url": data.audio_url,
-                    "language": data.language,
-                    "batch": True,
-                },
+                json=payload,
                 follow_redirects=True,
             )
 
