@@ -40,7 +40,7 @@ def verify_webhook_signature(
     4. Base64-encode the result
     5. Compare with provided signature using constant-time comparison
 
-    Reference: https://docs.daily.co/reference/rest-api/webhooks/webhook-security
+    Reference: https://docs.daily.co/reference/rest-api/webhooks
 
     Args:
         body: Raw request body bytes
@@ -89,10 +89,6 @@ def extract_room_name(event: DailyWebhookEvent) -> str | None:
     """
     Extract room name from Daily.co webhook event payload.
 
-    Daily.co API inconsistency:
-    - participant.* events use "room" field
-    - recording.* events use "room_name" field
-
     Args:
         event: Parsed webhook event
 
@@ -103,7 +99,7 @@ def extract_room_name(event: DailyWebhookEvent) -> str | None:
         >>> event = DailyWebhookEvent(**webhook_payload)
         >>> room_name = extract_room_name(event)
     """
-    room = event.payload.get("room_name") or event.payload.get("room")
+    room = event.payload.get("room_name")
     # Ensure we return a string, not any falsy value that might be in payload
     return room if isinstance(room, str) else None
 

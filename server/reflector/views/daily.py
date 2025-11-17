@@ -7,6 +7,7 @@ from reflector.dailyco_api import (
     DailyTrack,
     DailyWebhookEvent,
     extract_room_name,
+    parse_recording_error,
 )
 from reflector.db import get_database
 from reflector.db.daily_participant_sessions import (
@@ -321,8 +322,8 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
 
 async def _handle_recording_error(event: DailyWebhookEvent):
-    room_name = extract_room_name(event)
-    error = event.payload.get("error", "Unknown error")
+    payload = parse_recording_error(event)
+    room_name = payload.room_name
 
     if room_name:
         meeting = await meetings_controller.get_by_room_name(room_name)
@@ -331,6 +332,6 @@ async def _handle_recording_error(event: DailyWebhookEvent):
                 "Recording error",
                 meeting_id=meeting.id,
                 room_name=room_name,
-                error=error,
+                error=payload.error_msg,
                 platform="daily",
             )

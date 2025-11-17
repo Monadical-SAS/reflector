@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 import httpx
 import structlog
 
+from reflector.utils.string import NonEmptyString
+
 from .requests import (
     CreateMeetingTokenRequest,
     CreateRoomRequest,
@@ -51,10 +53,10 @@ class DailyApiClient:
 
     def __init__(
         self,
-        api_key: str,
-        webhook_secret: Optional[str] = None,
+        api_key: NonEmptyString,
+        webhook_secret: NonEmptyString | None = None,
         timeout: float = DEFAULT_TIMEOUT,
-        base_url: Optional[str] = None,
+        base_url: NonEmptyString | None = None,
     ):
         """
         Initialize Daily.co API client.
@@ -151,11 +153,9 @@ class DailyApiClient:
         data = await self._handle_response(response, "create_room")
         return RoomResponse(**data)
 
-    async def get_room(self, room_name: str) -> RoomResponse:
+    async def get_room(self, room_name: NonEmptyString) -> RoomResponse:
         """
         Get room configuration.
-
-        Reference: https://docs.daily.co/reference/rest-api/rooms/get-room-configuration
 
         Args:
             room_name: Daily.co room name
@@ -175,7 +175,9 @@ class DailyApiClient:
         data = await self._handle_response(response, "get_room")
         return RoomResponse(**data)
 
-    async def get_room_presence(self, room_name: str) -> RoomPresenceResponse:
+    async def get_room_presence(
+        self, room_name: NonEmptyString
+    ) -> RoomPresenceResponse:
         """
         Get current participants in a room (real-time presence).
 
@@ -199,7 +201,7 @@ class DailyApiClient:
         data = await self._handle_response(response, "get_room_presence")
         return RoomPresenceResponse(**data)
 
-    async def delete_room(self, room_name: str) -> None:
+    async def delete_room(self, room_name: NonEmptyString) -> None:
         """
         Delete a room (idempotent - succeeds even if room doesn't exist).
 
@@ -228,7 +230,7 @@ class DailyApiClient:
     # MEETINGS
     # ============================================================================
 
-    async def get_meeting(self, meeting_id: str) -> MeetingResponse:
+    async def get_meeting(self, meeting_id: NonEmptyString) -> MeetingResponse:
         """
         Get full meeting information including participants.
 
@@ -254,10 +256,10 @@ class DailyApiClient:
 
     async def get_meeting_participants(
         self,
-        meeting_id: str,
+        meeting_id: NonEmptyString,
         limit: Optional[int] = None,
-        joined_after: Optional[str] = None,
-        joined_before: Optional[str] = None,
+        joined_after: NonEmptyString | None = None,
+        joined_before: NonEmptyString | None = None,
     ) -> MeetingParticipantsResponse:
         """
         Get historical participant data from a completed meeting (paginated).
@@ -302,11 +304,11 @@ class DailyApiClient:
     # RECORDINGS
     # ============================================================================
 
-    async def get_recording(self, recording_id: str) -> RecordingResponse:
+    async def get_recording(self, recording_id: NonEmptyString) -> RecordingResponse:
         """
         Get recording metadata and status.
 
-        Reference: https://docs.daily.co/reference/rest-api/recordings/get-recording-info
+        Reference: https://docs.daily.co/reference/rest-api/recordings
 
         Args:
             recording_id: Daily.co recording ID
@@ -365,7 +367,7 @@ class DailyApiClient:
         """
         List all configured webhooks for this account.
 
-        Reference: https://docs.daily.co/reference/rest-api/webhooks/list-webhooks
+        Reference: https://docs.daily.co/reference/rest-api/webhooks
 
         Returns:
             List of webhook configurations
@@ -396,7 +398,7 @@ class DailyApiClient:
         """
         Create a new webhook subscription.
 
-        Reference: https://docs.daily.co/reference/rest-api/webhooks/create-webhook
+        Reference: https://docs.daily.co/reference/rest-api/webhooks
 
         Args:
             request: Webhook configuration with URL, event types, and HMAC secret
@@ -418,7 +420,7 @@ class DailyApiClient:
         return WebhookResponse(**data)
 
     async def update_webhook(
-        self, webhook_uuid: str, request: UpdateWebhookRequest
+        self, webhook_uuid: NonEmptyString, request: UpdateWebhookRequest
     ) -> WebhookResponse:
         """
         Update webhook configuration.
@@ -448,11 +450,11 @@ class DailyApiClient:
         data = await self._handle_response(response, "update_webhook")
         return WebhookResponse(**data)
 
-    async def delete_webhook(self, webhook_uuid: str) -> None:
+    async def delete_webhook(self, webhook_uuid: NonEmptyString) -> None:
         """
         Delete a webhook.
 
-        Reference: https://docs.daily.co/reference/rest-api/webhooks/delete-webhook
+        Reference: https://docs.daily.co/reference/rest-api/webhooks
 
         Args:
             webhook_uuid: Webhook UUID to delete
@@ -472,7 +474,9 @@ class DailyApiClient:
     # HELPER METHODS
     # ============================================================================
 
-    async def find_webhook_by_url(self, url: str) -> Optional[WebhookResponse]:
+    async def find_webhook_by_url(
+        self, url: NonEmptyString
+    ) -> Optional[WebhookResponse]:
         """
         Find a webhook by its URL.
 
@@ -488,7 +492,9 @@ class DailyApiClient:
                 return webhook
         return None
 
-    async def find_webhooks_by_pattern(self, pattern: str) -> List[WebhookResponse]:
+    async def find_webhooks_by_pattern(
+        self, pattern: NonEmptyString
+    ) -> List[WebhookResponse]:
         """
         Find webhooks matching a URL pattern (e.g., 'ngrok').
 

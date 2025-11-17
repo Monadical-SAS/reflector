@@ -1,12 +1,15 @@
 """
 Daily.co API Response Models
-
-Reference: https://docs.daily.co/reference/rest-api
 """
 
 from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, Field
+
+from reflector.utils.string import NonEmptyString
+
+# not documented in daily; we fill it according to observations
+RecordingStatus = Literal["in-progress", "finished"]
 
 
 class RoomResponse(BaseModel):
@@ -14,16 +17,15 @@ class RoomResponse(BaseModel):
     Response from room creation or retrieval.
 
     Reference: https://docs.daily.co/reference/rest-api/rooms/create-room
-    Reference: https://docs.daily.co/reference/rest-api/rooms/get-room-configuration
     """
 
-    id: str = Field(description="Unique room identifier (UUID)")
-    name: str = Field(description="Room name used in URLs")
+    id: NonEmptyString = Field(description="Unique room identifier (UUID)")
+    name: NonEmptyString = Field(description="Room name used in URLs")
     api_created: bool = Field(description="Whether room was created via API")
     privacy: Literal["public", "private"] = Field(description="Room privacy setting")
-    url: str = Field(description="Full room URL")
-    created_at: str = Field(description="ISO 8601 creation timestamp")
-    config: Dict[str, Any] = Field(
+    url: NonEmptyString = Field(description="Full room URL")
+    created_at: NonEmptyString = Field(description="ISO 8601 creation timestamp")
+    config: Dict[NonEmptyString, Any] = Field(
         default_factory=dict, description="Room configuration properties"
     )
 
@@ -35,11 +37,11 @@ class RoomPresenceParticipant(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/rooms/get-room-presence
     """
 
-    room: str = Field(description="Room name")
-    id: str = Field(description="Participant session ID")
-    userId: str | None = Field(None, description="User ID if provided")
-    userName: str | None = Field(None, description="User display name")
-    joinTime: str = Field(description="ISO 8601 join timestamp")
+    room: NonEmptyString = Field(description="Room name")
+    id: NonEmptyString = Field(description="Participant session ID")
+    userId: NonEmptyString | None = Field(None, description="User ID if provided")
+    userName: NonEmptyString | None = Field(None, description="User display name")
+    joinTime: NonEmptyString = Field(description="ISO 8601 join timestamp")
     duration: int = Field(description="Duration in room (seconds)")
 
 
@@ -65,9 +67,9 @@ class MeetingParticipant(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/meetings/get-meeting-participants
     """
 
-    user_id: str = Field(description="User identifier")
-    participant_id: str = Field(description="Participant session identifier")
-    user_name: str | None = Field(None, description="User display name")
+    user_id: NonEmptyString = Field(description="User identifier")
+    participant_id: NonEmptyString = Field(description="Participant session identifier")
+    user_name: NonEmptyString | None = Field(None, description="User display name")
     join_time: int = Field(description="Join timestamp (Unix epoch seconds)")
     duration: int = Field(description="Duration in meeting (seconds)")
 
@@ -91,8 +93,8 @@ class MeetingResponse(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/meetings/get-meeting-information
     """
 
-    id: str = Field(description="Meeting session identifier (UUID)")
-    room: str = Field(description="Room name where meeting occurred")
+    id: NonEmptyString = Field(description="Meeting session identifier (UUID)")
+    room: NonEmptyString = Field(description="Room name where meeting occurred")
     start_time: int = Field(
         description="Meeting start Unix timestamp (~15s granularity)"
     )
@@ -111,25 +113,29 @@ class RecordingS3Info(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/recordings
     """
 
-    bucket_name: str
-    bucket_region: str
-    endpoint: str | None = None
+    bucket_name: NonEmptyString
+    bucket_region: NonEmptyString
+    endpoint: NonEmptyString | None = None
 
 
 class RecordingResponse(BaseModel):
     """
     Response from recording retrieval endpoint.
 
-    Reference: https://docs.daily.co/reference/rest-api/recordings/get-recording-info
+    Reference: https://docs.daily.co/reference/rest-api/recordings
     """
 
-    id: str = Field(description="Recording identifier")
-    room_name: str = Field(description="Room where recording occurred")
+    id: NonEmptyString = Field(description="Recording identifier")
+    room_name: NonEmptyString = Field(description="Room where recording occurred")
     start_ts: int = Field(description="Recording start timestamp (Unix epoch seconds)")
-    status: str = Field(description="Recording status (e.g., 'finished', 'processing')")
+    status: RecordingStatus = Field(
+        description="Recording status ('in-progress' or 'finished')"
+    )
     max_participants: int = Field(description="Maximum participants during recording")
     duration: int = Field(description="Recording duration in seconds")
-    share_token: str | None = Field(None, description="Token for sharing recording")
+    share_token: NonEmptyString | None = Field(
+        None, description="Token for sharing recording"
+    )
     s3: RecordingS3Info | None = Field(None, description="S3 bucket information")
 
 
@@ -140,26 +146,27 @@ class MeetingTokenResponse(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/meeting-tokens/create-meeting-token
     """
 
-    token: str = Field(description="JWT meeting token for participant authentication")
+    token: NonEmptyString = Field(
+        description="JWT meeting token for participant authentication"
+    )
 
 
 class WebhookResponse(BaseModel):
     """
     Response from webhook creation or retrieval.
 
-    Reference: https://docs.daily.co/reference/rest-api/webhooks/create-webhook
-    Reference: https://docs.daily.co/reference/rest-api/webhooks/list-webhooks
+    Reference: https://docs.daily.co/reference/rest-api/webhooks
     """
 
-    uuid: str = Field(description="Unique webhook identifier")
-    url: str = Field(description="Webhook endpoint URL")
-    hmac: str | None = Field(
+    uuid: NonEmptyString = Field(description="Unique webhook identifier")
+    url: NonEmptyString = Field(description="Webhook endpoint URL")
+    hmac: NonEmptyString | None = Field(
         None, description="Base64-encoded HMAC secret for signature verification"
     )
-    basicAuth: str | None = Field(
+    basicAuth: NonEmptyString | None = Field(
         None, description="Basic auth credentials if configured"
     )
-    eventTypes: List[str] = Field(
+    eventTypes: List[NonEmptyString] = Field(
         default_factory=list,
         description="Array of event types (e.g., ['recording.started', 'participant.joined'])",
     )
@@ -167,9 +174,9 @@ class WebhookResponse(BaseModel):
         description="Webhook state - FAILED after 3+ consecutive failures"
     )
     failedCount: int = Field(default=0, description="Number of consecutive failures")
-    lastMomentPushed: str | None = Field(
+    lastMomentPushed: NonEmptyString | None = Field(
         None, description="ISO 8601 timestamp of last successful push"
     )
-    domainId: str = Field(description="Daily.co domain/account identifier")
-    createdAt: str = Field(description="ISO 8601 creation timestamp")
-    updatedAt: str = Field(description="ISO 8601 last update timestamp")
+    domainId: NonEmptyString = Field(description="Daily.co domain/account identifier")
+    createdAt: NonEmptyString = Field(description="ISO 8601 creation timestamp")
+    updatedAt: NonEmptyString = Field(description="ISO 8601 last update timestamp")

@@ -1,12 +1,5 @@
 """
 Daily.co API Module
-
-Complete async client for Daily.co REST API with Pydantic models and webhook utilities.
-
-Example:
-    >>> from reflector.dailyco_api import DailyApiClient, CreateRoomRequest
-    >>> client = DailyApiClient(api_key="your_api_key")
-    >>> room = await client.create_room(CreateRoomRequest(name="my-room"))
 """
 
 # Client

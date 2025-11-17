@@ -8,17 +8,19 @@ from typing import List, Literal
 
 from pydantic import BaseModel, Field
 
+from reflector.utils.string import NonEmptyString
+
 
 class RecordingsBucketConfig(BaseModel):
     """
     S3 bucket configuration for raw-tracks recordings.
 
-    Reference: https://docs.daily.co/reference/rest-api/recordings/raw-tracks-recordings
+    Reference: https://docs.daily.co/reference/rest-api/rooms/create-room
     """
 
-    bucket_name: str = Field(description="S3 bucket name")
-    bucket_region: str = Field(description="AWS region (e.g., 'us-east-1')")
-    assume_role_arn: str = Field(
+    bucket_name: NonEmptyString = Field(description="S3 bucket name")
+    bucket_region: NonEmptyString = Field(description="AWS region (e.g., 'us-east-1')")
+    assume_role_arn: NonEmptyString = Field(
         description="AWS IAM role ARN that Daily.co will assume to write recordings"
     )
     allow_api_access: bool = Field(
@@ -30,13 +32,11 @@ class RecordingsBucketConfig(BaseModel):
 class RoomProperties(BaseModel):
     """
     Room configuration properties.
-
-    Reference: https://docs.daily.co/reference/rest-api/rooms/config-properties
     """
 
-    enable_recording: Literal["raw-tracks", "cloud"] | bool = Field(
-        default=False,
-        description="Recording mode: 'raw-tracks' for multitrack, 'cloud' for mixed, False to disable",
+    enable_recording: Literal["cloud", "local", "raw-tracks"] | None = Field(
+        default=None,
+        description="Recording mode: 'cloud' for mixed, 'local' for local recording, 'raw-tracks' for multitrack, None to disable",
     )
     enable_chat: bool = Field(default=True, description="Enable in-meeting chat")
     enable_screenshare: bool = Field(default=True, description="Enable screen sharing")
@@ -61,7 +61,7 @@ class CreateRoomRequest(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/rooms/create-room
     """
 
-    name: str = Field(description="Room name (must be unique within domain)")
+    name: NonEmptyString = Field(description="Room name (must be unique within domain)")
     privacy: Literal["public", "private"] = Field(
         default="public", description="Room privacy setting"
     )
@@ -77,8 +77,8 @@ class MeetingTokenProperties(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/meeting-tokens/create-meeting-token
     """
 
-    room_name: str = Field(description="Room name this token is valid for")
-    user_id: str | None = Field(
+    room_name: NonEmptyString = Field(description="Room name this token is valid for")
+    user_id: NonEmptyString | None = Field(
         None, description="User identifier to associate with token"
     )
     is_owner: bool = Field(
@@ -115,27 +115,25 @@ class CreateWebhookRequest(BaseModel):
     """
     Request to create a webhook subscription.
 
-    Reference: https://docs.daily.co/reference/rest-api/webhooks/create-webhook
+    Reference: https://docs.daily.co/reference/rest-api/webhooks
     """
 
-    url: str = Field(description="Webhook endpoint URL (must be HTTPS)")
+    url: NonEmptyString = Field(description="Webhook endpoint URL (must be HTTPS)")
     eventTypes: List[
         Literal[
             "participant.joined",
             "participant.left",
-            "participant.updated",
-            "meeting.started",
-            "meeting.ended",
             "recording.started",
             "recording.ready-to-download",
             "recording.error",
-            "room.updated",
         ]
-    ] = Field(description="Array of event types to subscribe to")
-    hmac: str = Field(
+    ] = Field(
+        description="Array of event types to subscribe to (only events we handle)"
+    )
+    hmac: NonEmptyString = Field(
         description="Base64-encoded HMAC secret for webhook signature verification"
     )
-    basicAuth: str | None = Field(
+    basicAuth: NonEmptyString | None = Field(
         None, description="Optional basic auth credentials for webhook endpoint"
     )
 
@@ -150,7 +148,11 @@ class UpdateWebhookRequest(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/webhooks
     """
 
-    url: str | None = Field(None, description="New webhook endpoint URL")
-    eventTypes: List[str] | None = Field(None, description="New array of event types")
-    hmac: str | None = Field(None, description="New HMAC secret")
-    basicAuth: str | None = Field(None, description="New basic auth credentials")
+    url: NonEmptyString | None = Field(None, description="New webhook endpoint URL")
+    eventTypes: List[NonEmptyString] | None = Field(
+        None, description="New array of event types"
+    )
+    hmac: NonEmptyString | None = Field(None, description="New HMAC secret")
+    basicAuth: NonEmptyString | None = Field(
+        None, description="New basic auth credentials"
+    )
