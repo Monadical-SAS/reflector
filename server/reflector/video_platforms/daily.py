@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
 
 from reflector.dailyco_api import (
     CreateMeetingTokenRequest,
     CreateRoomRequest,
     DailyApiClient,
+    MeetingParticipantsResponse,
     MeetingTokenProperties,
+    RecordingResponse,
     RecordingsBucketConfig,
+    RoomPresenceResponse,
     RoomProperties,
     verify_webhook_signature,
 )
@@ -96,7 +98,7 @@ class DailyClient(VideoPlatformClient):
         Daily.co doesn't provide historical session API, so we query our database
         where participant.joined/left webhooks are stored.
         """
-        from reflector.db.meetings import meetings_controller
+        from reflector.db.meetings import meetings_controller  # noqa: PLC0415
 
         meeting = await meetings_controller.get_by_room_name(room_name)
         if not meeting:
@@ -115,19 +117,18 @@ class DailyClient(VideoPlatformClient):
             for s in sessions
         ]
 
-    async def get_room_presence(self, room_name: str) -> Dict[str, Any]:
+    async def get_room_presence(self, room_name: str) -> RoomPresenceResponse:
         """Get room presence/session data for a Daily.co room."""
-        result = await self._api_client.get_room_presence(room_name)
-        return result.model_dump()
+        return await self._api_client.get_room_presence(room_name)
 
-    async def get_meeting_participants(self, meeting_id: str) -> Dict[str, Any]:
+    async def get_meeting_participants(
+        self, meeting_id: str
+    ) -> MeetingParticipantsResponse:
         """Get participant data for a specific Daily.co meeting."""
-        result = await self._api_client.get_meeting_participants(meeting_id)
-        return result.model_dump()
+        return await self._api_client.get_meeting_participants(meeting_id)
 
-    async def get_recording(self, recording_id: str) -> Dict[str, Any]:
-        result = await self._api_client.get_recording(recording_id)
-        return result.model_dump()
+    async def get_recording(self, recording_id: str) -> RecordingResponse:
+        return await self._api_client.get_recording(recording_id)
 
     async def delete_room(self, room_name: str) -> bool:
         """Delete a room (idempotent - succeeds even if room doesn't exist)."""
@@ -138,7 +139,7 @@ class DailyClient(VideoPlatformClient):
         return True
 
     def verify_webhook_signature(
-        self, body: bytes, signature: str, timestamp: Optional[str] = None
+        self, body: bytes, signature: str, timestamp: str | None = None
     ) -> bool:
         """Verify Daily.co webhook signature using dailyco_api module."""
         if not self.config.webhook_secret:
@@ -156,13 +157,13 @@ class DailyClient(VideoPlatformClient):
         self,
         room_name: DailyRoomName,
         enable_recording: bool,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> str:
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
             start_cloud_recording=enable_recording,
-            enable_recording_ui=not enable_recording if enable_recording else True,
+            enable_recording_ui=not enable_recording,
         )
 
         request = CreateMeetingTokenRequest(properties=properties)
@@ -172,3 +173,9 @@ class DailyClient(VideoPlatformClient):
     async def close(self):
         """Clean up API client resources."""
         await self._api_client.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()

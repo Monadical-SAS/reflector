@@ -7,7 +7,7 @@ Reference: https://docs.daily.co/reference/rest-api
 """
 
 from http import HTTPStatus
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 import structlog
@@ -31,6 +31,24 @@ from .responses import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+class DailyApiError(Exception):
+    """Daily.co API error with full request/response context."""
+
+    def __init__(self, operation: str, response: httpx.Response):
+        self.operation = operation
+        self.response = response
+        self.status_code = response.status_code
+        self.response_body = response.text
+        self.url = str(response.url)
+        self.request_body = (
+            response.request.content.decode() if response.request.content else None
+        )
+
+        super().__init__(
+            f"Daily.co API error: {operation} failed with status {self.status_code}"
+        )
 
 
 class DailyApiClient:
@@ -79,7 +97,7 @@ class DailyApiClient:
             "Content-Type": "application/json",
         }
 
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self):
         return self
@@ -99,7 +117,7 @@ class DailyApiClient:
 
     async def _handle_response(
         self, response: httpx.Response, operation: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle API response with error logging.
 
@@ -111,17 +129,20 @@ class DailyApiClient:
             Parsed JSON response
 
         Raises:
-            httpx.HTTPStatusError: If request failed
+            DailyApiError: If request failed with full context
         """
         if response.status_code >= 400:
             logger.error(
                 f"Daily.co API error: {operation}",
                 status_code=response.status_code,
                 response_body=response.text,
+                request_body=response.request.content.decode()
+                if response.request.content
+                else None,
                 url=str(response.url),
             )
+            raise DailyApiError(operation, response)
 
-        response.raise_for_status()
         return response.json()
 
     # ============================================================================
@@ -257,7 +278,7 @@ class DailyApiClient:
     async def get_meeting_participants(
         self,
         meeting_id: NonEmptyString,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         joined_after: NonEmptyString | None = None,
         joined_before: NonEmptyString | None = None,
     ) -> MeetingParticipantsResponse:
@@ -363,7 +384,7 @@ class DailyApiClient:
     # WEBHOOKS
     # ============================================================================
 
-    async def list_webhooks(self) -> List[WebhookResponse]:
+    async def list_webhooks(self) -> list[WebhookResponse]:
         """
         List all configured webhooks for this account.
 
@@ -474,9 +495,7 @@ class DailyApiClient:
     # HELPER METHODS
     # ============================================================================
 
-    async def find_webhook_by_url(
-        self, url: NonEmptyString
-    ) -> Optional[WebhookResponse]:
+    async def find_webhook_by_url(self, url: NonEmptyString) -> WebhookResponse | None:
         """
         Find a webhook by its URL.
 
@@ -494,7 +513,7 @@ class DailyApiClient:
 
     async def find_webhooks_by_pattern(
         self, pattern: NonEmptyString
-    ) -> List[WebhookResponse]:
+    ) -> list[WebhookResponse]:
         """
         Find webhooks matching a URL pattern (e.g., 'ngrok').
 

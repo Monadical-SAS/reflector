@@ -10,6 +10,21 @@ from pydantic import BaseModel, Field, field_validator
 
 from reflector.utils.string import NonEmptyString
 
+
+def normalize_timestamp_to_int(v):
+    """
+    Normalize float timestamps to int by truncating decimal part.
+
+    Daily.co sometimes sends timestamps as floats (e.g., 1708972279.96).
+    Pydantic expects int for fields typed as `int`.
+    """
+    if v is None:
+        return v
+    if isinstance(v, float):
+        return int(v)
+    return v
+
+
 WebhookEventType = Literal[
     "participant.joined",
     "participant.left",
@@ -55,13 +70,9 @@ class DailyWebhookEvent(BaseModel):
         description="Documenting when the webhook itself was sent. This timestamp is different than the time of the event the webhook describes. For example, a recording.started event will contain a start_ts timestamp of when the actual recording started, and a slightly later event_ts timestamp indicating when the webhook event was sent"
     )
 
-    @field_validator("event_ts", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class ParticipantJoinedPayload(BaseModel):
@@ -77,13 +88,9 @@ class ParticipantJoinedPayload(BaseModel):
     user_name: NonEmptyString | None = Field(None, description="User display name")
     joined_at: int = Field(description="Join timestamp in Unix epoch seconds")
 
-    @field_validator("joined_at", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_joined_at = field_validator("joined_at", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class ParticipantLeftPayload(BaseModel):
@@ -102,13 +109,9 @@ class ParticipantLeftPayload(BaseModel):
         None, description="Duration of participation in seconds"
     )
 
-    @field_validator("joined_at", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_joined_at = field_validator("joined_at", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class RecordingStartedPayload(BaseModel):
@@ -122,15 +125,9 @@ class RecordingStartedPayload(BaseModel):
     recording_id: NonEmptyString = Field(description="Recording identifier")
     start_ts: int | None = Field(None, description="Recording start timestamp")
 
-    @field_validator("start_ts", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if v is None:
-            return v
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_start_ts = field_validator("start_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class RecordingReadyToDownloadPayload(BaseModel):
@@ -171,13 +168,9 @@ class RecordingReadyToDownloadPayload(BaseModel):
         description="If the recording is a raw-tracks recording, a tracks field will be provided. If role permissions have been removed, the tracks field may be null",
     )
 
-    @field_validator("start_ts", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_start_ts = field_validator("start_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class RecordingErrorPayload(BaseModel):
@@ -201,10 +194,6 @@ class RecordingErrorPayload(BaseModel):
         description="The Unix epoch time in seconds representing when the error was emitted"
     )
 
-    @field_validator("timestamp", mode="before")
-    @classmethod
-    def normalize_timestamp(cls, v):
-        """Normalize float timestamps to int by truncating decimal part."""
-        if isinstance(v, float):
-            return int(v)
-        return v
+    _normalize_timestamp = field_validator("timestamp", mode="before")(
+        normalize_timestamp_to_int
+    )
