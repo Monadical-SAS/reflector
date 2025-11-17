@@ -32,7 +32,6 @@ class DailyClient(VideoPlatformClient):
 
     def __init__(self, config: VideoPlatformConfig):
         super().__init__(config)
-        # Initialize dailyco_api client
         self._api_client = DailyApiClient(
             api_key=config.api_key,
             webhook_secret=config.webhook_secret,
@@ -52,7 +51,6 @@ class DailyClient(VideoPlatformClient):
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
         room_name = f"{room_name_prefix}{ROOM_PREFIX_SEPARATOR}{timestamp}"
 
-        # Build room properties
         properties = RoomProperties(
             enable_recording="raw-tracks"
             if room.recording_type != self.RECORDING_NONE
@@ -75,14 +73,12 @@ class DailyClient(VideoPlatformClient):
                 allow_api_access=True,
             )
 
-        # Create room request
         request = CreateRoomRequest(
             name=room_name,
             privacy="private" if room.is_locked else "public",
             properties=properties,
         )
 
-        # Call API
         result = await self._api_client.create_room(request)
 
         return MeetingData(
