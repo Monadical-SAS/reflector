@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote
 
 import av
@@ -10,8 +10,11 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
-from redis.exceptions import LockError
 
+from reflector.db.daily_participant_sessions import (
+    DailyParticipantSession,
+    daily_participant_sessions_controller,
+)
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -28,13 +31,17 @@ from reflector.pipelines.main_multitrack_pipeline import (
 from reflector.pipelines.topic_processing import EmptyPipeline
 from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
-from reflector.redis_cache import RedisAsyncLock, get_redis_client
+from reflector.redis_cache import RedisAsyncLock
 from reflector.settings import settings
-from reflector.storage import get_transcripts_storage
+from reflector.storage import get_dailyco_storage, get_transcripts_storage
 from reflector.utils.daily import (
     DailyRoomName,
     extract_base_room_name,
     recording_lock_key,
+)
+from reflector.utils.daily_poll import (
+    request_meeting_poll,
+    try_claim_meeting_poll,
 )
 from reflector.video_platforms.factory import create_platform_client
 from reflector.video_platforms.whereby_utils import (
@@ -356,6 +363,241 @@ async def _process_multitrack_recording_inner(
     )
 
 
+async def _discover_recording_tracks(room_name: str, recording_id: str) -> list[str]:
+    """Discover audio tracks for a recording by listing S3 objects.
+
+    Daily.co stores recordings in S3 with predictable paths:
+    - Pattern: {org_name}/{room_name}/{recording_ts}-{uuid}-cam-audio-{track_ts}.webm
+    - Example: monadical/daily-20251028130707/1761656985836-uuid-cam-audio-1761656986115.webm
+
+    Args:
+        room_name: Daily.co room name (e.g., "daily-20251028130707")
+        recording_id: Daily.co recording ID (not used in path, for logging)
+
+    Returns:
+        List of S3 keys for audio tracks, or empty list if none found
+    """
+    try:
+        storage = get_dailyco_storage()
+
+        # Daily.co S3 structure: {org_prefix}/{room_name}/
+        # The org prefix is typically the Daily.co domain prefix (e.g., "monadical")
+        # We'll try listing with just room_name as prefix, which should work
+        # if AWS_FOLDER is configured correctly in storage settings
+        prefix = f"{room_name}/"
+
+        all_keys = await storage.list_objects(prefix=prefix)
+
+        # Filter for audio tracks only
+        audio_tracks = [
+            key for key in all_keys if key.endswith(".webm") and "cam-audio" in key
+        ]
+
+        logger.debug(
+            "Discovered tracks for recording",
+            recording_id=recording_id,
+            room_name=room_name,
+            prefix=prefix,
+            total_objects=len(all_keys),
+            audio_tracks=len(audio_tracks),
+        )
+
+        return audio_tracks
+
+    except Exception as e:
+        logger.error(
+            "Failed to discover tracks for recording",
+            recording_id=recording_id,
+            room_name=room_name,
+            error=str(e),
+            exc_info=True,
+        )
+        return []
+
+
+@shared_task
+@asynctask
+async def poll_daily_recordings():
+    """Poll Daily.co API for recordings and process missing ones.
+
+    Queries last 2 hours of recordings from Daily.co API, compares with DB,
+    and queues processing for recordings not already in DB.
+
+    For each missing recording, discovers audio tracks via S3 listing.
+
+    Worker-level locking provides idempotency (see process_multitrack_recording).
+    """
+    bucket_name = settings.DAILYCO_STORAGE_AWS_BUCKET_NAME
+    if not bucket_name:
+        logger.debug(
+            "DAILYCO_STORAGE_AWS_BUCKET_NAME not configured; skipping recording poll"
+        )
+        return
+
+    now = datetime.now(timezone.utc)
+    start_time = int((now - timedelta(hours=2)).timestamp())
+    end_time = int(now.timestamp())
+
+    async with create_platform_client("daily") as daily_client:
+        try:
+            api_recordings = await daily_client.list_recordings(
+                start_time=start_time,
+                end_time=end_time,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to fetch recordings from Daily.co API",
+                error=str(e),
+                exc_info=True,
+            )
+            return
+
+    if not api_recordings:
+        logger.debug("No recordings found from Daily.co API in last 2 hours")
+        return
+
+    recording_ids = [rec.id for rec in api_recordings]
+    existing_recordings = await recordings_controller.get_by_ids_batch(recording_ids)
+    existing_ids = {rec.id for rec in existing_recordings}
+
+    missing_recordings = [rec for rec in api_recordings if rec.id not in existing_ids]
+
+    if not missing_recordings:
+        logger.debug(
+            "All recordings already in DB",
+            api_count=len(api_recordings),
+            existing_count=len(existing_recordings),
+        )
+        return
+
+    logger.info(
+        "Found recordings missing from DB",
+        missing_count=len(missing_recordings),
+        total_api_count=len(api_recordings),
+        existing_count=len(existing_recordings),
+    )
+
+    for recording in missing_recordings:
+        # Discover audio tracks via S3 listing
+        track_keys = await _discover_recording_tracks(
+            room_name=recording.room_name,
+            recording_id=recording.id,
+        )
+
+        if not track_keys:
+            logger.warning(
+                "No audio tracks found for recording, skipping",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+            )
+            continue
+
+        logger.info(
+            "Queueing missing recording for processing",
+            recording_id=recording.id,
+            room_name=recording.room_name,
+            track_count=len(track_keys),
+        )
+
+        process_multitrack_recording.delay(
+            bucket_name=bucket_name,
+            daily_room_name=recording.room_name,
+            recording_id=recording.id,
+            track_keys=track_keys,
+        )
+
+
+async def poll_daily_room_presence(meeting: "Meeting") -> None:  # noqa: F821
+    """Poll Daily.co room presence and reconcile with DB sessions."""
+
+    async with RedisAsyncLock(
+        key=f"meeting_presence_poll:{meeting.id}",
+        timeout=120,
+        extend_interval=30,
+        skip_if_locked=True,
+        blocking=False,
+    ) as lock:
+        if not lock.acquired:
+            logger.debug("Concurrent poll skipped", meeting_id=meeting.id)
+            return
+
+        async with create_platform_client("daily") as daily_client:
+            try:
+                presence = await daily_client.get_room_presence(meeting.room_name)
+            except Exception as e:
+                logger.error(
+                    "Daily.co API fetch failed",
+                    meeting_id=meeting.id,
+                    room_name=meeting.room_name,
+                    error=str(e),
+                    exc_info=True,
+                )
+                return
+
+        api_participants = {p.id: p for p in presence.data}
+        db_sessions = (
+            await daily_participant_sessions_controller.get_all_sessions_for_meeting(
+                meeting.id
+            )
+        )
+
+        active_session_ids = {
+            sid for sid, s in db_sessions.items() if s.left_at is None
+        }
+        missing_session_ids = set(api_participants.keys()) - active_session_ids
+        stale_session_ids = active_session_ids - set(api_participants.keys())
+
+        if missing_session_ids:
+            missing_sessions = []
+            for session_id in missing_session_ids:
+                p = api_participants[session_id]
+                session = DailyParticipantSession(
+                    id=f"{meeting.id}:{session_id}",
+                    meeting_id=meeting.id,
+                    room_id=meeting.room_id,
+                    session_id=session_id,
+                    user_id=p.userId,
+                    user_name=p.userName,
+                    joined_at=datetime.fromisoformat(p.joinTime),
+                    left_at=None,
+                )
+                missing_sessions.append(session)
+
+            await daily_participant_sessions_controller.batch_upsert_sessions(
+                missing_sessions
+            )
+            logger.info(
+                "Sessions added",
+                meeting_id=meeting.id,
+                count=len(missing_sessions),
+            )
+
+        if stale_session_ids:
+            composite_ids = [f"{meeting.id}:{sid}" for sid in stale_session_ids]
+            await daily_participant_sessions_controller.batch_close_sessions(
+                composite_ids,
+                left_at=datetime.now(timezone.utc),
+            )
+            logger.info(
+                "Stale sessions closed",
+                meeting_id=meeting.id,
+                count=len(composite_ids),
+            )
+
+        final_active_count = len(api_participants)
+        if meeting.num_clients != final_active_count:
+            await meetings_controller.update_meeting(
+                meeting.id,
+                num_clients=final_active_count,
+            )
+            logger.info(
+                "num_clients updated",
+                meeting_id=meeting.id,
+                old_value=meeting.num_clients,
+                new_value=final_active_count,
+            )
+
+
 @shared_task
 @asynctask
 async def process_meetings():
@@ -374,74 +616,71 @@ async def process_meetings():
     Uses distributed locking to prevent race conditions when multiple workers
     process the same meeting simultaneously.
     """
+
     meetings = await meetings_controller.get_all_active()
     logger.info(f"Processing {len(meetings)} meetings")
     current_time = datetime.now(timezone.utc)
-    redis_client = get_redis_client()
     processed_count = 0
     skipped_count = 0
     for meeting in meetings:
         logger_ = logger.bind(meeting_id=meeting.id, room_name=meeting.room_name)
         logger_.info("Processing meeting")
-        lock_key = f"meeting_process_lock:{meeting.id}"
-        lock = redis_client.lock(lock_key, timeout=120)
 
         try:
-            if not lock.acquire(blocking=False):
-                logger_.debug("Meeting is being processed by another worker, skipping")
-                skipped_count += 1
-                continue
+            async with RedisAsyncLock(
+                key=f"meeting_process_lock:{meeting.id}",
+                timeout=120,
+                extend_interval=30,
+                skip_if_locked=True,
+                blocking=False,
+            ) as lock:
+                if not lock.acquired:
+                    logger_.debug(
+                        "Meeting is being processed by another worker, skipping"
+                    )
+                    skipped_count += 1
+                    continue
 
-            # Process the meeting
-            should_deactivate = False
-            end_date = meeting.end_date
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
+                # Process the meeting
+                should_deactivate = False
+                end_date = meeting.end_date
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=timezone.utc)
 
-            client = create_platform_client(meeting.platform)
-            room_sessions = await client.get_room_sessions(meeting.room_name)
+                client = create_platform_client(meeting.platform)
+                room_sessions = await client.get_room_sessions(meeting.room_name)
 
-            try:
-                # Extend lock after operation to ensure we still hold it
-                lock.extend(120, replace_ttl=True)
-            except LockError:
-                logger_.warning("Lost lock for meeting, skipping")
-                continue
-
-            has_active_sessions = room_sessions and any(
-                s.ended_at is None for s in room_sessions
-            )
-            has_had_sessions = bool(room_sessions)
-            logger_.info(
-                f"found {has_active_sessions} active sessions, had {has_had_sessions}"
-            )
-
-            if has_active_sessions:
-                logger_.debug("Meeting still has active sessions, keep it")
-            elif has_had_sessions:
-                should_deactivate = True
-                logger_.info("Meeting ended - all participants left")
-            elif current_time > end_date:
-                should_deactivate = True
-                logger_.info(
-                    "Meeting deactivated - scheduled time ended with no participants",
+                has_active_sessions = room_sessions and any(
+                    s.ended_at is None for s in room_sessions
                 )
-            else:
-                logger_.debug("Meeting not yet started, keep it")
+                has_had_sessions = bool(room_sessions)
+                logger_.info(
+                    f"found {has_active_sessions} active sessions, had {has_had_sessions}"
+                )
 
-            if should_deactivate:
-                await meetings_controller.update_meeting(meeting.id, is_active=False)
-                logger_.info("Meeting is deactivated")
+                if has_active_sessions:
+                    logger_.debug("Meeting still has active sessions, keep it")
+                elif has_had_sessions:
+                    should_deactivate = True
+                    logger_.info("Meeting ended - all participants left")
+                elif current_time > end_date:
+                    should_deactivate = True
+                    logger_.info(
+                        "Meeting deactivated - scheduled time ended with no participants",
+                    )
+                else:
+                    logger_.debug("Meeting not yet started, keep it")
 
-            processed_count += 1
+                if should_deactivate:
+                    await meetings_controller.update_meeting(
+                        meeting.id, is_active=False
+                    )
+                    logger_.info("Meeting is deactivated")
+
+                processed_count += 1
 
         except Exception:
             logger_.error("Error processing meeting", exc_info=True)
-        finally:
-            try:
-                lock.release()
-            except LockError:
-                pass  # Lock already released or expired
 
     logger.debug(
         "Processed meetings finished",
@@ -563,3 +802,71 @@ async def reprocess_failed_recordings():
 
     logger.info(f"Reprocessing complete. Requeued {reprocessed_count} recordings")
     return reprocessed_count
+
+
+@shared_task
+@asynctask
+async def process_daily_poll_flags() -> None:
+    """Process Daily.co poll flags (claims flags, executes reconciliation)."""
+    try:
+        active_meetings = await meetings_controller.get_all_active()
+        processed = 0
+
+        for meeting in active_meetings:
+            # Only process Daily.co meetings
+            if meeting.platform != "daily":
+                continue
+            try:
+                claimed = await try_claim_meeting_poll(meeting.id)
+
+                if claimed:
+                    logger.debug("Poll claimed", meeting_id=meeting.id)
+                    await poll_daily_room_presence(meeting)
+                    processed += 1
+            except Exception as e:
+                logger.error(
+                    "Failed to process poll for meeting",
+                    meeting_id=meeting.id,
+                    error=str(e),
+                    exc_info=True,
+                )
+
+        if processed > 0:
+            logger.debug("Processed Daily poll flags", count=processed)
+
+    except Exception as e:
+        logger.error("Poll flag processing failed", error=str(e), exc_info=True)
+
+
+@shared_task
+@asynctask
+async def trigger_daily_reconciliation() -> None:
+    """Set poll flags for all Daily.co meetings (eventual consistency)."""
+    try:
+        active_meetings = await meetings_controller.get_all_active()
+        triggered_count = 0
+
+        for meeting in active_meetings:
+            # Only process Daily.co meetings
+            if meeting.platform != "daily":
+                continue
+
+            try:
+                await request_meeting_poll(meeting.id)
+                triggered_count += 1
+            except Exception as e:
+                logger.error(
+                    "Failed to set reconciliation flag",
+                    meeting_id=meeting.id,
+                    error=str(e),
+                    exc_info=True,
+                )
+
+        if triggered_count > 0:
+            logger.debug(
+                "Reconciliation flags set",
+                count=triggered_count,
+            )
+
+    except Exception as e:
+        logger.error("Reconciliation trigger failed", error=str(e), exc_info=True)

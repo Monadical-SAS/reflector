@@ -38,6 +38,18 @@ else:
             "task": "reflector.worker.process.reprocess_failed_recordings",
             "schedule": crontab(hour=5, minute=0),  # Midnight EST
         },
+        "poll_daily_recordings": {
+            "task": "reflector.worker.process.poll_daily_recordings",
+            "schedule": 180.0,  # Every 3 minutes (last 2 hours window)
+        },
+        "process_daily_poll_flags": {
+            "task": "reflector.worker.process.process_daily_poll_flags",
+            "schedule": 1.0,  # Every second (checks for poll flags)
+        },
+        "trigger_daily_reconciliation": {
+            "task": "reflector.worker.process.trigger_daily_reconciliation",
+            "schedule": 30.0,  # Every 30 seconds (eventual consistency)
+        },
         "sync_all_ics_calendars": {
             "task": "reflector.worker.ics_sync.sync_all_ics_calendars",
             "schedule": 60.0,  # Run every minute to check which rooms need sync

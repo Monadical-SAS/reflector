@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timezone
 from typing import assert_never
 
 from fastapi import APIRouter, HTTPException, Request
@@ -13,14 +12,10 @@ from reflector.dailyco_api import (
     RecordingReadyEvent,
     RecordingStartedEvent,
 )
-from reflector.db import get_database
-from reflector.db.daily_participant_sessions import (
-    DailyParticipantSession,
-    daily_participant_sessions_controller,
-)
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger as _logger
 from reflector.settings import settings
+from reflector.utils.daily_poll import request_meeting_poll
 from reflector.video_platforms.factory import create_platform_client
 from reflector.worker.process import process_multitrack_recording
 
@@ -102,90 +97,54 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 
-async def _handle_participant_joined(event: ParticipantJoinedEvent):
-    daily_room_name = event.payload.room_name
-    if not daily_room_name:
-        logger.warning("participant.joined: no room in payload", payload=event.payload)
-        return
-
-    meeting = await meetings_controller.get_by_room_name(daily_room_name)
-    if not meeting:
-        logger.warning(
-            "participant.joined: meeting not found", room_name=daily_room_name
-        )
-        return
-
-    payload = event.payload
-    joined_at = datetime.fromtimestamp(payload.joined_at, tz=timezone.utc)
-    session_id = f"{meeting.id}:{payload.session_id}"
-
-    session = DailyParticipantSession(
-        id=session_id,
-        meeting_id=meeting.id,
-        room_id=meeting.room_id,
-        session_id=payload.session_id,
-        user_id=payload.user_id,
-        user_name=payload.user_name,
-        joined_at=joined_at,
-        left_at=None,
-    )
-
-    # num_clients serves as a projection/cache of active session count for Daily.co
-    # Both operations must succeed or fail together to maintain consistency
-    async with get_database().transaction():
-        await meetings_controller.increment_num_clients(meeting.id)
-        await daily_participant_sessions_controller.upsert_joined(session)
-
-    logger.info(
-        "Participant joined",
-        meeting_id=meeting.id,
-        room_name=daily_room_name,
-        user_id=payload.user_id,
-        user_name=payload.user_name,
-        session_id=session_id,
-    )
-
-
-async def _handle_participant_left(event: ParticipantLeftEvent):
-    room_name = event.payload.room_name
+async def _request_poll_for_room(
+    room_name: str | None,
+    event_type: str,
+    user_id: str | None,
+    session_id: str | None,
+    **log_kwargs,
+) -> None:
+    """Request poll for room by name, handling missing room/meeting cases."""
     if not room_name:
-        logger.warning("participant.left: no room in payload", payload=event.payload)
+        logger.warning(f"{event_type}: no room in payload")
         return
 
     meeting = await meetings_controller.get_by_room_name(room_name)
     if not meeting:
-        logger.warning("participant.left: meeting not found", room_name=room_name)
+        logger.warning(f"{event_type}: meeting not found", room_name=room_name)
         return
 
-    payload = event.payload
-    joined_at = datetime.fromtimestamp(payload.joined_at, tz=timezone.utc)
-    left_at = datetime.fromtimestamp(event.event_ts, tz=timezone.utc)
-    session_id = f"{meeting.id}:{payload.session_id}"
-
-    session = DailyParticipantSession(
-        id=session_id,
-        meeting_id=meeting.id,
-        room_id=meeting.room_id,
-        session_id=payload.session_id,
-        user_id=payload.user_id,
-        user_name=payload.user_name,
-        joined_at=joined_at,
-        left_at=left_at,
-    )
-
-    # num_clients serves as a projection/cache of active session count for Daily.co
-    # Both operations must succeed or fail together to maintain consistency
-    async with get_database().transaction():
-        await meetings_controller.decrement_num_clients(meeting.id)
-        await daily_participant_sessions_controller.upsert_left(session)
+    await request_meeting_poll(meeting.id)
 
     logger.info(
-        "Participant left",
+        f"{event_type.replace('.', ' ').title()} - poll requested",
         meeting_id=meeting.id,
         room_name=room_name,
-        user_id=payload.user_id,
-        duration=payload.duration,
+        user_id=user_id,
         session_id=session_id,
+        **log_kwargs,
+    )
+
+
+async def _handle_participant_joined(event: ParticipantJoinedEvent):
+    """Request poll for presence reconciliation."""
+    await _request_poll_for_room(
+        event.payload.room_name,
+        "participant.joined",
+        event.payload.user_id,
+        event.payload.session_id,
+        user_name=event.payload.user_name,
+    )
+
+
+async def _handle_participant_left(event: ParticipantLeftEvent):
+    """Request poll for presence reconciliation."""
+    await _request_poll_for_room(
+        event.payload.room_name,
+        "participant.left",
+        event.payload.user_id,
+        event.payload.session_id,
+        duration=event.payload.duration,
     )
 
 

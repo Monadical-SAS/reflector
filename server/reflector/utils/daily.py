@@ -1,9 +1,9 @@
 from reflector.utils.string import NonEmptyString
 
-DailyRoomName = str
+DailyRoomName = NonEmptyString
 
 
-def recording_lock_key(recording_id: str) -> str:
+def recording_lock_key(recording_id: NonEmptyString) -> NonEmptyString:
     return f"recording:{recording_id}"
 
 
