@@ -351,6 +351,7 @@ async def rooms_create_meeting(
         client = create_platform_client(meeting.platform)
         token = await client.create_meeting_token(
             meeting.room_name,
+            enable_recording=True,
             user_id=user_id,
         )
         meeting = meeting.model_copy()
