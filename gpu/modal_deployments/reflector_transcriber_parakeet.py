@@ -81,9 +81,9 @@ image = (
         "cuda-python==12.8.0",
         "fastapi==0.115.12",
         "numpy<2",
-        "librosa==0.10.1",
+        "librosa==0.11.0",
         "requests",
-        "silero-vad==5.1.0",
+        "silero-vad==6.2.0",
         "torch",
     )
     .entrypoint([])  # silence chatty logs by container on start
@@ -306,6 +306,7 @@ class TranscriberParakeetFile:
         ) -> Generator[TimeSegment, None, None]:
             """Generate speech segments using VAD with start/end sample indices"""
             vad_iterator = VADIterator(self.vad_model, sampling_rate=SAMPLERATE)
+            audio_duration = len(audio_array) / float(SAMPLERATE)
             window_size = VAD_CONFIG["window_size"]
             start = None
 
@@ -331,6 +332,10 @@ class TranscriberParakeetFile:
 
                     yield TimeSegment(start_time, end_time)
                     start = None
+
+            if start is not None:
+                start_time = start / float(SAMPLERATE)
+                yield TimeSegment(start_time, audio_duration)
 
             vad_iterator.reset_states()
 
