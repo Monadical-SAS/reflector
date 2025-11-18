@@ -130,6 +130,47 @@ class DailyClient(VideoPlatformClient):
     async def get_recording(self, recording_id: str) -> RecordingResponse:
         return await self._api_client.get_recording(recording_id)
 
+    async def list_recordings(
+        self,
+        room_name: NonEmptyString,
+        start_time: datetime,
+        end_time: datetime | None = None,
+    ) -> list[RecordingResponse]:
+        """List recordings for room in time range.
+
+        Used by polling to discover recordings.
+
+        Args:
+            room_name: Room name to filter by
+            start_time: Start of time range (datetime)
+            end_time: End of time range (datetime), optional
+
+        Returns:
+            List of recordings with status ("in-progress", "ready", "failed")
+        """
+        start_ts = int(start_time.timestamp())
+        end_ts = int(end_time.timestamp()) if end_time else None
+
+        return await self._api_client.list_recordings(
+            room_name=room_name,
+            start_time=start_ts,
+            end_time=end_ts,
+        )
+
+    async def get_recording_status(self, recording_id: NonEmptyString) -> str:
+        """Check single recording status.
+
+        Used to verify webhook state.
+
+        Args:
+            recording_id: Recording ID to check
+
+        Returns:
+            Recording status: "in-progress", "finished", or "failed"
+        """
+        recording = await self.get_recording(recording_id)
+        return recording.status
+
     async def delete_room(self, room_name: str) -> bool:
         """Delete a room (idempotent - succeeds even if room doesn't exist)."""
         await self._api_client.delete_room(room_name)

@@ -28,10 +28,14 @@ from reflector.pipelines.main_multitrack_pipeline import (
 from reflector.pipelines.topic_processing import EmptyPipeline
 from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
-from reflector.redis_cache import get_redis_client
+from reflector.redis_cache import RedisAsyncLock, get_redis_client
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
-from reflector.utils.daily import DailyRoomName, extract_base_room_name
+from reflector.utils.daily import (
+    DailyRoomName,
+    extract_base_room_name,
+    recording_lock_key,
+)
 from reflector.video_platforms.factory import create_platform_client
 from reflector.video_platforms.whereby_utils import (
     parse_whereby_recording_filename,
@@ -178,6 +182,42 @@ async def process_multitrack_recording(
         logger.warning("No audio track keys provided")
         return
 
+    lock_key = recording_lock_key(recording_id)
+    async with RedisAsyncLock(
+        key=lock_key,
+        timeout=600,  # 10min for processing (includes API calls, DB writes)
+        extend_interval=60,  # Auto-extend every 60s
+        skip_if_locked=True,
+        blocking=False,
+    ) as lock:
+        if not lock.acquired:
+            logger.warning(
+                "Recording processing skipped - lock already held (duplicate task or concurrent worker)",
+                recording_id=recording_id,
+                lock_key=lock_key,
+                reason="duplicate_task_or_concurrent_worker",
+            )
+            return
+
+        logger.info(
+            "Recording worker acquired lock - starting processing",
+            recording_id=recording_id,
+            lock_key=lock_key,
+        )
+
+        await _process_multitrack_recording_inner(
+            bucket_name, daily_room_name, recording_id, track_keys
+        )
+
+
+async def _process_multitrack_recording_inner(
+    bucket_name: str,
+    daily_room_name: DailyRoomName,
+    recording_id: str,
+    track_keys: list[str],
+):
+    """Inner function containing the actual processing logic."""
+
     tz = timezone.utc
     recorded_at = datetime.now(tz)
     try:
@@ -225,9 +265,7 @@ async def process_multitrack_recording(
                 track_keys=track_keys,
             )
         )
-    else:
-        # Recording already exists; assume metadata was set at creation time
-        pass
+    # else: Recording already exists; metadata set at creation time
 
     transcript = await transcripts_controller.get_by_recording_id(recording.id)
     if transcript:
@@ -252,60 +290,61 @@ async def process_multitrack_recording(
         )
 
     try:
-        daily_client = create_platform_client("daily")
+        async with create_platform_client("daily") as daily_client:
+            id_to_name = {}
+            id_to_user_id = {}
 
-        id_to_name = {}
-        id_to_user_id = {}
-
-        mtg_session_id = None
-        try:
-            rec_details = await daily_client.get_recording(recording_id)
-            mtg_session_id = rec_details.get("mtgSessionId")
-        except Exception as e:
-            logger.warning(
-                "Failed to fetch Daily recording details",
-                error=str(e),
-                recording_id=recording_id,
-                exc_info=True,
-            )
-
-        if mtg_session_id:
+            mtg_session_id = None
             try:
-                payload = await daily_client.get_meeting_participants(mtg_session_id)
-                for p in payload.get("data", []):
-                    pid = p.get("participant_id")
-                    name = p.get("user_name")
-                    user_id = p.get("user_id")
-                    if pid and name:
-                        id_to_name[pid] = name
-                    if pid and user_id:
-                        id_to_user_id[pid] = user_id
+                rec_details = await daily_client.get_recording(recording_id)
+                mtg_session_id = rec_details.get("mtgSessionId")
             except Exception as e:
                 logger.warning(
-                    "Failed to fetch Daily meeting participants",
+                    "Failed to fetch Daily recording details",
                     error=str(e),
-                    mtg_session_id=mtg_session_id,
+                    recording_id=recording_id,
                     exc_info=True,
                 )
-        else:
-            logger.warning(
-                "No mtgSessionId found for recording; participant names may be generic",
-                recording_id=recording_id,
-            )
 
-        for idx, key in enumerate(track_keys):
-            base = os.path.basename(key)
-            m = re.search(r"\d{13,}-([0-9a-fA-F-]{36})-cam-audio-", base)
-            participant_id = m.group(1) if m else None
+            if mtg_session_id:
+                try:
+                    payload = await daily_client.get_meeting_participants(
+                        mtg_session_id
+                    )
+                    for p in payload.get("data", []):
+                        pid = p.get("participant_id")
+                        name = p.get("user_name")
+                        user_id = p.get("user_id")
+                        if pid and name:
+                            id_to_name[pid] = name
+                        if pid and user_id:
+                            id_to_user_id[pid] = user_id
+                except Exception as e:
+                    logger.warning(
+                        "Failed to fetch Daily meeting participants",
+                        error=str(e),
+                        mtg_session_id=mtg_session_id,
+                        exc_info=True,
+                    )
+            else:
+                logger.warning(
+                    "No mtgSessionId found for recording; participant names may be generic",
+                    recording_id=recording_id,
+                )
 
-            default_name = f"Speaker {idx}"
-            name = id_to_name.get(participant_id, default_name)
-            user_id = id_to_user_id.get(participant_id)
+            for idx, key in enumerate(track_keys):
+                base = os.path.basename(key)
+                m = re.search(r"\d{13,}-([0-9a-fA-F-]{36})-cam-audio-", base)
+                participant_id = m.group(1) if m else None
 
-            participant = TranscriptParticipant(
-                id=participant_id, speaker=idx, name=name, user_id=user_id
-            )
-            await transcripts_controller.upsert_participant(transcript, participant)
+                default_name = f"Speaker {idx}"
+                name = id_to_name.get(participant_id, default_name)
+                user_id = id_to_user_id.get(participant_id)
+
+                participant = TranscriptParticipant(
+                    id=participant_id, speaker=idx, name=name, user_id=user_id
+                )
+                await transcripts_controller.upsert_participant(transcript, participant)
 
     except Exception as e:
         logger.warning("Failed to map participant names", error=str(e), exc_info=True)

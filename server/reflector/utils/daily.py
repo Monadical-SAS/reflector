@@ -3,6 +3,10 @@ from reflector.utils.string import NonEmptyString
 DailyRoomName = str
 
 
+def recording_lock_key(recording_id: str) -> str:
+    return f"recording:{recording_id}"
+
+
 def extract_base_room_name(daily_room_name: DailyRoomName) -> NonEmptyString:
     """
     Extract base room name from Daily.co timestamped room name.

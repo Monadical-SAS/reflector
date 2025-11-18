@@ -1,13 +1,17 @@
 import json
 from datetime import datetime, timezone
+from typing import assert_never
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import TypeAdapter
 
 from reflector.dailyco_api import (
-    DailyTrack,
-    DailyWebhookEvent,
-    extract_room_name,
-    parse_recording_error,
+    DailyWebhookEventUnion,
+    ParticipantJoinedEvent,
+    ParticipantLeftEvent,
+    RecordingErrorEvent,
+    RecordingReadyEvent,
+    RecordingStartedEvent,
 )
 from reflector.db import get_database
 from reflector.db.daily_participant_sessions import (
@@ -74,60 +78,32 @@ async def webhook(request: Request):
         logger.info("Received Daily webhook test event")
         return {"status": "ok"}
 
+    event_adapter = TypeAdapter(DailyWebhookEventUnion)
     try:
-        event = DailyWebhookEvent(**body_json)
+        event = event_adapter.validate_python(body_json)
     except Exception as e:
         logger.error("Failed to parse webhook event", error=str(e), body=body.decode())
         raise HTTPException(status_code=422, detail="Invalid event format")
 
-    if event.type == "participant.joined":
-        await _handle_participant_joined(event)
-    elif event.type == "participant.left":
-        await _handle_participant_left(event)
-    elif event.type == "recording.started":
-        await _handle_recording_started(event)
-    elif event.type == "recording.ready-to-download":
-        await _handle_recording_ready(event)
-    elif event.type == "recording.error":
-        await _handle_recording_error(event)
-    else:
-        logger.warning(
-            "Unhandled Daily webhook event type",
-            event_type=event.type,
-            payload=event.payload,
-        )
+    match event:
+        case ParticipantJoinedEvent():
+            await _handle_participant_joined(event)
+        case ParticipantLeftEvent():
+            await _handle_participant_left(event)
+        case RecordingStartedEvent():
+            await _handle_recording_started(event)
+        case RecordingReadyEvent():
+            await _handle_recording_ready(event)
+        case RecordingErrorEvent():
+            await _handle_recording_error(event)
+        case _:
+            assert_never(event)
 
     return {"status": "ok"}
 
 
-"""
-{
-  "version": "1.0.0",
-  "type": "participant.joined",
-  "id": "ptcpt-join-6497c79b-f326-4942-aef8-c36a29140ad1-1708972279961",
-  "payload": {
-    "room": "test",
-    "user_id": "6497c79b-f326-4942-aef8-c36a29140ad1",
-    "user_name": "testuser",
-    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
-    "joined_at": 1708972279.96,
-    "will_eject_at": 1708972299.541,
-    "owner": false,
-    "permissions": {
-      "hasPresence": true,
-      "canSend": true,
-      "canReceive": { "base": true },
-      "canAdmin": false
-    }
-  },
-  "event_ts": 1708972279.961
-}
-
-"""
-
-
-async def _handle_participant_joined(event: DailyWebhookEvent):
-    daily_room_name = extract_room_name(event)
+async def _handle_participant_joined(event: ParticipantJoinedEvent):
+    daily_room_name = event.payload.room_name
     if not daily_room_name:
         logger.warning("participant.joined: no room in payload", payload=event.payload)
         return
@@ -140,16 +116,16 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         return
 
     payload = event.payload
-    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
-    session_id = f"{meeting.id}:{payload['session_id']}"
+    joined_at = datetime.fromtimestamp(payload.joined_at, tz=timezone.utc)
+    session_id = f"{meeting.id}:{payload.session_id}"
 
     session = DailyParticipantSession(
         id=session_id,
         meeting_id=meeting.id,
         room_id=meeting.room_id,
-        session_id=payload["session_id"],
-        user_id=payload.get("user_id", None),
-        user_name=payload["user_name"],
+        session_id=payload.session_id,
+        user_id=payload.user_id,
+        user_name=payload.user_name,
         joined_at=joined_at,
         left_at=None,
     )
@@ -164,40 +140,14 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         "Participant joined",
         meeting_id=meeting.id,
         room_name=daily_room_name,
-        user_id=payload.get("user_id", None),
-        user_name=payload.get("user_name"),
+        user_id=payload.user_id,
+        user_name=payload.user_name,
         session_id=session_id,
     )
 
 
-"""
-{
-  "version": "1.0.0",
-  "type": "participant.left",
-  "id": "ptcpt-left-16168c97-f973-4eae-9642-020fe3fda5db-1708972302986",
-  "payload": {
-    "room": "test",
-    "user_id": "16168c97-f973-4eae-9642-020fe3fda5db",
-    "user_name": "bipol",
-    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
-    "joined_at": 1708972291.567,
-    "will_eject_at": null,
-    "owner": false,
-    "permissions": {
-      "hasPresence": true,
-      "canSend": true,
-      "canReceive": { "base": true },
-      "canAdmin": false
-    },
-    "duration": 11.419000148773193
-  },
-  "event_ts": 1708972302.986
-}
-"""
-
-
-async def _handle_participant_left(event: DailyWebhookEvent):
-    room_name = extract_room_name(event)
+async def _handle_participant_left(event: ParticipantLeftEvent):
+    room_name = event.payload.room_name
     if not room_name:
         logger.warning("participant.left: no room in payload", payload=event.payload)
         return
@@ -208,17 +158,17 @@ async def _handle_participant_left(event: DailyWebhookEvent):
         return
 
     payload = event.payload
-    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
+    joined_at = datetime.fromtimestamp(payload.joined_at, tz=timezone.utc)
     left_at = datetime.fromtimestamp(event.event_ts, tz=timezone.utc)
-    session_id = f"{meeting.id}:{payload['session_id']}"
+    session_id = f"{meeting.id}:{payload.session_id}"
 
     session = DailyParticipantSession(
         id=session_id,
         meeting_id=meeting.id,
         room_id=meeting.room_id,
-        session_id=payload["session_id"],
-        user_id=payload.get("user_id", None),
-        user_name=payload["user_name"],
+        session_id=payload.session_id,
+        user_id=payload.user_id,
+        user_name=payload.user_name,
         joined_at=joined_at,
         left_at=left_at,
     )
@@ -233,14 +183,14 @@ async def _handle_participant_left(event: DailyWebhookEvent):
         "Participant left",
         meeting_id=meeting.id,
         room_name=room_name,
-        user_id=payload.get("user_id", None),
-        duration=payload.get("duration"),
+        user_id=payload.user_id,
+        duration=payload.duration,
         session_id=session_id,
     )
 
 
-async def _handle_recording_started(event: DailyWebhookEvent):
-    room_name = extract_room_name(event)
+async def _handle_recording_started(event: RecordingStartedEvent):
+    room_name = event.payload.room_name
     if not room_name:
         logger.warning(
             "recording.started: no room_name in payload", payload=event.payload
@@ -253,46 +203,24 @@ async def _handle_recording_started(event: DailyWebhookEvent):
             "Recording started",
             meeting_id=meeting.id,
             room_name=room_name,
-            recording_id=event.payload.get("recording_id"),
+            recording_id=event.payload.recording_id,
             platform="daily",
         )
     else:
         logger.warning("recording.started: meeting not found", room_name=room_name)
 
 
-async def _handle_recording_ready(event: DailyWebhookEvent):
-    """Handle recording ready for download event.
+async def _handle_recording_ready(event: RecordingReadyEvent):
+    room_name = event.payload.room_name
+    recording_id = event.payload.recording_id
+    tracks = event.payload.tracks
 
-    Daily.co webhook payload for raw-tracks recordings:
-    {
-      "recording_id": "...",
-      "room_name": "test2-20251009192341",
-      "tracks": [
-        {"type": "audio", "s3Key": "monadical/test2-.../uuid-cam-audio-123.webm", "size": 400000},
-        {"type": "video", "s3Key": "monadical/test2-.../uuid-cam-video-456.webm", "size": 30000000}
-      ]
-    }
-    """
-    room_name = extract_room_name(event)
-    recording_id = event.payload.get("recording_id")
-    tracks_raw = event.payload.get("tracks", [])
-
-    if not room_name or not tracks_raw:
+    if not tracks:
         logger.warning(
-            "recording.ready-to-download: missing room_name or tracks",
+            "recording.ready-to-download: missing tracks",
             room_name=room_name,
-            has_tracks=bool(tracks_raw),
+            recording_id=recording_id,
             payload=event.payload,
-        )
-        return
-
-    try:
-        tracks = [DailyTrack(**t) for t in tracks_raw]
-    except Exception as e:
-        logger.error(
-            "recording.ready-to-download: invalid tracks structure",
-            error=str(e),
-            tracks=tracks_raw,
         )
         return
 
@@ -313,6 +241,12 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
     track_keys = [t.s3Key for t in tracks if t.type == "audio"]
 
+    logger.info(
+        "Recording webhook queuing processing",
+        recording_id=recording_id,
+        room_name=room_name,
+    )
+
     process_multitrack_recording.delay(
         bucket_name=bucket_name,
         daily_room_name=room_name,
@@ -321,17 +255,18 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
     )
 
 
-async def _handle_recording_error(event: DailyWebhookEvent):
-    payload = parse_recording_error(event)
+async def _handle_recording_error(event: RecordingErrorEvent):
+    payload = event.payload
     room_name = payload.room_name
 
-    if room_name:
-        meeting = await meetings_controller.get_by_room_name(room_name)
-        if meeting:
-            logger.error(
-                "Recording error",
-                meeting_id=meeting.id,
-                room_name=room_name,
-                error=payload.error_msg,
-                platform="daily",
-            )
+    meeting = await meetings_controller.get_by_room_name(room_name)
+    if meeting:
+        logger.error(
+            "Recording error",
+            meeting_id=meeting.id,
+            room_name=room_name,
+            error=payload.error_msg,
+            platform="daily",
+        )
+    else:
+        logger.warning("recording.error: meeting not found", room_name=room_name)

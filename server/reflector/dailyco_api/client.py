@@ -347,7 +347,77 @@ class DailyApiClient:
         )
 
         data = await self._handle_response(response, "get_recording")
-        return RecordingResponse(**data)
+        try:
+            return RecordingResponse(**data)
+        except Exception as e:
+            logger.error(
+                "Failed to parse Daily.co recording response",
+                recording_id=recording_id,
+                error=str(e),
+                response_keys=list(data.keys()) if isinstance(data, dict) else None,
+                operation="get_recording",
+            )
+            raise
+
+    async def list_recordings(
+        self,
+        room_name: NonEmptyString | None = None,
+        start_time: int | None = None,
+        end_time: int | None = None,
+        limit: int = 100,
+    ) -> list[RecordingResponse]:
+        """
+        List recordings with optional filters.
+
+        Reference: https://docs.daily.co/reference/rest-api/recordings
+
+        Args:
+            room_name: Filter recordings by room name
+            start_time: Filter recordings after this Unix timestamp
+            end_time: Filter recordings before this Unix timestamp
+            limit: Maximum number of recordings to return (default 100)
+
+        Returns:
+            List of recording metadata
+
+        Raises:
+            httpx.HTTPStatusError: If API request fails
+        """
+        client = await self._get_client()
+
+        # Build query parameters
+        params = {"limit": limit}
+        if room_name:
+            params["room_name"] = room_name
+        if start_time:
+            params["starting_after_ts"] = start_time
+        if end_time:
+            params["ending_before_ts"] = end_time
+
+        response = await client.get(
+            f"{self.base_url}/recordings",
+            headers=self.headers,
+            params=params,
+        )
+
+        data = await self._handle_response(response, "list_recordings")
+
+        if not isinstance(data, dict) or "data" not in data:
+            logger.error(
+                "Daily.co API returned unexpected format for list_recordings",
+                data_type=type(data).__name__,
+                data_keys=list(data.keys()) if isinstance(data, dict) else None,
+                data_sample=str(data)[:500],
+                room_name=room_name,
+                operation="list_recordings",
+            )
+            raise httpx.HTTPStatusError(
+                message=f"Unexpected response format from list_recordings: {type(data).__name__}",
+                request=response.request,
+                response=response,
+            )
+
+        return [RecordingResponse(**r) for r in data["data"]]
 
     # ============================================================================
     # MEETING TOKENS

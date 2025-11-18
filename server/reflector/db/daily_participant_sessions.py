@@ -165,5 +165,73 @@ class DailyParticipantSessionController:
         results = await get_database().fetch_all(query)
         return [DailyParticipantSession(**result) for result in results]
 
+    async def get_all_sessions_for_meeting(
+        self, meeting_id: NonEmptyString
+    ) -> dict[NonEmptyString, DailyParticipantSession]:
+        query = daily_participant_sessions.select().where(
+            daily_participant_sessions.c.meeting_id == meeting_id
+        )
+        results = await get_database().fetch_all(query)
+        # TODO DailySessionId custom type
+        return {row["session_id"]: DailyParticipantSession(**row) for row in results}
+
+    async def batch_upsert_sessions(
+        self, sessions: list[DailyParticipantSession]
+    ) -> None:
+        """Upsert multiple sessions in single query.
+
+        Uses ON CONFLICT for idempotency. Updates user_name on conflict
+        (participant may change display name between sessions).
+
+        IMPORTANT: Does NOT overwrite left_at if already set. Once a session
+        is closed, it stays closed. This prevents polling from resurrecting
+        closed sessions with stale data.
+        """
+        if not sessions:
+            return
+
+        values = [session.model_dump() for session in sessions]
+        query = insert(daily_participant_sessions).values(values)
+        query = query.on_conflict_do_update(
+            index_elements=["id"],
+            set_={
+                # CRITICAL: Preserve existing left_at to prevent race conditions
+                # Race condition scenario:
+                # 1. T0: Participant leaves, webhook sets left_at=T0
+                # 2. T1: Polling fetches room presence (stale API data shows participant still present)
+                # 3. T2: Polling batch upserts sessions with left_at=NULL
+                # 4. Without COALESCE: left_at overwritten to NULL (participant "resurrected")
+                # 5. With COALESCE: existing left_at=T0 preserved (correct state maintained)
+                "left_at": sa.func.coalesce(
+                    daily_participant_sessions.c.left_at,  # Existing value (prefer this)
+                    query.excluded.left_at,  # New value from upsert
+                ),
+                "user_name": query.excluded.user_name,
+            },
+        )
+        await get_database().execute(query)
+
+    async def batch_close_sessions(
+        self, session_ids: list[NonEmptyString], left_at: datetime
+    ) -> None:
+        """Mark multiple sessions as left in single query.
+
+        Only updates sessions where left_at is NULL (protects already-closed sessions).
+        """
+        if not session_ids:
+            return
+
+        query = (
+            daily_participant_sessions.update()
+            .where(
+                sa.and_(
+                    daily_participant_sessions.c.id.in_(session_ids),
+                    daily_participant_sessions.c.left_at.is_(None),
+                )
+            )
+            .values(left_at=left_at)
+        )
+        await get_database().execute(query)
+
 
 daily_participant_sessions_controller = DailyParticipantSessionController()
