@@ -262,6 +262,100 @@ async def test_poll_presence_no_changes_if_synced(
 
 @pytest.mark.asyncio
 @patch("reflector.worker.process.create_platform_client")
+@patch(
+    "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
+)
+@patch(
+    "reflector.worker.process.daily_participant_sessions_controller.batch_upsert_sessions"
+)
+@patch(
+    "reflector.worker.process.daily_participant_sessions_controller.batch_close_sessions"
+)
+async def test_poll_presence_mixed_add_and_remove(
+    mock_batch_close,
+    mock_batch_upsert,
+    mock_get_sessions,
+    mock_create_client,
+    mock_meeting,
+):
+    """Test that polling handles simultaneous joins and leaves in single poll."""
+    now = datetime.now(timezone.utc)
+
+    # API returns: participant-1 and participant-3 (new)
+    api_response = RoomPresenceResponse(
+        total_count=2,
+        data=[
+            RoomPresenceParticipant(
+                room="test-room-20251118120000",
+                id="participant-1",
+                userName="Alice",
+                userId="user-alice",
+                joinTime=(now - timedelta(minutes=10)).isoformat(),
+                duration=600,
+            ),
+            RoomPresenceParticipant(
+                room="test-room-20251118120000",
+                id="participant-3",
+                userName="Charlie",
+                userId="user-charlie",
+                joinTime=now.isoformat(),
+                duration=0,
+            ),
+        ],
+    )
+
+    mock_daily_client = AsyncMock()
+    mock_daily_client.get_room_presence = AsyncMock(return_value=api_response)
+    mock_create_client.return_value.__aenter__ = AsyncMock(
+        return_value=mock_daily_client
+    )
+    mock_create_client.return_value.__aexit__ = AsyncMock()
+
+    # DB has: participant-1 and participant-2 (left but not in API)
+    mock_get_sessions.return_value = {
+        "participant-1": DailyParticipantSession(
+            id=f"meeting-123:participant-1",
+            meeting_id="meeting-123",
+            room_id="room-456",
+            session_id="participant-1",
+            user_id="user-alice",
+            user_name="Alice",
+            joined_at=now - timedelta(minutes=10),
+            left_at=None,
+        ),
+        "participant-2": DailyParticipantSession(
+            id=f"meeting-123:participant-2",
+            meeting_id="meeting-123",
+            room_id="room-456",
+            session_id="participant-2",
+            user_id="user-bob",
+            user_name="Bob",
+            joined_at=now - timedelta(minutes=5),
+            left_at=None,
+        ),
+    }
+
+    mock_batch_upsert.return_value = None
+    mock_batch_close.return_value = None
+
+    await poll_daily_room_presence(mock_meeting)
+
+    # Verify participant-3 was added (missing in DB)
+    assert mock_batch_upsert.call_count == 1
+    sessions_added = mock_batch_upsert.call_args.args[0]
+    assert len(sessions_added) == 1
+    assert sessions_added[0].session_id == "participant-3"
+    assert sessions_added[0].user_name == "Charlie"
+
+    # Verify participant-2 was closed (stale in DB)
+    assert mock_batch_close.call_count == 1
+    composite_ids = mock_batch_close.call_args.args[0]
+    assert len(composite_ids) == 1
+    assert "meeting-123:participant-2" in composite_ids
+
+
+@pytest.mark.asyncio
+@patch("reflector.worker.process.create_platform_client")
 async def test_poll_presence_handles_api_error(
     mock_create_client,
     mock_meeting,
