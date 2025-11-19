@@ -60,6 +60,15 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
         }
 
         frame.on("left-meeting", handleLeave);
+
+        frame.on("joined-meeting", async () => {
+          try {
+            await frame.startRecording({ type: "raw-tracks" });
+          } catch (error) {
+            console.error("Failed to start recording:", error);
+          }
+        });
+
         await frame.join({ url: roomUrl });
       } catch (error) {
         console.error("Error creating Daily frame:", error);
