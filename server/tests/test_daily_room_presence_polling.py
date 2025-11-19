@@ -101,7 +101,6 @@ async def test_poll_presence_adds_missing_sessions(
 
 
 @pytest.mark.asyncio
-@patch("reflector.worker.process.MeetingPollStateMachine")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -117,7 +116,6 @@ async def test_poll_presence_closes_stale_sessions(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
-    mock_state_machine_class,
     mock_meeting,
     mock_api_participants,
 ):
@@ -128,10 +126,6 @@ async def test_poll_presence_closes_stale_sessions(
         return_value=mock_daily_client
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
-
-    # Mock state machine
-    mock_state_machine = AsyncMock()
-    mock_state_machine_class.return_value = mock_state_machine
 
     now = datetime.now(timezone.utc)
     mock_get_sessions.return_value = {
@@ -168,7 +162,6 @@ async def test_poll_presence_closes_stale_sessions(
 
 
 @pytest.mark.asyncio
-@patch("reflector.worker.process.MeetingPollStateMachine")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -182,7 +175,6 @@ async def test_poll_presence_updates_num_clients(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
-    mock_state_machine_class,
     mock_meeting,
     mock_api_participants,
 ):
@@ -193,9 +185,6 @@ async def test_poll_presence_updates_num_clients(
         return_value=mock_daily_client
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
-
-    mock_state_machine = AsyncMock()
-    mock_state_machine_class.return_value = mock_state_machine
 
     mock_get_sessions.return_value = {}
     mock_batch_upsert.return_value = None
@@ -210,7 +199,6 @@ async def test_poll_presence_updates_num_clients(
 
 
 @pytest.mark.asyncio
-@patch("reflector.worker.process.MeetingPollStateMachine")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -218,7 +206,6 @@ async def test_poll_presence_updates_num_clients(
 async def test_poll_presence_no_changes_if_synced(
     mock_get_sessions,
     mock_create_client,
-    mock_state_machine_class,
     mock_meeting,
     mock_api_participants,
 ):
@@ -229,9 +216,6 @@ async def test_poll_presence_no_changes_if_synced(
         return_value=mock_daily_client
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
-
-    mock_state_machine = AsyncMock()
-    mock_state_machine_class.return_value = mock_state_machine
 
     now = datetime.now(timezone.utc)
     mock_get_sessions.return_value = {
@@ -372,7 +356,6 @@ async def test_poll_presence_handles_api_error(
 
 
 @pytest.mark.asyncio
-@patch("reflector.worker.process.MeetingPollStateMachine")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -384,7 +367,6 @@ async def test_poll_presence_closes_all_when_room_empty(
     mock_batch_close,
     mock_get_sessions,
     mock_create_client,
-    mock_state_machine_class,
     mock_meeting,
 ):
     """Test that polling closes all sessions when room is empty."""
@@ -396,9 +378,6 @@ async def test_poll_presence_closes_all_when_room_empty(
         return_value=mock_daily_client
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
-
-    mock_state_machine = AsyncMock()
-    mock_state_machine_class.return_value = mock_state_machine
 
     now = datetime.now(timezone.utc)
     mock_get_sessions.return_value = {
