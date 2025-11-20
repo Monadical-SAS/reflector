@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket
 
 from reflector.auth.auth_jwt import JWTAuth  # type: ignore
+from reflector.db.users import user_controller
 from reflector.ws_manager import get_ws_manager
 
 router = APIRouter()
@@ -29,7 +30,20 @@ async def user_events_websocket(websocket: WebSocket):
 
     try:
         payload = JWTAuth().verify_token(token)
-        user_id = payload.get("sub")
+        uid = payload.get("sub")  # This is the Authentik UID
+
+        # Look up user by Authentik UID to get internal user.id
+        if uid:
+            user = await user_controller.get_by_uid(uid)
+            if user:
+                user_id = user.id
+            else:
+                # User not found - they may not have been synced yet
+                await websocket.close(code=UNAUTHORISED)
+                return
+        else:
+            await websocket.close(code=UNAUTHORISED)
+            return
     except Exception:
         await websocket.close(code=UNAUTHORISED)
         return

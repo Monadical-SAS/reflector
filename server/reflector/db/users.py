@@ -32,6 +32,13 @@ class User(BaseModel):
 
 class UserController:
     @staticmethod
+    async def get_by_id(user_id: NonEmptyString) -> User | None:
+        """Get user by internal ID."""
+        query = users.select().where(users.c.id == user_id)
+        result = await get_database().fetch_one(query)
+        return User(**result) if result else None
+
+    @staticmethod
     async def get_by_uid(uid: NonEmptyString) -> User | None:
         """Get user by Authentik UID."""
         query = users.select().where(users.c.uid == uid)
