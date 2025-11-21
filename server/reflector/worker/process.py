@@ -33,7 +33,7 @@ from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.redis_cache import RedisAsyncLock
 from reflector.settings import settings
-from reflector.storage import get_dailyco_storage, get_transcripts_storage
+from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import (
     DailyRoomName,
     extract_base_room_name,
@@ -363,64 +363,12 @@ async def _process_multitrack_recording_inner(
     )
 
 
-async def _discover_recording_tracks(room_name: str, recording_id: str) -> list[str]:
-    """Discover audio tracks for a recording by listing S3 objects.
-
-    Daily.co stores recordings in S3 with predictable paths:
-    - Pattern: {org_name}/{room_name}/{recording_ts}-{uuid}-cam-audio-{track_ts}.webm
-    - Example: monadical/daily-20251028130707/1761656985836-uuid-cam-audio-1761656986115.webm
-
-    Args:
-        room_name: Daily.co room name (e.g., "daily-20251028130707")
-        recording_id: Daily.co recording ID (not used in path, for logging)
-
-    Returns:
-        List of S3 keys for audio tracks, or empty list if none found
-    """
-    try:
-        storage = get_dailyco_storage()
-
-        # Daily.co S3 structure: {org_prefix}/{room_name}/
-        # The org prefix is typically the Daily.co domain prefix (e.g., "monadical")
-        # We'll try listing with just room_name as prefix, which should work
-        # if AWS_FOLDER is configured correctly in storage settings
-        prefix = f"{room_name}/"
-
-        all_keys = await storage.list_objects(prefix=prefix)
-
-        # Filter for audio tracks only
-        audio_tracks = [
-            key for key in all_keys if key.endswith(".webm") and "cam-audio" in key
-        ]
-
-        logger.debug(
-            "Discovered tracks for recording",
-            recording_id=recording_id,
-            room_name=room_name,
-            prefix=prefix,
-            total_objects=len(all_keys),
-            audio_tracks=len(audio_tracks),
-        )
-
-        return audio_tracks
-
-    except Exception as e:
-        logger.error(
-            "Failed to discover tracks for recording",
-            recording_id=recording_id,
-            room_name=room_name,
-            error=str(e),
-            exc_info=True,
-        )
-        return []
-
-
 @shared_task
 @asynctask
 async def poll_daily_recordings():
     """Poll Daily.co API for recordings and process missing ones.
 
-    Queries last 2 hours of recordings from Daily.co API, compares with DB,
+    Queries recordings from Daily.co API within the configured lookback window, compares with DB,
     and queues processing for recordings not already in DB.
 
     For each missing recording, discovers audio tracks via S3 listing.
@@ -435,7 +383,8 @@ async def poll_daily_recordings():
         return
 
     now = datetime.now(timezone.utc)
-    start_time = int((now - timedelta(hours=2)).timestamp())
+    lookback_hours = settings.DAILY_RECORDING_POLL_LOOKBACK_HOURS
+    start_time = int((now - timedelta(hours=lookback_hours)).timestamp())
     end_time = int(now.timestamp())
 
     async with create_platform_client("daily") as daily_client:
@@ -453,7 +402,10 @@ async def poll_daily_recordings():
             return
 
     if not api_recordings:
-        logger.debug("No recordings found from Daily.co API in last 2 hours")
+        logger.debug(
+            "No recordings found from Daily.co API",
+            lookback_hours=lookback_hours,
+        )
         return
 
     recording_ids = [rec.id for rec in api_recordings]
@@ -478,17 +430,28 @@ async def poll_daily_recordings():
     )
 
     for recording in missing_recordings:
-        # Discover audio tracks via S3 listing
-        track_keys = await _discover_recording_tracks(
-            room_name=recording.room_name,
-            recording_id=recording.id,
-        )
+        if not recording.tracks:
+            assert recording.status != "finished", (
+                f"Recording {recording.id} has status='finished' but no tracks. "
+                f"Daily.co API guarantees finished recordings have tracks available. "
+                f"room_name={recording.room_name}"
+            )
+            logger.debug(
+                "No tracks in recording yet",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+                status=recording.status,
+            )
+            continue
+
+        track_keys = [t.s3Key for t in recording.tracks if t.type == "audio"]
 
         if not track_keys:
             logger.warning(
-                "No audio tracks found for recording, skipping",
+                "No audio tracks found in recording (only video tracks)",
                 recording_id=recording.id,
                 room_name=recording.room_name,
+                total_tracks=len(recording.tracks),
             )
             continue
 
@@ -809,13 +772,10 @@ async def reprocess_failed_recordings():
 async def process_daily_poll_flags() -> None:
     """Process Daily.co poll flags (claims flags, executes reconciliation)."""
     try:
-        active_meetings = await meetings_controller.get_all_active()
+        active_meetings = await meetings_controller.get_all_active(platform="daily")
         processed = 0
 
         for meeting in active_meetings:
-            # Only process Daily.co meetings
-            if meeting.platform != "daily":
-                continue
             try:
                 claimed = await try_claim_meeting_poll(meeting.id)
 
@@ -843,14 +803,10 @@ async def process_daily_poll_flags() -> None:
 async def trigger_daily_reconciliation() -> None:
     """Set poll flags for all Daily.co meetings (eventual consistency)."""
     try:
-        active_meetings = await meetings_controller.get_all_active()
+        active_meetings = await meetings_controller.get_all_active(platform="daily")
         triggered_count = 0
 
         for meeting in active_meetings:
-            # Only process Daily.co meetings
-            if meeting.platform != "daily":
-                continue
-
             try:
                 await request_meeting_poll(meeting.id)
                 triggered_count += 1

@@ -40,7 +40,7 @@ else:
         },
         "poll_daily_recordings": {
             "task": "reflector.worker.process.poll_daily_recordings",
-            "schedule": 180.0,  # Every 3 minutes (last 2 hours window)
+            "schedule": 180.0,  # Every 3 minutes (configurable lookback window)
         },
         "process_daily_poll_flags": {
             "task": "reflector.worker.process.process_daily_poll_flags",
