@@ -92,7 +92,7 @@ class TestMultitrackCLI:
 
                 # Verify transcript was created correctly
                 mock_controller.add.assert_called_once_with(
-                    "Multitrack (1 tracks)",
+                    "Multitrack (1 track)",
                     source_kind=SourceKind.FILE,
                     source_language="en",
                     target_language="en",
@@ -321,12 +321,12 @@ class TestMultitrackCLI:
                 )
 
     @pytest.mark.asyncio
-    async def test_speaker_id_assignment(self):
-        """Test that speaker IDs are assigned based on track order"""
+    async def test_track_order_preserved(self):
+        """Test that track order is preserved through pipeline submission"""
         s3_urls = [
-            "s3://test-bucket/alice.webm",  # Should be speaker 0
-            "s3://test-bucket/bob.webm",  # Should be speaker 1
-            "s3://test-bucket/charlie.webm",  # Should be speaker 2
+            "s3://test-bucket/alice.webm",
+            "s3://test-bucket/bob.webm",
+            "s3://test-bucket/charlie.webm",
         ]
 
         with (

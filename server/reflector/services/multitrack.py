@@ -7,6 +7,7 @@ other interface.
 
 import asyncio
 import time
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol
 
 import structlog
@@ -20,6 +21,15 @@ from reflector.pipelines.main_multitrack_pipeline import (
 
 logger = structlog.get_logger(__name__)
 
+# Maximum time to wait for multitrack processing (1 hour)
+DEFAULT_PROCESSING_TIMEOUT_SECONDS = 3600
+
+# Maximum error message length before truncation (database column constraint)
+MAX_ERROR_MESSAGE_LENGTH = 500
+
+# Interval between Celery task status checks
+TASK_POLL_INTERVAL_SECONDS = 2
+
 
 class StatusCallback(Protocol):
     """Callback for reporting multitrack task status updates."""
@@ -27,13 +37,13 @@ class StatusCallback(Protocol):
     def __call__(self, state: str, elapsed_seconds: int) -> None: ...
 
 
+@dataclass
 class MultitrackTaskResult:
     """Result from multitrack processing task."""
 
-    def __init__(self, success: bool, transcript_id: str, error: Optional[str] = None):
-        self.success = success
-        self.transcript_id = transcript_id
-        self.error = error
+    success: bool
+    transcript_id: str
+    error: Optional[str] = None
 
 
 async def create_multitrack_transcript(
@@ -55,7 +65,9 @@ async def create_multitrack_transcript(
     Returns:
         Created transcript entity
     """
-    transcript_name = f"Multitrack ({len(track_keys)} tracks)"
+    num_tracks = len(track_keys)
+    track_word = "track" if num_tracks == 1 else "tracks"
+    transcript_name = f"Multitrack ({num_tracks} {track_word})"
 
     transcript = await transcripts_controller.add(
         transcript_name,
@@ -109,8 +121,8 @@ def submit_multitrack_task(
 async def wait_for_task(
     result: AsyncResult,
     transcript_id: str,
-    timeout_seconds: int = 3600,
-    poll_interval: int = 2,
+    timeout_seconds: int = DEFAULT_PROCESSING_TIMEOUT_SECONDS,
+    poll_interval: int = TASK_POLL_INTERVAL_SECONDS,
     status_callback: Optional[StatusCallback] = None,
 ) -> MultitrackTaskResult:
     """Wait for Celery task completion.
@@ -187,7 +199,7 @@ async def update_transcript_status(
     transcript_id: str,
     status: str,
     error: Optional[str] = None,
-    max_error_length: int = 500,
+    max_error_length: int = MAX_ERROR_MESSAGE_LENGTH,
 ) -> None:
     """Update transcript status in database.
 
@@ -241,7 +253,7 @@ async def process_multitrack(
     source_language: str,
     target_language: str,
     user_id: Optional[str] = None,
-    timeout_seconds: int = 3600,
+    timeout_seconds: int = DEFAULT_PROCESSING_TIMEOUT_SECONDS,
     status_callback: Optional[StatusCallback] = None,
 ) -> MultitrackTaskResult:
     """High-level orchestration for multitrack processing.
@@ -280,9 +292,17 @@ async def process_multitrack(
 
     except Exception as e:
         if transcript:
-            await update_transcript_status(
-                transcript_id=transcript.id, status="failed", error=str(e)
-            )
+            try:
+                await update_transcript_status(
+                    transcript_id=transcript.id, status="failed", error=str(e)
+                )
+            except Exception as update_error:
+                logger.error(
+                    "Failed to update transcript status after error",
+                    original_error=str(e),
+                    update_error=str(update_error),
+                    transcript_id=transcript.id,
+                )
         raise
     finally:
         if connected:

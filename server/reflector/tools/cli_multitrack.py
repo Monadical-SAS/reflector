@@ -99,44 +99,33 @@ async def process_multitrack_cli(
     await validate_s3_objects(storage, bucket_keys)
     print_progress(f"S3 validation complete: {len(bucket_keys)} objects verified")
 
+    # Process using service layer
+    result = await process_multitrack(
+        bucket_name=primary_bucket,
+        track_keys=track_keys,
+        source_language=source_language,
+        target_language=target_language,
+        user_id=None,
+        timeout_seconds=3600,
+        status_callback=create_status_callback(),
+    )
+
+    if not result.success:
+        error_msg = (
+            f"Multitrack pipeline failed for transcript {result.transcript_id}\n"
+        )
+        if result.error:
+            error_msg += f"Error: {result.error}\n"
+        raise RuntimeError(error_msg)
+
+    print_progress(
+        f"Multitrack processing complete for transcript {result.transcript_id}"
+    )
+
+    # Extract and output results
+    database = get_database()
+    await database.connect()
     try:
-        # Process using service layer
-        result = await process_multitrack(
-            bucket_name=primary_bucket,
-            track_keys=track_keys,
-            source_language=source_language,
-            target_language=target_language,
-            user_id=None,  # CLI doesn't have user context
-            timeout_seconds=3600,
-            status_callback=create_status_callback(),
-        )
-
-        if not result.success:
-            error_msg = (
-                f"Multitrack pipeline failed for transcript {result.transcript_id}\n"
-            )
-            if result.error:
-                error_msg += f"Error: {result.error}\n"
-            raise RuntimeError(error_msg)
-
-        print_progress(
-            f"Multitrack processing complete for transcript {result.transcript_id}"
-        )
-
-        # Extract and output results
-        database = get_database()
-        await database.connect()
-        try:
-            await extract_result_from_entry(result.transcript_id, output_path)
-        finally:
-            await database.disconnect()
-
-    except TimeoutError as e:
-        # Log timeout for CLI user
-        print_progress(f"ERROR: Processing timed out - {e}")
-        raise
-
-    except Exception as e:
-        # Format error for CLI display
-        print_progress(f"ERROR: {e}")
-        raise
+        await extract_result_from_entry(result.transcript_id, output_path)
+    finally:
+        await database.disconnect()
