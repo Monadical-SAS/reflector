@@ -162,9 +162,8 @@ class RoomController:
             "ics_url": ics_url,
             "ics_fetch_interval": ics_fetch_interval,
             "ics_enabled": ics_enabled,
+            "platform": platform,
         }
-        if platform is not None:
-            room_data["platform"] = platform
 
         room = Room(**room_data)
         query = rooms.insert().values(**room.model_dump())
