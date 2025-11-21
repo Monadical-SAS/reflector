@@ -46,7 +46,6 @@ def parse_s3_url(url: str) -> Tuple[str, str]:
     if parsed.scheme == "s3":
         bucket = parsed.netloc
         key = parsed.path.lstrip("/")
-        # URL fragments are client-side only and not part of S3 keys
         if parsed.fragment:
             logger.debug(
                 "URL fragment ignored (not part of S3 key)",
