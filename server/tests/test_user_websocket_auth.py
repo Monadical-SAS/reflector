@@ -120,7 +120,15 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
     host, port = appserver_ws_user
     base_ws = f"http://{host}:{port}/v1/events"
 
-    token = _make_dummy_jwt("user-abc")
+    # Create a test user in the database
+    from reflector.db.users import user_controller
+
+    test_uid = "user-abc"
+    user = await user_controller.create_or_update(
+        id="test-user-id-abc", uid=test_uid, email="user-abc@example.com"
+    )
+
+    token = _make_dummy_jwt(test_uid)
     subprotocols = ["bearer", token]
 
     # Connect and then trigger an event via HTTP create
@@ -132,12 +140,13 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
         from reflector.auth import current_user, current_user_optional
 
         # Override auth dependencies so HTTP request is performed as the same user
+        # Use the internal user.id (not the Authentik UID)
         app.dependency_overrides[current_user] = lambda: {
-            "sub": "user-abc",
+            "sub": user.id,
             "email": "user-abc@example.com",
         }
         app.dependency_overrides[current_user_optional] = lambda: {
-            "sub": "user-abc",
+            "sub": user.id,
             "email": "user-abc@example.com",
         }
 

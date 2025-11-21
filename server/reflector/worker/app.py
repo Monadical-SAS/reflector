@@ -21,6 +21,7 @@ else:
             "reflector.worker.process",
             "reflector.worker.cleanup",
             "reflector.worker.ics_sync",
+            "reflector.worker.user_sync",
         ]
     )
 
@@ -45,6 +46,10 @@ else:
         "create_upcoming_meetings": {
             "task": "reflector.worker.ics_sync.create_upcoming_meetings",
             "schedule": 30.0,  # Run every 30 seconds to create upcoming meetings
+        },
+        "sync_users_from_authentik": {
+            "task": "reflector.worker.user_sync.sync_users_from_authentik",
+            "schedule": crontab(hour=2, minute=0),  # Run daily at 2 AM
         },
     }
 

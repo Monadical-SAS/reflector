@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from reflector.db.user_api_keys import user_api_keys_controller
+from reflector.db.users import user_controller
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -74,9 +75,23 @@ async def _authenticate_user(
     if jwt_token:
         try:
             payload = jwtauth.verify_token(jwt_token)
-            sub = payload["sub"]
+            uid = payload["sub"]  # This is the Authentik UID
             email = payload["email"]
-            user_infos.append(UserInfo(sub=sub, email=email))
+
+            # Look up user by Authentik UID to get internal user.id
+            user = await user_controller.get_by_uid(uid)
+            if user:
+                # Return user.id as sub instead of uid
+                user_infos.append(UserInfo(sub=user.id, email=email))
+            else:
+                # User not found in our database - they may not have been synced yet
+                logger.warning(
+                    f"User with Authentik UID {uid} not found in users table"
+                )
+                raise HTTPException(
+                    status_code=401,
+                    detail="User not found. Please contact an administrator.",
+                )
         except JWTError as e:
             logger.error(f"JWT error: {e}")
             raise HTTPException(status_code=401, detail="Invalid authentication")
