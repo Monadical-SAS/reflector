@@ -1,10 +1,14 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
 
+from reflector.dailyco_api import (
+    DailyTrack,
+    DailyWebhookEvent,
+    extract_room_name,
+    parse_recording_error,
+)
 from reflector.db import get_database
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
@@ -13,37 +17,12 @@ from reflector.db.daily_participant_sessions import (
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger as _logger
 from reflector.settings import settings
-from reflector.utils.daily import DailyRoomName
 from reflector.video_platforms.factory import create_platform_client
 from reflector.worker.process import process_multitrack_recording
 
 router = APIRouter()
 
 logger = _logger.bind(platform="daily")
-
-
-class DailyTrack(BaseModel):
-    type: Literal["audio", "video"]
-    s3Key: str
-    size: int
-
-
-class DailyWebhookEvent(BaseModel):
-    version: str
-    type: str
-    id: str
-    payload: Dict[str, Any]
-    event_ts: float
-
-
-def _extract_room_name(event: DailyWebhookEvent) -> DailyRoomName | None:
-    """Extract room name from Daily event payload.
-
-    Daily.co API inconsistency:
-    - participant.* events use "room" field
-    - recording.* events use "room_name" field
-    """
-    return event.payload.get("room_name") or event.payload.get("room")
 
 
 @router.post("/webhook")
@@ -77,18 +56,14 @@ async def webhook(request: Request):
 
     client = create_platform_client("daily")
 
-    # TEMPORARY: Bypass signature check for testing
-    # TODO: Remove this after testing is complete
-    BYPASS_FOR_TESTING = True
-    if not BYPASS_FOR_TESTING:
-        if not client.verify_webhook_signature(body, signature, timestamp):
-            logger.warning(
-                "Invalid webhook signature",
-                signature=signature,
-                timestamp=timestamp,
-                has_body=bool(body),
-            )
-            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    if not client.verify_webhook_signature(body, signature, timestamp):
+        logger.warning(
+            "Invalid webhook signature",
+            signature=signature,
+            timestamp=timestamp,
+            has_body=bool(body),
+        )
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     try:
         body_json = json.loads(body)
@@ -99,14 +74,12 @@ async def webhook(request: Request):
         logger.info("Received Daily webhook test event")
         return {"status": "ok"}
 
-    # Parse as actual event
     try:
         event = DailyWebhookEvent(**body_json)
     except Exception as e:
         logger.error("Failed to parse webhook event", error=str(e), body=body.decode())
         raise HTTPException(status_code=422, detail="Invalid event format")
 
-    # Handle participant events
     if event.type == "participant.joined":
         await _handle_participant_joined(event)
     elif event.type == "participant.left":
@@ -154,7 +127,7 @@ async def webhook(request: Request):
 
 
 async def _handle_participant_joined(event: DailyWebhookEvent):
-    daily_room_name = _extract_room_name(event)
+    daily_room_name = extract_room_name(event)
     if not daily_room_name:
         logger.warning("participant.joined: no room in payload", payload=event.payload)
         return
@@ -167,7 +140,6 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         return
 
     payload = event.payload
-    logger.warning({"payload": payload})
     joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
     session_id = f"{meeting.id}:{payload['session_id']}"
 
@@ -225,7 +197,7 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
 
 
 async def _handle_participant_left(event: DailyWebhookEvent):
-    room_name = _extract_room_name(event)
+    room_name = extract_room_name(event)
     if not room_name:
         logger.warning("participant.left: no room in payload", payload=event.payload)
         return
@@ -268,7 +240,7 @@ async def _handle_participant_left(event: DailyWebhookEvent):
 
 
 async def _handle_recording_started(event: DailyWebhookEvent):
-    room_name = _extract_room_name(event)
+    room_name = extract_room_name(event)
     if not room_name:
         logger.warning(
             "recording.started: no room_name in payload", payload=event.payload
@@ -301,7 +273,7 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
       ]
     }
     """
-    room_name = _extract_room_name(event)
+    room_name = extract_room_name(event)
     recording_id = event.payload.get("recording_id")
     tracks_raw = event.payload.get("tracks", [])
 
@@ -350,8 +322,8 @@ async def _handle_recording_ready(event: DailyWebhookEvent):
 
 
 async def _handle_recording_error(event: DailyWebhookEvent):
-    room_name = _extract_room_name(event)
-    error = event.payload.get("error", "Unknown error")
+    payload = parse_recording_error(event)
+    room_name = payload.room_name
 
     if room_name:
         meeting = await meetings_controller.get_by_room_name(room_name)
@@ -360,6 +332,6 @@ async def _handle_recording_error(event: DailyWebhookEvent):
                 "Recording error",
                 meeting_id=meeting.id,
                 room_name=room_name,
-                error=error,
+                error=payload.error_msg,
                 platform="daily",
             )
