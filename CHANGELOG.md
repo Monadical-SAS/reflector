@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.0](https://github.com/Monadical-SAS/reflector/compare/v0.18.0...v0.19.0) (2025-11-21)
+
+
+### Features
+
+* dailyco api module ([#725](https://github.com/Monadical-SAS/reflector/issues/725)) ([4287f8b](https://github.com/Monadical-SAS/reflector/commit/4287f8b8aeee60e51db7539f4dcbda5f6e696bd8))
+
+
+### Bug Fixes
+
+* parakeet vad not getting the end timestamp ([#728](https://github.com/Monadical-SAS/reflector/issues/728)) ([18ed713](https://github.com/Monadical-SAS/reflector/commit/18ed7133693653ef4ddac6c659a8c14b320d1657))
+* start raw tracks recording ([#729](https://github.com/Monadical-SAS/reflector/issues/729)) ([3e47c2c](https://github.com/Monadical-SAS/reflector/commit/3e47c2c0573504858e0d2e1798b6ed31f16b4a5d))
+
 ## [0.18.0](https://github.com/Monadical-SAS/reflector/compare/v0.17.0...v0.18.0) (2025-11-14)
 
 
