@@ -9,7 +9,10 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Tuple
+from urllib.parse import unquote, urlparse
+
+from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
 
 from reflector.db.transcripts import SourceKind, TranscriptTopic, transcripts_controller
 from reflector.logger import logger
@@ -20,10 +23,119 @@ from reflector.pipelines.main_live_pipeline import pipeline_post as live_pipelin
 from reflector.pipelines.main_live_pipeline import (
     pipeline_process as live_pipeline_process,
 )
+from reflector.storage import Storage
+
+
+def validate_s3_bucket_name(bucket: str) -> None:
+    if not bucket:
+        raise ValueError("Bucket name cannot be empty")
+    if len(bucket) > 255:  # Absolute max for any region
+        raise ValueError(f"Bucket name too long: {len(bucket)} characters (max 255)")
+
+
+def validate_s3_key(key: str) -> None:
+    if not key:
+        raise ValueError("S3 key cannot be empty")
+    if len(key) > 1024:
+        raise ValueError(f"S3 key too long: {len(key)} characters (max 1024)")
+
+
+def parse_s3_url(url: str) -> Tuple[str, str]:
+    parsed = urlparse(url)
+
+    if parsed.scheme == "s3":
+        bucket = parsed.netloc
+        key = parsed.path.lstrip("/")
+        if parsed.fragment:
+            logger.debug(
+                "URL fragment ignored (not part of S3 key)",
+                url=url,
+                fragment=parsed.fragment,
+            )
+        if not bucket or not key:
+            raise ValueError(f"Invalid S3 URL: {url} (missing bucket or key)")
+        bucket = unquote(bucket)
+        key = unquote(key)
+        validate_s3_bucket_name(bucket)
+        validate_s3_key(key)
+        return bucket, key
+
+    elif parsed.scheme in ("http", "https"):
+        if ".s3." in parsed.netloc or parsed.netloc.endswith(".s3.amazonaws.com"):
+            bucket = parsed.netloc.split(".")[0]
+            key = parsed.path.lstrip("/")
+            if parsed.fragment:
+                logger.debug("URL fragment ignored", url=url, fragment=parsed.fragment)
+            if not bucket or not key:
+                raise ValueError(f"Invalid S3 URL: {url} (missing bucket or key)")
+            bucket = unquote(bucket)
+            key = unquote(key)
+            validate_s3_bucket_name(bucket)
+            validate_s3_key(key)
+            return bucket, key
+
+        elif parsed.netloc.startswith("s3.") and "amazonaws.com" in parsed.netloc:
+            path_parts = parsed.path.lstrip("/").split("/", 1)
+            if len(path_parts) != 2:
+                raise ValueError(f"Invalid S3 URL: {url} (missing bucket or key)")
+            bucket, key = path_parts
+            if parsed.fragment:
+                logger.debug("URL fragment ignored", url=url, fragment=parsed.fragment)
+            bucket = unquote(bucket)
+            key = unquote(key)
+            validate_s3_bucket_name(bucket)
+            validate_s3_key(key)
+            return bucket, key
+
+        else:
+            raise ValueError(f"Invalid S3 URL format: {url} (not recognized as S3 URL)")
+
+    else:
+        raise ValueError(f"Invalid S3 URL scheme: {url} (must be s3:// or https://)")
+
+
+async def validate_s3_objects(
+    storage: Storage, bucket_keys: List[Tuple[str, str]]
+) -> None:
+    async with storage.session.client("s3") as client:
+
+        async def check_object(bucket: str, key: str) -> None:
+            try:
+                await client.head_object(Bucket=bucket, Key=key)
+            except ClientError as e:
+                error_code = e.response["Error"]["Code"]
+                if error_code in ("404", "NoSuchKey"):
+                    raise ValueError(f"S3 object not found: s3://{bucket}/{key}") from e
+                elif error_code in ("403", "Forbidden", "AccessDenied"):
+                    raise ValueError(
+                        f"Access denied for S3 object: s3://{bucket}/{key}. "
+                        f"Check AWS credentials and permissions"
+                    ) from e
+                else:
+                    raise ValueError(
+                        f"S3 error {error_code} for s3://{bucket}/{key}: "
+                        f"{e.response['Error'].get('Message', 'Unknown error')}"
+                    ) from e
+            except NoCredentialsError as e:
+                raise ValueError(
+                    "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and "
+                    "AWS_SECRET_ACCESS_KEY environment variables"
+                ) from e
+            except BotoCoreError as e:
+                raise ValueError(
+                    f"AWS service error for s3://{bucket}/{key}: {str(e)}"
+                ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Unexpected error validating s3://{bucket}/{key}: {str(e)}"
+                ) from e
+
+        await asyncio.gather(
+            *(check_object(bucket, key) for bucket, key in bucket_keys)
+        )
 
 
 def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
-    """Convert TranscriptTopic objects to JSON-serializable dicts"""
     serialized = []
     for topic in topics:
         topic_dict = topic.model_dump()
@@ -32,7 +144,6 @@ def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
 
 
 def debug_print_speakers(serialized_topics: List[Dict[str, Any]]) -> None:
-    """Print debug info about speakers found in topics"""
     all_speakers = set()
     for topic_dict in serialized_topics:
         for word in topic_dict.get("words", []):
@@ -47,8 +158,6 @@ def debug_print_speakers(serialized_topics: List[Dict[str, Any]]) -> None:
 TranscriptId = str
 
 
-# common interface for every flow: it needs an Entry in db with specific ceremony (file path + status + actual file in file system)
-# ideally we want to get rid of it at some point
 async def prepare_entry(
     source_path: str,
     source_language: str,
@@ -65,9 +174,7 @@ async def prepare_entry(
         user_id=None,
     )
 
-    logger.info(
-        f"Created empty transcript {transcript.id} for file {file_path.name} because technically we need an empty transcript before we start transcript"
-    )
+    logger.info(f"Created transcript {transcript.id} for {file_path.name}")
 
     # pipelines expect files as upload.*
 
@@ -83,7 +190,6 @@ async def prepare_entry(
     return transcript.id
 
 
-# same reason as prepare_entry
 async def extract_result_from_entry(
     transcript_id: TranscriptId, output_path: str
 ) -> None:
@@ -193,12 +299,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Process audio files with speaker diarization"
     )
-    parser.add_argument("source", help="Source file (mp3, wav, mp4...)")
+    parser.add_argument(
+        "source",
+        help="Source file (mp3, wav, mp4...) or comma-separated S3 URLs with --multitrack",
+    )
     parser.add_argument(
         "--pipeline",
-        required=True,
         choices=["live", "file"],
         help="Pipeline type to use for processing (live: streaming/incremental, file: batch/parallel)",
+    )
+    parser.add_argument(
+        "--multitrack",
+        action="store_true",
+        help="Process multiple audio tracks from comma-separated S3 URLs",
     )
     parser.add_argument(
         "--source-language", default="en", help="Source language code (default: en)"
@@ -209,12 +322,40 @@ if __name__ == "__main__":
     parser.add_argument("--output", "-o", help="Output file (output.jsonl)")
     args = parser.parse_args()
 
-    asyncio.run(
-        process(
-            args.source,
-            args.source_language,
-            args.target_language,
-            args.pipeline,
-            args.output,
+    if args.multitrack:
+        if not args.source:
+            parser.error("Source URLs required for multitrack processing")
+
+        s3_urls = [url.strip() for url in args.source.split(",") if url.strip()]
+
+        if not s3_urls:
+            parser.error("At least one S3 URL required for multitrack processing")
+
+        from reflector.tools.cli_multitrack import process_multitrack_cli
+
+        asyncio.run(
+            process_multitrack_cli(
+                s3_urls,
+                args.source_language,
+                args.target_language,
+                args.output,
+            )
         )
-    )
+    else:
+        if not args.pipeline:
+            parser.error("--pipeline is required for single-track processing")
+
+        if "," in args.source:
+            parser.error(
+                "Multiple files detected. Use --multitrack flag for multitrack processing"
+            )
+
+        asyncio.run(
+            process(
+                args.source,
+                args.source_language,
+                args.target_language,
+                args.pipeline,
+                args.output,
+            )
+        )
