@@ -1,9 +1,3 @@
-"""CLI-specific orchestration for multitrack processing.
-
-This module handles all CLI concerns like progress printing, status updates,
-and output formatting, as well as the core multitrack processing logic.
-"""
-
 import asyncio
 import sys
 import time
@@ -27,26 +21,19 @@ from reflector.tools.process import (
 
 logger = structlog.get_logger(__name__)
 
-# Maximum time to wait for multitrack processing (1 hour)
 DEFAULT_PROCESSING_TIMEOUT_SECONDS = 3600
 
-# Maximum error message length before truncation (database column constraint)
 MAX_ERROR_MESSAGE_LENGTH = 500
 
-# Interval between Celery task status checks
 TASK_POLL_INTERVAL_SECONDS = 2
 
 
 class StatusCallback(Protocol):
-    """Callback for reporting multitrack task status updates."""
-
     def __call__(self, state: str, elapsed_seconds: int) -> None: ...
 
 
 @dataclass
 class MultitrackTaskResult:
-    """Result from multitrack processing task."""
-
     success: bool
     transcript_id: str
     error: Optional[str] = None
@@ -59,18 +46,6 @@ async def create_multitrack_transcript(
     target_language: str,
     user_id: Optional[str] = None,
 ) -> Transcript:
-    """Create transcript entity for multitrack processing.
-
-    Args:
-        bucket_name: S3 bucket containing tracks
-        track_keys: List of S3 keys for audio tracks
-        source_language: Source language code
-        target_language: Target language code
-        user_id: Optional user ID
-
-    Returns:
-        Created transcript entity
-    """
     num_tracks = len(track_keys)
     track_word = "track" if num_tracks == 1 else "tracks"
     transcript_name = f"Multitrack ({num_tracks} {track_word})"
@@ -97,16 +72,6 @@ async def create_multitrack_transcript(
 def submit_multitrack_task(
     transcript_id: str, bucket_name: str, track_keys: List[str]
 ) -> AsyncResult:
-    """Submit multitrack processing task to Celery.
-
-    Args:
-        transcript_id: ID of transcript to process
-        bucket_name: S3 bucket containing tracks
-        track_keys: List of S3 keys for audio tracks
-
-    Returns:
-        Celery AsyncResult for tracking
-    """
     result = task_pipeline_multitrack_process.delay(
         transcript_id=transcript_id,
         bucket_name=bucket_name,
@@ -131,21 +96,6 @@ async def wait_for_task(
     poll_interval: int = TASK_POLL_INTERVAL_SECONDS,
     status_callback: Optional[StatusCallback] = None,
 ) -> MultitrackTaskResult:
-    """Wait for Celery task completion.
-
-    Args:
-        result: Celery AsyncResult to wait for
-        transcript_id: ID of transcript being processed
-        timeout_seconds: Maximum time to wait
-        poll_interval: Seconds between status checks
-        status_callback: Optional callback for status updates
-
-    Returns:
-        Task result with success status and any errors
-
-    Raises:
-        TimeoutError: If task doesn't complete within timeout
-    """
     start_time = time.time()
     last_status = None
 
@@ -207,14 +157,6 @@ async def update_transcript_status(
     error: Optional[str] = None,
     max_error_length: int = MAX_ERROR_MESSAGE_LENGTH,
 ) -> None:
-    """Update transcript status in database.
-
-    Args:
-        transcript_id: ID of transcript to update
-        status: New status value
-        error: Optional error message
-        max_error_length: Maximum length for error messages
-    """
     database = get_database()
     connected = False
 
@@ -262,20 +204,7 @@ async def process_multitrack(
     timeout_seconds: int = DEFAULT_PROCESSING_TIMEOUT_SECONDS,
     status_callback: Optional[StatusCallback] = None,
 ) -> MultitrackTaskResult:
-    """High-level orchestration for multitrack processing.
-
-    Args:
-        bucket_name: S3 bucket containing tracks
-        track_keys: List of S3 keys for audio tracks
-        source_language: Source language code
-        target_language: Target language code
-        user_id: Optional user ID
-        timeout_seconds: Maximum processing time
-        status_callback: Optional callback for status updates
-
-    Returns:
-        Processing result with transcript ID
-    """
+    """High-level orchestration for multitrack processing."""
     database = get_database()
     transcript = None
     connected = False
@@ -356,28 +285,9 @@ async def process_multitrack_cli(
     target_language: str,
     output_path: Optional[str] = None,
 ) -> None:
-    """Process multitrack recording from S3 URLs with CLI output.
-
-    This is the main entry point for CLI-based multitrack processing.
-    It handles all CLI-specific concerns like progress printing and
-    error formatting for terminal output.
-
-    Args:
-        s3_urls: List of S3 URLs for audio tracks
-        source_language: Source language code
-        target_language: Target language code
-        output_path: Optional output file path for JSONL
-
-    Raises:
-        ValueError: Invalid URLs or validation failures
-        TimeoutError: If processing exceeds timeout
-        RuntimeError: If pipeline processing fails
-    """
-    # Validate arguments
     if not s3_urls:
         raise ValueError("At least one track required for multitrack processing")
 
-    # Parse and validate S3 URLs
     bucket_keys = []
     for url in s3_urls:
         try:
@@ -386,7 +296,6 @@ async def process_multitrack_cli(
         except ValueError as e:
             raise ValueError(f"Invalid S3 URL '{url}': {e}") from e
 
-    # Ensure all tracks are in the same bucket
     buckets = set(bucket for bucket, _ in bucket_keys)
     if len(buckets) > 1:
         raise ValueError(
@@ -404,12 +313,10 @@ async def process_multitrack_cli(
         f"source_language={source_language}, target_language={target_language}"
     )
 
-    # Validate S3 objects exist
     storage = get_transcripts_storage()
     await validate_s3_objects(storage, bucket_keys)
     print_progress(f"S3 validation complete: {len(bucket_keys)} objects verified")
 
-    # Process using service layer
     result = await process_multitrack(
         bucket_name=primary_bucket,
         track_keys=track_keys,
@@ -432,7 +339,6 @@ async def process_multitrack_cli(
         f"Multitrack processing complete for transcript {result.transcript_id}"
     )
 
-    # Extract and output results
     database = get_database()
     await database.connect()
     try:

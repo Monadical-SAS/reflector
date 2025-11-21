@@ -27,17 +27,6 @@ from reflector.storage import Storage
 
 
 def validate_s3_bucket_name(bucket: str) -> None:
-    """Basic S3 bucket name validation
-
-    Only validates the most essential rules. AWS SDK will handle
-    full validation during API calls.
-
-    Args:
-        bucket: Bucket name to validate
-
-    Raises:
-        ValueError: If bucket name is clearly invalid
-    """
     if not bucket:
         raise ValueError("Bucket name cannot be empty")
     if len(bucket) > 255:  # Absolute max for any region
@@ -45,14 +34,6 @@ def validate_s3_bucket_name(bucket: str) -> None:
 
 
 def validate_s3_key(key: str) -> None:
-    """Basic S3 key validation
-
-    Args:
-        key: S3 object key to validate
-
-    Raises:
-        ValueError: If key is clearly invalid
-    """
     if not key:
         raise ValueError("S3 key cannot be empty")
     if len(key) > 1024:
@@ -60,17 +41,6 @@ def validate_s3_key(key: str) -> None:
 
 
 def parse_s3_url(url: str) -> Tuple[str, str]:
-    """Parse S3 URL into bucket and key components
-
-    Args:
-        url: S3 URL in any supported format
-
-    Returns:
-        Tuple of (bucket_name, object_key)
-
-    Raises:
-        ValueError: Invalid S3 URL format
-    """
     parsed = urlparse(url)
 
     if parsed.scheme == "s3":
@@ -128,15 +98,6 @@ def parse_s3_url(url: str) -> Tuple[str, str]:
 async def validate_s3_objects(
     storage: Storage, bucket_keys: List[Tuple[str, str]]
 ) -> None:
-    """Validate S3 objects exist and are accessible
-
-    Args:
-        storage: S3 storage client from get_transcripts_storage()
-        bucket_keys: List of (bucket, key) tuples
-
-    Raises:
-        ValueError: With specific error for missing/inaccessible objects
-    """
     async with storage.session.client("s3") as client:
 
         async def check_object(bucket: str, key: str) -> None:
@@ -176,7 +137,6 @@ async def validate_s3_objects(
 
 
 def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
-    """Convert TranscriptTopic objects to JSON-serializable dicts"""
     serialized = []
     for topic in topics:
         topic_dict = topic.model_dump()
@@ -185,7 +145,6 @@ def serialize_topics(topics: List[TranscriptTopic]) -> List[Dict[str, Any]]:
 
 
 def debug_print_speakers(serialized_topics: List[Dict[str, Any]]) -> None:
-    """Print debug info about speakers found in topics"""
     all_speakers = set()
     for topic_dict in serialized_topics:
         for word in topic_dict.get("words", []):
