@@ -1,5 +1,3 @@
-from typing import Optional
-
 from reflector.settings import settings
 from reflector.storage import get_dailyco_storage, get_whereby_storage
 
@@ -53,10 +51,3 @@ def get_platform_config(platform: Platform) -> VideoPlatformConfig:
 def create_platform_client(platform: Platform) -> VideoPlatformClient:
     config = get_platform_config(platform)
     return get_platform_client(platform, config)
-
-
-def get_platform(room_platform: Optional[Platform] = None) -> Platform:
-    if room_platform:
-        return room_platform
-
-    return settings.DEFAULT_VIDEO_PLATFORM
