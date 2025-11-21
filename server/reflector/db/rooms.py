@@ -138,7 +138,7 @@ class RoomController:
         ics_url: str | None = None,
         ics_fetch_interval: int = 300,
         ics_enabled: bool = False,
-        platform: Platform | None = None,
+        platform: Platform = settings.DEFAULT_VIDEO_PLATFORM,
     ):
         """
         Add a new room
