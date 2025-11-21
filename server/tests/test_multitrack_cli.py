@@ -23,10 +23,10 @@ class TestMultitrackCLI:
                 "reflector.tools.cli_multitrack.get_transcripts_storage"
             ) as mock_get_storage,
             patch(
-                "reflector.services.multitrack.transcripts_controller"
+                "reflector.tools.cli_multitrack.transcripts_controller"
             ) as mock_controller,
             patch(
-                "reflector.services.multitrack.task_pipeline_multitrack_process"
+                "reflector.tools.cli_multitrack.task_pipeline_multitrack_process"
             ) as mock_task,
             patch(
                 "reflector.tools.cli_multitrack.validate_s3_objects",
@@ -126,10 +126,10 @@ class TestMultitrackCLI:
                 "reflector.tools.cli_multitrack.get_transcripts_storage"
             ) as mock_get_storage,
             patch(
-                "reflector.services.multitrack.transcripts_controller"
+                "reflector.tools.cli_multitrack.transcripts_controller"
             ) as mock_controller,
             patch(
-                "reflector.services.multitrack.task_pipeline_multitrack_process"
+                "reflector.tools.cli_multitrack.task_pipeline_multitrack_process"
             ) as mock_task,
             patch(
                 "reflector.tools.cli_multitrack.validate_s3_objects",
@@ -279,10 +279,10 @@ class TestMultitrackCLI:
                 "reflector.tools.cli_multitrack.get_transcripts_storage"
             ) as mock_get_storage,
             patch(
-                "reflector.services.multitrack.transcripts_controller"
+                "reflector.tools.cli_multitrack.transcripts_controller"
             ) as mock_controller,
             patch(
-                "reflector.services.multitrack.task_pipeline_multitrack_process"
+                "reflector.tools.cli_multitrack.task_pipeline_multitrack_process"
             ) as mock_task,
             patch(
                 "reflector.tools.cli_multitrack.validate_s3_objects",
@@ -335,10 +335,10 @@ class TestMultitrackCLI:
                 "reflector.tools.cli_multitrack.get_transcripts_storage"
             ) as mock_get_storage,
             patch(
-                "reflector.services.multitrack.transcripts_controller"
+                "reflector.tools.cli_multitrack.transcripts_controller"
             ) as mock_controller,
             patch(
-                "reflector.services.multitrack.task_pipeline_multitrack_process"
+                "reflector.tools.cli_multitrack.task_pipeline_multitrack_process"
             ) as mock_task,
             patch(
                 "reflector.tools.cli_multitrack.validate_s3_objects",
