@@ -146,8 +146,11 @@ class MeetingController:
         await get_database().execute(query)
         return meeting
 
-    async def get_all_active(self) -> list[Meeting]:
-        query = meetings.select().where(meetings.c.is_active)
+    async def get_all_active(self, platform: str | None = None) -> list[Meeting]:
+        conditions = [meetings.c.is_active]
+        if platform is not None:
+            conditions.append(meetings.c.platform == platform)
+        query = meetings.select().where(sa.and_(*conditions))
         results = await get_database().fetch_all(query)
         return [Meeting(**result) for result in results]
 

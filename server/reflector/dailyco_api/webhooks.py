@@ -4,7 +4,7 @@ Daily.co Webhook Event Models
 Reference: https://docs.daily.co/reference/rest-api/webhooks
 """
 
-from typing import Any, Dict, Literal
+from typing import Annotated, Any, Dict, Literal, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -197,3 +197,75 @@ class RecordingErrorPayload(BaseModel):
     _normalize_timestamp = field_validator("timestamp", mode="before")(
         normalize_timestamp_to_int
     )
+
+
+class ParticipantJoinedEvent(BaseModel):
+    version: NonEmptyString
+    type: Literal["participant.joined"]
+    id: NonEmptyString
+    payload: ParticipantJoinedPayload
+    event_ts: int
+
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
+
+
+class ParticipantLeftEvent(BaseModel):
+    version: NonEmptyString
+    type: Literal["participant.left"]
+    id: NonEmptyString
+    payload: ParticipantLeftPayload
+    event_ts: int
+
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
+
+
+class RecordingStartedEvent(BaseModel):
+    version: NonEmptyString
+    type: Literal["recording.started"]
+    id: NonEmptyString
+    payload: RecordingStartedPayload
+    event_ts: int
+
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
+
+
+class RecordingReadyEvent(BaseModel):
+    version: NonEmptyString
+    type: Literal["recording.ready-to-download"]
+    id: NonEmptyString
+    payload: RecordingReadyToDownloadPayload
+    event_ts: int
+
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
+
+
+class RecordingErrorEvent(BaseModel):
+    version: NonEmptyString
+    type: Literal["recording.error"]
+    id: NonEmptyString
+    payload: RecordingErrorPayload
+    event_ts: int
+
+    _normalize_event_ts = field_validator("event_ts", mode="before")(
+        normalize_timestamp_to_int
+    )
+
+
+DailyWebhookEventUnion = Annotated[
+    Union[
+        ParticipantJoinedEvent,
+        ParticipantLeftEvent,
+        RecordingStartedEvent,
+        RecordingReadyEvent,
+        RecordingErrorEvent,
+    ],
+    Field(discriminator="type"),
+]

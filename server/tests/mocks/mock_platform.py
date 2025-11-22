@@ -64,12 +64,6 @@ class MockPlatformClient(VideoPlatformClient):
             )
         ]
 
-    async def delete_room(self, room_name: str) -> bool:
-        if room_name in self._rooms:
-            self._rooms[room_name]["is_active"] = False
-            return True
-        return False
-
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         if room_name in self._rooms:
             self._rooms[room_name]["logo_path"] = logo_path

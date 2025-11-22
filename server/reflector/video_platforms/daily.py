@@ -19,6 +19,7 @@ from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.storage import get_dailyco_storage
 
+from ..dailyco_api.responses import RecordingStatus
 from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
@@ -130,10 +131,25 @@ class DailyClient(VideoPlatformClient):
     async def get_recording(self, recording_id: str) -> RecordingResponse:
         return await self._api_client.get_recording(recording_id)
 
-    async def delete_room(self, room_name: str) -> bool:
-        """Delete a room (idempotent - succeeds even if room doesn't exist)."""
-        await self._api_client.delete_room(room_name)
-        return True
+    async def list_recordings(
+        self,
+        room_name: NonEmptyString | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        limit: int = 100,
+    ) -> list[RecordingResponse]:
+        return await self._api_client.list_recordings(
+            room_name=room_name,
+            starting_after=starting_after,
+            ending_before=ending_before,
+            limit=limit,
+        )
+
+    async def get_recording_status(
+        self, recording_id: NonEmptyString
+    ) -> RecordingStatus:
+        recording = await self.get_recording(recording_id)
+        return recording.status
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         return True

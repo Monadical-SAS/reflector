@@ -89,7 +89,9 @@ This document explains how Reflector receives and identifies multitrack audio re
 
 ---
 
-## Daily.co (Webhook-based)
+## Daily.co
+
+**Note:** Primary discovery via polling (`poll_daily_recordings`), webhooks as backup.
 
 Daily.co uses **webhooks** to notify Reflector when recordings are ready.
 

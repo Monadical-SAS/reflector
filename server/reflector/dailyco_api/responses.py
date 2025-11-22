@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, Field
 
+from reflector.dailyco_api.webhooks import DailyTrack
 from reflector.utils.string import NonEmptyString
 
 # not documented in daily; we fill it according to observations
@@ -131,12 +132,22 @@ class RecordingResponse(BaseModel):
     status: RecordingStatus = Field(
         description="Recording status ('in-progress' or 'finished')"
     )
-    max_participants: int = Field(description="Maximum participants during recording")
+    max_participants: int | None = Field(
+        None, description="Maximum participants during recording (may be missing)"
+    )
     duration: int = Field(description="Recording duration in seconds")
     share_token: NonEmptyString | None = Field(
         None, description="Token for sharing recording"
     )
     s3: RecordingS3Info | None = Field(None, description="S3 bucket information")
+    tracks: list[DailyTrack] = Field(
+        default_factory=list,
+        description="Track list for raw-tracks recordings (always array, never null)",
+    )
+    # this is not a mistake but a deliberate Daily.co naming decision
+    mtgSessionId: NonEmptyString | None = Field(
+        None, description="Meeting session identifier (may be missing)"
+    )
 
 
 class MeetingTokenResponse(BaseModel):

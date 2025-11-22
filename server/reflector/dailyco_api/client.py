@@ -327,18 +327,8 @@ class DailyApiClient:
 
     async def get_recording(self, recording_id: NonEmptyString) -> RecordingResponse:
         """
+        https://docs.daily.co/reference/rest-api/recordings/get-recording-information
         Get recording metadata and status.
-
-        Reference: https://docs.daily.co/reference/rest-api/recordings
-
-        Args:
-            recording_id: Daily.co recording ID
-
-        Returns:
-            Recording metadata including status, duration, and S3 info
-
-        Raises:
-            httpx.HTTPStatusError: If API request fails
         """
         client = await self._get_client()
         response = await client.get(
@@ -348,6 +338,62 @@ class DailyApiClient:
 
         data = await self._handle_response(response, "get_recording")
         return RecordingResponse(**data)
+
+    async def list_recordings(
+        self,
+        room_name: NonEmptyString | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        limit: int = 100,
+    ) -> list[RecordingResponse]:
+        """
+        List recordings with optional filters.
+
+        Reference: https://docs.daily.co/reference/rest-api/recordings
+
+        Args:
+            room_name: Filter by room name
+            starting_after: Pagination cursor - recording ID to start after
+            ending_before: Pagination cursor - recording ID to end before
+            limit: Max results per page (default 100, max 100)
+
+        Note: starting_after/ending_before are pagination cursors (recording IDs),
+        NOT time filters. API returns recordings in reverse chronological order.
+        """
+        client = await self._get_client()
+
+        params = {"limit": limit}
+        if room_name:
+            params["room_name"] = room_name
+        if starting_after:
+            params["starting_after"] = starting_after
+        if ending_before:
+            params["ending_before"] = ending_before
+
+        response = await client.get(
+            f"{self.base_url}/recordings",
+            headers=self.headers,
+            params=params,
+        )
+
+        data = await self._handle_response(response, "list_recordings")
+
+        if not isinstance(data, dict) or "data" not in data:
+            logger.error(
+                "Daily.co API returned unexpected format for list_recordings",
+                data_type=type(data).__name__,
+                data_keys=list(data.keys()) if isinstance(data, dict) else None,
+                data_sample=str(data)[:500],
+                room_name=room_name,
+                operation="list_recordings",
+            )
+            raise httpx.HTTPStatusError(
+                message=f"Unexpected response format from list_recordings: {type(data).__name__}",
+                request=response.request,
+                response=response,
+            )
+
+        return [RecordingResponse(**r) for r in data["data"]]
 
     # ============================================================================
     # MEETING TOKENS
