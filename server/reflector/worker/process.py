@@ -392,6 +392,7 @@ async def poll_daily_recordings():
         return
 
     async with create_platform_client("daily") as daily_client:
+        # latest 100. TODO cursor-based state
         api_recordings = await daily_client.list_recordings()
 
     if not api_recordings:
