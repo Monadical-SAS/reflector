@@ -464,7 +464,9 @@ async def poll_daily_recordings():
 
 
 async def poll_daily_room_presence(meeting_id: str) -> None:
-    """Poll Daily.co room presence and reconcile with DB sessions."""
+    """Poll Daily.co room presence and reconcile with DB sessions. New presence is added, old presence is marked as closed.
+    Warning: Daily api returns only current state, so there could be missed presence updates, people who went and left the room quickly.
+    Therefore, set(presences) != set(recordings) even if everyone said something. This is not a problem but should be noted."""
 
     async with RedisAsyncLock(
         key=f"meeting_presence_poll:{meeting_id}",
