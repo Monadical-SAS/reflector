@@ -342,8 +342,8 @@ class DailyApiClient:
     async def list_recordings(
         self,
         room_name: NonEmptyString | None = None,
-        start_time: int | None = None,
-        end_time: int | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
         limit: int = 100,
     ) -> list[RecordingResponse]:
         """
@@ -351,16 +351,24 @@ class DailyApiClient:
 
         Reference: https://docs.daily.co/reference/rest-api/recordings
 
+        Args:
+            room_name: Filter by room name
+            starting_after: Pagination cursor - recording ID to start after
+            ending_before: Pagination cursor - recording ID to end before
+            limit: Max results per page (default 100, max 100)
+
+        Note: starting_after/ending_before are pagination cursors (recording IDs),
+        NOT time filters. API returns recordings in reverse chronological order.
         """
         client = await self._get_client()
 
         params = {"limit": limit}
         if room_name:
             params["room_name"] = room_name
-        if start_time:
-            params["starting_after_ts"] = start_time
-        if end_time:
-            params["ending_before_ts"] = end_time
+        if starting_after:
+            params["starting_after"] = starting_after
+        if ending_before:
+            params["ending_before"] = ending_before
 
         response = await client.get(
             f"{self.base_url}/recordings",

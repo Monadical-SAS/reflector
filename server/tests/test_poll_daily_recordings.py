@@ -71,10 +71,8 @@ async def test_poll_daily_recordings_uses_configurable_lookback_window(
     mock_settings,
     mock_recording_response,
 ):
-    """Test that poll_daily_recordings uses DAILY_RECORDING_POLL_LOOKBACK_HOURS setting."""
     # Configure custom lookback window
     mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
-    mock_settings.DAILY_RECORDING_POLL_LOOKBACK_HOURS = 48
 
     # Mock Daily.co API client
     mock_daily_client = AsyncMock()
@@ -120,7 +118,6 @@ async def test_poll_daily_recordings_default_lookback_window(
     """Test that poll_daily_recordings uses default 24-hour lookback when not configured."""
     # Use default lookback window
     mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
-    mock_settings.DAILY_RECORDING_POLL_LOOKBACK_HOURS = 24
 
     # Mock Daily.co API client
     mock_daily_client = AsyncMock()

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from urllib.parse import unquote
 
 import av
@@ -391,29 +391,12 @@ async def poll_daily_recordings():
         )
         return
 
-    now = datetime.now(timezone.utc)
-    lookback_hours = settings.DAILY_RECORDING_POLL_LOOKBACK_HOURS
-    start_time = int((now - timedelta(hours=lookback_hours)).timestamp())
-    end_time = int(now.timestamp())
-
     async with create_platform_client("daily") as daily_client:
-        try:
-            api_recordings = await daily_client.list_recordings(
-                start_time=start_time,
-                end_time=end_time,
-            )
-        except Exception as e:
-            logger.error(
-                "Failed to fetch recordings from Daily.co API",
-                error=str(e),
-                exc_info=True,
-            )
-            return
+        api_recordings = await daily_client.list_recordings()
 
     if not api_recordings:
         logger.debug(
             "No recordings found from Daily.co API",
-            lookback_hours=lookback_hours,
         )
         return
 

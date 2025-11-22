@@ -138,10 +138,6 @@ class Settings(BaseSettings):
     DAILY_WEBHOOK_UUID: str | None = (
         None  # Webhook UUID for this environment. Not used by production code
     )
-    DAILY_RECORDING_POLL_LOOKBACK_HOURS: int = (
-        24  # Lookback window for polling recordings
-    )
-
     # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
 

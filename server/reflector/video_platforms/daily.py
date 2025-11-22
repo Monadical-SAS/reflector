@@ -133,17 +133,16 @@ class DailyClient(VideoPlatformClient):
 
     async def list_recordings(
         self,
-        room_name: NonEmptyString,
-        start_time: datetime,
-        end_time: datetime | None = None,
+        room_name: NonEmptyString | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        limit: int = 100,
     ) -> list[RecordingResponse]:
-        start_ts = int(start_time.timestamp())
-        end_ts = int(end_time.timestamp()) if end_time else None
-
         return await self._api_client.list_recordings(
             room_name=room_name,
-            start_time=start_ts,
-            end_time=end_ts,
+            starting_after=starting_after,
+            ending_before=ending_before,
+            limit=limit,
         )
 
     async def get_recording_status(
