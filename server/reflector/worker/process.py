@@ -310,9 +310,8 @@ async def _process_multitrack_recording_inner(
                         for p in payload.data:
                             pid = p.participant_id
                             assert (
-                                pid is not None,
-                                "panic! participant id cannot be None",
-                            )
+                                pid is not None
+                            ), "panic! participant id cannot be None"
                             name = p.user_name
                             user_id = p.user_id
                             if name:
@@ -326,18 +325,17 @@ async def _process_multitrack_recording_inner(
                             mtg_session_id=mtg_session_id,
                             exc_info=True,
                         )
+                else:
+                    logger.warning(
+                        "No mtgSessionId found for recording; participant names may be generic",
+                        recording_id=recording_id,
+                    )
             except Exception as e:
                 logger.warning(
                     "Failed to fetch Daily recording details",
                     error=str(e),
                     recording_id=recording_id,
                     exc_info=True,
-                )
-
-            else:
-                logger.warning(
-                    "No mtgSessionId found for recording; participant names may be generic",
-                    recording_id=recording_id,
                 )
 
             for idx, key in enumerate(track_keys):
