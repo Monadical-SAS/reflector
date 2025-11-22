@@ -122,9 +122,6 @@ class WherebyClient(VideoPlatformClient):
                 for s in results
             ]
 
-    async def delete_room(self, room_name: str) -> bool:
-        return True
-
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         async with httpx.AsyncClient() as client:
             with open(logo_path, "rb") as f:

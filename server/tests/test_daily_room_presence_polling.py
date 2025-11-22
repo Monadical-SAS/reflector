@@ -66,6 +66,7 @@ def mock_api_participants():
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -77,10 +78,13 @@ async def test_poll_presence_adds_missing_sessions(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
     mock_api_participants,
 ):
     """Test that polling creates sessions for participants not in DB."""
+    mock_get_by_id.return_value = mock_meeting
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(return_value=mock_api_participants)
     mock_create_client.return_value.__aenter__ = AsyncMock(
@@ -91,7 +95,7 @@ async def test_poll_presence_adds_missing_sessions(
     mock_get_sessions.return_value = {}
     mock_batch_upsert.return_value = None
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
     assert mock_batch_upsert.call_count == 1
     sessions = mock_batch_upsert.call_args.args[0]
@@ -101,6 +105,7 @@ async def test_poll_presence_adds_missing_sessions(
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -116,10 +121,13 @@ async def test_poll_presence_closes_stale_sessions(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
     mock_api_participants,
 ):
     """Test that polling closes sessions for participants no longer in room."""
+    mock_get_by_id.return_value = mock_meeting
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(return_value=mock_api_participants)
     mock_create_client.return_value.__aenter__ = AsyncMock(
@@ -151,7 +159,7 @@ async def test_poll_presence_closes_stale_sessions(
         ),
     }
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
     assert mock_batch_close.call_count == 1
     composite_ids = mock_batch_close.call_args.args[0]
@@ -162,6 +170,7 @@ async def test_poll_presence_closes_stale_sessions(
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -175,10 +184,15 @@ async def test_poll_presence_updates_num_clients(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
     mock_api_participants,
 ):
     """Test that polling updates num_clients when different from API."""
+    meeting_with_wrong_count = mock_meeting
+    meeting_with_wrong_count.num_clients = 5
+    mock_get_by_id.return_value = meeting_with_wrong_count
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(return_value=mock_api_participants)
     mock_create_client.return_value.__aenter__ = AsyncMock(
@@ -189,16 +203,14 @@ async def test_poll_presence_updates_num_clients(
     mock_get_sessions.return_value = {}
     mock_batch_upsert.return_value = None
 
-    meeting_with_wrong_count = mock_meeting
-    meeting_with_wrong_count.num_clients = 5
-
-    await poll_daily_room_presence(meeting_with_wrong_count)
+    await poll_daily_room_presence(meeting_with_wrong_count.id)
 
     assert mock_update_meeting.call_count == 1
     assert mock_update_meeting.call_args.kwargs["num_clients"] == 2
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -206,10 +218,13 @@ async def test_poll_presence_updates_num_clients(
 async def test_poll_presence_no_changes_if_synced(
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
     mock_api_participants,
 ):
     """Test that polling skips updates when DB already synced with API."""
+    mock_get_by_id.return_value = mock_meeting
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(return_value=mock_api_participants)
     mock_create_client.return_value.__aenter__ = AsyncMock(
@@ -241,10 +256,11 @@ async def test_poll_presence_no_changes_if_synced(
         ),
     }
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -260,9 +276,12 @@ async def test_poll_presence_mixed_add_and_remove(
     mock_batch_upsert,
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
 ):
     """Test that polling handles simultaneous joins and leaves in single poll."""
+    mock_get_by_id.return_value = mock_meeting
+
     now = datetime.now(timezone.utc)
 
     # API returns: participant-1 and participant-3 (new)
@@ -322,7 +341,7 @@ async def test_poll_presence_mixed_add_and_remove(
     mock_batch_upsert.return_value = None
     mock_batch_close.return_value = None
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
     # Verify participant-3 was added (missing in DB)
     assert mock_batch_upsert.call_count == 1
@@ -339,12 +358,16 @@ async def test_poll_presence_mixed_add_and_remove(
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 async def test_poll_presence_handles_api_error(
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
 ):
     """Test that polling handles Daily.co API errors gracefully."""
+    mock_get_by_id.return_value = mock_meeting
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(side_effect=Exception("API error"))
     mock_create_client.return_value.__aenter__ = AsyncMock(
@@ -352,10 +375,11 @@ async def test_poll_presence_handles_api_error(
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
 
 @pytest.mark.asyncio
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 @patch(
     "reflector.worker.process.daily_participant_sessions_controller.get_all_sessions_for_meeting"
@@ -367,9 +391,12 @@ async def test_poll_presence_closes_all_when_room_empty(
     mock_batch_close,
     mock_get_sessions,
     mock_create_client,
+    mock_get_by_id,
     mock_meeting,
 ):
     """Test that polling closes all sessions when room is empty."""
+    mock_get_by_id.return_value = mock_meeting
+
     mock_daily_client = AsyncMock()
     mock_daily_client.get_room_presence = AsyncMock(
         return_value=RoomPresenceResponse(total_count=0, data=[])
@@ -394,7 +421,7 @@ async def test_poll_presence_closes_all_when_room_empty(
         ),
     }
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
     assert mock_batch_close.call_count == 1
     composite_ids = mock_batch_close.call_args.args[0]
@@ -406,13 +433,17 @@ async def test_poll_presence_closes_all_when_room_empty(
 
 @pytest.mark.asyncio
 @patch("reflector.worker.process.RedisAsyncLock")
+@patch("reflector.worker.process.meetings_controller.get_by_id")
 @patch("reflector.worker.process.create_platform_client")
 async def test_poll_presence_skips_if_locked(
     mock_create_client,
+    mock_get_by_id,
     mock_redis_lock_class,
     mock_meeting,
 ):
     """Test that concurrent polling is prevented by Redis lock."""
+    mock_get_by_id.return_value = mock_meeting
+
     # Mock the RedisAsyncLock to simulate lock not acquired
     mock_lock_instance = AsyncMock()
     mock_lock_instance.acquired = False  # Lock not acquired
@@ -427,7 +458,7 @@ async def test_poll_presence_skips_if_locked(
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
 
-    await poll_daily_room_presence(mock_meeting)
+    await poll_daily_room_presence(mock_meeting.id)
 
     # Verify RedisAsyncLock was instantiated
     assert mock_redis_lock_class.call_count == 1

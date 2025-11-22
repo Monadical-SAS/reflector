@@ -199,12 +199,7 @@ class RecordingErrorPayload(BaseModel):
     )
 
 
-# Typed webhook event classes (discriminated union)
-
-
 class ParticipantJoinedEvent(BaseModel):
-    """Typed event for participant.joined webhook."""
-
     version: NonEmptyString
     type: Literal["participant.joined"]
     id: NonEmptyString
@@ -217,8 +212,6 @@ class ParticipantJoinedEvent(BaseModel):
 
 
 class ParticipantLeftEvent(BaseModel):
-    """Typed event for participant.left webhook."""
-
     version: NonEmptyString
     type: Literal["participant.left"]
     id: NonEmptyString
@@ -231,8 +224,6 @@ class ParticipantLeftEvent(BaseModel):
 
 
 class RecordingStartedEvent(BaseModel):
-    """Typed event for recording.started webhook."""
-
     version: NonEmptyString
     type: Literal["recording.started"]
     id: NonEmptyString
@@ -245,8 +236,6 @@ class RecordingStartedEvent(BaseModel):
 
 
 class RecordingReadyEvent(BaseModel):
-    """Typed event for recording.ready-to-download webhook."""
-
     version: NonEmptyString
     type: Literal["recording.ready-to-download"]
     id: NonEmptyString
@@ -259,8 +248,6 @@ class RecordingReadyEvent(BaseModel):
 
 
 class RecordingErrorEvent(BaseModel):
-    """Typed event for recording.error webhook."""
-
     version: NonEmptyString
     type: Literal["recording.error"]
     id: NonEmptyString
@@ -272,7 +259,6 @@ class RecordingErrorEvent(BaseModel):
     )
 
 
-# Discriminated union of all webhook events
 DailyWebhookEventUnion = Annotated[
     Union[
         ParticipantJoinedEvent,

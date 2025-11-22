@@ -327,18 +327,8 @@ class DailyApiClient:
 
     async def get_recording(self, recording_id: NonEmptyString) -> RecordingResponse:
         """
+        https://docs.daily.co/reference/rest-api/recordings/get-recording-information
         Get recording metadata and status.
-
-        Reference: https://docs.daily.co/reference/rest-api/recordings
-
-        Args:
-            recording_id: Daily.co recording ID
-
-        Returns:
-            Recording metadata including status, duration, and S3 info
-
-        Raises:
-            httpx.HTTPStatusError: If API request fails
         """
         client = await self._get_client()
         response = await client.get(
@@ -347,17 +337,7 @@ class DailyApiClient:
         )
 
         data = await self._handle_response(response, "get_recording")
-        try:
-            return RecordingResponse(**data)
-        except Exception as e:
-            logger.error(
-                "Failed to parse Daily.co recording response",
-                recording_id=recording_id,
-                error=str(e),
-                response_keys=list(data.keys()) if isinstance(data, dict) else None,
-                operation="get_recording",
-            )
-            raise
+        return RecordingResponse(**data)
 
     async def list_recordings(
         self,
@@ -371,21 +351,9 @@ class DailyApiClient:
 
         Reference: https://docs.daily.co/reference/rest-api/recordings
 
-        Args:
-            room_name: Filter recordings by room name
-            start_time: Filter recordings after this Unix timestamp
-            end_time: Filter recordings before this Unix timestamp
-            limit: Maximum number of recordings to return (default 100)
-
-        Returns:
-            List of recording metadata
-
-        Raises:
-            httpx.HTTPStatusError: If API request fails
         """
         client = await self._get_client()
 
-        # Build query parameters
         params = {"limit": limit}
         if room_name:
             params["room_name"] = room_name

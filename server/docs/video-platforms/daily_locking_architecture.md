@@ -1,72 +1,58 @@
-# Daily.co Event-Driven Polling Architecture
+# Daily.co Task-Based Polling Architecture
 
 ## Overview
 
-This document details the **event-driven polling architecture** for Daily.co participant presence tracking.
+This document details the **task-based polling architecture** for Daily.co participant presence tracking.
 
-**Core Principle:** Participant webhooks don't write to DB, they only signal "this meeting needs polling".
+**Core Principle:** Participant webhooks don't write to DB, they queue Celery tasks for polling.
 
-**Note on Scope:** This architecture currently applies to **participant events only** (join/left). Recording webhooks queue tasks directly.
+**Note on Scope:** This architecture currently applies to **participant events only** (join/left). Recording webhooks also queue tasks directly.
 
 **Architecture:**
-- **Single Writer:** Only polling updates DB (eliminates race conditions)
-- **Event Triggers:** Webhooks + reconciliation timer set "needs poll" flags
-- **Event Coalescing:** Multiple webhooks → single poll covers all changes
-- **Fast Response:** Participant webhooks just set Redis flag and return immediately
+- **Single Writer:** Only polling task updates DB (eliminates race conditions)
+- **Event Triggers:** Webhooks + reconciliation timer queue Celery tasks
+- **Task Queue:** Celery manages task distribution to workers
+- **Fast Response:** Participant webhooks queue task and return immediately
 - **Resilience:** Lost webhooks caught by 30s reconciliation timer
+- **Duplicate Protection:** Redis locks prevent concurrent execution for same meeting
 
 **All scenarios are illustrated with Mermaid sequence diagrams showing:**
-- Event flow (webhook → flag → poll → DB)
-- Event coalescing (multiple triggers → single poll)
+- Event flow (webhook → queue task → poll → DB)
+- Lock patterns for duplicate protection
 - Reconciliation fallback mechanism
-- Lock patterns for concurrent workers
+- Task execution behavior
 
-## Implicit State Machine
+## Design Trade-offs
 
-The architecture creates an **implicit state machine** with three states:
+**Task Queue Overhead:**
+- Multiple webhooks for same meeting → multiple tasks queued
+- Redis lock ensures only one task actually polls
+- Other tasks skip quickly when lock held
+- Reconciliation queues tasks for ALL active meetings every 30s
 
-```
-States:
-1. IDLE         - No flag exists (default state)
-2. NEEDS_POLL   - Flag exists (webhook/reconciliation set it)
-3. POLLING      - Flag claimed, poll in progress (transient, not observable in Redis)
-
-Transitions:
-IDLE → NEEDS_POLL:       Webhook or timer sets flag
-NEEDS_POLL → POLLING:    Worker atomically claims flag (GETDEL)
-POLLING → IDLE:          Poll completes (no explicit action needed)
-```
-
-**Design Trade-off:** Reconciliation runs unconditionally every 30s, setting flags for ALL active Daily.co meetings regardless of recent polls. This causes redundant API calls but:
-- Keeps implementation simple (no timestamp tracking)
-- Guarantees eventual consistency within 30s
-- Redundant polls are safe (idempotent operations)
-- Acceptable overhead for active meetings
+**Benefits:**
+- Simple architecture (standard Celery pattern)
+- No custom flag management required
+- Observable via Celery monitoring tools
+- Eventual consistency within 30s guaranteed
 
 ## Redis Keys Architecture
 
-### 1. Poll Request Flag
-- **Key Pattern:** `meeting_poll_requested:{meeting_id}`
-- **Value:** `"1"` (presence indicates poll needed)
-- **TTL:** None (flag cleared by atomic GETDEL, reconciliation re-sets every 30s)
-- **Purpose:** Signal that meeting needs polling
-- **Set by:** Participant webhooks OR reconciliation timer (idempotent)
-- **Cleared by:** Poll worker (atomic GETDEL)
-
-### 2. Poll Execution Lock
+### 1. Poll Execution Lock
 - **Key Pattern:** `meeting_presence_poll:{meeting_id}`
 - **Timeout:** 120s
 - **Auto-extend:** Every 30s
-- **Purpose:** Prevent concurrent polls by different workers
+- **Purpose:** Prevent concurrent polls by different workers (duplicate task protection)
 - **Pattern:** Distributed lock with automatic TTL extension
+- **Used by:** `poll_daily_room_presence` Celery task
 
-### 3. Recording Processing Lock
+### 2. Recording Processing Lock
 - **Key Pattern:** `recording:{recording_id}`
 - **Timeout:** 600s (10 minutes)
 - **Auto-extend:** Every 60s
 - **Purpose:** Prevent duplicate transcription work for recording webhooks
 
-### 4. Meeting Process Lock
+### 3. Meeting Process Lock
 - **Key Pattern:** `meeting_process_lock:{meeting_id}`
 - **Timeout:** 120s
 - **Auto-extend:** Every 30s
@@ -523,26 +509,26 @@ sequenceDiagram
 
 ## Key Principles
 
-1. **Single Writer** - Only poll worker writes to DB (eliminates all race conditions)
-2. **Event Triggers** - Participant webhooks + reconciliation timer set poll flags
-3. **Fast Participant Webhooks** - Just SET flag in Redis, return immediately
-4. **Atomic Flag Operations** - `GETDEL` ensures exactly-once processing
-5. **Event Coalescing** - Multiple webhooks → single poll covers all changes
-6. **Unconditional Reconciliation** - Timer sets flags for ALL active meetings every 30s (no timestamp tracking)
+1. **Single Writer** - Only poll task writes to DB (eliminates all race conditions)
+2. **Event Triggers** - Participant webhooks + reconciliation timer queue Celery tasks
+3. **Fast Participant Webhooks** - Queue task and return immediately (<1ms response)
+4. **Lock-Based Deduplication** - Redis locks prevent concurrent execution for same meeting
+5. **Task Queue Flexibility** - Celery handles task distribution and retry
+6. **Unconditional Reconciliation** - Timer queues tasks for ALL active meetings every 30s
 7. **DB as Source of Truth** - API state reconciled into DB, `num_clients` derived from final DB state
-8. **Lock for Coordination** - Prevents concurrent polls, not webhook races
+8. **Simple Architecture** - Standard Celery pattern, no custom flag system
 
 ## Architecture Constraints
 
 ### Current Limitations
 
-1. **Redundant Polls:** Reconciliation triggers polls every 30s regardless of recent webhook activity
-2. **No Rate Limiting:** High-traffic meetings may generate frequent API calls
-3. **Participant Events Only:** Recording webhooks still queue tasks directly (not using flag pattern)
+1. **Task Queue Overhead:** Multiple webhooks for same meeting queue multiple tasks (lock prevents duplicate work)
+2. **No Rate Limiting:** High-traffic meetings may generate many queued tasks
+3. **Task Execution Delay:** Tasks may not execute immediately if queue is backlogged
 
 ### Operational Requirements
 
-- **Poll worker must run continuously** - 1-5s loop interval
-- **Reconciliation timer must run continuously** - 30s-5m interval
-- **Redis must be available** - No fallback mechanism
-- **Idempotent operations required** - Polls may execute redundantly
+- **Celery workers must run continuously** - Process queued tasks
+- **Celery beat must run continuously** - Triggers reconciliation every 30s
+- **Redis must be available** - For task queue and locks
+- **Idempotent operations required** - Tasks may queue redundantly (locks protect DB writes)

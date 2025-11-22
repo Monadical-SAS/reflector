@@ -180,12 +180,8 @@ class DailyParticipantSessionController:
     ) -> None:
         """Upsert multiple sessions in single query.
 
-        Uses ON CONFLICT for idempotency. Updates user_name on conflict
-        (participant may change display name between sessions).
+        Uses ON CONFLICT for idempotency. Updates user_name on conflict since they may change it during a meeting.
 
-        IMPORTANT: Does NOT overwrite left_at if already set. Once a session
-        is closed, it stays closed. This prevents polling from resurrecting
-        closed sessions with stale data.
         """
         if not sessions:
             return
@@ -195,16 +191,10 @@ class DailyParticipantSessionController:
         query = query.on_conflict_do_update(
             index_elements=["id"],
             set_={
-                # CRITICAL: Preserve existing left_at to prevent race conditions
-                # Race condition scenario:
-                # 1. T0: Participant leaves, webhook sets left_at=T0
-                # 2. T1: Polling fetches room presence (stale API data shows participant still present)
-                # 3. T2: Polling batch upserts sessions with left_at=NULL
-                # 4. Without COALESCE: left_at overwritten to NULL (participant "resurrected")
-                # 5. With COALESCE: existing left_at=T0 preserved (correct state maintained)
+                # Preserve existing left_at to prevent race conditions
                 "left_at": sa.func.coalesce(
-                    daily_participant_sessions.c.left_at,  # Existing value (prefer this)
-                    query.excluded.left_at,  # New value from upsert
+                    daily_participant_sessions.c.left_at,
+                    query.excluded.left_at,
                 ),
                 "user_name": query.excluded.user_name,
             },
@@ -217,6 +207,8 @@ class DailyParticipantSessionController:
         """Mark multiple sessions as left in single query.
 
         Only updates sessions where left_at is NULL (protects already-closed sessions).
+
+        Left_at mismatch for existing sessions is ignored, assumed to be not important issue if ever happens.
         """
         if not session_ids:
             return

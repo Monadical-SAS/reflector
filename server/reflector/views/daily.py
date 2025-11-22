@@ -15,9 +15,11 @@ from reflector.dailyco_api import (
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger as _logger
 from reflector.settings import settings
-from reflector.utils.daily_poll import request_meeting_poll
 from reflector.video_platforms.factory import create_platform_client
-from reflector.worker.process import process_multitrack_recording
+from reflector.worker.process import (
+    poll_daily_room_presence_task,
+    process_multitrack_recording,
+)
 
 router = APIRouter()
 
@@ -97,14 +99,14 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 
-async def _request_poll_for_room(
+async def _queue_poll_for_room(
     room_name: str | None,
     event_type: str,
     user_id: str | None,
     session_id: str | None,
     **log_kwargs,
 ) -> None:
-    """Request poll for room by name, handling missing room/meeting cases."""
+    """Queue poll task for room by name, handling missing room/meeting cases."""
     if not room_name:
         logger.warning(f"{event_type}: no room in payload")
         return
@@ -114,10 +116,10 @@ async def _request_poll_for_room(
         logger.warning(f"{event_type}: meeting not found", room_name=room_name)
         return
 
-    await request_meeting_poll(meeting.id)
+    poll_daily_room_presence_task.delay(meeting.id)
 
     logger.info(
-        f"{event_type.replace('.', ' ').title()} - poll requested",
+        f"{event_type.replace('.', ' ').title()} - poll queued",
         meeting_id=meeting.id,
         room_name=room_name,
         user_id=user_id,
@@ -127,8 +129,8 @@ async def _request_poll_for_room(
 
 
 async def _handle_participant_joined(event: ParticipantJoinedEvent):
-    """Request poll for presence reconciliation."""
-    await _request_poll_for_room(
+    """Queue poll task for presence reconciliation."""
+    await _queue_poll_for_room(
         event.payload.room_name,
         "participant.joined",
         event.payload.user_id,
@@ -138,8 +140,8 @@ async def _handle_participant_joined(event: ParticipantJoinedEvent):
 
 
 async def _handle_participant_left(event: ParticipantLeftEvent):
-    """Request poll for presence reconciliation."""
-    await _request_poll_for_room(
+    """Queue poll task for presence reconciliation."""
+    await _queue_poll_for_room(
         event.payload.room_name,
         "participant.left",
         event.payload.user_id,

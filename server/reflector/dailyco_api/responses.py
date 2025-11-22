@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from reflector.dailyco_api.webhooks import DailyTrack
 from reflector.utils.string import NonEmptyString
 
+# not documented in daily; we fill it according to observations
 RecordingStatus = Literal["in-progress", "finished"]
 
 
@@ -142,6 +143,10 @@ class RecordingResponse(BaseModel):
     tracks: list[DailyTrack] = Field(
         default_factory=list,
         description="Track list for raw-tracks recordings (always array, never null)",
+    )
+    # this is not a mistake but a deliberate Daily.co naming decision
+    mtgSessionId: NonEmptyString | None = Field(
+        None, description="Meeting session identifier (may be missing)"
     )
 
 

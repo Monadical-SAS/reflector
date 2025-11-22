@@ -11,6 +11,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 
+from reflector.dailyco_api import MeetingParticipantsResponse
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
@@ -37,11 +38,8 @@ from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import (
     DailyRoomName,
     extract_base_room_name,
+    parse_daily_recording_filename,
     recording_lock_key,
-)
-from reflector.utils.daily_poll import (
-    request_meeting_poll,
-    try_claim_meeting_poll,
 )
 from reflector.video_platforms.factory import create_platform_client
 from reflector.video_platforms.whereby_utils import (
@@ -301,10 +299,33 @@ async def _process_multitrack_recording_inner(
             id_to_name = {}
             id_to_user_id = {}
 
-            mtg_session_id = None
             try:
                 rec_details = await daily_client.get_recording(recording_id)
-                mtg_session_id = rec_details.get("mtgSessionId")
+                mtg_session_id = rec_details.mtgSessionId
+                if mtg_session_id:
+                    try:
+                        payload: MeetingParticipantsResponse = (
+                            await daily_client.get_meeting_participants(mtg_session_id)
+                        )
+                        for p in payload.data:
+                            pid = p.participant_id
+                            assert (
+                                pid is not None,
+                                "panic! participant id cannot be None",
+                            )
+                            name = p.user_name
+                            user_id = p.user_id
+                            if name:
+                                id_to_name[pid] = name
+                            if user_id:
+                                id_to_user_id[pid] = user_id
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to fetch Daily meeting participants",
+                            error=str(e),
+                            mtg_session_id=mtg_session_id,
+                            exc_info=True,
+                        )
             except Exception as e:
                 logger.warning(
                     "Failed to fetch Daily recording details",
@@ -313,26 +334,6 @@ async def _process_multitrack_recording_inner(
                     exc_info=True,
                 )
 
-            if mtg_session_id:
-                try:
-                    payload = await daily_client.get_meeting_participants(
-                        mtg_session_id
-                    )
-                    for p in payload.get("data", []):
-                        pid = p.get("participant_id")
-                        name = p.get("user_name")
-                        user_id = p.get("user_id")
-                        if pid and name:
-                            id_to_name[pid] = name
-                        if pid and user_id:
-                            id_to_user_id[pid] = user_id
-                except Exception as e:
-                    logger.warning(
-                        "Failed to fetch Daily meeting participants",
-                        error=str(e),
-                        mtg_session_id=mtg_session_id,
-                        exc_info=True,
-                    )
             else:
                 logger.warning(
                     "No mtgSessionId found for recording; participant names may be generic",
@@ -340,9 +341,17 @@ async def _process_multitrack_recording_inner(
                 )
 
             for idx, key in enumerate(track_keys):
-                base = os.path.basename(key)
-                m = re.search(r"\d{13,}-([0-9a-fA-F-]{36})-cam-audio-", base)
-                participant_id = m.group(1) if m else None
+                try:
+                    parsed = parse_daily_recording_filename(key)
+                    participant_id = parsed.participant_id
+                except ValueError as e:
+                    logger.error(
+                        "Failed to parse Daily recording filename",
+                        error=str(e),
+                        key=key,
+                        exc_info=True,
+                    )
+                    continue
 
                 default_name = f"Speaker {idx}"
                 name = id_to_name.get(participant_id, default_name)
@@ -409,7 +418,7 @@ async def poll_daily_recordings():
         return
 
     recording_ids = [rec.id for rec in api_recordings]
-    existing_recordings = await recordings_controller.get_by_ids_batch(recording_ids)
+    existing_recordings = await recordings_controller.get_by_ids(recording_ids)
     existing_ids = {rec.id for rec in existing_recordings}
 
     missing_recordings = [rec for rec in api_recordings if rec.id not in existing_ids]
@@ -470,18 +479,25 @@ async def poll_daily_recordings():
         )
 
 
-async def poll_daily_room_presence(meeting: "Meeting") -> None:  # noqa: F821
+async def poll_daily_room_presence(meeting_id: str) -> None:
     """Poll Daily.co room presence and reconcile with DB sessions."""
 
     async with RedisAsyncLock(
-        key=f"meeting_presence_poll:{meeting.id}",
+        key=f"meeting_presence_poll:{meeting_id}",
         timeout=120,
         extend_interval=30,
         skip_if_locked=True,
         blocking=False,
     ) as lock:
         if not lock.acquired:
-            logger.debug("Concurrent poll skipped", meeting_id=meeting.id)
+            logger.debug(
+                "Concurrent poll skipped (duplicate task)", meeting_id=meeting_id
+            )
+            return
+
+        meeting = await meetings_controller.get_by_id(meeting_id)
+        if not meeting:
+            logger.warning("Meeting not found", meeting_id=meeting_id)
             return
 
         async with create_platform_client("daily") as daily_client:
@@ -559,6 +575,16 @@ async def poll_daily_room_presence(meeting: "Meeting") -> None:  # noqa: F821
                 old_value=meeting.num_clients,
                 new_value=final_active_count,
             )
+
+
+@shared_task
+@asynctask
+async def poll_daily_room_presence_task(meeting_id: str) -> None:
+    """Celery task wrapper for poll_daily_room_presence.
+
+    Queued by webhooks or reconciliation timer.
+    """
+    await poll_daily_room_presence(meeting_id)
 
 
 @shared_task
@@ -769,59 +795,29 @@ async def reprocess_failed_recordings():
 
 @shared_task
 @asynctask
-async def process_daily_poll_flags() -> None:
-    """Process Daily.co poll flags (claims flags, executes reconciliation)."""
-    try:
-        active_meetings = await meetings_controller.get_all_active(platform="daily")
-        processed = 0
-
-        for meeting in active_meetings:
-            try:
-                claimed = await try_claim_meeting_poll(meeting.id)
-
-                if claimed:
-                    logger.debug("Poll claimed", meeting_id=meeting.id)
-                    await poll_daily_room_presence(meeting)
-                    processed += 1
-            except Exception as e:
-                logger.error(
-                    "Failed to process poll for meeting",
-                    meeting_id=meeting.id,
-                    error=str(e),
-                    exc_info=True,
-                )
-
-        if processed > 0:
-            logger.debug("Processed Daily poll flags", count=processed)
-
-    except Exception as e:
-        logger.error("Poll flag processing failed", error=str(e), exc_info=True)
-
-
-@shared_task
-@asynctask
 async def trigger_daily_reconciliation() -> None:
-    """Set poll flags for all Daily.co meetings (eventual consistency)."""
+    """Daily.co pull"""
     try:
         active_meetings = await meetings_controller.get_all_active(platform="daily")
-        triggered_count = 0
+        queued_count = 0
 
         for meeting in active_meetings:
             try:
-                await request_meeting_poll(meeting.id)
-                triggered_count += 1
+                poll_daily_room_presence_task.delay(meeting.id)
+                queued_count += 1
             except Exception as e:
                 logger.error(
-                    "Failed to set reconciliation flag",
+                    "Failed to queue reconciliation poll",
                     meeting_id=meeting.id,
                     error=str(e),
                     exc_info=True,
                 )
+                raise
 
-        if triggered_count > 0:
+        if queued_count > 0:
             logger.debug(
-                "Reconciliation flags set",
-                count=triggered_count,
+                "Reconciliation polls queued",
+                count=queued_count,
             )
 
     except Exception as e:

@@ -19,6 +19,7 @@ from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.storage import get_dailyco_storage
 
+from ..dailyco_api.responses import RecordingStatus
 from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
@@ -136,18 +137,6 @@ class DailyClient(VideoPlatformClient):
         start_time: datetime,
         end_time: datetime | None = None,
     ) -> list[RecordingResponse]:
-        """List recordings for room in time range.
-
-        Used by polling to discover recordings.
-
-        Args:
-            room_name: Room name to filter by
-            start_time: Start of time range (datetime)
-            end_time: End of time range (datetime), optional
-
-        Returns:
-            List of recordings with status ("in-progress", "ready", "failed")
-        """
         start_ts = int(start_time.timestamp())
         end_ts = int(end_time.timestamp()) if end_time else None
 
@@ -157,24 +146,11 @@ class DailyClient(VideoPlatformClient):
             end_time=end_ts,
         )
 
-    async def get_recording_status(self, recording_id: NonEmptyString) -> str:
-        """Check single recording status.
-
-        Used to verify webhook state.
-
-        Args:
-            recording_id: Recording ID to check
-
-        Returns:
-            Recording status: "in-progress", "finished", or "failed"
-        """
+    async def get_recording_status(
+        self, recording_id: NonEmptyString
+    ) -> RecordingStatus:
         recording = await self.get_recording(recording_id)
         return recording.status
-
-    async def delete_room(self, room_name: str) -> bool:
-        """Delete a room (idempotent - succeeds even if room doesn't exist)."""
-        await self._api_client.delete_room(room_name)
-        return True
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         return True

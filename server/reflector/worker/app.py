@@ -42,13 +42,9 @@ else:
             "task": "reflector.worker.process.poll_daily_recordings",
             "schedule": 180.0,  # Every 3 minutes (configurable lookback window)
         },
-        "process_daily_poll_flags": {
-            "task": "reflector.worker.process.process_daily_poll_flags",
-            "schedule": 1.0,  # Every second (checks for poll flags)
-        },
         "trigger_daily_reconciliation": {
             "task": "reflector.worker.process.trigger_daily_reconciliation",
-            "schedule": 30.0,  # Every 30 seconds (eventual consistency)
+            "schedule": 30.0,  # Every 30 seconds (queues poll tasks for all active meetings)
         },
         "sync_all_ics_calendars": {
             "task": "reflector.worker.ics_sync.sync_all_ics_calendars",
