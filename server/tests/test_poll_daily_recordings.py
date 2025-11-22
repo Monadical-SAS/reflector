@@ -1,4 +1,4 @@
-"""Tests for poll_daily_recordings configurable lookback window."""
+"""Tests for poll_daily_recordings task."""
 
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
@@ -64,14 +64,14 @@ def mock_recording_response():
 @patch("reflector.worker.process.create_platform_client")
 @patch("reflector.worker.process.recordings_controller.get_by_ids")
 @patch("reflector.worker.process.process_multitrack_recording.delay")
-async def test_poll_daily_recordings_uses_configurable_lookback_window(
+async def test_poll_daily_recordings_processes_missing_recordings(
     mock_process_delay,
     mock_get_recordings,
     mock_create_client,
     mock_settings,
     mock_recording_response,
 ):
-    # Configure custom lookback window
+    """Test that poll_daily_recordings queues processing for recordings not in DB."""
     mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
 
     # Mock Daily.co API client
@@ -89,18 +89,28 @@ async def test_poll_daily_recordings_uses_configurable_lookback_window(
     poll_fn = _get_poll_daily_recordings_fn()
     await poll_fn()
 
-    # Verify Daily.co API was called with correct time range
+    # Verify Daily.co API was called without time parameters (uses default limit=100)
     assert mock_daily_client.list_recordings.call_count == 1
     call_kwargs = mock_daily_client.list_recordings.call_args.kwargs
 
-    # Calculate expected time range
-    now = datetime.now(timezone.utc)
-    expected_start = int((now - timedelta(hours=48)).timestamp())
-    expected_end = int(now.timestamp())
+    # Should not have time-based parameters (uses cursor-based pagination)
+    assert "start_time" not in call_kwargs
+    assert "end_time" not in call_kwargs
 
-    # Allow 1 second tolerance for execution time
-    assert abs(call_kwargs["start_time"] - expected_start) <= 1
-    assert abs(call_kwargs["end_time"] - expected_end) <= 1
+    # Verify processing was queued for both missing recordings
+    assert mock_process_delay.call_count == 2
+
+    # Verify the processing calls have correct parameters
+    calls = mock_process_delay.call_args_list
+    assert calls[0].kwargs["bucket_name"] == "test-bucket"
+    assert calls[0].kwargs["recording_id"] == "rec-123"
+    assert calls[0].kwargs["daily_room_name"] == "test-room-20251118120000"
+    assert calls[0].kwargs["track_keys"] == ["track1.webm", "track2.webm"]
+
+    assert calls[1].kwargs["bucket_name"] == "test-bucket"
+    assert calls[1].kwargs["recording_id"] == "rec-456"
+    assert calls[1].kwargs["daily_room_name"] == "test-room-20251118130000"
+    assert calls[1].kwargs["track_keys"] == ["track1.webm"]
 
 
 @pytest.mark.asyncio
@@ -108,15 +118,14 @@ async def test_poll_daily_recordings_uses_configurable_lookback_window(
 @patch("reflector.worker.process.create_platform_client")
 @patch("reflector.worker.process.recordings_controller.get_by_ids")
 @patch("reflector.worker.process.process_multitrack_recording.delay")
-async def test_poll_daily_recordings_default_lookback_window(
+async def test_poll_daily_recordings_skips_existing_recordings(
     mock_process_delay,
     mock_get_recordings,
     mock_create_client,
     mock_settings,
     mock_recording_response,
 ):
-    """Test that poll_daily_recordings uses default 24-hour lookback when not configured."""
-    # Use default lookback window
+    """Test that poll_daily_recordings skips recordings already in DB."""
     mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
 
     # Mock Daily.co API client
@@ -127,24 +136,35 @@ async def test_poll_daily_recordings_default_lookback_window(
     )
     mock_create_client.return_value.__aexit__ = AsyncMock()
 
-    # Mock DB controller - no existing recordings
-    mock_get_recordings.return_value = []
+    # Mock DB controller - all recordings already exist
+    from reflector.db.recordings import Recording
+
+    mock_get_recordings.return_value = [
+        Recording(
+            id="rec-123",
+            bucket_name="test-bucket",
+            object_key="",
+            recorded_at=datetime.now(timezone.utc),
+            meeting_id="meeting-1",
+        ),
+        Recording(
+            id="rec-456",
+            bucket_name="test-bucket",
+            object_key="",
+            recorded_at=datetime.now(timezone.utc),
+            meeting_id="meeting-1",
+        ),
+    ]
 
     # Execute - call the unwrapped async function
     poll_fn = _get_poll_daily_recordings_fn()
     await poll_fn()
 
-    # Verify Daily.co API was called with 24-hour window
+    # Verify Daily.co API was called
     assert mock_daily_client.list_recordings.call_count == 1
-    call_kwargs = mock_daily_client.list_recordings.call_args.kwargs
 
-    now = datetime.now(timezone.utc)
-    expected_start = int((now - timedelta(hours=24)).timestamp())
-    expected_end = int(now.timestamp())
-
-    # Allow 1 second tolerance
-    assert abs(call_kwargs["start_time"] - expected_start) <= 1
-    assert abs(call_kwargs["end_time"] - expected_end) <= 1
+    # Verify NO processing was queued (all recordings already exist)
+    assert mock_process_delay.call_count == 0
 
 
 @pytest.mark.asyncio

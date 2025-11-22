@@ -375,10 +375,10 @@ async def _process_multitrack_recording_inner(
 async def poll_daily_recordings():
     """Poll Daily.co API for recordings and process missing ones.
 
-    Queries recordings from Daily.co API within the configured lookback window, compares with DB,
+    Fetches latest recordings from Daily.co API (default limit 100), compares with DB,
     and queues processing for recordings not already in DB.
 
-    For each missing recording, discovers audio tracks via S3 listing.
+    For each missing recording, uses audio tracks from API response.
 
     Worker-level locking provides idempotency (see process_multitrack_recording).
     """
