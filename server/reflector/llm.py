@@ -41,7 +41,6 @@ class LLM:
         self.max_tokens = max_tokens
         self.logger = logging.getLogger(__name__)
 
-        # Configure llamaindex Settings
         self._configure_llamaindex()
 
     def _configure_llamaindex(self):
@@ -74,7 +73,6 @@ class LLM:
             return True
 
         if isinstance(error, httpx.HTTPStatusError):
-            # Retryable HTTP status codes
             retryable_codes = [429, 500, 502, 503, 504]
             return error.response.status_code in retryable_codes
 
@@ -107,7 +105,6 @@ class LLM:
         self, prompt: str, texts: list[str], tone_name: str | None = None
     ) -> str:
         """Get a text response using TreeSummarize for non-function-calling models with retry logic"""
-        # Check if retry is enabled
         if not self.settings_obj.LLM_RETRY_ENABLED:
             summarizer = TreeSummarize(verbose=False)
             response = await summarizer.aget_response(
@@ -115,7 +112,6 @@ class LLM:
             )
             return str(response).strip()
 
-        # Apply retry decorator dynamically
         retry_decorator = self._get_retry_decorator()
 
         @retry_decorator
@@ -137,7 +133,6 @@ class LLM:
             )
             raise
         except Exception as e:
-            # Check if error is retryable
             if not self._is_retryable_error(e):
                 self.logger.error(
                     f"Non-retryable error in get_response: {type(e).__name__}: {e}"
@@ -152,7 +147,6 @@ class LLM:
         tone_name: str | None = None,
     ) -> T:
         """Get structured output from LLM with network retry and parse error recovery"""
-        # Check if retry is enabled
         if not self.settings_obj.LLM_RETRY_ENABLED:
             return await self._get_structured_response_no_retry(
                 prompt, texts, output_cls, tone_name
@@ -168,12 +162,10 @@ class LLM:
                 try:
                     enhanced_prompt = prompt
 
-                    # Add error feedback from previous attempt
                     if last_error:
                         error_msg = self._format_parse_error_feedback(last_error)
                         enhanced_prompt += f"\n\nYour previous response had errors:\n{error_msg}\nPlease return valid JSON fixing all these issues."
 
-                    # Apply network retry decorator
                     retry_decorator = self._get_retry_decorator()
 
                     @retry_decorator
@@ -194,7 +186,6 @@ class LLM:
                             "Please structure the above information in the following JSON format:"
                         )
 
-                        # Capture raw response before parsing for error logging
                         raw_response_capture["value"] = str(response)
 
                         output = await program.acall(
@@ -207,7 +198,6 @@ class LLM:
 
                 except (ValidationError, json.JSONDecodeError, ValueError) as e:
                     last_error = e
-                    # Log parse error with raw response if available
                     error_msg = (
                         f"LLM parse error (attempt {attempt + 1}/{self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS}): "
                         f"{type(e).__name__}: {str(e)}"
@@ -218,7 +208,6 @@ class LLM:
                         )
                     self.logger.error(error_msg)
 
-            # After all parse attempts, raise the last error
             raise last_error
 
         try:
