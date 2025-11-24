@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Type, TypeVar
+from typing import Callable, Type, TypeVar
 
 import httpx
 from llama_index.core import Settings
@@ -19,6 +19,7 @@ from tenacity import (
 )
 
 T = TypeVar("T", bound=BaseModel)
+RawResponseCallback = Callable[[str], None] | None
 
 STRUCTURED_RESPONSE_PROMPT_TEMPLATE = """
 Based on the following analysis, provide the information in the requested JSON format:
@@ -170,29 +171,15 @@ class LLM:
 
                     @retry_decorator
                     async def _get_structured_with_retry():
-                        summarizer = TreeSummarize(verbose=False)
-                        response = await summarizer.aget_response(
-                            enhanced_prompt, texts, tone_name=tone_name
+                        return await self._do_structured_call(
+                            enhanced_prompt,
+                            texts,
+                            output_cls,
+                            tone_name,
+                            on_response=lambda raw: raw_response_capture.__setitem__(
+                                "value", raw
+                            ),
                         )
-
-                        output_parser = PydanticOutputParser(output_cls)
-                        program = LLMTextCompletionProgram.from_defaults(
-                            output_parser=output_parser,
-                            prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
-                            verbose=False,
-                        )
-
-                        format_instructions = output_parser.format(
-                            "Please structure the above information in the following JSON format:"
-                        )
-
-                        raw_response_capture["value"] = str(response)
-
-                        output = await program.acall(
-                            analysis=raw_response_capture["value"],
-                            format_instructions=format_instructions,
-                        )
-                        return output
 
                     return await _get_structured_with_retry()
 
@@ -229,8 +216,23 @@ class LLM:
         tone_name: str | None = None,
     ) -> T:
         """Get structured output without retry logic (for when retry is disabled)"""
+        return await self._do_structured_call(prompt, texts, output_cls, tone_name)
+
+    async def _do_structured_call(
+        self,
+        prompt: str,
+        texts: list[str],
+        output_cls: Type[T],
+        tone_name: str | None = None,
+        on_response: RawResponseCallback = None,
+    ) -> T:
+        """Core structured response logic shared by retry and no-retry paths"""
         summarizer = TreeSummarize(verbose=False)
         response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
+        raw = str(response)
+
+        if on_response:
+            on_response(raw)
 
         output_parser = PydanticOutputParser(output_cls)
         program = LLMTextCompletionProgram.from_defaults(
@@ -238,15 +240,12 @@ class LLM:
             prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
             verbose=False,
         )
-
         format_instructions = output_parser.format(
             "Please structure the above information in the following JSON format:"
         )
-
-        output = await program.acall(
-            analysis=str(response), format_instructions=format_instructions
+        return await program.acall(
+            analysis=raw, format_instructions=format_instructions
         )
-        return output
 
     def _format_parse_error_feedback(self, error: Exception) -> str:
         """Format parse error into feedback for LLM"""

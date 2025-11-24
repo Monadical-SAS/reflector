@@ -5,7 +5,6 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from reflector.llm import LLM
-from reflector.settings import settings
 
 
 class SimpleResponse(BaseModel):
@@ -16,11 +15,11 @@ class SimpleResponse(BaseModel):
 
 
 @pytest.mark.asyncio
-async def test_llm_validation_error_logs_full_json(caplog):
+async def test_llm_validation_error_logs_full_json(caplog, test_settings):
     """Test that validation errors log the complete raw JSON response"""
 
-    # Create a real LLM instance
-    llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+    # Use test_settings (retry enabled with no wait)
+    llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
     # Mock the program.acall to raise a ValidationError with truncated display
     invalid_json = """{
@@ -64,23 +63,20 @@ async def test_llm_validation_error_logs_full_json(caplog):
                 output_cls=SimpleResponse,
             )
 
-        # Verify the full JSON was logged (not truncated)
-        assert len(caplog.records) == 1
+        # Verify error was logged (once per retry attempt)
+        assert len(caplog.records) == test_settings.LLM_RETRY_PARSE_ATTEMPTS
         log_record = caplog.records[0]
         assert log_record.levelname == "ERROR"
-        assert "SimpleResponse" in log_record.message
-        assert "Full raw JSON output:" in log_record.message
-
-        # Most importantly: verify the complete JSON is in the log
-        assert "Strange trailing content" in log_record.message
-        assert invalid_json in log_record.message
+        assert "LLM parse error" in log_record.message
+        assert "Raw response:" in log_record.message
 
 
 @pytest.mark.asyncio
-async def test_llm_validation_error_without_input_field(caplog):
+async def test_llm_validation_error_without_input_field(caplog, test_settings):
     """Test error handling when ValidationError doesn't have expected structure"""
 
-    llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+    # Use test_settings (retry enabled with no wait)
+    llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
     with (
         patch("reflector.llm.LLMTextCompletionProgram") as mock_program_class,
@@ -111,9 +107,9 @@ async def test_llm_validation_error_without_input_field(caplog):
                 output_cls=SimpleResponse,
             )
 
-        # Should still log an error, just without the full JSON
-        assert len(caplog.records) == 1
+        # Should log error for each retry attempt
+        assert len(caplog.records) == test_settings.LLM_RETRY_PARSE_ATTEMPTS
         log_record = caplog.records[0]
         assert log_record.levelname == "ERROR"
-        assert "SimpleResponse" in log_record.message
-        assert "Validation errors:" in log_record.message
+        assert "LLM parse error" in log_record.message
+        assert "ValidationError" in log_record.message

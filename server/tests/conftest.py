@@ -323,7 +323,10 @@ def test_settings():
     """Provide isolated settings for tests to avoid modifying global settings"""
     from reflector.settings import Settings
 
-    return Settings()
+    return Settings(
+        LLM_RETRY_WAIT_INITIAL=0.0,  # No wait between retries in tests
+        LLM_RETRY_WAIT_MAX=0.0,
+    )
 
 
 @pytest.fixture(scope="session")

@@ -767,3 +767,36 @@ class TestLLMCombinedRetry:
             # Check for retry logs
             retry_logs = [r for r in caplog.records if "retry" in r.message.lower()]
             assert len(retry_logs) >= 2  # At least 2 retry attempts logged
+
+
+class TestFormatParseErrorFeedback:
+    """Direct unit tests for _format_parse_error_feedback"""
+
+    def test_validation_error(self, test_settings):
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        try:
+            TestResponse.model_validate({"title": "Test"})
+        except ValidationError as e:
+            result = llm._format_parse_error_feedback(e)
+
+        assert "Schema validation errors:" in result
+        assert "summary" in result
+        assert "confidence" in result
+
+    def test_json_decode_error(self, test_settings):
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        error = json.JSONDecodeError("Expecting comma", '{"a": 1 "b": 2}', 8)
+        result = llm._format_parse_error_feedback(error)
+
+        assert "Invalid JSON syntax at position 8" in result
+        assert "Expecting comma" in result
+
+    def test_generic_error(self, test_settings):
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        result = llm._format_parse_error_feedback(ValueError("unexpected value"))
+
+        assert "Parse error:" in result
+        assert "unexpected value" in result
