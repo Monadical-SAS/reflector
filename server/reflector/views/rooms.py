@@ -347,19 +347,7 @@ async def rooms_create_meeting(
             status_code=503, detail="Meeting creation in progress, please try again"
         )
 
-    if meeting.platform == "daily" and room.recording_trigger != "none":
-        client = create_platform_client(meeting.platform)
-        token = await client.create_meeting_token(
-            meeting.room_name,
-            enable_recording=True,
-            user_id=user_id,
-        )
-        meeting = meeting.model_copy()
-        meeting.room_url = add_query_param(meeting.room_url, "t", token)
-        if meeting.host_room_url:
-            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
-
-    if user_id != room.user_id:
+    if user_id != room.user_id and meeting.platform == "whereby":
         meeting.host_room_url = ""
 
     return meeting
@@ -519,7 +507,8 @@ async def rooms_list_active_meetings(
 
     if user_id != room.user_id:
         for meeting in meetings:
-            meeting.host_room_url = ""
+            if meeting.platform == "whereby":
+                meeting.host_room_url = ""
 
     return meetings
 
@@ -541,7 +530,7 @@ async def rooms_get_meeting(
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
-    if user_id != room.user_id and not room.is_shared:
+    if user_id != room.user_id and not room.is_shared and meeting.platform == "whereby":
         meeting.host_room_url = ""
 
     return meeting
@@ -571,7 +560,20 @@ async def rooms_join_meeting(
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
 
-    if user_id != room.user_id:
+    if meeting.platform == "daily":
+        client = create_platform_client(meeting.platform)
+        enable_recording = room.recording_trigger != "none"
+        token = await client.create_meeting_token(
+            meeting.room_name,
+            enable_recording=enable_recording,
+            user_id=user_id,
+        )
+        meeting = meeting.model_copy()
+        meeting.room_url = add_query_param(meeting.room_url, "t", token)
+        if meeting.host_room_url:
+            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
+
+    if user_id != room.user_id and meeting.platform == "whereby":
         meeting.host_room_url = ""
 
     return meeting

@@ -167,7 +167,6 @@ async def _handle_participant_joined(event: DailyWebhookEvent):
         return
 
     payload = event.payload
-    logger.warning({"payload": payload})
     joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
     session_id = f"{meeting.id}:{payload['session_id']}"
 
