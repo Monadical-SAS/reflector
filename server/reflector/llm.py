@@ -1,11 +1,22 @@
+import asyncio
+import json
+import logging
 from typing import Type, TypeVar
 
+import httpx
 from llama_index.core import Settings
 from llama_index.core.output_parsers import PydanticOutputParser
 from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.llms.openai_like import OpenAILike
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from tenacity import (
+    after_log,
+    before_log,
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -28,6 +39,7 @@ class LLM:
         self.context_window = settings.LLM_CONTEXT_WINDOW
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.logger = logging.getLogger(__name__)
 
         # Configure llamaindex Settings
         self._configure_llamaindex()
@@ -45,13 +57,75 @@ class LLM:
             max_tokens=self.max_tokens,
         )
 
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """Determine if an error is retryable based on error type and status code"""
+        if isinstance(
+            error, (asyncio.TimeoutError, httpx.ConnectTimeout, httpx.ReadTimeout)
+        ):
+            return True
+
+        if isinstance(error, httpx.HTTPStatusError):
+            # Retryable HTTP status codes
+            retryable_codes = [429, 500, 502, 503]
+            return error.response.status_code in retryable_codes
+
+        # Don't retry auth errors, bad requests, or unknown errors
+        return False
+
+    def _get_retry_decorator(self):
+        """Create retry decorator with current settings"""
+
+        def should_retry(retry_state):
+            """Custom retry predicate that checks if error is retryable"""
+            if retry_state.outcome.failed:
+                error = retry_state.outcome.exception()
+                return self._is_retryable_error(error)
+            return False
+
+        return retry(
+            retry=should_retry,
+            stop=stop_after_attempt(self.settings_obj.LLM_RETRY_NETWORK_ATTEMPTS),
+            wait=wait_exponential_jitter(
+                initial=self.settings_obj.LLM_RETRY_WAIT_INITIAL,
+                max=self.settings_obj.LLM_RETRY_WAIT_MAX,
+            ),
+            before=before_log(self.logger, logging.INFO),
+            after=after_log(self.logger, logging.INFO),
+            reraise=True,
+        )
+
     async def get_response(
         self, prompt: str, texts: list[str], tone_name: str | None = None
     ) -> str:
-        """Get a text response using TreeSummarize for non-function-calling models"""
-        summarizer = TreeSummarize(verbose=False)
-        response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
-        return str(response).strip()
+        """Get a text response using TreeSummarize for non-function-calling models with retry logic"""
+        # Check if retry is enabled
+        if not self.settings_obj.LLM_RETRY_ENABLED:
+            summarizer = TreeSummarize(verbose=False)
+            response = await summarizer.aget_response(
+                prompt, texts, tone_name=tone_name
+            )
+            return str(response).strip()
+
+        # Apply retry decorator dynamically
+        retry_decorator = self._get_retry_decorator()
+
+        @retry_decorator
+        async def _get_response_with_retry():
+            summarizer = TreeSummarize(verbose=False)
+            response = await summarizer.aget_response(
+                prompt, texts, tone_name=tone_name
+            )
+            return str(response).strip()
+
+        try:
+            return await _get_response_with_retry()
+        except Exception as e:
+            # Check if error is retryable
+            if not self._is_retryable_error(e):
+                self.logger.error(
+                    f"Non-retryable error in get_response: {type(e).__name__}: {e}"
+                )
+            raise
 
     async def get_structured_response(
         self,
@@ -60,12 +134,82 @@ class LLM:
         output_cls: Type[T],
         tone_name: str | None = None,
     ) -> T:
-        """Get structured output from LLM for non-function-calling models"""
+        """Get structured output from LLM with network retry and parse error recovery"""
+        # Check if retry is enabled
+        if not self.settings_obj.LLM_RETRY_ENABLED:
+            return await self._get_structured_response_no_retry(
+                prompt, texts, output_cls, tone_name
+            )
+
+        # Parse error handling loop
+        last_error = None
+        for attempt in range(self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS):
+            try:
+                enhanced_prompt = prompt
+
+                # Add error feedback from previous attempt
+                if last_error:
+                    error_msg = self._format_parse_error_feedback(last_error)
+                    enhanced_prompt += f"\n\nYour previous response had errors:\n{error_msg}\nPlease return valid JSON fixing all these issues."
+
+                # Apply network retry decorator
+                retry_decorator = self._get_retry_decorator()
+
+                @retry_decorator
+                async def _get_structured_with_retry():
+                    summarizer = TreeSummarize(verbose=True)
+                    response = await summarizer.aget_response(
+                        enhanced_prompt, texts, tone_name=tone_name
+                    )
+
+                    output_parser = PydanticOutputParser(output_cls)
+                    program = LLMTextCompletionProgram.from_defaults(
+                        output_parser=output_parser,
+                        prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
+                        verbose=False,
+                    )
+
+                    format_instructions = output_parser.format(
+                        "Please structure the above information in the following JSON format:"
+                    )
+
+                    output = await program.acall(
+                        analysis=str(response), format_instructions=format_instructions
+                    )
+                    return output
+
+                return await _get_structured_with_retry()
+
+            except (ValidationError, json.JSONDecodeError, ValueError) as e:
+                last_error = e
+                self.logger.error(
+                    f"LLM parse error (attempt {attempt + 1}/{self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS}): "
+                    f"{type(e).__name__}: {str(e)}"
+                )
+
+                # Log the raw output if available for debugging
+                if isinstance(e, ValidationError) and hasattr(e, "__context__"):
+                    context = e.__context__
+                    if hasattr(context, "doc"):
+                        self.logger.error(
+                            f"Raw JSON that failed validation: {context.doc}"
+                        )
+
+        # After all parse attempts, raise the last error
+        raise last_error
+
+    async def _get_structured_response_no_retry(
+        self,
+        prompt: str,
+        texts: list[str],
+        output_cls: Type[T],
+        tone_name: str | None = None,
+    ) -> T:
+        """Get structured output without retry logic (for when retry is disabled)"""
         summarizer = TreeSummarize(verbose=True)
         response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
 
         output_parser = PydanticOutputParser(output_cls)
-
         program = LLMTextCompletionProgram.from_defaults(
             output_parser=output_parser,
             prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
@@ -79,5 +223,20 @@ class LLM:
         output = await program.acall(
             analysis=str(response), format_instructions=format_instructions
         )
-
         return output
+
+    def _format_parse_error_feedback(self, error: Exception) -> str:
+        """Format parse error into feedback for LLM"""
+        if isinstance(error, ValidationError):
+            # Extract all validation errors with full detail
+            error_messages = []
+            for err in error.errors():
+                field = ".".join(str(loc) for loc in err["loc"])
+                error_messages.append(f"- {err['msg']} in field '{field}'")
+            return "Schema validation errors:\n" + "\n".join(error_messages)
+
+        elif isinstance(error, json.JSONDecodeError):
+            return f"Invalid JSON syntax at position {error.pos}: {error.msg}"
+
+        else:
+            return f"Parse error: {str(error)}"
