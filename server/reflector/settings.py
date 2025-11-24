@@ -81,7 +81,6 @@ class Settings(BaseSettings):
     LLM_RETRY_TIMEOUT: int = 180  # Overall timeout in seconds
     LLM_RETRY_WAIT_INITIAL: float = 1.0  # Initial wait time in seconds
     LLM_RETRY_WAIT_MAX: float = 10.0  # Max wait time in seconds
-    LLM_RETRY_WAIT_JITTER: bool = True  # Add jitter to prevent thundering herd
 
     # Diarization
     DIARIZATION_ENABLED: bool = True

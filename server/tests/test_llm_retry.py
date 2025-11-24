@@ -9,10 +9,6 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from reflector.llm import LLM
-from reflector.settings import settings
-
-# Disable jitter for deterministic tests
-settings.LLM_RETRY_WAIT_JITTER = False
 
 
 class TestResponse(BaseModel):
@@ -27,9 +23,9 @@ class TestLLMNetworkRetry:
     """Test network error retry logic"""
 
     @pytest.mark.asyncio
-    async def test_retry_on_httpx_timeout(self):
+    async def test_retry_on_httpx_timeout(self, test_settings):
         """Test retry on network timeout errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -50,9 +46,9 @@ class TestLLMNetworkRetry:
             assert mock_summarizer.aget_response.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_retry_on_asyncio_timeout(self):
+    async def test_retry_on_asyncio_timeout(self, test_settings):
         """Test retry on asyncio timeout errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -72,9 +68,9 @@ class TestLLMNetworkRetry:
             assert mock_summarizer.aget_response.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_retry_on_rate_limit(self):
+    async def test_retry_on_rate_limit(self, test_settings):
         """Test retry on rate limit (429) errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -98,9 +94,9 @@ class TestLLMNetworkRetry:
             assert mock_summarizer.aget_response.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_retry_on_service_unavailable(self):
+    async def test_retry_on_service_unavailable(self, test_settings):
         """Test retry on 503 Service Unavailable errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -124,9 +120,9 @@ class TestLLMNetworkRetry:
             assert mock_summarizer.aget_response.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_no_retry_on_auth_error(self):
+    async def test_no_retry_on_auth_error(self, test_settings):
         """Test no retry on 401 Unauthorized errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -149,9 +145,9 @@ class TestLLMNetworkRetry:
             assert mock_summarizer.aget_response.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_max_retry_attempts_exceeded(self):
+    async def test_max_retry_attempts_exceeded(self, test_settings):
         """Test that retry stops after max attempts"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
             mock_summarizer = MagicMock()
@@ -166,13 +162,13 @@ class TestLLMNetworkRetry:
                 await llm.get_response(prompt="Test prompt", texts=["Test text"])
 
             # Should try max attempts (default 5)
-            expected_attempts = getattr(settings, "LLM_RETRY_NETWORK_ATTEMPTS", 5)
+            expected_attempts = getattr(test_settings, "LLM_RETRY_NETWORK_ATTEMPTS", 5)
             assert mock_summarizer.aget_response.call_count == expected_attempts
 
     @pytest.mark.asyncio
-    async def test_exponential_backoff_timing(self):
+    async def test_exponential_backoff_timing(self, test_settings):
         """Test that exponential backoff is configured correctly"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         # Test that retries happen with exponential delays
         with patch("reflector.llm.TreeSummarize") as mock_summarize:
@@ -195,14 +191,199 @@ class TestLLMNetworkRetry:
             assert result == "Success"
             assert attempt_count["count"] == 4  # 3 failures + 1 success
 
+    @pytest.mark.asyncio
+    async def test_timeout_enforcement(self, test_settings):
+        """Test that LLM_RETRY_TIMEOUT is enforced for entire operation"""
+        # Configure settings with very short timeout for test
+        test_settings.LLM_RETRY_TIMEOUT = 2  # 2 second timeout
+        test_settings.LLM_RETRY_NETWORK_ATTEMPTS = 10  # Many attempts but timeout first
+
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # Simulate slow responses that would exceed timeout
+            async def slow_response(*args, **kwargs):
+                await asyncio.sleep(1)  # Each call takes 1 second
+                raise httpx.ReadTimeout("Timeout")
+
+            mock_summarizer.aget_response = AsyncMock(side_effect=slow_response)
+
+            # Should raise TimeoutError, not exhaust all retry attempts
+            with pytest.raises(asyncio.TimeoutError):
+                await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            # Should not have tried all 10 attempts due to timeout
+            assert mock_summarizer.aget_response.call_count < 10
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_timeout_exception(self, test_settings):
+        """Test retry on httpx.TimeoutException (base class)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call times out with base TimeoutException, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.TimeoutException("Generic timeout"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_connect_error(self, test_settings):
+        """Test retry on httpx.ConnectError (connection failures)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call fails to connect, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.ConnectError("Connection failed"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_network_error(self, test_settings):
+        """Test retry on httpx.NetworkError (network unreachable, DNS failures)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call has network error, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.NetworkError("Network unreachable"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_504_gateway_timeout(self, test_settings):
+        """Test retry on 504 Gateway Timeout errors"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # Create 504 error
+            gateway_timeout_error = httpx.HTTPStatusError(
+                "Gateway timeout",
+                request=MagicMock(),
+                response=MagicMock(status_code=504, headers={}),
+            )
+
+            # First call times out at gateway, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[gateway_timeout_error, "Success response"]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_remote_protocol_error(self, test_settings):
+        """Test retry on httpx.RemoteProtocolError (malformed HTTP response)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call gets malformed HTTP response, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.RemoteProtocolError("Invalid HTTP response"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_read_error(self, test_settings):
+        """Test retry on httpx.ReadError (connection broken while reading)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call breaks while reading response, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.ReadError("Connection broken while reading"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_retry_on_httpx_write_error(self, test_settings):
+        """Test retry on httpx.WriteError (connection broken while writing)"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+
+            # First call breaks while sending request, second succeeds
+            mock_summarizer.aget_response = AsyncMock(
+                side_effect=[
+                    httpx.WriteError("Connection broken while writing"),
+                    "Success response",
+                ]
+            )
+
+            result = await llm.get_response(prompt="Test prompt", texts=["Test text"])
+
+            assert result == "Success response"
+            assert mock_summarizer.aget_response.call_count == 2
+
 
 class TestLLMParseErrorRecovery:
     """Test parse error recovery with feedback loop"""
 
     @pytest.mark.asyncio
-    async def test_parse_error_recovery_with_feedback(self):
+    async def test_parse_error_recovery_with_feedback(self, test_settings):
         """Test that parse errors trigger retry with error feedback"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
@@ -256,9 +437,9 @@ class TestLLMParseErrorRecovery:
             assert response_counter["count"] == 2
 
     @pytest.mark.asyncio
-    async def test_json_syntax_error_recovery(self):
+    async def test_json_syntax_error_recovery(self, test_settings):
         """Test recovery from JSON syntax errors"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
@@ -308,9 +489,9 @@ class TestLLMParseErrorRecovery:
             assert response_counter["count"] == 2
 
     @pytest.mark.asyncio
-    async def test_max_parse_retry_attempts(self):
+    async def test_max_parse_retry_attempts(self, test_settings):
         """Test that parse error retry stops after max attempts"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
@@ -339,13 +520,13 @@ class TestLLMParseErrorRecovery:
                 )
 
             # Should try max parse attempts (default 3)
-            expected_attempts = getattr(settings, "LLM_RETRY_PARSE_ATTEMPTS", 3)
+            expected_attempts = getattr(test_settings, "LLM_RETRY_PARSE_ATTEMPTS", 3)
             assert mock_program.acall.call_count == expected_attempts
 
     @pytest.mark.asyncio
-    async def test_multiple_validation_errors_in_feedback(self):
+    async def test_multiple_validation_errors_in_feedback(self, test_settings):
         """Test that all validation errors are included in feedback"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
@@ -397,14 +578,113 @@ class TestLLMParseErrorRecovery:
             assert result == successful_response
             assert response_counter["count"] == 2
 
+    @pytest.mark.asyncio
+    async def test_raw_response_logging_on_parse_error(self, test_settings, caplog):
+        """Test that raw response is logged when parse error occurs"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.LLMTextCompletionProgram") as mock_program_class,
+            caplog.at_level("ERROR"),
+        ):
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(
+                return_value="Analysis response from LLM"
+            )
+
+            mock_program = MagicMock()
+            mock_program_class.from_defaults.return_value = mock_program
+
+            # Create validation error
+            try:
+                TestResponse.model_validate({"title": "Test"})  # Missing fields
+            except ValidationError as e:
+                validation_error = e
+
+            successful_response = TestResponse(
+                title="Test Title", summary="Test Summary", confidence=0.95
+            )
+
+            # First call fails with validation error, second succeeds
+            mock_program.acall = AsyncMock(
+                side_effect=[validation_error, successful_response]
+            )
+
+            result = await llm.get_structured_response(
+                prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
+            )
+
+            assert result == successful_response
+
+            # Check that raw response was logged
+            error_logs = [r for r in caplog.records if r.levelname == "ERROR"]
+            raw_response_logged = any("Raw response:" in r.message for r in error_logs)
+            assert raw_response_logged, "Raw response should be logged on parse error"
+
+    @pytest.mark.asyncio
+    async def test_no_double_logging_on_parse_error(self, test_settings, caplog):
+        """Test that parse errors are not logged twice"""
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.LLMTextCompletionProgram") as mock_program_class,
+            caplog.at_level("ERROR"),
+        ):
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Analysis response")
+
+            mock_program = MagicMock()
+            mock_program_class.from_defaults.return_value = mock_program
+
+            # Create validation error
+            try:
+                TestResponse.model_validate({"title": "Test"})  # Missing fields
+            except ValidationError as e:
+                validation_error = e
+
+            successful_response = TestResponse(
+                title="Test Title", summary="Test Summary", confidence=0.95
+            )
+
+            # First call fails with validation error, second succeeds
+            mock_program.acall = AsyncMock(
+                side_effect=[validation_error, successful_response]
+            )
+
+            result = await llm.get_structured_response(
+                prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
+            )
+
+            assert result == successful_response
+
+            # Check that parse error is logged only once, not twice
+            error_logs = [r for r in caplog.records if r.levelname == "ERROR"]
+
+            # Count logs mentioning the parse error
+            parse_error_mentions = [
+                log
+                for log in error_logs
+                if "parse error" in log.message.lower()
+                or "validation" in log.message.lower()
+            ]
+
+            # Should be exactly 1 log entry about the parse error (not 2)
+            assert (
+                len(parse_error_mentions) == 1
+            ), f"Expected 1 parse error log, got {len(parse_error_mentions)}: {[log.message for log in parse_error_mentions]}"
+
 
 class TestLLMCombinedRetry:
     """Test combined network and parse error retry scenarios"""
 
     @pytest.mark.asyncio
-    async def test_network_retry_then_parse_retry(self):
+    async def test_network_retry_then_parse_retry(self, test_settings):
         """Test network retry followed by parse error retry"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
@@ -460,9 +740,9 @@ class TestLLMCombinedRetry:
             assert mock_program.acall.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_retry_logging(self, caplog):
+    async def test_retry_logging(self, test_settings, caplog):
         """Test that retry attempts are properly logged"""
-        llm = LLM(settings=settings, temperature=0.4, max_tokens=100)
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,

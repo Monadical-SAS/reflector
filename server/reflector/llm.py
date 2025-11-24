@@ -60,13 +60,22 @@ class LLM:
     def _is_retryable_error(self, error: Exception) -> bool:
         """Determine if an error is retryable based on error type and status code"""
         if isinstance(
-            error, (asyncio.TimeoutError, httpx.ConnectTimeout, httpx.ReadTimeout)
+            error,
+            (
+                asyncio.TimeoutError,
+                httpx.TimeoutException,  # Base class for all httpx timeouts
+                httpx.ConnectError,  # Connection failures
+                httpx.NetworkError,  # Network unreachable, DNS failures
+                httpx.RemoteProtocolError,  # Malformed HTTP response
+                httpx.ReadError,  # Connection broken while reading
+                httpx.WriteError,  # Connection broken while writing
+            ),
         ):
             return True
 
         if isinstance(error, httpx.HTTPStatusError):
             # Retryable HTTP status codes
-            retryable_codes = [429, 500, 502, 503]
+            retryable_codes = [429, 500, 502, 503, 504]
             return error.response.status_code in retryable_codes
 
         # Don't retry auth errors, bad requests, or unknown errors
@@ -118,7 +127,15 @@ class LLM:
             return str(response).strip()
 
         try:
-            return await _get_response_with_retry()
+            return await asyncio.wait_for(
+                _get_response_with_retry(),
+                timeout=self.settings_obj.LLM_RETRY_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            self.logger.error(
+                f"LLM request timed out after {self.settings_obj.LLM_RETRY_TIMEOUT}s"
+            )
+            raise
         except Exception as e:
             # Check if error is retryable
             if not self._is_retryable_error(e):
@@ -141,62 +158,79 @@ class LLM:
                 prompt, texts, output_cls, tone_name
             )
 
-        # Parse error handling loop
-        last_error = None
-        for attempt in range(self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS):
-            try:
-                enhanced_prompt = prompt
+        async def _get_structured_with_timeout():
+            # Parse error handling loop
+            last_error = None
+            # Closure variable to capture raw response for error logging
+            raw_response_capture = {"value": None}
 
-                # Add error feedback from previous attempt
-                if last_error:
-                    error_msg = self._format_parse_error_feedback(last_error)
-                    enhanced_prompt += f"\n\nYour previous response had errors:\n{error_msg}\nPlease return valid JSON fixing all these issues."
+            for attempt in range(self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS):
+                try:
+                    enhanced_prompt = prompt
 
-                # Apply network retry decorator
-                retry_decorator = self._get_retry_decorator()
+                    # Add error feedback from previous attempt
+                    if last_error:
+                        error_msg = self._format_parse_error_feedback(last_error)
+                        enhanced_prompt += f"\n\nYour previous response had errors:\n{error_msg}\nPlease return valid JSON fixing all these issues."
 
-                @retry_decorator
-                async def _get_structured_with_retry():
-                    summarizer = TreeSummarize(verbose=True)
-                    response = await summarizer.aget_response(
-                        enhanced_prompt, texts, tone_name=tone_name
-                    )
+                    # Apply network retry decorator
+                    retry_decorator = self._get_retry_decorator()
 
-                    output_parser = PydanticOutputParser(output_cls)
-                    program = LLMTextCompletionProgram.from_defaults(
-                        output_parser=output_parser,
-                        prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
-                        verbose=False,
-                    )
-
-                    format_instructions = output_parser.format(
-                        "Please structure the above information in the following JSON format:"
-                    )
-
-                    output = await program.acall(
-                        analysis=str(response), format_instructions=format_instructions
-                    )
-                    return output
-
-                return await _get_structured_with_retry()
-
-            except (ValidationError, json.JSONDecodeError, ValueError) as e:
-                last_error = e
-                self.logger.error(
-                    f"LLM parse error (attempt {attempt + 1}/{self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS}): "
-                    f"{type(e).__name__}: {str(e)}"
-                )
-
-                # Log the raw output if available for debugging
-                if isinstance(e, ValidationError) and hasattr(e, "__context__"):
-                    context = e.__context__
-                    if hasattr(context, "doc"):
-                        self.logger.error(
-                            f"Raw JSON that failed validation: {context.doc}"
+                    @retry_decorator
+                    async def _get_structured_with_retry():
+                        summarizer = TreeSummarize(verbose=False)
+                        response = await summarizer.aget_response(
+                            enhanced_prompt, texts, tone_name=tone_name
                         )
 
-        # After all parse attempts, raise the last error
-        raise last_error
+                        output_parser = PydanticOutputParser(output_cls)
+                        program = LLMTextCompletionProgram.from_defaults(
+                            output_parser=output_parser,
+                            prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
+                            verbose=False,
+                        )
+
+                        format_instructions = output_parser.format(
+                            "Please structure the above information in the following JSON format:"
+                        )
+
+                        # Capture raw response before parsing for error logging
+                        raw_response_capture["value"] = str(response)
+
+                        output = await program.acall(
+                            analysis=raw_response_capture["value"],
+                            format_instructions=format_instructions,
+                        )
+                        return output
+
+                    return await _get_structured_with_retry()
+
+                except (ValidationError, json.JSONDecodeError, ValueError) as e:
+                    last_error = e
+                    # Log parse error with raw response if available
+                    error_msg = (
+                        f"LLM parse error (attempt {attempt + 1}/{self.settings_obj.LLM_RETRY_PARSE_ATTEMPTS}): "
+                        f"{type(e).__name__}: {str(e)}"
+                    )
+                    if raw_response_capture["value"]:
+                        error_msg += (
+                            f"\nRaw response: {raw_response_capture['value'][:500]}"
+                        )
+                    self.logger.error(error_msg)
+
+            # After all parse attempts, raise the last error
+            raise last_error
+
+        try:
+            return await asyncio.wait_for(
+                _get_structured_with_timeout(),
+                timeout=self.settings_obj.LLM_RETRY_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            self.logger.error(
+                f"LLM request timed out after {self.settings_obj.LLM_RETRY_TIMEOUT}s"
+            )
+            raise
 
     async def _get_structured_response_no_retry(
         self,
@@ -206,7 +240,7 @@ class LLM:
         tone_name: str | None = None,
     ) -> T:
         """Get structured output without retry logic (for when retry is disabled)"""
-        summarizer = TreeSummarize(verbose=True)
+        summarizer = TreeSummarize(verbose=False)
         response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
 
         output_parser = PydanticOutputParser(output_cls)
