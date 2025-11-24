@@ -6,10 +6,15 @@ Create Date: 2025-11-20 14:34:54.941338
 
 """
 
+import asyncio
+from datetime import datetime, timezone
 from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+
+from reflector.authentik_client import authentik_client
+from reflector.settings import settings
 
 # revision identifiers, used by Alembic.
 revision: str = "36cf051dd3e4"
@@ -23,34 +28,49 @@ def upgrade() -> None:
     Migrate user_id columns from Authentik uid to our internal user.id.
 
     This migration:
-    1. Syncs users from Authentik API to populate the users table
-    2. Updates user_id in: user_api_key, transcript, room, meeting_consent
-    3. Uses user.uid to lookup the corresponding user.id
+    1. Checks if there's existing data that needs migration
+    2. If no data exists and Authentik is not configured, safely skips (for CI/test environments)
+    3. If data exists, syncs users from Authentik API to populate the users table
+    4. Updates user_id in: user_api_key, transcript, room, meeting_consent
+    5. Uses user.uid to lookup the corresponding user.id
 
-    Prerequisites:
+    Prerequisites (only when migrating existing data):
     - AUTHENTIK_API_URL and AUTHENTIK_API_TOKEN must be configured
     - Authentik API must be accessible
     """
-    import asyncio
-
     connection = op.get_bind()
 
-    print("Step 1: Syncing users from Authentik...")
+    # Check if there's any existing data that would need migration
+    tables_to_check = ["user_api_key", "transcript", "room", "meeting_consent"]
+    has_existing_data = False
 
-    from reflector.authentik_client import authentik_client
-    from reflector.settings import settings
+    for table in tables_to_check:
+        result = connection.execute(sa.text(f'SELECT COUNT(*) FROM "{table}"'))
+        count = result.scalar()
+        if count > 0:
+            print(f"Found {count} existing records in {table}")
+            has_existing_data = True
 
+    # If no Authentik credentials, check if we can skip the migration
     if not settings.AUTHENTIK_API_URL or not settings.AUTHENTIK_API_TOKEN:
-        raise Exception(
-            "Cannot migrate: AUTHENTIK_API_URL and AUTHENTIK_API_TOKEN must be "
-            "configured. Please set these environment variables and try again."
-        )
+        if not has_existing_data:
+            print(
+                "⚠️  Authentik credentials not configured, but no existing data to migrate."
+            )
+            print("Skipping Authentik user sync (clean database).")
+            print("Migration complete (no-op)!")
+            return
+        else:
+            raise Exception(
+                "Cannot migrate: AUTHENTIK_API_URL and AUTHENTIK_API_TOKEN must be "
+                "configured to migrate existing user data. "
+                "Please set these environment variables and try again."
+            )
 
+    print("Step 1: Syncing users from Authentik...")
     print(f"Authentik API URL: {settings.AUTHENTIK_API_URL}")
 
     async def sync_from_authentik():
-        from datetime import datetime, timezone
-
         try:
             authentik_users = await authentik_client.get_all_users()
 
