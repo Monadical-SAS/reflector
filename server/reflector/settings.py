@@ -79,8 +79,8 @@ class Settings(BaseSettings):
     LLM_RETRY_NETWORK_ATTEMPTS: int = 5  # Max attempts for network errors
     LLM_RETRY_PARSE_ATTEMPTS: int = 3  # Max attempts for parse errors
     LLM_RETRY_TIMEOUT: int = 180  # Overall timeout in seconds
-    LLM_RETRY_WAIT_INITIAL: float = 1.0  # Initial wait time in seconds
-    LLM_RETRY_WAIT_MAX: float = 10.0  # Max wait time in seconds
+    LLM_RETRY_WAIT_INITIAL: float = 3.0  # Initial wait time in seconds
+    LLM_RETRY_WAIT_MAX: float = 30.0  # Max wait time in seconds
 
     # Diarization
     DIARIZATION_ENABLED: bool = True
