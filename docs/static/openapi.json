@@ -1,0 +1,3456 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/metrics": {
+      "get": {
+        "summary": "Metrics",
+        "description": "Endpoint that serves Prometheus metrics.",
+        "operationId": "metrics",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/meetings/{meeting_id}/consent": {
+      "post": {
+        "summary": "Meeting Audio Consent",
+        "operationId": "v1_meeting_audio_consent",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Meeting Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rooms": {
+      "get": {
+        "summary": "Rooms List",
+        "operationId": "v1_rooms_list",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page size",
+              "default": 50,
+              "title": "Size"
+            },
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Room_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Rooms Create",
+        "operationId": "v1_rooms_create",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoom"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Room"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rooms/{room_id}": {
+      "patch": {
+        "summary": "Rooms Update",
+        "operationId": "v1_rooms_update",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoom"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Room"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Rooms Delete",
+        "operationId": "v1_rooms_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "room_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rooms/{room_name}/meeting": {
+      "post": {
+        "summary": "Rooms Create Meeting",
+        "operationId": "v1_rooms_create_meeting",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "room_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Room Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meeting"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts": {
+      "get": {
+        "summary": "Transcripts List",
+        "operationId": "v1_transcripts_list",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Kind"
+            }
+          },
+          {
+            "name": "room_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Room Id"
+            }
+          },
+          {
+            "name": "search_term",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search Term"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page size",
+              "default": 50,
+              "title": "Size"
+            },
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_GetTranscriptMinimal_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Transcripts Create",
+        "operationId": "v1_transcripts_create",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTranscript"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTranscript"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/search": {
+      "get": {
+        "summary": "Transcripts Search",
+        "description": "Full-text search across transcript titles and content.",
+        "operationId": "v1_transcripts_search",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query text",
+              "title": "Q"
+            },
+            "description": "Search query text"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Results per page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Results per page"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of results to skip",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Number of results to skip"
+          },
+          {
+            "name": "room_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Room Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}": {
+      "get": {
+        "summary": "Transcript Get",
+        "operationId": "v1_transcript_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTranscript"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Transcript Update",
+        "operationId": "v1_transcript_update",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTranscript"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTranscript"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Transcript Delete",
+        "operationId": "v1_transcript_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/topics": {
+      "get": {
+        "summary": "Transcript Get Topics",
+        "operationId": "v1_transcript_get_topics",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetTranscriptTopic"
+                  },
+                  "title": "Response Transcript Get Topics V1 Transcripts  Transcript Id  Topics Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/topics/with-words": {
+      "get": {
+        "summary": "Transcript Get Topics With Words",
+        "operationId": "v1_transcript_get_topics_with_words",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GetTranscriptTopicWithWords"
+                  },
+                  "title": "Response Transcript Get Topics With Words V1 Transcripts  Transcript Id  Topics With Words Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/topics/{topic_id}/words-per-speaker": {
+      "get": {
+        "summary": "Transcript Get Topics With Words Per Speaker",
+        "operationId": "v1_transcript_get_topics_with_words_per_speaker",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "topic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Topic Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTranscriptTopicWithWordsPerSpeaker"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/zulip": {
+      "post": {
+        "summary": "Transcript Post To Zulip",
+        "operationId": "v1_transcript_post_to_zulip",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "stream",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Stream"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Topic"
+            }
+          },
+          {
+            "name": "include_topics",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean",
+              "title": "Include Topics"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/audio/mp3": {
+      "head": {
+        "summary": "Transcript Get Audio Mp3",
+        "operationId": "v1_transcript_head_audio_mp3",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Transcript Get Audio Mp3",
+        "operationId": "v1_transcript_get_audio_mp3",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/audio/waveform": {
+      "get": {
+        "summary": "Transcript Get Audio Waveform",
+        "operationId": "v1_transcript_get_audio_waveform",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioWaveform"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/participants": {
+      "get": {
+        "summary": "Transcript Get Participants",
+        "operationId": "v1_transcript_get_participants",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Participant"
+                  },
+                  "title": "Response Transcript Get Participants V1 Transcripts  Transcript Id  Participants Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Transcript Add Participant",
+        "operationId": "v1_transcript_add_participant",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateParticipant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Participant"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/participants/{participant_id}": {
+      "get": {
+        "summary": "Transcript Get Participant",
+        "operationId": "v1_transcript_get_participant",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "participant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Participant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Participant"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Transcript Update Participant",
+        "operationId": "v1_transcript_update_participant",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "participant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Participant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateParticipant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Participant"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Transcript Delete Participant",
+        "operationId": "v1_transcript_delete_participant",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "participant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Participant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/speaker/assign": {
+      "patch": {
+        "summary": "Transcript Assign Speaker",
+        "operationId": "v1_transcript_assign_speaker",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeakerAssignment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerAssignmentStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/speaker/merge": {
+      "patch": {
+        "summary": "Transcript Merge Speaker",
+        "operationId": "v1_transcript_merge_speaker",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeakerMerge"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerAssignmentStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/record/upload": {
+      "post": {
+        "summary": "Transcript Record Upload",
+        "operationId": "v1_transcript_record_upload",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          },
+          {
+            "name": "chunk_number",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Chunk Number"
+            }
+          },
+          {
+            "name": "total_chunks",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Total Chunks"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/events": {
+      "get": {
+        "summary": "Transcript Get Websocket Events",
+        "operationId": "v1_transcript_get_websocket_events",
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/record/webrtc": {
+      "post": {
+        "summary": "Transcript Record Webrtc",
+        "operationId": "v1_transcript_record_webrtc",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RtcOffer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transcripts/{transcript_id}/process": {
+      "post": {
+        "summary": "Transcript Process",
+        "operationId": "v1_transcript_process",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transcript_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transcript Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "User Me",
+        "operationId": "v1_user_me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UserInfo"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response User Me V1 Me Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/zulip/streams": {
+      "get": {
+        "summary": "Zulip Get Streams",
+        "description": "Get all Zulip streams.",
+        "operationId": "v1_zulip_get_streams",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Stream"
+                  },
+                  "type": "array",
+                  "title": "Response Zulip Get Streams V1 Zulip Streams Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/zulip/streams/{stream_id}/topics": {
+      "get": {
+        "summary": "Zulip Get Topics",
+        "description": "Get all topics for a specific Zulip stream.",
+        "operationId": "v1_zulip_get_topics",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "stream_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Stream Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Topic"
+                  },
+                  "title": "Response Zulip Get Topics V1 Zulip Streams  Stream Id  Topics Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/whereby": {
+      "post": {
+        "summary": "Whereby Webhook",
+        "operationId": "v1_whereby_webhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WherebyWebhookEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AudioWaveform": {
+        "properties": {
+          "data": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "AudioWaveform"
+      },
+      "Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post": {
+        "properties": {
+          "chunk": {
+            "type": "string",
+            "format": "binary",
+            "title": "Chunk"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk"
+        ],
+        "title": "Body_transcript_record_upload_v1_transcripts__transcript_id__record_upload_post"
+      },
+      "CreateParticipant": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateParticipant"
+      },
+      "CreateRoom": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "zulip_auto_post": {
+            "type": "boolean",
+            "title": "Zulip Auto Post"
+          },
+          "zulip_stream": {
+            "type": "string",
+            "title": "Zulip Stream"
+          },
+          "zulip_topic": {
+            "type": "string",
+            "title": "Zulip Topic"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "room_mode": {
+            "type": "string",
+            "title": "Room Mode"
+          },
+          "recording_type": {
+            "type": "string",
+            "title": "Recording Type"
+          },
+          "recording_trigger": {
+            "type": "string",
+            "title": "Recording Trigger"
+          },
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "zulip_auto_post",
+          "zulip_stream",
+          "zulip_topic",
+          "is_locked",
+          "room_mode",
+          "recording_type",
+          "recording_trigger",
+          "is_shared"
+        ],
+        "title": "CreateRoom"
+      },
+      "CreateTranscript": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_language": {
+            "type": "string",
+            "title": "Source Language",
+            "default": "en"
+          },
+          "target_language": {
+            "type": "string",
+            "title": "Target Language",
+            "default": "en"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateTranscript"
+      },
+      "DeletionStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "DeletionStatus"
+      },
+      "GetTranscript": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "short_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Summary"
+          },
+          "long_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "share_mode": {
+            "type": "string",
+            "title": "Share Mode",
+            "default": "private"
+          },
+          "source_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Language"
+          },
+          "target_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Language"
+          },
+          "reviewed": {
+            "type": "boolean",
+            "title": "Reviewed"
+          },
+          "meeting_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting Id"
+          },
+          "source_kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "room_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Name"
+          },
+          "audio_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Deleted"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TranscriptParticipant"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "status",
+          "locked",
+          "duration",
+          "title",
+          "short_summary",
+          "long_summary",
+          "created_at",
+          "source_language",
+          "target_language",
+          "reviewed",
+          "meeting_id",
+          "source_kind",
+          "participants"
+        ],
+        "title": "GetTranscript"
+      },
+      "GetTranscriptMinimal": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "short_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Summary"
+          },
+          "long_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "share_mode": {
+            "type": "string",
+            "title": "Share Mode",
+            "default": "private"
+          },
+          "source_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Language"
+          },
+          "target_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Language"
+          },
+          "reviewed": {
+            "type": "boolean",
+            "title": "Reviewed"
+          },
+          "meeting_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting Id"
+          },
+          "source_kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "room_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Name"
+          },
+          "audio_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "status",
+          "locked",
+          "duration",
+          "title",
+          "short_summary",
+          "long_summary",
+          "created_at",
+          "source_language",
+          "target_language",
+          "reviewed",
+          "meeting_id",
+          "source_kind"
+        ],
+        "title": "GetTranscriptMinimal"
+      },
+      "GetTranscriptSegmentTopic": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "start": {
+            "type": "number",
+            "title": "Start"
+          },
+          "speaker": {
+            "type": "integer",
+            "title": "Speaker"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "start",
+          "speaker"
+        ],
+        "title": "GetTranscriptSegmentTopic"
+      },
+      "GetTranscriptTopic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "timestamp": {
+            "type": "number",
+            "title": "Timestamp"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/GetTranscriptSegmentTopic"
+            },
+            "type": "array",
+            "title": "Segments",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "timestamp",
+          "duration",
+          "transcript"
+        ],
+        "title": "GetTranscriptTopic"
+      },
+      "GetTranscriptTopicWithWords": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "timestamp": {
+            "type": "number",
+            "title": "Timestamp"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/GetTranscriptSegmentTopic"
+            },
+            "type": "array",
+            "title": "Segments",
+            "default": []
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/Word"
+            },
+            "type": "array",
+            "title": "Words",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "timestamp",
+          "duration",
+          "transcript"
+        ],
+        "title": "GetTranscriptTopicWithWords"
+      },
+      "GetTranscriptTopicWithWordsPerSpeaker": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "timestamp": {
+            "type": "number",
+            "title": "Timestamp"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/GetTranscriptSegmentTopic"
+            },
+            "type": "array",
+            "title": "Segments",
+            "default": []
+          },
+          "words_per_speaker": {
+            "items": {
+              "$ref": "#/components/schemas/SpeakerWords"
+            },
+            "type": "array",
+            "title": "Words Per Speaker",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "timestamp",
+          "duration",
+          "transcript"
+        ],
+        "title": "GetTranscriptTopicWithWordsPerSpeaker"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Meeting": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "room_name": {
+            "type": "string",
+            "title": "Room Name"
+          },
+          "room_url": {
+            "type": "string",
+            "title": "Room Url"
+          },
+          "host_room_url": {
+            "type": "string",
+            "title": "Host Room Url"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
+          },
+          "recording_type": {
+            "type": "string",
+            "enum": [
+              "none",
+              "local",
+              "cloud"
+            ],
+            "title": "Recording Type",
+            "default": "cloud"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "room_name",
+          "room_url",
+          "host_room_url",
+          "start_date",
+          "end_date"
+        ],
+        "title": "Meeting"
+      },
+      "MeetingConsentRequest": {
+        "properties": {
+          "consent_given": {
+            "type": "boolean",
+            "title": "Consent Given"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consent_given"
+        ],
+        "title": "MeetingConsentRequest"
+      },
+      "Page_GetTranscriptMinimal_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GetTranscriptMinimal"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "size"
+        ],
+        "title": "Page[GetTranscriptMinimal]"
+      },
+      "Page_Room_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Room"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "size"
+        ],
+        "title": "Page[Room]"
+      },
+      "Participant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "speaker",
+          "name"
+        ],
+        "title": "Participant"
+      },
+      "Room": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "zulip_auto_post": {
+            "type": "boolean",
+            "title": "Zulip Auto Post"
+          },
+          "zulip_stream": {
+            "type": "string",
+            "title": "Zulip Stream"
+          },
+          "zulip_topic": {
+            "type": "string",
+            "title": "Zulip Topic"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "room_mode": {
+            "type": "string",
+            "title": "Room Mode"
+          },
+          "recording_type": {
+            "type": "string",
+            "title": "Recording Type"
+          },
+          "recording_trigger": {
+            "type": "string",
+            "title": "Recording Trigger"
+          },
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "user_id",
+          "created_at",
+          "zulip_auto_post",
+          "zulip_stream",
+          "zulip_topic",
+          "is_locked",
+          "room_mode",
+          "recording_type",
+          "recording_trigger",
+          "is_shared"
+        ],
+        "title": "Room"
+      },
+      "RtcOffer": {
+        "properties": {
+          "sdp": {
+            "type": "string",
+            "title": "Sdp"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sdp",
+          "type"
+        ],
+        "title": "RtcOffer"
+      },
+      "SearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total number of search results"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query",
+            "description": "Search query text"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "description": "Results per page"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "description": "Number of results to skip"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "query",
+          "limit",
+          "offset"
+        ],
+        "title": "SearchResponse"
+      },
+      "SearchResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "room_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room Id"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Status"
+          },
+          "rank": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Rank"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration",
+            "description": "Duration in seconds"
+          },
+          "search_snippets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Search Snippets",
+            "description": "Text snippets around search matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "status",
+          "rank",
+          "duration",
+          "search_snippets"
+        ],
+        "title": "SearchResult",
+        "description": "Public search result model with computed fields."
+      },
+      "SourceKind": {
+        "type": "string",
+        "enum": [
+          "room",
+          "live",
+          "file"
+        ],
+        "title": "SourceKind"
+      },
+      "SpeakerAssignment": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "participant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant"
+          },
+          "timestamp_from": {
+            "type": "number",
+            "title": "Timestamp From"
+          },
+          "timestamp_to": {
+            "type": "number",
+            "title": "Timestamp To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp_from",
+          "timestamp_to"
+        ],
+        "title": "SpeakerAssignment"
+      },
+      "SpeakerAssignmentStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "SpeakerAssignmentStatus"
+      },
+      "SpeakerMerge": {
+        "properties": {
+          "speaker_from": {
+            "type": "integer",
+            "title": "Speaker From"
+          },
+          "speaker_to": {
+            "type": "integer",
+            "title": "Speaker To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker_from",
+          "speaker_to"
+        ],
+        "title": "SpeakerMerge"
+      },
+      "SpeakerWords": {
+        "properties": {
+          "speaker": {
+            "type": "integer",
+            "title": "Speaker"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/Word"
+            },
+            "type": "array",
+            "title": "Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker",
+          "words"
+        ],
+        "title": "SpeakerWords"
+      },
+      "Stream": {
+        "properties": {
+          "stream_id": {
+            "type": "integer",
+            "title": "Stream Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stream_id",
+          "name"
+        ],
+        "title": "Stream"
+      },
+      "Topic": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Topic"
+      },
+      "TranscriptParticipant": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "speaker",
+          "name"
+        ],
+        "title": "TranscriptParticipant"
+      },
+      "UpdateParticipant": {
+        "properties": {
+          "speaker": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "title": "UpdateParticipant"
+      },
+      "UpdateRoom": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "zulip_auto_post": {
+            "type": "boolean",
+            "title": "Zulip Auto Post"
+          },
+          "zulip_stream": {
+            "type": "string",
+            "title": "Zulip Stream"
+          },
+          "zulip_topic": {
+            "type": "string",
+            "title": "Zulip Topic"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
+          },
+          "room_mode": {
+            "type": "string",
+            "title": "Room Mode"
+          },
+          "recording_type": {
+            "type": "string",
+            "title": "Recording Type"
+          },
+          "recording_trigger": {
+            "type": "string",
+            "title": "Recording Trigger"
+          },
+          "is_shared": {
+            "type": "boolean",
+            "title": "Is Shared"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "zulip_auto_post",
+          "zulip_stream",
+          "zulip_topic",
+          "is_locked",
+          "room_mode",
+          "recording_type",
+          "recording_trigger",
+          "is_shared"
+        ],
+        "title": "UpdateRoom"
+      },
+      "UpdateTranscript": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "short_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Summary"
+          },
+          "long_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Long Summary"
+          },
+          "share_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "public",
+                  "semi-private",
+                  "private"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Mode"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TranscriptParticipant"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participants"
+          },
+          "reviewed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed"
+          },
+          "audio_deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Deleted"
+          }
+        },
+        "type": "object",
+        "title": "UpdateTranscript"
+      },
+      "UserInfo": {
+        "properties": {
+          "sub": {
+            "type": "string",
+            "title": "Sub"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sub",
+          "email",
+          "email_verified"
+        ],
+        "title": "UserInfo"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WherebyWebhookEvent": {
+        "properties": {
+          "apiVersion": {
+            "type": "string",
+            "title": "Apiversion"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "id",
+          "createdAt",
+          "type",
+          "data"
+        ],
+        "title": "WherebyWebhookEvent"
+      },
+      "Word": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Start",
+            "description": "Time in seconds with float part"
+          },
+          "end": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "End",
+            "description": "Time in seconds with float part"
+          },
+          "speaker": {
+            "type": "integer",
+            "title": "Speaker",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "start",
+          "end"
+        ],
+        "title": "Word"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "token"
+          }
+        }
+      }
+    }
+  }
+}
