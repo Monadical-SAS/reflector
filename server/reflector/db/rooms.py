@@ -10,6 +10,7 @@ from sqlalchemy.sql import false, or_
 
 from reflector.db import get_database, metadata
 from reflector.schemas.platform import Platform
+from reflector.settings import settings
 from reflector.utils import generate_uuid4
 
 rooms = sqlalchemy.Table(
@@ -54,8 +55,7 @@ rooms = sqlalchemy.Table(
     sqlalchemy.Column(
         "platform",
         sqlalchemy.String,
-        nullable=True,
-        server_default=None,
+        nullable=False,
     ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
@@ -84,7 +84,7 @@ class Room(BaseModel):
     ics_enabled: bool = False
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
-    platform: Platform | None = None
+    platform: Platform = Field(default_factory=lambda: settings.DEFAULT_VIDEO_PLATFORM)
 
 
 class RoomController:
@@ -138,7 +138,7 @@ class RoomController:
         ics_url: str | None = None,
         ics_fetch_interval: int = 300,
         ics_enabled: bool = False,
-        platform: Platform | None = None,
+        platform: Platform = settings.DEFAULT_VIDEO_PLATFORM,
     ):
         """
         Add a new room
@@ -146,24 +146,26 @@ class RoomController:
         if webhook_url and not webhook_secret:
             webhook_secret = secrets.token_urlsafe(32)
 
-        room = Room(
-            name=name,
-            user_id=user_id,
-            zulip_auto_post=zulip_auto_post,
-            zulip_stream=zulip_stream,
-            zulip_topic=zulip_topic,
-            is_locked=is_locked,
-            room_mode=room_mode,
-            recording_type=recording_type,
-            recording_trigger=recording_trigger,
-            is_shared=is_shared,
-            webhook_url=webhook_url,
-            webhook_secret=webhook_secret,
-            ics_url=ics_url,
-            ics_fetch_interval=ics_fetch_interval,
-            ics_enabled=ics_enabled,
-            platform=platform,
-        )
+        room_data = {
+            "name": name,
+            "user_id": user_id,
+            "zulip_auto_post": zulip_auto_post,
+            "zulip_stream": zulip_stream,
+            "zulip_topic": zulip_topic,
+            "is_locked": is_locked,
+            "room_mode": room_mode,
+            "recording_type": recording_type,
+            "recording_trigger": recording_trigger,
+            "is_shared": is_shared,
+            "webhook_url": webhook_url,
+            "webhook_secret": webhook_secret,
+            "ics_url": ics_url,
+            "ics_fetch_interval": ics_fetch_interval,
+            "ics_enabled": ics_enabled,
+            "platform": platform,
+        }
+
+        room = Room(**room_data)
         query = rooms.insert().values(**room.model_dump())
         try:
             await get_database().execute(query)

@@ -10,7 +10,7 @@ from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.services.ics_sync import SyncStatus, ics_sync_service
-from reflector.video_platforms.factory import create_platform_client, get_platform
+from reflector.video_platforms.factory import create_platform_client
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
 
@@ -104,7 +104,7 @@ async def create_upcoming_meetings_for_event(event, create_window, room: Room):
     try:
         end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
 
-        client = create_platform_client(get_platform(room.platform))
+        client = create_platform_client(room.platform)
 
         meeting_data = await client.create_meeting(
             room.name,

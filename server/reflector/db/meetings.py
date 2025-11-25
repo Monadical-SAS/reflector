@@ -10,7 +10,6 @@ from reflector.db.rooms import Room
 from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils import generate_uuid4
 from reflector.utils.string import assert_equal
-from reflector.video_platforms.factory import get_platform
 
 meetings = sa.Table(
     "meeting",
@@ -140,7 +139,7 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
-            platform=get_platform(room.platform),
+            platform=room.platform,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
