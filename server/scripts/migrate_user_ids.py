@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Manual Migration Script: Migrate user_id from Authentik uid to internal user.id
+Manual Migration Script: Migrate user_id from Authentik UID to internal user.id
 
 This script should be run manually AFTER applying the database schema migrations.
 
@@ -11,14 +11,14 @@ Usage:
     python scripts/migrate_user_ids.py
 
 What this script does:
-1. Collects all unique UIDs currently used in the database
+1. Collects all unique Authentik UIDs currently used in the database
 2. Fetches only those users from Authentik API to populate the users table
 3. Updates user_id in: user_api_key, transcript, room, meeting_consent
-4. Uses user.uid to lookup the corresponding user.id
+4. Uses user.authentik_uid to lookup the corresponding user.id
 
 The script is idempotent:
 - User inserts use ON CONFLICT DO NOTHING (safe if users already exist)
-- Update queries only match uid->uuid pairs (no-op if already migrated)
+- Update queries only match authentik_uid->uuid pairs (no-op if already migrated)
 - Safe to run multiple times without side effects
 
 Prerequisites:
@@ -95,22 +95,22 @@ class AuthentikClient:
             raise Exception(f"Failed to fetch users from Authentik: {e}") from e
 
 
-async def collect_used_uids(connection: AsyncConnection) -> set[str]:
-    print("\nStep 1: Collecting UIDs from database tables...")
-    used_uids = set()
+async def collect_used_authentik_uids(connection: AsyncConnection) -> set[str]:
+    print("\nStep 1: Collecting Authentik UIDs from database tables...")
+    used_authentik_uids = set()
 
     for table in TABLES_WITH_USER_ID:
         result = await connection.execute(
             text(f'SELECT DISTINCT user_id FROM "{table}" WHERE user_id IS NOT NULL')
         )
-        uids = [row[0] for row in result.fetchall()]
-        used_uids.update(uids)
-        print(f"  Found {len(uids)} unique UIDs in {table}")
+        authentik_uids = [row[0] for row in result.fetchall()]
+        used_authentik_uids.update(authentik_uids)
+        print(f"  Found {len(authentik_uids)} unique Authentik UIDs in {table}")
 
-    print(f"  Total unique user IDs found: {len(used_uids)}")
+    print(f"  Total unique user IDs found: {len(used_authentik_uids)}")
 
-    if used_uids:
-        sample_id = next(iter(used_uids))
+    if used_authentik_uids:
+        sample_id = next(iter(used_authentik_uids))
         if len(sample_id) == 36 and sample_id.count("-") == 4:
             print(
                 f"\n✅ User IDs are already in UUID format (e.g., {sample_id[:20]}...)"
@@ -118,17 +118,17 @@ async def collect_used_uids(connection: AsyncConnection) -> set[str]:
             print("Migration has already been completed!")
             return set()
 
-    return used_uids
+    return used_authentik_uids
 
 
-def filter_users_by_uid(
-    authentik_users: list[dict[str, Any]], used_uids: set[str]
+def filter_users_by_authentik_uid(
+    authentik_users: list[dict[str, Any]], used_authentik_uids: set[str]
 ) -> tuple[list[dict[str, Any]], set[str]]:
     used_authentik_users = [
-        user for user in authentik_users if user.get("uid") in used_uids
+        user for user in authentik_users if user.get("uid") in used_authentik_uids
     ]
 
-    missing_ids = used_uids - {u.get("uid") for u in used_authentik_users}
+    missing_ids = used_authentik_uids - {u.get("uid") for u in used_authentik_users}
 
     print(
         f"  Found {len(used_authentik_users)} matching users in Authentik "
@@ -137,7 +137,7 @@ def filter_users_by_uid(
 
     if missing_ids:
         print(
-            f"  ⚠ Warning: {len(missing_ids)} UIDs in database not found in Authentik:"
+            f"  ⚠ Warning: {len(missing_ids)} Authentik UIDs in database not found in Authentik:"
         )
         for user_id in sorted(missing_ids):
             print(f"    - {user_id}")
@@ -154,24 +154,24 @@ async def sync_users_to_database(
 
     for authentik_user in authentik_users:
         user_id = authentik_user["uuid"]
-        uid = authentik_user["uid"]
+        authentik_uid = authentik_user["uid"]
         email = authentik_user.get("email")
 
         if not email:
-            print(f"  ⚠ Skipping user {uid} (no email)")
+            print(f"  ⚠ Skipping user {authentik_uid} (no email)")
             skipped += 1
             continue
 
         result = await connection.execute(
             text("""
-                INSERT INTO "user" (id, uid, email, created_at, updated_at)
-                VALUES (:id, :uid, :email, :created_at, :updated_at)
+                INSERT INTO "user" (id, email, authentik_uid, created_at, updated_at)
+                VALUES (:id, :email, :authentik_uid, :created_at, :updated_at)
                 ON CONFLICT (id) DO NOTHING
             """),
             {
                 "id": user_id,
-                "uid": uid,
                 "email": email,
+                "authentik_uid": authentik_uid,
                 "created_at": now,
                 "updated_at": now,
             },
@@ -183,7 +183,7 @@ async def sync_users_to_database(
 
 
 async def migrate_all_user_ids(connection: AsyncConnection) -> int:
-    print("\nStep 3: Migrating user_id columns from uid to internal id...")
+    print("\nStep 3: Migrating user_id columns from Authentik UID to internal UUID...")
     print("(If no rows are updated, migration may have already been completed)")
 
     total_updated = 0
@@ -199,7 +199,7 @@ async def migrate_all_user_ids(connection: AsyncConnection) -> int:
             UPDATE {table}
             SET user_id = u.id
             FROM "user" u
-            WHERE {table}.user_id = u.uid
+            WHERE {table}.user_id = u.authentik_uid
             {null_check}
         """
 
@@ -219,8 +219,8 @@ async def run_migration(
 
     try:
         async with engine.begin() as connection:
-            used_uids = await collect_used_uids(connection)
-            if not used_uids:
+            used_authentik_uids = await collect_used_authentik_uids(connection)
+            if not used_authentik_uids:
                 print("\n⚠️  No user IDs found in database. Nothing to migrate.")
                 print("Migration complete (no-op)!")
                 return
@@ -239,7 +239,9 @@ async def run_migration(
                 )
                 sys.exit(1)
 
-            used_authentik_users, _ = filter_users_by_uid(authentik_users, used_uids)
+            used_authentik_users, _ = filter_users_by_authentik_uid(
+                authentik_users, used_authentik_uids
+            )
             created, skipped = await sync_users_to_database(
                 connection, used_authentik_users
             )

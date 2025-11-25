@@ -22,15 +22,15 @@ def upgrade() -> None:
     op.create_table(
         "user",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("uid", sa.String(), nullable=False),
         sa.Column("email", sa.String(), nullable=False),
+        sa.Column("authentik_uid", sa.String(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
 
     with op.batch_alter_table("user", schema=None) as batch_op:
-        batch_op.create_index("idx_user_uid", ["uid"], unique=True)
+        batch_op.create_index("idx_user_authentik_uid", ["authentik_uid"], unique=True)
         batch_op.create_index("idx_user_email", ["email"], unique=False)
 
 

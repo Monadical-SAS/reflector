@@ -76,21 +76,20 @@ async def _authenticate_user(
     if jwt_token:
         try:
             payload = jwtauth.verify_token(jwt_token)
-            uid = payload["sub"]  # This is the Authentik UID
+            authentik_uid = payload["sub"]
             email = payload["email"]
 
-            # Look up user by Authentik UID to get internal user.id
-            user = await user_controller.get_by_uid(uid)
+            user = await user_controller.get_by_authentik_uid(authentik_uid)
             if not user:
-                # User not found - create them on first login
-                logger.info(f"Creating new user on first login: {uid} ({email})")
+                logger.info(
+                    f"Creating new user on first login: {authentik_uid} ({email})"
+                )
                 user = await user_controller.create_or_update(
                     id=generate_uuid4(),
-                    uid=uid,
+                    authentik_uid=authentik_uid,
                     email=email,
                 )
 
-            # Return user.id as sub
             user_infos.append(UserInfo(sub=user.id, email=email))
         except JWTError as e:
             logger.error(f"JWT error: {e}")
