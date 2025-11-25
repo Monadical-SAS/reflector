@@ -27,9 +27,6 @@ class ProcessError:
     detail: NonEmptyString
 
 
-# === Success Config Types ===
-
-
 @dataclass
 class FileProcessingConfig:
     transcript_id: NonEmptyString
