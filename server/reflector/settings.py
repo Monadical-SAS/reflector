@@ -97,10 +97,6 @@ class Settings(BaseSettings):
     AUTH_JWT_PUBLIC_KEY: str | None = "authentik.monadical.com_public.pem"
     AUTH_JWT_AUDIENCE: str | None = None
 
-    # Authentik API integration
-    AUTHENTIK_API_URL: str | None = None
-    AUTHENTIK_API_TOKEN: str | None = None
-
     PUBLIC_MODE: bool = False
     PUBLIC_DATA_RETENTION_DAYS: PositiveInt = 7
 
