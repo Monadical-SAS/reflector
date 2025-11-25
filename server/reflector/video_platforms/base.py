@@ -31,10 +31,6 @@ class VideoPlatformClient(ABC):
         pass
 
     @abstractmethod
-    async def delete_room(self, room_name: str) -> bool:
-        pass
-
-    @abstractmethod
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         pass
 
