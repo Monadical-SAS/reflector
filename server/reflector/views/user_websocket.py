@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, WebSocket
 
 from reflector.auth.auth_jwt import JWTAuth  # type: ignore
+from reflector.db.users import user_controller
 from reflector.ws_manager import get_ws_manager
 
 router = APIRouter()
@@ -29,7 +30,18 @@ async def user_events_websocket(websocket: WebSocket):
 
     try:
         payload = JWTAuth().verify_token(token)
-        user_id = payload.get("sub")
+        authentik_uid = payload.get("sub")
+
+        if authentik_uid:
+            user = await user_controller.get_by_authentik_uid(authentik_uid)
+            if user:
+                user_id = user.id
+            else:
+                await websocket.close(code=UNAUTHORISED)
+                return
+        else:
+            await websocket.close(code=UNAUTHORISED)
+            return
     except Exception:
         await websocket.close(code=UNAUTHORISED)
         return

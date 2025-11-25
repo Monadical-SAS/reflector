@@ -4,7 +4,7 @@ import { useWebSockets } from "../../useWebSockets";
 import { lockWakeState, releaseWakeState } from "../../../../lib/wakeLock";
 import { useRouter } from "next/navigation";
 import useMp3 from "../../useMp3";
-import { Center, VStack, Text, Heading, Button } from "@chakra-ui/react";
+import { Center, VStack, Text, Heading } from "@chakra-ui/react";
 import FileUploadButton from "../../fileUploadButton";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
 
@@ -53,6 +53,12 @@ const TranscriptUpload = (details: TranscriptUpload) => {
 
       const newUrl = "/transcripts/" + params.transcriptId;
       router.replace(newUrl);
+    } else if (
+      newStatus &&
+      (newStatus == "uploaded" || newStatus == "processing")
+    ) {
+      // After upload finishes (or if already processing), redirect to the unified processing page
+      router.replace(`/transcripts/${params.transcriptId}/processing`);
     }
   }, [webSockets.status?.value, transcript.data?.status]);
 
@@ -71,7 +77,7 @@ const TranscriptUpload = (details: TranscriptUpload) => {
     <>
       <VStack
         align={"left"}
-        h="full"
+        minH="100vh"
         pt={4}
         mx="auto"
         w={{ base: "full", md: "container.xl" }}
@@ -79,34 +85,16 @@ const TranscriptUpload = (details: TranscriptUpload) => {
         <Heading size={"lg"}>Upload meeting</Heading>
         <Center h={"full"} w="full">
           <VStack gap={10} bg="gray.100" p={10} borderRadius="md" maxW="500px">
-            {status && status == "idle" && (
-              <>
-                <Text>
-                  Please select the file, supported formats: .mp3, m4a, .wav,
-                  .mp4, .mov or .webm
-                </Text>
-                <FileUploadButton transcriptId={params.transcriptId} />
-              </>
-            )}
-            {status && status == "uploaded" && (
-              <Text>File is uploaded, processing...</Text>
-            )}
-            {(status == "recording" || status == "processing") && (
-              <>
-                <Heading size={"lg"}>Processing your recording...</Heading>
-                <Text>
-                  You can safely return to the library while your file is being
-                  processed.
-                </Text>
-                <Button
-                  onClick={() => {
-                    router.push("/browse");
-                  }}
-                >
-                  Browse
-                </Button>
-              </>
-            )}
+            <Text>
+              Please select the file, supported formats: .mp3, m4a, .wav, .mp4,
+              .mov or .webm
+            </Text>
+            <FileUploadButton
+              transcriptId={params.transcriptId}
+              onUploadComplete={() =>
+                router.replace(`/transcripts/${params.transcriptId}/processing`)
+              }
+            />
           </VStack>
         </Center>
       </VStack>

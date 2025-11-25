@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, TypeVar
 
 from pydantic import Field, TypeAdapter, constr
 
@@ -21,3 +21,12 @@ def try_parse_non_empty_string(s: str) -> NonEmptyString | None:
     if not s:
         return None
     return parse_non_empty_string(s)
+
+
+T = TypeVar("T", bound=str)
+
+
+def assert_equal[T](s1: T, s2: T) -> T:
+    if s1 != s2:
+        raise ValueError(f"assert_equal: {s1} != {s2}")
+    return s1

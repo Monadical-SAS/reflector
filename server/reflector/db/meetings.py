@@ -7,7 +7,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
+from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils import generate_uuid4
+from reflector.utils.string import assert_equal
 
 meetings = sa.Table(
     "meeting",
@@ -55,6 +57,12 @@ meetings = sa.Table(
         ),
     ),
     sa.Column("calendar_metadata", JSONB),
+    sa.Column(
+        "platform",
+        sa.String,
+        nullable=False,
+        server_default=assert_equal(WHEREBY_PLATFORM, "whereby"),
+    ),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -94,13 +102,14 @@ class Meeting(BaseModel):
     is_locked: bool = False
     room_mode: Literal["normal", "group"] = "normal"
     recording_type: Literal["none", "local", "cloud"] = "cloud"
-    recording_trigger: Literal[
+    recording_trigger: Literal[  # whereby-specific
         "none", "prompt", "automatic", "automatic-2nd-participant"
     ] = "automatic-2nd-participant"
     num_clients: int = 0
     is_active: bool = True
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
+    platform: Platform = WHEREBY_PLATFORM
 
 
 class MeetingController:
@@ -130,14 +139,19 @@ class MeetingController:
             recording_trigger=room.recording_trigger,
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
+            platform=room.platform,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
         return meeting
 
-    async def get_all_active(self) -> list[Meeting]:
-        query = meetings.select().where(meetings.c.is_active)
-        return await get_database().fetch_all(query)
+    async def get_all_active(self, platform: str | None = None) -> list[Meeting]:
+        conditions = [meetings.c.is_active]
+        if platform is not None:
+            conditions.append(meetings.c.platform == platform)
+        query = meetings.select().where(sa.and_(*conditions))
+        results = await get_database().fetch_all(query)
+        return [Meeting(**result) for result in results]
 
     async def get_by_room_name(
         self,
@@ -147,16 +161,14 @@ class MeetingController:
         Get a meeting by room name.
         For backward compatibility, returns the most recent meeting.
         """
-        end_date = getattr(meetings.c, "end_date")
         query = (
             meetings.select()
             .where(meetings.c.room_name == room_name)
-            .order_by(end_date.desc())
+            .order_by(meetings.c.end_date.desc())
         )
         result = await get_database().fetch_one(query)
         if not result:
             return None
-
         return Meeting(**result)
 
     async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
@@ -179,7 +191,6 @@ class MeetingController:
         result = await get_database().fetch_one(query)
         if not result:
             return None
-
         return Meeting(**result)
 
     async def get_all_active_for_room(
@@ -219,17 +230,27 @@ class MeetingController:
             return None
         return Meeting(**result)
 
-    async def get_by_id(self, meeting_id: str, **kwargs) -> Meeting | None:
+    async def get_by_id(
+        self, meeting_id: str, room: Room | None = None
+    ) -> Meeting | None:
         query = meetings.select().where(meetings.c.id == meeting_id)
+
+        if room:
+            query = query.where(meetings.c.room_id == room.id)
+
         result = await get_database().fetch_one(query)
         if not result:
             return None
         return Meeting(**result)
 
-    async def get_by_calendar_event(self, calendar_event_id: str) -> Meeting | None:
+    async def get_by_calendar_event(
+        self, calendar_event_id: str, room: Room
+    ) -> Meeting | None:
         query = meetings.select().where(
             meetings.c.calendar_event_id == calendar_event_id
         )
+        if room:
+            query = query.where(meetings.c.room_id == room.id)
         result = await get_database().fetch_one(query)
         if not result:
             return None
@@ -237,6 +258,28 @@ class MeetingController:
 
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
+        await get_database().execute(query)
+
+    async def increment_num_clients(self, meeting_id: str) -> None:
+        """Atomically increment participant count."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(num_clients=meetings.c.num_clients + 1)
+        )
+        await get_database().execute(query)
+
+    async def decrement_num_clients(self, meeting_id: str) -> None:
+        """Atomically decrement participant count (min 0)."""
+        query = (
+            meetings.update()
+            .where(meetings.c.id == meeting_id)
+            .values(
+                num_clients=sa.case(
+                    (meetings.c.num_clients > 0, meetings.c.num_clients - 1), else_=0
+                )
+            )
+        )
         await get_database().execute(query)
 
 

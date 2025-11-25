@@ -10,7 +10,15 @@ import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import { useRouter } from "next/navigation";
-import { Box, Flex, Grid, GridItem, Skeleton, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Grid,
+  GridItem,
+  Skeleton,
+  Text,
+  Spinner,
+} from "@chakra-ui/react";
 import { useTranscriptGet } from "../../../lib/apiHooks";
 import { TranscriptStatus } from "../../../lib/transcript";
 
@@ -28,6 +36,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     "idle",
     "recording",
     "processing",
+    "uploaded",
   ] satisfies TranscriptStatus[] as TranscriptStatus[];
 
   const transcript = useTranscriptGet(transcriptId);
@@ -41,17 +50,59 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     waiting || mp3.audioDeleted === true,
   );
   const useActiveTopic = useState<Topic | null>(null);
+  const [finalSummaryElement, setFinalSummaryElement] =
+    useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (waiting) {
-      const newUrl = "/transcripts/" + params.transcriptId + "/record";
+    if (!waiting || !transcript.data) return;
+
+    const status = transcript.data.status;
+    let newUrl: string | null = null;
+
+    if (status === "processing" || status === "uploaded") {
+      newUrl = `/transcripts/${params.transcriptId}/processing`;
+    } else if (status === "recording") {
+      newUrl = `/transcripts/${params.transcriptId}/record`;
+    } else if (status === "idle") {
+      newUrl =
+        transcript.data.source_kind === "file"
+          ? `/transcripts/${params.transcriptId}/upload`
+          : `/transcripts/${params.transcriptId}/record`;
+    }
+
+    if (newUrl) {
       // Shallow redirection does not work on NextJS 13
       // https://github.com/vercel/next.js/discussions/48110
       // https://github.com/vercel/next.js/discussions/49540
       router.replace(newUrl);
-      // history.replaceState({}, "", newUrl);
     }
-  }, [waiting]);
+  }, [waiting, transcript.data?.status, transcript.data?.source_kind]);
+
+  if (waiting) {
+    return (
+      <Box>
+        <Box
+          w="full"
+          background="gray.bg"
+          border={"2px solid"}
+          borderColor={"gray.bg"}
+          borderRadius={8}
+          p={6}
+          minH="100%"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Flex direction="column" align="center" gap={3}>
+            <Spinner size="xl" color="blue.500" />
+            <Text color="gray.600" textAlign="center">
+              Loading transcript...
+            </Text>
+          </Flex>
+        </Box>
+      </Box>
+    );
+  }
 
   if (transcript.error || topics?.error) {
     return (
@@ -124,9 +175,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                 <TranscriptTitle
                   title={transcript.data?.title || "Unnamed Transcript"}
                   transcriptId={transcriptId}
-                  onUpdate={(newTitle) => {
+                  onUpdate={() => {
                     transcript.refetch().then(() => {});
                   }}
+                  transcript={transcript.data || null}
+                  topics={topics.topics}
+                  finalSummaryElement={finalSummaryElement}
                 />
               </Flex>
               {mp3.audioDeleted && (
@@ -148,11 +202,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
           {transcript.data && topics.topics ? (
             <>
               <FinalSummary
-                transcriptResponse={transcript.data}
-                topicsResponse={topics.topics}
+                transcript={transcript.data}
+                topics={topics.topics}
                 onUpdate={() => {
-                  transcript.refetch();
+                  transcript.refetch().then(() => {});
                 }}
+                finalSummaryRef={setFinalSummaryElement}
               />
             </>
           ) : (

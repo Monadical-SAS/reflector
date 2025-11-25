@@ -5,17 +5,18 @@ type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { Button, BoxProps, Box, Menu } from "@chakra-ui/react";
 import { LuChevronDown } from "react-icons/lu";
 import { client } from "../../lib/apiClient";
+import { useTranscriptParticipants } from "../../lib/apiHooks";
 
 type ShareCopyProps = {
-  finalSummaryRef: any;
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
+  finalSummaryElement: HTMLDivElement | null;
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
 };
 
 export default function ShareCopy({
-  finalSummaryRef,
-  transcriptResponse,
-  topicsResponse,
+  finalSummaryElement,
+  transcript,
+  topics,
   ...boxProps
 }: ShareCopyProps & BoxProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
@@ -30,16 +31,18 @@ export default function ShareCopy({
     { value: "webvtt-named", label: "WebVTT (named)" },
     { value: "json", label: "JSON" },
   ];
+  const participantsQuery = useTranscriptParticipants(transcript?.id || null);
 
   const onCopySummaryClick = () => {
-    let text_to_copy = finalSummaryRef.current?.innerText;
+    const text_to_copy = finalSummaryElement?.innerText;
 
-    text_to_copy &&
+    if (text_to_copy) {
       navigator.clipboard.writeText(text_to_copy).then(() => {
         setIsCopiedSummary(true);
         // Reset the copied state after 2 seconds
         setTimeout(() => setIsCopiedSummary(false), 2000);
       });
+    }
   };
 
   const onCopyTranscriptFormatClick = async (format: TranscriptFormat) => {
@@ -49,7 +52,7 @@ export default function ShareCopy({
         "/v1/transcripts/{transcript_id}",
         {
           params: {
-            path: { transcript_id: transcriptResponse.id },
+            path: { transcript_id: transcript.id },
             query: { transcript_format: format },
           } as any,
         },

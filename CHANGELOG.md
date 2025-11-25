@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.19.0](https://github.com/Monadical-SAS/reflector/compare/v0.18.0...v0.19.0) (2025-11-25)
+
+
+### Features
+
+* dailyco api module ([#725](https://github.com/Monadical-SAS/reflector/issues/725)) ([4287f8b](https://github.com/Monadical-SAS/reflector/commit/4287f8b8aeee60e51db7539f4dcbda5f6e696bd8))
+* dailyco poll ([#730](https://github.com/Monadical-SAS/reflector/issues/730)) ([8e438ca](https://github.com/Monadical-SAS/reflector/commit/8e438ca285152bd48fdc42767e706fb448d3525c))
+* multitrack cli ([#735](https://github.com/Monadical-SAS/reflector/issues/735)) ([11731c9](https://github.com/Monadical-SAS/reflector/commit/11731c9d38439b04e93b1c3afbd7090bad11a11f))
+
+
+### Bug Fixes
+
+* default platform fix ([#736](https://github.com/Monadical-SAS/reflector/issues/736)) ([c442a62](https://github.com/Monadical-SAS/reflector/commit/c442a627873ca667656eeaefb63e54ab10b8d19e))
+* parakeet vad not getting the end timestamp ([#728](https://github.com/Monadical-SAS/reflector/issues/728)) ([18ed713](https://github.com/Monadical-SAS/reflector/commit/18ed7133693653ef4ddac6c659a8c14b320d1657))
+* start raw tracks recording ([#729](https://github.com/Monadical-SAS/reflector/issues/729)) ([3e47c2c](https://github.com/Monadical-SAS/reflector/commit/3e47c2c0573504858e0d2e1798b6ed31f16b4a5d))
+
+## [0.18.0](https://github.com/Monadical-SAS/reflector/compare/v0.17.0...v0.18.0) (2025-11-14)
+
+
+### Features
+
+* daily QOL: participants dictionary ([#721](https://github.com/Monadical-SAS/reflector/issues/721)) ([b20cad7](https://github.com/Monadical-SAS/reflector/commit/b20cad76e69fb6a76405af299a005f1ddcf60eae))
+
+
+### Bug Fixes
+
+* add proccessing page to file upload and reprocessing ([#650](https://github.com/Monadical-SAS/reflector/issues/650)) ([28a7258](https://github.com/Monadical-SAS/reflector/commit/28a7258e45317b78e60e6397be2bc503647eaace))
+* copy transcript ([#674](https://github.com/Monadical-SAS/reflector/issues/674)) ([a9a4f32](https://github.com/Monadical-SAS/reflector/commit/a9a4f32324f66c838e081eee42bb9502f38c1db1))
+
+## [0.17.0](https://github.com/Monadical-SAS/reflector/compare/v0.16.0...v0.17.0) (2025-11-13)
+
+
+### Features
+
+* add API key management UI ([#716](https://github.com/Monadical-SAS/reflector/issues/716)) ([372202b](https://github.com/Monadical-SAS/reflector/commit/372202b0e1a86823900b0aa77be1bfbc2893d8a1))
+* daily.co support as alternative to whereby ([#691](https://github.com/Monadical-SAS/reflector/issues/691)) ([1473fd8](https://github.com/Monadical-SAS/reflector/commit/1473fd82dc472c394cbaa2987212ad662a74bcac))
+
+## [0.16.0](https://github.com/Monadical-SAS/reflector/compare/v0.15.0...v0.16.0) (2025-10-24)
+
+
+### Features
+
+* search date filter ([#710](https://github.com/Monadical-SAS/reflector/issues/710)) ([962c40e](https://github.com/Monadical-SAS/reflector/commit/962c40e2b6428ac42fd10aea926782d7a6f3f902))
+
 ## [0.15.0](https://github.com/Monadical-SAS/reflector/compare/v0.14.0...v0.15.0) (2025-10-20)
 
 

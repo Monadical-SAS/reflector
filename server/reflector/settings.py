@@ -1,6 +1,7 @@
 from pydantic.types import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils.string import NonEmptyString
 
 
@@ -47,14 +48,17 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
-    # Recording storage
-    RECORDING_STORAGE_BACKEND: str | None = None
+    # Platform-specific recording storage (follows {PREFIX}_STORAGE_AWS_{CREDENTIAL} pattern)
+    # Whereby storage configuration
+    WHEREBY_STORAGE_AWS_BUCKET_NAME: str | None = None
+    WHEREBY_STORAGE_AWS_REGION: str | None = None
+    WHEREBY_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
+    WHEREBY_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
 
-    # Recording storage configuration for AWS
-    RECORDING_STORAGE_AWS_BUCKET_NAME: str = "recording-bucket"
-    RECORDING_STORAGE_AWS_REGION: str = "us-east-1"
-    RECORDING_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
-    RECORDING_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+    # Daily.co storage configuration
+    DAILYCO_STORAGE_AWS_BUCKET_NAME: str | None = None
+    DAILYCO_STORAGE_AWS_REGION: str | None = None
+    DAILYCO_STORAGE_AWS_ROLE_ARN: str | None = None
 
     # Translate into the target language
     TRANSLATION_BACKEND: str = "passthrough"
@@ -124,10 +128,18 @@ class Settings(BaseSettings):
     WHEREBY_API_URL: str = "https://api.whereby.dev/v1"
     WHEREBY_API_KEY: NonEmptyString | None = None
     WHEREBY_WEBHOOK_SECRET: str | None = None
-    AWS_WHEREBY_ACCESS_KEY_ID: str | None = None
-    AWS_WHEREBY_ACCESS_KEY_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
+
+    # Daily.co integration
+    DAILY_API_KEY: str | None = None
+    DAILY_WEBHOOK_SECRET: str | None = None
+    DAILY_SUBDOMAIN: str | None = None
+    DAILY_WEBHOOK_UUID: str | None = (
+        None  # Webhook UUID for this environment. Not used by production code
+    )
+    # Platform Configuration
+    DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
 
     # Zulip integration
     ZULIP_REALM: str | None = None

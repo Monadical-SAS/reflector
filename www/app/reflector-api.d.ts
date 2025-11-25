@@ -604,25 +604,25 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/v1/user/tokens": {
+  "/v1/user/api-keys": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** List Tokens */
-    get: operations["v1_list_tokens"];
+    /** List Api Keys */
+    get: operations["v1_list_api_keys"];
     put?: never;
-    /** Create Token */
-    post: operations["v1_create_token"];
+    /** Create Api Key */
+    post: operations["v1_create_api_key"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/v1/user/tokens/{token_id}": {
+  "/v1/user/api-keys/{key_id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -632,8 +632,8 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /** Delete Token */
-    delete: operations["v1_delete_token"];
+    /** Delete Api Key */
+    delete: operations["v1_delete_api_key"];
     options?: never;
     head?: never;
     patch?: never;
@@ -696,10 +696,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/webhook": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Webhook
+     * @description Handle Daily webhook events.
+     */
+    post: operations["v1_webhook"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** ApiKeyResponse */
+    ApiKeyResponse: {
+      /**
+       * Id
+       * @description A non-empty string
+       */
+      id: string;
+      /**
+       * User Id
+       * @description A non-empty string
+       */
+      user_id: string;
+      /** Name */
+      name: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
     /** AudioWaveform */
     AudioWaveform: {
       /** Data */
@@ -759,6 +799,36 @@ export interface components {
        */
       updated_at: string;
     };
+    /** CreateApiKeyRequest */
+    CreateApiKeyRequest: {
+      /** Name */
+      name?: string | null;
+    };
+    /** CreateApiKeyResponse */
+    CreateApiKeyResponse: {
+      /**
+       * Id
+       * @description A non-empty string
+       */
+      id: string;
+      /**
+       * User Id
+       * @description A non-empty string
+       */
+      user_id: string;
+      /** Name */
+      name: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Key
+       * @description A non-empty string
+       */
+      key: string;
+    };
     /** CreateParticipant */
     CreateParticipant: {
       /** Speaker */
@@ -802,6 +872,8 @@ export interface components {
        * @default false
        */
       ics_enabled: boolean;
+      /** Platform */
+      platform?: ("whereby" | "daily") | null;
     };
     /** CreateRoomMeeting */
     CreateRoomMeeting: {
@@ -810,27 +882,6 @@ export interface components {
        * @default false
        */
       allow_duplicated: boolean | null;
-    };
-    /** CreateTokenRequest */
-    CreateTokenRequest: {
-      /** Name */
-      name?: string | null;
-    };
-    /** CreateTokenResponse */
-    CreateTokenResponse: {
-      /** Id */
-      id: string;
-      /** User Id */
-      user_id: string;
-      /** Name */
-      name: string | null;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Token */
-      token: string;
     };
     /** CreateTranscript */
     CreateTranscript: {
@@ -847,6 +898,22 @@ export interface components {
        */
       target_language: string;
       source_kind?: components["schemas"]["SourceKind"] | null;
+    };
+    /**
+     * DailyWebhookEvent
+     * @description Daily webhook event structure.
+     */
+    DailyWebhookEvent: {
+      /** Type */
+      type: string;
+      /** Id */
+      id: string;
+      /** Ts */
+      ts: number;
+      /** Data */
+      data: {
+        [key: string]: unknown;
+      };
     };
     /** DeletionStatus */
     DeletionStatus: {
@@ -1164,6 +1231,12 @@ export interface components {
       calendar_metadata?: {
         [key: string]: unknown;
       } | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {
@@ -1250,6 +1323,12 @@ export interface components {
       ics_last_sync?: string | null;
       /** Ics Last Etag */
       ics_last_etag?: string | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
     };
     /** RoomDetails */
     RoomDetails: {
@@ -1296,6 +1375,12 @@ export interface components {
       ics_last_sync?: string | null;
       /** Ics Last Etag */
       ics_last_etag?: string | null;
+      /**
+       * Platform
+       * @default whereby
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
       /** Webhook Url */
       webhook_url: string | null;
       /** Webhook Secret */
@@ -1425,20 +1510,6 @@ export interface components {
      * @enum {string}
      */
     SyncStatus: "success" | "unchanged" | "error" | "skipped";
-    /** TokenResponse */
-    TokenResponse: {
-      /** Id */
-      id: string;
-      /** User Id */
-      user_id: string;
-      /** Name */
-      name: string | null;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-    };
     /** Topic */
     Topic: {
       /** Name */
@@ -1490,6 +1561,8 @@ export interface components {
       ics_fetch_interval?: number | null;
       /** Ics Enabled */
       ics_enabled?: boolean | null;
+      /** Platform */
+      platform?: ("whereby" | "daily") | null;
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -1518,8 +1591,6 @@ export interface components {
       sub: string;
       /** Email */
       email: string | null;
-      /** Email Verified */
-      email_verified: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -2265,6 +2336,10 @@ export interface operations {
         offset?: number;
         room_id?: string | null;
         source_kind?: components["schemas"]["SourceKind"] | null;
+        /** @description Filter transcripts created on or after this datetime (ISO 8601 with timezone) */
+        from?: string | null;
+        /** @description Filter transcripts created on or before this datetime (ISO 8601 with timezone) */
+        to?: string | null;
       };
       header?: never;
       path?: never;
@@ -3006,7 +3081,7 @@ export interface operations {
       };
     };
   };
-  v1_list_tokens: {
+  v1_list_api_keys: {
     parameters: {
       query?: never;
       header?: never;
@@ -3021,12 +3096,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["TokenResponse"][];
+          "application/json": components["schemas"]["ApiKeyResponse"][];
         };
       };
     };
   };
-  v1_create_token: {
+  v1_create_api_key: {
     parameters: {
       query?: never;
       header?: never;
@@ -3035,7 +3110,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CreateTokenRequest"];
+        "application/json": components["schemas"]["CreateApiKeyRequest"];
       };
     };
     responses: {
@@ -3045,7 +3120,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CreateTokenResponse"];
+          "application/json": components["schemas"]["CreateApiKeyResponse"];
         };
       };
       /** @description Validation Error */
@@ -3059,12 +3134,12 @@ export interface operations {
       };
     };
   };
-  v1_delete_token: {
+  v1_delete_api_key: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        token_id: string;
+        key_id: string;
       };
       cookie?: never;
     };
@@ -3151,6 +3226,39 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["WherebyWebhookEvent"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_webhook: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DailyWebhookEvent"];
       };
     };
     responses: {

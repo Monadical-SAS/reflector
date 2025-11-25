@@ -135,6 +135,8 @@ class SearchParameters(BaseModel):
     user_id: str | None = None
     room_id: str | None = None
     source_kind: SourceKind | None = None
+    from_datetime: datetime | None = None
+    to_datetime: datetime | None = None
 
 
 class SearchResultDB(BaseModel):
@@ -401,6 +403,14 @@ class SearchController:
         if params.source_kind:
             base_query = base_query.where(
                 transcripts.c.source_kind == params.source_kind
+            )
+        if params.from_datetime:
+            base_query = base_query.where(
+                transcripts.c.created_at >= params.from_datetime
+            )
+        if params.to_datetime:
+            base_query = base_query.where(
+                transcripts.c.created_at <= params.to_datetime
             )
 
         if params.query_text is not None:

@@ -26,9 +26,9 @@ import { useAuth } from "../../lib/AuthProvider";
 import { featureEnabled } from "../../lib/features";
 
 type ShareAndPrivacyProps = {
-  finalSummaryRef: any;
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
+  finalSummaryElement: HTMLDivElement | null;
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
 };
 
 type ShareOption = { value: ShareMode; label: string };
@@ -48,7 +48,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   const [isOwner, setIsOwner] = useState(false);
   const [shareMode, setShareMode] = useState<ShareOption>(
     shareOptionsData.find(
-      (option) => option.value === props.transcriptResponse.share_mode,
+      (option) => option.value === props.transcript.share_mode,
     ) || shareOptionsData[0],
   );
   const [shareLoading, setShareLoading] = useState(false);
@@ -70,7 +70,7 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
     try {
       const updatedTranscript = await updateTranscriptMutation.mutateAsync({
         params: {
-          path: { transcript_id: props.transcriptResponse.id },
+          path: { transcript_id: props.transcript.id },
         },
         body: requestBody,
       });
@@ -90,8 +90,8 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
   const userId = auth.status === "authenticated" ? auth.user?.id : null;
 
   useEffect(() => {
-    setIsOwner(!!(requireLogin && userId === props.transcriptResponse.user_id));
-  }, [userId, props.transcriptResponse.user_id]);
+    setIsOwner(!!(requireLogin && userId === props.transcript.user_id));
+  }, [userId, props.transcript.user_id]);
 
   return (
     <>
@@ -171,19 +171,19 @@ export default function ShareAndPrivacy(props: ShareAndPrivacyProps) {
               <Flex gap={2} mb={2}>
                 {requireLogin && (
                   <ShareZulip
-                    transcriptResponse={props.transcriptResponse}
-                    topicsResponse={props.topicsResponse}
+                    transcript={props.transcript}
+                    topics={props.topics}
                     disabled={toShareMode(shareMode.value) === "private"}
                   />
                 )}
                 <ShareCopy
-                  finalSummaryRef={props.finalSummaryRef}
-                  transcriptResponse={props.transcriptResponse}
-                  topicsResponse={props.topicsResponse}
+                  finalSummaryElement={props.finalSummaryElement}
+                  transcript={props.transcript}
+                  topics={props.topics}
                 />
               </Flex>
 
-              <ShareLink transcriptId={props.transcriptResponse.id} />
+              <ShareLink transcriptId={props.transcript.id} />
             </Dialog.Body>
           </Dialog.Content>
         </Dialog.Positioner>

@@ -23,23 +23,18 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.logger import logger
+from reflector.pipelines import topic_processing
 from reflector.pipelines.main_live_pipeline import (
     PipelineMainBase,
     broadcast_to_sockets,
     task_cleanup_consent,
     task_pipeline_post_to_zulip,
 )
-from reflector.processors import (
-    AudioFileWriterProcessor,
-    TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
-    TranscriptTopicDetectorProcessor,
-)
+from reflector.pipelines.transcription_helpers import transcribe_file_with_processor
+from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_diarization import FileDiarizationInput
 from reflector.processors.file_diarization_auto import FileDiarizationAutoProcessor
-from reflector.processors.file_transcript import FileTranscriptInput
-from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.transcript_diarization_assembler import (
     TranscriptDiarizationAssemblerInput,
     TranscriptDiarizationAssemblerProcessor,
@@ -56,19 +51,6 @@ from reflector.storage import get_transcripts_storage
 from reflector.worker.webhook import send_transcript_webhook
 
 
-class EmptyPipeline:
-    """Empty pipeline for processors that need a pipeline reference"""
-
-    def __init__(self, logger: structlog.BoundLogger):
-        self.logger = logger
-
-    def get_pref(self, k, d=None):
-        return d
-
-    async def emit(self, event):
-        pass
-
-
 class PipelineMainFile(PipelineMainBase):
     """
     Optimized file processing pipeline.
@@ -81,7 +63,7 @@ class PipelineMainFile(PipelineMainBase):
     def __init__(self, transcript_id: str):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
-        self.empty_pipeline = EmptyPipeline(logger=self.logger)
+        self.empty_pipeline = topic_processing.EmptyPipeline(logger=self.logger)
 
     def _handle_gather_exceptions(self, results: list, operation: str) -> None:
         """Handle exceptions from asyncio.gather with return_exceptions=True"""
@@ -262,24 +244,7 @@ class PipelineMainFile(PipelineMainBase):
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
         """Transcribe complete file"""
-        processor = FileTranscriptAutoProcessor()
-        input_data = FileTranscriptInput(audio_url=audio_url, language=language)
-
-        # Store result for retrieval
-        result: TranscriptType | None = None
-
-        async def capture_result(transcript):
-            nonlocal result
-            result = transcript
-
-        processor.on(capture_result)
-        await processor.push(input_data)
-        await processor.flush()
-
-        if not result:
-            raise ValueError("No transcript captured")
-
-        return result
+        return await transcribe_file_with_processor(audio_url, language)
 
     async def diarize_file(self, audio_url: str) -> list[DiarizationSegment] | None:
         """Get diarization for file"""
@@ -322,63 +287,31 @@ class PipelineMainFile(PipelineMainBase):
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str
     ) -> list[TitleSummary]:
-        """Detect topics from complete transcript"""
-        chunk_size = 300
-        topics: list[TitleSummary] = []
-
-        async def on_topic(topic: TitleSummary):
-            topics.append(topic)
-            return await self.on_topic(topic)
-
-        topic_detector = TranscriptTopicDetectorProcessor(callback=on_topic)
-        topic_detector.set_pipeline(self.empty_pipeline)
-
-        for i in range(0, len(transcript.words), chunk_size):
-            chunk_words = transcript.words[i : i + chunk_size]
-            if not chunk_words:
-                continue
-
-            chunk_transcript = TranscriptType(
-                words=chunk_words, translation=transcript.translation
-            )
-
-            await topic_detector.push(chunk_transcript)
-
-        await topic_detector.flush()
-        return topics
+        return await topic_processing.detect_topics(
+            transcript,
+            target_language,
+            on_topic_callback=self.on_topic,
+            empty_pipeline=self.empty_pipeline,
+        )
 
     async def generate_title(self, topics: list[TitleSummary]):
-        """Generate title from topics"""
-        if not topics:
-            self.logger.warning("No topics for title generation")
-            return
-
-        processor = TranscriptFinalTitleProcessor(callback=self.on_title)
-        processor.set_pipeline(self.empty_pipeline)
-
-        for topic in topics:
-            await processor.push(topic)
-
-        await processor.flush()
+        return await topic_processing.generate_title(
+            topics,
+            on_title_callback=self.on_title,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
+        )
 
     async def generate_summaries(self, topics: list[TitleSummary]):
-        """Generate long and short summaries from topics"""
-        if not topics:
-            self.logger.warning("No topics for summary generation")
-            return
-
         transcript = await self.get_transcript()
-        processor = TranscriptFinalSummaryProcessor(
-            transcript=transcript,
-            callback=self.on_long_summary,
-            on_short_summary=self.on_short_summary,
+        return await topic_processing.generate_summaries(
+            topics,
+            transcript,
+            on_long_summary_callback=self.on_long_summary,
+            on_short_summary_callback=self.on_short_summary,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
         )
-        processor.set_pipeline(self.empty_pipeline)
-
-        for topic in topics:
-            await processor.push(topic)
-
-        await processor.flush()
 
 
 @shared_task
@@ -426,7 +359,12 @@ async def task_pipeline_file_process(*, transcript_id: str):
 
         await pipeline.process(audio_file)
 
-    except Exception:
+    except Exception as e:
+        logger.error(
+            f"File pipeline failed for transcript {transcript_id}: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+            transcript_id=transcript_id,
+        )
         await pipeline.set_status(transcript_id, "error")
         raise
 
