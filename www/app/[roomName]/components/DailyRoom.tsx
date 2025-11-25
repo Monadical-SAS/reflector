@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { Box } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Spinner, Center, Text } from "@chakra-ui/react";
+import { useRouter, useParams } from "next/navigation";
 import DailyIframe, { DailyCall } from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
@@ -10,6 +10,7 @@ import {
   ConsentDialogButton,
   recordingTypeRequiresConsent,
 } from "../../lib/consent";
+import { useRoomJoinMeeting } from "../../lib/apiHooks";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -19,13 +20,41 @@ interface DailyRoomProps {
 
 export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
+  const params = useParams();
   const auth = useAuth();
   const status = auth.status;
   const containerRef = useRef<HTMLDivElement>(null);
+  const joinMutation = useRoomJoinMeeting();
+  const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
-  const roomUrl = meeting?.host_room_url || meeting?.room_url;
+  const roomName = params?.roomName as string;
 
-  const isLoading = status === "loading";
+  // Always call /join to get a fresh token with user_id
+  useEffect(() => {
+    if (status === "loading" || !meeting?.id || !roomName) return;
+
+    const join = async () => {
+      try {
+        const result = await joinMutation.mutateAsync({
+          params: {
+            path: {
+              room_name: roomName,
+              meeting_id: meeting.id,
+            },
+          },
+        });
+        setJoinedMeeting(result);
+      } catch (error) {
+        console.error("Failed to join meeting:", error);
+      }
+    };
+
+    join();
+  }, [meeting?.id, roomName, status]);
+
+  const roomUrl = joinedMeeting?.host_room_url || joinedMeeting?.room_url;
+  const isLoading =
+    status === "loading" || joinMutation.isPending || !joinedMeeting;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
@@ -86,6 +115,22 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       }
     };
   }, [roomUrl, isLoading, handleLeave]);
+
+  if (isLoading) {
+    return (
+      <Center width="100vw" height="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
+
+  if (joinMutation.isError) {
+    return (
+      <Center width="100vw" height="100vh">
+        <Text color="red.500">Failed to join meeting. Please try again.</Text>
+      </Center>
+    );
+  }
 
   if (!roomUrl) {
     return null;
