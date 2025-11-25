@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { components } from "../../reflector-api";
-type GetTranscript = components["schemas"]["GetTranscript"];
+import type { components, operations } from "../../reflector-api";
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { Button, BoxProps, Box, Menu } from "@chakra-ui/react";
 import { LuChevronDown } from "react-icons/lu";
@@ -9,7 +10,7 @@ import { useTranscriptParticipants } from "../../lib/apiHooks";
 
 type ShareCopyProps = {
   finalSummaryElement: HTMLDivElement | null;
-  transcript: GetTranscript;
+  transcript: GetTranscriptWithParticipants;
   topics: GetTranscriptTopic[];
 };
 
@@ -23,19 +24,31 @@ export default function ShareCopy({
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
 
-  type TranscriptFormat = "text" | "text-timestamped" | "webvtt-named" | "json";
+  type ApiTranscriptFormat = NonNullable<
+    operations["v1_transcript_get"]["parameters"]["query"]
+  >["transcript_format"];
+  const TRANSCRIPT_FORMATS = [
+    "text",
+    "text-timestamped",
+    "webvtt-named",
+    "json",
+  ] as const satisfies ApiTranscriptFormat[];
+  type TranscriptFormat = (typeof TRANSCRIPT_FORMATS)[number];
 
-  const formatOptions: { value: TranscriptFormat; label: string }[] = [
-    { value: "text", label: "Plain text" },
-    { value: "text-timestamped", label: "Text + timestamps" },
-    { value: "webvtt-named", label: "WebVTT (named)" },
-    { value: "json", label: "JSON" },
-  ];
-  const participantsQuery = useTranscriptParticipants(transcript?.id || null);
+  const TRANSCRIPT_FORMAT_LABELS: { [k in TranscriptFormat]: string } = {
+    text: "Plain text",
+    "text-timestamped": "Text + timestamps",
+    "webvtt-named": "WebVTT (named)",
+    json: "JSON",
+  };
+
+  const formatOptions = TRANSCRIPT_FORMATS.map((f) => ({
+    value: f,
+    label: TRANSCRIPT_FORMAT_LABELS[f],
+  }));
 
   const onCopySummaryClick = () => {
     const text_to_copy = finalSummaryElement?.innerText;
-
     if (text_to_copy) {
       navigator.clipboard.writeText(text_to_copy).then(() => {
         setIsCopiedSummary(true);
