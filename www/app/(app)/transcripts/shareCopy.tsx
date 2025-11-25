@@ -54,7 +54,7 @@ export default function ShareCopy({
           params: {
             path: { transcript_id: transcript.id },
             query: { transcript_format: format },
-          } as any,
+          },
         },
       );
       if (error) throw error;
