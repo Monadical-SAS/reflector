@@ -125,7 +125,7 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
 
     test_uid = "user-abc"
     user = await user_controller.create_or_update(
-        id="test-user-id-abc", uid=test_uid, email="user-abc@example.com"
+        id="test-user-id-abc", authentik_uid=test_uid, email="user-abc@example.com"
     )
 
     token = _make_dummy_jwt(test_uid)
