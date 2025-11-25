@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.20.0](https://github.com/Monadical-SAS/reflector/compare/v0.19.0...v0.20.0) (2025-11-25)
+
+
+### Features
+
+* link transcript participants ([#737](https://github.com/Monadical-SAS/reflector/issues/737)) ([9bec398](https://github.com/Monadical-SAS/reflector/commit/9bec39808fc6322612d8b87e922a6f7901fc01c1))
+* transcript restart script ([#742](https://github.com/Monadical-SAS/reflector/issues/742)) ([86d5e26](https://github.com/Monadical-SAS/reflector/commit/86d5e26224bb55a0f1cc785aeda52065bb92ee6f))
+
 ## [0.19.0](https://github.com/Monadical-SAS/reflector/compare/v0.18.0...v0.19.0) (2025-11-25)
 
 
