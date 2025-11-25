@@ -195,7 +195,6 @@ def parse_recording_error(event: DailyWebhookEvent) -> RecordingErrorPayload:
     return RecordingErrorPayload(**event.payload)
 
 
-# Webhook event type to parser mapping
 WEBHOOK_PARSERS = {
     "participant.joined": parse_participant_joined,
     "participant.left": parse_participant_left,
