@@ -9,6 +9,7 @@ from reflector.db.user_api_keys import user_api_keys_controller
 from reflector.db.users import user_controller
 from reflector.logger import logger
 from reflector.settings import settings
+from reflector.utils import generate_uuid4
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -80,18 +81,17 @@ async def _authenticate_user(
 
             # Look up user by Authentik UID to get internal user.id
             user = await user_controller.get_by_uid(uid)
-            if user:
-                # Return user.id as sub instead of uid
-                user_infos.append(UserInfo(sub=user.id, email=email))
-            else:
-                # User not found in our database - they may not have been synced yet
-                logger.warning(
-                    f"User with Authentik UID {uid} not found in users table"
+            if not user:
+                # User not found - create them on first login
+                logger.info(f"Creating new user on first login: {uid} ({email})")
+                user = await user_controller.create_or_update(
+                    id=generate_uuid4(),
+                    uid=uid,
+                    email=email,
                 )
-                raise HTTPException(
-                    status_code=401,
-                    detail="User not found. Please contact an administrator.",
-                )
+
+            # Return user.id as sub
+            user_infos.append(UserInfo(sub=user.id, email=email))
         except JWTError as e:
             logger.error(f"JWT error: {e}")
             raise HTTPException(status_code=401, detail="Invalid authentication")

@@ -24,7 +24,7 @@ users = sqlalchemy.Table(
 
 class User(BaseModel):
     id: NonEmptyString = Field(default_factory=generate_uuid4)
-    uid: NonEmptyString  # Authentik user UUID (from JWT 'sub')
+    uid: NonEmptyString  # Authentik user UID (from JWT 'sub')
     email: NonEmptyString
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
