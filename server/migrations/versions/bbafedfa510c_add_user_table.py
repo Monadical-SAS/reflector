@@ -1,7 +1,7 @@
 """add user table
 
 Revision ID: bbafedfa510c
-Revises: 2b92a1b03caa
+Revises: 5d6b9df9b045
 Create Date: 2025-11-19 21:06:30.543262
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "bbafedfa510c"
-down_revision: Union[str, None] = "2b92a1b03caa"
+down_revision: Union[str, None] = "5d6b9df9b045"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
