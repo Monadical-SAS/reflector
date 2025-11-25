@@ -7,29 +7,34 @@ Uses parallel processing for transcription, diarization, and waveform generation
 """
 
 import asyncio
+import uuid
 from pathlib import Path
 
 import av
 import structlog
-from celery import shared_task
+from celery import chain, shared_task
 
+from reflector.asynctask import asynctask
+from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
+    SourceKind,
     Transcript,
+    TranscriptStatus,
     transcripts_controller,
 )
 from reflector.logger import logger
-from reflector.pipelines.main_live_pipeline import PipelineMainBase, asynctask
-from reflector.processors import (
-    AudioFileWriterProcessor,
-    TranscriptFinalSummaryProcessor,
-    TranscriptFinalTitleProcessor,
-    TranscriptTopicDetectorProcessor,
+from reflector.pipelines import topic_processing
+from reflector.pipelines.main_live_pipeline import (
+    PipelineMainBase,
+    broadcast_to_sockets,
+    task_cleanup_consent,
+    task_pipeline_post_to_zulip,
 )
+from reflector.pipelines.transcription_helpers import transcribe_file_with_processor
+from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.file_diarization import FileDiarizationInput
 from reflector.processors.file_diarization_auto import FileDiarizationAutoProcessor
-from reflector.processors.file_transcript import FileTranscriptInput
-from reflector.processors.file_transcript_auto import FileTranscriptAutoProcessor
 from reflector.processors.transcript_diarization_assembler import (
     TranscriptDiarizationAssemblerInput,
     TranscriptDiarizationAssemblerProcessor,
@@ -43,19 +48,7 @@ from reflector.processors.types import (
 )
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
-
-
-class EmptyPipeline:
-    """Empty pipeline for processors that need a pipeline reference"""
-
-    def __init__(self, logger: structlog.BoundLogger):
-        self.logger = logger
-
-    def get_pref(self, k, d=None):
-        return d
-
-    async def emit(self, event):
-        pass
+from reflector.worker.webhook import send_transcript_webhook
 
 
 class PipelineMainFile(PipelineMainBase):
@@ -70,7 +63,7 @@ class PipelineMainFile(PipelineMainBase):
     def __init__(self, transcript_id: str):
         super().__init__(transcript_id=transcript_id)
         self.logger = logger.bind(transcript_id=self.transcript_id)
-        self.empty_pipeline = EmptyPipeline(logger=self.logger)
+        self.empty_pipeline = topic_processing.EmptyPipeline(logger=self.logger)
 
     def _handle_gather_exceptions(self, results: list, operation: str) -> None:
         """Handle exceptions from asyncio.gather with return_exceptions=True"""
@@ -83,11 +76,26 @@ class PipelineMainFile(PipelineMainBase):
                 exc_info=result,
             )
 
+    @broadcast_to_sockets
+    async def set_status(self, transcript_id: str, status: TranscriptStatus):
+        async with self.lock_transaction():
+            return await transcripts_controller.set_status(transcript_id, status)
+
     async def process(self, file_path: Path):
         """Main entry point for file processing"""
         self.logger.info(f"Starting file pipeline for {file_path}")
 
         transcript = await self.get_transcript()
+
+        # Clear transcript as we're going to regenerate everything
+        async with self.transaction():
+            await transcripts_controller.update(
+                transcript,
+                {
+                    "events": [],
+                    "topics": [],
+                },
+            )
 
         # Extract audio and write to transcript location
         audio_path = await self.extract_and_write_audio(file_path, transcript)
@@ -104,6 +112,8 @@ class PipelineMainFile(PipelineMainBase):
         )
 
         self.logger.info("File pipeline complete")
+
+        await self.set_status(transcript.id, "ended")
 
     async def extract_and_write_audio(
         self, file_path: Path, transcript: Transcript
@@ -234,24 +244,7 @@ class PipelineMainFile(PipelineMainBase):
 
     async def transcribe_file(self, audio_url: str, language: str) -> TranscriptType:
         """Transcribe complete file"""
-        processor = FileTranscriptAutoProcessor()
-        input_data = FileTranscriptInput(audio_url=audio_url, language=language)
-
-        # Store result for retrieval
-        result: TranscriptType | None = None
-
-        async def capture_result(transcript):
-            nonlocal result
-            result = transcript
-
-        processor.on(capture_result)
-        await processor.push(input_data)
-        await processor.flush()
-
-        if not result:
-            raise ValueError("No transcript captured")
-
-        return result
+        return await transcribe_file_with_processor(audio_url, language)
 
     async def diarize_file(self, audio_url: str) -> list[DiarizationSegment] | None:
         """Get diarization for file"""
@@ -294,63 +287,53 @@ class PipelineMainFile(PipelineMainBase):
     async def detect_topics(
         self, transcript: TranscriptType, target_language: str
     ) -> list[TitleSummary]:
-        """Detect topics from complete transcript"""
-        chunk_size = 300
-        topics: list[TitleSummary] = []
-
-        async def on_topic(topic: TitleSummary):
-            topics.append(topic)
-            return await self.on_topic(topic)
-
-        topic_detector = TranscriptTopicDetectorProcessor(callback=on_topic)
-        topic_detector.set_pipeline(self.empty_pipeline)
-
-        for i in range(0, len(transcript.words), chunk_size):
-            chunk_words = transcript.words[i : i + chunk_size]
-            if not chunk_words:
-                continue
-
-            chunk_transcript = TranscriptType(
-                words=chunk_words, translation=transcript.translation
-            )
-
-            await topic_detector.push(chunk_transcript)
-
-        await topic_detector.flush()
-        return topics
+        return await topic_processing.detect_topics(
+            transcript,
+            target_language,
+            on_topic_callback=self.on_topic,
+            empty_pipeline=self.empty_pipeline,
+        )
 
     async def generate_title(self, topics: list[TitleSummary]):
-        """Generate title from topics"""
-        if not topics:
-            self.logger.warning("No topics for title generation")
-            return
-
-        processor = TranscriptFinalTitleProcessor(callback=self.on_title)
-        processor.set_pipeline(self.empty_pipeline)
-
-        for topic in topics:
-            await processor.push(topic)
-
-        await processor.flush()
+        return await topic_processing.generate_title(
+            topics,
+            on_title_callback=self.on_title,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
+        )
 
     async def generate_summaries(self, topics: list[TitleSummary]):
-        """Generate long and short summaries from topics"""
-        if not topics:
-            self.logger.warning("No topics for summary generation")
-            return
-
         transcript = await self.get_transcript()
-        processor = TranscriptFinalSummaryProcessor(
-            transcript=transcript,
-            callback=self.on_long_summary,
-            on_short_summary=self.on_short_summary,
+        return await topic_processing.generate_summaries(
+            topics,
+            transcript,
+            on_long_summary_callback=self.on_long_summary,
+            on_short_summary_callback=self.on_short_summary,
+            empty_pipeline=self.empty_pipeline,
+            logger=self.logger,
         )
-        processor.set_pipeline(self.empty_pipeline)
 
-        for topic in topics:
-            await processor.push(topic)
 
-        await processor.flush()
+@shared_task
+@asynctask
+async def task_send_webhook_if_needed(*, transcript_id: str):
+    """Send webhook if this is a room recording with webhook configured"""
+    transcript = await transcripts_controller.get_by_id(transcript_id)
+    if not transcript:
+        return
+
+    if transcript.source_kind == SourceKind.ROOM and transcript.room_id:
+        room = await rooms_controller.get_by_id(transcript.room_id)
+        if room and room.webhook_url:
+            logger.info(
+                "Dispatching webhook",
+                transcript_id=transcript_id,
+                room_id=room.id,
+                webhook_url=room.webhook_url,
+            )
+            send_transcript_webhook.delay(
+                transcript_id, room.id, event_id=uuid.uuid4().hex
+            )
 
 
 @shared_task
@@ -362,14 +345,33 @@ async def task_pipeline_file_process(*, transcript_id: str):
     if not transcript:
         raise Exception(f"Transcript {transcript_id} not found")
 
-    # Find the file to process
-    audio_file = next(transcript.data_path.glob("upload.*"), None)
-    if not audio_file:
-        audio_file = next(transcript.data_path.glob("audio.*"), None)
-
-    if not audio_file:
-        raise Exception("No audio file found to process")
-
-    # Run file pipeline
     pipeline = PipelineMainFile(transcript_id=transcript_id)
-    await pipeline.process(audio_file)
+    try:
+        await pipeline.set_status(transcript_id, "processing")
+
+        # Find the file to process
+        audio_file = next(transcript.data_path.glob("upload.*"), None)
+        if not audio_file:
+            audio_file = next(transcript.data_path.glob("audio.*"), None)
+
+        if not audio_file:
+            raise Exception("No audio file found to process")
+
+        await pipeline.process(audio_file)
+
+    except Exception as e:
+        logger.error(
+            f"File pipeline failed for transcript {transcript_id}: {type(e).__name__}: {str(e)}",
+            exc_info=True,
+            transcript_id=transcript_id,
+        )
+        await pipeline.set_status(transcript_id, "error")
+        raise
+
+    # Run post-processing chain: consent cleanup -> zulip -> webhook
+    post_chain = chain(
+        task_cleanup_consent.si(transcript_id=transcript_id),
+        task_pipeline_post_to_zulip.si(transcript_id=transcript_id),
+        task_send_webhook_if_needed.si(transcript_id=transcript_id),
+    )
+    post_chain.delay()

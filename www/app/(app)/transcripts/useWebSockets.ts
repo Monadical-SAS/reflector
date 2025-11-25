@@ -1,9 +1,12 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
-import { DomainContext } from "../../domainContext";
-import { AudioWaveform, GetTranscriptSegmentTopic } from "../../api";
-import useApi from "../../lib/useApi";
+import type { components } from "../../reflector-api";
+type AudioWaveform = components["schemas"]["AudioWaveform"];
+type GetTranscriptSegmentTopic =
+  components["schemas"]["GetTranscriptSegmentTopic"];
+import { useQueryClient } from "@tanstack/react-query";
+import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -12,7 +15,7 @@ export type UseWebSockets = {
   title: string;
   topics: Topic[];
   finalSummary: FinalSummary;
-  status: Status;
+  status: Status | null;
   waveform: AudioWaveform | null;
   duration: number | null;
 };
@@ -30,11 +33,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
   const [finalSummary, setFinalSummary] = useState<FinalSummary>({
     summary: "",
   });
-  const [status, setStatus] = useState<Status>({ value: "" });
+  const [status, setStatus] = useState<Status | null>(null);
   const { setError } = useError();
 
-  const { websocket_url } = useContext(DomainContext);
-  const api = useApi();
+  const queryClient = useQueryClient();
 
   const [accumulatedText, setAccumulatedText] = useState<string>("");
 
@@ -60,7 +62,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
   useEffect(() => {
     document.onkeyup = (e) => {
-      if (e.key === "a" && process.env.NEXT_PUBLIC_ENV === "development") {
+      if (e.key === "a" && process.env.NODE_ENV === "development") {
         const segments: GetTranscriptSegmentTopic[] = [
           {
             speaker: 1,
@@ -105,6 +107,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             title: "Topic 1: Introduction to Quantum Mechanics",
             transcript:
               "A brief overview of quantum mechanics and its principles.",
+            segments: [
+              {
+                speaker: 1,
+                start: 0,
+                text: "This is the transcription of an example title",
+              },
+            ],
           },
           {
             id: "2",
@@ -192,7 +201,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
         setFinalSummary({ summary: "This is the final summary" });
       }
-      if (e.key === "z" && process.env.NEXT_PUBLIC_ENV === "development") {
+      if (e.key === "z" && process.env.NODE_ENV === "development") {
         setTranscriptTextLive(
           "This text is in English, and it is a pretty long sentence to test the limits",
         );
@@ -315,11 +324,9 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       }
     };
 
-    if (!transcriptId || !api) return;
+    if (!transcriptId) return;
 
-    api?.v1TranscriptGetWebsocketEvents({ transcriptId }).then((result) => {});
-
-    const url = `${websocket_url}/v1/transcripts/${transcriptId}/events`;
+    const url = `${WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
     let ws = new WebSocket(url);
 
     ws.onopen = () => {
@@ -361,6 +368,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               return [...prevTopics, topic];
             });
             console.debug("TOPIC event:", message.data);
+            // Invalidate topics query to sync with WebSocket data
+            queryClient.invalidateQueries({
+              queryKey: $api.queryOptions(
+                "get",
+                "/v1/transcripts/{transcript_id}/topics",
+                {
+                  params: { path: { transcript_id: transcriptId } },
+                },
+              ).queryKey,
+            });
             break;
 
           case "FINAL_SHORT_SUMMARY":
@@ -370,6 +387,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           case "FINAL_LONG_SUMMARY":
             if (message.data) {
               setFinalSummary(message.data);
+              // Invalidate transcript query to sync summary
+              queryClient.invalidateQueries({
+                queryKey: $api.queryOptions(
+                  "get",
+                  "/v1/transcripts/{transcript_id}",
+                  {
+                    params: { path: { transcript_id: transcriptId } },
+                  },
+                ).queryKey,
+              });
             }
             break;
 
@@ -377,6 +404,16 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             console.debug("FINAL_TITLE event:", message.data);
             if (message.data) {
               setTitle(message.data.title);
+              // Invalidate transcript query to sync title
+              queryClient.invalidateQueries({
+                queryKey: $api.queryOptions(
+                  "get",
+                  "/v1/transcripts/{transcript_id}",
+                  {
+                    params: { path: { transcript_id: transcriptId } },
+                  },
+                ).queryKey,
+              });
             }
             break;
 
@@ -434,6 +471,11 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
           break;
         case 1001: // Navigate away
           break;
+        case 1006: // Closed by client Chrome
+          console.warn(
+            "WebSocket closed by client, likely duplicated connection in react dev mode",
+          );
+          break;
         default:
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
@@ -450,7 +492,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     return () => {
       ws.close();
     };
-  }, [transcriptId, !api]);
+  }, [transcriptId]);
 
   return {
     transcriptTextLive,

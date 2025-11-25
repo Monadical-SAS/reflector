@@ -21,6 +21,7 @@ recordings = sa.Table(
         server_default="pending",
     ),
     sa.Column("meeting_id", sa.String),
+    sa.Column("track_keys", sa.JSON, nullable=True),
     sa.Index("idx_recording_meeting_id", "meeting_id"),
 )
 
@@ -28,10 +29,13 @@ recordings = sa.Table(
 class Recording(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     bucket_name: str
+    # for single-track
     object_key: str
     recorded_at: datetime
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
+    # for multitrack reprocessing
+    track_keys: list[str] | None = None
 
 
 class RecordingController:

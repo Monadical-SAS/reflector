@@ -2,6 +2,8 @@ name: Test Database Migrations
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "server/migrations/**"
       - "server/reflector/db/**"
@@ -17,6 +19,9 @@ on:
 jobs:
   test-migrations:
     runs-on: ubuntu-latest
+    concurrency:
+      group: db-ubuntu-latest-${{ github.ref }}
+      cancel-in-progress: true
     services:
       postgres:
         image: postgres:17

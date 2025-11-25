@@ -1,5 +1,170 @@
 # Changelog
 
+## [0.18.0](https://github.com/Monadical-SAS/reflector/compare/v0.17.0...v0.18.0) (2025-11-14)
+
+
+### Features
+
+* daily QOL: participants dictionary ([#721](https://github.com/Monadical-SAS/reflector/issues/721)) ([b20cad7](https://github.com/Monadical-SAS/reflector/commit/b20cad76e69fb6a76405af299a005f1ddcf60eae))
+
+
+### Bug Fixes
+
+* add proccessing page to file upload and reprocessing ([#650](https://github.com/Monadical-SAS/reflector/issues/650)) ([28a7258](https://github.com/Monadical-SAS/reflector/commit/28a7258e45317b78e60e6397be2bc503647eaace))
+* copy transcript ([#674](https://github.com/Monadical-SAS/reflector/issues/674)) ([a9a4f32](https://github.com/Monadical-SAS/reflector/commit/a9a4f32324f66c838e081eee42bb9502f38c1db1))
+
+## [0.17.0](https://github.com/Monadical-SAS/reflector/compare/v0.16.0...v0.17.0) (2025-11-13)
+
+
+### Features
+
+* add API key management UI ([#716](https://github.com/Monadical-SAS/reflector/issues/716)) ([372202b](https://github.com/Monadical-SAS/reflector/commit/372202b0e1a86823900b0aa77be1bfbc2893d8a1))
+* daily.co support as alternative to whereby ([#691](https://github.com/Monadical-SAS/reflector/issues/691)) ([1473fd8](https://github.com/Monadical-SAS/reflector/commit/1473fd82dc472c394cbaa2987212ad662a74bcac))
+
+## [0.16.0](https://github.com/Monadical-SAS/reflector/compare/v0.15.0...v0.16.0) (2025-10-24)
+
+
+### Features
+
+* search date filter ([#710](https://github.com/Monadical-SAS/reflector/issues/710)) ([962c40e](https://github.com/Monadical-SAS/reflector/commit/962c40e2b6428ac42fd10aea926782d7a6f3f902))
+
+## [0.15.0](https://github.com/Monadical-SAS/reflector/compare/v0.14.0...v0.15.0) (2025-10-20)
+
+
+### Features
+
+* api tokens  ([#705](https://github.com/Monadical-SAS/reflector/issues/705)) ([9a258ab](https://github.com/Monadical-SAS/reflector/commit/9a258abc0209b0ac3799532a507ea6a9125d703a))
+
+## [0.14.0](https://github.com/Monadical-SAS/reflector/compare/v0.13.1...v0.14.0) (2025-10-08)
+
+
+### Features
+
+* Add calendar event data to transcript webhook payload ([#689](https://github.com/Monadical-SAS/reflector/issues/689)) ([5f6910e](https://github.com/Monadical-SAS/reflector/commit/5f6910e5131b7f28f86c9ecdcc57fed8412ee3cd))
+* container build for www / github ([#672](https://github.com/Monadical-SAS/reflector/issues/672)) ([969bd84](https://github.com/Monadical-SAS/reflector/commit/969bd84fcc14851d1a101412a0ba115f1b7cde82))
+* docker-compose for production frontend ([#664](https://github.com/Monadical-SAS/reflector/issues/664)) ([5bf64b5](https://github.com/Monadical-SAS/reflector/commit/5bf64b5a41f64535e22849b4bb11734d4dbb4aae))
+
+
+### Bug Fixes
+
+* restore feature boolean logic ([#671](https://github.com/Monadical-SAS/reflector/issues/671)) ([3660884](https://github.com/Monadical-SAS/reflector/commit/36608849ec64e953e3be456172502762e3c33df9))
+* security review ([#656](https://github.com/Monadical-SAS/reflector/issues/656)) ([5d98754](https://github.com/Monadical-SAS/reflector/commit/5d98754305c6c540dd194dda268544f6d88bfaf8))
+* update transcript list on reprocess ([#676](https://github.com/Monadical-SAS/reflector/issues/676)) ([9a71af1](https://github.com/Monadical-SAS/reflector/commit/9a71af145ee9b833078c78d0c684590ab12e9f0e))
+* upgrade nemo toolkit ([#678](https://github.com/Monadical-SAS/reflector/issues/678)) ([eef6dc3](https://github.com/Monadical-SAS/reflector/commit/eef6dc39037329b65804297786d852dddb0557f9))
+
+## [0.13.1](https://github.com/Monadical-SAS/reflector/compare/v0.13.0...v0.13.1) (2025-09-22)
+
+
+### Bug Fixes
+
+* TypeError on not all arguments converted during string formatting in logger ([#667](https://github.com/Monadical-SAS/reflector/issues/667)) ([565a629](https://github.com/Monadical-SAS/reflector/commit/565a62900f5a02fc946b68f9269a42190ed70ab6))
+
+## [0.13.0](https://github.com/Monadical-SAS/reflector/compare/v0.12.1...v0.13.0) (2025-09-19)
+
+
+### Features
+
+* room form edit with enter ([#662](https://github.com/Monadical-SAS/reflector/issues/662)) ([47716f6](https://github.com/Monadical-SAS/reflector/commit/47716f6e5ddee952609d2fa0ffabdfa865286796))
+
+
+### Bug Fixes
+
+* invalid cleanup call ([#660](https://github.com/Monadical-SAS/reflector/issues/660)) ([0abcebf](https://github.com/Monadical-SAS/reflector/commit/0abcebfc9491f87f605f21faa3e53996fafedd9a))
+
+## [0.12.1](https://github.com/Monadical-SAS/reflector/compare/v0.12.0...v0.12.1) (2025-09-17)
+
+
+### Bug Fixes
+
+* production blocked because having existing meeting with room_id null ([#657](https://github.com/Monadical-SAS/reflector/issues/657)) ([870e860](https://github.com/Monadical-SAS/reflector/commit/870e8605171a27155a9cbee215eeccb9a8d6c0a2))
+
+## [0.12.0](https://github.com/Monadical-SAS/reflector/compare/v0.11.0...v0.12.0) (2025-09-17)
+
+
+### Features
+
+* calendar integration ([#608](https://github.com/Monadical-SAS/reflector/issues/608)) ([6f680b5](https://github.com/Monadical-SAS/reflector/commit/6f680b57954c688882c4ed49f40f161c52a00a24))
+* self-hosted gpu api ([#636](https://github.com/Monadical-SAS/reflector/issues/636)) ([ab859d6](https://github.com/Monadical-SAS/reflector/commit/ab859d65a6bded904133a163a081a651b3938d42))
+
+
+### Bug Fixes
+
+* ignore player hotkeys for text inputs ([#646](https://github.com/Monadical-SAS/reflector/issues/646)) ([fa049e8](https://github.com/Monadical-SAS/reflector/commit/fa049e8d068190ce7ea015fd9fcccb8543f54a3f))
+
+## [0.11.0](https://github.com/Monadical-SAS/reflector/compare/v0.10.0...v0.11.0) (2025-09-16)
+
+
+### Features
+
+* remove profanity filter that was there for conference ([#652](https://github.com/Monadical-SAS/reflector/issues/652)) ([b42f7cf](https://github.com/Monadical-SAS/reflector/commit/b42f7cfc606783afcee792590efcc78b507468ab))
+
+
+### Bug Fixes
+
+* zulip and consent handler on the file pipeline ([#645](https://github.com/Monadical-SAS/reflector/issues/645)) ([5f143fe](https://github.com/Monadical-SAS/reflector/commit/5f143fe3640875dcb56c26694254a93189281d17))
+* zulip stream and topic selection in share dialog ([#644](https://github.com/Monadical-SAS/reflector/issues/644)) ([c546e69](https://github.com/Monadical-SAS/reflector/commit/c546e69739e68bb74fbc877eb62609928e5b8de6))
+
+## [0.10.0](https://github.com/Monadical-SAS/reflector/compare/v0.9.0...v0.10.0) (2025-09-11)
+
+
+### Features
+
+* replace nextjs-config with environment variables ([#632](https://github.com/Monadical-SAS/reflector/issues/632)) ([369ecdf](https://github.com/Monadical-SAS/reflector/commit/369ecdff13f3862d926a9c0b87df52c9d94c4dde))
+
+
+### Bug Fixes
+
+* anonymous users transcript permissions ([#621](https://github.com/Monadical-SAS/reflector/issues/621)) ([f81fe99](https://github.com/Monadical-SAS/reflector/commit/f81fe9948a9237b3e0001b2d8ca84f54d76878f9))
+* auth post ([#624](https://github.com/Monadical-SAS/reflector/issues/624)) ([cde99ca](https://github.com/Monadical-SAS/reflector/commit/cde99ca2716f84ba26798f289047732f0448742e))
+* auth post ([#626](https://github.com/Monadical-SAS/reflector/issues/626)) ([3b85ff3](https://github.com/Monadical-SAS/reflector/commit/3b85ff3bdf4fb053b103070646811bc990c0e70a))
+* auth post ([#627](https://github.com/Monadical-SAS/reflector/issues/627)) ([962038e](https://github.com/Monadical-SAS/reflector/commit/962038ee3f2a555dc3c03856be0e4409456e0996))
+* missing follow_redirects=True on modal endpoint ([#630](https://github.com/Monadical-SAS/reflector/issues/630)) ([fc363bd](https://github.com/Monadical-SAS/reflector/commit/fc363bd49b17b075e64f9186e5e0185abc325ea7))
+* sync backend and frontend token refresh logic ([#614](https://github.com/Monadical-SAS/reflector/issues/614)) ([5a5b323](https://github.com/Monadical-SAS/reflector/commit/5a5b3233820df9536da75e87ce6184a983d4713a))
+
+## [0.9.0](https://github.com/Monadical-SAS/reflector/compare/v0.8.2...v0.9.0) (2025-09-06)
+
+
+### Features
+
+* frontend openapi react query ([#606](https://github.com/Monadical-SAS/reflector/issues/606)) ([c4d2825](https://github.com/Monadical-SAS/reflector/commit/c4d2825c81f81ad8835629fbf6ea8c7383f8c31b))
+
+
+### Bug Fixes
+
+* align whisper transcriber api with parakeet ([#602](https://github.com/Monadical-SAS/reflector/issues/602)) ([0663700](https://github.com/Monadical-SAS/reflector/commit/0663700a615a4af69a03c96c410f049e23ec9443))
+* kv use tls explicit ([#610](https://github.com/Monadical-SAS/reflector/issues/610)) ([08d88ec](https://github.com/Monadical-SAS/reflector/commit/08d88ec349f38b0d13e0fa4cb73486c8dfd31836))
+* source kind for file processing ([#601](https://github.com/Monadical-SAS/reflector/issues/601)) ([dc82f8b](https://github.com/Monadical-SAS/reflector/commit/dc82f8bb3bdf3ab3d4088e592a30fd63907319e1))
+* token refresh locking ([#613](https://github.com/Monadical-SAS/reflector/issues/613)) ([7f5a4c9](https://github.com/Monadical-SAS/reflector/commit/7f5a4c9ddc7fd098860c8bdda2ca3b57f63ded2f))
+
+## [0.8.2](https://github.com/Monadical-SAS/reflector/compare/v0.8.1...v0.8.2) (2025-08-29)
+
+
+### Bug Fixes
+
+* search-logspam ([#593](https://github.com/Monadical-SAS/reflector/issues/593)) ([695d1a9](https://github.com/Monadical-SAS/reflector/commit/695d1a957d4cd862753049f9beed88836cabd5ab))
+
+## [0.8.1](https://github.com/Monadical-SAS/reflector/compare/v0.8.0...v0.8.1) (2025-08-29)
+
+
+### Bug Fixes
+
+* make webhook secret/url allowing null ([#590](https://github.com/Monadical-SAS/reflector/issues/590)) ([84a3812](https://github.com/Monadical-SAS/reflector/commit/84a381220bc606231d08d6f71d4babc818fa3c75))
+
+## [0.8.0](https://github.com/Monadical-SAS/reflector/compare/v0.7.3...v0.8.0) (2025-08-29)
+
+
+### Features
+
+* **cleanup:** add automatic data retention for public instances ([#574](https://github.com/Monadical-SAS/reflector/issues/574)) ([6f0c7c1](https://github.com/Monadical-SAS/reflector/commit/6f0c7c1a5e751713366886c8e764c2009e12ba72))
+* **rooms:** add webhook for transcript completion ([#578](https://github.com/Monadical-SAS/reflector/issues/578)) ([88ed7cf](https://github.com/Monadical-SAS/reflector/commit/88ed7cfa7804794b9b54cad4c3facc8a98cf85fd))
+
+
+### Bug Fixes
+
+* file pipeline status reporting and websocket updates ([#589](https://github.com/Monadical-SAS/reflector/issues/589)) ([9dfd769](https://github.com/Monadical-SAS/reflector/commit/9dfd76996f851cc52be54feea078adbc0816dc57))
+* Igor/evaluation ([#575](https://github.com/Monadical-SAS/reflector/issues/575)) ([124ce03](https://github.com/Monadical-SAS/reflector/commit/124ce03bf86044c18313d27228a25da4bc20c9c5))
+* optimize parakeet transcription batching algorithm ([#577](https://github.com/Monadical-SAS/reflector/issues/577)) ([7030e0f](https://github.com/Monadical-SAS/reflector/commit/7030e0f23649a8cf6c1eb6d5889684a41ce849ec))
+
 ## [0.7.3](https://github.com/Monadical-SAS/reflector/compare/v0.7.2...v0.7.3) (2025-08-22)
 
 

@@ -1,30 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useState, use } from "react";
 import TopicHeader from "./topicHeader";
 import TopicWords from "./topicWords";
 import TopicPlayer from "./topicPlayer";
 import useParticipants from "../../useParticipants";
 import useTopicWithWords from "../../useTopicWithWords";
 import ParticipantList from "./participantList";
-import { GetTranscriptTopic } from "../../../../api";
+import type { components } from "../../../../reflector-api";
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { SelectedText, selectedTextIsTimeSlice } from "./types";
-import useApi from "../../../../lib/useApi";
-import useTranscript from "../../useTranscript";
+import {
+  useTranscriptGet,
+  useTranscriptUpdate,
+} from "../../../../lib/apiHooks";
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
 import { Box, Grid } from "@chakra-ui/react";
 
 export type TranscriptCorrect = {
-  params: {
+  params: Promise<{
     transcriptId: string;
-  };
+  }>;
 };
 
-export default function TranscriptCorrect({
-  params: { transcriptId },
-}: TranscriptCorrect) {
-  const api = useApi();
-  const transcript = useTranscript(transcriptId);
+export default function TranscriptCorrect(props: TranscriptCorrect) {
+  const params = use(props.params);
+
+  const { transcriptId } = params;
+
+  const updateTranscriptMutation = useTranscriptUpdate();
+  const transcript = useTranscriptGet(transcriptId);
   const stateCurrentTopic = useState<GetTranscriptTopic>();
   const [currentTopic, _sct] = stateCurrentTopic;
   const stateSelectedText = useState<SelectedText>();
@@ -34,16 +39,21 @@ export default function TranscriptCorrect({
   const { setError } = useError();
   const router = useRouter();
 
-  const markAsDone = () => {
-    if (transcript.response && !transcript.response.reviewed) {
-      api
-        ?.v1TranscriptUpdate({ transcriptId, requestBody: { reviewed: true } })
-        .then(() => {
-          router.push(`/transcripts/${transcriptId}`);
-        })
-        .catch((e) => {
-          setError(e, "Error marking as done");
+  const markAsDone = async () => {
+    if (transcript.data && !transcript.data.reviewed) {
+      try {
+        await updateTranscriptMutation.mutateAsync({
+          params: {
+            path: {
+              transcript_id: transcriptId,
+            },
+          },
+          body: { reviewed: true },
         });
+        router.push(`/transcripts/${transcriptId}`);
+      } catch (e) {
+        setError(e as Error, "Error marking as done");
+      }
     }
   };
 
@@ -108,7 +118,7 @@ export default function TranscriptCorrect({
           }}
         />
       </Grid>
-      {transcript.response && !transcript.response?.reviewed && (
+      {transcript.data && !transcript.data?.reviewed && (
         <div className="flex flex-row justify-end">
           <button
             className="p-2 px-4 rounded bg-green-400"

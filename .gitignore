@@ -17,3 +17,4 @@ server/test.sqlite
 CLAUDE.local.md
 www/.env.development
 www/.env.production
+.playwright-mcp

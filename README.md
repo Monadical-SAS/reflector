@@ -99,11 +99,10 @@ Start with `cd www`.
 
 ```bash
 pnpm install
-cp .env_template .env
-cp config-template.ts config.ts
+cp .env.example .env
 ```
 
-Then, fill in the environment variables in `.env` and the configuration in `config.ts` as needed. If you are unsure on how to proceed, ask in Zulip.
+Then, fill in the environment variables in `.env` as needed. If you are unsure on how to proceed, ask in Zulip.
 
 **Run in development mode**
 
@@ -167,4 +166,42 @@ You can manually process an audio file by calling the process tool:
 
 ```bash
 uv run python -m reflector.tools.process path/to/audio.wav
+```
+
+## Build-time env variables
+
+Next.js projects are more used to NEXT_PUBLIC_ prefixed buildtime vars. We don't have those for the reason we need to serve a ccustomizable prebuild docker container.
+
+Instead, all the variables are runtime. Variables needed to the frontend are served to the frontend app at initial render.
+
+It also means there's no static prebuild and no static files to serve for js/html.
+
+## Feature Flags
+
+Reflector uses environment variable-based feature flags to control application functionality. These flags allow you to enable or disable features without code changes.
+
+### Available Feature Flags
+
+| Feature Flag | Environment Variable |
+|-------------|---------------------|
+| `requireLogin` | `FEATURE_REQUIRE_LOGIN` |
+| `privacy` | `FEATURE_PRIVACY` |
+| `browse` | `FEATURE_BROWSE` |
+| `sendToZulip` | `FEATURE_SEND_TO_ZULIP` |
+| `rooms` | `FEATURE_ROOMS` |
+
+### Setting Feature Flags
+
+Feature flags are controlled via environment variables using the pattern `FEATURE_{FEATURE_NAME}` where `{FEATURE_NAME}` is the SCREAMING_SNAKE_CASE version of the feature name.
+
+**Examples:**
+```bash
+# Enable user authentication requirement
+FEATURE_REQUIRE_LOGIN=true
+
+# Disable browse functionality
+FEATURE_BROWSE=false
+
+# Enable Zulip integration
+FEATURE_SEND_TO_ZULIP=true
 ```

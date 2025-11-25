@@ -17,12 +17,11 @@ from contextlib import asynccontextmanager
 from typing import Generic
 
 import av
-import boto3
 from celery import chord, current_task, group, shared_task
 from pydantic import BaseModel
 from structlog import BoundLogger as Logger
 
-from reflector.db import get_database
+from reflector.asynctask import asynctask
 from reflector.db.meetings import meeting_consent_controller, meetings_controller
 from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -32,6 +31,7 @@ from reflector.db.transcripts import (
     TranscriptFinalLongSummary,
     TranscriptFinalShortSummary,
     TranscriptFinalTitle,
+    TranscriptStatus,
     TranscriptText,
     TranscriptTopic,
     TranscriptWaveform,
@@ -69,29 +69,6 @@ from reflector.zulip import (
 )
 
 
-def asynctask(f):
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        async def run_with_db():
-            database = get_database()
-            await database.connect()
-            try:
-                return await f(*args, **kwargs)
-            finally:
-                await database.disconnect()
-
-        coro = run_with_db()
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop and loop.is_running():
-            return loop.run_until_complete(coro)
-        return asyncio.run(coro)
-
-    return wrapper
-
-
 def broadcast_to_sockets(func):
     """
     Decorator to broadcast transcript event to websockets
@@ -106,6 +83,20 @@ def broadcast_to_sockets(func):
             room_id=self.ws_room_id,
             message=resp.model_dump(mode="json"),
         )
+
+        transcript = await transcripts_controller.get_by_id(self.transcript_id)
+        if transcript and transcript.user_id:
+            # Emit only relevant events to the user room to avoid noisy updates.
+            # Allowed: STATUS, FINAL_TITLE, DURATION. All are prefixed with TRANSCRIPT_
+            allowed_user_events = {"STATUS", "FINAL_TITLE", "DURATION"}
+            if resp.event in allowed_user_events:
+                await self.ws_manager.send_json(
+                    room_id=f"user:{transcript.user_id}",
+                    message={
+                        "event": f"TRANSCRIPT_{resp.event}",
+                        "data": {"id": self.transcript_id, **resp.data},
+                    },
+                )
 
     return wrapper
 
@@ -188,8 +179,15 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         ]
 
     @asynccontextmanager
-    async def transaction(self):
+    async def lock_transaction(self):
+        # This lock is to prevent multiple processor starting adding
+        # into event array at the same time
         async with self._lock:
+            yield
+
+    @asynccontextmanager
+    async def transaction(self):
+        async with self.lock_transaction():
             async with transcripts_controller.transaction():
                 yield
 
@@ -198,14 +196,14 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         # if it's the first part, update the status of the transcript
         # but do not set the ended status yet.
         if isinstance(self, PipelineMainLive):
-            status_mapping = {
+            status_mapping: dict[str, TranscriptStatus] = {
                 "started": "recording",
                 "push": "recording",
                 "flush": "processing",
                 "error": "error",
             }
         elif isinstance(self, PipelineMainFinalSummaries):
-            status_mapping = {
+            status_mapping: dict[str, TranscriptStatus] = {
                 "push": "processing",
                 "flush": "processing",
                 "error": "error",
@@ -221,22 +219,8 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
             return
 
         # when the status of the pipeline changes, update the transcript
-        async with self.transaction():
-            transcript = await self.get_transcript()
-            if status == transcript.status:
-                return
-            resp = await transcripts_controller.append_event(
-                transcript=transcript,
-                event="STATUS",
-                data=StrValue(value=status),
-            )
-            await transcripts_controller.update(
-                transcript,
-                {
-                    "status": status,
-                },
-            )
-            return resp
+        async with self._lock:
+            return await transcripts_controller.set_status(self.transcript_id, status)
 
     @broadcast_to_sockets
     async def on_transcript(self, data):
@@ -599,6 +583,7 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     consent_denied = False
     recording = None
+    meeting = None
     try:
         if transcript.recording_id:
             recording = await recordings_controller.get_by_id(transcript.recording_id)
@@ -609,8 +594,8 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                         meeting.id
                     )
     except Exception as e:
-        logger.error(f"Failed to get fetch consent: {e}", exc_info=e)
-        consent_denied = True
+        logger.error(f"Failed to fetch consent: {e}", exc_info=e)
+        raise
 
     if not consent_denied:
         logger.info("Consent approved, keeping all files")
@@ -618,25 +603,24 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
 
     logger.info("Consent denied, cleaning up all related audio files")
 
-    if recording and recording.bucket_name and recording.object_key:
-        s3_whereby = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_WHEREBY_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_WHEREBY_ACCESS_KEY_SECRET,
-        )
-        try:
-            s3_whereby.delete_object(
-                Bucket=recording.bucket_name, Key=recording.object_key
-            )
-            logger.info(
-                f"Deleted original Whereby recording: {recording.bucket_name}/{recording.object_key}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to delete Whereby recording: {e}", exc_info=e)
+    deletion_errors = []
+    if recording and recording.bucket_name:
+        keys_to_delete = []
+        if recording.track_keys:
+            keys_to_delete = recording.track_keys
+        elif recording.object_key:
+            keys_to_delete = [recording.object_key]
 
-    # non-transactional, files marked for deletion not actually deleted is possible
-    await transcripts_controller.update(transcript, {"audio_deleted": True})
-    # 2. Delete processed audio from transcript storage S3 bucket
+        master_storage = get_transcripts_storage()
+        for key in keys_to_delete:
+            try:
+                await master_storage.delete_file(key, bucket=recording.bucket_name)
+                logger.info(f"Deleted recording file: {recording.bucket_name}/{key}")
+            except Exception as e:
+                error_msg = f"Failed to delete {key}: {e}"
+                logger.error(error_msg, exc_info=e)
+                deletion_errors.append(error_msg)
+
     if transcript.audio_location == "storage":
         storage = get_transcripts_storage()
         try:
@@ -645,18 +629,28 @@ async def cleanup_consent(transcript: Transcript, logger: Logger):
                 f"Deleted processed audio from storage: {transcript.storage_audio_path}"
             )
         except Exception as e:
-            logger.error(f"Failed to delete processed audio: {e}", exc_info=e)
+            error_msg = f"Failed to delete processed audio: {e}"
+            logger.error(error_msg, exc_info=e)
+            deletion_errors.append(error_msg)
 
-    # 3. Delete local audio files
     try:
         if hasattr(transcript, "audio_mp3_filename") and transcript.audio_mp3_filename:
             transcript.audio_mp3_filename.unlink(missing_ok=True)
         if hasattr(transcript, "audio_wav_filename") and transcript.audio_wav_filename:
             transcript.audio_wav_filename.unlink(missing_ok=True)
     except Exception as e:
-        logger.error(f"Failed to delete local audio files: {e}", exc_info=e)
+        error_msg = f"Failed to delete local audio files: {e}"
+        logger.error(error_msg, exc_info=e)
+        deletion_errors.append(error_msg)
 
-    logger.info("Consent cleanup done")
+    if deletion_errors:
+        logger.warning(
+            f"Consent cleanup completed with {len(deletion_errors)} errors",
+            errors=deletion_errors,
+        )
+    else:
+        await transcripts_controller.update(transcript, {"audio_deleted": True})
+        logger.info("Consent cleanup done - all audio deleted")
 
 
 @get_transcript
@@ -794,7 +788,7 @@ def pipeline_post(*, transcript_id: str):
         chain_final_summaries,
     ) | task_pipeline_post_to_zulip.si(transcript_id=transcript_id)
 
-    chain.delay()
+    return chain.delay()
 
 
 @get_transcript

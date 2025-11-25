@@ -5,12 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import AwareDatetime, BaseModel, Field, constr, field_serializer
 
 import reflector.auth as auth
 from reflector.db import get_database
-from reflector.db.meetings import meetings_controller
-from reflector.db.rooms import rooms_controller
 from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
@@ -19,20 +17,22 @@ from reflector.db.search import (
     SearchOffsetBase,
     SearchParameters,
     SearchQuery,
-    SearchQueryBase,
     SearchResult,
     SearchTotal,
     search_controller,
+    search_query_adapter,
 )
 from reflector.db.transcripts import (
     SourceKind,
     TranscriptParticipant,
+    TranscriptStatus,
     TranscriptTopic,
     transcripts_controller,
 )
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.settings import settings
+from reflector.ws_manager import get_ws_manager
 from reflector.zulip import (
     InvalidMessageError,
     get_zulip_message,
@@ -63,7 +63,7 @@ class GetTranscriptMinimal(BaseModel):
     id: str
     user_id: str | None
     name: str
-    status: str
+    status: TranscriptStatus
     locked: bool
     duration: float
     title: str | None
@@ -96,6 +96,7 @@ class CreateTranscript(BaseModel):
     name: str
     source_language: str = Field("en")
     target_language: str = Field("en")
+    source_kind: SourceKind | None = None
 
 
 class UpdateTranscript(BaseModel):
@@ -114,17 +115,44 @@ class DeletionStatus(BaseModel):
     status: str
 
 
-SearchQueryParam = Annotated[SearchQueryBase, Query(description="Search query text")]
+SearchQueryParamBase = constr(min_length=0, strip_whitespace=True)
+SearchQueryParam = Annotated[
+    SearchQueryParamBase, Query(description="Search query text")
+]
+
+
+# http and api standards accept "q="; we would like to handle it as the absence of query, not as "empty string query"
+def parse_search_query_param(q: SearchQueryParam) -> SearchQuery | None:
+    if q == "":
+        return None
+    return search_query_adapter.validate_python(q)
+
+
 SearchLimitParam = Annotated[SearchLimitBase, Query(description="Results per page")]
 SearchOffsetParam = Annotated[
     SearchOffsetBase, Query(description="Number of results to skip")
+]
+
+SearchFromDatetimeParam = Annotated[
+    AwareDatetime | None,
+    Query(
+        alias="from",
+        description="Filter transcripts created on or after this datetime (ISO 8601 with timezone)",
+    ),
+]
+SearchToDatetimeParam = Annotated[
+    AwareDatetime | None,
+    Query(
+        alias="to",
+        description="Filter transcripts created on or before this datetime (ISO 8601 with timezone)",
+    ),
 ]
 
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
     total: SearchTotal
-    query: SearchQuery
+    query: SearchQuery | None = None
     limit: SearchLimit
     offset: SearchOffset
 
@@ -161,25 +189,32 @@ async def transcripts_search(
     offset: SearchOffsetParam = 0,
     room_id: Optional[str] = None,
     source_kind: Optional[SourceKind] = None,
+    from_datetime: SearchFromDatetimeParam = None,
+    to_datetime: SearchToDatetimeParam = None,
     user: Annotated[
         Optional[auth.UserInfo], Depends(auth.current_user_optional)
     ] = None,
 ):
-    """
-    Full-text search across transcript titles and content.
-    """
+    """Full-text search across transcript titles and content."""
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
 
+    if from_datetime and to_datetime and from_datetime > to_datetime:
+        raise HTTPException(
+            status_code=400, detail="'from' must be less than or equal to 'to'"
+        )
+
     search_params = SearchParameters(
-        query_text=q,
+        query_text=parse_search_query_param(q),
         limit=limit,
         offset=offset,
         user_id=user_id,
         room_id=room_id,
         source_kind=source_kind,
+        from_datetime=from_datetime,
+        to_datetime=to_datetime,
     )
 
     results, total = await search_controller.search_transcripts(search_params)
@@ -199,13 +234,21 @@ async def transcripts_create(
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
     user_id = user["sub"] if user else None
-    return await transcripts_controller.add(
+    transcript = await transcripts_controller.add(
         info.name,
-        source_kind=SourceKind.LIVE,
+        source_kind=info.source_kind or SourceKind.LIVE,
         source_language=info.source_language,
         target_language=info.target_language,
         user_id=user_id,
     )
+
+    if user_id:
+        await get_ws_manager().send_json(
+            room_id=f"user:{user_id}",
+            message={"event": "TRANSCRIPT_CREATED", "data": {"id": transcript.id}},
+        )
+
+    return transcript
 
 
 # ==============================================================
@@ -330,14 +373,14 @@ async def transcript_get(
 async def transcript_update(
     transcript_id: str,
     info: UpdateTranscript,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
-    if not transcript:
-        raise HTTPException(status_code=404, detail="Transcript not found")
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
     values = info.dict(exclude_unset=True)
     updated_transcript = await transcripts_controller.update(transcript, values)
     return updated_transcript
@@ -346,20 +389,20 @@ async def transcript_update(
 @router.delete("/transcripts/{transcript_id}", response_model=DeletionStatus)
 async def transcript_delete(
     transcript_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-
-    if transcript.meeting_id:
-        meeting = await meetings_controller.get_by_id(transcript.meeting_id)
-        room = await rooms_controller.get_by_id(meeting.room_id)
-        if room.is_shared:
-            user_id = None
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     await transcripts_controller.remove_by_id(transcript.id, user_id=user_id)
+    await get_ws_manager().send_json(
+        room_id=f"user:{user_id}",
+        message={"event": "TRANSCRIPT_DELETED", "data": {"id": transcript.id}},
+    )
     return DeletionStatus(status="ok")
 
 
@@ -431,15 +474,16 @@ async def transcript_post_to_zulip(
     stream: str,
     topic: str,
     include_topics: bool,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    user: Annotated[auth.UserInfo, Depends(auth.current_user)],
 ):
-    user_id = user["sub"] if user else None
+    user_id = user["sub"]
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found")
-
+    if not transcripts_controller.user_can_mutate(transcript, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
     content = get_zulip_message(transcript, include_topics)
 
     message_updated = False

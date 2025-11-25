@@ -1,0 +1,69 @@
+services:
+  server:
+    build:
+      context: server
+    ports:
+      - 1250:1250
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: server
+
+  worker:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: worker
+
+  beat:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: beat
+
+  redis:
+    image: redis:7.2
+    ports:
+      - 6379:6379
+  web:
+    image: node:22-alpine
+    ports:
+      - "3000:3000"
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./www:/app/
+      - /app/node_modules
+    env_file:
+      - ./www/.env.local
+    environment:
+      - NODE_ENV=development
+
+  postgres:
+    image: postgres:17
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+networks:
+  default:
+    attachable: true

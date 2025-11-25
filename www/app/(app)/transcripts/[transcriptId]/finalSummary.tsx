@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import React from "react";
 import Markdown from "react-markdown";
 import "../../../styles/markdown.css";
-import {
-  GetTranscript,
-  GetTranscriptTopic,
-  UpdateTranscript,
-} from "../../../api";
-import useApi from "../../../lib/useApi";
+import type { components } from "../../../reflector-api";
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
+import { useTranscriptUpdate } from "../../../lib/apiHooks";
 import {
   Flex,
   Heading,
@@ -18,49 +16,47 @@ import {
 } from "@chakra-ui/react";
 import { LuPen } from "react-icons/lu";
 import { useError } from "../../../(errors)/errorContext";
-import ShareAndPrivacy from "../shareAndPrivacy";
 
 type FinalSummaryProps = {
-  transcriptResponse: GetTranscript;
-  topicsResponse: GetTranscriptTopic[];
-  onUpdate?: (newSummary) => void;
+  transcript: GetTranscript;
+  topics: GetTranscriptTopic[];
+  onUpdate: (newSummary: string) => void;
+  finalSummaryRef: React.Dispatch<React.SetStateAction<HTMLDivElement | null>>;
 };
 
 export default function FinalSummary(props: FinalSummaryProps) {
-  const finalSummaryRef = useRef<HTMLParagraphElement>(null);
-
   const [isEditMode, setIsEditMode] = useState(false);
   const [preEditSummary, setPreEditSummary] = useState("");
   const [editedSummary, setEditedSummary] = useState("");
 
-  const api = useApi();
-
   const { setError } = useError();
+  const updateTranscriptMutation = useTranscriptUpdate();
 
   useEffect(() => {
-    setEditedSummary(props.transcriptResponse?.long_summary || "");
-  }, [props.transcriptResponse?.long_summary]);
+    setEditedSummary(props.transcript?.long_summary || "");
+  }, [props.transcript?.long_summary]);
 
-  if (!props.topicsResponse || !props.transcriptResponse) {
+  if (!props.topics || !props.transcript) {
     return null;
   }
 
   const updateSummary = async (newSummary: string, transcriptId: string) => {
     try {
-      const requestBody: UpdateTranscript = {
-        long_summary: newSummary,
-      };
-      const updatedTranscript = await api?.v1TranscriptUpdate({
-        transcriptId,
-        requestBody,
+      const updatedTranscript = await updateTranscriptMutation.mutateAsync({
+        params: {
+          path: {
+            transcript_id: transcriptId,
+          },
+        },
+        body: {
+          long_summary: newSummary,
+        },
       });
-      if (props.onUpdate) {
-        props.onUpdate(newSummary);
-      }
+      props.onUpdate(newSummary);
       console.log("Updated long summary:", updatedTranscript);
     } catch (err) {
       console.error("Failed to update long summary:", err);
-      setError(err, "Failed to update long summary.");
+      setError(err as Error, "Failed to update long summary.");
     }
   };
 
@@ -75,7 +71,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
   };
 
   const onSaveClick = () => {
-    updateSummary(editedSummary, props.transcriptResponse.id);
+    updateSummary(editedSummary, props.transcript.id);
     setIsEditMode(false);
   };
 
@@ -114,7 +110,12 @@ export default function FinalSummary(props: FinalSummaryProps) {
             <Button onClick={onDiscardClick} variant="ghost">
               Cancel
             </Button>
-            <Button onClick={onSaveClick}>Save</Button>
+            <Button
+              onClick={onSaveClick}
+              disabled={updateTranscriptMutation.isPending}
+            >
+              Save
+            </Button>
           </Flex>
         )}
         {!isEditMode && (
@@ -128,11 +129,6 @@ export default function FinalSummary(props: FinalSummaryProps) {
             >
               <LuPen />
             </IconButton>
-            <ShareAndPrivacy
-              finalSummaryRef={finalSummaryRef}
-              transcriptResponse={props.transcriptResponse}
-              topicsResponse={props.topicsResponse}
-            />
           </>
         )}
       </Flex>
@@ -148,7 +144,7 @@ export default function FinalSummary(props: FinalSummaryProps) {
           mt={2}
         />
       ) : (
-        <div ref={finalSummaryRef} className="markdown">
+        <div ref={props.finalSummaryRef} className="markdown">
           <Markdown>{editedSummary}</Markdown>
         </div>
       )}

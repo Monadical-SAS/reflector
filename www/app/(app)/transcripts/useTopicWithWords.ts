@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import type { components } from "../../reflector-api";
+import { useTranscriptTopicsWithWordsPerSpeaker } from "../../lib/apiHooks";
 
-import { GetTranscriptTopicWithWordsPerSpeaker } from "../../api";
-import { useError } from "../../(errors)/errorContext";
-import useApi from "../../lib/useApi";
-import { shouldShowError } from "../../lib/errorUtils";
+type GetTranscriptTopicWithWordsPerSpeaker =
+  components["schemas"]["GetTranscriptTopicWithWordsPerSpeaker"];
 
 type ErrorTopicWithWords = {
   error: Error;
@@ -33,47 +32,40 @@ const useTopicWithWords = (
   topicId: string | undefined,
   transcriptId: string,
 ): UseTopicWithWords => {
-  const [response, setResponse] =
-    useState<GetTranscriptTopicWithWordsPerSpeaker | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setErrorState] = useState<Error | null>(null);
-  const { setError } = useError();
-  const api = useApi();
+  const {
+    data: response,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useTranscriptTopicsWithWordsPerSpeaker(
+    transcriptId || null,
+    topicId || null,
+  );
 
-  const [count, setCount] = useState(0);
+  if (error) {
+    return {
+      error: error as Error,
+      loading: false,
+      response: null,
+      refetch,
+    } satisfies ErrorTopicWithWords & { refetch: () => void };
+  }
 
-  const refetch = () => {
-    if (!loading) {
-      setCount(count + 1);
-      setLoading(true);
-      setErrorState(null);
-    }
-  };
+  if (loading || !response) {
+    return {
+      response: response || null,
+      loading: true,
+      error: false,
+      refetch,
+    } satisfies LoadingTopicWithWords & { refetch: () => void };
+  }
 
-  useEffect(() => {
-    if (!transcriptId || !topicId || !api) return;
-
-    setLoading(true);
-
-    api
-      .v1TranscriptGetTopicsWithWordsPerSpeaker({ transcriptId, topicId })
-      .then((result) => {
-        setResponse(result);
-        setLoading(false);
-        console.debug("Topics with words Loaded:", result);
-      })
-      .catch((error) => {
-        const shouldShowHuman = shouldShowError(error);
-        if (shouldShowHuman) {
-          setError(error, "There was an error loading the topics with words");
-        } else {
-          setError(error);
-        }
-        setErrorState(error);
-      });
-  }, [transcriptId, !api, topicId, count]);
-
-  return { response, loading, error, refetch } as UseTopicWithWords;
+  return {
+    response,
+    loading: false,
+    error: null,
+    refetch,
+  } satisfies SuccessTopicWithWords & { refetch: () => void };
 };
 
 export default useTopicWithWords;

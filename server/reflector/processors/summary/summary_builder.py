@@ -165,6 +165,7 @@ class SummaryBuilder:
         self.llm: LLM = llm
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
+        self.participant_instructions: str | None = None
         if filename:
             self.read_transcript_from_file(filename)
 
@@ -191,13 +192,60 @@ class SummaryBuilder:
         self, prompt: str, output_cls: Type[T], tone_name: str | None = None
     ) -> T:
         """Generic function to get structured output from LLM for non-function-calling models."""
+        # Add participant instructions to the prompt if available
+        enhanced_prompt = self._enhance_prompt_with_participants(prompt)
         return await self.llm.get_structured_response(
-            prompt, [self.transcript], output_cls, tone_name=tone_name
+            enhanced_prompt, [self.transcript], output_cls, tone_name=tone_name
         )
+
+    async def _get_response(
+        self, prompt: str, texts: list[str], tone_name: str | None = None
+    ) -> str:
+        """Get text response with automatic participant instructions injection."""
+        enhanced_prompt = self._enhance_prompt_with_participants(prompt)
+        return await self.llm.get_response(enhanced_prompt, texts, tone_name=tone_name)
+
+    def _enhance_prompt_with_participants(self, prompt: str) -> str:
+        """Add participant instructions to any prompt if participants are known."""
+        if self.participant_instructions:
+            self.logger.debug("Adding participant instructions to prompt")
+            return f"{prompt}\n\n{self.participant_instructions}"
+        return prompt
 
     # ----------------------------------------------------------------------------
     # Participants
     # ----------------------------------------------------------------------------
+
+    def set_known_participants(self, participants: list[str]) -> None:
+        """
+        Set known participants directly without LLM identification.
+        This is used when participants are already identified and stored.
+        They are appended at the end of the transcript, providing more context for the assistant.
+        """
+        if not participants:
+            self.logger.warning("No participants provided")
+            return
+
+        self.logger.info(
+            "Using known participants",
+            participants=participants,
+        )
+
+        participants_md = self.format_list_md(participants)
+        self.transcript += f"\n\n# Participants\n\n{participants_md}"
+
+        # Set instructions that will be automatically added to all prompts
+        participants_list = ", ".join(participants)
+        self.participant_instructions = dedent(
+            f"""
+            # IMPORTANT: Participant Names
+            The following participants are identified in this conversation: {participants_list}
+
+            You MUST use these specific participant names when referring to people in your response.
+            Do NOT use generic terms like "a participant", "someone", "attendee", "Speaker 1", "Speaker 2", etc.
+            Always refer to people by their actual names (e.g., "John suggested..." not "A participant suggested...").
+            """
+        ).strip()
 
     async def identify_participants(self) -> None:
         """
@@ -232,6 +280,19 @@ class SummaryBuilder:
             if unique_participants:
                 participants_md = self.format_list_md(unique_participants)
                 self.transcript += f"\n\n# Participants\n\n{participants_md}"
+
+                # Set instructions that will be automatically added to all prompts
+                participants_list = ", ".join(unique_participants)
+                self.participant_instructions = dedent(
+                    f"""
+                    # IMPORTANT: Participant Names
+                    The following participants are identified in this conversation: {participants_list}
+
+                    You MUST use these specific participant names when referring to people in your response.
+                    Do NOT use generic terms like "a participant", "someone", "attendee", "Speaker 1", "Speaker 2", etc.
+                    Always refer to people by their actual names (e.g., "John suggested..." not "A participant suggested...").
+                    """
+                ).strip()
             else:
                 self.logger.warning("No participants identified in the transcript")
 
@@ -318,13 +379,13 @@ class SummaryBuilder:
         for subject in self.subjects:
             detailed_prompt = DETAILED_SUBJECT_PROMPT_TEMPLATE.format(subject=subject)
 
-            detailed_response = await self.llm.get_response(
+            detailed_response = await self._get_response(
                 detailed_prompt, [self.transcript], tone_name="Topic assistant"
             )
 
             paragraph_prompt = PARAGRAPH_SUMMARY_PROMPT
 
-            paragraph_response = await self.llm.get_response(
+            paragraph_response = await self._get_response(
                 paragraph_prompt, [str(detailed_response)], tone_name="Topic summarizer"
             )
 
@@ -345,7 +406,7 @@ class SummaryBuilder:
 
         recap_prompt = RECAP_PROMPT
 
-        recap_response = await self.llm.get_response(
+        recap_response = await self._get_response(
             recap_prompt, [summaries_text], tone_name="Recap summarizer"
         )
 

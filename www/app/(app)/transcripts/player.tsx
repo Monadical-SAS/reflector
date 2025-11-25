@@ -5,7 +5,9 @@ import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 
 import { formatTime, formatTimeMs } from "../../lib/time";
 import { Topic } from "./webSocketTypes";
-import { AudioWaveform } from "../../api";
+import type { components } from "../../reflector-api";
+
+type AudioWaveform = components["schemas"]["AudioWaveform"];
 import { waveSurferStyles } from "../../styles/recorder";
 import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { LuPause, LuPlay } from "react-icons/lu";
@@ -18,7 +20,7 @@ type PlayerProps = {
   ];
   waveform: AudioWaveform;
   media: HTMLMediaElement;
-  mediaDuration: number;
+  mediaDuration: number | null;
 };
 
 export default function Player(props: PlayerProps) {
@@ -31,17 +33,27 @@ export default function Player(props: PlayerProps) {
   const topicsRef = useRef(props.topics);
   const [firstRender, setFirstRender] = useState<boolean>(true);
 
-  const keyHandler = (e) => {
-    if (e.key == " ") {
+  const shouldIgnoreHotkeys = (target: EventTarget | null) => {
+    return (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement
+    );
+  };
+
+  const keyHandler = (e: KeyboardEvent) => {
+    if (e.key === " ") {
+      if (e.repeat) return;
+      if (shouldIgnoreHotkeys(e.target)) return;
+      e.preventDefault();
       wavesurfer?.playPause();
     }
   };
   useEffect(() => {
-    document.addEventListener("keyup", keyHandler);
+    document.addEventListener("keydown", keyHandler);
     return () => {
-      document.removeEventListener("keyup", keyHandler);
+      document.removeEventListener("keydown", keyHandler);
     };
-  });
+  }, [wavesurfer]);
 
   // Waveform setup
   useEffect(() => {
@@ -50,7 +62,9 @@ export default function Player(props: PlayerProps) {
         container: waveformRef.current,
         peaks: [props.waveform.data],
         height: "auto",
-        duration: Math.floor(props.mediaDuration / 1000),
+        duration: props.mediaDuration
+          ? Math.floor(props.mediaDuration / 1000)
+          : undefined,
         media: props.media,
 
         ...waveSurferStyles.playerSettings,

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  experimental: { esmExternals: "loose" },
+  env: {
+    IS_CI: process.env.IS_CI,
+  },
 };
 
 module.exports = nextConfig;

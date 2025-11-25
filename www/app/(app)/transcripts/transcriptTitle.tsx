@@ -1,37 +1,56 @@
 import { useState } from "react";
-import { UpdateTranscript } from "../../api";
-import useApi from "../../lib/useApi";
+import type { components } from "../../reflector-api";
+
+type UpdateTranscript = components["schemas"]["UpdateTranscript"];
+type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
+import {
+  useTranscriptUpdate,
+  useTranscriptParticipants,
+} from "../../lib/apiHooks";
 import { Heading, IconButton, Input, Flex, Spacer } from "@chakra-ui/react";
-import { LuPen } from "react-icons/lu";
+import { LuPen, LuCopy, LuCheck } from "react-icons/lu";
+import ShareAndPrivacy from "./shareAndPrivacy";
+import { buildTranscriptWithTopics } from "./buildTranscriptWithTopics";
+import { toaster } from "../../components/ui/toaster";
 
 type TranscriptTitle = {
   title: string;
   transcriptId: string;
-  onUpdate?: (newTitle: string) => void;
+  onUpdate: (newTitle: string) => void;
+
+  // share props
+  transcript: GetTranscript | null;
+  topics: GetTranscriptTopic[] | null;
+  finalSummaryElement: HTMLDivElement | null;
 };
 
 const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
-  const api = useApi();
+  const updateTranscriptMutation = useTranscriptUpdate();
+  const participantsQuery = useTranscriptParticipants(
+    props.transcript?.id || null,
+  );
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
-    if (!api) return;
     try {
       const requestBody: UpdateTranscript = {
         title: newTitle,
       };
-      const updatedTranscript = await api?.v1TranscriptUpdate({
-        transcriptId,
-        requestBody,
+      await updateTranscriptMutation.mutateAsync({
+        params: {
+          path: { transcript_id: transcriptId },
+        },
+        body: requestBody,
       });
-      if (props.onUpdate) {
-        props.onUpdate(newTitle);
-      }
-      console.log("Updated transcript:", updatedTranscript);
+      props.onUpdate(newTitle);
+      console.log("Updated transcript title:", newTitle);
     } catch (err) {
       console.error("Failed to update transcript:", err);
+      // Revert title on error
+      setDisplayedTitle(preEditTitle);
     }
   };
 
@@ -57,11 +76,11 @@ const TranscriptTitle = (props: TranscriptTitle) => {
     }
     setIsEditing(false);
   };
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayedTitle(e.target.value);
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       updateTitle(displayedTitle, props.transcriptId);
       setIsEditing(false);
@@ -106,6 +125,59 @@ const TranscriptTitle = (props: TranscriptTitle) => {
           >
             <LuPen />
           </IconButton>
+          {props.transcript && props.topics && (
+            <>
+              <IconButton
+                aria-label="Copy Transcript"
+                size="sm"
+                variant="subtle"
+                onClick={() => {
+                  const text = buildTranscriptWithTopics(
+                    props.topics || [],
+                    participantsQuery?.data || null,
+                    props.transcript?.title || null,
+                  );
+                  if (!text) return;
+                  navigator.clipboard
+                    .writeText(text)
+                    .then(() => {
+                      toaster
+                        .create({
+                          placement: "top",
+                          duration: 2500,
+                          render: () => (
+                            <div className="chakra-ui-light">
+                              <div
+                                style={{
+                                  background: "#38A169",
+                                  color: "white",
+                                  padding: "8px 12px",
+                                  borderRadius: 6,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  boxShadow: "rgba(0,0,0,0.25) 0px 4px 12px",
+                                }}
+                              >
+                                <LuCheck /> Transcript copied
+                              </div>
+                            </div>
+                          ),
+                        })
+                        .then(() => {});
+                    })
+                    .catch(() => {});
+                }}
+              >
+                <LuCopy />
+              </IconButton>
+              <ShareAndPrivacy
+                finalSummaryElement={props.finalSummaryElement}
+                transcript={props.transcript}
+                topics={props.topics}
+              />
+            </>
+          )}
         </Flex>
       )}
     </>

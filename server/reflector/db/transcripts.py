@@ -21,7 +21,7 @@ from reflector.db.utils import is_postgresql
 from reflector.logger import logger
 from reflector.processors.types import Word as ProcessorWord
 from reflector.settings import settings
-from reflector.storage import get_recordings_storage, get_transcripts_storage
+from reflector.storage import get_transcripts_storage
 from reflector.utils import generate_uuid4
 from reflector.utils.webvtt import topics_to_webvtt
 
@@ -122,6 +122,15 @@ def generate_transcript_name() -> str:
     return f"Transcript {now.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
+TranscriptStatus = Literal[
+    "idle", "uploaded", "recording", "processing", "error", "ended"
+]
+
+
+class StrValue(BaseModel):
+    value: str
+
+
 class AudioWaveform(BaseModel):
     data: list[float]
 
@@ -177,6 +186,7 @@ class TranscriptParticipant(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     speaker: int | None
     name: str
+    user_id: str | None = None
 
 
 class Transcript(BaseModel):
@@ -185,7 +195,7 @@ class Transcript(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     user_id: str | None = None
     name: str = Field(default_factory=generate_transcript_name)
-    status: str = "idle"
+    status: TranscriptStatus = "idle"
     duration: float = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     title: str | None = None
@@ -614,7 +624,9 @@ class TranscriptController:
                 )
                 if recording:
                     try:
-                        await get_recordings_storage().delete_file(recording.object_key)
+                        await get_transcripts_storage().delete_file(
+                            recording.object_key, bucket=recording.bucket_name
+                        )
                     except Exception as e:
                         logger.warning(
                             "Failed to delete recording object from S3",
@@ -637,6 +649,19 @@ class TranscriptController:
         """
         query = transcripts.delete().where(transcripts.c.recording_id == recording_id)
         await get_database().execute(query)
+
+    @staticmethod
+    def user_can_mutate(transcript: Transcript, user_id: str | None) -> bool:
+        """
+        Returns True if the given user is allowed to modify the transcript.
+
+        Policy:
+        - Anonymous transcripts (user_id is None) cannot be modified via API
+        - Only the owner (matching user_id) can modify their transcript
+        """
+        if transcript.user_id is None:
+            return False
+        return user_id and transcript.user_id == user_id
 
     @asynccontextmanager
     async def transaction(self):
@@ -703,11 +728,13 @@ class TranscriptController:
         """
         Download audio from storage
         """
-        transcript.audio_mp3_filename.write_bytes(
-            await get_transcripts_storage().get_file(
-                transcript.storage_audio_path,
-            )
-        )
+        storage = get_transcripts_storage()
+        try:
+            with open(transcript.audio_mp3_filename, "wb") as f:
+                await storage.stream_to_fileobj(transcript.storage_audio_path, f)
+        except Exception:
+            transcript.audio_mp3_filename.unlink(missing_ok=True)
+            raise
 
     async def upsert_participant(
         self,
@@ -731,6 +758,28 @@ class TranscriptController:
         """
         transcript.delete_participant(participant_id)
         await self.update(transcript, {"participants": transcript.participants_dump()})
+
+    async def set_status(
+        self, transcript_id: str, status: TranscriptStatus
+    ) -> TranscriptEvent | None:
+        """
+        Update the status of a transcript
+
+        Will add an event STATUS + update the status field of transcript
+        """
+        async with self.transaction():
+            transcript = await self.get_by_id(transcript_id)
+            if not transcript:
+                raise Exception(f"Transcript {transcript_id} not found")
+            if transcript.status == status:
+                return
+            resp = await self.append_event(
+                transcript=transcript,
+                event="STATUS",
+                data=StrValue(value=status),
+            )
+            await self.update(transcript, {"status": status})
+        return resp
 
 
 transcripts_controller = TranscriptController()

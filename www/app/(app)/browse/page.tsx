@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Flex,
   Spinner,
@@ -19,36 +19,32 @@ import {
   parseAsStringLiteral,
 } from "nuqs";
 import { LuX } from "react-icons/lu";
-import { useSearchTranscripts } from "../transcripts/useSearchTranscripts";
-import useSessionUser from "../../lib/useSessionUser";
-import { Room, SourceKind, SearchResult, $SourceKind } from "../../api";
-import useApi from "../../lib/useApi";
-import { useError } from "../../(errors)/errorContext";
+import type { components } from "../../reflector-api";
+
+type Room = components["schemas"]["Room"];
+type SourceKind = components["schemas"]["SourceKind"];
+type SearchResult = components["schemas"]["SearchResult"];
+import {
+  useRoomsList,
+  useTranscriptsSearch,
+  useTranscriptDelete,
+  useTranscriptProcess,
+} from "../../lib/apiHooks";
 import FilterSidebar from "./_components/FilterSidebar";
 import Pagination, {
   FIRST_PAGE,
   PaginationPage,
   parsePaginationPage,
   totalPages as getTotalPages,
+  paginationPageTo0Based,
 } from "./_components/Pagination";
 import TranscriptCards from "./_components/TranscriptCards";
 import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
 import { RECORD_A_MEETING_URL } from "../../api/urls";
+import { useUserName } from "../../lib/useUserName";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
-
-const usePrefetchRooms = (setRooms: (rooms: Room[]) => void): void => {
-  const { setError } = useError();
-  const api = useApi();
-  useEffect(() => {
-    if (!api) return;
-    api
-      .v1RoomsList({ page: 1 })
-      .then((rooms) => setRooms(rooms.items))
-      .catch((err) => setError(err, "There was an error fetching the rooms"));
-  }, [api, setError]);
-};
 
 const SearchForm: React.FC<{
   setPage: (page: PaginationPage) => void;
@@ -69,7 +65,6 @@ const SearchForm: React.FC<{
   searchQuery,
   setSearchQuery,
 }) => {
-  // to keep the search input controllable + more fine grained control (urlSearchQuery is updated on submits)
   const [searchInputValue, setSearchInputValue] = useState(searchQuery || "");
   const handleSearchQuerySubmit = async (d: FormData) => {
     await setSearchQuery((d.get(SEARCH_FORM_QUERY_INPUT_NAME) as string) || "");
@@ -163,7 +158,6 @@ const UnderSearchFormFilterIndicators: React.FC<{
                 p="1px"
                 onClick={() => {
                   setSourceKind(null);
-                  // TODO questionable
                   setRoomId(null);
                 }}
                 _hover={{ bg: "blue.200" }}
@@ -209,7 +203,11 @@ export default function TranscriptBrowser() {
 
   const [urlSourceKind, setUrlSourceKind] = useQueryState(
     "source",
-    parseAsStringLiteral($SourceKind.enum).withOptions({
+    parseAsStringLiteral([
+      "room",
+      "live",
+      "file",
+    ] as const satisfies SourceKind[]).withOptions({
       shallow: false,
     }),
   );
@@ -229,45 +227,56 @@ export default function TranscriptBrowser() {
   useEffect(() => {
     const maybePage = parsePaginationPage(urlPage);
     if ("error" in maybePage) {
-      setPage(FIRST_PAGE).then(() => {
-        /*may be called n times we dont care*/
-      });
+      setPage(FIRST_PAGE).then(() => {});
       return;
     }
     _setSafePage(maybePage.value);
   }, [urlPage]);
 
-  const [rooms, setRooms] = useState<Room[]>([]);
-
   const pageSize = 20;
-  const {
-    results,
-    totalCount: totalResults,
-    isLoading,
-    reload,
-  } = useSearchTranscripts(
-    urlSearchQuery,
-    {
-      roomIds: urlRoomId ? [urlRoomId] : null,
-      sourceKind: urlSourceKind,
-    },
-    {
-      pageSize,
-      page,
-    },
+
+  // must be json-able
+  const searchFilters = useMemo(
+    () => ({
+      q: urlSearchQuery,
+      extras: {
+        room_id: urlRoomId || undefined,
+        source_kind: urlSourceKind || undefined,
+      },
+    }),
+    [urlSearchQuery, urlRoomId, urlSourceKind],
   );
+
+  const {
+    data: searchData,
+    isLoading: searchLoading,
+    refetch: reloadSearch,
+  } = useTranscriptsSearch(searchFilters.q, {
+    limit: pageSize,
+    offset: paginationPageTo0Based(page) * pageSize,
+    ...searchFilters.extras,
+  });
+
+  const results = searchData?.results || [];
+  const totalResults = searchData?.total || 0;
+
+  // Fetch rooms
+  const { data: roomsData } = useRoomsList(1);
+  const rooms = roomsData?.items || [];
 
   const totalPages = getTotalPages(totalResults, pageSize);
 
-  const userName = useSessionUser().name;
+  // reset pagination when search results change (detected by total change; good enough approximation)
+  useEffect(() => {
+    // operation is idempotent
+    setPage(FIRST_PAGE).then(() => {});
+  }, [JSON.stringify(searchFilters)]);
+
+  const userName = useUserName();
   const [deletionLoading, setDeletionLoading] = useState(false);
-  const api = useApi();
-  const { setError } = useError();
   const cancelRef = React.useRef(null);
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
     React.useState<string>();
-
-  usePrefetchRooms(setRooms);
 
   const handleFilterTranscripts = (
     sourceKind: SourceKind | null,
@@ -280,44 +289,37 @@ export default function TranscriptBrowser() {
 
   const onCloseDeletion = () => setTranscriptToDeleteId(undefined);
 
+  const deleteTranscript = useTranscriptDelete();
+  const processTranscript = useTranscriptProcess();
+
   const confirmDeleteTranscript = (transcriptId: string) => {
-    if (!api || deletionLoading) return;
+    if (deletionLoading) return;
     setDeletionLoading(true);
-    api
-      .v1TranscriptDelete({ transcriptId })
-      .then(() => {
-        setDeletionLoading(false);
-        onCloseDeletion();
-        reload();
-      })
-      .catch((err) => {
-        setDeletionLoading(false);
-        setError(err, "There was an error deleting the transcript");
-      });
+    deleteTranscript.mutate(
+      {
+        params: {
+          path: { transcript_id: transcriptId },
+        },
+      },
+      {
+        onSuccess: () => {
+          setDeletionLoading(false);
+          onCloseDeletion();
+          reloadSearch();
+        },
+        onError: () => {
+          setDeletionLoading(false);
+        },
+      },
+    );
   };
 
   const handleProcessTranscript = (transcriptId: string) => {
-    if (!api) {
-      console.error("API not available on handleProcessTranscript");
-      return;
-    }
-    api
-      .v1TranscriptProcess({ transcriptId })
-      .then((result) => {
-        const status =
-          result && typeof result === "object" && "status" in result
-            ? (result as { status: string }).status
-            : undefined;
-        if (status === "already running") {
-          setError(
-            new Error("Processing is already running, please wait"),
-            "Processing is already running, please wait",
-          );
-        }
-      })
-      .catch((err) => {
-        setError(err, "There was an error processing the transcript");
-      });
+    processTranscript.mutate({
+      params: {
+        path: { transcript_id: transcriptId },
+      },
+    });
   };
 
   const transcriptToDelete = results?.find(
@@ -332,7 +334,7 @@ export default function TranscriptBrowser() {
       ? transcriptToDelete.room_name || transcriptToDelete.room_id
       : transcriptToDelete?.source_kind;
 
-  if (isLoading && results.length === 0) {
+  if (searchLoading && results.length === 0) {
     return (
       <Flex
         flexDir="column"
@@ -360,7 +362,7 @@ export default function TranscriptBrowser() {
       >
         <Heading size="lg">
           {userName ? `${userName}'s Transcriptions` : "Your Transcriptions"}{" "}
-          {(isLoading || deletionLoading) && <Spinner size="sm" />}
+          {(searchLoading || deletionLoading) && <Spinner size="sm" />}
         </Heading>
       </Flex>
 
@@ -403,12 +405,12 @@ export default function TranscriptBrowser() {
           <TranscriptCards
             results={results}
             query={urlSearchQuery}
-            isLoading={isLoading}
+            isLoading={searchLoading}
             onDelete={setTranscriptToDeleteId}
             onReprocess={handleProcessTranscript}
           />
 
-          {!isLoading && results.length === 0 && (
+          {!searchLoading && results.length === 0 && (
             <EmptyResult searchQuery={urlSearchQuery} />
           )}
         </Flex>

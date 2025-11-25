@@ -1,4 +1,4 @@
-let authToken = ""; // Variable to store the token
+let authToken = null;
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SET_AUTH_TOKEN") {

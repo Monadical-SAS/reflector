@@ -12,7 +12,8 @@ async def test_transcript_upload_file(
     tmpdir,
     dummy_llm,
     dummy_processors,
-    dummy_diarization,
+    dummy_file_transcript,
+    dummy_file_diarization,
     dummy_storage,
     client,
 ):
@@ -36,8 +37,8 @@ async def test_transcript_upload_file(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-    # wait the processing to finish (max 10 minutes)
-    timeout_seconds = 600  # 10 minutes
+    # wait the processing to finish (max 1 minute)
+    timeout_seconds = 60
     start_time = time.monotonic()
     while (time.monotonic() - start_time) < timeout_seconds:
         # fetch the transcript and check if it is ended
@@ -47,7 +48,7 @@ async def test_transcript_upload_file(
             break
         await asyncio.sleep(1)
     else:
-        pytest.fail(f"Processing timed out after {timeout_seconds} seconds")
+        return pytest.fail(f"Processing timed out after {timeout_seconds} seconds")
 
     # check the transcript is ended
     transcript = resp.json()
@@ -59,4 +60,4 @@ async def test_transcript_upload_file(
     response = await client.get(f"/transcripts/{tid}/topics")
     assert response.status_code == 200
     assert len(response.json()) == 1
-    assert "want to share" in response.json()[0]["transcript"]
+    assert "Hello world. How are you today?" in response.json()[0]["transcript"]

@@ -7,9 +7,10 @@ import {
   FaMicrophone,
   FaGear,
 } from "react-icons/fa6";
+import { TranscriptStatus } from "../../../lib/transcript";
 
 interface TranscriptStatusIconProps {
-  status: string;
+  status: TranscriptStatus;
 }
 
 export default function TranscriptStatusIcon({

@@ -54,7 +54,18 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
                     "language": data.language,
                     "batch": True,
                 },
+                follow_redirects=True,
             )
+
+            if response.status_code != 200:
+                error_body = response.text
+                self.logger.error(
+                    "Modal API error",
+                    audio_url=data.audio_url,
+                    status_code=response.status_code,
+                    error_body=error_body,
+                )
+
             response.raise_for_status()
             result = response.json()
 
@@ -66,6 +77,9 @@ class FileTranscriptModalProcessor(FileTranscriptProcessor):
             )
             for word_info in result.get("words", [])
         ]
+
+        # words come not in order
+        words.sort(key=lambda w: w.start)
 
         return Transcript(words=words)
 

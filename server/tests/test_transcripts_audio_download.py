@@ -19,7 +19,7 @@ async def fake_transcript(tmpdir, client):
     transcript = await transcripts_controller.get_by_id(tid)
     assert transcript is not None
 
-    await transcripts_controller.update(transcript, {"status": "finished"})
+    await transcripts_controller.update(transcript, {"status": "ended"})
 
     # manually copy a file at the expected location
     audio_filename = transcript.audio_mp3_filename
@@ -111,7 +111,9 @@ async def test_transcript_audio_download_range_with_seek(
 
 
 @pytest.mark.asyncio
-async def test_transcript_delete_with_audio(fake_transcript, client):
+async def test_transcript_delete_with_audio(
+    authenticated_client, fake_transcript, client
+):
     response = await client.delete(f"/transcripts/{fake_transcript.id}")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"

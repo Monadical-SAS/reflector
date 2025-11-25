@@ -1,7 +1,10 @@
 import React from "react";
 import { Box, Stack, Link, Heading } from "@chakra-ui/react";
 import NextLink from "next/link";
-import { Room, SourceKind } from "../../../api";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
+type SourceKind = components["schemas"]["SourceKind"];
 
 interface FilterSidebarProps {
   rooms: Room[];
@@ -72,7 +75,7 @@ export default function FilterSidebar({
                 key={room.id}
                 as={NextLink}
                 href="#"
-                onClick={() => onFilterChange("room", room.id)}
+                onClick={() => onFilterChange("room" as SourceKind, room.id)}
                 color={
                   selectedSourceKind === "room" && selectedRoomId === room.id
                     ? "blue.500"

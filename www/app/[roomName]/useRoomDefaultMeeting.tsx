@@ -1,0 +1,89 @@
+import { useEffect, useState, useRef } from "react";
+import { useError } from "../(errors)/errorContext";
+import type { components } from "../reflector-api";
+import { shouldShowError } from "../lib/errorUtils";
+
+type Meeting = components["schemas"]["Meeting"];
+import { useRoomsCreateMeeting } from "../lib/apiHooks";
+import { notFound } from "next/navigation";
+import { ApiError } from "../api/_error";
+
+type ErrorMeeting = {
+  error: ApiError;
+  loading: false;
+  response: null;
+  reload: () => void;
+};
+
+type LoadingMeeting = {
+  error: null;
+  response: null;
+  loading: true;
+  reload: () => void;
+};
+
+type SuccessMeeting = {
+  error: null;
+  response: Meeting;
+  loading: false;
+  reload: () => void;
+};
+
+const useRoomDefaultMeeting = (
+  roomName: string | null,
+): ErrorMeeting | LoadingMeeting | SuccessMeeting => {
+  const [response, setResponse] = useState<Meeting | null>(null);
+  const [reload, setReload] = useState(0);
+  const { setError } = useError();
+  const createMeetingMutation = useRoomsCreateMeeting();
+  const reloadHandler = () => setReload((prev) => prev + 1);
+
+  // this is to undupe dev mode room creation
+  const creatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!roomName) return;
+    if (creatingRef.current) return;
+
+    const createMeeting = async () => {
+      creatingRef.current = true;
+      try {
+        const result = await createMeetingMutation.mutateAsync({
+          params: {
+            path: {
+              room_name: roomName,
+            },
+          },
+          body: {
+            allow_duplicated: false,
+          },
+        });
+        setResponse(result);
+      } catch (error: any) {
+        const shouldShowHuman = shouldShowError(error);
+        if (shouldShowHuman && error.status !== 404) {
+          setError(
+            error,
+            "There was an error loading the meeting. Please try again by refreshing the page.",
+          );
+        } else {
+          setError(error);
+        }
+      } finally {
+        creatingRef.current = false;
+      }
+    };
+
+    createMeeting().then(() => {});
+  }, [roomName, reload]);
+
+  const loading = createMeetingMutation.isPending && !response;
+  const error = createMeetingMutation.error;
+
+  return { response, loading, error, reload: reloadHandler } as
+    | ErrorMeeting
+    | LoadingMeeting
+    | SuccessMeeting;
+};
+
+export default useRoomDefaultMeeting;

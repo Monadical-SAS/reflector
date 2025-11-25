@@ -1,0 +1,337 @@
+import json
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, HTTPException, Request
+
+from reflector.dailyco_api import (
+    DailyTrack,
+    DailyWebhookEvent,
+    extract_room_name,
+    parse_recording_error,
+)
+from reflector.db import get_database
+from reflector.db.daily_participant_sessions import (
+    DailyParticipantSession,
+    daily_participant_sessions_controller,
+)
+from reflector.db.meetings import meetings_controller
+from reflector.logger import logger as _logger
+from reflector.settings import settings
+from reflector.video_platforms.factory import create_platform_client
+from reflector.worker.process import process_multitrack_recording
+
+router = APIRouter()
+
+logger = _logger.bind(platform="daily")
+
+
+@router.post("/webhook")
+async def webhook(request: Request):
+    """Handle Daily webhook events.
+
+    Example webhook payload:
+    {
+      "version": "1.0.0",
+      "type": "recording.ready-to-download",
+      "id": "rec-rtd-c3df927c-f738-4471-a2b7-066fa7e95a6b-1692124192",
+      "payload": {
+        "recording_id": "08fa0b24-9220-44c5-846c-3f116cf8e738",
+        "room_name": "Xcm97xRZ08b2dePKb78g",
+        "start_ts": 1692124183,
+        "status": "finished",
+        "max_participants": 1,
+        "duration": 9,
+        "share_token": "ntDCL5k98Ulq", #gitleaks:allow
+        "s3_key": "api-test-1j8fizhzd30c/Xcm97xRZ08b2dePKb78g/1692124183028"
+      },
+      "event_ts": 1692124192
+    }
+
+    Daily.co circuit-breaker: After 3+ failed responses (4xx/5xx), webhook
+    state→FAILED, stops sending events. Reset: scripts/recreate_daily_webhook.py
+    """
+    body = await request.body()
+    signature = request.headers.get("X-Webhook-Signature", "")
+    timestamp = request.headers.get("X-Webhook-Timestamp", "")
+
+    client = create_platform_client("daily")
+
+    if not client.verify_webhook_signature(body, signature, timestamp):
+        logger.warning(
+            "Invalid webhook signature",
+            signature=signature,
+            timestamp=timestamp,
+            has_body=bool(body),
+        )
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    try:
+        body_json = json.loads(body)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=422, detail="Invalid JSON")
+
+    if body_json.get("test") == "test":
+        logger.info("Received Daily webhook test event")
+        return {"status": "ok"}
+
+    try:
+        event = DailyWebhookEvent(**body_json)
+    except Exception as e:
+        logger.error("Failed to parse webhook event", error=str(e), body=body.decode())
+        raise HTTPException(status_code=422, detail="Invalid event format")
+
+    if event.type == "participant.joined":
+        await _handle_participant_joined(event)
+    elif event.type == "participant.left":
+        await _handle_participant_left(event)
+    elif event.type == "recording.started":
+        await _handle_recording_started(event)
+    elif event.type == "recording.ready-to-download":
+        await _handle_recording_ready(event)
+    elif event.type == "recording.error":
+        await _handle_recording_error(event)
+    else:
+        logger.warning(
+            "Unhandled Daily webhook event type",
+            event_type=event.type,
+            payload=event.payload,
+        )
+
+    return {"status": "ok"}
+
+
+"""
+{
+  "version": "1.0.0",
+  "type": "participant.joined",
+  "id": "ptcpt-join-6497c79b-f326-4942-aef8-c36a29140ad1-1708972279961",
+  "payload": {
+    "room": "test",
+    "user_id": "6497c79b-f326-4942-aef8-c36a29140ad1",
+    "user_name": "testuser",
+    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
+    "joined_at": 1708972279.96,
+    "will_eject_at": 1708972299.541,
+    "owner": false,
+    "permissions": {
+      "hasPresence": true,
+      "canSend": true,
+      "canReceive": { "base": true },
+      "canAdmin": false
+    }
+  },
+  "event_ts": 1708972279.961
+}
+
+"""
+
+
+async def _handle_participant_joined(event: DailyWebhookEvent):
+    daily_room_name = extract_room_name(event)
+    if not daily_room_name:
+        logger.warning("participant.joined: no room in payload", payload=event.payload)
+        return
+
+    meeting = await meetings_controller.get_by_room_name(daily_room_name)
+    if not meeting:
+        logger.warning(
+            "participant.joined: meeting not found", room_name=daily_room_name
+        )
+        return
+
+    payload = event.payload
+    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
+    session_id = f"{meeting.id}:{payload['session_id']}"
+
+    session = DailyParticipantSession(
+        id=session_id,
+        meeting_id=meeting.id,
+        room_id=meeting.room_id,
+        session_id=payload["session_id"],
+        user_id=payload.get("user_id", None),
+        user_name=payload["user_name"],
+        joined_at=joined_at,
+        left_at=None,
+    )
+
+    # num_clients serves as a projection/cache of active session count for Daily.co
+    # Both operations must succeed or fail together to maintain consistency
+    async with get_database().transaction():
+        await meetings_controller.increment_num_clients(meeting.id)
+        await daily_participant_sessions_controller.upsert_joined(session)
+
+    logger.info(
+        "Participant joined",
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+        user_id=payload.get("user_id", None),
+        user_name=payload.get("user_name"),
+        session_id=session_id,
+    )
+
+
+"""
+{
+  "version": "1.0.0",
+  "type": "participant.left",
+  "id": "ptcpt-left-16168c97-f973-4eae-9642-020fe3fda5db-1708972302986",
+  "payload": {
+    "room": "test",
+    "user_id": "16168c97-f973-4eae-9642-020fe3fda5db",
+    "user_name": "bipol",
+    "session_id": "0c0d2dda-f21d-4cf9-ab56-86bf3c407ffa",
+    "joined_at": 1708972291.567,
+    "will_eject_at": null,
+    "owner": false,
+    "permissions": {
+      "hasPresence": true,
+      "canSend": true,
+      "canReceive": { "base": true },
+      "canAdmin": false
+    },
+    "duration": 11.419000148773193
+  },
+  "event_ts": 1708972302.986
+}
+"""
+
+
+async def _handle_participant_left(event: DailyWebhookEvent):
+    room_name = extract_room_name(event)
+    if not room_name:
+        logger.warning("participant.left: no room in payload", payload=event.payload)
+        return
+
+    meeting = await meetings_controller.get_by_room_name(room_name)
+    if not meeting:
+        logger.warning("participant.left: meeting not found", room_name=room_name)
+        return
+
+    payload = event.payload
+    joined_at = datetime.fromtimestamp(payload["joined_at"], tz=timezone.utc)
+    left_at = datetime.fromtimestamp(event.event_ts, tz=timezone.utc)
+    session_id = f"{meeting.id}:{payload['session_id']}"
+
+    session = DailyParticipantSession(
+        id=session_id,
+        meeting_id=meeting.id,
+        room_id=meeting.room_id,
+        session_id=payload["session_id"],
+        user_id=payload.get("user_id", None),
+        user_name=payload["user_name"],
+        joined_at=joined_at,
+        left_at=left_at,
+    )
+
+    # num_clients serves as a projection/cache of active session count for Daily.co
+    # Both operations must succeed or fail together to maintain consistency
+    async with get_database().transaction():
+        await meetings_controller.decrement_num_clients(meeting.id)
+        await daily_participant_sessions_controller.upsert_left(session)
+
+    logger.info(
+        "Participant left",
+        meeting_id=meeting.id,
+        room_name=room_name,
+        user_id=payload.get("user_id", None),
+        duration=payload.get("duration"),
+        session_id=session_id,
+    )
+
+
+async def _handle_recording_started(event: DailyWebhookEvent):
+    room_name = extract_room_name(event)
+    if not room_name:
+        logger.warning(
+            "recording.started: no room_name in payload", payload=event.payload
+        )
+        return
+
+    meeting = await meetings_controller.get_by_room_name(room_name)
+    if meeting:
+        logger.info(
+            "Recording started",
+            meeting_id=meeting.id,
+            room_name=room_name,
+            recording_id=event.payload.get("recording_id"),
+            platform="daily",
+        )
+    else:
+        logger.warning("recording.started: meeting not found", room_name=room_name)
+
+
+async def _handle_recording_ready(event: DailyWebhookEvent):
+    """Handle recording ready for download event.
+
+    Daily.co webhook payload for raw-tracks recordings:
+    {
+      "recording_id": "...",
+      "room_name": "test2-20251009192341",
+      "tracks": [
+        {"type": "audio", "s3Key": "monadical/test2-.../uuid-cam-audio-123.webm", "size": 400000},
+        {"type": "video", "s3Key": "monadical/test2-.../uuid-cam-video-456.webm", "size": 30000000}
+      ]
+    }
+    """
+    room_name = extract_room_name(event)
+    recording_id = event.payload.get("recording_id")
+    tracks_raw = event.payload.get("tracks", [])
+
+    if not room_name or not tracks_raw:
+        logger.warning(
+            "recording.ready-to-download: missing room_name or tracks",
+            room_name=room_name,
+            has_tracks=bool(tracks_raw),
+            payload=event.payload,
+        )
+        return
+
+    try:
+        tracks = [DailyTrack(**t) for t in tracks_raw]
+    except Exception as e:
+        logger.error(
+            "recording.ready-to-download: invalid tracks structure",
+            error=str(e),
+            tracks=tracks_raw,
+        )
+        return
+
+    logger.info(
+        "Recording ready for download",
+        room_name=room_name,
+        recording_id=recording_id,
+        num_tracks=len(tracks),
+        platform="daily",
+    )
+
+    bucket_name = settings.DAILYCO_STORAGE_AWS_BUCKET_NAME
+    if not bucket_name:
+        logger.error(
+            "DAILYCO_STORAGE_AWS_BUCKET_NAME not configured; cannot process Daily recording"
+        )
+        return
+
+    track_keys = [t.s3Key for t in tracks if t.type == "audio"]
+
+    process_multitrack_recording.delay(
+        bucket_name=bucket_name,
+        daily_room_name=room_name,
+        recording_id=recording_id,
+        track_keys=track_keys,
+    )
+
+
+async def _handle_recording_error(event: DailyWebhookEvent):
+    payload = parse_recording_error(event)
+    room_name = payload.room_name
+
+    if room_name:
+        meeting = await meetings_controller.get_by_room_name(room_name)
+        if meeting:
+            logger.error(
+                "Recording error",
+                meeting_id=meeting.id,
+                room_name=room_name,
+                error=payload.error_msg,
+                platform="daily",
+            )

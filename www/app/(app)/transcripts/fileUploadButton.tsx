@@ -1,20 +1,25 @@
 import React, { useState } from "react";
-import useApi from "../../lib/useApi";
+import { useTranscriptUploadAudio } from "../../lib/apiHooks";
 import { Button, Spinner } from "@chakra-ui/react";
+import { useError } from "../../(errors)/errorContext";
 
 type FileUploadButton = {
   transcriptId: string;
+  onUploadComplete?: () => void;
 };
 
 export default function FileUploadButton(props: FileUploadButton) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const api = useApi();
+  const uploadMutation = useTranscriptUploadAudio();
+  const { setError } = useError();
   const [progress, setProgress] = useState(0);
   const triggerFileUpload = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
 
     if (file) {
@@ -24,37 +29,46 @@ export default function FileUploadButton(props: FileUploadButton) {
       let start = 0;
       let uploadedSize = 0;
 
-      api?.httpRequest.config.interceptors.request.use((request) => {
-        request.onUploadProgress = (progressEvent) => {
-          const currentProgress = Math.floor(
-            ((uploadedSize + progressEvent.loaded) / file.size) * 100,
-          );
-          setProgress(currentProgress);
-        };
-        return request;
-      });
-
       const uploadNextChunk = async () => {
-        if (chunkNumber == totalChunks) return;
+        if (chunkNumber == totalChunks) {
+          setProgress(0);
+          props.onUploadComplete?.();
+          return;
+        }
 
         const chunkSize = Math.min(maxChunkSize, file.size - start);
         const end = start + chunkSize;
         const chunk = file.slice(start, end);
 
-        await api?.v1TranscriptRecordUpload({
-          transcriptId: props.transcriptId,
-          formData: {
-            chunk,
-          },
-          chunkNumber,
-          totalChunks,
-        });
+        try {
+          const formData = new FormData();
+          formData.append("chunk", chunk);
 
-        uploadedSize += chunkSize;
-        chunkNumber++;
-        start = end;
+          await uploadMutation.mutateAsync({
+            params: {
+              path: {
+                transcript_id: props.transcriptId,
+              },
+              query: {
+                chunk_number: chunkNumber,
+                total_chunks: totalChunks,
+              },
+            },
+            body: formData as any,
+          });
 
-        uploadNextChunk();
+          uploadedSize += chunkSize;
+          const currentProgress = Math.floor((uploadedSize / file.size) * 100);
+          setProgress(currentProgress);
+
+          chunkNumber++;
+          start = end;
+
+          await uploadNextChunk();
+        } catch (error) {
+          setError(error as Error, "Failed to upload file");
+          setProgress(0);
+        }
       };
 
       uploadNextChunk();

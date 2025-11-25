@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Table,
@@ -7,15 +7,58 @@ import {
   IconButton,
   Text,
   Spinner,
+  Badge,
+  VStack,
+  Icon,
 } from "@chakra-ui/react";
-import { LuLink } from "react-icons/lu";
-import { Room } from "../../../api";
+import { LuLink, LuRefreshCw } from "react-icons/lu";
+import { FaCalendarAlt } from "react-icons/fa";
+import type { components } from "../../../reflector-api";
+import {
+  useRoomActiveMeetings,
+  useRoomUpcomingMeetings,
+  useRoomIcsSync,
+} from "../../../lib/apiHooks";
+
+type Room = components["schemas"]["Room"];
+type Meeting = components["schemas"]["Meeting"];
+type CalendarEventResponse = components["schemas"]["CalendarEventResponse"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
+import { MEETING_DEFAULT_TIME_MINUTES } from "../../../[roomName]/[meetingId]/constants";
+import { NonEmptyString, parseNonEmptyString } from "../../../lib/utils";
+
+// Custom icon component that combines calendar and refresh icons
+const CalendarSyncIcon = () => (
+  <Box position="relative" display="inline-block" w="20px" h="20px">
+    <Icon
+      as={FaCalendarAlt}
+      position="absolute"
+      top={0}
+      left={0}
+      boxSize="20px"
+    />
+    <Box
+      position="absolute"
+      bottom="-2px"
+      right="-2px"
+      bg="white"
+      borderRadius="full"
+      p="1px"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      w="12px"
+      h="12px"
+    >
+      <Icon as={LuRefreshCw} boxSize="10px" color="gray.700" />
+    </Box>
+  </Box>
+);
 
 interface RoomTableProps {
   rooms: Room[];
   linkCopied: string;
-  onCopyUrl: (roomName: string) => void;
+  onCopyUrl: (roomName: NonEmptyString) => void;
   onEdit: (roomId: string, roomData: any) => void;
   onDelete: (roomId: string) => void;
   loading?: boolean;
@@ -61,6 +104,71 @@ const getZulipDisplay = (
   return "Enabled";
 };
 
+function MeetingStatus({ roomName }: { roomName: string }) {
+  const activeMeetingsQuery = useRoomActiveMeetings(roomName);
+  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
+
+  const activeMeetings = activeMeetingsQuery.data || [];
+  const upcomingMeetings = upcomingMeetingsQuery.data || [];
+
+  if (activeMeetingsQuery.isLoading || upcomingMeetingsQuery.isLoading) {
+    return <Spinner size="sm" />;
+  }
+
+  if (activeMeetings.length > 0) {
+    const meeting = activeMeetings[0];
+    const title = String(
+      meeting.calendar_metadata?.["title"] || "Active Meeting",
+    );
+    return (
+      <VStack gap={1} alignItems="start">
+        <Text fontSize="xs" color="gray.600" lineHeight={1}>
+          {title}
+        </Text>
+        <Text fontSize="xs" color="gray.500" lineHeight={1}>
+          {meeting.num_clients} participants
+        </Text>
+      </VStack>
+    );
+  }
+
+  if (upcomingMeetings.length > 0) {
+    const event = upcomingMeetings[0];
+    const startTime = new Date(event.start_time);
+    const now = new Date();
+    const diffMinutes = Math.floor(
+      (startTime.getTime() - now.getTime()) / 60000,
+    );
+
+    return (
+      <VStack gap={1} alignItems="start">
+        <Badge colorScheme="orange" size="sm">
+          {diffMinutes < MEETING_DEFAULT_TIME_MINUTES
+            ? `In ${diffMinutes}m`
+            : "Upcoming"}
+        </Badge>
+        <Text fontSize="xs" color="gray.600" lineHeight={1}>
+          {event.title || "Scheduled Meeting"}
+        </Text>
+        <Text fontSize="xs" color="gray.500" lineHeight={1}>
+          {startTime.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            month: "short",
+            day: "numeric",
+          })}
+        </Text>
+      </VStack>
+    );
+  }
+
+  return (
+    <Text fontSize="xs" color="gray.500">
+      No meetings
+    </Text>
+  );
+}
+
 export function RoomTable({
   rooms,
   linkCopied,
@@ -69,6 +177,30 @@ export function RoomTable({
   onDelete,
   loading,
 }: RoomTableProps) {
+  const [syncingRooms, setSyncingRooms] = useState<Set<NonEmptyString>>(
+    new Set(),
+  );
+  const syncMutation = useRoomIcsSync();
+
+  const handleForceSync = async (roomName: NonEmptyString) => {
+    setSyncingRooms((prev) => new Set(prev).add(roomName));
+    try {
+      await syncMutation.mutateAsync({
+        params: {
+          path: { room_name: roomName },
+        },
+      });
+    } catch (err) {
+      console.error("Failed to sync calendar:", err);
+    } finally {
+      setSyncingRooms((prev) => {
+        const next = new Set(prev);
+        next.delete(roomName);
+        return next;
+      });
+    }
+  };
+
   return (
     <Box display={{ base: "none", lg: "block" }} position="relative">
       {loading && (
@@ -95,13 +227,16 @@ export function RoomTable({
               <Table.ColumnHeader width="250px" fontWeight="600">
                 Room Name
               </Table.ColumnHeader>
-              <Table.ColumnHeader width="250px" fontWeight="600">
-                Zulip
-              </Table.ColumnHeader>
-              <Table.ColumnHeader width="150px" fontWeight="600">
-                Room Size
+              <Table.ColumnHeader width="200px" fontWeight="600">
+                Current Meeting
               </Table.ColumnHeader>
               <Table.ColumnHeader width="200px" fontWeight="600">
+                Zulip
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="120px" fontWeight="600">
+                Room Size
+              </Table.ColumnHeader>
+              <Table.ColumnHeader width="150px" fontWeight="600">
                 Recording
               </Table.ColumnHeader>
               <Table.ColumnHeader
@@ -115,6 +250,9 @@ export function RoomTable({
               <Table.Row key={room.id}>
                 <Table.Cell>
                   <Link href={`/${room.name}`}>{room.name}</Link>
+                </Table.Cell>
+                <Table.Cell>
+                  <MeetingStatus roomName={room.name} />
                 </Table.Cell>
                 <Table.Cell>
                   {getZulipDisplay(
@@ -131,7 +269,42 @@ export function RoomTable({
                   )}
                 </Table.Cell>
                 <Table.Cell>
-                  <Flex alignItems="center" gap={2}>
+                  <Flex alignItems="center" gap={2} justifyContent="flex-end">
+                    {room.ics_enabled && (
+                      <IconButton
+                        aria-label="Force sync calendar"
+                        onClick={() =>
+                          handleForceSync(
+                            parseNonEmptyString(
+                              room.name,
+                              true,
+                              "panic! room.name is required",
+                            ),
+                          )
+                        }
+                        size="sm"
+                        variant="ghost"
+                        disabled={syncingRooms.has(
+                          parseNonEmptyString(
+                            room.name,
+                            true,
+                            "panic! room.name is required",
+                          ),
+                        )}
+                      >
+                        {syncingRooms.has(
+                          parseNonEmptyString(
+                            room.name,
+                            true,
+                            "panic! room.name is required",
+                          ),
+                        ) ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <CalendarSyncIcon />
+                        )}
+                      </IconButton>
+                    )}
                     {linkCopied === room.name ? (
                       <Text color="green.500" fontSize="sm">
                         Copied!
@@ -139,7 +312,15 @@ export function RoomTable({
                     ) : (
                       <IconButton
                         aria-label="Copy URL"
-                        onClick={() => onCopyUrl(room.name)}
+                        onClick={() =>
+                          onCopyUrl(
+                            parseNonEmptyString(
+                              room.name,
+                              true,
+                              "panic! room.name is required",
+                            ),
+                          )
+                        }
                         size="sm"
                         variant="ghost"
                       >

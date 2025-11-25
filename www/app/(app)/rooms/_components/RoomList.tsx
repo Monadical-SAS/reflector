@@ -1,13 +1,16 @@
 import { Box, Heading, Text, VStack } from "@chakra-ui/react";
-import { Room } from "../../../api";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
 import { RoomTable } from "./RoomTable";
 import { RoomCards } from "./RoomCards";
+import { NonEmptyString } from "../../../lib/utils";
 
 interface RoomListProps {
   title: string;
   rooms: Room[];
   linkCopied: string;
-  onCopyUrl: (roomName: string) => void;
+  onCopyUrl: (roomName: NonEmptyString) => void;
   onEdit: (roomId: string, roomData: any) => void;
   onDelete: (roomId: string) => void;
   emptyMessage?: string;

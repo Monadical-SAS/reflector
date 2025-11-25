@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import useRoomMeeting from "../../[roomName]/useRoomMeeting";
+import useRoomDefaultMeeting from "../../[roomName]/useRoomDefaultMeeting";
 import dynamic from "next/dynamic";
 const WherebyEmbed = dynamic(() => import("../../lib/WherebyWebinarEmbed"), {
   ssr: false,
@@ -30,9 +30,9 @@ const FORM_FIELDS = {
 };
 
 export type WebinarDetails = {
-  params: {
+  params: Promise<{
     title: string;
-  };
+  }>;
 };
 
 export type Webinar = {
@@ -63,7 +63,8 @@ const WEBINARS: Webinar[] = [
 ];
 
 export default function WebinarPage(details: WebinarDetails) {
-  const title = details.params.title;
+  const params = use(details.params);
+  const title = params.title;
   const webinar = WEBINARS.find((webinar) => webinar.title === title);
   if (!webinar) {
     return notFound();
@@ -71,7 +72,7 @@ export default function WebinarPage(details: WebinarDetails) {
   const startDate = new Date(Date.parse(webinar.startsAt));
   const endDate = new Date(Date.parse(webinar.endsAt));
 
-  const meeting = useRoomMeeting(ROOM_NAME);
+  const meeting = useRoomDefaultMeeting(ROOM_NAME);
   const roomUrl = meeting?.response?.host_room_url
     ? meeting?.response?.host_room_url
     : meeting?.response?.room_url;

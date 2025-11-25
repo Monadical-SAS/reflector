@@ -12,7 +12,9 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { LuLink } from "react-icons/lu";
-import { Room } from "../../../api";
+import type { components } from "../../../reflector-api";
+
+type Room = components["schemas"]["Room"];
 import { RoomActionsMenu } from "./RoomActionsMenu";
 
 interface RoomCardsProps {
