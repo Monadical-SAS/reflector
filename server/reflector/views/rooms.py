@@ -248,7 +248,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
-        platform=room.platform,
+        platform=room.platform or settings.DEFAULT_VIDEO_PLATFORM,
     )
 
 
@@ -556,6 +556,7 @@ async def rooms_join_meeting(
             meeting.room_name,
             enable_recording=enable_recording,
             user_id=user_id,
+            is_owner=user_id == room.user_id,
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)

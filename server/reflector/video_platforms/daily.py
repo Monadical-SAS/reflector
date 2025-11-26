@@ -173,15 +173,16 @@ class DailyClient(VideoPlatformClient):
         self,
         room_name: DailyRoomName,
         enable_recording: bool,
-        user_id: str | None = None,
-    ) -> str:
+        user_id: NonEmptyString | None = None,
+        is_owner: bool = False,
+    ) -> NonEmptyString:
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
             start_cloud_recording=enable_recording,
-            enable_recording_ui=not enable_recording,
+            enable_recording_ui=False,
+            is_owner=is_owner,
         )
-
         request = CreateMeetingTokenRequest(properties=properties)
         result = await self._api_client.create_meeting_token(request)
         return result.token
