@@ -3,10 +3,14 @@
 import webvtt
 
 from reflector.db.transcripts import TranscriptParticipant, TranscriptTopic
-from reflector.processors.types import Transcript as ProcessorTranscript
-from reflector.processors.types import words_to_segments
+from reflector.processors.types import (
+    Transcript as ProcessorTranscript,
+)
+from reflector.processors.types import (
+    words_to_segments,
+)
 from reflector.schemas.transcript_formats import TranscriptSegment
-from reflector.utils.webvtt import _seconds_to_timestamp
+from reflector.utils.webvtt import seconds_to_timestamp
 
 
 def get_speaker_name(
@@ -86,8 +90,8 @@ def topics_to_webvtt_named(
             text = f"<v {speaker_name}>{text}"
 
             caption = webvtt.Caption(
-                start=_seconds_to_timestamp(segment.start),
-                end=_seconds_to_timestamp(segment.end),
+                start=seconds_to_timestamp(segment.start),
+                end=seconds_to_timestamp(segment.end),
                 text=text,
             )
             vtt.captions.append(caption)

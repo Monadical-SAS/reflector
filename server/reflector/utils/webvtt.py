@@ -13,7 +13,7 @@ VttTimestamp = Annotated[str, "vtt_timestamp"]
 WebVTTStr = Annotated[str, "webvtt_str"]
 
 
-def _seconds_to_timestamp(seconds: Seconds) -> VttTimestamp:
+def seconds_to_timestamp(seconds: Seconds) -> VttTimestamp:
     # lib doesn't do that
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
@@ -37,8 +37,8 @@ def words_to_webvtt(words: list[Word]) -> WebVTTStr:
         text = f"<v Speaker{segment.speaker}>{text}"
 
         caption = webvtt.Caption(
-            start=_seconds_to_timestamp(segment.start),
-            end=_seconds_to_timestamp(segment.end),
+            start=seconds_to_timestamp(segment.start),
+            end=seconds_to_timestamp(segment.end),
             text=text,
         )
         vtt.captions.append(caption)
