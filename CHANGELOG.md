@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/Monadical-SAS/reflector/compare/v0.20.0...v0.21.0) (2025-11-26)
+
+
+### Features
+
+* add transcript format parameter to GET endpoint ([#709](https://github.com/Monadical-SAS/reflector/issues/709)) ([f6ca075](https://github.com/Monadical-SAS/reflector/commit/f6ca07505f34483b02270a2ef3bd809e9d2e1045))
+
 ## [0.20.0](https://github.com/Monadical-SAS/reflector/compare/v0.19.0...v0.20.0) (2025-11-25)
 
 
