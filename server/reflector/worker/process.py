@@ -2,6 +2,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from typing import List
 from urllib.parse import unquote
 
 import av
@@ -11,7 +12,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 
-from reflector.dailyco_api import MeetingParticipantsResponse
+from reflector.dailyco_api import MeetingParticipantsResponse, RecordingResponse
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
@@ -391,7 +392,7 @@ async def poll_daily_recordings():
 
     async with create_platform_client("daily") as daily_client:
         # latest 100. TODO cursor-based state
-        api_recordings = await daily_client.list_recordings()
+        api_recordings: List[RecordingResponse] = await daily_client.list_recordings()
 
     if not api_recordings:
         logger.debug(

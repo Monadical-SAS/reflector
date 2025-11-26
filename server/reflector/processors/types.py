@@ -221,7 +221,9 @@ class Transcript(BaseModel):
             word.start += offset
             word.end += offset
 
-    def as_segments(self) -> list[TranscriptSegment]:
+    def as_segments(self, is_multitrack: bool = False) -> list[TranscriptSegment]:
+        if is_multitrack:
+            return words_to_segments_by_sentence(self.words)
         return words_to_segments(self.words)
 
 

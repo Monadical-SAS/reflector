@@ -573,3 +573,207 @@ async def test_api_transcript_format_default_is_text(client):
 
     assert data["transcript_format"] == "text"
     assert "transcript" in data
+
+
+@pytest.mark.asyncio
+async def test_api_topics_endpoint_multitrack_segmentation(client):
+    """Test GET /transcripts/{id}/topics uses sentence-based segmentation for multitrack.
+
+    This tests the fix for TASKS2.md - ensuring /topics endpoints correctly detect
+    multitrack recordings and use sentence-based segmentation instead of fragmenting
+    on every speaker change.
+    """
+    from datetime import datetime, timezone
+
+    from reflector.db.recordings import Recording, recordings_controller
+    from reflector.db.transcripts import (
+        TranscriptParticipant,
+        TranscriptTopic,
+        transcripts_controller,
+    )
+    from reflector.processors.types import Word
+
+    # Create a multitrack recording (has track_keys)
+    recording = Recording(
+        bucket_name="test-bucket",
+        object_key="test-key",
+        recorded_at=datetime.now(timezone.utc),
+        track_keys=["track1.webm", "track2.webm"],  # This makes it multitrack
+    )
+    await recordings_controller.create(recording)
+
+    # Create transcript linked to the recording
+    transcript = await transcripts_controller.add(
+        name="Multitrack Test",
+        source_kind="file",
+        recording_id=recording.id,
+    )
+
+    await transcripts_controller.update(
+        transcript,
+        {
+            "participants": [
+                TranscriptParticipant(id="1", speaker=0, name="Alice").model_dump(),
+                TranscriptParticipant(id="2", speaker=1, name="Bob").model_dump(),
+            ]
+        },
+    )
+
+    # Add interleaved words (as they appear in real multitrack data)
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 1",
+            summary="Summary 1",
+            timestamp=0,
+            words=[
+                Word(text="Hello ", start=0.0, end=0.5, speaker=0),
+                Word(text="I'm ", start=0.5, end=0.8, speaker=1),
+                Word(text="there.", start=0.5, end=1.0, speaker=0),
+                Word(text="good.", start=1.0, end=1.5, speaker=1),
+            ],
+        ),
+    )
+
+    # Test /topics endpoint
+    response = await client.get(f"/transcripts/{transcript.id}/topics")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data) == 1
+    topic = data[0]
+
+    # Key assertion: multitrack should produce 2 segments (one per speaker sentence)
+    # Not 4 segments (one per speaker change)
+    assert len(topic["segments"]) == 2
+
+    # Check content
+    segment_texts = [s["text"] for s in topic["segments"]]
+    assert "Hello there." in segment_texts
+    assert "I'm good." in segment_texts
+
+
+@pytest.mark.asyncio
+async def test_api_topics_endpoint_non_multitrack_segmentation(client):
+    """Test GET /transcripts/{id}/topics uses default segmentation for non-multitrack.
+
+    Ensures backward compatibility - transcripts without multitrack recordings
+    should continue using the default speaker-change-based segmentation.
+    """
+    from reflector.db.transcripts import (
+        TranscriptParticipant,
+        TranscriptTopic,
+        transcripts_controller,
+    )
+    from reflector.processors.types import Word
+
+    # Create transcript WITHOUT recording (not multitrack)
+    response = await client.post("/transcripts", json={"name": "Test transcript"})
+    assert response.status_code == 200
+    tid = response.json()["id"]
+
+    transcript = await transcripts_controller.get_by_id(tid)
+
+    await transcripts_controller.update(
+        transcript,
+        {
+            "participants": [
+                TranscriptParticipant(id="1", speaker=0, name="Alice").model_dump(),
+                TranscriptParticipant(id="2", speaker=1, name="Bob").model_dump(),
+            ]
+        },
+    )
+
+    # Add interleaved words
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 1",
+            summary="Summary 1",
+            timestamp=0,
+            words=[
+                Word(text="Hello ", start=0.0, end=0.5, speaker=0),
+                Word(text="I'm ", start=0.5, end=0.8, speaker=1),
+                Word(text="there.", start=0.5, end=1.0, speaker=0),
+                Word(text="good.", start=1.0, end=1.5, speaker=1),
+            ],
+        ),
+    )
+
+    # Test /topics endpoint
+    response = await client.get(f"/transcripts/{tid}/topics")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data) == 1
+    topic = data[0]
+
+    # Non-multitrack: should produce 4 segments (one per speaker change)
+    assert len(topic["segments"]) == 4
+
+
+@pytest.mark.asyncio
+async def test_api_topics_with_words_endpoint_multitrack(client):
+    """Test GET /transcripts/{id}/topics/with-words uses multitrack segmentation."""
+    from datetime import datetime, timezone
+
+    from reflector.db.recordings import Recording, recordings_controller
+    from reflector.db.transcripts import (
+        TranscriptParticipant,
+        TranscriptTopic,
+        transcripts_controller,
+    )
+    from reflector.processors.types import Word
+
+    # Create multitrack recording
+    recording = Recording(
+        bucket_name="test-bucket",
+        object_key="test-key-2",
+        recorded_at=datetime.now(timezone.utc),
+        track_keys=["track1.webm", "track2.webm"],
+    )
+    await recordings_controller.create(recording)
+
+    transcript = await transcripts_controller.add(
+        name="Multitrack Test 2",
+        source_kind="file",
+        recording_id=recording.id,
+    )
+
+    await transcripts_controller.update(
+        transcript,
+        {
+            "participants": [
+                TranscriptParticipant(id="1", speaker=0, name="Alice").model_dump(),
+                TranscriptParticipant(id="2", speaker=1, name="Bob").model_dump(),
+            ]
+        },
+    )
+
+    await transcripts_controller.upsert_topic(
+        transcript,
+        TranscriptTopic(
+            title="Topic 1",
+            summary="Summary 1",
+            timestamp=0,
+            words=[
+                Word(text="Hello ", start=0.0, end=0.5, speaker=0),
+                Word(text="I'm ", start=0.5, end=0.8, speaker=1),
+                Word(text="there.", start=0.5, end=1.0, speaker=0),
+                Word(text="good.", start=1.0, end=1.5, speaker=1),
+            ],
+        ),
+    )
+
+    response = await client.get(f"/transcripts/{transcript.id}/topics/with-words")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert len(data) == 1
+    topic = data[0]
+
+    # Should have 2 segments (multitrack sentence-based)
+    assert len(topic["segments"]) == 2
+    # Should also have words field
+    assert "words" in topic
+    assert len(topic["words"]) == 4

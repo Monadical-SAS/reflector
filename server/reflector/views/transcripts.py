@@ -61,6 +61,14 @@ ALGORITHM = "HS256"
 DOWNLOAD_EXPIRE_MINUTES = 60
 
 
+async def _get_is_multitrack(transcript) -> bool:
+    """Detect if transcript is from multitrack recording."""
+    if not transcript.recording_id:
+        return False
+    recording = await recordings_controller.get_by_id(transcript.recording_id)
+    return recording is not None and recording.is_multitrack
+
+
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
@@ -361,7 +369,7 @@ class GetTranscriptTopic(BaseModel):
     segments: list[GetTranscriptSegmentTopic] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
         if not topic.words:
             # In previous version, words were missing
             # Just output a segment with speaker 0
@@ -385,7 +393,7 @@ class GetTranscriptTopic(BaseModel):
                     start=segment.start,
                     speaker=segment.speaker,
                 )
-                for segment in transcript.as_segments()
+                for segment in transcript.as_segments(is_multitrack)
             ]
         return cls(
             id=topic.id,
@@ -402,8 +410,8 @@ class GetTranscriptTopicWithWords(GetTranscriptTopic):
     words: list[Word] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
-        instance = super().from_transcript_topic(topic)
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
+        instance = super().from_transcript_topic(topic, is_multitrack)
         if topic.words:
             instance.words = topic.words
         return instance
@@ -418,8 +426,8 @@ class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
     words_per_speaker: list[SpeakerWords] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
-        instance = super().from_transcript_topic(topic)
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
+        instance = super().from_transcript_topic(topic, is_multitrack)
         if topic.words:
             words_per_speakers = []
             # group words by speaker
@@ -458,11 +466,7 @@ async def transcript_get(
         transcript_id, user_id=user_id
     )
 
-    is_multitrack = False
-    if transcript.recording_id:
-        recording = await recordings_controller.get_by_id(transcript.recording_id)
-        # transcript not always has recording right now
-        is_multitrack = recording is not None and recording.is_multitrack
+    is_multitrack = await _get_is_multitrack(transcript)
 
     base_data = {
         "id": transcript.id,
@@ -574,9 +578,12 @@ async def transcript_get_topics(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # convert to GetTranscriptTopic
     return [
-        GetTranscriptTopic.from_transcript_topic(topic) for topic in transcript.topics
+        GetTranscriptTopic.from_transcript_topic(topic, is_multitrack)
+        for topic in transcript.topics
     ]
 
 
@@ -593,9 +600,11 @@ async def transcript_get_topics_with_words(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # convert to GetTranscriptTopicWithWords
     return [
-        GetTranscriptTopicWithWords.from_transcript_topic(topic)
+        GetTranscriptTopicWithWords.from_transcript_topic(topic, is_multitrack)
         for topic in transcript.topics
     ]
 
@@ -614,13 +623,17 @@ async def transcript_get_topics_with_words_per_speaker(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # get the topic from the transcript
     topic = next((t for t in transcript.topics if t.id == topic_id), None)
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
     # convert to GetTranscriptTopicWithWordsPerSpeaker
-    return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(topic)
+    return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(
+        topic, is_multitrack
+    )
 
 
 @router.post("/transcripts/{transcript_id}/zulip")

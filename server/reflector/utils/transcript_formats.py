@@ -6,10 +6,6 @@ from reflector.db.transcripts import TranscriptParticipant, TranscriptTopic
 from reflector.processors.types import (
     Transcript as ProcessorTranscript,
 )
-from reflector.processors.types import (
-    words_to_segments,
-    words_to_segments_by_sentence,
-)
 from reflector.schemas.transcript_formats import TranscriptSegment
 from reflector.utils.webvtt import seconds_to_timestamp
 
@@ -43,11 +39,8 @@ def transcript_to_text(
         if not topic.words:
             continue
 
-        if is_multitrack:
-            segments = words_to_segments_by_sentence(topic.words)
-        else:
-            transcript = ProcessorTranscript(words=topic.words)
-            segments = transcript.as_segments()
+        transcript = ProcessorTranscript(words=topic.words)
+        segments = transcript.as_segments(is_multitrack)
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -68,11 +61,8 @@ def transcript_to_text_timestamped(
         if not topic.words:
             continue
 
-        if is_multitrack:
-            segments = words_to_segments_by_sentence(topic.words)
-        else:
-            transcript = ProcessorTranscript(words=topic.words)
-            segments = transcript.as_segments()
+        transcript = ProcessorTranscript(words=topic.words)
+        segments = transcript.as_segments(is_multitrack)
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -95,10 +85,8 @@ def topics_to_webvtt_named(
         if not topic.words:
             continue
 
-        if is_multitrack:
-            segments = words_to_segments_by_sentence(topic.words)
-        else:
-            segments = words_to_segments(topic.words)
+        transcript = ProcessorTranscript(words=topic.words)
+        segments = transcript.as_segments(is_multitrack)
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -127,11 +115,8 @@ def transcript_to_json_segments(
         if not topic.words:
             continue
 
-        if is_multitrack:
-            segments = words_to_segments_by_sentence(topic.words)
-        else:
-            transcript = ProcessorTranscript(words=topic.words)
-            segments = transcript.as_segments()
+        transcript = ProcessorTranscript(words=topic.words)
+        segments = transcript.as_segments(is_multitrack)
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
