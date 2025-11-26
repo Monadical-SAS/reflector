@@ -19,6 +19,15 @@ class DiarizationSegment(TypedDict):
 PUNC_RE = re.compile(r"[.;:?!…]")
 SENTENCE_END_RE = re.compile(r"[.?!…]$")
 
+# Max segment length for words_to_segments() - breaks on any punctuation (. ; : ? ! …)
+# when segment exceeds this limit. Used for non-multitrack recordings.
+MAX_SEGMENT_CHARS = 120
+
+# Max segment length for words_to_segments_by_sentence() - only breaks on sentence-ending
+# punctuation (. ? ! …) when segment exceeds this limit. Higher threshold allows complete
+# sentences in multitrack recordings where speakers overlap.
+MAX_SENTENCE_SEGMENT_CHARS = 300
+
 
 class AudioFile(BaseModel):
     name: str
@@ -78,7 +87,6 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
     # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
     segments = []
     current_segment = None
-    MAX_SEGMENT_LENGTH = 120
 
     for word in words:
         if current_segment is None:
@@ -108,7 +116,7 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
         current_segment.end = word.end
 
         have_punc = PUNC_RE.search(word.text)
-        if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
+        if have_punc and (len(current_segment.text) > MAX_SEGMENT_CHARS):
             segments.append(current_segment)
             current_segment = None
 
@@ -137,7 +145,6 @@ def words_to_segments_by_sentence(words: list[Word]) -> list[TranscriptSegment]:
         by_speaker[w.speaker].append(w)
 
     segments: list[TranscriptSegment] = []
-    max_segment_chars = 300
 
     for speaker, speaker_words in by_speaker.items():
         current_text = ""
@@ -153,7 +160,7 @@ def words_to_segments_by_sentence(words: list[Word]) -> list[TranscriptSegment]:
 
             # Check for sentence end or max length
             is_sentence_end = SENTENCE_END_RE.search(word.text.strip())
-            is_too_long = len(current_text) >= max_segment_chars
+            is_too_long = len(current_text) >= MAX_SENTENCE_SEGMENT_CHARS
 
             if is_sentence_end or is_too_long:
                 segments.append(
