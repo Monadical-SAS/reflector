@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/Monadical-SAS/reflector/compare/v0.21.0...v0.22.0) (2025-11-26)
+
+
+### Features
+
+* Multitrack segmentation ([#747](https://github.com/Monadical-SAS/reflector/issues/747)) ([d63040e](https://github.com/Monadical-SAS/reflector/commit/d63040e2fdc07e7b272e85a39eb2411cd6a14798))
+
 ## [0.21.0](https://github.com/Monadical-SAS/reflector/compare/v0.20.0...v0.21.0) (2025-11-26)
 
 
