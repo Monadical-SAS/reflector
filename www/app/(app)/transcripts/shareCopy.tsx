@@ -3,10 +3,10 @@ import type { components, operations } from "../../reflector-api";
 type GetTranscriptWithParticipants =
   components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
-import { Button, BoxProps, Box, Menu } from "@chakra-ui/react";
+import { Button, BoxProps, Box, Menu, Text } from "@chakra-ui/react";
 import { LuChevronDown } from "react-icons/lu";
 import { client } from "../../lib/apiClient";
-import { useTranscriptParticipants } from "../../lib/apiHooks";
+import { toaster } from "../../components/ui/toaster";
 
 type ShareCopyProps = {
   finalSummaryElement: HTMLDivElement | null;
@@ -72,6 +72,15 @@ export default function ShareCopy({
       );
       if (error) {
         console.error("Failed to copy transcript:", error);
+        toaster.create({
+          duration: 3000,
+          render: () => (
+            <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+              <Text fontWeight="bold">Error</Text>
+              <Text fontSize="sm">Failed to fetch transcript</Text>
+            </Box>
+          ),
+        });
         return;
       }
 
@@ -87,6 +96,15 @@ export default function ShareCopy({
       }
     } catch (e) {
       console.error("Failed to copy transcript:", e);
+      toaster.create({
+        duration: 3000,
+        render: () => (
+          <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+            <Text fontWeight="bold">Error</Text>
+            <Text fontSize="sm">Failed to copy transcript</Text>
+          </Box>
+        ),
+      });
     } finally {
       setIsCopying(false);
     }
