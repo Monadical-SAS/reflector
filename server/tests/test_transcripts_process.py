@@ -139,10 +139,10 @@ async def test_whereby_recording_uses_file_pipeline(client):
 
     with (
         patch(
-            "reflector.views.transcripts_process.task_pipeline_file_process"
+            "reflector.services.transcript_process.task_pipeline_file_process"
         ) as mock_file_pipeline,
         patch(
-            "reflector.views.transcripts_process.task_pipeline_multitrack_process"
+            "reflector.services.transcript_process.task_pipeline_multitrack_process"
         ) as mock_multitrack_pipeline,
     ):
         response = await client.post(f"/transcripts/{transcript.id}/process")
@@ -194,10 +194,10 @@ async def test_dailyco_recording_uses_multitrack_pipeline(client):
 
     with (
         patch(
-            "reflector.views.transcripts_process.task_pipeline_file_process"
+            "reflector.services.transcript_process.task_pipeline_file_process"
         ) as mock_file_pipeline,
         patch(
-            "reflector.views.transcripts_process.task_pipeline_multitrack_process"
+            "reflector.services.transcript_process.task_pipeline_multitrack_process"
         ) as mock_multitrack_pipeline,
     ):
         response = await client.post(f"/transcripts/{transcript.id}/process")

@@ -168,6 +168,12 @@ You can manually process an audio file by calling the process tool:
 uv run python -m reflector.tools.process path/to/audio.wav
 ```
 
+## Reprocessing any transcription
+
+```bash
+uv run -m reflector.tools.process_transcript 81ec38d1-9dd7-43d2-b3f8-51f4d34a07cd --sync
+```
+
 ## Build-time env variables
 
 Next.js projects are more used to NEXT_PUBLIC_ prefixed buildtime vars. We don't have those for the reason we need to serve a ccustomizable prebuild docker container.
