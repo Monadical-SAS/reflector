@@ -39,6 +39,7 @@ from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import (
     DailyRoomName,
     extract_base_room_name,
+    filter_cam_audio_tracks,
     parse_daily_recording_filename,
     recording_lock_key,
 )
@@ -339,7 +340,9 @@ async def _process_multitrack_recording_inner(
                     exc_info=True,
                 )
 
-            for idx, key in enumerate(track_keys):
+            cam_audio_keys = filter_cam_audio_tracks(track_keys)
+
+            for idx, key in enumerate(cam_audio_keys):
                 try:
                     parsed = parse_daily_recording_filename(key)
                     participant_id = parsed.participant_id
@@ -367,7 +370,7 @@ async def _process_multitrack_recording_inner(
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,
-        track_keys=track_keys,
+        track_keys=filter_cam_audio_tracks(track_keys),
     )
 
 
