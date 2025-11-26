@@ -667,7 +667,7 @@ async def test_api_topics_endpoint_non_multitrack_segmentation(client):
     )
     from reflector.processors.types import Word
 
-    # Create transcript WITHOUT recording (not multitrack)
+    # Create transcript WITHOUT recording (defaulted as not multitrack) TODO better heuristic
     response = await client.post("/transcripts", json={"name": "Test transcript"})
     assert response.status_code == 200
     tid = response.json()["id"]
