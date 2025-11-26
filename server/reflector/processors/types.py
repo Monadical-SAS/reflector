@@ -26,7 +26,8 @@ MAX_SEGMENT_CHARS = 120
 # Max segment length for words_to_segments_by_sentence() - only breaks on sentence-ending
 # punctuation (. ? ! …) when segment exceeds this limit. Higher threshold allows complete
 # sentences in multitrack recordings where speakers overlap.
-MAX_SENTENCE_SEGMENT_CHARS = 300
+# similar number to server/reflector/processors/transcript_liner.py
+MAX_SENTENCE_SEGMENT_CHARS = 1000
 
 
 class AudioFile(BaseModel):
