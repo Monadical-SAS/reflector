@@ -147,7 +147,7 @@ async def test_topics_to_webvtt_named():
 
     result = topics_to_webvtt_named(topics, participants)
 
-    assert "WEBVTT" in result
+    assert result.startswith("WEBVTT")
     assert "<v John Smith>" in result
     assert "00:00:00.000 --> 00:00:02.000" in result
     assert "Hello world." in result
@@ -270,6 +270,67 @@ async def test_transcript_formats_with_multiple_speakers():
     assert json_result[0].speaker_name == "Alice"
     assert json_result[1].speaker_name == "Bob"
     assert json_result[2].speaker_name == "Alice"
+
+
+@pytest.mark.asyncio
+async def test_transcript_formats_with_overlapping_speakers():
+    """Test format conversion when multiple speakers speak at the same time (overlapping timestamps)."""
+    topics = [
+        TranscriptTopic(
+            id="1",
+            title="Topic 1",
+            summary="Summary 1",
+            timestamp=0.0,
+            words=[
+                Word(text="Hello", start=0.0, end=0.5, speaker=0),
+                Word(text=" there.", start=0.5, end=1.0, speaker=0),
+                # Speaker 1 overlaps with speaker 0 at 0.5-1.0
+                Word(text="I'm", start=0.5, end=1.0, speaker=1),
+                Word(text=" good.", start=1.0, end=1.5, speaker=1),
+            ],
+        ),
+    ]
+
+    participants = [
+        TranscriptParticipant(id="1", speaker=0, name="Alice"),
+        TranscriptParticipant(id="2", speaker=1, name="Bob"),
+    ]
+
+    text_result = transcript_to_text(topics, participants)
+    lines = text_result.split("\n")
+    assert len(lines) >= 2
+    assert any("Alice:" in line for line in lines)
+    assert any("Bob:" in line for line in lines)
+
+    timestamped_result = transcript_to_text_timestamped(topics, participants)
+    timestamped_lines = timestamped_result.split("\n")
+    assert len(timestamped_lines) >= 2
+    assert any("Alice:" in line for line in timestamped_lines)
+    assert any("Bob:" in line for line in timestamped_lines)
+    assert any("[00:00]" in line for line in timestamped_lines)
+
+    webvtt_result = topics_to_webvtt_named(topics, participants)
+    assert webvtt_result.startswith("WEBVTT")
+    assert "<v Alice>" in webvtt_result
+    assert "<v Bob>" in webvtt_result
+
+    segments = transcript_to_json_segments(topics, participants)
+    assert len(segments) >= 2
+    speakers = {seg.speaker for seg in segments}
+    assert 0 in speakers and 1 in speakers
+
+    alice_seg = next(seg for seg in segments if seg.speaker == 0)
+    bob_seg = next(seg for seg in segments if seg.speaker == 1)
+
+    # Verify timestamps overlap: Alice (0.0-1.0) and Bob (0.5-1.5) overlap at 0.5-1.0
+    assert alice_seg.start < bob_seg.end, "Alice segment should start before Bob ends"
+    assert bob_seg.start < alice_seg.end, "Bob segment should start before Alice ends"
+
+    overlap_start = max(alice_seg.start, bob_seg.start)
+    overlap_end = min(alice_seg.end, bob_seg.end)
+    assert (
+        overlap_start < overlap_end
+    ), f"Segments should overlap between {overlap_start} and {overlap_end}"
 
 
 @pytest.mark.asyncio
