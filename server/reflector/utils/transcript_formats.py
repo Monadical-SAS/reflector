@@ -20,7 +20,7 @@ def get_speaker_name(
     return f"Speaker {speaker}"
 
 
-def format_timestamp_mmss(seconds: float) -> str:
+def format_timestamp_mmss(seconds: float | int) -> str:
     """Format seconds as MM:SS timestamp."""
     minutes = int(seconds // 60)
     secs = int(seconds % 60)
