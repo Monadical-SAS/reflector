@@ -67,6 +67,11 @@ const recordingTypeOptions: SelectOption[] = [
   { label: "Cloud", value: "cloud" },
 ];
 
+const platformOptions: SelectOption[] = [
+  { label: "Whereby", value: "whereby" },
+  { label: "Daily", value: "daily" },
+];
+
 const roomInitialState = {
   name: "",
   zulipAutoPost: false,
@@ -82,6 +87,7 @@ const roomInitialState = {
   icsUrl: "",
   icsEnabled: false,
   icsFetchInterval: 5,
+  platform: "whereby",
 };
 
 export default function RoomsList() {
@@ -99,6 +105,11 @@ export default function RoomsList() {
   const recordingTypeCollection = createListCollection({
     items: recordingTypeOptions,
   });
+
+  const platformCollection = createListCollection({
+    items: platformOptions,
+  });
+
   const [roomInput, setRoomInput] = useState<null | typeof roomInitialState>(
     null,
   );
@@ -152,6 +163,7 @@ export default function RoomsList() {
             icsUrl: detailedEditedRoom.ics_url || "",
             icsEnabled: detailedEditedRoom.ics_enabled || false,
             icsFetchInterval: detailedEditedRoom.ics_fetch_interval || 5,
+            platform: detailedEditedRoom.platform || "whereby",
           }
         : null,
     [detailedEditedRoom],
@@ -292,6 +304,7 @@ export default function RoomsList() {
         ics_url: room.icsUrl,
         ics_enabled: room.icsEnabled,
         ics_fetch_interval: room.icsFetchInterval,
+        platform: room.platform,
       };
 
       if (isEditing) {
@@ -348,6 +361,7 @@ export default function RoomsList() {
       icsUrl: roomData.ics_url || "",
       icsEnabled: roomData.ics_enabled || false,
       icsFetchInterval: roomData.ics_fetch_interval || 5,
+      platform: roomData.platform || "whereby",
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -525,6 +539,36 @@ export default function RoomsList() {
                         <Select.Positioner>
                           <Select.Content>
                             {roomModeOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+                    <Field.Root mt={4}>
+                      <Field.Label>Platform</Field.Label>
+                      <Select.Root
+                        value={[room.platform]}
+                        onValueChange={(e) =>
+                          setRoomInput({ ...room, platform: e.value[0] })
+                        }
+                        collection={platformCollection}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select platform" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {platformOptions.map((option) => (
                               <Select.Item key={option.value} item={option}>
                                 {option.label}
                                 <Select.ItemIndicator />
