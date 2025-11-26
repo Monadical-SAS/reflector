@@ -1,6 +1,7 @@
 import io
 import re
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, TypedDict
 
@@ -16,6 +17,7 @@ class DiarizationSegment(TypedDict):
 
 
 PUNC_RE = re.compile(r"[.;:?!…]")
+SENTENCE_END_RE = re.compile(r"[.?!…]$")
 
 
 class AudioFile(BaseModel):
@@ -113,6 +115,71 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
     if current_segment:
         segments.append(current_segment)
 
+    return segments
+
+
+def words_to_segments_by_sentence(words: list[Word]) -> list[TranscriptSegment]:
+    """Group words by speaker, then split into sentences.
+
+    For multitrack recordings where words from different speakers are interleaved
+    by timestamp, this function first groups all words by speaker, then creates
+    segments based on sentence boundaries within each speaker's words.
+
+    This produces cleaner output than words_to_segments() which breaks on every
+    speaker change, resulting in many tiny segments when speakers overlap.
+    """
+    if not words:
+        return []
+
+    # Group words by speaker, preserving order within each speaker
+    by_speaker: dict[int, list[Word]] = defaultdict(list)
+    for w in words:
+        by_speaker[w.speaker].append(w)
+
+    segments: list[TranscriptSegment] = []
+    max_segment_chars = 300
+
+    for speaker, speaker_words in by_speaker.items():
+        current_text = ""
+        current_start: float | None = None
+        current_end: float = 0.0
+
+        for word in speaker_words:
+            if current_start is None:
+                current_start = word.start
+
+            current_text += word.text
+            current_end = word.end
+
+            # Check for sentence end or max length
+            is_sentence_end = SENTENCE_END_RE.search(word.text.strip())
+            is_too_long = len(current_text) >= max_segment_chars
+
+            if is_sentence_end or is_too_long:
+                segments.append(
+                    TranscriptSegment(
+                        text=current_text,
+                        start=current_start,
+                        end=current_end,
+                        speaker=speaker,
+                    )
+                )
+                current_text = ""
+                current_start = None
+
+        # Flush remaining words for this speaker
+        if current_text and current_start is not None:
+            segments.append(
+                TranscriptSegment(
+                    text=current_text,
+                    start=current_start,
+                    end=current_end,
+                    speaker=speaker,
+                )
+            )
+
+    # Sort segments by start time
+    segments.sort(key=lambda s: s.start)
     return segments
 
 

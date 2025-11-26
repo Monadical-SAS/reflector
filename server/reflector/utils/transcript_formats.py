@@ -8,6 +8,7 @@ from reflector.processors.types import (
 )
 from reflector.processors.types import (
     words_to_segments,
+    words_to_segments_by_sentence,
 )
 from reflector.schemas.transcript_formats import TranscriptSegment
 from reflector.utils.webvtt import seconds_to_timestamp
@@ -32,7 +33,9 @@ def format_timestamp_mmss(seconds: float | int) -> str:
 
 
 def transcript_to_text(
-    topics: list[TranscriptTopic], participants: list[TranscriptParticipant] | None
+    topics: list[TranscriptTopic],
+    participants: list[TranscriptParticipant] | None,
+    is_multitrack: bool = False,
 ) -> str:
     """Convert transcript topics to plain text with speaker names."""
     lines = []
@@ -40,8 +43,11 @@ def transcript_to_text(
         if not topic.words:
             continue
 
-        transcript = ProcessorTranscript(words=topic.words)
-        segments = transcript.as_segments()
+        if is_multitrack:
+            segments = words_to_segments_by_sentence(topic.words)
+        else:
+            transcript = ProcessorTranscript(words=topic.words)
+            segments = transcript.as_segments()
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -52,7 +58,9 @@ def transcript_to_text(
 
 
 def transcript_to_text_timestamped(
-    topics: list[TranscriptTopic], participants: list[TranscriptParticipant] | None
+    topics: list[TranscriptTopic],
+    participants: list[TranscriptParticipant] | None,
+    is_multitrack: bool = False,
 ) -> str:
     """Convert transcript topics to timestamped text with speaker names."""
     lines = []
@@ -60,8 +68,11 @@ def transcript_to_text_timestamped(
         if not topic.words:
             continue
 
-        transcript = ProcessorTranscript(words=topic.words)
-        segments = transcript.as_segments()
+        if is_multitrack:
+            segments = words_to_segments_by_sentence(topic.words)
+        else:
+            transcript = ProcessorTranscript(words=topic.words)
+            segments = transcript.as_segments()
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -73,7 +84,9 @@ def transcript_to_text_timestamped(
 
 
 def topics_to_webvtt_named(
-    topics: list[TranscriptTopic], participants: list[TranscriptParticipant] | None
+    topics: list[TranscriptTopic],
+    participants: list[TranscriptParticipant] | None,
+    is_multitrack: bool = False,
 ) -> str:
     """Convert transcript topics to WebVTT format with participant names."""
     vtt = webvtt.WebVTT()
@@ -82,7 +95,10 @@ def topics_to_webvtt_named(
         if not topic.words:
             continue
 
-        segments = words_to_segments(topic.words)
+        if is_multitrack:
+            segments = words_to_segments_by_sentence(topic.words)
+        else:
+            segments = words_to_segments(topic.words)
 
         for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
@@ -100,19 +116,26 @@ def topics_to_webvtt_named(
 
 
 def transcript_to_json_segments(
-    topics: list[TranscriptTopic], participants: list[TranscriptParticipant] | None
+    topics: list[TranscriptTopic],
+    participants: list[TranscriptParticipant] | None,
+    is_multitrack: bool = False,
 ) -> list[TranscriptSegment]:
     """Convert transcript topics to a flat list of JSON segments."""
-    segments = []
+    result = []
 
     for topic in topics:
         if not topic.words:
             continue
 
-        transcript = ProcessorTranscript(words=topic.words)
-        for segment in transcript.as_segments():
+        if is_multitrack:
+            segments = words_to_segments_by_sentence(topic.words)
+        else:
+            transcript = ProcessorTranscript(words=topic.words)
+            segments = transcript.as_segments()
+
+        for segment in segments:
             speaker_name = get_speaker_name(segment.speaker, participants)
-            segments.append(
+            result.append(
                 TranscriptSegment(
                     speaker=segment.speaker,
                     speaker_name=speaker_name,
@@ -122,4 +145,4 @@ def transcript_to_json_segments(
                 )
             )
 
-    return segments
+    return result

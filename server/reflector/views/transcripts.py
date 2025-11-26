@@ -16,6 +16,7 @@ from pydantic import (
 
 import reflector.auth as auth
 from reflector.db import get_database
+from reflector.db.recordings import recordings_controller
 from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
@@ -457,6 +458,12 @@ async def transcript_get(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = False
+    if transcript.recording_id:
+        recording = await recordings_controller.get_by_id(transcript.recording_id)
+        # transcript not always has recording right now
+        is_multitrack = recording is not None and recording.is_multitrack
+
     base_data = {
         "id": transcript.id,
         "user_id": transcript.user_id,
@@ -483,14 +490,16 @@ async def transcript_get(
         return GetTranscriptWithText(
             **base_data,
             transcript_format="text",
-            transcript=transcript_to_text(transcript.topics, transcript.participants),
+            transcript=transcript_to_text(
+                transcript.topics, transcript.participants, is_multitrack
+            ),
         )
     elif transcript_format == "text-timestamped":
         return GetTranscriptWithTextTimestamped(
             **base_data,
             transcript_format="text-timestamped",
             transcript=transcript_to_text_timestamped(
-                transcript.topics, transcript.participants
+                transcript.topics, transcript.participants, is_multitrack
             ),
         )
     elif transcript_format == "webvtt-named":
@@ -498,7 +507,7 @@ async def transcript_get(
             **base_data,
             transcript_format="webvtt-named",
             transcript=topics_to_webvtt_named(
-                transcript.topics, transcript.participants
+                transcript.topics, transcript.participants, is_multitrack
             ),
         )
     elif transcript_format == "json":
@@ -506,7 +515,7 @@ async def transcript_get(
             **base_data,
             transcript_format="json",
             transcript=transcript_to_json_segments(
-                transcript.topics, transcript.participants
+                transcript.topics, transcript.participants, is_multitrack
             ),
         )
     else:

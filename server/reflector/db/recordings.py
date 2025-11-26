@@ -29,13 +29,16 @@ recordings = sa.Table(
 class Recording(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     bucket_name: str
-    # for single-track
     object_key: str
     recorded_at: datetime
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
-    # for multitrack reprocessing
     track_keys: list[str] | None = None
+
+    @property
+    def is_multitrack(self) -> bool:
+        """True if recording has separate audio tracks (1+ tracks counts as multitrack)."""
+        return self.track_keys is not None and len(self.track_keys) > 0
 
 
 class RecordingController:
