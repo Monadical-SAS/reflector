@@ -70,7 +70,10 @@ export default function ShareCopy({
           },
         },
       );
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to copy transcript:", error);
+        return;
+      }
 
       const transcriptData: any = data as any;
       const copiedText =
