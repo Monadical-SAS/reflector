@@ -310,9 +310,15 @@ async def test_transcript_formats_with_overlapping_speakers():
     assert any("[00:00]" in line for line in timestamped_lines)
 
     webvtt_result = topics_to_webvtt_named(topics, participants)
-    assert webvtt_result.startswith("WEBVTT")
-    assert "<v Alice>" in webvtt_result
-    assert "<v Bob>" in webvtt_result
+    expected_webvtt = """WEBVTT
+
+00:00:00.000 --> 00:00:01.000
+<v Alice>Hello there.
+
+00:00:00.500 --> 00:00:01.500
+<v Bob>I'm good.
+"""
+    assert webvtt_result == expected_webvtt
 
     segments = transcript_to_json_segments(topics, participants)
     assert len(segments) >= 2
