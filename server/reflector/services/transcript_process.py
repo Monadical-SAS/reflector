@@ -7,7 +7,7 @@ This module provides result-based error handling that works in both contexts:
 """
 
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Literal, Union, assert_never
 
 import celery
 from celery.result import AsyncResult
@@ -18,7 +18,6 @@ from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_multitrack_pipeline import (
     task_pipeline_multitrack_process,
 )
-from reflector.utils.match import absurd
 from reflector.utils.string import NonEmptyString
 
 
@@ -155,7 +154,7 @@ def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult:
     elif isinstance(config, FileProcessingConfig):
         return task_pipeline_file_process.delay(transcript_id=config.transcript_id)
     else:
-        absurd(config)
+        assert_never(config)
 
 
 def task_is_scheduled_or_active(task_name: str, **kwargs):

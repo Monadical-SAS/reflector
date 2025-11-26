@@ -32,6 +32,11 @@ async function getUserId(accessToken: string): Promise<string | null> {
     });
 
     if (!response.ok) {
+      try {
+        console.error(await response.text());
+      } catch (e) {
+        console.error("Failed to parse error response", e);
+      }
       return null;
     }
 

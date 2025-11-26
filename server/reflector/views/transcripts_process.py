@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, assert_never
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -15,7 +15,6 @@ from reflector.services.transcript_process import (
     prepare_transcript_processing,
     validate_transcript_for_processing,
 )
-from reflector.utils.match import absurd
 
 router = APIRouter()
 
@@ -44,7 +43,7 @@ async def transcript_process(
     elif isinstance(validation, ValidationOk):
         pass
     else:
-        absurd(validation)
+        assert_never(validation)
 
     config = await prepare_transcript_processing(validation)
 
