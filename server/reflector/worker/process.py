@@ -423,17 +423,19 @@ async def poll_daily_recordings():
 
     for recording in missing_recordings:
         if not recording.tracks:
-            assert recording.status != "finished", (
-                f"Recording {recording.id} has status='finished' but no tracks. "
-                f"Daily.co API guarantees finished recordings have tracks available. "
-                f"room_name={recording.room_name}"
-            )
-            logger.debug(
-                "No tracks in recording yet",
-                recording_id=recording.id,
-                room_name=recording.room_name,
-                status=recording.status,
-            )
+            if recording.status == "finished":
+                logger.warning(
+                    "Finished recording has no tracks (no audio captured)",
+                    recording_id=recording.id,
+                    room_name=recording.room_name,
+                )
+            else:
+                logger.debug(
+                    "No tracks in recording yet",
+                    recording_id=recording.id,
+                    room_name=recording.room_name,
+                    status=recording.status,
+                )
             continue
 
         track_keys = [t.s3Key for t in recording.tracks if t.type == "audio"]

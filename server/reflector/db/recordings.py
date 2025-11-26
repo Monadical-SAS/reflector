@@ -35,7 +35,8 @@ class Recording(BaseModel):
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
     # for multitrack reprocessing
-    # TODO think of corner case when track_keys present and empty - we probably want to restrict that altogether from happening
+    # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
+    # None means not a multitrack recording, [] means multitrack with no tracks
     track_keys: list[str] | None = None
 
     @property
