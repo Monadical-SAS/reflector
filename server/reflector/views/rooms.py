@@ -248,7 +248,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
-        platform=room.platform,
+        platform=room.platform or settings.DEFAULT_VIDEO_PLATFORM,
     )
 
 
