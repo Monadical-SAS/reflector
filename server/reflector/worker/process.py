@@ -240,15 +240,14 @@ async def _process_multitrack_recording_inner(
         )
 
     meeting = await meetings_controller.get_by_room_name(daily_room_name)
+    if not meeting:
+        raise Exception(f"Meeting not found: {daily_room_name}")
 
     room_name_base = extract_base_room_name(daily_room_name)
 
     room = await rooms_controller.get_by_name(room_name_base)
     if not room:
         raise Exception(f"Room not found: {room_name_base}")
-
-    if not meeting:
-        raise Exception(f"Meeting not found: {room_name_base}")
 
     logger.info(
         "Found existing Meeting for recording",
@@ -443,6 +442,15 @@ async def poll_daily_recordings():
                 recording_id=recording.id,
                 room_name=recording.room_name,
                 total_tracks=len(recording.tracks),
+            )
+            continue
+
+        meeting = await meetings_controller.get_by_room_name(recording.room_name)
+        if not meeting:
+            logger.warning(
+                "Skipping recording - no matching meeting",
+                recording_id=recording.id,
+                room_name=recording.room_name,
             )
             continue
 

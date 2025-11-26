@@ -59,17 +59,37 @@ def mock_recording_response():
     ]
 
 
+@pytest.fixture
+def mock_meeting():
+    """Mock meeting object."""
+    from reflector.db.meetings import Meeting
+
+    return Meeting(
+        id="meeting-123",
+        room_name="test-room-20251118120000",
+        room_url="https://daily.co/test-room",
+        host_room_url="https://daily.co/test-room",
+        start_date=datetime.now(timezone.utc),
+        end_date=datetime.now(timezone.utc) + timedelta(hours=1),
+        room_id="room-123",
+        platform="daily",
+    )
+
+
 @pytest.mark.asyncio
 @patch("reflector.worker.process.settings")
 @patch("reflector.worker.process.create_platform_client")
 @patch("reflector.worker.process.recordings_controller.get_by_ids")
+@patch("reflector.worker.process.meetings_controller.get_by_room_name")
 @patch("reflector.worker.process.process_multitrack_recording.delay")
 async def test_poll_daily_recordings_processes_missing_recordings(
     mock_process_delay,
+    mock_get_meeting,
     mock_get_recordings,
     mock_create_client,
     mock_settings,
     mock_recording_response,
+    mock_meeting,
 ):
     """Test that poll_daily_recordings queues processing for recordings not in DB."""
     mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
@@ -84,6 +104,9 @@ async def test_poll_daily_recordings_processes_missing_recordings(
 
     # Mock DB controller - no existing recordings
     mock_get_recordings.return_value = []
+
+    # Mock meeting exists for all recordings
+    mock_get_meeting.return_value = mock_meeting
 
     # Execute - call the unwrapped async function
     poll_fn = _get_poll_daily_recordings_fn()
@@ -111,6 +134,48 @@ async def test_poll_daily_recordings_processes_missing_recordings(
     assert calls[1].kwargs["recording_id"] == "rec-456"
     assert calls[1].kwargs["daily_room_name"] == "test-room-20251118130000"
     assert calls[1].kwargs["track_keys"] == ["track1.webm"]
+
+
+@pytest.mark.asyncio
+@patch("reflector.worker.process.settings")
+@patch("reflector.worker.process.create_platform_client")
+@patch("reflector.worker.process.recordings_controller.get_by_ids")
+@patch("reflector.worker.process.meetings_controller.get_by_room_name")
+@patch("reflector.worker.process.process_multitrack_recording.delay")
+async def test_poll_daily_recordings_skips_recordings_without_meeting(
+    mock_process_delay,
+    mock_get_meeting,
+    mock_get_recordings,
+    mock_create_client,
+    mock_settings,
+    mock_recording_response,
+):
+    """Test that poll_daily_recordings skips recordings without matching meeting."""
+    mock_settings.DAILYCO_STORAGE_AWS_BUCKET_NAME = "test-bucket"
+
+    # Mock Daily.co API client
+    mock_daily_client = AsyncMock()
+    mock_daily_client.list_recordings = AsyncMock(return_value=mock_recording_response)
+    mock_create_client.return_value.__aenter__ = AsyncMock(
+        return_value=mock_daily_client
+    )
+    mock_create_client.return_value.__aexit__ = AsyncMock()
+
+    # Mock DB controller - no existing recordings
+    mock_get_recordings.return_value = []
+
+    # Mock no meeting found
+    mock_get_meeting.return_value = None
+
+    # Execute - call the unwrapped async function
+    poll_fn = _get_poll_daily_recordings_fn()
+    await poll_fn()
+
+    # Verify Daily.co API was called
+    assert mock_daily_client.list_recordings.call_count == 1
+
+    # Verify NO processing was queued (no matching meetings)
+    assert mock_process_delay.call_count == 0
 
 
 @pytest.mark.asyncio
