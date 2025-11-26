@@ -75,11 +75,10 @@ export default function ShareCopy({
         return;
       }
 
-      const transcriptData: any = data as any;
       const copiedText =
         format === "json"
-          ? JSON.stringify(transcriptData?.transcript ?? {}, null, 2)
-          : String(transcriptData?.transcript ?? "");
+          ? JSON.stringify(data?.transcript ?? {}, null, 2)
+          : String(data?.transcript ?? "");
 
       if (copiedText) {
         await navigator.clipboard.writeText(copiedText);
