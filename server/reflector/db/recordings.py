@@ -35,7 +35,14 @@ class Recording(BaseModel):
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
     # for multitrack reprocessing
+    # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
+    # None means not a multitrack recording, [] means multitrack with no tracks
     track_keys: list[str] | None = None
+
+    @property
+    def is_multitrack(self) -> bool:
+        """True if recording has separate audio tracks (1+ tracks counts as multitrack)."""
+        return self.track_keys is not None and len(self.track_keys) > 0
 
 
 class RecordingController:

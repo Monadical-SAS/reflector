@@ -2,6 +2,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from typing import List
 from urllib.parse import unquote
 
 import av
@@ -11,7 +12,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 
-from reflector.dailyco_api import MeetingParticipantsResponse
+from reflector.dailyco_api import MeetingParticipantsResponse, RecordingResponse
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
@@ -38,6 +39,7 @@ from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import (
     DailyRoomName,
     extract_base_room_name,
+    filter_cam_audio_tracks,
     parse_daily_recording_filename,
     recording_lock_key,
 )
@@ -338,7 +340,9 @@ async def _process_multitrack_recording_inner(
                     exc_info=True,
                 )
 
-            for idx, key in enumerate(track_keys):
+            cam_audio_keys = filter_cam_audio_tracks(track_keys)
+
+            for idx, key in enumerate(cam_audio_keys):
                 try:
                     parsed = parse_daily_recording_filename(key)
                     participant_id = parsed.participant_id
@@ -366,7 +370,7 @@ async def _process_multitrack_recording_inner(
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,
-        track_keys=track_keys,
+        track_keys=filter_cam_audio_tracks(track_keys),
     )
 
 
@@ -391,7 +395,7 @@ async def poll_daily_recordings():
 
     async with create_platform_client("daily") as daily_client:
         # latest 100. TODO cursor-based state
-        api_recordings = await daily_client.list_recordings()
+        api_recordings: List[RecordingResponse] = await daily_client.list_recordings()
 
     if not api_recordings:
         logger.debug(
@@ -422,17 +426,19 @@ async def poll_daily_recordings():
 
     for recording in missing_recordings:
         if not recording.tracks:
-            assert recording.status != "finished", (
-                f"Recording {recording.id} has status='finished' but no tracks. "
-                f"Daily.co API guarantees finished recordings have tracks available. "
-                f"room_name={recording.room_name}"
-            )
-            logger.debug(
-                "No tracks in recording yet",
-                recording_id=recording.id,
-                room_name=recording.room_name,
-                status=recording.status,
-            )
+            if recording.status == "finished":
+                logger.warning(
+                    "Finished recording has no tracks (no audio captured)",
+                    recording_id=recording.id,
+                    room_name=recording.room_name,
+                )
+            else:
+                logger.debug(
+                    "No tracks in recording yet",
+                    recording_id=recording.id,
+                    room_name=recording.room_name,
+                    status=recording.status,
+                )
             continue
 
         track_keys = [t.s3Key for t in recording.tracks if t.type == "audio"]

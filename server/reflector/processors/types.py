@@ -1,6 +1,7 @@
 import io
 import re
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, TypedDict
 
@@ -16,6 +17,17 @@ class DiarizationSegment(TypedDict):
 
 
 PUNC_RE = re.compile(r"[.;:?!…]")
+SENTENCE_END_RE = re.compile(r"[.?!…]$")
+
+# Max segment length for words_to_segments() - breaks on any punctuation (. ; : ? ! …)
+# when segment exceeds this limit. Used for non-multitrack recordings.
+MAX_SEGMENT_CHARS = 120
+
+# Max segment length for words_to_segments_by_sentence() - only breaks on sentence-ending
+# punctuation (. ? ! …) when segment exceeds this limit. Higher threshold allows complete
+# sentences in multitrack recordings where speakers overlap.
+# similar number to server/reflector/processors/transcript_liner.py
+MAX_SENTENCE_SEGMENT_CHARS = 1000
 
 
 class AudioFile(BaseModel):
@@ -76,7 +88,6 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
     # but separate if the speaker changes, or if the punctuation is a . , ; : ? !
     segments = []
     current_segment = None
-    MAX_SEGMENT_LENGTH = 120
 
     for word in words:
         if current_segment is None:
@@ -106,13 +117,77 @@ def words_to_segments(words: list[Word]) -> list[TranscriptSegment]:
         current_segment.end = word.end
 
         have_punc = PUNC_RE.search(word.text)
-        if have_punc and (len(current_segment.text) > MAX_SEGMENT_LENGTH):
+        if have_punc and (len(current_segment.text) > MAX_SEGMENT_CHARS):
             segments.append(current_segment)
             current_segment = None
 
     if current_segment:
         segments.append(current_segment)
 
+    return segments
+
+
+def words_to_segments_by_sentence(words: list[Word]) -> list[TranscriptSegment]:
+    """Group words by speaker, then split into sentences.
+
+    For multitrack recordings where words from different speakers are interleaved
+    by timestamp, this function first groups all words by speaker, then creates
+    segments based on sentence boundaries within each speaker's words.
+
+    This produces cleaner output than words_to_segments() which breaks on every
+    speaker change, resulting in many tiny segments when speakers overlap.
+    """
+    if not words:
+        return []
+
+    # Group words by speaker, preserving order within each speaker
+    by_speaker: dict[int, list[Word]] = defaultdict(list)
+    for w in words:
+        by_speaker[w.speaker].append(w)
+
+    segments: list[TranscriptSegment] = []
+
+    for speaker, speaker_words in by_speaker.items():
+        current_text = ""
+        current_start: float | None = None
+        current_end: float = 0.0
+
+        for word in speaker_words:
+            if current_start is None:
+                current_start = word.start
+
+            current_text += word.text
+            current_end = word.end
+
+            # Check for sentence end or max length
+            is_sentence_end = SENTENCE_END_RE.search(word.text.strip())
+            is_too_long = len(current_text) >= MAX_SENTENCE_SEGMENT_CHARS
+
+            if is_sentence_end or is_too_long:
+                segments.append(
+                    TranscriptSegment(
+                        text=current_text,
+                        start=current_start,
+                        end=current_end,
+                        speaker=speaker,
+                    )
+                )
+                current_text = ""
+                current_start = None
+
+        # Flush remaining words for this speaker
+        if current_text and current_start is not None:
+            segments.append(
+                TranscriptSegment(
+                    text=current_text,
+                    start=current_start,
+                    end=current_end,
+                    speaker=speaker,
+                )
+            )
+
+    # Sort segments by start time
+    segments.sort(key=lambda s: s.start)
     return segments
 
 
@@ -154,7 +229,9 @@ class Transcript(BaseModel):
             word.start += offset
             word.end += offset
 
-    def as_segments(self) -> list[TranscriptSegment]:
+    def as_segments(self, is_multitrack: bool = False) -> list[TranscriptSegment]:
+        if is_multitrack:
+            return words_to_segments_by_sentence(self.words)
         return words_to_segments(self.words)
 
 

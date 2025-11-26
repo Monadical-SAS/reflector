@@ -159,3 +159,78 @@ def test_processor_transcript_segment():
     assert segments[3].start == 30.72
     assert segments[4].start == 31.56
     assert segments[5].start == 32.38
+
+
+def test_processor_transcript_segment_multitrack_interleaved():
+    """Test as_segments(is_multitrack=True) with interleaved speakers.
+
+    Multitrack recordings have words from different speakers sorted by start time,
+    causing frequent speaker alternation. The multitrack mode should group by
+    speaker first, then split into sentences.
+    """
+    from reflector.processors.types import Transcript, Word
+
+    # Simulate real multitrack data: words sorted by start time, speakers interleave
+    # Speaker 0 says: "Hello there."
+    # Speaker 1 says: "I'm good."
+    # When sorted by time, words interleave
+    transcript = Transcript(
+        words=[
+            Word(text="Hello ", start=0.0, end=0.5, speaker=0),
+            Word(text="I'm ", start=0.5, end=0.8, speaker=1),
+            Word(text="there.", start=0.5, end=1.0, speaker=0),
+            Word(text="good.", start=1.0, end=1.5, speaker=1),
+        ]
+    )
+
+    # Default behavior (is_multitrack=False): breaks on every speaker change = 4 segments
+    segments_default = transcript.as_segments(is_multitrack=False)
+    assert len(segments_default) == 4
+
+    # Multitrack behavior: groups by speaker, then sentences = 2 segments
+    segments_multitrack = transcript.as_segments(is_multitrack=True)
+    assert len(segments_multitrack) == 2
+
+    # Check content - sorted by start time
+    assert segments_multitrack[0].speaker == 0
+    assert segments_multitrack[0].text == "Hello there."
+    assert segments_multitrack[0].start == 0.0
+    assert segments_multitrack[0].end == 1.0
+
+    assert segments_multitrack[1].speaker == 1
+    assert segments_multitrack[1].text == "I'm good."
+    assert segments_multitrack[1].start == 0.5
+    assert segments_multitrack[1].end == 1.5
+
+
+def test_processor_transcript_segment_multitrack_overlapping_timestamps():
+    """Test multitrack with exactly overlapping timestamps (real Daily.co data pattern)."""
+    from reflector.processors.types import Transcript, Word
+
+    # Real pattern from transcript 38d84d57: words with identical timestamps
+    transcript = Transcript(
+        words=[
+            Word(text="speaking ", start=6.71, end=7.11, speaker=0),
+            Word(text="Speaking ", start=6.71, end=7.11, speaker=1),
+            Word(text="at ", start=7.11, end=7.27, speaker=0),
+            Word(text="at ", start=7.11, end=7.27, speaker=1),
+            Word(text="the ", start=7.27, end=7.43, speaker=0),
+            Word(text="the ", start=7.27, end=7.43, speaker=1),
+            Word(text="same ", start=7.43, end=7.59, speaker=0),
+            Word(text="same ", start=7.43, end=7.59, speaker=1),
+            Word(text="time.", start=7.59, end=8.0, speaker=0),
+            Word(text="time.", start=7.59, end=8.0, speaker=1),
+        ]
+    )
+
+    # Default: 10 segments (one per speaker change)
+    segments_default = transcript.as_segments(is_multitrack=False)
+    assert len(segments_default) == 10
+
+    # Multitrack: 2 segments (one per speaker sentence)
+    segments_multitrack = transcript.as_segments(is_multitrack=True)
+    assert len(segments_multitrack) == 2
+
+    # Both should have complete sentences
+    assert "speaking at the same time." in segments_multitrack[0].text
+    assert "Speaking at the same time." in segments_multitrack[1].text

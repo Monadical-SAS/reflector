@@ -64,6 +64,11 @@ def recording_lock_key(recording_id: NonEmptyString) -> NonEmptyString:
     return f"recording:{recording_id}"
 
 
+def filter_cam_audio_tracks(track_keys: list[str]) -> list[str]:
+    """Filter track keys to cam-audio tracks only (skip screen-audio, etc.)."""
+    return [k for k in track_keys if "cam-audio" in k]
+
+
 def extract_base_room_name(daily_room_name: DailyRoomName) -> NonEmptyString:
     """
     Extract base room name from Daily.co timestamped room name.
