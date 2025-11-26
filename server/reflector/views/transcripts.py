@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional, assert_never
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
@@ -509,6 +509,8 @@ async def transcript_get(
                 transcript.topics, transcript.participants
             ),
         )
+    else:
+        assert_never(transcript_format)
 
 
 @router.patch(
