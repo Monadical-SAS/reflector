@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/Monadical-SAS/reflector/compare/v0.22.0...v0.22.1) (2025-11-27)
+
+
+### Bug Fixes
+
+* participants update from daily ([#749](https://github.com/Monadical-SAS/reflector/issues/749)) ([7f0b728](https://github.com/Monadical-SAS/reflector/commit/7f0b728991c1b9f9aae702c96297eae63b561ef5))
+
 ## [0.22.0](https://github.com/Monadical-SAS/reflector/compare/v0.21.0...v0.22.0) (2025-11-26)
 
 
