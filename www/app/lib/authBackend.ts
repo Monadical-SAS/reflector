@@ -148,7 +148,7 @@ export const authOptions = (): AuthOptions =>
           },
           async session({ session, token }) {
             const extendedToken = token as JWTWithAccessToken;
-
+            console.log("extendedToken", extendedToken);
             const userId = await getUserId(extendedToken.accessToken);
 
             return {

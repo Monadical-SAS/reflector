@@ -11,6 +11,7 @@ import {
   recordingTypeRequiresConsent,
 } from "../../lib/consent";
 import { useRoomJoinMeeting } from "../../lib/apiHooks";
+import { assertExists } from "../../lib/utils";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -22,16 +23,16 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
   const params = useParams();
   const auth = useAuth();
-  const status = auth.status;
+  const authStatus = auth.status;
+  const authLastUserId = auth.lastUserId;
   const containerRef = useRef<HTMLDivElement>(null);
   const joinMutation = useRoomJoinMeeting();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
   const roomName = params?.roomName as string;
 
-  // Always call /join to get a fresh token with user_id
   useEffect(() => {
-    if (status === "loading" || !meeting?.id || !roomName) return;
+    if (authLastUserId === null || !meeting?.id || !roomName) return;
 
     const join = async () => {
       try {
@@ -50,18 +51,16 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
     };
 
     join();
-  }, [meeting?.id, roomName, status]);
+  }, [meeting?.id, roomName, authLastUserId]);
 
   const roomUrl = joinedMeeting?.host_room_url || joinedMeeting?.room_url;
-  const isLoading =
-    status === "loading" || joinMutation.isPending || !joinedMeeting;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
   }, [router]);
 
   useEffect(() => {
-    if (isLoading || !roomUrl || !containerRef.current) return;
+    if (!authLastUserId || !roomUrl || !containerRef.current) return;
 
     let frame: DailyCall | null = null;
     let destroyed = false;
@@ -90,9 +89,14 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
 
         frame.on("left-meeting", handleLeave);
 
+        // TODO this method must not ignore no-recording option
+        // TODO this method is here to make dev environments work in some cases (not examined which)
         frame.on("joined-meeting", async () => {
           try {
-            await frame.startRecording({ type: "raw-tracks" });
+            assertExists(
+              frame,
+              "frame object got lost somewhere after frame.on was called",
+            ).startRecording({ type: "raw-tracks" });
           } catch (error) {
             console.error("Failed to start recording:", error);
           }
@@ -104,7 +108,9 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       }
     };
 
-    createAndJoin();
+    createAndJoin().catch((error) => {
+      console.error("Failed to create and join meeting:", error);
+    });
 
     return () => {
       destroyed = true;
@@ -114,9 +120,9 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
         });
       }
     };
-  }, [roomUrl, isLoading, handleLeave]);
+  }, [roomUrl, authLastUserId, handleLeave]);
 
-  if (isLoading) {
+  if (!authLastUserId) {
     return (
       <Center width="100vw" height="100vh">
         <Spinner size="xl" />
