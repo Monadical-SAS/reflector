@@ -108,7 +108,9 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       }
     };
 
-    createAndJoin().then(() => {});
+    createAndJoin().catch(error => {
+      console.error("Failed to create and join meeting:", error);
+    });
 
     return () => {
       destroyed = true;
