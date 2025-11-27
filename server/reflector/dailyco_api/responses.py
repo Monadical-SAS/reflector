@@ -68,7 +68,7 @@ class MeetingParticipant(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/meetings/get-meeting-participants
     """
 
-    user_id: NonEmptyString = Field(description="User identifier")
+    user_id: NonEmptyString | None = Field(None, description="User identifier")
     participant_id: NonEmptyString = Field(description="Participant session identifier")
     user_name: NonEmptyString | None = Field(None, description="User display name")
     join_time: int = Field(description="Join timestamp (Unix epoch seconds)")

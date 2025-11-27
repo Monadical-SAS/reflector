@@ -9,7 +9,10 @@ from av.audio.resampler import AudioResampler
 from celery import chain, shared_task
 
 from reflector.asynctask import asynctask
+from reflector.dailyco_api import MeetingParticipantsResponse
+from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import (
+    TranscriptParticipant,
     TranscriptStatus,
     TranscriptWaveform,
     transcripts_controller,
@@ -29,7 +32,12 @@ from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
 from reflector.storage import Storage, get_transcripts_storage
+from reflector.utils.daily import (
+    filter_cam_audio_tracks,
+    parse_daily_recording_filename,
+)
 from reflector.utils.string import NonEmptyString
+from reflector.video_platforms.factory import create_platform_client
 
 # Audio encoding constants
 OPUS_STANDARD_SAMPLE_RATE = 48000
@@ -494,6 +502,95 @@ class PipelineMainMultitrack(PipelineMainBase):
                 transcript=transcript, event="WAVEFORM", data=waveform
             )
 
+    async def update_participants_from_daily(self, track_keys: list[str]) -> None:
+        """Update transcript participants with user_id and names from Daily.co API."""
+        transcript = await self.get_transcript()
+        if not transcript or not transcript.recording_id:
+            return
+
+        recording = await recordings_controller.get_by_id(transcript.recording_id)
+        if not recording or not recording.track_keys:
+            return
+
+        try:
+            async with create_platform_client("daily") as daily_client:
+                id_to_name = {}
+                id_to_user_id = {}
+
+                try:
+                    rec_details = await daily_client.get_recording(
+                        transcript.recording_id
+                    )
+                    mtg_session_id = rec_details.mtgSessionId
+                    if mtg_session_id:
+                        try:
+                            payload: MeetingParticipantsResponse = (
+                                await daily_client.get_meeting_participants(
+                                    mtg_session_id
+                                )
+                            )
+                            for p in payload.data:
+                                pid = p.participant_id
+                                assert (
+                                    pid is not None
+                                ), "panic! participant id cannot be None"
+                                name = p.user_name
+                                user_id = p.user_id
+                                if name:
+                                    id_to_name[pid] = name
+                                if user_id:
+                                    id_to_user_id[pid] = user_id
+                        except Exception as e:
+                            self.logger.warning(
+                                "Failed to fetch Daily meeting participants",
+                                error=str(e),
+                                mtg_session_id=mtg_session_id,
+                                exc_info=True,
+                            )
+                    else:
+                        self.logger.warning(
+                            "No mtgSessionId found for recording; participant names may be generic",
+                            recording_id=transcript.recording_id,
+                        )
+                except Exception as e:
+                    self.logger.warning(
+                        "Failed to fetch Daily recording details",
+                        error=str(e),
+                        recording_id=transcript.recording_id,
+                        exc_info=True,
+                    )
+
+                cam_audio_keys = filter_cam_audio_tracks(track_keys)
+
+                for idx, key in enumerate(cam_audio_keys):
+                    try:
+                        parsed = parse_daily_recording_filename(key)
+                        participant_id = parsed.participant_id
+                    except ValueError as e:
+                        self.logger.error(
+                            "Failed to parse Daily recording filename",
+                            error=str(e),
+                            key=key,
+                            exc_info=True,
+                        )
+                        continue
+
+                    default_name = f"Speaker {idx}"
+                    name = id_to_name.get(participant_id, default_name)
+                    user_id = id_to_user_id.get(participant_id)
+
+                    participant = TranscriptParticipant(
+                        id=participant_id, speaker=idx, name=name, user_id=user_id
+                    )
+                    await transcripts_controller.upsert_participant(
+                        transcript, participant
+                    )
+
+        except Exception as e:
+            self.logger.warning(
+                "Failed to map participant names", error=str(e), exc_info=True
+            )
+
     async def process(self, bucket_name: str, track_keys: list[str]):
         transcript = await self.get_transcript()
         async with self.transaction():
@@ -502,8 +599,11 @@ class PipelineMainMultitrack(PipelineMainBase):
                 {
                     "events": [],
                     "topics": [],
+                    "participants": [],
                 },
             )
+
+        await self.update_participants_from_daily(track_keys)
 
         source_storage = get_transcripts_storage()
         transcript_storage = source_storage
