@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useRef } from "react";
 import { useSession as useNextAuthSession } from "next-auth/react";
 import { signOut, signIn } from "next-auth/react";
 import { configureApiAuth } from "./apiClient";
@@ -25,6 +25,8 @@ type AuthContextType = (
   update: () => Promise<Session | null>;
   signIn: typeof signIn;
   signOut: typeof signOut;
+  // TODO probably rename isLoading to isReloading and make THIS field "isLoading"
+  lastUserId: CustomSession["user"]["id"] | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,10 +43,13 @@ const noopAuthContext: AuthContextType = {
   signOut: async () => {
     throw new Error("signOut not supposed to be called");
   },
+  lastUserId: null,
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useNextAuthSession();
+  // referential comparison done in component, must be primitive /or cached
+  const lastUserId = useRef<CustomSession["user"]["id"] | null>(null);
 
   const contextValue: AuthContextType = isAuthEnabled
     ? {
@@ -78,6 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   status: "unauthenticated" as const,
                 };
               } else if (customSession?.accessToken) {
+                // updates anyways with updated properties below
+                // warning! execution order conscience, must be ran before reading lastUser.current below
+                lastUserId.current = customSession.user.id;
                 return {
                   status,
                   accessToken: customSession.accessToken,
@@ -103,6 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         update,
         signIn,
         signOut,
+        // for optimistic cases when we assume "loading" doesn't immediately invalidate the user
+        lastUserId: lastUserId.current,
       }
     : noopAuthContext;
 
