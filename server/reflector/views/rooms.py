@@ -89,7 +89,7 @@ class CreateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
-    platform: Optional[Platform] = None
+    platform: Platform
 
 
 class UpdateRoom(BaseModel):
@@ -107,7 +107,7 @@ class UpdateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
-    platform: Optional[Platform] = None
+    platform: Platform
 
 
 class CreateRoomMeeting(BaseModel):
@@ -248,7 +248,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
-        platform=room.platform or settings.DEFAULT_VIDEO_PLATFORM,
+        platform=room.platform,
     )
 
 

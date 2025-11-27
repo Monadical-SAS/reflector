@@ -163,7 +163,7 @@ export default function RoomsList() {
             icsUrl: detailedEditedRoom.ics_url || "",
             icsEnabled: detailedEditedRoom.ics_enabled || false,
             icsFetchInterval: detailedEditedRoom.ics_fetch_interval || 5,
-            platform: detailedEditedRoom.platform || "whereby",
+            platform: detailedEditedRoom.platform,
           }
         : null,
     [detailedEditedRoom],
@@ -289,6 +289,11 @@ export default function RoomsList() {
         return;
       }
 
+      const platform: "whereby" | "daily" | null =
+        room.platform === "whereby" || room.platform === "daily"
+          ? room.platform
+          : null;
+
       const roomData = {
         name: room.name,
         zulip_auto_post: room.zulipAutoPost,
@@ -304,7 +309,7 @@ export default function RoomsList() {
         ics_url: room.icsUrl,
         ics_enabled: room.icsEnabled,
         ics_fetch_interval: room.icsFetchInterval,
-        platform: room.platform,
+        platform,
       };
 
       if (isEditing) {
@@ -361,7 +366,7 @@ export default function RoomsList() {
       icsUrl: roomData.ics_url || "",
       icsEnabled: roomData.ics_enabled || false,
       icsFetchInterval: roomData.ics_fetch_interval || 5,
-      platform: roomData.platform || "whereby",
+      platform: roomData.platform,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -497,64 +502,20 @@ export default function RoomsList() {
                     </Field.Root>
 
                     <Field.Root mt={4}>
-                      <Checkbox.Root
-                        name="isLocked"
-                        checked={room.isLocked}
-                        onCheckedChange={(e) => {
-                          const syntheticEvent = {
-                            target: {
-                              name: "isLocked",
-                              type: "checkbox",
-                              checked: e.checked,
-                            },
-                          };
-                          handleRoomChange(syntheticEvent);
-                        }}
-                      >
-                        <Checkbox.HiddenInput />
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        <Checkbox.Label>Locked room</Checkbox.Label>
-                      </Checkbox.Root>
-                    </Field.Root>
-                    <Field.Root mt={4}>
-                      <Field.Label>Room size</Field.Label>
-                      <Select.Root
-                        value={[room.roomMode]}
-                        onValueChange={(e) =>
-                          setRoomInput({ ...room, roomMode: e.value[0] })
-                        }
-                        collection={roomModeCollection}
-                      >
-                        <Select.HiddenSelect />
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Select room size" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Select.Positioner>
-                          <Select.Content>
-                            {roomModeOptions.map((option) => (
-                              <Select.Item key={option.value} item={option}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Select.Root>
-                    </Field.Root>
-                    <Field.Root mt={4}>
                       <Field.Label>Platform</Field.Label>
                       <Select.Root
                         value={[room.platform]}
-                        onValueChange={(e) =>
-                          setRoomInput({ ...room, platform: e.value[0] })
-                        }
+                        onValueChange={(e) => {
+                          const newPlatform = e.value[0] as "whereby" | "daily";
+                          const updates: Partial<typeof room> = {
+                            platform: newPlatform,
+                          };
+                          // Daily.co doesn't support recording triggers
+                          if (newPlatform === "daily") {
+                            updates.recordingTrigger = "none";
+                          }
+                          setRoomInput({ ...room, ...updates });
+                        }}
                         collection={platformCollection}
                       >
                         <Select.HiddenSelect />
@@ -578,6 +539,61 @@ export default function RoomsList() {
                         </Select.Positioner>
                       </Select.Root>
                     </Field.Root>
+
+                    <Field.Root mt={4}>
+                      <Checkbox.Root
+                        name="isLocked"
+                        checked={room.isLocked}
+                        onCheckedChange={(e) => {
+                          const syntheticEvent = {
+                            target: {
+                              name: "isLocked",
+                              type: "checkbox",
+                              checked: e.checked,
+                            },
+                          };
+                          handleRoomChange(syntheticEvent);
+                        }}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        <Checkbox.Label>Locked room</Checkbox.Label>
+                      </Checkbox.Root>
+                    </Field.Root>
+                    {room.platform === "whereby" && (
+                      <Field.Root mt={4}>
+                        <Field.Label>Room size</Field.Label>
+                        <Select.Root
+                          value={[room.roomMode]}
+                          onValueChange={(e) =>
+                            setRoomInput({ ...room, roomMode: e.value[0] })
+                          }
+                          collection={roomModeCollection}
+                        >
+                          <Select.HiddenSelect />
+                          <Select.Control>
+                            <Select.Trigger>
+                              <Select.ValueText placeholder="Select room size" />
+                            </Select.Trigger>
+                            <Select.IndicatorGroup>
+                              <Select.Indicator />
+                            </Select.IndicatorGroup>
+                          </Select.Control>
+                          <Select.Positioner>
+                            <Select.Content>
+                              {roomModeOptions.map((option) => (
+                                <Select.Item key={option.value} item={option}>
+                                  {option.label}
+                                  <Select.ItemIndicator />
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Select.Root>
+                      </Field.Root>
+                    )}
                     <Field.Root mt={4}>
                       <Field.Label>Recording type</Field.Label>
                       <Select.Root
@@ -615,40 +631,42 @@ export default function RoomsList() {
                         </Select.Positioner>
                       </Select.Root>
                     </Field.Root>
-                    <Field.Root mt={4}>
-                      <Field.Label>Cloud recording start trigger</Field.Label>
-                      <Select.Root
-                        value={[room.recordingTrigger]}
-                        onValueChange={(e) =>
-                          setRoomInput({
-                            ...room,
-                            recordingTrigger: e.value[0],
-                          })
-                        }
-                        collection={recordingTriggerCollection}
-                        disabled={room.recordingType !== "cloud"}
-                      >
-                        <Select.HiddenSelect />
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Select trigger" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Select.Positioner>
-                          <Select.Content>
-                            {recordingTriggerOptions.map((option) => (
-                              <Select.Item key={option.value} item={option}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Select.Root>
-                    </Field.Root>
+                    {room.platform === "whereby" && (
+                      <Field.Root mt={4}>
+                        <Field.Label>Cloud recording start trigger</Field.Label>
+                        <Select.Root
+                          value={[room.recordingTrigger]}
+                          onValueChange={(e) =>
+                            setRoomInput({
+                              ...room,
+                              recordingTrigger: e.value[0],
+                            })
+                          }
+                          collection={recordingTriggerCollection}
+                          disabled={room.recordingType !== "cloud"}
+                        >
+                          <Select.HiddenSelect />
+                          <Select.Control>
+                            <Select.Trigger>
+                              <Select.ValueText placeholder="Select trigger" />
+                            </Select.Trigger>
+                            <Select.IndicatorGroup>
+                              <Select.Indicator />
+                            </Select.IndicatorGroup>
+                          </Select.Control>
+                          <Select.Positioner>
+                            <Select.Content>
+                              {recordingTriggerOptions.map((option) => (
+                                <Select.Item key={option.value} item={option}>
+                                  {option.label}
+                                  <Select.ItemIndicator />
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Select.Root>
+                      </Field.Root>
+                    )}
 
                     <Field.Root mt={4}>
                       <Checkbox.Root
