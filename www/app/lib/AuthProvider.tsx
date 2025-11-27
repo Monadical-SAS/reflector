@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 };
               } else if (customSession?.accessToken) {
                 // updates anyways with updated properties below
-                // warning! execution order conscience, must be ran before reading lastUser.current below
+                // warning! execution order conscience, must be ran before reading lastUserId.current below
                 lastUserId.current = customSession.user.id;
                 return {
                   status,
