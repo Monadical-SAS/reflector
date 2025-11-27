@@ -10,8 +10,8 @@ from celery import chain, shared_task
 
 from reflector.asynctask import asynctask
 from reflector.dailyco_api import MeetingParticipantsResponse
-from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import (
+    Transcript,
     TranscriptParticipant,
     TranscriptStatus,
     TranscriptWaveform,
@@ -502,14 +502,11 @@ class PipelineMainMultitrack(PipelineMainBase):
                 transcript=transcript, event="WAVEFORM", data=waveform
             )
 
-    async def update_participants_from_daily(self, track_keys: list[str]) -> None:
+    async def update_participants_from_daily(
+        self, transcript: Transcript, track_keys: list[str]
+    ) -> None:
         """Update transcript participants with user_id and names from Daily.co API."""
-        transcript = await self.get_transcript()
-        if not transcript or not transcript.recording_id:
-            return
-
-        recording = await recordings_controller.get_by_id(transcript.recording_id)
-        if not recording or not recording.track_keys:
+        if not transcript.recording_id:
             return
 
         try:
@@ -531,9 +528,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                             )
                             for p in payload.data:
                                 pid = p.participant_id
-                                assert (
-                                    pid is not None
-                                ), "panic! participant id cannot be None"
                                 name = p.user_name
                                 user_id = p.user_id
                                 if name:
@@ -559,6 +553,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                         recording_id=transcript.recording_id,
                         exc_info=True,
                     )
+                    return
 
                 cam_audio_keys = filter_cam_audio_tracks(track_keys)
 
@@ -603,7 +598,7 @@ class PipelineMainMultitrack(PipelineMainBase):
                 },
             )
 
-        await self.update_participants_from_daily(track_keys)
+        await self.update_participants_from_daily(transcript, track_keys)
 
         source_storage = get_transcripts_storage()
         transcript_storage = source_storage
