@@ -551,10 +551,10 @@ async def rooms_join_meeting(
 
     if meeting.platform == "daily":
         client = create_platform_client(meeting.platform)
-        enable_recording = room.recording_trigger != "none"
         token = await client.create_meeting_token(
             meeting.room_name,
-            enable_recording=enable_recording,
+            start_cloud_recording=meeting.recording_type == "cloud",
+            enable_recording_ui=meeting.recording_type == "local",
             user_id=user_id,
             is_owner=user_id == room.user_id,
         )

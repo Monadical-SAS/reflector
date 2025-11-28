@@ -89,14 +89,17 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
 
         frame.on("left-meeting", handleLeave);
 
-        // TODO this method must not ignore no-recording option
-        // TODO this method is here to make dev environments work in some cases (not examined which)
         frame.on("joined-meeting", async () => {
           try {
-            assertExists(
+            const frameInstance = assertExists(
               frame,
               "frame object got lost somewhere after frame.on was called",
-            ).startRecording({ type: "raw-tracks" });
+            );
+
+            if (meeting.recording_type === "cloud") {
+              console.log("Starting cloud recording");
+              await frameInstance.startRecording({ type: "raw-tracks" });
+            }
           } catch (error) {
             console.error("Failed to start recording:", error);
           }
