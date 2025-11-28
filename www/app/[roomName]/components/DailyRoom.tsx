@@ -23,7 +23,6 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
   const params = useParams();
   const auth = useAuth();
-  const authStatus = auth.status;
   const authLastUserId = auth.lastUserId;
   const containerRef = useRef<HTMLDivElement>(null);
   const joinMutation = useRoomJoinMeeting();
@@ -32,7 +31,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   const roomName = params?.roomName as string;
 
   useEffect(() => {
-    if (authLastUserId === null || !meeting?.id || !roomName) return;
+    if (authLastUserId === undefined || !meeting?.id || !roomName) return;
 
     const join = async () => {
       try {
@@ -60,7 +59,8 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
   }, [router]);
 
   useEffect(() => {
-    if (!authLastUserId || !roomUrl || !containerRef.current) return;
+    if (authLastUserId === undefined || !roomUrl || !containerRef.current)
+      return;
 
     let frame: DailyCall | null = null;
     let destroyed = false;
@@ -122,7 +122,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
     };
   }, [roomUrl, authLastUserId, handleLeave]);
 
-  if (!authLastUserId) {
+  if (authLastUserId === undefined) {
     return (
       <Center width="100vw" height="100vh">
         <Spinner size="xl" />
