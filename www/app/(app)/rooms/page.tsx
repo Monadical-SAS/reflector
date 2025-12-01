@@ -159,7 +159,12 @@ export default function RoomsList() {
                 ? "group"
                 : detailedEditedRoom.room_mode,
             recordingType: detailedEditedRoom.recording_type,
-            recordingTrigger: detailedEditedRoom.recording_trigger,
+            recordingTrigger:
+              detailedEditedRoom.platform === "daily"
+                ? detailedEditedRoom.recording_type === "cloud"
+                  ? "automatic-2nd-participant"
+                  : "none"
+                : detailedEditedRoom.recording_trigger,
             isShared: detailedEditedRoom.is_shared,
             webhookUrl: detailedEditedRoom.webhook_url || "",
             webhookSecret: detailedEditedRoom.webhook_secret || "",
@@ -305,7 +310,12 @@ export default function RoomsList() {
         is_locked: room.isLocked,
         room_mode: platform === "daily" ? "group" : room.roomMode,
         recording_type: room.recordingType,
-        recording_trigger: room.recordingTrigger,
+        recording_trigger:
+          platform === "daily"
+            ? room.recordingType === "cloud"
+              ? "automatic-2nd-participant"
+              : "none"
+            : room.recordingTrigger,
         is_shared: room.isShared,
         webhook_url: room.webhookUrl,
         webhook_secret: room.webhookSecret,
@@ -362,7 +372,12 @@ export default function RoomsList() {
       isLocked: roomData.is_locked,
       roomMode: roomData.platform === "daily" ? "group" : roomData.room_mode, // Daily always uses 2-200
       recordingType: roomData.recording_type,
-      recordingTrigger: roomData.recording_trigger,
+      recordingTrigger:
+        roomData.platform === "daily"
+          ? roomData.recording_type === "cloud"
+            ? "automatic-2nd-participant"
+            : "none"
+          : roomData.recording_trigger,
       isShared: roomData.is_shared,
       webhookUrl: roomData.webhook_url || "",
       webhookSecret: roomData.webhook_secret || "",
@@ -513,10 +528,12 @@ export default function RoomsList() {
                           const updates: Partial<typeof room> = {
                             platform: newPlatform,
                           };
-                          // Daily.co doesn't support recording triggers
                           if (newPlatform === "daily") {
-                            updates.recordingTrigger = "none";
                             updates.roomMode = "group";
+                            updates.recordingTrigger =
+                              room.recordingType === "cloud"
+                                ? "automatic-2nd-participant"
+                                : "none";
                           }
                           setRoomInput({ ...room, ...updates });
                         }}
@@ -601,16 +618,26 @@ export default function RoomsList() {
                       <Field.Label>Recording type</Field.Label>
                       <Select.Root
                         value={[room.recordingType]}
-                        onValueChange={(e) =>
-                          setRoomInput({
-                            ...room,
-                            recordingType: e.value[0],
-                            recordingTrigger:
-                              e.value[0] !== "cloud"
+                        onValueChange={(e) => {
+                          const newRecordingType = e.value[0];
+                          const updates: Partial<typeof room> = {
+                            recordingType: newRecordingType,
+                          };
+                          // For Daily: if cloud, use automatic; otherwise none
+                          if (room.platform === "daily") {
+                            updates.recordingTrigger =
+                              newRecordingType === "cloud"
+                                ? "automatic-2nd-participant"
+                                : "none";
+                          } else {
+                            // For Whereby: if not cloud, set to none
+                            updates.recordingTrigger =
+                              newRecordingType !== "cloud"
                                 ? "none"
-                                : room.recordingTrigger,
-                          })
-                        }
+                                : room.recordingTrigger;
+                          }
+                          setRoomInput({ ...room, ...updates });
+                        }}
                         collection={recordingTypeCollection}
                       >
                         <Select.HiddenSelect />
@@ -634,42 +661,44 @@ export default function RoomsList() {
                         </Select.Positioner>
                       </Select.Root>
                     </Field.Root>
-                    {room.platform === "whereby" && (
-                      <Field.Root mt={4}>
-                        <Field.Label>Cloud recording start trigger</Field.Label>
-                        <Select.Root
-                          value={[room.recordingTrigger]}
-                          onValueChange={(e) =>
-                            setRoomInput({
-                              ...room,
-                              recordingTrigger: e.value[0],
-                            })
-                          }
-                          collection={recordingTriggerCollection}
-                          disabled={room.recordingType !== "cloud"}
-                        >
-                          <Select.HiddenSelect />
-                          <Select.Control>
-                            <Select.Trigger>
-                              <Select.ValueText placeholder="Select trigger" />
-                            </Select.Trigger>
-                            <Select.IndicatorGroup>
-                              <Select.Indicator />
-                            </Select.IndicatorGroup>
-                          </Select.Control>
-                          <Select.Positioner>
-                            <Select.Content>
-                              {recordingTriggerOptions.map((option) => (
-                                <Select.Item key={option.value} item={option}>
-                                  {option.label}
-                                  <Select.ItemIndicator />
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Select.Root>
-                      </Field.Root>
-                    )}
+                    <Field.Root mt={4}>
+                      <Field.Label>Recording start trigger</Field.Label>
+                      <Select.Root
+                        value={[room.recordingTrigger]}
+                        onValueChange={(e) =>
+                          setRoomInput({
+                            ...room,
+                            recordingTrigger: e.value[0],
+                          })
+                        }
+                        collection={recordingTriggerCollection}
+                        disabled={
+                          room.recordingType !== "cloud" ||
+                          (room.platform === "daily" &&
+                            room.recordingType === "cloud")
+                        }
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select trigger" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {recordingTriggerOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
 
                     <Field.Root mt={4}>
                       <Checkbox.Root
