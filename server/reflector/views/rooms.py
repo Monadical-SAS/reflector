@@ -549,7 +549,7 @@ async def rooms_join_meeting(
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
 
-    if meeting.platform == "daily":
+    if meeting.platform == "daily" and user_id is not None:
         client = create_platform_client(meeting.platform)
         token = await client.create_meeting_token(
             meeting.room_name,
@@ -560,10 +560,5 @@ async def rooms_join_meeting(
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)
-        if meeting.host_room_url:
-            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
-
-    if user_id != room.user_id and meeting.platform == "whereby":
-        meeting.host_room_url = ""
 
     return meeting

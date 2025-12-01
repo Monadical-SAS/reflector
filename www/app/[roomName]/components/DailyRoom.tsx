@@ -52,7 +52,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
     join();
   }, [meeting?.id, roomName, authLastUserId]);
 
-  const roomUrl = joinedMeeting?.host_room_url || joinedMeeting?.room_url;
+  const roomUrl = joinedMeeting?.room_url;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
