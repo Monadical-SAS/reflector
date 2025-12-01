@@ -107,7 +107,7 @@ class UpdateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
-    platform: Platform
+    platform: Optional[Platform] = None
 
 
 class CreateRoomMeeting(BaseModel):
