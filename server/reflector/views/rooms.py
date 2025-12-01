@@ -310,6 +310,22 @@ async def rooms_create_meeting(
                     room=room, current_time=current_time
                 )
 
+                if meeting is not None:
+                    settings_match = (
+                        meeting.is_locked == room.is_locked
+                        and meeting.room_mode == room.room_mode
+                        and meeting.recording_type == room.recording_type
+                        and meeting.recording_trigger == room.recording_trigger
+                        and meeting.platform == room.platform
+                    )
+                    if not settings_match:
+                        logger.info(
+                            f"Room settings changed for {room_name}, creating new meeting",
+                            room_id=room.id,
+                            old_meeting_id=meeting.id,
+                        )
+                        meeting = None
+
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
 
