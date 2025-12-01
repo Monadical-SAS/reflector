@@ -65,6 +65,7 @@ class DailyClient(VideoPlatformClient):
             enable_recording=enable_recording,
             enable_chat=True,
             enable_screenshare=True,
+            enable_knocking=room.is_locked,
             start_video_off=False,
             start_audio_off=False,
             exp=int(end_date.timestamp()),

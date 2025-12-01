@@ -40,6 +40,10 @@ class RoomProperties(BaseModel):
     )
     enable_chat: bool = Field(default=True, description="Enable in-meeting chat")
     enable_screenshare: bool = Field(default=True, description="Enable screen sharing")
+    enable_knocking: bool = Field(
+        default=False,
+        description="Enable knocking for private rooms (allows participants to request access)",
+    )
     start_video_off: bool = Field(
         default=False, description="Start with video off for all participants"
     )
