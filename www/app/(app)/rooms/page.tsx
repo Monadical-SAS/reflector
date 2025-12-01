@@ -154,7 +154,10 @@ export default function RoomsList() {
             zulipStream: detailedEditedRoom.zulip_stream,
             zulipTopic: detailedEditedRoom.zulip_topic,
             isLocked: detailedEditedRoom.is_locked,
-            roomMode: detailedEditedRoom.room_mode,
+            roomMode:
+              detailedEditedRoom.platform === "daily"
+                ? "group"
+                : detailedEditedRoom.room_mode,
             recordingType: detailedEditedRoom.recording_type,
             recordingTrigger: detailedEditedRoom.recording_trigger,
             isShared: detailedEditedRoom.is_shared,
@@ -300,7 +303,7 @@ export default function RoomsList() {
         zulip_stream: room.zulipStream,
         zulip_topic: room.zulipTopic,
         is_locked: room.isLocked,
-        room_mode: room.roomMode,
+        room_mode: platform === "daily" ? "group" : room.roomMode,
         recording_type: room.recordingType,
         recording_trigger: room.recordingTrigger,
         is_shared: room.isShared,
@@ -357,7 +360,7 @@ export default function RoomsList() {
       zulipStream: roomData.zulip_stream,
       zulipTopic: roomData.zulip_topic,
       isLocked: roomData.is_locked,
-      roomMode: roomData.room_mode,
+      roomMode: roomData.platform === "daily" ? "group" : roomData.room_mode, // Daily always uses 2-200
       recordingType: roomData.recording_type,
       recordingTrigger: roomData.recording_trigger,
       isShared: roomData.is_shared,
@@ -513,6 +516,7 @@ export default function RoomsList() {
                           // Daily.co doesn't support recording triggers
                           if (newPlatform === "daily") {
                             updates.recordingTrigger = "none";
+                            updates.roomMode = "group";
                           }
                           setRoomInput({ ...room, ...updates });
                         }}
@@ -562,38 +566,37 @@ export default function RoomsList() {
                         <Checkbox.Label>Locked room</Checkbox.Label>
                       </Checkbox.Root>
                     </Field.Root>
-                    {room.platform === "whereby" && (
-                      <Field.Root mt={4}>
-                        <Field.Label>Room size</Field.Label>
-                        <Select.Root
-                          value={[room.roomMode]}
-                          onValueChange={(e) =>
-                            setRoomInput({ ...room, roomMode: e.value[0] })
-                          }
-                          collection={roomModeCollection}
-                        >
-                          <Select.HiddenSelect />
-                          <Select.Control>
-                            <Select.Trigger>
-                              <Select.ValueText placeholder="Select room size" />
-                            </Select.Trigger>
-                            <Select.IndicatorGroup>
-                              <Select.Indicator />
-                            </Select.IndicatorGroup>
-                          </Select.Control>
-                          <Select.Positioner>
-                            <Select.Content>
-                              {roomModeOptions.map((option) => (
-                                <Select.Item key={option.value} item={option}>
-                                  {option.label}
-                                  <Select.ItemIndicator />
-                                </Select.Item>
-                              ))}
-                            </Select.Content>
-                          </Select.Positioner>
-                        </Select.Root>
-                      </Field.Root>
-                    )}
+                    <Field.Root mt={4}>
+                      <Field.Label>Room size</Field.Label>
+                      <Select.Root
+                        value={[room.roomMode]}
+                        onValueChange={(e) =>
+                          setRoomInput({ ...room, roomMode: e.value[0] })
+                        }
+                        collection={roomModeCollection}
+                        disabled={room.platform === "daily"}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select room size" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {roomModeOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
                     <Field.Root mt={4}>
                       <Field.Label>Recording type</Field.Label>
                       <Select.Root
