@@ -5,6 +5,8 @@ from fractions import Fraction
 from pathlib import Path
 
 import av
+import av.error
+import numpy as np
 from av.audio.resampler import AudioResampler
 from celery import chain, shared_task
 
@@ -321,173 +323,414 @@ class PipelineMainMultitrack(PipelineMainBase):
             )
             raise
 
+    def _get_sample_rate_from_url(self, url: str) -> int | None:
+        """Extract sample rate from first decodable frame of audio URL."""
+        container = None
+        try:
+            container = av.open(url)
+            for frame in container.decode(audio=0):
+                return frame.sample_rate
+        except Exception:
+            return None
+        finally:
+            if container is not None:
+                container.close()
+        return None
+
+    def _mix_two_tracks_to_file(
+        self,
+        url1: str,
+        url2: str,
+        output_path: str,
+        target_sample_rate: int,
+    ) -> None:
+        """
+        Mix exactly two audio tracks into output file using manual sample addition.
+        No filter graph - avoids amix buffering issues entirely.
+        Uses FLAC for smaller intermediate files.
+        """
+        containers = []
+        chunks_written = 0
+        try:
+            c0 = av.open(url1)
+            c1 = av.open(url2)
+            containers = [c0, c1]
+
+            with av.open(output_path, "w", format="flac") as out_container:
+                out_stream = out_container.add_stream("flac", rate=target_sample_rate)
+                out_stream.layout = "stereo"
+
+                decoders = [c.decode(audio=0) for c in containers]
+                active = [True, True]
+                resamplers = [
+                    AudioResampler(
+                        format="s32", layout="stereo", rate=target_sample_rate
+                    )
+                    for _ in range(2)
+                ]
+
+                # Buffers for leftover samples when frame sizes don't match
+                buffers: list[np.ndarray | None] = [None, None]
+
+                def get_samples(idx: int, num_samples: int) -> np.ndarray | None:
+                    """Get exactly num_samples from decoder idx, or None if exhausted."""
+                    nonlocal buffers, active
+
+                    if buffers[idx] is not None:
+                        collected = buffers[idx]
+                        buffers[idx] = None
+                    else:
+                        collected = np.zeros((0, 2), dtype=np.int32)
+
+                    while collected.shape[0] < num_samples and active[idx]:
+                        try:
+                            frame = next(decoders[idx])
+                        except StopIteration:
+                            active[idx] = False
+                            break
+
+                        out_frames = resamplers[idx].resample(frame) or []
+                        for rf in out_frames:
+                            arr = rf.to_ndarray().T
+                            if arr.shape[1] == 1:
+                                arr = np.column_stack([arr, arr])
+                            collected = (
+                                np.vstack([collected, arr])
+                                if collected.shape[0] > 0
+                                else arr
+                            )
+
+                    if collected.shape[0] == 0:
+                        return None
+
+                    if collected.shape[0] >= num_samples:
+                        result = collected[:num_samples]
+                        leftover = collected[num_samples:]
+                        buffers[idx] = leftover if leftover.shape[0] > 0 else None
+                        return result
+                    else:
+                        return collected
+
+                chunk_size = 4096
+
+                while (
+                    active[0]
+                    or active[1]
+                    or buffers[0] is not None
+                    or buffers[1] is not None
+                ):
+                    samples0 = get_samples(0, chunk_size)
+                    samples1 = get_samples(1, chunk_size)
+
+                    if samples0 is None and samples1 is None:
+                        break
+
+                    if samples0 is None:
+                        mixed = samples1
+                    elif samples1 is None:
+                        mixed = samples0
+                    else:
+                        len0, len1 = samples0.shape[0], samples1.shape[0]
+                        if len0 < len1:
+                            samples0 = np.vstack(
+                                [samples0, np.zeros((len1 - len0, 2), dtype=np.int32)]
+                            )
+                        elif len1 < len0:
+                            samples1 = np.vstack(
+                                [samples1, np.zeros((len0 - len1, 2), dtype=np.int32)]
+                            )
+
+                        mixed = np.clip(
+                            samples0.astype(np.int64) + samples1.astype(np.int64),
+                            np.iinfo(np.int32).min,
+                            np.iinfo(np.int32).max,
+                        ).astype(np.int32)
+
+                    out_frame = av.AudioFrame.from_ndarray(
+                        mixed.T.copy(),
+                        format="s32p",
+                        layout="stereo",
+                    )
+                    out_frame.sample_rate = target_sample_rate
+                    out_frame.time_base = Fraction(1, target_sample_rate)
+
+                    for packet in out_stream.encode(out_frame):
+                        out_container.mux(packet)
+                    chunks_written += 1
+
+                for packet in out_stream.encode(None):
+                    out_container.mux(packet)
+
+        finally:
+            for c in containers:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+
+    async def _mix_two_tracks_to_writer(
+        self,
+        url1: str,
+        url2: str,
+        writer: AudioFileWriterProcessor,
+        target_sample_rate: int,
+    ) -> None:
+        """
+        Mix exactly two audio tracks directly to the output writer (no temp file).
+        Used for the final mixing round.
+        """
+        containers = []
+        frames_written = 0
+        try:
+            c0 = av.open(url1)
+            c1 = av.open(url2)
+            containers = [c0, c1]
+
+            decoders = [c.decode(audio=0) for c in containers]
+            active = [True, True]
+            resamplers = [
+                AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
+                for _ in range(2)
+            ]
+
+            buffers: list[np.ndarray | None] = [None, None]
+
+            def get_samples(idx: int, num_samples: int) -> np.ndarray | None:
+                nonlocal buffers, active
+
+                if buffers[idx] is not None:
+                    collected = buffers[idx]
+                    buffers[idx] = None
+                else:
+                    collected = np.zeros((0, 2), dtype=np.int32)
+
+                while collected.shape[0] < num_samples and active[idx]:
+                    try:
+                        frame = next(decoders[idx])
+                    except StopIteration:
+                        active[idx] = False
+                        break
+
+                    out_frames = resamplers[idx].resample(frame) or []
+                    for rf in out_frames:
+                        arr = rf.to_ndarray().T
+                        if arr.shape[1] == 1:
+                            arr = np.column_stack([arr, arr])
+                        collected = (
+                            np.vstack([collected, arr])
+                            if collected.shape[0] > 0
+                            else arr
+                        )
+
+                if collected.shape[0] == 0:
+                    return None
+
+                if collected.shape[0] >= num_samples:
+                    result = collected[:num_samples]
+                    leftover = collected[num_samples:]
+                    buffers[idx] = leftover if leftover.shape[0] > 0 else None
+                    return result
+                else:
+                    return collected
+
+            chunk_size = 4096
+
+            while (
+                active[0]
+                or active[1]
+                or buffers[0] is not None
+                or buffers[1] is not None
+            ):
+                samples0 = get_samples(0, chunk_size)
+                samples1 = get_samples(1, chunk_size)
+
+                if samples0 is None and samples1 is None:
+                    break
+
+                if samples0 is None:
+                    mixed = samples1
+                elif samples1 is None:
+                    mixed = samples0
+                else:
+                    len0, len1 = samples0.shape[0], samples1.shape[0]
+                    if len0 < len1:
+                        samples0 = np.vstack(
+                            [samples0, np.zeros((len1 - len0, 2), dtype=np.int32)]
+                        )
+                    elif len1 < len0:
+                        samples1 = np.vstack(
+                            [samples1, np.zeros((len0 - len1, 2), dtype=np.int32)]
+                        )
+
+                    mixed = np.clip(
+                        samples0.astype(np.int64) + samples1.astype(np.int64),
+                        np.iinfo(np.int32).min,
+                        np.iinfo(np.int32).max,
+                    ).astype(np.int32)
+
+                out_frame = av.AudioFrame.from_ndarray(
+                    mixed.T.copy(),
+                    format="s32p",
+                    layout="stereo",
+                )
+                out_frame.sample_rate = target_sample_rate
+                out_frame.time_base = Fraction(1, target_sample_rate)
+
+                await writer.push(out_frame)
+                frames_written += 1
+
+                if frames_written % 5000 == 0:
+                    self.logger.info(
+                        f"Final mix progress: {frames_written} chunks written"
+                    )
+
+        finally:
+            for c in containers:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+
+        self.logger.info(f"Final mix complete: {frames_written} chunks")
+
+    async def _write_single_track_to_writer(
+        self,
+        url: str,
+        writer: AudioFileWriterProcessor,
+        target_sample_rate: int,
+    ) -> None:
+        """Decode a single track and write frames to the output writer."""
+        container = None
+        frames_written = 0
+        try:
+            container = av.open(url)
+            resampler = AudioResampler(
+                format="s32", layout="stereo", rate=target_sample_rate
+            )
+
+            for frame in container.decode(audio=0):
+                out_frames = resampler.resample(frame) or []
+                for rf in out_frames:
+                    rf.sample_rate = target_sample_rate
+                    rf.time_base = Fraction(1, target_sample_rate)
+                    await writer.push(rf)
+                    frames_written += 1
+
+            out_frames = resampler.resample(None) or []
+            for rf in out_frames:
+                await writer.push(rf)
+                frames_written += 1
+
+        finally:
+            if container is not None:
+                container.close()
+
     async def mixdown_tracks(
         self,
         track_urls: list[str],
         writer: AudioFileWriterProcessor,
         offsets_seconds: list[float] | None = None,
     ) -> None:
-        """Multi-track mixdown using PyAV filter graph (amix), reading from S3 presigned URLs"""
+        """
+        Memory-efficient mixdown using pairwise reduction with numpy.
+        Uses FLAC for intermediate files and writes directly to MP3 in final round.
+        """
+        valid_urls = [url for url in track_urls if url]
 
-        target_sample_rate: int | None = None
-        for url in track_urls:
-            if not url:
-                continue
-            container = None
-            try:
-                container = av.open(url)
-                for frame in container.decode(audio=0):
-                    target_sample_rate = frame.sample_rate
-                    break
-            except Exception:
-                continue
-            finally:
-                if container is not None:
-                    container.close()
+        if not valid_urls:
+            self.logger.error("Mixdown failed - no valid track URLs")
+            raise Exception("Mixdown failed: No valid track URLs")
+
+        target_sample_rate = None
+        for url in valid_urls:
+            target_sample_rate = self._get_sample_rate_from_url(url)
             if target_sample_rate:
                 break
 
         if not target_sample_rate:
             self.logger.error("Mixdown failed - no decodable audio frames found")
             raise Exception("Mixdown failed: No decodable audio frames in any track")
-        # Build PyAV filter graph:
-        # N abuffer (s32/stereo)
-        #   -> optional adelay per input (for alignment)
-        #   -> amix (s32)
-        #   -> aformat(s16)
-        #   -> sink
-        graph = av.filter.Graph()
-        inputs = []
-        valid_track_urls = [url for url in track_urls if url]
-        input_offsets_seconds = None
-        if offsets_seconds is not None:
-            input_offsets_seconds = [
-                offsets_seconds[i] for i, url in enumerate(track_urls) if url
-            ]
-        for idx, url in enumerate(valid_track_urls):
-            args = (
-                f"time_base=1/{target_sample_rate}:"
-                f"sample_rate={target_sample_rate}:"
-                f"sample_fmt=s32:"
-                f"channel_layout=stereo"
-            )
-            in_ctx = graph.add("abuffer", args=args, name=f"in{idx}")
-            inputs.append(in_ctx)
 
-        if not inputs:
-            self.logger.error("Mixdown failed - no valid inputs for graph")
-            raise Exception("Mixdown failed: No valid inputs for filter graph")
-
-        mixer = graph.add("amix", args=f"inputs={len(inputs)}:normalize=0", name="mix")
-
-        fmt = graph.add(
-            "aformat",
-            args=(
-                f"sample_fmts=s32:channel_layouts=stereo:sample_rates={target_sample_rate}"
-            ),
-            name="fmt",
+        self.logger.info(
+            "Starting pairwise mixdown",
+            num_tracks=len(valid_urls),
+            sample_rate=target_sample_rate,
         )
 
-        sink = graph.add("abuffersink", name="out")
+        # Single track - just write directly
+        if len(valid_urls) == 1:
+            await self._write_single_track_to_writer(
+                valid_urls[0], writer, target_sample_rate
+            )
+            return
 
-        # Optional per-input delay before mixing
-        delays_ms: list[int] = []
-        if input_offsets_seconds is not None:
-            base = min(input_offsets_seconds) if input_offsets_seconds else 0.0
-            delays_ms = [
-                max(0, int(round((o - base) * 1000))) for o in input_offsets_seconds
-            ]
-        else:
-            delays_ms = [0 for _ in inputs]
+        current_round = valid_urls
+        round_num = 0
+        temp_files: list[str] = []
 
-        for idx, in_ctx in enumerate(inputs):
-            delay_ms = delays_ms[idx] if idx < len(delays_ms) else 0
-            if delay_ms > 0:
-                # adelay requires one value per channel; use same for stereo
-                adelay = graph.add(
-                    "adelay",
-                    args=f"delays={delay_ms}|{delay_ms}:all=1",
-                    name=f"delay{idx}",
-                )
-                in_ctx.link_to(adelay)
-                adelay.link_to(mixer, 0, idx)
-            else:
-                in_ctx.link_to(mixer, 0, idx)
-        mixer.link_to(fmt)
-        fmt.link_to(sink)
-        graph.configure()
-
-        containers = []
         try:
-            # Open all containers with cleanup guaranteed
-            for i, url in enumerate(valid_track_urls):
-                try:
-                    c = av.open(url)
-                    containers.append(c)
-                except Exception as e:
-                    self.logger.warning(
-                        "Mixdown: failed to open container from URL",
-                        input=i,
-                        url=url,
-                        error=str(e),
-                    )
+            while len(current_round) > 2:
+                round_num += 1
+                next_round: list[str] = []
 
-            if not containers:
-                self.logger.error("Mixdown failed - no valid containers opened")
-                raise Exception("Mixdown failed: Could not open any track containers")
+                self.logger.info(
+                    f"Pairwise mixdown round {round_num}",
+                    tracks_in_round=len(current_round),
+                )
 
-            decoders = [c.decode(audio=0) for c in containers]
-            active = [True] * len(decoders)
-            resamplers = [
-                AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
-                for _ in decoders
-            ]
+                i = 0
+                while i < len(current_round):
+                    if i + 1 < len(current_round):
+                        temp_file = tempfile.NamedTemporaryFile(
+                            suffix=".flac", delete=False
+                        )
+                        temp_path = temp_file.name
+                        temp_file.close()
+                        temp_files.append(temp_path)
 
-            while any(active):
-                for i, (dec, is_active) in enumerate(zip(decoders, active)):
-                    if not is_active:
-                        continue
-                    try:
-                        frame = next(dec)
-                    except StopIteration:
-                        active[i] = False
-                        continue
+                        self.logger.info(f"Mixing pair {i} and {i+1}", round=round_num)
+                        self._mix_two_tracks_to_file(
+                            current_round[i],
+                            current_round[i + 1],
+                            temp_path,
+                            target_sample_rate,
+                        )
+                        file_size = Path(temp_path).stat().st_size
+                        self.logger.info(
+                            f"Pair {i}+{i+1} mixed",
+                            output_size_mb=round(file_size / 1024 / 1024, 1),
+                        )
+                        next_round.append(temp_path)
+                        i += 2
+                    else:
+                        next_round.append(current_round[i])
+                        i += 1
 
-                    if frame.sample_rate != target_sample_rate:
-                        continue
-                    out_frames = resamplers[i].resample(frame) or []
-                    for rf in out_frames:
-                        rf.sample_rate = target_sample_rate
-                        rf.time_base = Fraction(1, target_sample_rate)
-                        inputs[i].push(rf)
+                current_round = next_round
 
-                    while True:
-                        try:
-                            mixed = sink.pull()
-                        except Exception:
-                            break
-                        mixed.sample_rate = target_sample_rate
-                        mixed.time_base = Fraction(1, target_sample_rate)
-                        await writer.push(mixed)
+            # Final round: mix last 2 tracks directly to writer (no temp file)
+            self.logger.info("Final round: mixing directly to MP3 writer")
+            if len(current_round) == 2:
+                await self._mix_two_tracks_to_writer(
+                    current_round[0],
+                    current_round[1],
+                    writer,
+                    target_sample_rate,
+                )
+            else:
+                # Only 1 track left
+                await self._write_single_track_to_writer(
+                    current_round[0], writer, target_sample_rate
+                )
 
-            for in_ctx in inputs:
-                in_ctx.push(None)
-            while True:
-                try:
-                    mixed = sink.pull()
-                except Exception:
-                    break
-                mixed.sample_rate = target_sample_rate
-                mixed.time_base = Fraction(1, target_sample_rate)
-                await writer.push(mixed)
+            self.logger.info("Pairwise mixdown complete")
+
         finally:
-            # Cleanup all containers, even if processing failed
-            for c in containers:
-                if c is not None:
-                    try:
-                        c.close()
-                    except Exception:
-                        pass  # Best effort cleanup
+            for temp_path in temp_files:
+                try:
+                    Path(temp_path).unlink(missing_ok=True)
+                except Exception:
+                    pass
 
     @broadcast_to_sockets
     async def set_status(self, transcript_id: str, status: TranscriptStatus):
