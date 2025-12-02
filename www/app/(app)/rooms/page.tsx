@@ -537,6 +537,10 @@ export default function RoomsList() {
                               room.recordingType === "cloud"
                                 ? "automatic-2nd-participant"
                                 : "none";
+                          } else {
+                            if (room.recordingType !== "cloud") {
+                              updates.recordingTrigger = "none";
+                            }
                           }
                           setRoomInput({ ...room, ...updates });
                         }}
@@ -662,14 +666,12 @@ export default function RoomsList() {
                           const updates: Partial<typeof room> = {
                             recordingType: newRecordingType,
                           };
-                          // For Daily: if cloud, use automatic; otherwise none
                           if (room.platform === "daily") {
                             updates.recordingTrigger =
                               newRecordingType === "cloud"
                                 ? "automatic-2nd-participant"
                                 : "none";
                           } else {
-                            // For Whereby: if not cloud, set to none
                             updates.recordingTrigger =
                               newRecordingType !== "cloud"
                                 ? "none"
