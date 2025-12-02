@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.3](https://github.com/Monadical-SAS/reflector/compare/v0.22.2...v0.22.3) (2025-12-02)
+
+
+### Bug Fixes
+
+* align daily room settings ([#759](https://github.com/Monadical-SAS/reflector/issues/759)) ([28f87c0](https://github.com/Monadical-SAS/reflector/commit/28f87c09dc459846873d0dde65b03e3d7b2b9399))
+
 ## [0.22.2](https://github.com/Monadical-SAS/reflector/compare/v0.22.1...v0.22.2) (2025-12-02)
 
 
