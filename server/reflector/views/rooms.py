@@ -89,7 +89,7 @@ class CreateRoom(BaseModel):
     ics_url: Optional[str] = None
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
-    platform: Optional[Platform] = None
+    platform: Platform
 
 
 class UpdateRoom(BaseModel):
@@ -248,7 +248,7 @@ async def rooms_create(
         ics_url=room.ics_url,
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
-        platform=room.platform or settings.DEFAULT_VIDEO_PLATFORM,
+        platform=room.platform,
     )
 
 
@@ -309,6 +309,22 @@ async def rooms_create_meeting(
                 meeting = await meetings_controller.get_active(
                     room=room, current_time=current_time
                 )
+
+                if meeting is not None:
+                    settings_match = (
+                        meeting.is_locked == room.is_locked
+                        and meeting.room_mode == room.room_mode
+                        and meeting.recording_type == room.recording_type
+                        and meeting.recording_trigger == room.recording_trigger
+                        and meeting.platform == room.platform
+                    )
+                    if not settings_match:
+                        logger.info(
+                            f"Room settings changed for {room_name}, creating new meeting",
+                            room_id=room.id,
+                            old_meeting_id=meeting.id,
+                        )
+                        meeting = None
 
             if meeting is None:
                 end_date = current_time + timedelta(hours=8)
@@ -549,21 +565,16 @@ async def rooms_join_meeting(
     if meeting.end_date <= current_time:
         raise HTTPException(status_code=400, detail="Meeting has ended")
 
-    if meeting.platform == "daily":
+    if meeting.platform == "daily" and user_id is not None:
         client = create_platform_client(meeting.platform)
-        enable_recording = room.recording_trigger != "none"
         token = await client.create_meeting_token(
             meeting.room_name,
-            enable_recording=enable_recording,
+            start_cloud_recording=meeting.recording_type == "cloud",
+            enable_recording_ui=meeting.recording_type == "local",
             user_id=user_id,
             is_owner=user_id == room.user_id,
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)
-        if meeting.host_room_url:
-            meeting.host_room_url = add_query_param(meeting.host_room_url, "t", token)
-
-    if user_id != room.user_id and meeting.platform == "whereby":
-        meeting.host_room_url = ""
 
     return meeting

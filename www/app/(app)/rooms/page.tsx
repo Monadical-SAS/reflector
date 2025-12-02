@@ -67,6 +67,11 @@ const recordingTypeOptions: SelectOption[] = [
   { label: "Cloud", value: "cloud" },
 ];
 
+const platformOptions: SelectOption[] = [
+  { label: "Whereby", value: "whereby" },
+  { label: "Daily", value: "daily" },
+];
+
 const roomInitialState = {
   name: "",
   zulipAutoPost: false,
@@ -82,6 +87,7 @@ const roomInitialState = {
   icsUrl: "",
   icsEnabled: false,
   icsFetchInterval: 5,
+  platform: "whereby",
 };
 
 export default function RoomsList() {
@@ -99,6 +105,11 @@ export default function RoomsList() {
   const recordingTypeCollection = createListCollection({
     items: recordingTypeOptions,
   });
+
+  const platformCollection = createListCollection({
+    items: platformOptions,
+  });
+
   const [roomInput, setRoomInput] = useState<null | typeof roomInitialState>(
     null,
   );
@@ -143,15 +154,24 @@ export default function RoomsList() {
             zulipStream: detailedEditedRoom.zulip_stream,
             zulipTopic: detailedEditedRoom.zulip_topic,
             isLocked: detailedEditedRoom.is_locked,
-            roomMode: detailedEditedRoom.room_mode,
+            roomMode:
+              detailedEditedRoom.platform === "daily"
+                ? "group"
+                : detailedEditedRoom.room_mode,
             recordingType: detailedEditedRoom.recording_type,
-            recordingTrigger: detailedEditedRoom.recording_trigger,
+            recordingTrigger:
+              detailedEditedRoom.platform === "daily"
+                ? detailedEditedRoom.recording_type === "cloud"
+                  ? "automatic-2nd-participant"
+                  : "none"
+                : detailedEditedRoom.recording_trigger,
             isShared: detailedEditedRoom.is_shared,
             webhookUrl: detailedEditedRoom.webhook_url || "",
             webhookSecret: detailedEditedRoom.webhook_secret || "",
             icsUrl: detailedEditedRoom.ics_url || "",
             icsEnabled: detailedEditedRoom.ics_enabled || false,
             icsFetchInterval: detailedEditedRoom.ics_fetch_interval || 5,
+            platform: detailedEditedRoom.platform,
           }
         : null,
     [detailedEditedRoom],
@@ -277,21 +297,32 @@ export default function RoomsList() {
         return;
       }
 
+      const platform: "whereby" | "daily" | null =
+        room.platform === "whereby" || room.platform === "daily"
+          ? room.platform
+          : null;
+
       const roomData = {
         name: room.name,
         zulip_auto_post: room.zulipAutoPost,
         zulip_stream: room.zulipStream,
         zulip_topic: room.zulipTopic,
         is_locked: room.isLocked,
-        room_mode: room.roomMode,
+        room_mode: platform === "daily" ? "group" : room.roomMode,
         recording_type: room.recordingType,
-        recording_trigger: room.recordingTrigger,
+        recording_trigger:
+          platform === "daily"
+            ? room.recordingType === "cloud"
+              ? "automatic-2nd-participant"
+              : "none"
+            : room.recordingTrigger,
         is_shared: room.isShared,
         webhook_url: room.webhookUrl,
         webhook_secret: room.webhookSecret,
         ics_url: room.icsUrl,
         ics_enabled: room.icsEnabled,
         ics_fetch_interval: room.icsFetchInterval,
+        platform,
       };
 
       if (isEditing) {
@@ -339,15 +370,21 @@ export default function RoomsList() {
       zulipStream: roomData.zulip_stream,
       zulipTopic: roomData.zulip_topic,
       isLocked: roomData.is_locked,
-      roomMode: roomData.room_mode,
+      roomMode: roomData.platform === "daily" ? "group" : roomData.room_mode, // Daily always uses 2-200
       recordingType: roomData.recording_type,
-      recordingTrigger: roomData.recording_trigger,
+      recordingTrigger:
+        roomData.platform === "daily"
+          ? roomData.recording_type === "cloud"
+            ? "automatic-2nd-participant"
+            : "none"
+          : roomData.recording_trigger,
       isShared: roomData.is_shared,
       webhookUrl: roomData.webhook_url || "",
       webhookSecret: roomData.webhook_secret || "",
       icsUrl: roomData.ics_url || "",
       icsEnabled: roomData.ics_enabled || false,
       icsFetchInterval: roomData.ics_fetch_interval || 5,
+      platform: roomData.platform,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -483,6 +520,48 @@ export default function RoomsList() {
                     </Field.Root>
 
                     <Field.Root mt={4}>
+                      <Field.Label>Platform</Field.Label>
+                      <Select.Root
+                        value={[room.platform]}
+                        onValueChange={(e) => {
+                          const newPlatform = e.value[0] as "whereby" | "daily";
+                          const updates: Partial<typeof room> = {
+                            platform: newPlatform,
+                          };
+                          if (newPlatform === "daily") {
+                            updates.roomMode = "group";
+                            updates.recordingTrigger =
+                              room.recordingType === "cloud"
+                                ? "automatic-2nd-participant"
+                                : "none";
+                          }
+                          setRoomInput({ ...room, ...updates });
+                        }}
+                        collection={platformCollection}
+                      >
+                        <Select.HiddenSelect />
+                        <Select.Control>
+                          <Select.Trigger>
+                            <Select.ValueText placeholder="Select platform" />
+                          </Select.Trigger>
+                          <Select.IndicatorGroup>
+                            <Select.Indicator />
+                          </Select.IndicatorGroup>
+                        </Select.Control>
+                        <Select.Positioner>
+                          <Select.Content>
+                            {platformOptions.map((option) => (
+                              <Select.Item key={option.value} item={option}>
+                                {option.label}
+                                <Select.ItemIndicator />
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Positioner>
+                      </Select.Root>
+                    </Field.Root>
+
+                    <Field.Root mt={4}>
                       <Checkbox.Root
                         name="isLocked"
                         checked={room.isLocked}
@@ -512,6 +591,7 @@ export default function RoomsList() {
                           setRoomInput({ ...room, roomMode: e.value[0] })
                         }
                         collection={roomModeCollection}
+                        disabled={room.platform === "daily"}
                       >
                         <Select.HiddenSelect />
                         <Select.Control>
@@ -538,16 +618,26 @@ export default function RoomsList() {
                       <Field.Label>Recording type</Field.Label>
                       <Select.Root
                         value={[room.recordingType]}
-                        onValueChange={(e) =>
-                          setRoomInput({
-                            ...room,
-                            recordingType: e.value[0],
-                            recordingTrigger:
-                              e.value[0] !== "cloud"
+                        onValueChange={(e) => {
+                          const newRecordingType = e.value[0];
+                          const updates: Partial<typeof room> = {
+                            recordingType: newRecordingType,
+                          };
+                          // For Daily: if cloud, use automatic; otherwise none
+                          if (room.platform === "daily") {
+                            updates.recordingTrigger =
+                              newRecordingType === "cloud"
+                                ? "automatic-2nd-participant"
+                                : "none";
+                          } else {
+                            // For Whereby: if not cloud, set to none
+                            updates.recordingTrigger =
+                              newRecordingType !== "cloud"
                                 ? "none"
-                                : room.recordingTrigger,
-                          })
-                        }
+                                : room.recordingTrigger;
+                          }
+                          setRoomInput({ ...room, ...updates });
+                        }}
                         collection={recordingTypeCollection}
                       >
                         <Select.HiddenSelect />
@@ -572,7 +662,7 @@ export default function RoomsList() {
                       </Select.Root>
                     </Field.Root>
                     <Field.Root mt={4}>
-                      <Field.Label>Cloud recording start trigger</Field.Label>
+                      <Field.Label>Recording start trigger</Field.Label>
                       <Select.Root
                         value={[room.recordingTrigger]}
                         onValueChange={(e) =>
@@ -582,7 +672,11 @@ export default function RoomsList() {
                           })
                         }
                         collection={recordingTriggerCollection}
-                        disabled={room.recordingType !== "cloud"}
+                        disabled={
+                          room.recordingType !== "cloud" ||
+                          (room.platform === "daily" &&
+                            room.recordingType === "cloud")
+                        }
                       >
                         <Select.HiddenSelect />
                         <Select.Control>
