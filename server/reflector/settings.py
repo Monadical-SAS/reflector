@@ -138,6 +138,14 @@ class Settings(BaseSettings):
     DAILY_WEBHOOK_UUID: str | None = (
         None  # Webhook UUID for this environment. Not used by production code
     )
+
+    # Multitrack processing
+    # SKIP_MIXDOWN: When True, skips audio mixdown and waveform generation.
+    # Transcription still works using individual tracks. Useful for:
+    # - Diagnosing OOM issues in mixdown
+    # - Fast processing when audio playback is not needed
+    # Note: UI will have no audio playback or waveform when enabled.
+    SKIP_MIXDOWN: bool = True
     # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
 

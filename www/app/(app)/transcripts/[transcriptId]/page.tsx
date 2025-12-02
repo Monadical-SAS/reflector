@@ -117,15 +117,6 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     return <Modal title="Loading" text={"Loading transcript..."} />;
   }
 
-  if (mp3.error) {
-    return (
-      <Modal
-        title="Transcription error"
-        text={`There was an error loading the recording. Error: ${mp3.error}`}
-      />
-    );
-  }
-
   return (
     <>
       <Grid
@@ -147,7 +138,12 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               />
             ) : !mp3.loading && (waveform.error || mp3.error) ? (
               <Box p={4} bg="red.100" borderRadius="md">
-                <Text>Error loading this recording</Text>
+                <Text>
+                  Error loading{" "}
+                  {[waveform.error && "waveform", mp3.error && "mp3"].join(
+                    " and ",
+                  )}
+                </Text>
               </Box>
             ) : (
               <Skeleton h={14} />
