@@ -140,9 +140,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               <Box p={4} bg="red.100" borderRadius="md">
                 <Text>
                   Error loading{" "}
-                  {[waveform.error && "waveform", mp3.error && "mp3"].join(
-                    " and ",
-                  )}
+                  {[waveform.error && "waveform", mp3.error && "mp3"]
+                    .filter(Boolean)
+                    .join(" and ")}
                 </Text>
               </Box>
             ) : (
