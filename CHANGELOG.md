@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.4](https://github.com/Monadical-SAS/reflector/compare/v0.22.3...v0.22.4) (2025-12-02)
+
+
+### Bug Fixes
+
+* Multitrack mixdown optimisation 2 ([#764](https://github.com/Monadical-SAS/reflector/issues/764)) ([bd5df1c](https://github.com/Monadical-SAS/reflector/commit/bd5df1ce2ebf35d7f3413b295e56937a9a28ef7b))
+
 ## [0.22.3](https://github.com/Monadical-SAS/reflector/compare/v0.22.2...v0.22.3) (2025-12-02)
 
 
