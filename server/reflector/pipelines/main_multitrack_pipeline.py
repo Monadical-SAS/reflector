@@ -422,7 +422,15 @@ class PipelineMainMultitrack(PipelineMainBase):
             # Open all containers with cleanup guaranteed
             for i, url in enumerate(valid_track_urls):
                 try:
-                    c = av.open(url)
+                    c = av.open(
+                        url,
+                        options={
+                            # it's trying to stream from s3 by default
+                            "reconnect": "1",
+                            "reconnect_streamed": "1",
+                            "reconnect_delay_max": "5",
+                        },
+                    )
                     containers.append(c)
                 except Exception as e:
                     self.logger.warning(
@@ -451,6 +459,8 @@ class PipelineMainMultitrack(PipelineMainBase):
                         frame = next(dec)
                     except StopIteration:
                         active[i] = False
+                        # causes stream to move on / unclogs memory
+                        inputs[i].push(None)
                         continue
 
                     if frame.sample_rate != target_sample_rate:
@@ -470,8 +480,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                         mixed.time_base = Fraction(1, target_sample_rate)
                         await writer.push(mixed)
 
-            for in_ctx in inputs:
-                in_ctx.push(None)
             while True:
                 try:
                     mixed = sink.pull()
