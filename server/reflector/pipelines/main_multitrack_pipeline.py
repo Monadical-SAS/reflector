@@ -31,6 +31,7 @@ from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
+from reflector.settings import settings
 from reflector.storage import Storage, get_transcripts_storage
 from reflector.utils.daily import (
     filter_cam_audio_tracks,
@@ -631,43 +632,55 @@ class PipelineMainMultitrack(PipelineMainBase):
 
         transcript.data_path.mkdir(parents=True, exist_ok=True)
 
-        mp3_writer = AudioFileWriterProcessor(
-            path=str(transcript.audio_mp3_filename),
-            on_duration=self.on_duration,
-        )
-        await self.mixdown_tracks(padded_track_urls, mp3_writer, offsets_seconds=None)
-        await mp3_writer.flush()
+        if settings.SKIP_MIXDOWN:
+            self.logger.warning(
+                "SKIP_MIXDOWN enabled: Skipping mixdown and waveform generation. "
+                "UI will have no audio playback or waveform.",
+                num_tracks=len(padded_track_urls),
+                transcript_id=transcript.id,
+            )
+        else:
+            mp3_writer = AudioFileWriterProcessor(
+                path=str(transcript.audio_mp3_filename),
+                on_duration=self.on_duration,
+            )
+            await self.mixdown_tracks(
+                padded_track_urls, mp3_writer, offsets_seconds=None
+            )
+            await mp3_writer.flush()
 
-        if not transcript.audio_mp3_filename.exists():
-            raise Exception(
-                "Mixdown failed - no MP3 file generated. Cannot proceed without playable audio."
+            if not transcript.audio_mp3_filename.exists():
+                raise Exception(
+                    "Mixdown failed - no MP3 file generated. Cannot proceed without playable audio."
+                )
+
+            storage_path = f"{transcript.id}/audio.mp3"
+            # Use file handle streaming to avoid loading entire MP3 into memory
+            mp3_size = transcript.audio_mp3_filename.stat().st_size
+            with open(transcript.audio_mp3_filename, "rb") as mp3_file:
+                await transcript_storage.put_file(storage_path, mp3_file)
+            mp3_url = await transcript_storage.get_file_url(storage_path)
+
+            await transcripts_controller.update(
+                transcript, {"audio_location": "storage"}
             )
 
-        storage_path = f"{transcript.id}/audio.mp3"
-        # Use file handle streaming to avoid loading entire MP3 into memory
-        mp3_size = transcript.audio_mp3_filename.stat().st_size
-        with open(transcript.audio_mp3_filename, "rb") as mp3_file:
-            await transcript_storage.put_file(storage_path, mp3_file)
-        mp3_url = await transcript_storage.get_file_url(storage_path)
+            self.logger.info(
+                f"Uploaded mixed audio to storage",
+                storage_path=storage_path,
+                size=mp3_size,
+                url=mp3_url,
+            )
 
-        await transcripts_controller.update(transcript, {"audio_location": "storage"})
-
-        self.logger.info(
-            f"Uploaded mixed audio to storage",
-            storage_path=storage_path,
-            size=mp3_size,
-            url=mp3_url,
-        )
-
-        self.logger.info("Generating waveform from mixed audio")
-        waveform_processor = AudioWaveformProcessor(
-            audio_path=transcript.audio_mp3_filename,
-            waveform_path=transcript.audio_waveform_filename,
-            on_waveform=self.on_waveform,
-        )
-        waveform_processor.set_pipeline(self.empty_pipeline)
-        await waveform_processor.flush()
-        self.logger.info("Waveform generated successfully")
+            self.logger.info("Generating waveform from mixed audio")
+            waveform_processor = AudioWaveformProcessor(
+                audio_path=transcript.audio_mp3_filename,
+                waveform_path=transcript.audio_waveform_filename,
+                on_waveform=self.on_waveform,
+            )
+            waveform_processor.set_pipeline(self.empty_pipeline)
+            await waveform_processor.flush()
+            self.logger.info("Waveform generated successfully")
 
         speaker_transcripts: list[TranscriptType] = []
         for idx, padded_url in enumerate(padded_track_urls):
