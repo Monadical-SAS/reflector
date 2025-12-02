@@ -160,7 +160,10 @@ def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult:
 def task_is_scheduled_or_active(task_name: str, **kwargs):
     inspect = celery.current_app.control.inspect()
 
-    for worker, tasks in (inspect.scheduled() | inspect.active()).items():
+    scheduled = inspect.scheduled() or []
+    active = inspect.active() or []
+    all = scheduled | active
+    for worker, tasks in all.items():
         for task in tasks:
             if task["name"] == task_name and task["kwargs"] == kwargs:
                 return True
