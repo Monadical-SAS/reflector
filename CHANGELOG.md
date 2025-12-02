@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.2](https://github.com/Monadical-SAS/reflector/compare/v0.22.1...v0.22.2) (2025-12-02)
+
+
+### Bug Fixes
+
+* daily auto refresh fix ([#755](https://github.com/Monadical-SAS/reflector/issues/755)) ([fe47c46](https://github.com/Monadical-SAS/reflector/commit/fe47c46489c5aa0cc538109f7559cc9accb35c01))
+* Skip mixdown for multitrack ([#760](https://github.com/Monadical-SAS/reflector/issues/760)) ([b51b7aa](https://github.com/Monadical-SAS/reflector/commit/b51b7aa9176c1a53ba57ad99f5e976c804a1e80c))
+
 ## [0.22.1](https://github.com/Monadical-SAS/reflector/compare/v0.22.0...v0.22.1) (2025-11-27)
 
 
