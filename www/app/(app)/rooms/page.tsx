@@ -15,9 +15,12 @@ import {
   createListCollection,
   useDisclosure,
   Tabs,
+  Popover,
+  Text,
+  HStack,
 } from "@chakra-ui/react";
 import { useEffect, useMemo, useState } from "react";
-import { LuEye, LuEyeOff } from "react-icons/lu";
+import { LuEye, LuEyeOff, LuInfo } from "react-icons/lu";
 import useRoomList from "./useRoomList";
 import type { components } from "../../reflector-api";
 import {
@@ -583,39 +586,75 @@ export default function RoomsList() {
                         <Checkbox.Label>Locked room</Checkbox.Label>
                       </Checkbox.Root>
                     </Field.Root>
+                    {room.platform !== "daily" && (
+                      <Field.Root mt={4}>
+                        <Field.Label>Room size</Field.Label>
+                        <Select.Root
+                          value={[room.roomMode]}
+                          onValueChange={(e) =>
+                            setRoomInput({ ...room, roomMode: e.value[0] })
+                          }
+                          collection={roomModeCollection}
+                        >
+                          <Select.HiddenSelect />
+                          <Select.Control>
+                            <Select.Trigger>
+                              <Select.ValueText placeholder="Select room size" />
+                            </Select.Trigger>
+                            <Select.IndicatorGroup>
+                              <Select.Indicator />
+                            </Select.IndicatorGroup>
+                          </Select.Control>
+                          <Select.Positioner>
+                            <Select.Content>
+                              {roomModeOptions.map((option) => (
+                                <Select.Item key={option.value} item={option}>
+                                  {option.label}
+                                  <Select.ItemIndicator />
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Positioner>
+                        </Select.Root>
+                      </Field.Root>
+                    )}
                     <Field.Root mt={4}>
-                      <Field.Label>Room size</Field.Label>
-                      <Select.Root
-                        value={[room.roomMode]}
-                        onValueChange={(e) =>
-                          setRoomInput({ ...room, roomMode: e.value[0] })
-                        }
-                        collection={roomModeCollection}
-                        disabled={room.platform === "daily"}
-                      >
-                        <Select.HiddenSelect />
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Select room size" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Select.Positioner>
-                          <Select.Content>
-                            {roomModeOptions.map((option) => (
-                              <Select.Item key={option.value} item={option}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Select.Root>
-                    </Field.Root>
-                    <Field.Root mt={4}>
-                      <Field.Label>Recording type</Field.Label>
+                      <HStack gap={2} alignItems="center">
+                        <Field.Label>Recording type</Field.Label>
+                        <Popover.Root>
+                          <Popover.Trigger asChild>
+                            <IconButton
+                              aria-label="Recording type help"
+                              variant="ghost"
+                              size="xs"
+                              colorPalette="gray"
+                            >
+                              <LuInfo />
+                            </IconButton>
+                          </Popover.Trigger>
+                          <Popover.Positioner>
+                            <Popover.Content>
+                              <Popover.Arrow />
+                              <Popover.Body>
+                                <Text fontSize="sm" lineHeight="1.6">
+                                  <strong>None:</strong> No recording will be
+                                  created.
+                                  <br />
+                                  <br />
+                                  <strong>Local:</strong> Recording happens on
+                                  each participant's device. Files are saved
+                                  locally.
+                                  <br />
+                                  <br />
+                                  <strong>Cloud:</strong> Recording happens on
+                                  the platform's servers and is available after
+                                  the meeting ends.
+                                </Text>
+                              </Popover.Body>
+                            </Popover.Content>
+                          </Popover.Positioner>
+                        </Popover.Root>
+                      </HStack>
                       <Select.Root
                         value={[room.recordingType]}
                         onValueChange={(e) => {
@@ -661,44 +700,77 @@ export default function RoomsList() {
                         </Select.Positioner>
                       </Select.Root>
                     </Field.Root>
-                    <Field.Root mt={4}>
-                      <Field.Label>Recording start trigger</Field.Label>
-                      <Select.Root
-                        value={[room.recordingTrigger]}
-                        onValueChange={(e) =>
-                          setRoomInput({
-                            ...room,
-                            recordingTrigger: e.value[0],
-                          })
-                        }
-                        collection={recordingTriggerCollection}
-                        disabled={
-                          room.recordingType !== "cloud" ||
-                          (room.platform === "daily" &&
-                            room.recordingType === "cloud")
-                        }
-                      >
-                        <Select.HiddenSelect />
-                        <Select.Control>
-                          <Select.Trigger>
-                            <Select.ValueText placeholder="Select trigger" />
-                          </Select.Trigger>
-                          <Select.IndicatorGroup>
-                            <Select.Indicator />
-                          </Select.IndicatorGroup>
-                        </Select.Control>
-                        <Select.Positioner>
-                          <Select.Content>
-                            {recordingTriggerOptions.map((option) => (
-                              <Select.Item key={option.value} item={option}>
-                                {option.label}
-                                <Select.ItemIndicator />
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Positioner>
-                      </Select.Root>
-                    </Field.Root>
+                    {room.recordingType === "cloud" &&
+                      room.platform !== "daily" && (
+                        <Field.Root mt={4}>
+                          <HStack gap={2} alignItems="center">
+                            <Field.Label>Recording start trigger</Field.Label>
+                            <Popover.Root>
+                              <Popover.Trigger asChild>
+                                <IconButton
+                                  aria-label="Recording start trigger help"
+                                  variant="ghost"
+                                  size="xs"
+                                  colorPalette="gray"
+                                >
+                                  <LuInfo />
+                                </IconButton>
+                              </Popover.Trigger>
+                              <Popover.Positioner>
+                                <Popover.Content>
+                                  <Popover.Arrow />
+                                  <Popover.Body>
+                                    <Text fontSize="sm" lineHeight="1.6">
+                                      <strong>None:</strong> Recording must be
+                                      started manually by a participant.
+                                      <br />
+                                      <br />
+                                      <strong>Prompt:</strong> Participants will
+                                      be prompted to start recording when they
+                                      join.
+                                      <br />
+                                      <br />
+                                      <strong>Automatic:</strong> Recording
+                                      starts automatically when a second
+                                      participant joins.
+                                    </Text>
+                                  </Popover.Body>
+                                </Popover.Content>
+                              </Popover.Positioner>
+                            </Popover.Root>
+                          </HStack>
+                          <Select.Root
+                            value={[room.recordingTrigger]}
+                            onValueChange={(e) =>
+                              setRoomInput({
+                                ...room,
+                                recordingTrigger: e.value[0],
+                              })
+                            }
+                            collection={recordingTriggerCollection}
+                          >
+                            <Select.HiddenSelect />
+                            <Select.Control>
+                              <Select.Trigger>
+                                <Select.ValueText placeholder="Select trigger" />
+                              </Select.Trigger>
+                              <Select.IndicatorGroup>
+                                <Select.Indicator />
+                              </Select.IndicatorGroup>
+                            </Select.Control>
+                            <Select.Positioner>
+                              <Select.Content>
+                                {recordingTriggerOptions.map((option) => (
+                                  <Select.Item key={option.value} item={option}>
+                                    {option.label}
+                                    <Select.ItemIndicator />
+                                  </Select.Item>
+                                ))}
+                              </Select.Content>
+                            </Select.Positioner>
+                          </Select.Root>
+                        </Field.Root>
+                      )}
 
                     <Field.Root mt={4}>
                       <Checkbox.Root
