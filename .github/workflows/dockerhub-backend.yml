@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dockerhub-2
     paths:
       - 'server/**'
       - '.github/workflows/dockerhub-backend.yml'
