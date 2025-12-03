@@ -1,14 +1,22 @@
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional, assert_never
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from jose import jwt
-from pydantic import AwareDatetime, BaseModel, Field, constr, field_serializer
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    Discriminator,
+    Field,
+    constr,
+    field_serializer,
+)
 
 import reflector.auth as auth
 from reflector.db import get_database
+from reflector.db.recordings import recordings_controller
 from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
@@ -29,9 +37,17 @@ from reflector.db.transcripts import (
     TranscriptTopic,
     transcripts_controller,
 )
+from reflector.db.users import user_controller
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
+from reflector.schemas.transcript_formats import TranscriptFormat, TranscriptSegment
 from reflector.settings import settings
+from reflector.utils.transcript_formats import (
+    topics_to_webvtt_named,
+    transcript_to_json_segments,
+    transcript_to_text,
+    transcript_to_text_timestamped,
+)
 from reflector.ws_manager import get_ws_manager
 from reflector.zulip import (
     InvalidMessageError,
@@ -44,6 +60,14 @@ router = APIRouter()
 
 ALGORITHM = "HS256"
 DOWNLOAD_EXPIRE_MINUTES = 60
+
+
+async def _get_is_multitrack(transcript) -> bool:
+    """Detect if transcript is from multitrack recording."""
+    if not transcript.recording_id:
+        return False
+    recording = await recordings_controller.get_by_id(transcript.recording_id)
+    return recording is not None and recording.is_multitrack
 
 
 def create_access_token(data: dict, expires_delta: timedelta):
@@ -88,8 +112,86 @@ class GetTranscriptMinimal(BaseModel):
     audio_deleted: bool | None = None
 
 
-class GetTranscript(GetTranscriptMinimal):
-    participants: list[TranscriptParticipant] | None
+class TranscriptParticipantWithEmail(TranscriptParticipant):
+    email: str | None = None
+
+
+class GetTranscriptWithParticipants(GetTranscriptMinimal):
+    participants: list[TranscriptParticipantWithEmail] | None
+
+
+class GetTranscriptWithText(GetTranscriptWithParticipants):
+    """
+    Transcript response with plain text format.
+
+    Format: Speaker names followed by their dialogue, one line per segment.
+    Example:
+        John Smith: Hello everyone
+        Jane Doe: Hi there
+    """
+
+    transcript_format: Literal["text"] = "text"
+    transcript: str
+
+
+class GetTranscriptWithTextTimestamped(GetTranscriptWithParticipants):
+    """
+    Transcript response with timestamped text format.
+
+    Format: [MM:SS] timestamp prefix before each speaker and dialogue.
+    Example:
+        [00:00] John Smith: Hello everyone
+        [00:05] Jane Doe: Hi there
+    """
+
+    transcript_format: Literal["text-timestamped"] = "text-timestamped"
+    transcript: str
+
+
+class GetTranscriptWithWebVTTNamed(GetTranscriptWithParticipants):
+    """
+    Transcript response in WebVTT subtitle format with participant names.
+
+    Format: Standard WebVTT with voice tags using participant names.
+    Example:
+        WEBVTT
+
+        00:00:00.000 --> 00:00:05.000
+        <v John Smith>Hello everyone
+    """
+
+    transcript_format: Literal["webvtt-named"] = "webvtt-named"
+    transcript: str
+
+
+class GetTranscriptWithJSON(GetTranscriptWithParticipants):
+    """
+    Transcript response as structured JSON segments.
+
+    Format: Array of segment objects with speaker info, text, and timing.
+    Example:
+        [
+            {
+                "speaker": 0,
+                "speaker_name": "John Smith",
+                "text": "Hello everyone",
+                "start": 0.0,
+                "end": 5.0
+            }
+        ]
+    """
+
+    transcript_format: Literal["json"] = "json"
+    transcript: list[TranscriptSegment]
+
+
+GetTranscript = Annotated[
+    GetTranscriptWithText
+    | GetTranscriptWithTextTimestamped
+    | GetTranscriptWithWebVTTNamed
+    | GetTranscriptWithJSON,
+    Discriminator("transcript_format"),
+]
 
 
 class CreateTranscript(BaseModel):
@@ -228,7 +330,7 @@ async def transcripts_search(
     )
 
 
-@router.post("/transcripts", response_model=GetTranscript)
+@router.post("/transcripts", response_model=GetTranscriptWithParticipants)
 async def transcripts_create(
     info: CreateTranscript,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
@@ -272,7 +374,7 @@ class GetTranscriptTopic(BaseModel):
     segments: list[GetTranscriptSegmentTopic] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
         if not topic.words:
             # In previous version, words were missing
             # Just output a segment with speaker 0
@@ -296,7 +398,7 @@ class GetTranscriptTopic(BaseModel):
                     start=segment.start,
                     speaker=segment.speaker,
                 )
-                for segment in transcript.as_segments()
+                for segment in transcript.as_segments(is_multitrack)
             ]
         return cls(
             id=topic.id,
@@ -313,8 +415,8 @@ class GetTranscriptTopicWithWords(GetTranscriptTopic):
     words: list[Word] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
-        instance = super().from_transcript_topic(topic)
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
+        instance = super().from_transcript_topic(topic, is_multitrack)
         if topic.words:
             instance.words = topic.words
         return instance
@@ -329,8 +431,8 @@ class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
     words_per_speaker: list[SpeakerWords] = []
 
     @classmethod
-    def from_transcript_topic(cls, topic: TranscriptTopic):
-        instance = super().from_transcript_topic(topic)
+    def from_transcript_topic(cls, topic: TranscriptTopic, is_multitrack: bool = False):
+        instance = super().from_transcript_topic(topic, is_multitrack)
         if topic.words:
             words_per_speakers = []
             # group words by speaker
@@ -362,14 +464,88 @@ class GetTranscriptTopicWithWordsPerSpeaker(GetTranscriptTopic):
 async def transcript_get(
     transcript_id: str,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+    transcript_format: TranscriptFormat = "text",
 ):
     user_id = user["sub"] if user else None
-    return await transcripts_controller.get_by_id_for_http(
+    transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
 
-@router.patch("/transcripts/{transcript_id}", response_model=GetTranscript)
+    participants = []
+    if transcript.participants:
+        user_ids = [p.user_id for p in transcript.participants if p.user_id is not None]
+        users_dict = await user_controller.get_by_ids(user_ids) if user_ids else {}
+        for p in transcript.participants:
+            user = users_dict.get(p.user_id) if p.user_id else None
+            participants.append(
+                TranscriptParticipantWithEmail(
+                    **p.model_dump(), email=user.email if user else None
+                )
+            )
+
+    base_data = {
+        "id": transcript.id,
+        "user_id": transcript.user_id,
+        "name": transcript.name,
+        "status": transcript.status,
+        "locked": transcript.locked,
+        "duration": transcript.duration,
+        "title": transcript.title,
+        "short_summary": transcript.short_summary,
+        "long_summary": transcript.long_summary,
+        "created_at": transcript.created_at,
+        "share_mode": transcript.share_mode,
+        "source_language": transcript.source_language,
+        "target_language": transcript.target_language,
+        "reviewed": transcript.reviewed,
+        "meeting_id": transcript.meeting_id,
+        "source_kind": transcript.source_kind,
+        "room_id": transcript.room_id,
+        "audio_deleted": transcript.audio_deleted,
+        "participants": participants,
+    }
+
+    if transcript_format == "text":
+        return GetTranscriptWithText(
+            **base_data,
+            transcript_format="text",
+            transcript=transcript_to_text(
+                transcript.topics, transcript.participants, is_multitrack
+            ),
+        )
+    elif transcript_format == "text-timestamped":
+        return GetTranscriptWithTextTimestamped(
+            **base_data,
+            transcript_format="text-timestamped",
+            transcript=transcript_to_text_timestamped(
+                transcript.topics, transcript.participants, is_multitrack
+            ),
+        )
+    elif transcript_format == "webvtt-named":
+        return GetTranscriptWithWebVTTNamed(
+            **base_data,
+            transcript_format="webvtt-named",
+            transcript=topics_to_webvtt_named(
+                transcript.topics, transcript.participants, is_multitrack
+            ),
+        )
+    elif transcript_format == "json":
+        return GetTranscriptWithJSON(
+            **base_data,
+            transcript_format="json",
+            transcript=transcript_to_json_segments(
+                transcript.topics, transcript.participants, is_multitrack
+            ),
+        )
+    else:
+        assert_never(transcript_format)
+
+
+@router.patch(
+    "/transcripts/{transcript_id}", response_model=GetTranscriptWithParticipants
+)
 async def transcript_update(
     transcript_id: str,
     info: UpdateTranscript,
@@ -419,9 +595,12 @@ async def transcript_get_topics(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # convert to GetTranscriptTopic
     return [
-        GetTranscriptTopic.from_transcript_topic(topic) for topic in transcript.topics
+        GetTranscriptTopic.from_transcript_topic(topic, is_multitrack)
+        for topic in transcript.topics
     ]
 
 
@@ -438,9 +617,11 @@ async def transcript_get_topics_with_words(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # convert to GetTranscriptTopicWithWords
     return [
-        GetTranscriptTopicWithWords.from_transcript_topic(topic)
+        GetTranscriptTopicWithWords.from_transcript_topic(topic, is_multitrack)
         for topic in transcript.topics
     ]
 
@@ -459,13 +640,17 @@ async def transcript_get_topics_with_words_per_speaker(
         transcript_id, user_id=user_id
     )
 
+    is_multitrack = await _get_is_multitrack(transcript)
+
     # get the topic from the transcript
     topic = next((t for t in transcript.topics if t.id == topic_id), None)
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
     # convert to GetTranscriptTopicWithWordsPerSpeaker
-    return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(topic)
+    return GetTranscriptTopicWithWordsPerSpeaker.from_transcript_topic(
+        topic, is_multitrack
+    )
 
 
 @router.post("/transcripts/{transcript_id}/zulip")

@@ -1,14 +1,16 @@
 import { useState } from "react";
-import type { components } from "../../reflector-api";
-type GetTranscript = components["schemas"]["GetTranscript"];
+import type { components, operations } from "../../reflector-api";
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
-import { Button, BoxProps, Box } from "@chakra-ui/react";
-import { buildTranscriptWithTopics } from "./buildTranscriptWithTopics";
-import { useTranscriptParticipants } from "../../lib/apiHooks";
+import { Button, BoxProps, Box, Menu, Text } from "@chakra-ui/react";
+import { LuChevronDown } from "react-icons/lu";
+import { client } from "../../lib/apiClient";
+import { toaster } from "../../components/ui/toaster";
 
 type ShareCopyProps = {
   finalSummaryElement: HTMLDivElement | null;
-  transcript: GetTranscript;
+  transcript: GetTranscriptWithParticipants;
   topics: GetTranscriptTopic[];
 };
 
@@ -20,11 +22,33 @@ export default function ShareCopy({
 }: ShareCopyProps & BoxProps) {
   const [isCopiedSummary, setIsCopiedSummary] = useState(false);
   const [isCopiedTranscript, setIsCopiedTranscript] = useState(false);
-  const participantsQuery = useTranscriptParticipants(transcript?.id || null);
+  const [isCopying, setIsCopying] = useState(false);
+
+  type ApiTranscriptFormat = NonNullable<
+    operations["v1_transcript_get"]["parameters"]["query"]
+  >["transcript_format"];
+  const TRANSCRIPT_FORMATS = [
+    "text",
+    "text-timestamped",
+    "webvtt-named",
+    "json",
+  ] as const satisfies ApiTranscriptFormat[];
+  type TranscriptFormat = (typeof TRANSCRIPT_FORMATS)[number];
+
+  const TRANSCRIPT_FORMAT_LABELS: { [k in TranscriptFormat]: string } = {
+    text: "Plain text",
+    "text-timestamped": "Text + timestamps",
+    "webvtt-named": "WebVTT (named)",
+    json: "JSON",
+  };
+
+  const formatOptions = TRANSCRIPT_FORMATS.map((f) => ({
+    value: f,
+    label: TRANSCRIPT_FORMAT_LABELS[f],
+  }));
 
   const onCopySummaryClick = () => {
     const text_to_copy = finalSummaryElement?.innerText;
-
     if (text_to_copy) {
       navigator.clipboard.writeText(text_to_copy).then(() => {
         setIsCopiedSummary(true);
@@ -34,27 +58,91 @@ export default function ShareCopy({
     }
   };
 
-  const onCopyTranscriptClick = () => {
-    const text_to_copy =
-      buildTranscriptWithTopics(
-        topics || [],
-        participantsQuery?.data || null,
-        transcript?.title || null,
-      ) || "";
+  const onCopyTranscriptFormatClick = async (format: TranscriptFormat) => {
+    try {
+      setIsCopying(true);
+      const { data, error } = await client.GET(
+        "/v1/transcripts/{transcript_id}",
+        {
+          params: {
+            path: { transcript_id: transcript.id },
+            query: { transcript_format: format },
+          },
+        },
+      );
+      if (error) {
+        console.error("Failed to copy transcript:", error);
+        toaster.create({
+          duration: 3000,
+          render: () => (
+            <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+              <Text fontWeight="bold">Error</Text>
+              <Text fontSize="sm">Failed to fetch transcript</Text>
+            </Box>
+          ),
+        });
+        return;
+      }
 
-    text_to_copy &&
-      navigator.clipboard.writeText(text_to_copy).then(() => {
+      const copiedText =
+        format === "json"
+          ? JSON.stringify(data?.transcript ?? {}, null, 2)
+          : String(data?.transcript ?? "");
+
+      if (copiedText) {
+        await navigator.clipboard.writeText(copiedText);
         setIsCopiedTranscript(true);
-        // Reset the copied state after 2 seconds
         setTimeout(() => setIsCopiedTranscript(false), 2000);
+      }
+    } catch (e) {
+      console.error("Failed to copy transcript:", e);
+      toaster.create({
+        duration: 3000,
+        render: () => (
+          <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+            <Text fontWeight="bold">Error</Text>
+            <Text fontSize="sm">Failed to copy transcript</Text>
+          </Box>
+        ),
       });
+    } finally {
+      setIsCopying(false);
+    }
   };
 
   return (
     <Box {...boxProps}>
-      <Button onClick={onCopyTranscriptClick} mr={2} variant="subtle">
-        {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
-      </Button>
+      <Menu.Root
+        closeOnSelect={true}
+        lazyMount={true}
+        positioning={{ gutter: 4 }}
+      >
+        <Menu.Trigger asChild>
+          <Button
+            mr={2}
+            variant="subtle"
+            loading={isCopying}
+            loadingText="Copying..."
+          >
+            {isCopiedTranscript ? "Copied!" : "Copy Transcript"}
+            <LuChevronDown style={{ marginLeft: 6 }} />
+          </Button>
+        </Menu.Trigger>
+        <Menu.Positioner>
+          <Menu.Content>
+            {formatOptions.map((opt) => (
+              <Menu.Item
+                key={opt.value}
+                value={opt.value}
+                _hover={{ backgroundColor: "gray.100" }}
+                onClick={() => onCopyTranscriptFormatClick(opt.value)}
+              >
+                {opt.label}
+              </Menu.Item>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Menu.Root>
       <Button onClick={onCopySummaryClick} variant="subtle">
         {isCopiedSummary ? "Copied!" : "Copy Summary"}
       </Button>

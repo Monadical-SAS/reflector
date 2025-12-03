@@ -1,5 +1,72 @@
 # Changelog
 
+## [0.22.4](https://github.com/Monadical-SAS/reflector/compare/v0.22.3...v0.22.4) (2025-12-02)
+
+
+### Bug Fixes
+
+* Multitrack mixdown optimisation 2 ([#764](https://github.com/Monadical-SAS/reflector/issues/764)) ([bd5df1c](https://github.com/Monadical-SAS/reflector/commit/bd5df1ce2ebf35d7f3413b295e56937a9a28ef7b))
+
+## [0.22.3](https://github.com/Monadical-SAS/reflector/compare/v0.22.2...v0.22.3) (2025-12-02)
+
+
+### Bug Fixes
+
+* align daily room settings ([#759](https://github.com/Monadical-SAS/reflector/issues/759)) ([28f87c0](https://github.com/Monadical-SAS/reflector/commit/28f87c09dc459846873d0dde65b03e3d7b2b9399))
+
+## [0.22.2](https://github.com/Monadical-SAS/reflector/compare/v0.22.1...v0.22.2) (2025-12-02)
+
+
+### Bug Fixes
+
+* daily auto refresh fix ([#755](https://github.com/Monadical-SAS/reflector/issues/755)) ([fe47c46](https://github.com/Monadical-SAS/reflector/commit/fe47c46489c5aa0cc538109f7559cc9accb35c01))
+* Skip mixdown for multitrack ([#760](https://github.com/Monadical-SAS/reflector/issues/760)) ([b51b7aa](https://github.com/Monadical-SAS/reflector/commit/b51b7aa9176c1a53ba57ad99f5e976c804a1e80c))
+
+## [0.22.1](https://github.com/Monadical-SAS/reflector/compare/v0.22.0...v0.22.1) (2025-11-27)
+
+
+### Bug Fixes
+
+* participants update from daily ([#749](https://github.com/Monadical-SAS/reflector/issues/749)) ([7f0b728](https://github.com/Monadical-SAS/reflector/commit/7f0b728991c1b9f9aae702c96297eae63b561ef5))
+
+## [0.22.0](https://github.com/Monadical-SAS/reflector/compare/v0.21.0...v0.22.0) (2025-11-26)
+
+
+### Features
+
+* Multitrack segmentation ([#747](https://github.com/Monadical-SAS/reflector/issues/747)) ([d63040e](https://github.com/Monadical-SAS/reflector/commit/d63040e2fdc07e7b272e85a39eb2411cd6a14798))
+
+## [0.21.0](https://github.com/Monadical-SAS/reflector/compare/v0.20.0...v0.21.0) (2025-11-26)
+
+
+### Features
+
+* add transcript format parameter to GET endpoint ([#709](https://github.com/Monadical-SAS/reflector/issues/709)) ([f6ca075](https://github.com/Monadical-SAS/reflector/commit/f6ca07505f34483b02270a2ef3bd809e9d2e1045))
+
+## [0.20.0](https://github.com/Monadical-SAS/reflector/compare/v0.19.0...v0.20.0) (2025-11-25)
+
+
+### Features
+
+* link transcript participants ([#737](https://github.com/Monadical-SAS/reflector/issues/737)) ([9bec398](https://github.com/Monadical-SAS/reflector/commit/9bec39808fc6322612d8b87e922a6f7901fc01c1))
+* transcript restart script ([#742](https://github.com/Monadical-SAS/reflector/issues/742)) ([86d5e26](https://github.com/Monadical-SAS/reflector/commit/86d5e26224bb55a0f1cc785aeda52065bb92ee6f))
+
+## [0.19.0](https://github.com/Monadical-SAS/reflector/compare/v0.18.0...v0.19.0) (2025-11-25)
+
+
+### Features
+
+* dailyco api module ([#725](https://github.com/Monadical-SAS/reflector/issues/725)) ([4287f8b](https://github.com/Monadical-SAS/reflector/commit/4287f8b8aeee60e51db7539f4dcbda5f6e696bd8))
+* dailyco poll ([#730](https://github.com/Monadical-SAS/reflector/issues/730)) ([8e438ca](https://github.com/Monadical-SAS/reflector/commit/8e438ca285152bd48fdc42767e706fb448d3525c))
+* multitrack cli ([#735](https://github.com/Monadical-SAS/reflector/issues/735)) ([11731c9](https://github.com/Monadical-SAS/reflector/commit/11731c9d38439b04e93b1c3afbd7090bad11a11f))
+
+
+### Bug Fixes
+
+* default platform fix ([#736](https://github.com/Monadical-SAS/reflector/issues/736)) ([c442a62](https://github.com/Monadical-SAS/reflector/commit/c442a627873ca667656eeaefb63e54ab10b8d19e))
+* parakeet vad not getting the end timestamp ([#728](https://github.com/Monadical-SAS/reflector/issues/728)) ([18ed713](https://github.com/Monadical-SAS/reflector/commit/18ed7133693653ef4ddac6c659a8c14b320d1657))
+* start raw tracks recording ([#729](https://github.com/Monadical-SAS/reflector/issues/729)) ([3e47c2c](https://github.com/Monadical-SAS/reflector/commit/3e47c2c0573504858e0d2e1798b6ed31f16b4a5d))
+
 ## [0.18.0](https://github.com/Monadical-SAS/reflector/compare/v0.17.0...v0.18.0) (2025-11-14)
 
 

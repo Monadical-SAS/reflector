@@ -138,7 +138,6 @@ class Settings(BaseSettings):
     DAILY_WEBHOOK_UUID: str | None = (
         None  # Webhook UUID for this environment. Not used by production code
     )
-
     # Platform Configuration
     DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
 

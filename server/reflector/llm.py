@@ -1,3 +1,4 @@
+import logging
 from typing import Type, TypeVar
 
 from llama_index.core import Settings
@@ -5,7 +6,7 @@ from llama_index.core.output_parsers import PydanticOutputParser
 from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.llms.openai_like import OpenAILike
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -61,6 +62,8 @@ class LLM:
         tone_name: str | None = None,
     ) -> T:
         """Get structured output from LLM for non-function-calling models"""
+        logger = logging.getLogger(__name__)
+
         summarizer = TreeSummarize(verbose=True)
         response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
 
@@ -76,8 +79,25 @@ class LLM:
             "Please structure the above information in the following JSON format:"
         )
 
-        output = await program.acall(
-            analysis=str(response), format_instructions=format_instructions
-        )
+        try:
+            output = await program.acall(
+                analysis=str(response), format_instructions=format_instructions
+            )
+        except ValidationError as e:
+            # Extract the raw JSON from the error details
+            errors = e.errors()
+            if errors and "input" in errors[0]:
+                raw_json = errors[0]["input"]
+                logger.error(
+                    f"JSON validation failed for {output_cls.__name__}. "
+                    f"Full raw JSON output:\n{raw_json}\n"
+                    f"Validation errors: {errors}"
+                )
+            else:
+                logger.error(
+                    f"JSON validation failed for {output_cls.__name__}. "
+                    f"Validation errors: {errors}"
+                )
+            raise
 
         return output
