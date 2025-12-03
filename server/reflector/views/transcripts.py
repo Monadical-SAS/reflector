@@ -473,11 +473,10 @@ async def transcript_get(
 
     is_multitrack = await _get_is_multitrack(transcript)
 
-    participants = None
+    participants = []
     if transcript.participants:
         user_ids = [p.user_id for p in transcript.participants if p.user_id is not None]
         users_dict = await user_controller.get_by_ids(user_ids) if user_ids else {}
-        participants = []
         for p in transcript.participants:
             user = users_dict.get(p.user_id) if p.user_id else None
             participants.append(
