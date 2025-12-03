@@ -88,5 +88,11 @@ class UserController:
         results = await get_database().fetch_all(query)
         return [User(**r) for r in results]
 
+    @staticmethod
+    async def get_by_ids(user_ids: list[NonEmptyString]) -> dict[str, User]:
+        query = users.select().where(users.c.id.in_(user_ids))
+        results = await get_database().fetch_all(query)
+        return {user.id: User(**user) for user in results}
+
 
 user_controller = UserController()

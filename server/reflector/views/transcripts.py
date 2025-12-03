@@ -37,6 +37,7 @@ from reflector.db.transcripts import (
     TranscriptTopic,
     transcripts_controller,
 )
+from reflector.db.users import user_controller
 from reflector.processors.types import Transcript as ProcessorTranscript
 from reflector.processors.types import Word
 from reflector.schemas.transcript_formats import TranscriptFormat, TranscriptSegment
@@ -111,8 +112,12 @@ class GetTranscriptMinimal(BaseModel):
     audio_deleted: bool | None = None
 
 
+class TranscriptParticipantWithEmail(TranscriptParticipant):
+    email: str | None = None
+
+
 class GetTranscriptWithParticipants(GetTranscriptMinimal):
-    participants: list[TranscriptParticipant] | None
+    participants: list[TranscriptParticipantWithEmail] | None
 
 
 class GetTranscriptWithText(GetTranscriptWithParticipants):
@@ -468,6 +473,18 @@ async def transcript_get(
 
     is_multitrack = await _get_is_multitrack(transcript)
 
+    participants = []
+    if transcript.participants:
+        user_ids = [p.user_id for p in transcript.participants if p.user_id is not None]
+        users_dict = await user_controller.get_by_ids(user_ids) if user_ids else {}
+        for p in transcript.participants:
+            user = users_dict.get(p.user_id) if p.user_id else None
+            participants.append(
+                TranscriptParticipantWithEmail(
+                    **p.model_dump(), email=user.email if user else None
+                )
+            )
+
     base_data = {
         "id": transcript.id,
         "user_id": transcript.user_id,
@@ -487,7 +504,7 @@ async def transcript_get(
         "source_kind": transcript.source_kind,
         "room_id": transcript.room_id,
         "audio_deleted": transcript.audio_deleted,
-        "participants": transcript.participants,
+        "participants": participants,
     }
 
     if transcript_format == "text":
