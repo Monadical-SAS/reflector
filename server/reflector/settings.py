@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str | None = None
     LLM_CONTEXT_WINDOW: int = 16000
 
+    # LLM Parse Error Recovery
+    LLM_PARSE_RETRY_ATTEMPTS: int = 3  # Max attempts for JSON/validation errors
+
     # Diarization
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
