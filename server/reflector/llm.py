@@ -4,9 +4,6 @@ from typing import Generic, Type, TypeVar
 from uuid import uuid4
 
 from llama_index.core import Settings
-
-# Session ID for LiteLLM request grouping - set per processing run
-llm_session_id: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 from llama_index.core.output_parsers import PydanticOutputParser
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.core.workflow import (
@@ -22,6 +19,9 @@ from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
+
+# Session ID for LiteLLM request grouping - set per processing run
+llm_session_id: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 
 logger = logging.getLogger(__name__)
 
