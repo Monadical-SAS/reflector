@@ -1,7 +1,5 @@
-import asyncio
-import json
 import logging
-from typing import Callable, Type, TypeVar
+from typing import Type, TypeVar
 
 import httpx
 from llama_index.core import Settings
@@ -10,13 +8,6 @@ from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, ValidationError
-from tenacity import (
-    after_log,
-    before_log,
-    retry,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
 
 T = TypeVar("T", bound=BaseModel)
 RawResponseCallback = Callable[[str], None] | None
@@ -147,7 +138,7 @@ class LLM:
         output_cls: Type[T],
         tone_name: str | None = None,
     ) -> T:
-        """Get structured output from LLM with network retry and parse error recovery"""
+        """Get structured output from LLM for non-function-calling models"""
         if not self.settings_obj.LLM_RETRY_ENABLED:
             return await self._get_structured_response_no_retry(
                 prompt, texts, output_cls, tone_name
@@ -259,6 +250,26 @@ class LLM:
 
         elif isinstance(error, json.JSONDecodeError):
             return f"Invalid JSON syntax at position {error.pos}: {error.msg}"
+        try:
+            output = await program.acall(
+                analysis=str(response), format_instructions=format_instructions
+            )
+        except ValidationError as e:
+            # Extract the raw JSON from the error details
+            errors = e.errors()
+            if errors and "input" in errors[0]:
+                raw_json = errors[0]["input"]
+                logger.error(
+                    f"JSON validation failed for {output_cls.__name__}. "
+                    f"Full raw JSON output:\n{raw_json}\n"
+                    f"Validation errors: {errors}"
+                )
+            else:
+                logger.error(
+                    f"JSON validation failed for {output_cls.__name__}. "
+                    f"Validation errors: {errors}"
+                )
+            raise
 
         else:
             return f"Parse error: {str(error)}"

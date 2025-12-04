@@ -696,7 +696,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/v1/webhook": {
+  "/v1/daily/webhook": {
     parameters: {
       query?: never;
       header?: never;
@@ -708,6 +708,27 @@ export interface paths {
     /**
      * Webhook
      * @description Handle Daily webhook events.
+     *
+     *     Example webhook payload:
+     *     {
+     *       "version": "1.0.0",
+     *       "type": "recording.ready-to-download",
+     *       "id": "rec-rtd-c3df927c-f738-4471-a2b7-066fa7e95a6b-1692124192",
+     *       "payload": {
+     *         "recording_id": "08fa0b24-9220-44c5-846c-3f116cf8e738",
+     *         "room_name": "Xcm97xRZ08b2dePKb78g",
+     *         "start_ts": 1692124183,
+     *         "status": "finished",
+     *         "max_participants": 1,
+     *         "duration": 9,
+     *         "share_token": "ntDCL5k98Ulq", #gitleaks:allow
+     *         "s3_key": "api-test-1j8fizhzd30c/Xcm97xRZ08b2dePKb78g/1692124183028"
+     *       },
+     *       "event_ts": 1692124192
+     *     }
+     *
+     *     Daily.co circuit-breaker: After 3+ failed responses (4xx/5xx), webhook
+     *     state→FAILED, stops sending events. Reset: scripts/recreate_daily_webhook.py
      */
     post: operations["v1_webhook"];
     delete?: never;
@@ -899,80 +920,10 @@ export interface components {
       target_language: string;
       source_kind?: components["schemas"]["SourceKind"] | null;
     };
-    /**
-     * DailyWebhookEvent
-     * @description Daily webhook event structure.
-     */
-    DailyWebhookEvent: {
-      /** Type */
-      type: string;
-      /** Id */
-      id: string;
-      /** Ts */
-      ts: number;
-      /** Data */
-      data: {
-        [key: string]: unknown;
-      };
-    };
     /** DeletionStatus */
     DeletionStatus: {
       /** Status */
       status: string;
-    };
-    /** GetTranscript */
-    GetTranscript: {
-      /** Id */
-      id: string;
-      /** User Id */
-      user_id: string | null;
-      /** Name */
-      name: string;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status:
-        | "idle"
-        | "uploaded"
-        | "recording"
-        | "processing"
-        | "error"
-        | "ended";
-      /** Locked */
-      locked: boolean;
-      /** Duration */
-      duration: number;
-      /** Title */
-      title: string | null;
-      /** Short Summary */
-      short_summary: string | null;
-      /** Long Summary */
-      long_summary: string | null;
-      /** Created At */
-      created_at: string;
-      /**
-       * Share Mode
-       * @default private
-       */
-      share_mode: string;
-      /** Source Language */
-      source_language: string | null;
-      /** Target Language */
-      target_language: string | null;
-      /** Reviewed */
-      reviewed: boolean;
-      /** Meeting Id */
-      meeting_id: string | null;
-      source_kind: components["schemas"]["SourceKind"];
-      /** Room Id */
-      room_id?: string | null;
-      /** Room Name */
-      room_name?: string | null;
-      /** Audio Deleted */
-      audio_deleted?: boolean | null;
-      /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
     };
     /** GetTranscriptMinimal */
     GetTranscriptMinimal: {
@@ -1105,6 +1056,345 @@ export interface components {
        */
       words_per_speaker: components["schemas"]["SpeakerWords"][];
     };
+    /**
+     * GetTranscriptWithJSON
+     * @description Transcript response as structured JSON segments.
+     *
+     *     Format: Array of segment objects with speaker info, text, and timing.
+     *     Example:
+     *         [
+     *             {
+     *                 "speaker": 0,
+     *                 "speaker_name": "John Smith",
+     *                 "text": "Hello everyone",
+     *                 "start": 0.0,
+     *                 "end": 5.0
+     *             }
+     *         ]
+     */
+    GetTranscriptWithJSON: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+      /** Locked */
+      locked: boolean;
+      /** Duration */
+      duration: number;
+      /** Title */
+      title: string | null;
+      /** Short Summary */
+      short_summary: string | null;
+      /** Long Summary */
+      long_summary: string | null;
+      /** Created At */
+      created_at: string;
+      /**
+       * Share Mode
+       * @default private
+       */
+      share_mode: string;
+      /** Source Language */
+      source_language: string | null;
+      /** Target Language */
+      target_language: string | null;
+      /** Reviewed */
+      reviewed: boolean;
+      /** Meeting Id */
+      meeting_id: string | null;
+      source_kind: components["schemas"]["SourceKind"];
+      /** Room Id */
+      room_id?: string | null;
+      /** Room Name */
+      room_name?: string | null;
+      /** Audio Deleted */
+      audio_deleted?: boolean | null;
+      /** Participants */
+      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      transcript_format: "json";
+      /** Transcript */
+      transcript: components["schemas"]["TranscriptSegment"][];
+    };
+    /** GetTranscriptWithParticipants */
+    GetTranscriptWithParticipants: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+      /** Locked */
+      locked: boolean;
+      /** Duration */
+      duration: number;
+      /** Title */
+      title: string | null;
+      /** Short Summary */
+      short_summary: string | null;
+      /** Long Summary */
+      long_summary: string | null;
+      /** Created At */
+      created_at: string;
+      /**
+       * Share Mode
+       * @default private
+       */
+      share_mode: string;
+      /** Source Language */
+      source_language: string | null;
+      /** Target Language */
+      target_language: string | null;
+      /** Reviewed */
+      reviewed: boolean;
+      /** Meeting Id */
+      meeting_id: string | null;
+      source_kind: components["schemas"]["SourceKind"];
+      /** Room Id */
+      room_id?: string | null;
+      /** Room Name */
+      room_name?: string | null;
+      /** Audio Deleted */
+      audio_deleted?: boolean | null;
+      /** Participants */
+      participants: components["schemas"]["TranscriptParticipant"][] | null;
+    };
+    /**
+     * GetTranscriptWithText
+     * @description Transcript response with plain text format.
+     *
+     *     Format: Speaker names followed by their dialogue, one line per segment.
+     *     Example:
+     *         John Smith: Hello everyone
+     *         Jane Doe: Hi there
+     */
+    GetTranscriptWithText: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+      /** Locked */
+      locked: boolean;
+      /** Duration */
+      duration: number;
+      /** Title */
+      title: string | null;
+      /** Short Summary */
+      short_summary: string | null;
+      /** Long Summary */
+      long_summary: string | null;
+      /** Created At */
+      created_at: string;
+      /**
+       * Share Mode
+       * @default private
+       */
+      share_mode: string;
+      /** Source Language */
+      source_language: string | null;
+      /** Target Language */
+      target_language: string | null;
+      /** Reviewed */
+      reviewed: boolean;
+      /** Meeting Id */
+      meeting_id: string | null;
+      source_kind: components["schemas"]["SourceKind"];
+      /** Room Id */
+      room_id?: string | null;
+      /** Room Name */
+      room_name?: string | null;
+      /** Audio Deleted */
+      audio_deleted?: boolean | null;
+      /** Participants */
+      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      transcript_format: "text";
+      /** Transcript */
+      transcript: string;
+    };
+    /**
+     * GetTranscriptWithTextTimestamped
+     * @description Transcript response with timestamped text format.
+     *
+     *     Format: [MM:SS] timestamp prefix before each speaker and dialogue.
+     *     Example:
+     *         [00:00] John Smith: Hello everyone
+     *         [00:05] Jane Doe: Hi there
+     */
+    GetTranscriptWithTextTimestamped: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+      /** Locked */
+      locked: boolean;
+      /** Duration */
+      duration: number;
+      /** Title */
+      title: string | null;
+      /** Short Summary */
+      short_summary: string | null;
+      /** Long Summary */
+      long_summary: string | null;
+      /** Created At */
+      created_at: string;
+      /**
+       * Share Mode
+       * @default private
+       */
+      share_mode: string;
+      /** Source Language */
+      source_language: string | null;
+      /** Target Language */
+      target_language: string | null;
+      /** Reviewed */
+      reviewed: boolean;
+      /** Meeting Id */
+      meeting_id: string | null;
+      source_kind: components["schemas"]["SourceKind"];
+      /** Room Id */
+      room_id?: string | null;
+      /** Room Name */
+      room_name?: string | null;
+      /** Audio Deleted */
+      audio_deleted?: boolean | null;
+      /** Participants */
+      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      transcript_format: "text-timestamped";
+      /** Transcript */
+      transcript: string;
+    };
+    /**
+     * GetTranscriptWithWebVTTNamed
+     * @description Transcript response in WebVTT subtitle format with participant names.
+     *
+     *     Format: Standard WebVTT with voice tags using participant names.
+     *     Example:
+     *         WEBVTT
+     *
+     *         00:00:00.000 --> 00:00:05.000
+     *         <v John Smith>Hello everyone
+     */
+    GetTranscriptWithWebVTTNamed: {
+      /** Id */
+      id: string;
+      /** User Id */
+      user_id: string | null;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+      /** Locked */
+      locked: boolean;
+      /** Duration */
+      duration: number;
+      /** Title */
+      title: string | null;
+      /** Short Summary */
+      short_summary: string | null;
+      /** Long Summary */
+      long_summary: string | null;
+      /** Created At */
+      created_at: string;
+      /**
+       * Share Mode
+       * @default private
+       */
+      share_mode: string;
+      /** Source Language */
+      source_language: string | null;
+      /** Target Language */
+      target_language: string | null;
+      /** Reviewed */
+      reviewed: boolean;
+      /** Meeting Id */
+      meeting_id: string | null;
+      source_kind: components["schemas"]["SourceKind"];
+      /** Room Id */
+      room_id?: string | null;
+      /** Room Name */
+      room_name?: string | null;
+      /** Audio Deleted */
+      audio_deleted?: boolean | null;
+      /** Participants */
+      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      transcript_format: "webvtt-named";
+      /** Transcript */
+      transcript: string;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -1233,7 +1523,6 @@ export interface components {
       } | null;
       /**
        * Platform
-       * @default whereby
        * @enum {string}
        */
       platform: "whereby" | "daily";
@@ -1325,7 +1614,6 @@ export interface components {
       ics_last_etag?: string | null;
       /**
        * Platform
-       * @default whereby
        * @enum {string}
        */
       platform: "whereby" | "daily";
@@ -1377,7 +1665,6 @@ export interface components {
       ics_last_etag?: string | null;
       /**
        * Platform
-       * @default whereby
        * @enum {string}
        */
       platform: "whereby" | "daily";
@@ -1523,6 +1810,24 @@ export interface components {
       speaker: number | null;
       /** Name */
       name: string;
+      /** User Id */
+      user_id?: string | null;
+    };
+    /**
+     * TranscriptSegment
+     * @description A single transcript segment with speaker and timing information.
+     */
+    TranscriptSegment: {
+      /** Speaker */
+      speaker: number;
+      /** Speaker Name */
+      speaker_name: string;
+      /** Text */
+      text: string;
+      /** Start */
+      start: number;
+      /** End */
+      end: number;
     };
     /** UpdateParticipant */
     UpdateParticipant: {
@@ -2311,7 +2616,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["GetTranscript"];
+          "application/json": components["schemas"]["GetTranscriptWithParticipants"];
         };
       };
       /** @description Validation Error */
@@ -2369,7 +2674,13 @@ export interface operations {
   };
   v1_transcript_get: {
     parameters: {
-      query?: never;
+      query?: {
+        transcript_format?:
+          | "text"
+          | "text-timestamped"
+          | "webvtt-named"
+          | "json";
+      };
       header?: never;
       path: {
         transcript_id: string;
@@ -2384,7 +2695,11 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["GetTranscript"];
+          "application/json":
+            | components["schemas"]["GetTranscriptWithText"]
+            | components["schemas"]["GetTranscriptWithTextTimestamped"]
+            | components["schemas"]["GetTranscriptWithWebVTTNamed"]
+            | components["schemas"]["GetTranscriptWithJSON"];
         };
       };
       /** @description Validation Error */
@@ -2450,7 +2765,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["GetTranscript"];
+          "application/json": components["schemas"]["GetTranscriptWithParticipants"];
         };
       };
       /** @description Validation Error */
@@ -3256,11 +3571,7 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DailyWebhookEvent"];
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description Successful Response */
       200: {
@@ -3269,15 +3580,6 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

@@ -35,7 +35,14 @@ class Recording(BaseModel):
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
     # for multitrack reprocessing
+    # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
+    # None means not a multitrack recording, [] means multitrack with no tracks
     track_keys: list[str] | None = None
+
+    @property
+    def is_multitrack(self) -> bool:
+        """True if recording has separate audio tracks (1+ tracks counts as multitrack)."""
+        return self.track_keys is not None and len(self.track_keys) > 0
 
 
 class RecordingController:
@@ -44,12 +51,14 @@ class RecordingController:
         await get_database().execute(query)
         return recording
 
-    async def get_by_id(self, id: str) -> Recording:
+    async def get_by_id(self, id: str) -> Recording | None:
         query = recordings.select().where(recordings.c.id == id)
         result = await get_database().fetch_one(query)
         return Recording(**result) if result else None
 
-    async def get_by_object_key(self, bucket_name: str, object_key: str) -> Recording:
+    async def get_by_object_key(
+        self, bucket_name: str, object_key: str
+    ) -> Recording | None:
         query = recordings.select().where(
             recordings.c.bucket_name == bucket_name,
             recordings.c.object_key == object_key,
@@ -60,6 +69,15 @@ class RecordingController:
     async def remove_by_id(self, id: str) -> None:
         query = recordings.delete().where(recordings.c.id == id)
         await get_database().execute(query)
+
+    # no check for existence
+    async def get_by_ids(self, recording_ids: list[str]) -> list[Recording]:
+        if not recording_ids:
+            return []
+
+        query = recordings.select().where(recordings.c.id.in_(recording_ids))
+        results = await get_database().fetch_all(query)
+        return [Recording(**row) for row in results]
 
 
 recordings_controller = RecordingController()

@@ -6,8 +6,10 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from reflector.db.user_api_keys import user_api_keys_controller
+from reflector.db.users import user_controller
 from reflector.logger import logger
 from reflector.settings import settings
+from reflector.utils import generate_uuid4
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -74,9 +76,21 @@ async def _authenticate_user(
     if jwt_token:
         try:
             payload = jwtauth.verify_token(jwt_token)
-            sub = payload["sub"]
+            authentik_uid = payload["sub"]
             email = payload["email"]
-            user_infos.append(UserInfo(sub=sub, email=email))
+
+            user = await user_controller.get_by_authentik_uid(authentik_uid)
+            if not user:
+                logger.info(
+                    f"Creating new user on first login: {authentik_uid} ({email})"
+                )
+                user = await user_controller.create_or_update(
+                    id=generate_uuid4(),
+                    authentik_uid=authentik_uid,
+                    email=email,
+                )
+
+            user_infos.append(UserInfo(sub=user.id, email=email))
         except JWTError as e:
             logger.error(f"JWT error: {e}")
             raise HTTPException(status_code=401, detail="Invalid authentication")

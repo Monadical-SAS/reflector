@@ -22,6 +22,32 @@ import { sequenceThrows } from "./errorUtils";
 import { featureEnabled } from "./features";
 import { getNextEnvVar } from "./nextBuild";
 
+async function getUserId(accessToken: string): Promise<string | null> {
+  try {
+    const apiUrl = getNextEnvVar("SERVER_API_URL");
+    const response = await fetch(`${apiUrl}/v1/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      try {
+        console.error(await response.text());
+      } catch (e) {
+        console.error("Failed to parse error response", e);
+      }
+      return null;
+    }
+
+    const userInfo = await response.json();
+    return userInfo.sub || null;
+  } catch (error) {
+    console.error("Error fetching user ID from backend:", error);
+    return null;
+  }
+}
+
 const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 const getAuthentikClientId = () => getNextEnvVar("AUTHENTIK_CLIENT_ID");
 const getAuthentikClientSecret = () => getNextEnvVar("AUTHENTIK_CLIENT_SECRET");
@@ -122,13 +148,16 @@ export const authOptions = (): AuthOptions =>
           },
           async session({ session, token }) {
             const extendedToken = token as JWTWithAccessToken;
+            console.log("extendedToken", extendedToken);
+            const userId = await getUserId(extendedToken.accessToken);
+
             return {
               ...session,
               accessToken: extendedToken.accessToken,
               accessTokenExpires: extendedToken.accessTokenExpires,
               error: extendedToken.error,
               user: {
-                id: assertExists(extendedToken.sub),
+                id: assertExistsAndNonEmptyString(userId, "User ID required"),
                 name: extendedToken.name,
                 email: extendedToken.email,
               },

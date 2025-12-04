@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { Box } from "@chakra-ui/react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Spinner, Center, Text } from "@chakra-ui/react";
+import { useRouter, useParams } from "next/navigation";
 import DailyIframe, { DailyCall } from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
@@ -10,6 +10,8 @@ import {
   ConsentDialogButton,
   recordingTypeRequiresConsent,
 } from "../../lib/consent";
+import { useRoomJoinMeeting } from "../../lib/apiHooks";
+import { assertExists } from "../../lib/utils";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -19,20 +21,46 @@ interface DailyRoomProps {
 
 export default function DailyRoom({ meeting }: DailyRoomProps) {
   const router = useRouter();
+  const params = useParams();
   const auth = useAuth();
-  const status = auth.status;
+  const authLastUserId = auth.lastUserId;
   const containerRef = useRef<HTMLDivElement>(null);
+  const joinMutation = useRoomJoinMeeting();
+  const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
-  const roomUrl = meeting?.host_room_url || meeting?.room_url;
+  const roomName = params?.roomName as string;
 
-  const isLoading = status === "loading";
+  useEffect(() => {
+    if (authLastUserId === undefined || !meeting?.id || !roomName) return;
+
+    const join = async () => {
+      try {
+        const result = await joinMutation.mutateAsync({
+          params: {
+            path: {
+              room_name: roomName,
+              meeting_id: meeting.id,
+            },
+          },
+        });
+        setJoinedMeeting(result);
+      } catch (error) {
+        console.error("Failed to join meeting:", error);
+      }
+    };
+
+    join();
+  }, [meeting?.id, roomName, authLastUserId]);
+
+  const roomUrl = joinedMeeting?.room_url;
 
   const handleLeave = useCallback(() => {
     router.push("/browse");
   }, [router]);
 
   useEffect(() => {
-    if (isLoading || !roomUrl || !containerRef.current) return;
+    if (authLastUserId === undefined || !roomUrl || !containerRef.current)
+      return;
 
     let frame: DailyCall | null = null;
     let destroyed = false;
@@ -63,7 +91,15 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
 
         frame.on("joined-meeting", async () => {
           try {
-            await frame.startRecording({ type: "raw-tracks" });
+            const frameInstance = assertExists(
+              frame,
+              "frame object got lost somewhere after frame.on was called",
+            );
+
+            if (meeting.recording_type === "cloud") {
+              console.log("Starting cloud recording");
+              await frameInstance.startRecording({ type: "raw-tracks" });
+            }
           } catch (error) {
             console.error("Failed to start recording:", error);
           }
@@ -75,7 +111,9 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       }
     };
 
-    createAndJoin();
+    createAndJoin().catch((error) => {
+      console.error("Failed to create and join meeting:", error);
+    });
 
     return () => {
       destroyed = true;
@@ -85,7 +123,23 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
         });
       }
     };
-  }, [roomUrl, isLoading, handleLeave]);
+  }, [roomUrl, authLastUserId, handleLeave]);
+
+  if (authLastUserId === undefined) {
+    return (
+      <Center width="100vw" height="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
+
+  if (joinMutation.isError) {
+    return (
+      <Center width="100vw" height="100vh">
+        <Text color="red.500">Failed to join meeting. Please try again.</Text>
+      </Center>
+    );
+  }
 
   if (!roomUrl) {
     return null;

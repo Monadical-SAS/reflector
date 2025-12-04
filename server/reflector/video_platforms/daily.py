@@ -19,6 +19,7 @@ from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.storage import get_dailyco_storage
 
+from ..dailyco_api.responses import RecordingStatus
 from ..schemas.platform import Platform
 from ..utils.daily import DailyRoomName
 from ..utils.string import NonEmptyString
@@ -30,6 +31,7 @@ class DailyClient(VideoPlatformClient):
     PLATFORM_NAME: Platform = "daily"
     TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
     RECORDING_NONE: RecordingType = "none"
+    RECORDING_LOCAL: RecordingType = "local"
     RECORDING_CLOUD: RecordingType = "cloud"
 
     def __init__(self, config: VideoPlatformConfig):
@@ -53,19 +55,23 @@ class DailyClient(VideoPlatformClient):
         timestamp = datetime.now().strftime(self.TIMESTAMP_FORMAT)
         room_name = f"{room_name_prefix}{ROOM_PREFIX_SEPARATOR}{timestamp}"
 
+        enable_recording = None
+        if room.recording_type == self.RECORDING_LOCAL:
+            enable_recording = "local"
+        elif room.recording_type == self.RECORDING_CLOUD:
+            enable_recording = "raw-tracks"
+
         properties = RoomProperties(
-            enable_recording="raw-tracks"
-            if room.recording_type != self.RECORDING_NONE
-            else False,
+            enable_recording=enable_recording,
             enable_chat=True,
             enable_screenshare=True,
+            enable_knocking=room.is_locked,
             start_video_off=False,
             start_audio_off=False,
             exp=int(end_date.timestamp()),
         )
 
-        # Only configure recordings_bucket if recording is enabled
-        if room.recording_type != self.RECORDING_NONE:
+        if room.recording_type == self.RECORDING_CLOUD:
             daily_storage = get_dailyco_storage()
             assert daily_storage.bucket_name, "S3 bucket must be configured"
             properties.recordings_bucket = RecordingsBucketConfig(
@@ -130,10 +136,25 @@ class DailyClient(VideoPlatformClient):
     async def get_recording(self, recording_id: str) -> RecordingResponse:
         return await self._api_client.get_recording(recording_id)
 
-    async def delete_room(self, room_name: str) -> bool:
-        """Delete a room (idempotent - succeeds even if room doesn't exist)."""
-        await self._api_client.delete_room(room_name)
-        return True
+    async def list_recordings(
+        self,
+        room_name: NonEmptyString | None = None,
+        starting_after: str | None = None,
+        ending_before: str | None = None,
+        limit: int = 100,
+    ) -> list[RecordingResponse]:
+        return await self._api_client.list_recordings(
+            room_name=room_name,
+            starting_after=starting_after,
+            ending_before=ending_before,
+            limit=limit,
+        )
+
+    async def get_recording_status(
+        self, recording_id: NonEmptyString
+    ) -> RecordingStatus:
+        recording = await self.get_recording(recording_id)
+        return recording.status
 
     async def upload_logo(self, room_name: str, logo_path: str) -> bool:
         return True
@@ -156,16 +177,18 @@ class DailyClient(VideoPlatformClient):
     async def create_meeting_token(
         self,
         room_name: DailyRoomName,
-        enable_recording: bool,
-        user_id: str | None = None,
-    ) -> str:
+        start_cloud_recording: bool,
+        enable_recording_ui: bool,
+        user_id: NonEmptyString | None = None,
+        is_owner: bool = False,
+    ) -> NonEmptyString:
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
-            start_cloud_recording=enable_recording,
-            enable_recording_ui=not enable_recording,
+            start_cloud_recording=start_cloud_recording,
+            enable_recording_ui=enable_recording_ui,
+            is_owner=is_owner,
         )
-
         request = CreateMeetingTokenRequest(properties=properties)
         result = await self._api_client.create_meeting_token(request)
         return result.token

@@ -1,6 +1,72 @@
+import os
+import re
+from typing import NamedTuple
+
 from reflector.utils.string import NonEmptyString
 
-DailyRoomName = str
+DailyRoomName = NonEmptyString
+
+
+class DailyRecordingFilename(NamedTuple):
+    """Parsed components from Daily.co recording filename.
+
+    Format: {recording_start_ts}-{participant_id}-cam-audio-{track_start_ts}
+    Example: 1763152299562-12f0b87c-97d4-4dd3-a65c-cee1f854a79c-cam-audio-1763152314582
+
+    Note: S3 object keys have no extension, but browsers add .webm when downloading
+    from S3 UI due to MIME type headers. If you download manually and wonder.
+    """
+
+    recording_start_ts: int
+    participant_id: str
+    track_start_ts: int
+
+
+def parse_daily_recording_filename(filename: str) -> DailyRecordingFilename:
+    """Parse Daily.co recording filename to extract timestamps and participant ID.
+
+    Args:
+        filename: Full path or basename of Daily.co recording file
+                 Format: {recording_start_ts}-{participant_id}-cam-audio-{track_start_ts}
+
+    Returns:
+        DailyRecordingFilename with parsed components
+
+    Raises:
+        ValueError: If filename doesn't match expected format
+
+    Examples:
+        >>> parse_daily_recording_filename("1763152299562-12f0b87c-97d4-4dd3-a65c-cee1f854a79c-cam-audio-1763152314582")
+        DailyRecordingFilename(recording_start_ts=1763152299562, participant_id='12f0b87c-97d4-4dd3-a65c-cee1f854a79c', track_start_ts=1763152314582)
+    """
+    base = os.path.basename(filename)
+    pattern = r"(\d{13,})-([0-9a-fA-F-]{36})-cam-audio-(\d{13,})"
+    match = re.search(pattern, base)
+
+    if not match:
+        raise ValueError(
+            f"Invalid Daily.co recording filename: {filename}. "
+            f"Expected format: {{recording_start_ts}}-{{participant_id}}-cam-audio-{{track_start_ts}}"
+        )
+
+    recording_start_ts = int(match.group(1))
+    participant_id = match.group(2)
+    track_start_ts = int(match.group(3))
+
+    return DailyRecordingFilename(
+        recording_start_ts=recording_start_ts,
+        participant_id=participant_id,
+        track_start_ts=track_start_ts,
+    )
+
+
+def recording_lock_key(recording_id: NonEmptyString) -> NonEmptyString:
+    return f"recording:{recording_id}"
+
+
+def filter_cam_audio_tracks(track_keys: list[str]) -> list[str]:
+    """Filter track keys to cam-audio tracks only (skip screen-audio, etc.)."""
+    return [k for k in track_keys if "cam-audio" in k]
 
 
 def extract_base_room_name(daily_room_name: DailyRoomName) -> NonEmptyString:
