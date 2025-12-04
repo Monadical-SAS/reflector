@@ -1,25 +1,143 @@
-import json
 import logging
-from typing import Callable, Type, TypeVar
+from typing import Type, TypeVar
 
 from llama_index.core import Settings
 from llama_index.core.output_parsers import PydanticOutputParser
-from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.response_synthesizers import TreeSummarize
+from llama_index.core.workflow import (
+    Context,
+    Event,
+    StartEvent,
+    StopEvent,
+    Workflow,
+    step,
+)
 from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
-RawResponseCallback = Callable[[str], None] | None
 
-STRUCTURED_RESPONSE_PROMPT_TEMPLATE = """
-Based on the following analysis, provide the information in the requested JSON format:
+logger = logging.getLogger(__name__)
 
-Analysis:
-{analysis}
 
-{format_instructions}
-"""
+class ExtractionDone(Event):
+    """Event emitted when LLM extraction completes."""
+
+    output: str
+    prompt: str
+    texts: list[str]
+    tone_name: str | None
+
+
+class ValidationErrorEvent(Event):
+    """Event emitted when validation fails."""
+
+    error: str
+    wrong_output: str
+    prompt: str
+    texts: list[str]
+    tone_name: str | None
+
+
+class StructuredOutputWorkflow(Workflow):
+    """Workflow for structured output extraction with validation retry."""
+
+    def __init__(
+        self,
+        output_cls: Type[BaseModel],
+        max_retries: int = 3,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.output_cls = output_cls
+        self.max_retries = max_retries
+        self.output_parser = PydanticOutputParser(output_cls)
+
+    @step
+    async def extract(
+        self, ctx: Context, ev: StartEvent | ValidationErrorEvent
+    ) -> StopEvent | ExtractionDone:
+        """Extract structured data from text using LLM."""
+        current_retries = await ctx.get("retries", default=0)
+
+        if current_retries >= self.max_retries:
+            last_error = await ctx.get("last_error", default=None)
+            logger.error(
+                f"Max retries ({self.max_retries}) reached for {self.output_cls.__name__}"
+            )
+            return StopEvent(result={"error": last_error})
+
+        await ctx.set("retries", current_retries + 1)
+
+        if isinstance(ev, StartEvent):
+            prompt = ev.get("prompt")
+            texts = ev.get("texts")
+            tone_name = ev.get("tone_name")
+            reflection = ""
+        else:
+            prompt = ev.prompt
+            texts = ev.texts
+            tone_name = ev.tone_name
+            reflection = (
+                f"\n\nYour previous response had errors:\n{ev.error}\n"
+                "Please return valid JSON fixing all these issues."
+            )
+
+        full_prompt = prompt + reflection
+        summarizer = TreeSummarize(verbose=False)
+        response = await summarizer.aget_response(
+            full_prompt, texts, tone_name=tone_name
+        )
+
+        return ExtractionDone(
+            output=str(response),
+            prompt=prompt,
+            texts=texts,
+            tone_name=tone_name,
+        )
+
+    @step
+    async def validate(
+        self, ctx: Context, ev: ExtractionDone
+    ) -> StopEvent | ValidationErrorEvent:
+        """Validate extracted output against Pydantic schema."""
+        raw_output = ev.output
+
+        try:
+            format_instructions = self.output_parser.format(
+                "Please structure the above information in the following JSON format:"
+            )
+            parsed = self.output_parser.parse(raw_output)
+            return StopEvent(result={"success": parsed})
+
+        except (ValidationError, ValueError, Exception) as e:
+            error_msg = self._format_error(e, raw_output)
+            await ctx.set("last_error", error_msg)
+
+            retries = await ctx.get("retries", default=0)
+            logger.error(
+                f"LLM parse error (attempt {retries}/{self.max_retries}): "
+                f"{type(e).__name__}: {e}\nRaw response: {raw_output[:500]}"
+            )
+
+            return ValidationErrorEvent(
+                error=error_msg,
+                wrong_output=raw_output,
+                prompt=ev.prompt,
+                texts=ev.texts,
+                tone_name=ev.tone_name,
+            )
+
+    def _format_error(self, error: Exception, raw_output: str) -> str:
+        """Format error for LLM feedback."""
+        if isinstance(error, ValidationError):
+            error_messages = []
+            for err in error.errors():
+                field = ".".join(str(loc) for loc in err["loc"])
+                error_messages.append(f"- {err['msg']} in field '{field}'")
+            return "Schema validation errors:\n" + "\n".join(error_messages)
+        else:
+            return f"Parse error: {str(error)}"
 
 
 class LLM:
@@ -31,7 +149,6 @@ class LLM:
         self.context_window = settings.LLM_CONTEXT_WINDOW
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.logger = logging.getLogger(__name__)
 
         self._configure_llamaindex()
 
@@ -63,86 +180,21 @@ class LLM:
         output_cls: Type[T],
         tone_name: str | None = None,
     ) -> T:
-        """Get structured output from LLM with parse error recovery"""
-        last_error = None
-        raw_response_capture = {"value": None}
-
-        for attempt in range(self.settings_obj.LLM_PARSE_RETRY_ATTEMPTS):
-            try:
-                enhanced_prompt = prompt
-
-                if last_error:
-                    error_msg = self._format_parse_error_feedback(last_error)
-                    enhanced_prompt += (
-                        f"\n\nYour previous response had errors:\n{error_msg}\n"
-                        "Please return valid JSON fixing all these issues."
-                    )
-
-                return await self._do_structured_call(
-                    enhanced_prompt,
-                    texts,
-                    output_cls,
-                    tone_name,
-                    on_response=lambda raw: raw_response_capture.__setitem__(
-                        "value", raw
-                    ),
-                )
-
-            except (ValidationError, json.JSONDecodeError, ValueError) as e:
-                last_error = e
-                error_msg = (
-                    f"LLM parse error (attempt {attempt + 1}/"
-                    f"{self.settings_obj.LLM_PARSE_RETRY_ATTEMPTS}): "
-                    f"{type(e).__name__}: {str(e)}"
-                )
-                if raw_response_capture["value"]:
-                    error_msg += (
-                        f"\nRaw response: {raw_response_capture['value'][:500]}"
-                    )
-                self.logger.error(error_msg)
-
-        raise last_error
-
-    async def _do_structured_call(
-        self,
-        prompt: str,
-        texts: list[str],
-        output_cls: Type[T],
-        tone_name: str | None = None,
-        on_response: RawResponseCallback = None,
-    ) -> T:
-        """Core structured response logic"""
-        summarizer = TreeSummarize(verbose=False)
-        response = await summarizer.aget_response(prompt, texts, tone_name=tone_name)
-        raw = str(response)
-
-        if on_response:
-            on_response(raw)
-
-        output_parser = PydanticOutputParser(output_cls)
-        program = LLMTextCompletionProgram.from_defaults(
-            output_parser=output_parser,
-            prompt_template_str=STRUCTURED_RESPONSE_PROMPT_TEMPLATE,
-            verbose=False,
-        )
-        format_instructions = output_parser.format(
-            "Please structure the above information in the following JSON format:"
-        )
-        return await program.acall(
-            analysis=raw, format_instructions=format_instructions
+        """Get structured output from LLM with validation retry via Workflow."""
+        workflow = StructuredOutputWorkflow(
+            output_cls=output_cls,
+            max_retries=self.settings_obj.LLM_PARSE_RETRY_ATTEMPTS,
+            timeout=120,
         )
 
-    def _format_parse_error_feedback(self, error: Exception) -> str:
-        """Format parse error into feedback for LLM"""
-        if isinstance(error, ValidationError):
-            error_messages = []
-            for err in error.errors():
-                field = ".".join(str(loc) for loc in err["loc"])
-                error_messages.append(f"- {err['msg']} in field '{field}'")
-            return "Schema validation errors:\n" + "\n".join(error_messages)
+        result = await workflow.run(
+            prompt=prompt,
+            texts=texts,
+            tone_name=tone_name,
+        )
 
-        elif isinstance(error, json.JSONDecodeError):
-            return f"Invalid JSON syntax at position {error.pos}: {error.msg}"
+        if "error" in result:
+            error_msg = result["error"] or "Max retries exceeded"
+            raise ValueError(f"Failed to parse {output_cls.__name__}: {error_msg}")
 
-        else:
-            return f"Parse error: {str(error)}"
+        return result["success"]
