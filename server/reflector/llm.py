@@ -61,7 +61,12 @@ class ValidationErrorEvent(Event):
 
 
 class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
-    """Workflow for structured output extraction with validation retry."""
+    """Workflow for structured output extraction with validation retry.
+
+    This workflow handles parse/validation retries only. Network error retries
+    are handled internally by Settings.llm (OpenAILike max_retries=3).
+    The caller should NOT wrap this workflow in additional retry logic.
+    """
 
     def __init__(
         self,
@@ -83,11 +88,11 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
         Step 1 (first call only): TreeSummarize generates text analysis
         Step 2 (every call): Settings.llm.acomplete formats analysis as JSON
         """
-        current_retries = await ctx.get("retries", default=0)
-        await ctx.set("retries", current_retries + 1)
+        current_retries = await ctx.store.get("retries", default=0)
+        await ctx.store.set("retries", current_retries + 1)
 
         if current_retries >= self.max_retries:
-            last_error = await ctx.get("last_error", default=None)
+            last_error = await ctx.store.get("last_error", default=None)
             logger.error(
                 f"Max retries ({self.max_retries}) reached for {self.output_cls.__name__}"
             )
@@ -107,11 +112,11 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
             analysis = await summarizer.aget_response(
                 prompt, texts, tone_name=tone_name
             )
-            await ctx.set("analysis", str(analysis))
+            await ctx.store.set("analysis", str(analysis))
             reflection = ""
         else:
             # Retry: reuse analysis from context
-            analysis = await ctx.get("analysis")
+            analysis = await ctx.store.get("analysis")
             if not analysis:
                 raise RuntimeError("Internal error: analysis not found in context")
 
@@ -135,6 +140,7 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
             format_instructions=format_instructions + reflection,
         )
 
+        # Network retries handled by OpenAILike (max_retries=3)
         response = await Settings.llm.acomplete(json_prompt)
         return ExtractionDone(output=response.text)
 
@@ -144,7 +150,7 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
     ) -> StopEvent | ValidationErrorEvent:
         """Validate extracted output against Pydantic schema."""
         raw_output = ev.output
-        retries = await ctx.get("retries", default=0)
+        retries = await ctx.store.get("retries", default=0)
 
         try:
             parsed = self.output_parser.parse(raw_output)
@@ -157,7 +163,7 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
 
         except (ValidationError, ValueError) as e:
             error_msg = self._format_error(e, raw_output)
-            await ctx.set("last_error", error_msg)
+            await ctx.store.set("last_error", error_msg)
 
             logger.error(
                 f"LLM parse error (attempt {retries}/{self.max_retries}): "

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
+from workflows.errors import WorkflowRuntimeError
 
 from reflector.llm import LLM, LLMParseError, StructuredOutputWorkflow
 
@@ -281,3 +282,76 @@ class TestStructuredOutputWorkflow:
             # TreeSummarize called once, acomplete called max_retries times
             assert mock_summarizer.aget_response.call_count == 1
             assert mock_settings.llm.acomplete.call_count == 2
+
+
+class TestNetworkErrorRetries:
+    """Test that network error retries are handled by OpenAILike, not Workflow"""
+
+    @pytest.mark.asyncio
+    async def test_network_error_propagates_after_openai_retries(self, test_settings):
+        """Test that network errors are retried by OpenAILike and then propagate.
+
+        Network retries are handled by OpenAILike (max_retries=3), not by our
+        StructuredOutputWorkflow. This test verifies that network errors propagate
+        up after OpenAILike exhausts its retries.
+        """
+        llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
+
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
+
+            # Simulate network error from acomplete (after OpenAILike retries exhausted)
+            network_error = ConnectionError("Connection refused")
+            mock_settings.llm.acomplete = AsyncMock(side_effect=network_error)
+
+            # Network error wrapped in WorkflowRuntimeError
+            with pytest.raises(WorkflowRuntimeError, match="Connection refused"):
+                await llm.get_structured_response(
+                    prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
+                )
+
+            # acomplete called only once - network error propagates, not retried by Workflow
+            assert mock_settings.llm.acomplete.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_network_error_not_retried_by_workflow(self, test_settings):
+        """Test that Workflow does NOT retry network errors (OpenAILike handles those).
+
+        This verifies the separation of concerns:
+        - StructuredOutputWorkflow: retries parse/validation errors
+        - OpenAILike: retries network errors (internally, max_retries=3)
+        """
+        workflow = StructuredOutputWorkflow(
+            output_cls=TestResponse,
+            max_retries=3,
+            timeout=30,
+        )
+
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
+            mock_summarizer = MagicMock()
+            mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
+
+            # Network error should propagate immediately, not trigger Workflow retry
+            mock_settings.llm.acomplete = AsyncMock(
+                side_effect=TimeoutError("Request timed out")
+            )
+
+            # Network error wrapped in WorkflowRuntimeError
+            with pytest.raises(WorkflowRuntimeError, match="Request timed out"):
+                await workflow.run(
+                    prompt="Extract data",
+                    texts=["Some text"],
+                    tone_name=None,
+                )
+
+            # Only called once - Workflow doesn't retry network errors
+            assert mock_settings.llm.acomplete.call_count == 1
