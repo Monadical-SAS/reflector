@@ -16,6 +16,13 @@ class TestResponse(BaseModel):
     confidence: float = Field(description="Confidence score", ge=0, le=1)
 
 
+def make_completion_response(text: str):
+    """Create a mock CompletionResponse with .text attribute"""
+    response = MagicMock()
+    response.text = text
+    return response
+
+
 class TestLLMParseErrorRecovery:
     """Test parse error recovery with Workflow feedback loop"""
 
@@ -24,26 +31,35 @@ class TestLLMParseErrorRecovery:
         """Test that parse errors trigger retry with error feedback"""
         llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            # TreeSummarize returns plain text analysis (step 1)
+            mock_summarizer.aget_response = AsyncMock(
+                return_value="The analysis shows a test with summary and high confidence."
+            )
 
             call_count = {"count": 0}
 
-            async def response_handler(prompt, *args, **kwargs):
+            async def acomplete_handler(prompt, *args, **kwargs):
                 call_count["count"] += 1
                 if call_count["count"] == 1:
-                    # First call returns invalid JSON
-                    return '{"title": "Test"}'  # Missing required fields
+                    # First JSON formatting call returns invalid JSON
+                    return make_completion_response('{"title": "Test"}')
                 else:
-                    # Second call should have error feedback with wrong output in prompt
+                    # Second call should have error feedback in prompt
                     assert "Your previous response could not be parsed:" in prompt
                     assert '{"title": "Test"}' in prompt
                     assert "Error:" in prompt
                     assert "Please try again" in prompt
-                    return '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                    return make_completion_response(
+                        '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                    )
 
-            mock_summarizer.aget_response = AsyncMock(side_effect=response_handler)
+            mock_settings.llm.acomplete = AsyncMock(side_effect=acomplete_handler)
 
             result = await llm.get_structured_response(
                 prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
@@ -52,6 +68,8 @@ class TestLLMParseErrorRecovery:
             assert result.title == "Test"
             assert result.summary == "Summary"
             assert result.confidence == 0.95
+            # TreeSummarize called once, Settings.llm.acomplete called twice
+            assert mock_summarizer.aget_response.call_count == 1
             assert call_count["count"] == 2
 
     @pytest.mark.asyncio
@@ -59,13 +77,19 @@ class TestLLMParseErrorRecovery:
         """Test that parse error retry stops after max attempts"""
         llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
-            # Always return invalid JSON
-            mock_summarizer.aget_response = AsyncMock(
-                return_value='{"invalid": "missing required fields"}'
+            # Always return invalid JSON from acomplete
+            mock_settings.llm.acomplete = AsyncMock(
+                return_value=make_completion_response(
+                    '{"invalid": "missing required fields"}'
+                )
             )
 
             with pytest.raises(LLMParseError, match="Failed to parse"):
@@ -74,7 +98,9 @@ class TestLLMParseErrorRecovery:
                 )
 
             expected_attempts = test_settings.LLM_PARSE_MAX_RETRIES + 1
-            assert mock_summarizer.aget_response.call_count == expected_attempts
+            # TreeSummarize called once, acomplete called max_retries times
+            assert mock_summarizer.aget_response.call_count == 1
+            assert mock_settings.llm.acomplete.call_count == expected_attempts
 
     @pytest.mark.asyncio
     async def test_raw_response_logging_on_parse_error(self, test_settings, caplog):
@@ -83,20 +109,24 @@ class TestLLMParseErrorRecovery:
 
         with (
             patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
             caplog.at_level("ERROR"),
         ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
             call_count = {"count": 0}
 
-            async def response_handler(*args, **kwargs):
+            async def acomplete_handler(*args, **kwargs):
                 call_count["count"] += 1
                 if call_count["count"] == 1:
-                    return '{"title": "Test"}'  # Invalid
-                return '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                    return make_completion_response('{"title": "Test"}')  # Invalid
+                return make_completion_response(
+                    '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                )
 
-            mock_summarizer.aget_response = AsyncMock(side_effect=response_handler)
+            mock_settings.llm.acomplete = AsyncMock(side_effect=acomplete_handler)
 
             result = await llm.get_structured_response(
                 prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
@@ -113,26 +143,32 @@ class TestLLMParseErrorRecovery:
         """Test that validation errors are included in feedback"""
         llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
             call_count = {"count": 0}
 
-            async def response_handler(prompt, *args, **kwargs):
+            async def acomplete_handler(prompt, *args, **kwargs):
                 call_count["count"] += 1
                 if call_count["count"] == 1:
                     # Missing title and summary
-                    return '{"confidence": 0.5}'
+                    return make_completion_response('{"confidence": 0.5}')
                 else:
                     # Should have schema validation errors in prompt
                     assert (
                         "Schema validation errors" in prompt
                         or "error" in prompt.lower()
                     )
-                    return '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                    return make_completion_response(
+                        '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                    )
 
-            mock_summarizer.aget_response = AsyncMock(side_effect=response_handler)
+            mock_settings.llm.acomplete = AsyncMock(side_effect=acomplete_handler)
 
             result = await llm.get_structured_response(
                 prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
@@ -146,12 +182,18 @@ class TestLLMParseErrorRecovery:
         """Test that no retry happens when first attempt succeeds"""
         llm = LLM(settings=test_settings, temperature=0.4, max_tokens=100)
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
-            mock_summarizer.aget_response = AsyncMock(
-                return_value='{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+            mock_settings.llm.acomplete = AsyncMock(
+                return_value=make_completion_response(
+                    '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
+                )
             )
 
             result = await llm.get_structured_response(
@@ -162,6 +204,7 @@ class TestLLMParseErrorRecovery:
             assert result.summary == "Summary"
             assert result.confidence == 0.95
             assert mock_summarizer.aget_response.call_count == 1
+            assert mock_settings.llm.acomplete.call_count == 1
 
 
 class TestStructuredOutputWorkflow:
@@ -176,19 +219,25 @@ class TestStructuredOutputWorkflow:
             timeout=30,
         )
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
             call_count = {"count": 0}
 
-            async def response_handler(*args, **kwargs):
+            async def acomplete_handler(*args, **kwargs):
                 call_count["count"] += 1
                 if call_count["count"] < 2:
-                    return '{"title": "Only title"}'
-                return '{"title": "Test", "summary": "Summary", "confidence": 0.9}'
+                    return make_completion_response('{"title": "Only title"}')
+                return make_completion_response(
+                    '{"title": "Test", "summary": "Summary", "confidence": 0.9}'
+                )
 
-            mock_summarizer.aget_response = AsyncMock(side_effect=response_handler)
+            mock_settings.llm.acomplete = AsyncMock(side_effect=acomplete_handler)
 
             result = await workflow.run(
                 prompt="Extract data",
@@ -209,12 +258,18 @@ class TestStructuredOutputWorkflow:
             timeout=30,
         )
 
-        with patch("reflector.llm.TreeSummarize") as mock_summarize:
+        with (
+            patch("reflector.llm.TreeSummarize") as mock_summarize,
+            patch("reflector.llm.Settings") as mock_settings,
+        ):
             mock_summarizer = MagicMock()
             mock_summarize.return_value = mock_summarizer
+            mock_summarizer.aget_response = AsyncMock(return_value="Some analysis")
 
-            # Always return invalid
-            mock_summarizer.aget_response = AsyncMock(return_value='{"invalid": true}')
+            # Always return invalid JSON
+            mock_settings.llm.acomplete = AsyncMock(
+                return_value=make_completion_response('{"invalid": true}')
+            )
 
             result = await workflow.run(
                 prompt="Extract data",
@@ -223,4 +278,6 @@ class TestStructuredOutputWorkflow:
             )
 
             assert "error" in result
-            assert mock_summarizer.aget_response.call_count == 2
+            # TreeSummarize called once, acomplete called max_retries times
+            assert mock_summarizer.aget_response.call_count == 1
+            assert mock_settings.llm.acomplete.call_count == 2

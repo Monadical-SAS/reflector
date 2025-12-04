@@ -1,7 +1,12 @@
 import logging
+from contextvars import ContextVar
 from typing import Generic, Type, TypeVar
+from uuid import uuid4
 
 from llama_index.core import Settings
+
+# Session ID for LiteLLM request grouping - set per processing run
+llm_session_id: ContextVar[str | None] = ContextVar("llm_session_id", default=None)
 from llama_index.core.output_parsers import PydanticOutputParser
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.core.workflow import (
@@ -20,6 +25,15 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 
+STRUCTURED_RESPONSE_PROMPT_TEMPLATE = """
+Based on the following analysis, provide the information in the requested JSON format:
+
+Analysis:
+{analysis}
+
+{format_instructions}
+"""
+
 
 class LLMParseError(Exception):
     """Raised when LLM output cannot be parsed after retries."""
@@ -34,12 +48,9 @@ class LLMParseError(Exception):
 
 
 class ExtractionDone(Event):
-    """Event emitted when LLM extraction completes."""
+    """Event emitted when LLM JSON formatting completes."""
 
     output: str
-    prompt: str
-    texts: list[str]
-    tone_name: str | None
 
 
 class ValidationErrorEvent(Event):
@@ -47,9 +58,6 @@ class ValidationErrorEvent(Event):
 
     error: str
     wrong_output: str
-    prompt: str
-    texts: list[str]
-    tone_name: str | None
 
 
 class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
@@ -70,8 +78,11 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
     async def extract(
         self, ctx: Context, ev: StartEvent | ValidationErrorEvent
     ) -> StopEvent | ExtractionDone:
-        """Extract structured data from text using LLM."""
-        # Increment first to avoid race condition
+        """Extract structured data from text using two-step LLM process.
+
+        Step 1 (first call only): TreeSummarize generates text analysis
+        Step 2 (every call): Settings.llm.acomplete formats analysis as JSON
+        """
         current_retries = await ctx.get("retries", default=0)
         await ctx.set("retries", current_retries + 1)
 
@@ -83,6 +94,7 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
             return StopEvent(result={"error": last_error, "attempts": current_retries})
 
         if isinstance(ev, StartEvent):
+            # First call: run TreeSummarize to get analysis, store in context
             prompt = ev.get("prompt")
             texts = ev.get("texts")
             tone_name = ev.get("tone_name")
@@ -90,12 +102,19 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
                 raise ValueError(
                     "StartEvent must contain 'prompt' (str) and 'texts' (list)"
                 )
+
+            summarizer = TreeSummarize(verbose=False)
+            analysis = await summarizer.aget_response(
+                prompt, texts, tone_name=tone_name
+            )
+            await ctx.set("analysis", str(analysis))
             reflection = ""
         else:
-            prompt = ev.prompt
-            texts = ev.texts
-            tone_name = ev.tone_name
-            # Truncate wrong output to avoid blowing up context
+            # Retry: reuse analysis from context
+            analysis = await ctx.get("analysis")
+            if not analysis:
+                raise RuntimeError("Internal error: analysis not found in context")
+
             wrong_output = ev.wrong_output
             if len(wrong_output) > 2000:
                 wrong_output = wrong_output[:2000] + "... [truncated]"
@@ -106,21 +125,18 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
                 "with no markdown formatting or extra text."
             )
 
-        full_prompt = prompt + reflection
-
-        summarizer = TreeSummarize(verbose=False)
-        response = await summarizer.aget_response(
-            full_prompt, texts, tone_name=tone_name
+        # Step 2: Format analysis as JSON using LLM completion
+        format_instructions = self.output_parser.format(
+            "Please structure the above information in the following JSON format:"
         )
 
-        output = str(response)
-
-        return ExtractionDone(
-            output=output,
-            prompt=prompt,
-            texts=texts,
-            tone_name=tone_name,
+        json_prompt = STRUCTURED_RESPONSE_PROMPT_TEMPLATE.format(
+            analysis=analysis,
+            format_instructions=format_instructions + reflection,
         )
+
+        response = await Settings.llm.acomplete(json_prompt)
+        return ExtractionDone(output=response.text)
 
     @step
     async def validate(
@@ -151,9 +167,6 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
             return ValidationErrorEvent(
                 error=error_msg,
                 wrong_output=raw_output,
-                prompt=ev.prompt,
-                texts=ev.texts,
-                tone_name=ev.tone_name,
             )
 
     def _format_error(self, error: Exception, raw_output: str) -> str:
@@ -182,6 +195,8 @@ class LLM:
 
     def _configure_llamaindex(self):
         """Configure llamaindex Settings with OpenAILike LLM"""
+        session_id = llm_session_id.get() or f"fallback-{uuid4().hex}"
+
         Settings.llm = OpenAILike(
             model=self.model_name,
             api_base=self.url,
@@ -191,6 +206,7 @@ class LLM:
             is_function_calling_model=False,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            additional_kwargs={"extra_body": {"litellm_session_id": session_id}},
         )
 
     async def get_response(

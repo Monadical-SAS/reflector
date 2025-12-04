@@ -1,13 +1,19 @@
 import asyncio
 import functools
+from uuid import uuid4
+
+from celery import current_task
 
 from reflector.db import get_database
+from reflector.llm import llm_session_id
 
 
 def asynctask(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         async def run_with_db():
+            task_id = current_task.request.id if current_task else None
+            llm_session_id.set(task_id or f"random-{uuid4().hex}")
             database = get_database()
             await database.connect()
             try:
