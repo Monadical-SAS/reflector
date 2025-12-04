@@ -36,8 +36,11 @@ class TestLLMParseErrorRecovery:
                     # First call returns invalid JSON
                     return '{"title": "Test"}'  # Missing required fields
                 else:
-                    # Second call should have error feedback in prompt
-                    assert "Your previous response had errors:" in prompt
+                    # Second call should have error feedback with wrong output in prompt
+                    assert "Your previous response could not be parsed:" in prompt
+                    assert '{"title": "Test"}' in prompt
+                    assert "Error:" in prompt
+                    assert "Please try again" in prompt
                     return '{"title": "Test", "summary": "Summary", "confidence": 0.95}'
 
             mock_summarizer.aget_response = AsyncMock(side_effect=response_handler)

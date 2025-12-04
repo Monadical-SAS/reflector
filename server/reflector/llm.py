@@ -1,5 +1,5 @@
 import logging
-from typing import Type, TypeVar
+from typing import Generic, Type, TypeVar
 
 from llama_index.core import Settings
 from llama_index.core.output_parsers import PydanticOutputParser
@@ -16,6 +16,7 @@ from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
+OutputT = TypeVar("OutputT", bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 
@@ -39,17 +40,17 @@ class ValidationErrorEvent(Event):
     tone_name: str | None
 
 
-class StructuredOutputWorkflow(Workflow):
+class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
     """Workflow for structured output extraction with validation retry."""
 
     def __init__(
         self,
-        output_cls: Type[BaseModel],
+        output_cls: Type[OutputT],
         max_retries: int = 3,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.output_cls = output_cls
+        self.output_cls: Type[OutputT] = output_cls
         self.max_retries = max_retries
         self.output_parser = PydanticOutputParser(output_cls)
 
@@ -78,19 +79,28 @@ class StructuredOutputWorkflow(Workflow):
             prompt = ev.prompt
             texts = ev.texts
             tone_name = ev.tone_name
+            # Truncate wrong output to avoid blowing up context
+            wrong_output = ev.wrong_output
+            if len(wrong_output) > 2000:
+                wrong_output = wrong_output[:2000] + "... [truncated]"
             reflection = (
-                f"\n\nYour previous response had errors:\n{ev.error}\n"
-                "Please return valid JSON fixing all these issues."
+                f"\n\nYour previous response could not be parsed:\n{wrong_output}\n\n"
+                f"Error:\n{ev.error}\n\n"
+                "Please try again. Return ONLY valid JSON matching the schema above, "
+                "with no markdown formatting or extra text."
             )
 
         full_prompt = prompt + reflection
+
         summarizer = TreeSummarize(verbose=False)
         response = await summarizer.aget_response(
             full_prompt, texts, tone_name=tone_name
         )
 
+        output = str(response)
+
         return ExtractionDone(
-            output=str(response),
+            output=output,
             prompt=prompt,
             texts=texts,
             tone_name=tone_name,
@@ -104,9 +114,6 @@ class StructuredOutputWorkflow(Workflow):
         raw_output = ev.output
 
         try:
-            format_instructions = self.output_parser.format(
-                "Please structure the above information in the following JSON format:"
-            )
             parsed = self.output_parser.parse(raw_output)
             return StopEvent(result={"success": parsed})
 
