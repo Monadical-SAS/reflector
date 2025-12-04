@@ -74,7 +74,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str | None = None
     LLM_CONTEXT_WINDOW: int = 16000
 
-    LLM_PARSE_RETRY_ATTEMPTS: int = 3  # Max attempts for JSON/validation errors
+    LLM_PARSE_MAX_RETRIES: int = (
+        3  # Max retries for JSON/validation errors (total attempts = retries + 1)
+    )
 
     # Diarization
     DIARIZATION_ENABLED: bool = True

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
-from reflector.llm import LLM, StructuredOutputWorkflow
+from reflector.llm import LLM, LLMParseError, StructuredOutputWorkflow
 
 
 class TestResponse(BaseModel):
@@ -68,12 +68,12 @@ class TestLLMParseErrorRecovery:
                 return_value='{"invalid": "missing required fields"}'
             )
 
-            with pytest.raises(ValueError, match="Failed to parse"):
+            with pytest.raises(LLMParseError, match="Failed to parse"):
                 await llm.get_structured_response(
                     prompt="Test prompt", texts=["Test text"], output_cls=TestResponse
                 )
 
-            expected_attempts = test_settings.LLM_PARSE_RETRY_ATTEMPTS
+            expected_attempts = test_settings.LLM_PARSE_MAX_RETRIES + 1
             assert mock_summarizer.aget_response.call_count == expected_attempts
 
     @pytest.mark.asyncio

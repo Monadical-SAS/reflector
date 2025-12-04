@@ -21,6 +21,18 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 logger = logging.getLogger(__name__)
 
 
+class LLMParseError(Exception):
+    """Raised when LLM output cannot be parsed after retries."""
+
+    def __init__(self, output_cls: Type[BaseModel], error_msg: str, attempts: int):
+        self.output_cls = output_cls
+        self.error_msg = error_msg
+        self.attempts = attempts
+        super().__init__(
+            f"Failed to parse {output_cls.__name__} after {attempts} attempts: {error_msg}"
+        )
+
+
 class ExtractionDone(Event):
     """Event emitted when LLM extraction completes."""
 
@@ -59,21 +71,25 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
         self, ctx: Context, ev: StartEvent | ValidationErrorEvent
     ) -> StopEvent | ExtractionDone:
         """Extract structured data from text using LLM."""
+        # Increment first to avoid race condition
         current_retries = await ctx.get("retries", default=0)
+        await ctx.set("retries", current_retries + 1)
 
         if current_retries >= self.max_retries:
             last_error = await ctx.get("last_error", default=None)
             logger.error(
                 f"Max retries ({self.max_retries}) reached for {self.output_cls.__name__}"
             )
-            return StopEvent(result={"error": last_error})
-
-        await ctx.set("retries", current_retries + 1)
+            return StopEvent(result={"error": last_error, "attempts": current_retries})
 
         if isinstance(ev, StartEvent):
             prompt = ev.get("prompt")
             texts = ev.get("texts")
             tone_name = ev.get("tone_name")
+            if not prompt or not isinstance(texts, list):
+                raise ValueError(
+                    "StartEvent must contain 'prompt' (str) and 'texts' (list)"
+                )
             reflection = ""
         else:
             prompt = ev.prompt
@@ -112,16 +128,21 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
     ) -> StopEvent | ValidationErrorEvent:
         """Validate extracted output against Pydantic schema."""
         raw_output = ev.output
+        retries = await ctx.get("retries", default=0)
 
         try:
             parsed = self.output_parser.parse(raw_output)
+            if retries > 1:
+                logger.info(
+                    f"LLM parse succeeded on attempt {retries}/{self.max_retries} "
+                    f"for {self.output_cls.__name__}"
+                )
             return StopEvent(result={"success": parsed})
 
-        except (ValidationError, ValueError, Exception) as e:
+        except (ValidationError, ValueError) as e:
             error_msg = self._format_error(e, raw_output)
             await ctx.set("last_error", error_msg)
 
-            retries = await ctx.get("retries", default=0)
             logger.error(
                 f"LLM parse error (attempt {retries}/{self.max_retries}): "
                 f"{type(e).__name__}: {e}\nRaw response: {raw_output[:500]}"
@@ -190,7 +211,7 @@ class LLM:
         """Get structured output from LLM with validation retry via Workflow."""
         workflow = StructuredOutputWorkflow(
             output_cls=output_cls,
-            max_retries=self.settings_obj.LLM_PARSE_RETRY_ATTEMPTS,
+            max_retries=self.settings_obj.LLM_PARSE_MAX_RETRIES + 1,
             timeout=120,
         )
 
@@ -202,6 +223,10 @@ class LLM:
 
         if "error" in result:
             error_msg = result["error"] or "Max retries exceeded"
-            raise ValueError(f"Failed to parse {output_cls.__name__}: {error_msg}")
+            raise LLMParseError(
+                output_cls=output_cls,
+                error_msg=error_msg,
+                attempts=result.get("attempts", 0),
+            )
 
         return result["success"]
