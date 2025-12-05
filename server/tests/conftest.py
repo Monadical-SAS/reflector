@@ -318,6 +318,14 @@ async def dummy_storage():
         yield
 
 
+@pytest.fixture
+def test_settings():
+    """Provide isolated settings for tests to avoid modifying global settings"""
+    from reflector.settings import Settings
+
+    return Settings()
+
+
 @pytest.fixture(scope="session")
 def celery_enable_logging():
     return True

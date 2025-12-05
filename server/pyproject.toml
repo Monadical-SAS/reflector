@@ -126,6 +126,7 @@ markers = [
 select = [
     "I",       # isort - import sorting
     "F401",    # unused imports
+    "E402",    # module level import not at top of file
     "PLC0415", # import-outside-top-level - detect inline imports
 ]
 
