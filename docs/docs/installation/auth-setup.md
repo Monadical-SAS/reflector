@@ -62,25 +62,22 @@ sudo docker network connect reflector_default authentik-server-1
 
 ### Step 3: Add Authentik to Caddy
 
-Edit your `Caddyfile` to add the Authentik domain:
+Uncomment the Authentik section in your `Caddyfile` and set your domain:
 
+```bash
+nano Caddyfile
 ```
-app.example.com {
-    reverse_proxy web:3000
-}
 
-api.example.com {
-    reverse_proxy server:1250
-}
-
-authentik.example.com {
+Uncomment and edit:
+```
+{$AUTHENTIK_DOMAIN:authentik.example.com} {
     reverse_proxy authentik-server-1:9000
 }
 ```
 
 Reload Caddy:
 ```bash
-sudo docker exec reflector-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 ### Step 4: Create OAuth2 Provider in Authentik

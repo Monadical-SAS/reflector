@@ -192,19 +192,18 @@ FEATURE_REQUIRE_LOGIN=false
 
 **Location: YOUR SERVER (via SSH)**
 
-Edit Caddyfile with your domains:
-
 ```bash
+cp Caddyfile.example Caddyfile
 nano Caddyfile
 ```
 
-Replace example.com:
+Replace `example.com` with your domains:
 ```
-app.example.com {
+{$FRONTEND_DOMAIN:app.example.com} {
     reverse_proxy web:3000
 }
 
-api.example.com {
+{$API_DOMAIN:api.example.com} {
     reverse_proxy server:1250
 }
 ```
@@ -254,22 +253,25 @@ curl https://api.example.com/health
 
 ---
 
-## Step 8: Optional - Enable Authentication
+## Step 8: Enable Authentication (Required for Live Rooms)
 
-By default, Reflector is open (no login required). To add authentication:
+By default, Reflector is open (no login required). **Authentication is required if you want to use Live Meeting Rooms (Step 9).**
 
 See [Authentication Setup](./auth-setup) for full Authentik OAuth configuration.
 
 Quick summary:
 1. Deploy Authentik on your server
 2. Create OAuth provider in Authentik
-3. Update `server/.env`: `AUTH_BACKEND=jwt`
-4. Update `www/.env`: `FEATURE_REQUIRE_LOGIN=true` + Authentik credentials
-5. Restart services
+3. Extract public key for JWT verification
+4. Update `server/.env`: `AUTH_BACKEND=jwt` + `AUTH_JWT_AUDIENCE`
+5. Update `www/.env`: `FEATURE_REQUIRE_LOGIN=true` + Authentik credentials
+6. Mount JWT keys volume and restart services
 
 ---
 
-## Step 9: Optional - Enable Live Meeting Rooms
+## Step 9: Enable Live Meeting Rooms
+
+**Requires: Step 8 (Authentication)**
 
 Live rooms require Daily.co and AWS S3. Add to `server/.env`:
 
