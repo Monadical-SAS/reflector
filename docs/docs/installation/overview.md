@@ -24,6 +24,7 @@ Before starting, you need:
 - [ ] **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
 - [ ] **Modal.com account** - Free tier at https://modal.com
 - [ ] **HuggingFace account** - Free at https://huggingface.co
+- [ ] **OpenAI API key** - For summaries and topic detection at https://platform.openai.com/account/api-keys
 
 ### Optional (for live meeting rooms)
 
@@ -159,7 +160,14 @@ DIARIZATION_BACKEND=modal
 DIARIZATION_URL=https://yourname--reflector-diarizer-web.modal.run
 DIARIZATION_MODAL_API_KEY=<from-deploy-all.sh-output>
 
-# Auth - disable for initial setup (see Step 9 for authentication)
+# Storage - where to store audio files and transcripts
+TRANSCRIPT_STORAGE_BACKEND=local
+
+# LLM - for generating titles, summaries, and topics
+LLM_API_KEY=sk-your-openai-api-key
+LLM_MODEL=gpt-4o-mini
+
+# Auth - disable for initial setup (see Step 8 for authentication)
 AUTH_BACKEND=none
 ```
 
@@ -286,9 +294,9 @@ DAILYCO_STORAGE_AWS_REGION=us-east-1
 DAILYCO_STORAGE_AWS_ROLE_ARN=<arn:aws:iam::ACCOUNT:role/DailyCo>
 ```
 
-Restart server:
+Reload env and restart:
 ```bash
-docker compose -f docker-compose.prod.yml restart server worker
+docker compose -f docker-compose.prod.yml up -d server worker
 ```
 
 ---
@@ -302,7 +310,7 @@ docker compose -f docker-compose.prod.yml logs
 
 ### CORS errors in browser
 - Verify `CORS_ORIGIN` in `server/.env` matches your frontend domain exactly (including `https://`)
-- Restart: `docker compose -f docker-compose.prod.yml restart server`
+- Reload env: `docker compose -f docker-compose.prod.yml up -d server`
 
 ### SSL certificate errors
 - Caddy auto-provisions Let's Encrypt certificates

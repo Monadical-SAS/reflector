@@ -89,6 +89,7 @@ image = (
         "torch==2.5.1",
         "faster-whisper==1.1.1",
         "fastapi==0.115.12",
+        "python-multipart",
         "requests",
         "librosa==0.10.1",
         "numpy<2",

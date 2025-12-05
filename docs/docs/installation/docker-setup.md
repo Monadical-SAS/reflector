@@ -100,7 +100,11 @@ docker compose -f docker-compose.prod.yml logs server --tail 50
 
 ### Restart a service
 ```bash
+# Quick restart (doesn't reload .env changes)
 docker compose -f docker-compose.prod.yml restart server
+
+# Reload .env and restart
+docker compose -f docker-compose.prod.yml up -d server
 ```
 
 ### Run database migrations

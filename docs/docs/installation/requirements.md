@@ -36,6 +36,7 @@ This page lists hardware and software requirements. For the complete deployment 
 - **Two domain names** - One for frontend (e.g., `app.example.com`), one for API (e.g., `api.example.com`)
 - **Modal.com account** - For GPU-accelerated transcription and diarization (free tier available)
 - **HuggingFace account** - For Pyannote diarization model access
+- **OpenAI API key** - For generating summaries and topic detection (https://platform.openai.com/account/api-keys)
 
 ### Required for Live Meeting Rooms
 
