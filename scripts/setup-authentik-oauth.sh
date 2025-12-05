@@ -2,6 +2,10 @@
 set -e
 
 # Setup Authentik OAuth provider for Reflector
+#
+# IMPORTANT: Run this script from your Reflector repository directory (cd ~/reflector)
+# The script creates files using relative paths: server/reflector/auth/jwt/keys/
+#
 # Usage: ./setup-authentik-oauth.sh <authentik-url> <admin-password> <frontend-url>
 # Example: ./setup-authentik-oauth.sh https://authentik.example.com MyPassword123 https://app.example.com
 
@@ -27,29 +31,18 @@ echo "Authentik URL: $AUTHENTIK_URL"
 echo "Frontend URL: $FRONTEND_URL"
 echo ""
 
-# Step 1: Create API token using basic auth
+# Step 1: Create API token via docker exec
 echo "Creating API token..."
-TOKEN_RESPONSE=$(curl -s -X POST "$AUTHENTIK_URL/api/v3/core/tokens/" \
-    -u "akadmin:$ADMIN_PASSWORD" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "identifier": "reflector-setup-token",
-        "intent": "api",
-        "description": "Token for Reflector setup script"
-    }')
+API_TOKEN=$(docker compose -f ~/authentik/docker-compose.yml exec -T server python manage.py shell -c "
+from authentik.core.models import User, Token
+user = User.objects.get(username='akadmin')
+token, _ = Token.objects.get_or_create(user=user, identifier='reflector-setup', defaults={'intent': 'api'})
+print(f'TOKEN:{token.key}')
+" 2>&1 | grep "TOKEN:" | cut -d: -f2)
 
-# Check if token already exists, if so get it
-if echo "$TOKEN_RESPONSE" | grep -q "already exists"; then
-    echo "  -> Token exists, retrieving..."
-    API_TOKEN=$(curl -s "$AUTHENTIK_URL/api/v3/core/tokens/reflector-setup-token/view_key/" \
-        -u "akadmin:$ADMIN_PASSWORD" | jq -r '.key')
-else
-    API_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.key')
-fi
-
-if [ -z "$API_TOKEN" ] || [ "$API_TOKEN" = "null" ]; then
-    echo "Error: Failed to get API token"
-    echo "Response: $TOKEN_RESPONSE"
+if [ -z "$API_TOKEN" ]; then
+    echo "Error: Failed to create API token via docker exec"
+    echo "Make sure Authentik is fully started and akadmin user exists"
     exit 1
 fi
 echo "  -> Got API token"
@@ -81,12 +74,12 @@ echo "  -> Invalidation UUID: $INVALIDATION_UUID"
 
 # Step 4: Get scope mappings (email, openid, profile)
 echo "Getting scope mappings..."
-SCOPE_RESPONSE=$(curl -s "$AUTHENTIK_URL/api/v3/propertymappings/scope/" \
+SCOPE_RESPONSE=$(curl -s "$AUTHENTIK_URL/api/v3/propertymappings/all/" \
     -H "Authorization: Bearer $API_TOKEN")
 
-EMAIL_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.scope_name=="email") | .pk')
-OPENID_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.scope_name=="openid") | .pk')
-PROFILE_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.scope_name=="profile") | .pk')
+EMAIL_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.name == "authentik default OAuth Mapping: OpenID '\''email'\''") | .pk')
+OPENID_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.name == "authentik default OAuth Mapping: OpenID '\''openid'\''") | .pk')
+PROFILE_SCOPE=$(echo "$SCOPE_RESPONSE" | jq -r '.results[] | select(.name == "authentik default OAuth Mapping: OpenID '\''profile'\''") | .pk')
 echo "  -> email: $EMAIL_SCOPE"
 echo "  -> openid: $OPENID_SCOPE"
 echo "  -> profile: $PROFILE_SCOPE"
@@ -173,10 +166,19 @@ else
     echo "  -> Application created: $APP_SLUG"
 fi
 
-# Step 9: Clean up setup token
-echo "Cleaning up..."
-curl -s -X DELETE "$AUTHENTIK_URL/api/v3/core/tokens/reflector-setup-token/" \
-    -H "Authorization: Bearer $API_TOKEN" > /dev/null 2>&1 || true
+# Step 9: Extract public key for JWT verification
+echo "Extracting public key for JWT verification..."
+mkdir -p server/reflector/auth/jwt/keys
+curl -s "$AUTHENTIK_URL/application/o/reflector/jwks/" | \
+    jq -r '.keys[0].x5c[0]' | \
+    base64 -d | \
+    openssl x509 -pubkey -noout > server/reflector/auth/jwt/keys/authentik_public.pem
+
+if [ ! -s server/reflector/auth/jwt/keys/authentik_public.pem ]; then
+    echo "Error: Failed to extract public key"
+    exit 1
+fi
+echo "  -> Saved to server/reflector/auth/jwt/keys/authentik_public.pem"
 
 # Output configuration
 echo ""
@@ -198,4 +200,8 @@ echo ""
 echo "# --- JWT Authentication ---"
 echo "AUTH_BACKEND=jwt"
 echo "AUTH_JWT_AUDIENCE=$CLIENT_ID"
+echo "AUTH_JWT_PUBLIC_KEY=authentik_public.pem"
 echo "# --- End JWT Configuration ---"
+echo ""
+echo "Note: Public key has been saved to server/reflector/auth/jwt/keys/authentik_public.pem"
+echo "      It will be mounted via docker-compose volume."
