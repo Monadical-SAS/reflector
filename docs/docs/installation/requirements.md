@@ -5,25 +5,54 @@ title: System Requirements
 
 # System Requirements
 
-## Minimum Requirements
+This page lists hardware and software requirements. For the complete deployment guide, see [Deployment Guide](./overview).
+
+## Server Requirements
+
+### Minimum Requirements
 
 - **CPU**: 4 cores
 - **RAM**: 8 GB
 - **Storage**: 50 GB SSD
-- **OS**: Ubuntu 20.04+ or compatible Linux
+- **OS**: Ubuntu 22.04+ or compatible Linux
 - **Network**: Public IP address
 
-## Recommended Requirements
+### Recommended Requirements
 
 - **CPU**: 8+ cores
 - **RAM**: 16 GB
 - **Storage**: 100 GB SSD
-- **GPU**: NVIDIA GPU with 8GB+ VRAM (for local processing)
 - **Network**: 1 Gbps connection
 
 ## Software Requirements
 
 - Docker Engine 20.10+
 - Docker Compose 2.0+
-- Node.js 18+ (for frontend development)
-- Python 3.11+ (for backend development)
+
+## External Services
+
+### Required
+
+- **Two domain names** - One for frontend (e.g., `app.example.com`), one for API (e.g., `api.example.com`)
+- **Modal.com account** - For GPU-accelerated transcription and diarization (free tier available)
+- **HuggingFace account** - For Pyannote diarization model access
+
+### Required for Live Meeting Rooms
+
+- **Daily.co account** - For video conferencing (free tier available at https://dashboard.daily.co)
+- **AWS S3 bucket + IAM Role** - For Daily.co to store recordings
+
+### Optional
+
+- **AWS S3** - For cloud storage of recordings and transcripts
+- **Authentik** - For SSO/OIDC authentication
+- **Sentry** - For error tracking
+
+## Development Requirements
+
+For local development only (not required for production deployment):
+
+- Node.js 22+ (for frontend development)
+- Python 3.12+ (for backend development)
+- pnpm (for frontend package management)
+- uv (for Python package management)

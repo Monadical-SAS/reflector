@@ -105,7 +105,7 @@ def download_pyannote_audio():
 
 
 diarizer_image = (
-    modal.Image.debian_slim(python_version="3.10.8")
+    modal.Image.debian_slim(python_version="3.10")
     .pip_install(
         "pyannote.audio==3.1.0",
         "requests",
@@ -116,7 +116,7 @@ diarizer_image = (
         "transformers==4.34.0",
         "sentencepiece",
         "protobuf",
-        "numpy",
+        "numpy<2",
         "huggingface_hub",
         "hf-transfer",
     )

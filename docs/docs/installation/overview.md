@@ -1,162 +1,325 @@
 ---
 sidebar_position: 1
-title: Installation Overview
+title: Deployment Guide
 ---
 
-# Installation Overview
+# Deployment Guide
 
-Reflector is designed for self-hosted deployment, giving you complete control over your infrastructure and data.
+This guide walks you through deploying Reflector from scratch. Follow these steps in order.
 
-## Deployment Options
+## What You'll Set Up
 
-### Docker Deployment (Recommended)
+```
+User --> Caddy (auto-SSL) --> Frontend (Next.js)
+                         --> Backend (FastAPI) --> PostgreSQL
+                                               --> Redis
+                                               --> Celery Workers --> Modal.com GPU
+```
 
-The easiest way to deploy Reflector:
-- Pre-configured containers
-- Automated dependency management
-- Consistent environment
-- Easy updates
+## Prerequisites
 
-### Manual Installation
+Before starting, you need:
 
-For custom deployments:
-- Greater control over configuration
-- Integration with existing infrastructure
-- Custom optimization options
-- Development environments
+- [ ] **Production server** - Ubuntu 22.04+, 4+ cores, 8GB+ RAM, public IP
+- [ ] **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
+- [ ] **Modal.com account** - Free tier at https://modal.com
+- [ ] **HuggingFace account** - Free at https://huggingface.co
 
-## Requirements
+### Optional (for live meeting rooms)
 
-### System Requirements
+- [ ] **Daily.co account** - Free tier at https://dashboard.daily.co
+- [ ] **AWS S3 bucket** - For Daily.co recording storage
 
-**Minimum Requirements:**
-- CPU: 4 cores
-- RAM: 8 GB
-- Storage: 50 GB
-- OS: Ubuntu 20.04+ or similar Linux
+---
 
-**Recommended Requirements:**
-- CPU: 8+ cores
-- RAM: 16 GB
-- Storage: 100 GB SSD
-- GPU: NVIDIA GPU with 8GB+ VRAM (for local processing)
+## Step 1: Configure DNS
 
-### Network Requirements
+**Location: Your domain registrar / DNS provider**
 
-- Public IP address (for WebRTC)
-- Ports: 80, 443, 8000, 3000
-- Domain name (for SSL)
-- SSL certificate (Let's Encrypt supported)
+Create A records pointing to your server:
+```
+Type: A    Name: app    Value: <your-server-ip>
+Type: A    Name: api    Value: <your-server-ip>
+```
 
-## Required Services
+Verify propagation (wait a few minutes):
+```bash
+dig app.example.com +short
+dig api.example.com +short
+# Both should return your server IP
+```
 
-### Core Services
+---
 
-These services are required for basic operation:
+## Step 2: Deploy Modal GPU Functions
 
-1. **PostgreSQL** - Primary database
-2. **Redis** - Message broker and cache
-3. **Docker** - Container runtime
+**Location: YOUR LOCAL COMPUTER (laptop/desktop)**
 
-### GPU Processing
+Modal requires browser authentication, so this runs locally - not on your server.
 
-Choose one:
-- **Modal.com** - Serverless GPU (recommended)
-- **Local GPU** - Self-hosted GPU processing
+### Accept HuggingFace Licenses
 
-### Optional Services
+Visit both pages and click "Accept":
+- https://huggingface.co/pyannote/speaker-diarization-3.1
+- https://huggingface.co/pyannote/segmentation-3.0
 
-Enhance functionality with:
-- **AWS S3** - Long-term storage
-- **Whereby** - Video conferencing rooms
-- **Authentik** - Enterprise authentication
-- **Zulip** - Chat integration
+Then generate a token at https://huggingface.co/settings/tokens
 
-## Quick Start
+### Deploy to Modal
 
-### Using Docker Compose
+```bash
+pip install modal
+modal setup  # opens browser for authentication
 
-1. Clone the repository:
+git clone https://github.com/monadical-sas/reflector.git
+cd reflector/gpu/modal_deployments
+./deploy-all.sh --hf-token YOUR_HUGGINGFACE_TOKEN
+```
+
+**Save the output** - copy the configuration block, you'll need it for Step 5.
+
+See [Modal Setup](./modal-setup) for troubleshooting and details.
+
+---
+
+## Step 3: Prepare Server
+
+**Location: YOUR SERVER (via SSH)**
+
+### Install Docker
+
+```bash
+ssh user@your-server-ip
+
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# Log out and back in for group changes
+exit
+ssh user@your-server-ip
+
+docker --version  # verify
+```
+
+### Open Firewall
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+### Clone Repository
+
 ```bash
 git clone https://github.com/monadical-sas/reflector.git
 cd reflector
 ```
 
-2. Navigate to docker directory:
+---
+
+## Step 4: Configure Environment
+
+**Location: YOUR SERVER (via SSH)**
+
+Reflector has two env files:
+- `server/.env` - Backend configuration
+- `www/.env` - Frontend configuration
+
+### Backend Configuration
+
 ```bash
-cd docker
+cp server/env.example server/.env
+nano server/.env
 ```
 
-3. Copy and configure environment:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-4. Start services:
-```bash
-docker compose up -d
-```
-
-5. Access Reflector:
-- Frontend: https://your-domain.com
-- API: https://your-domain.com/api
-
-## Configuration Overview
-
-### Essential Configuration
-
+**Required settings:**
 ```env
-# Database
-DATABASE_URL=postgresql://user:pass@localhost/reflector
+# Database (defaults work with docker-compose.prod.yml)
+DATABASE_URL=postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
 
 # Redis
-REDIS_URL=redis://localhost:6379
+REDIS_HOST=redis
+CELERY_BROKER_URL=redis://redis:6379/1
+CELERY_RESULT_BACKEND=redis://redis:6379/1
 
-# Modal.com (for GPU processing)
-TRANSCRIPT_MODAL_API_KEY=your-key
-DIARIZATION_MODAL_API_KEY=your-key
+# Your domains
+BASE_URL=https://api.example.com
+CORS_ORIGIN=https://app.example.com
+CORS_ALLOW_CREDENTIALS=true
 
-# Domain
-DOMAIN=your-domain.com
+# Secret key - generate with: openssl rand -hex 32
+SECRET_KEY=<your-generated-secret>
+
+# Modal GPU (paste from deploy-all.sh output)
+TRANSCRIPT_BACKEND=modal
+TRANSCRIPT_URL=https://yourname--reflector-transcriber-web.modal.run
+TRANSCRIPT_MODAL_API_KEY=<from-deploy-all.sh-output>
+
+DIARIZATION_BACKEND=modal
+DIARIZATION_URL=https://yourname--reflector-diarizer-web.modal.run
+DIARIZATION_MODAL_API_KEY=<from-deploy-all.sh-output>
+
+# Auth - disable for initial setup (see Step 9 for authentication)
+AUTH_BACKEND=none
 ```
 
-### Security Configuration
+### Frontend Configuration
+
+```bash
+cp www/.env.example www/.env
+nano www/.env
+```
+
+**Required settings:**
+```env
+# Your domains
+SITE_URL=https://app.example.com
+API_URL=https://api.example.com
+WEBSOCKET_URL=wss://api.example.com
+SERVER_API_URL=http://server:1250
+
+# NextAuth
+NEXTAUTH_URL=https://app.example.com
+NEXTAUTH_SECRET=<generate-with-openssl-rand-hex-32>
+
+# Disable login requirement for initial setup
+FEATURE_REQUIRE_LOGIN=false
+```
+
+---
+
+## Step 5: Configure Caddy
+
+**Location: YOUR SERVER (via SSH)**
+
+Edit Caddyfile with your domains:
+
+```bash
+nano Caddyfile
+```
+
+Replace example.com:
+```
+app.example.com {
+    reverse_proxy web:3000
+}
+
+api.example.com {
+    reverse_proxy server:1250
+}
+```
+
+---
+
+## Step 6: Start Services
+
+**Location: YOUR SERVER (via SSH)**
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Wait for containers to start (~30 seconds), then run migrations:
+
+```bash
+docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
+```
+
+---
+
+## Step 7: Verify Deployment
+
+### Check services
+```bash
+docker compose -f docker-compose.prod.yml ps
+# All should show "Up"
+```
+
+### Check logs for errors
+```bash
+docker compose -f docker-compose.prod.yml logs server --tail 20
+docker compose -f docker-compose.prod.yml logs worker --tail 20
+```
+
+### Test API
+```bash
+curl https://api.example.com/health
+# Should return: {"status":"healthy"}
+```
+
+### Test Frontend
+- Visit https://app.example.com
+- You should see the Reflector interface
+- Try uploading an audio file to test transcription
+
+---
+
+## Step 8: Optional - Enable Authentication
+
+By default, Reflector is open (no login required). To add authentication:
+
+See [Authentication Setup](./auth-setup) for full Authentik OAuth configuration.
+
+Quick summary:
+1. Deploy Authentik on your server
+2. Create OAuth provider in Authentik
+3. Update `server/.env`: `AUTH_BACKEND=jwt`
+4. Update `www/.env`: `FEATURE_REQUIRE_LOGIN=true` + Authentik credentials
+5. Restart services
+
+---
+
+## Step 9: Optional - Enable Live Meeting Rooms
+
+Live rooms require Daily.co and AWS S3. Add to `server/.env`:
 
 ```env
-# Authentication
-REFLECTOR_AUTH_BACKEND=jwt
-NEXTAUTH_SECRET=generate-strong-secret
+DEFAULT_VIDEO_PLATFORM=daily
+DAILY_API_KEY=<from-daily.co-dashboard>
+DAILY_SUBDOMAIN=<your-daily-subdomain>
 
-# SSL (handled by Caddy)
-# Automatic with Let's Encrypt
+# S3 for recording storage
+DAILYCO_STORAGE_AWS_BUCKET_NAME=<your-bucket>
+DAILYCO_STORAGE_AWS_REGION=us-east-1
+DAILYCO_STORAGE_AWS_ROLE_ARN=<arn:aws:iam::ACCOUNT:role/DailyCo>
 ```
 
-## Service Architecture
-
-```mermaid
-graph TD
-    A[Caddy Reverse Proxy] --> B[Frontend - Next.js]
-    A --> C[Backend - FastAPI]
-    C --> D[PostgreSQL]
-    C --> E[Redis]
-    C --> F[Celery Workers]
-    F --> G[Modal.com GPU]
+Restart server:
+```bash
+docker compose -f docker-compose.prod.yml restart server worker
 ```
+
+---
+
+## Troubleshooting
+
+### Services won't start
+```bash
+docker compose -f docker-compose.prod.yml logs
+```
+
+### CORS errors in browser
+- Verify `CORS_ORIGIN` in `server/.env` matches your frontend domain exactly (including `https://`)
+- Restart: `docker compose -f docker-compose.prod.yml restart server`
+
+### SSL certificate errors
+- Caddy auto-provisions Let's Encrypt certificates
+- Ensure ports 80 and 443 are open
+- Check: `docker compose -f docker-compose.prod.yml logs caddy`
+
+### Transcription not working
+- Check Modal dashboard: https://modal.com/apps
+- Verify URLs in `server/.env` match deployed functions
+- Check worker logs: `docker compose -f docker-compose.prod.yml logs worker`
+
+### "Login required" but auth not configured
+- Set `FEATURE_REQUIRE_LOGIN=false` in `www/.env`
+- Rebuild frontend: `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
+
+---
 
 ## Next Steps
 
-1. **Review Requirements**: [System Requirements](./requirements)
-2. **Docker Setup**: [Docker Deployment Guide](./docker-setup)
-3. **Configure Services**:
-   - [Modal.com Setup](./modal-setup)
-   - [Whereby Setup](./whereby-setup)
-   - [AWS S3 Setup](./aws-setup)
-4. **Optional Services**:
-   - [Authentik Setup](./authentik-setup)
-   - [Zulip Setup](./zulip-setup)
-
-## Getting Help
-
-- [GitHub Issues](https://github.com/monadical-sas/reflector/issues)
-- [Community Discord](#)
+- [Modal Setup](./modal-setup) - GPU processing details
+- [Authentication Setup](./auth-setup) - Authentik OAuth
+- [System Requirements](./requirements) - Hardware specs
