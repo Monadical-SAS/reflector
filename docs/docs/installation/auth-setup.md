@@ -82,6 +82,19 @@ docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/
 
 ### Step 4: Create OAuth2 Provider in Authentik
 
+**Option A: Automated Setup (Recommended)**
+
+Run the setup script from the Reflector repository:
+
+```bash
+cd ~/reflector
+./scripts/setup-authentik-oauth.sh https://authentik.example.com YourSecurePassword123 https://app.example.com
+```
+
+The script will output the configuration values to add to your `.env` files. Skip to Step 6.
+
+**Option B: Manual Setup**
+
 1. **Login to Authentik Admin** at `https://authentik.example.com/`
    - Username: `akadmin`
    - Password: The `AUTHENTIK_BOOTSTRAP_PASSWORD` you set in .env
@@ -99,6 +112,11 @@ docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/
        ```
        https://app.example.com/api/auth/callback/authentik
        ```
+   - Scroll down to **Advanced protocol settings**
+   - In **Scopes**, add these three mappings:
+     - `authentik default OAuth Mapping: OpenID 'email'`
+     - `authentik default OAuth Mapping: OpenID 'openid'`
+     - `authentik default OAuth Mapping: OpenID 'profile'`
    - Click **Finish**
 
 3. **Create Application:**
