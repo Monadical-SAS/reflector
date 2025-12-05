@@ -1,11 +1,11 @@
-name: Build and Push Backend Container to ECR
+name: Build and Push Frontend Container to ECR
 
 on: [workflow_dispatch]
 
 env:
-  # 950402358378.dkr.ecr.us-east-1.amazonaws.com/reflector
+  # 950402358378.dkr.ecr.us-east-1.amazonaws.com/reflector-frontend
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: reflector
+  ECR_REPOSITORY: reflector-frontend
 
 jobs:
   build:
@@ -47,7 +47,8 @@ jobs:
       - name: Build and push ${{ matrix.arch }}
         uses: docker/build-push-action@v5
         with:
-          context: server
+          context: www
+          file: www/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest-${{ matrix.arch }}
@@ -73,12 +74,12 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Create and push multi-arch manifest
         run: |
-          # Get the registry URL (since we can't easily access job outputs in matrix)
-          ECR_REGISTRY=$(aws ecr describe-registry --query 'registryId' --output text).dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
 
           docker manifest create \
             $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest \
