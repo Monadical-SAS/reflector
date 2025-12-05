@@ -281,7 +281,9 @@ Quick summary:
 
 **Requires: Step 8 (Authentication)**
 
-Live rooms require Daily.co and AWS S3. Add to `server/.env`:
+Live rooms require Daily.co and AWS S3. See [Daily.co Setup](./daily-setup) for complete S3/IAM configuration instructions.
+
+Quick config - Add to `server/.env`:
 
 ```env
 DEFAULT_VIDEO_PLATFORM=daily
