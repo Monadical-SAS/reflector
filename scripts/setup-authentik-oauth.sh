@@ -31,17 +31,31 @@ echo "Authentik URL: $AUTHENTIK_URL"
 echo "Frontend URL: $FRONTEND_URL"
 echo ""
 
-# Step 1: Create API token via docker exec
+# Step 1: Create API token via Django shell
 echo "Creating API token..."
-API_TOKEN=$(docker compose -f ~/authentik/docker-compose.yml exec -T server python manage.py shell -c "
-from authentik.core.models import User, Token
-user = User.objects.get(username='akadmin')
-token, _ = Token.objects.get_or_create(user=user, identifier='reflector-setup', defaults={'intent': 'api'})
-print(f'TOKEN:{token.key}')
-" 2>&1 | grep "TOKEN:" | cut -d: -f2)
+cd ~/authentik || { echo "Error: ~/authentik directory not found"; exit 1; }
 
-if [ -z "$API_TOKEN" ]; then
-    echo "Error: Failed to create API token via docker exec"
+API_TOKEN=$(sudo docker compose exec -T server python -m manage shell 2>&1 << 'PYTHON' | grep "^TOKEN:" | cut -d: -f2
+from authentik.core.models import User, Token, TokenIntents
+
+user = User.objects.get(username='akadmin')
+token, created = Token.objects.update_or_create(
+    identifier='reflector-setup',
+    defaults={
+        'user': user,
+        'intent': TokenIntents.INTENT_API,
+        'description': 'Reflector setup token',
+        'expiring': False
+    }
+)
+print(f"TOKEN:{token.key}")
+PYTHON
+)
+
+cd - > /dev/null
+
+if [ -z "$API_TOKEN" ] || [ "$API_TOKEN" = "null" ]; then
+    echo "Error: Failed to create API token"
     echo "Make sure Authentik is fully started and akadmin user exists"
     exit 1
 fi
@@ -180,28 +194,49 @@ if [ ! -s server/reflector/auth/jwt/keys/authentik_public.pem ]; then
 fi
 echo "  -> Saved to server/reflector/auth/jwt/keys/authentik_public.pem"
 
-# Output configuration
+# Step 10: Update environment files automatically
+echo "Updating environment files..."
+
+# Update server/.env
+cat >> server/.env << EOF
+
+# --- Authentik OAuth (added by setup script) ---
+AUTH_BACKEND=jwt
+AUTH_JWT_AUDIENCE=$CLIENT_ID
+AUTH_JWT_PUBLIC_KEY=authentik_public.pem
+# --- End JWT Configuration ---
+EOF
+echo "  -> Updated server/.env"
+
+# Update www/.env
+cat >> www/.env << EOF
+
+# --- Authentik OAuth (added by setup script) ---
+FEATURE_REQUIRE_LOGIN=true
+AUTHENTIK_ISSUER=$AUTHENTIK_URL/application/o/reflector
+AUTHENTIK_REFRESH_TOKEN_URL=$AUTHENTIK_URL/application/o/token/
+AUTHENTIK_CLIENT_ID=$CLIENT_ID
+AUTHENTIK_CLIENT_SECRET=$CLIENT_SECRET
+# --- End Authentik Configuration ---
+EOF
+echo "  -> Updated www/.env"
+
+# Step 11: Restart Reflector services
+echo "Restarting Reflector services..."
+docker compose -f docker-compose.prod.yml up -d server worker web
+
 echo ""
 echo "==========================================="
 echo "Setup complete!"
 echo "==========================================="
 echo ""
-echo "Add these to your www/.env file:"
+echo "Authentik admin: $AUTHENTIK_URL"
+echo "  Username: akadmin"
+echo "  Password: (provided as argument)"
 echo ""
-echo "# --- Authentik OAuth Configuration ---"
-echo "AUTHENTIK_ISSUER=$AUTHENTIK_URL/application/o/reflector"
-echo "AUTHENTIK_REFRESH_TOKEN_URL=$AUTHENTIK_URL/application/o/token/"
-echo "AUTHENTIK_CLIENT_ID=$CLIENT_ID"
-echo "AUTHENTIK_CLIENT_SECRET=$CLIENT_SECRET"
-echo "# --- End Authentik Configuration ---"
+echo "Frontend: $FRONTEND_URL"
+echo "  Authentication is now required"
 echo ""
-echo "Add this to your server/.env file:"
+echo "Note: Public key saved to server/reflector/auth/jwt/keys/authentik_public.pem"
+echo "      and mounted via docker-compose volume."
 echo ""
-echo "# --- JWT Authentication ---"
-echo "AUTH_BACKEND=jwt"
-echo "AUTH_JWT_AUDIENCE=$CLIENT_ID"
-echo "AUTH_JWT_PUBLIC_KEY=authentik_public.pem"
-echo "# --- End JWT Configuration ---"
-echo ""
-echo "Note: Public key has been saved to server/reflector/auth/jwt/keys/authentik_public.pem"
-echo "      It will be mounted via docker-compose volume."
