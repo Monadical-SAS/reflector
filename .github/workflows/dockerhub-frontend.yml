@@ -6,8 +6,8 @@ on:
       - main
       - dockerhub-2
     paths:
-      - 'www/**'
-      - '.github/workflows/dockerhub-frontend.yml'
+      - "www/**"
+      - ".github/workflows/dockerhub-frontend.yml"
   workflow_dispatch:
 
 env:
@@ -41,6 +41,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,3 +57,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+      - name: Trigger Coolify deployment
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_WEBHOOK_TOKEN }}" \
+            -f || (echo "Failed to trigger Coolify deployment" && exit 1)
