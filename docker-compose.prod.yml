@@ -96,6 +96,10 @@ services:
       - web
       - server
 
+  docs:
+    build: ./docs
+    restart: unless-stopped
+
 volumes:
   redis_data:
   postgres_data:
