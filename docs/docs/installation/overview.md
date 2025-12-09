@@ -26,13 +26,15 @@ flowchart LR
 
 Before starting, you need:
 
-- [ ] **Production server** - Ubuntu 22.04+, 4+ cores, 8GB+ RAM, public IP
-- [ ] **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
-- [ ] **GPU processing** - Choose one:
-  - Modal.com account (free tier at https://modal.com), OR
+- **Production server** -  4+ cores, 8GB+ RAM, public IP
+- **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
+- **GPU processing** - Choose one:
+  - Modal.com account, OR
   - GPU server with NVIDIA GPU (8GB+ VRAM)
-- [ ] **HuggingFace account** - Free at https://huggingface.co
-- [ ] **OpenAI API key** - For summaries and topic detection at https://platform.openai.com/account/api-keys
+- **HuggingFace account** - Free at https://huggingface.co
+- **LLM API** - For summaries and topic detection. Choose one:
+  - OpenAI API key at https://platform.openai.com/account/api-keys, OR
+  - Any OpenAI-compatible endpoint (vLLM, LiteLLM, Ollama, etc.)
 
 ### Optional (for live meeting rooms)
 
@@ -41,41 +43,25 @@ Before starting, you need:
 
 ---
 
-## Step 1: Configure DNS
+## Configure DNS
 
-**Location: Your domain registrar / DNS provider**
-
-Create A records pointing to your server:
 ```
 Type: A    Name: app    Value: <your-server-ip>
 Type: A    Name: api    Value: <your-server-ip>
 ```
 
-Verify propagation (wait a few minutes):
-```bash
-dig app.example.com +short
-dig api.example.com +short
-# Both should return your server IP
-```
-
 ---
 
-## Step 2: Deploy GPU Processing
+## Deploy GPU Processing
 
-Reflector requires GPU processing for transcription (Whisper) and speaker diarization (Pyannote). Choose one option:
+Reflector requires GPU processing for transcription and speaker diarization. Choose one option:
 
 | | **Modal.com (Cloud)** | **Self-Hosted GPU** |
 |---|---|---|
 | **Best for** | No GPU hardware, zero maintenance | Own GPU server, full control |
-| **Pricing** | Pay-per-use (~$0.01-0.10/min audio) | Fixed infrastructure cost |
-| **Setup** | Run from laptop (browser auth) | Run on GPU server |
-| **Scaling** | Automatic | Manual |
+| **Pricing** | Pay-per-use | Fixed infrastructure cost |
 
 ### Option A: Modal.com (Serverless Cloud GPU)
-
-**Location: YOUR LOCAL COMPUTER (laptop/desktop)**
-
-Modal requires browser authentication, so this runs locally - not on your server.
 
 #### Accept HuggingFace Licenses
 
@@ -83,9 +69,13 @@ Visit both pages and click "Accept":
 - https://huggingface.co/pyannote/speaker-diarization-3.1
 - https://huggingface.co/pyannote/segmentation-3.0
 
-Then generate a token at https://huggingface.co/settings/tokens
+Generate a token at https://huggingface.co/settings/tokens
 
 #### Deploy to Modal
+
+There's an install script to help with this setup. It's using modal API to set all necessary moving parts.
+
+As an alternative, all those operations that script does could be performed in modal settings in modal UI.
 
 ```bash
 pip install modal
@@ -96,7 +86,7 @@ cd reflector/gpu/modal_deployments
 ./deploy-all.sh --hf-token YOUR_HUGGINGFACE_TOKEN
 ```
 
-**Save the output** - copy the configuration block, you'll need it for Step 4.
+**Save the output** - copy the configuration block, you'll need it soon.
 
 See [Modal Setup](./modal-setup) for troubleshooting and details.
 
@@ -114,13 +104,13 @@ See [Self-Hosted GPU Setup](./self-hosted-gpu-setup) for complete instructions. 
 4. Start service (Docker compose or systemd)
 5. Set up Caddy reverse proxy for HTTPS
 
-**Save your API key and HTTPS URL** - you'll need them for Step 4.
+**Save your API key and HTTPS URL** - you'll need them soon.
 
 ---
 
-## Step 3: Prepare Server
+## Prepare Server
 
-**Location: YOUR SERVER (via SSH)**
+**Location: dedicated reflector server**
 
 ### Install Docker
 
@@ -150,7 +140,7 @@ cd reflector
 
 ---
 
-## Step 4: Configure Environment
+## Configure Environment
 
 **Location: YOUR SERVER (via SSH, in the `reflector` directory)**
 
@@ -183,7 +173,7 @@ CORS_ALLOW_CREDENTIALS=true
 # Secret key - generate with: openssl rand -hex 32
 SECRET_KEY=<your-generated-secret>
 
-# GPU Processing - choose ONE option from Step 2:
+# GPU Processing - choose ONE option:
 
 # Option A: Modal.com (paste from deploy-all.sh output)
 TRANSCRIPT_BACKEND=modal
@@ -208,7 +198,7 @@ TRANSCRIPT_STORAGE_BACKEND=local
 LLM_API_KEY=sk-your-openai-api-key
 LLM_MODEL=gpt-4o-mini
 
-# Auth - disable for initial setup (see Step 8 for authentication)
+# Auth - disable for initial setup (see a dedicated step for authentication)
 AUTH_BACKEND=none
 ```
 
@@ -237,7 +227,7 @@ FEATURE_REQUIRE_LOGIN=false
 
 ---
 
-## Step 5: Configure Caddy
+## Configure Caddy
 
 **Location: YOUR SERVER (via SSH)**
 
@@ -260,7 +250,7 @@ Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy'
 
 ---
 
-## Step 6: Start Services
+## Start Services
 
 **Location: YOUR SERVER (via SSH)**
 
@@ -280,7 +270,7 @@ docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade hea
 
 ---
 
-## Step 7: Verify Deployment
+## Verify Deployment
 
 ### Check services
 ```bash
@@ -307,9 +297,9 @@ curl https://api.example.com/health
 
 ---
 
-## Step 8: Enable Authentication (Required for Live Rooms)
+## Enable Authentication (Required for Live Rooms)
 
-By default, Reflector is open (no login required). **Authentication is required if you want to use Live Meeting Rooms (Step 9).**
+By default, Reflector is open (no login required). **Authentication is required if you want to use Live Meeting Rooms.**
 
 See [Authentication Setup](./auth-setup) for full Authentik OAuth configuration.
 
@@ -323,9 +313,9 @@ Quick summary:
 
 ---
 
-## Step 9: Enable Live Meeting Rooms
+## Enable Live Meeting Rooms
 
-**Requires: Step 8 (Authentication)**
+**Requires: Authentication Step**
 
 Live rooms require Daily.co and AWS S3. See [Daily.co Setup](./daily-setup) for complete S3/IAM configuration instructions.
 

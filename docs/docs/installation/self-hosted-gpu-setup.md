@@ -43,7 +43,6 @@ Your main Reflector server connects to this service exactly like it connects to 
   - Systemd method: 25-30GB minimum
 
 ### Software
-- Ubuntu 22.04 or 24.04
 - Public IP address
 - Domain name with DNS A record pointing to server
 
@@ -54,34 +53,6 @@ Your main Reflector server connects to this service exactly like it connects to 
 - **HuggingFace access token** from https://huggingface.co/settings/tokens
 
 ## Choose Deployment Method
-
-### Docker Deployment (Recommended)
-
-**Pros:**
-- Container isolation and reproducibility
-- No manual library path configuration
-- Easier to replicate across servers
-- Built-in restart policies
-- Simpler dependency management
-
-**Cons:**
-- Higher disk usage (~15GB for container)
-- Requires 40-50GB disk minimum
-
-**Best for:** Teams wanting reproducible deployments, multiple GPU servers
-
-### Systemd Deployment
-
-**Pros:**
-- Lower disk usage (~8GB total)
-- Direct GPU access (no container layer)
-- Works on smaller disks (25-30GB)
-
-**Cons:**
-- Manual `LD_LIBRARY_PATH` configuration
-- Less portable across systems
-
-**Best for:** Single GPU server, limited disk space
 
 ---
 
@@ -422,16 +393,6 @@ watch -n 1 nvidia-smi
 
 ---
 
-## Performance Notes
-
-**Tesla T4 benchmarks:**
-- Transcription: ~2-3x real-time (10 min audio in 3-5 min)
-- Diarization: ~1.5x real-time
-- Max concurrent requests: 2-3 (depends on audio length)
-- First request warmup: ~10 seconds (model loading)
-
----
-
 ## Troubleshooting
 
 ### nvidia-smi fails after driver install
@@ -480,16 +441,6 @@ sudo docker compose logs
 # - GPU not accessible (nvidia-ctk not configured)
 # - Missing .env file
 ```
-
----
-
-## Security Considerations
-
-1. **API Key**: Keep `REFLECTOR_GPU_APIKEY` secret, rotate periodically
-2. **HuggingFace Token**: Treat as password, never commit to git
-3. **Firewall**: Only expose ports 80 and 443 publicly
-4. **Updates**: Regularly update system packages
-5. **Monitoring**: Set up alerts for service failures
 
 ---
 

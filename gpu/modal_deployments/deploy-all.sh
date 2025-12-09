@@ -6,7 +6,7 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --hf-token TOKEN    HuggingFace token for Pyannote model"
+    echo "  --hf-token TOKEN    HuggingFace token"
     echo "  --help              Show this help message"
     echo ""
     echo "Examples:"
@@ -88,7 +88,7 @@ if [[ ! "$HF_TOKEN" =~ ^hf_ ]]; then
     fi
 fi
 
-# --- Auto-generate API Key ---
+# --- Auto-generate reflector<->GPU API Key ---
 echo ""
 echo "Generating API key for GPU services..."
 API_KEY=$(openssl rand -hex 32)
