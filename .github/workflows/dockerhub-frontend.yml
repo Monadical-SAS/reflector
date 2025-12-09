@@ -1,10 +1,9 @@
 name: Build and Push Frontend Docker Image
 
 on:
-  push:
-    branches:
-      - main
-      - dockerhub-2
+  pull_request:
+    types:
+      - closed
     paths:
       - "www/**"
       - ".github/workflows/dockerhub-frontend.yml"
@@ -17,6 +16,10 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release-please--branches--'))
 
     permissions:
       contents: read

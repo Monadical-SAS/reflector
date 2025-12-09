@@ -1,13 +1,12 @@
 name: Build and Push Backend Docker Image (Docker Hub)
 
 on:
-  push:
-    branches:
-      - main
-      - dockerhub-2
+  pull_request:
+    types:
+      - closed
     paths:
-      - 'server/**'
-      - '.github/workflows/dockerhub-backend.yml'
+      - "server/**"
+      - ".github/workflows/dockerhub-backend.yml"
   workflow_dispatch:
 
 env:
@@ -17,6 +16,10 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release-please--branches--'))
 
     permissions:
       contents: read
