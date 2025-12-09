@@ -34,6 +34,12 @@ def ensure_dirs():
     UPLOADS_PATH.mkdir(parents=True, exist_ok=True)
 
 
+# IMPORTANT: This function is duplicated in multiple files for deployment isolation.
+# If you modify the audio format detection logic, you MUST update all copies:
+#   - gpu/self_hosted/app/utils.py (this file)
+#   - gpu/modal_deployments/reflector_transcriber.py (2 copies)
+#   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+#   - gpu/modal_deployments/reflector_diarizer.py
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
     url_path = urlparse(url).path
     for ext in SUPPORTED_FILE_EXTENSIONS:
@@ -47,6 +53,8 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> str:
         return "wav"
     if "audio/mp4" in content_type:
         return "mp4"
+    if "audio/webm" in content_type or "video/webm" in content_type:
+        return "webm"
 
     raise HTTPException(
         status_code=400,

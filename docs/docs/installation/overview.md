@@ -9,11 +9,17 @@ This guide walks you through deploying Reflector from scratch. Follow these step
 
 ## What You'll Set Up
 
-```
-User --> Caddy (auto-SSL) --> Frontend (Next.js)
-                         --> Backend (FastAPI) --> PostgreSQL
-                                               --> Redis
-                                               --> Celery Workers --> Modal.com GPU
+```mermaid
+flowchart LR
+    User --> Caddy["Caddy (auto-SSL)"]
+    Caddy --> Frontend["Frontend (Next.js)"]
+    Caddy --> Backend["Backend (FastAPI)"]
+    Backend --> PostgreSQL
+    Backend --> Redis
+    Backend --> Workers["Celery Workers"]
+    Workers --> PostgreSQL
+    Workers --> Redis
+    Workers --> GPU["GPU Processing<br/>(Modal.com OR Self-hosted)"]
 ```
 
 ## Prerequisites
@@ -22,7 +28,9 @@ Before starting, you need:
 
 - [ ] **Production server** - Ubuntu 22.04+, 4+ cores, 8GB+ RAM, public IP
 - [ ] **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
-- [ ] **Modal.com account** - Free tier at https://modal.com
+- [ ] **GPU processing** - Choose one:
+  - Modal.com account (free tier at https://modal.com), OR
+  - GPU server with NVIDIA GPU (8GB+ VRAM)
 - [ ] **HuggingFace account** - Free at https://huggingface.co
 - [ ] **OpenAI API key** - For summaries and topic detection at https://platform.openai.com/account/api-keys
 
@@ -52,13 +60,24 @@ dig api.example.com +short
 
 ---
 
-## Step 2: Deploy Modal GPU Functions
+## Step 2: Deploy GPU Processing
+
+Reflector requires GPU processing for transcription (Whisper) and speaker diarization (Pyannote). Choose one option:
+
+| | **Modal.com (Cloud)** | **Self-Hosted GPU** |
+|---|---|---|
+| **Best for** | No GPU hardware, zero maintenance | Own GPU server, full control |
+| **Pricing** | Pay-per-use (~$0.01-0.10/min audio) | Fixed infrastructure cost |
+| **Setup** | Run from laptop (browser auth) | Run on GPU server |
+| **Scaling** | Automatic | Manual |
+
+### Option A: Modal.com (Serverless Cloud GPU)
 
 **Location: YOUR LOCAL COMPUTER (laptop/desktop)**
 
 Modal requires browser authentication, so this runs locally - not on your server.
 
-### Accept HuggingFace Licenses
+#### Accept HuggingFace Licenses
 
 Visit both pages and click "Accept":
 - https://huggingface.co/pyannote/speaker-diarization-3.1
@@ -66,7 +85,7 @@ Visit both pages and click "Accept":
 
 Then generate a token at https://huggingface.co/settings/tokens
 
-### Deploy to Modal
+#### Deploy to Modal
 
 ```bash
 pip install modal
@@ -77,9 +96,25 @@ cd reflector/gpu/modal_deployments
 ./deploy-all.sh --hf-token YOUR_HUGGINGFACE_TOKEN
 ```
 
-**Save the output** - copy the configuration block, you'll need it for Step 5.
+**Save the output** - copy the configuration block, you'll need it for Step 4.
 
 See [Modal Setup](./modal-setup) for troubleshooting and details.
+
+### Option B: Self-Hosted GPU
+
+**Location: YOUR GPU SERVER**
+
+Requires: NVIDIA GPU with 8GB+ VRAM, Ubuntu 22.04+, 40-50GB disk (Docker) or 25-30GB (Systemd).
+
+See [Self-Hosted GPU Setup](./self-hosted-gpu-setup) for complete instructions. Quick summary:
+
+1. Install NVIDIA drivers and Docker (or uv for systemd)
+2. Clone repository: `git clone https://github.com/monadical-sas/reflector.git`
+3. Configure `.env` with HuggingFace token
+4. Start service (Docker compose or systemd)
+5. Set up Caddy reverse proxy for HTTPS
+
+**Save your API key and HTTPS URL** - you'll need them for Step 4.
 
 ---
 
@@ -102,12 +137,9 @@ ssh user@your-server-ip
 docker --version  # verify
 ```
 
-### Open Firewall
+### Firewall
 
-```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-```
+Ensure ports 80 (HTTP) and 443 (HTTPS) are open for inbound traffic. The method varies by cloud provider and OS configuration.
 
 ### Clone Repository
 
@@ -120,7 +152,7 @@ cd reflector
 
 ## Step 4: Configure Environment
 
-**Location: YOUR SERVER (via SSH)**
+**Location: YOUR SERVER (via SSH, in the `reflector` directory)**
 
 Reflector has two env files:
 - `server/.env` - Backend configuration
@@ -129,7 +161,7 @@ Reflector has two env files:
 ### Backend Configuration
 
 ```bash
-cp server/env.example server/.env
+cp server/.env.example server/.env
 nano server/.env
 ```
 
@@ -151,14 +183,23 @@ CORS_ALLOW_CREDENTIALS=true
 # Secret key - generate with: openssl rand -hex 32
 SECRET_KEY=<your-generated-secret>
 
-# Modal GPU (paste from deploy-all.sh output)
+# GPU Processing - choose ONE option from Step 2:
+
+# Option A: Modal.com (paste from deploy-all.sh output)
 TRANSCRIPT_BACKEND=modal
 TRANSCRIPT_URL=https://yourname--reflector-transcriber-web.modal.run
 TRANSCRIPT_MODAL_API_KEY=<from-deploy-all.sh-output>
-
 DIARIZATION_BACKEND=modal
 DIARIZATION_URL=https://yourname--reflector-diarizer-web.modal.run
 DIARIZATION_MODAL_API_KEY=<from-deploy-all.sh-output>
+
+# Option B: Self-hosted GPU (use your GPU server URL and API key)
+# TRANSCRIPT_BACKEND=modal
+# TRANSCRIPT_URL=https://gpu.example.com
+# TRANSCRIPT_MODAL_API_KEY=<your-generated-api-key>
+# DIARIZATION_BACKEND=modal
+# DIARIZATION_URL=https://gpu.example.com
+# DIARIZATION_MODAL_API_KEY=<your-generated-api-key>
 
 # Storage - where to store audio files and transcripts
 TRANSCRIPT_STORAGE_BACKEND=local
@@ -205,7 +246,8 @@ cp Caddyfile.example Caddyfile
 nano Caddyfile
 ```
 
-Replace `example.com` with your domains:
+Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy's env var substitution - you can either edit the file directly or set `FRONTEND_DOMAIN` and `API_DOMAIN` environment variables.
+
 ```
 {$FRONTEND_DOMAIN:app.example.com} {
     reverse_proxy web:3000
@@ -226,9 +268,13 @@ Replace `example.com` with your domains:
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Wait for containers to start (~30 seconds), then run migrations:
+Wait for PostgreSQL to be ready, then run migrations:
 
 ```bash
+# Wait for postgres to be healthy (may take 30-60 seconds on first run)
+docker compose -f docker-compose.prod.yml exec postgres pg_isready -U reflector
+
+# Run database migrations
 docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
 ```
 
@@ -332,6 +378,7 @@ docker compose -f docker-compose.prod.yml logs
 
 ## Next Steps
 
-- [Modal Setup](./modal-setup) - GPU processing details
+- [Modal Setup](./modal-setup) - Cloud GPU processing details
+- [Self-Hosted GPU Setup](./self-hosted-gpu-setup) - Own GPU server deployment
 - [Authentication Setup](./auth-setup) - Authentik OAuth
 - [System Requirements](./requirements) - Hardware specs

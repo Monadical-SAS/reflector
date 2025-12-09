@@ -84,6 +84,7 @@ Please provide specific values for:
   - Exact UDP port range used (e.g., 10000-20000)
   - STUN server configuration (if any)
   - ICE candidate gathering timeout
+  - https://docs.daily.co/guides/privacy-and-security/corporate-firewalls-nats-allowed-ip-list
 
 - [ ] **Worker Configuration**
   - Default Celery worker count

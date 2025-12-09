@@ -2,7 +2,7 @@
 # Usage: docker compose -f docker-compose.prod.yml up -d
 #
 # Prerequisites:
-# 1. Copy env.example to .env and configure for both server/ and www/
+# 1. Copy .env.example to .env and configure for both server/ and www/
 # 2. Copy Caddyfile.example to Caddyfile and edit with your domains
 # 3. Deploy Modal GPU functions (see gpu/modal_deployments/deploy-all.sh)
 
