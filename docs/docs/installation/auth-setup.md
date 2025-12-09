@@ -9,6 +9,8 @@ This page covers authentication setup in detail. For the complete deployment gui
 
 Reflector uses [Authentik](https://goauthentik.io/) for OAuth/OIDC authentication. This guide walks you through setting up Authentik and connecting it to Reflector.
 
+The guide simplistically sets Authentic on the same server as Reflector. You can use your own Authentic instance instead.
+
 ## Overview
 
 Reflector's authentication flow:
@@ -16,15 +18,13 @@ Reflector's authentication flow:
 2. Frontend redirects to Authentik login page
 3. User authenticates with Authentik
 4. Authentik redirects back with OAuth tokens
-5. Frontend stores tokens, backend verifies JWT signature
+5. Frontend stores tokens, backends verify JWT signature
 
 ## Option 1: Self-Hosted Authentik (Same Server)
 
 This setup runs Authentik on the same server as Reflector, with Caddy proxying to both.
 
-### Step 1: Deploy Authentik
-
-**Location: YOUR SERVER (via SSH)**
+### Deploy Authentik
 
 ```bash
 # Create directory for Authentik
@@ -37,6 +37,7 @@ curl -O https://goauthentik.io/docker-compose.yml
 cat > .env << 'EOF'
 PG_PASS=$(openssl rand -base64 36 | tr -d '\n')
 AUTHENTIK_SECRET_KEY=$(openssl rand -base64 60 | tr -d '\n')
+# Privacy-focused choice for self-hosted deployments
 AUTHENTIK_ERROR_REPORTING__ENABLED=false
 AUTHENTIK_BOOTSTRAP_PASSWORD=YourSecurePassword123
 AUTHENTIK_BOOTSTRAP_EMAIL=admin@example.com
@@ -48,25 +49,19 @@ sudo docker compose up -d
 
 Authentik takes ~2 minutes to run migrations and apply blueprints on first start.
 
-### Step 2: Connect Authentik to Reflector's Network
+### Connect Authentik to Reflector's Network
 
-**Location: YOUR SERVER (via SSH)**
-
-Since Authentik runs in a separate Docker Compose project, connect it to Reflector's network so Caddy can proxy to it:
+If Authentik runs in a separate Docker Compose project, connect it to Reflector's network so Caddy can proxy to it:
 
 ```bash
 # Wait for Authentik to be healthy
-sleep 120
-
 # Connect Authentik server to Reflector's network
 sudo docker network connect reflector_default authentik-server-1
 ```
 
 **Important:** This step must be repeated if you restart Authentik with `docker compose down`. Add it to your deployment scripts or use `docker compose up -d` (which preserves containers) instead of down/up.
 
-### Step 3: Add Authentik to Caddy
-
-**Location: YOUR SERVER (via SSH)**
+### Add Authentik to Caddy
 
 Uncomment the Authentik section in your `Caddyfile` and set your domain:
 
@@ -86,11 +81,11 @@ Reload Caddy:
 docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
-### Step 4: Create OAuth2 Provider in Authentik
+### Create OAuth2 Provider in Authentik
 
 **Option A: Automated Setup (Recommended)**
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 Run the setup script from the Reflector repository:
 
@@ -102,7 +97,7 @@ cd ~/reflector
 
 **Important:** The script must be run from the `~/reflector` directory on your server, as it creates files using relative paths.
 
-The script will output the configuration values to add to your `.env` files. Skip to Step 6.
+The script will output the configuration values to add to your `.env` files. Skip to "Update docker-compose.prod.yml".
 
 **Option B: Manual Setup**
 
@@ -138,9 +133,9 @@ The script will output the configuration values to add to your `.env` files. Ski
      - **Provider**: Select the `Reflector` provider you just created
    - Click **Create**
 
-### Step 5: Get Public Key for JWT Verification
+### Get Public Key for JWT Verification
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 Extract the public key from Authentik's JWKS endpoint:
 
@@ -151,9 +146,9 @@ curl -s https://authentik.example.com/application/o/reflector/jwks/ | \
   > ~/reflector/server/reflector/auth/jwt/keys/authentik_public.pem
 ```
 
-### Step 6: Update docker-compose.prod.yml
+### Update docker-compose.prod.yml
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 **Note:** This step is already done in the current `docker-compose.prod.yml`. Verify the volume mounts exist:
 
@@ -173,9 +168,9 @@ worker:
     - ./server/reflector/auth/jwt/keys:/app/reflector/auth/jwt/keys:ro
 ```
 
-### Step 7: Configure Reflector Backend
+### Configure Reflector Backend
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 Update `server/.env`:
 ```env
@@ -186,11 +181,11 @@ AUTH_JWT_AUDIENCE=<your-client-id>
 CORS_ALLOW_CREDENTIALS=true
 ```
 
-Replace `<your-client-id>` with the Client ID from Step 4.
+Replace `<your-client-id>` with the Client ID from previous steps.
 
-### Step 8: Configure Reflector Frontend
+### Configure Reflector Frontend
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 Update `www/.env`:
 ```env
@@ -207,16 +202,16 @@ AUTHENTIK_CLIENT_SECRET=<your-client-secret>
 NEXTAUTH_SECRET=<generate-with-openssl-rand-hex-32>
 ```
 
-### Step 9: Restart Services
+### Restart Services
 
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 ```bash
 cd ~/reflector
 sudo docker compose -f docker-compose.prod.yml up -d --force-recreate server worker web
 ```
 
-### Step 10: Verify Authentication
+### Verify Authentication
 
 1. Visit `https://app.example.com`
 2. Click "Log in" or navigate to `/api/auth/signin`
