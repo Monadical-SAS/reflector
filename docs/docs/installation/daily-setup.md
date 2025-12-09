@@ -12,18 +12,18 @@ Daily.co enables live video meetings with automatic recording and transcription.
 ## What You'll Set Up
 
 ```
-User joins meeting → Daily.co video room → Recording to S3 → Webhook → Reflector transcribes
+User joins meeting → Daily.co video room → Recording to S3 → [Webhook] → Reflector transcribes
 ```
 
 ## Prerequisites
 
 - [ ] **Daily.co account** - Free tier at https://dashboard.daily.co
 - [ ] **AWS account** - For S3 storage
-- [ ] **Reflector deployed** - Complete Steps 1-7 from [Deployment Guide](./overview)
+- [ ] **Reflector deployed** - Complete steps from [Deployment Guide](./overview)
 
 ---
 
-## Step 1: Create Daily.co Account
+## Create Daily.co Account
 
 1. Visit https://dashboard.daily.co and sign up
 2. Verify your email
@@ -31,30 +31,30 @@ User joins meeting → Daily.co video room → Recording to S3 → Webhook → R
 
 ---
 
-## Step 2: Get Daily.co API Key
+## Get Daily.co API Key
 
 1. In Daily.co dashboard, go to **Developers**
 2. Click **API Keys**
 3. Click **Create API Key**
 4. Copy the key (starts with a long string)
 
-Save this for Step 6.
+Save this for later.
 
 ---
 
-## Step 3: Create AWS S3 Bucket
+## Create AWS S3 Bucket
 
 Daily.co needs somewhere to store recordings before Reflector processes them.
 
 ```bash
 # Choose a unique bucket name
-BUCKET_NAME="reflector-dailyco-yourname"
+BUCKET_NAME="reflector-dailyco-yourname" # -yourname is not a requirement, you can name the bucket as you wish
 AWS_REGION="us-east-1"
 
 # Create bucket
 aws s3 mb s3://$BUCKET_NAME --region $AWS_REGION
 
-# Enable versioning (optional but recommended)
+# Enable versioning (required)
 aws s3api put-bucket-versioning \
   --bucket $BUCKET_NAME \
   --versioning-configuration Status=Enabled
@@ -62,133 +62,38 @@ aws s3api put-bucket-versioning \
 
 ---
 
-## Step 4: Create IAM Role for Daily.co
+## Create IAM Role for Daily.co
 
 Daily.co needs permission to write recordings to your S3 bucket.
 
-### Create Trust Policy
+Follow the guide https://docs.daily.co/guides/products/live-streaming-recording/storing-recordings-in-a-custom-s3-bucket
 
-Create `daily-trust-policy.json`:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::741088605061:root"
-      },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "sts:ExternalId": "daily-co"
-        }
-      }
-    }
-  ]
-}
-```
+Save the role ARN - you'll need it soon.
 
-**Note**: `741088605061` is Daily.co's AWS account ID (this is public and correct).
+It looks like: `arn:aws:iam::123456789012:role/DailyCo`
 
-### Create the Role
+Shortly, you'll need to set up a role and give this role your s3 bucket access
 
-```bash
-aws iam create-role \
-  --role-name DailyCo \
-  --assume-role-policy-document file://daily-trust-policy.json
-```
-
-### Create Permission Policy
-
-Create `daily-s3-policy.json` (replace `BUCKET_NAME`):
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:PutObjectAcl",
-        "s3:GetObject",
-        "s3:GetObjectAcl",
-        "s3:DeleteObject"
-      ],
-      "Resource": "arn:aws:s3:::BUCKET_NAME/*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetBucketLocation"
-      ],
-      "Resource": "arn:aws:s3:::BUCKET_NAME"
-    }
-  ]
-}
-```
-
-### Attach Policy to Role
-
-```bash
-aws iam put-role-policy \
-  --role-name DailyCo \
-  --policy-name DailyCoS3Access \
-  --policy-document file://daily-s3-policy.json
-```
-
-### Get the Role ARN
-
-```bash
-aws iam get-role --role-name DailyCo --query 'Role.Arn' --output text
-```
-
-Save this ARN - you'll need it in Step 6.
-
-Output looks like: `arn:aws:iam::123456789012:role/DailyCo`
+No additional setup is required from Daily.co settings website side: the app code takes care of letting Daily know where to save the recordings.
 
 ---
 
-## Step 5: Configure Daily.co to Use Your S3
+## Configure Reflector
 
-**Official Documentation**: For detailed instructions, see Daily.co's guide on [Storing Recordings in a Custom S3 Bucket](https://docs.daily.co/guides/products/live-streaming-recording/storing-recordings-in-a-custom-s3-bucket)
-
-**Quick Setup:**
-
-1. Go to Daily.co dashboard → **Developers** → **Recording**
-2. Select **Amazon S3**
-3. Enter:
-   - **Bucket Name**: Your bucket name from Step 3
-   - **Bucket Region**: `us-east-1` (or your chosen region)
-   - **Role ARN**: The ARN from Step 4
-4. Click **Save**
-5. Daily.co will verify it can access your bucket
-
----
-
-## Step 6: Configure Reflector
-
-**Location: YOUR SERVER (via SSH)**
+**Location: Reflector server**
 
 Add to `server/.env`:
-```bash
-ssh user@your-server
-cd ~/reflector
-nano server/.env
-```
 
-Add these lines:
 ```env
 # Daily.co Configuration
 DEFAULT_VIDEO_PLATFORM=daily
-DAILY_API_KEY=<your-api-key-from-step-2>
-DAILY_SUBDOMAIN=<your-subdomain-from-step-1>
+DAILY_API_KEY=<your-api-key-from-daily-setup>
+DAILY_SUBDOMAIN=<your-subdomain-from-daily-setup>
 
 # S3 Storage for Daily.co recordings
-DAILYCO_STORAGE_AWS_BUCKET_NAME=<your-bucket-from-step-3>
+DAILYCO_STORAGE_AWS_BUCKET_NAME=<your-bucket-from-daily-setup>
 DAILYCO_STORAGE_AWS_REGION=us-east-1
-DAILYCO_STORAGE_AWS_ROLE_ARN=<your-role-arn-from-step-4>
+DAILYCO_STORAGE_AWS_ROLE_ARN=<your-role-arn-from-daily-setup>
 
 # Transcript storage (required for Daily.co multitrack processing)
 TRANSCRIPT_STORAGE_BACKEND=local
@@ -196,13 +101,13 @@ TRANSCRIPT_STORAGE_BACKEND=local
 # TRANSCRIPT_STORAGE_BACKEND=aws
 # TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID=<your-key>
 # TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY=<your-secret>
-# TRANSCRIPT_STORAGE_AWS_BUCKET_NAME=reflector-media
-# TRANSCRIPT_STORAGE_AWS_REGION=us-east-1
+# TRANSCRIPT_STORAGE_AWS_BUCKET_NAME=<your-bucket-name>
+# TRANSCRIPT_STORAGE_AWS_REGION=<your-bucket-region>
 ```
 
 ---
 
-## Step 7: Restart Services
+## Restart Services
 
 After changing `.env` files, reload with `up -d`:
 
@@ -214,37 +119,26 @@ sudo docker compose -f docker-compose.prod.yml up -d server worker
 
 ---
 
-## Step 8: Test Live Room
+## Test Live Room
 
 1. Visit your Reflector frontend: `https://app.example.com`
-2. Go to **Rooms** (or `/rooms`)
-3. Click **Create Room** or use test room
-4. Click **Join Meeting**
-5. Allow camera/microphone access
-6. You should see Daily.co video interface
-7. Speak for 10-20 seconds
-8. Leave the meeting
-9. Recording should appear in **Transcripts** within 1-2 minutes
+2. Go to **Rooms**
+3. Create or join a room
+4. Allow camera/microphone access
+5. You should see Daily.co video interface
+6. Speak for 10-20 seconds
+7. Leave the meeting
+8. Recording should appear in **Transcripts** within 5 minutes
 
 ---
 
 ## Troubleshooting
 
-### "Failed to create room"
-
-Check `server/.env`:
-- `DAILY_API_KEY` is correct
-- `DAILY_SUBDOMAIN` matches your Daily.co account
-- Restart server after changes
-
 ### Recording doesn't appear in S3
 
 1. Check Daily.co dashboard → **Logs** for errors
-2. Verify IAM role trust policy has correct Daily.co account ID
-3. Test S3 permissions:
-   ```bash
-   aws s3 ls s3://your-bucket-name
-   ```
+2. Verify IAM role trust policy has correct Daily.co account ID and your Daily.co subdomain
+3. Verify that the bucket has
 
 ### Recording in S3 but not transcribed
 
@@ -263,34 +157,10 @@ Check `server/.env`:
 
 ---
 
-## Webhook Configuration
+## Webhook Configuration [optional]
 
-Reflector automatically configures the Daily.co webhook when the server starts if:
-- `DAILY_API_KEY` is set
-- `DAILY_SUBDOMAIN` is set
-- `BASE_URL` is accessible from the internet
+`manage_daily_webhook.py` script guides you through creating a webhook for Daily recordings.
 
-The webhook URL will be: `https://api.example.com/v1/webhooks/daily`
+The webhook isn't required - polling mechanism is the default and performed automatically.
 
-To manually check webhook:
-```bash
-curl -H "Authorization: Bearer YOUR_DAILY_API_KEY" \
-  https://api.daily.co/v1/webhooks
-```
-
----
-
-## Costs
-
-**Daily.co Free Tier:**
-- 10,000 participant minutes/month
-- Good for ~40 hours of meetings
-
-**AWS S3 Costs:**
-- Storage: ~$0.023/GB/month
-- 1 hour meeting ≈ 500MB recording
-- Example: 10 hours/month ≈ $0.12/month
-
-**Modal.com Processing:**
-- Transcription: ~$0.01-0.05 per minute of audio
-- Diarization: ~$0.02-0.10 per minute of audio
+This guide won't go deep into webhook setup.

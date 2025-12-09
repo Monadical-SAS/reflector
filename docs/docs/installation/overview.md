@@ -133,6 +133,8 @@ Ensure ports 80 (HTTP) and 443 (HTTPS) are open for inbound traffic. The method 
 
 ### Clone Repository
 
+The Docker images contain all application code. You clone the repository for configuration files and the compose definition:
+
 ```bash
 git clone https://github.com/monadical-sas/reflector.git
 cd reflector
@@ -318,6 +320,8 @@ Quick summary:
 **Requires: Authentication Step**
 
 Live rooms require Daily.co and AWS S3. See [Daily.co Setup](./daily-setup) for complete S3/IAM configuration instructions.
+
+Note that Reflector also supports Whereby as a call provider - this doc doesn't cover its setup yet.
 
 Quick config - Add to `server/.env`:
 
