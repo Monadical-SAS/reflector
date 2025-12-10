@@ -3,10 +3,7 @@
 
 services:
   web:
-    build:
-      context: ./www
-      dockerfile: Dockerfile
-    image: reflector-frontend:latest
+    image: monadicalsas/reflector-frontend:latest
     environment:
       - KV_URL=${KV_URL:-redis://redis:6379}
       - SITE_URL=${SITE_URL}
