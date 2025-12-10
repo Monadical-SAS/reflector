@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     LLM_API_KEY: str | None = None
     LLM_CONTEXT_WINDOW: int = 16000
 
+    LLM_PARSE_MAX_RETRIES: int = (
+        3  # Max retries for JSON/validation errors (total attempts = retries + 1)
+    )
+
     # Diarization
     # backends:
     #   - pyannote: in-process model loading (no HTTP, runs in same process)

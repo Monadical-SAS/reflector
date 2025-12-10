@@ -1,13 +1,12 @@
 name: Build and Push Frontend Docker Image
 
 on:
-  push:
-    branches:
-      - main
-      - dockerhub-2
+  pull_request:
+    types:
+      - closed
     paths:
-      - 'www/**'
-      - '.github/workflows/dockerhub-frontend.yml'
+      - "www/**"
+      - ".github/workflows/dockerhub-frontend.yml"
   workflow_dispatch:
 
 env:
@@ -17,6 +16,10 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release-please--branches--'))
 
     permissions:
       contents: read
@@ -39,8 +42,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,3 +60,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: success()
+    strategy:
+      matrix:
+        environment: [reflector-monadical, reflector-media]
+    environment: ${{ matrix.environment }}
+    steps:
+      - name: Trigger Coolify deployment
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_WEBHOOK_TOKEN }}" \
+            -f || (echo "Failed to trigger Coolify deployment for ${{ matrix.environment }}" && exit 1)

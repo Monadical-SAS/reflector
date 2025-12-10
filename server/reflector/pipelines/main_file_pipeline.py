@@ -340,7 +340,6 @@ async def task_send_webhook_if_needed(*, transcript_id: str):
 @asynctask
 async def task_pipeline_file_process(*, transcript_id: str):
     """Celery task for file pipeline processing"""
-
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
         raise Exception(f"Transcript {transcript_id} not found")
