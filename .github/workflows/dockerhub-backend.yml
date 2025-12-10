@@ -42,7 +42,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Set up Docker Buildx

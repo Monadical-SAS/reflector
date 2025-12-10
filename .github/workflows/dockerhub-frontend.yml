@@ -42,7 +42,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
+            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -61,10 +61,18 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: success()
+    strategy:
+      matrix:
+        environment: [reflector-monadical, reflector-media]
+    environment: ${{ matrix.environment }}
+    steps:
       - name: Trigger Coolify deployment
-        if: success()
         run: |
           curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_WEBHOOK_TOKEN }}" \
-            -f || (echo "Failed to trigger Coolify deployment" && exit 1)
+            -f || (echo "Failed to trigger Coolify deployment for ${{ matrix.environment }}" && exit 1)
