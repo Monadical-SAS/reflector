@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.23.0](https://github.com/Monadical-SAS/reflector/compare/v0.22.4...v0.23.0) (2025-12-10)
+
+
+### Features
+
+* dockerhub ci ([#772](https://github.com/Monadical-SAS/reflector/issues/772)) ([00549f1](https://github.com/Monadical-SAS/reflector/commit/00549f153ade922cf4cb6c5358a7d11a39c426d2))
+* llm retries ([#739](https://github.com/Monadical-SAS/reflector/issues/739)) ([61f0e29](https://github.com/Monadical-SAS/reflector/commit/61f0e29d4c51eab54ee67af92141fbb171e8ccaa))
+
+
+### Bug Fixes
+
+* celery inspect bug sidestep in restart script ([#766](https://github.com/Monadical-SAS/reflector/issues/766)) ([ec17ed7](https://github.com/Monadical-SAS/reflector/commit/ec17ed7b587cf6ee143646baaee67a7c017044d4))
+* deploy frontend to coolify ([#779](https://github.com/Monadical-SAS/reflector/issues/779)) ([91650ec](https://github.com/Monadical-SAS/reflector/commit/91650ec65f65713faa7ee0dcfb75af427b7c4ba0))
+* hide rooms settings instead of disabling ([#763](https://github.com/Monadical-SAS/reflector/issues/763)) ([3ad78be](https://github.com/Monadical-SAS/reflector/commit/3ad78be7628c0d029296b301a0e87236c76b7598))
+* return participant emails from transcript endpoint ([#769](https://github.com/Monadical-SAS/reflector/issues/769)) ([d3a5cd1](https://github.com/Monadical-SAS/reflector/commit/d3a5cd12d2d0d9c32af2d5bd9322e030ef69b85d))
+
 ## [0.22.4](https://github.com/Monadical-SAS/reflector/compare/v0.22.3...v0.22.4) (2025-12-02)
 
 
