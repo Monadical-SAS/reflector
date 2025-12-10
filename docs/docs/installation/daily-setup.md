@@ -95,9 +95,7 @@ DAILYCO_STORAGE_AWS_BUCKET_NAME=<your-bucket-from-daily-setup>
 DAILYCO_STORAGE_AWS_REGION=us-east-1
 DAILYCO_STORAGE_AWS_ROLE_ARN=<your-role-arn-from-daily-setup>
 
-# Transcript storage (required for Daily.co multitrack processing)
-TRANSCRIPT_STORAGE_BACKEND=local
-# Or use S3 for production:
+# Transcript storage (should already be configured from main setup)
 # TRANSCRIPT_STORAGE_BACKEND=aws
 # TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID=<your-key>
 # TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY=<your-secret>
@@ -123,12 +121,13 @@ sudo docker compose -f docker-compose.prod.yml up -d server worker
 
 1. Visit your Reflector frontend: `https://app.example.com`
 2. Go to **Rooms**
-3. Create or join a room
-4. Allow camera/microphone access
-5. You should see Daily.co video interface
-6. Speak for 10-20 seconds
-7. Leave the meeting
-8. Recording should appear in **Transcripts** within 5 minutes
+3. Click **Create Room**
+4. Select **Daily** as the platform
+5. Allow camera/microphone access
+6. You should see Daily.co video interface
+7. Speak for 10-20 seconds
+8. Leave the meeting
+9. Recording should appear in **Transcripts** within 5 minutes (if webhooks aren't set up yet, see [Webhook Configuration](#webhook-configuration-optional) below)
 
 ---
 

@@ -32,14 +32,18 @@ Before starting, you need:
   - Modal.com account, OR
   - GPU server with NVIDIA GPU (8GB+ VRAM)
 - **HuggingFace account** - Free at https://huggingface.co
+  - Accept both Pyannote licenses (required for speaker diarization):
+    - https://huggingface.co/pyannote/speaker-diarization-3.1
+    - https://huggingface.co/pyannote/segmentation-3.0
 - **LLM API** - For summaries and topic detection. Choose one:
   - OpenAI API key at https://platform.openai.com/account/api-keys, OR
   - Any OpenAI-compatible endpoint (vLLM, LiteLLM, Ollama, etc.)
+- **AWS S3 bucket** - For storing audio files and transcripts (see [S3 Setup](#create-s3-bucket-for-transcript-storage) below)
 
 ### Optional (for live meeting rooms)
 
 - [ ] **Daily.co account** - Free tier at https://dashboard.daily.co
-- [ ] **AWS S3 bucket** - For Daily.co recording storage
+- [ ] **AWS S3 bucket + IAM Role** - For Daily.co recording storage (separate from transcript storage)
 
 ---
 
@@ -142,6 +146,34 @@ cd reflector
 
 ---
 
+## Create S3 Bucket for Transcript Storage
+
+Reflector requires AWS S3 to store audio files during processing.
+
+### Create Bucket
+
+```bash
+# Choose a unique bucket name
+BUCKET_NAME="reflector-transcripts-yourname"
+AWS_REGION="us-east-1"
+
+# Create bucket
+aws s3 mb s3://$BUCKET_NAME --region $AWS_REGION
+```
+
+### Create IAM User
+
+Create an IAM user with S3 access for Reflector:
+
+1. Go to AWS IAM Console → Users → Create User
+2. Name: `reflector-transcripts`
+3. Attach policy: `AmazonS3FullAccess` (or create a custom policy for just your bucket)
+4. Create access key (Access key ID + Secret access key)
+
+Save these credentials - you'll need them in the next step.
+
+---
+
 ## Configure Environment
 
 **Location: YOUR SERVER (via SSH, in the `reflector` directory)**
@@ -193,12 +225,17 @@ DIARIZATION_MODAL_API_KEY=<from-deploy-all.sh-output>
 # DIARIZATION_URL=https://gpu.example.com
 # DIARIZATION_MODAL_API_KEY=<your-generated-api-key>
 
-# Storage - where to store audio files and transcripts
-TRANSCRIPT_STORAGE_BACKEND=local
+# Storage - where to store audio files and transcripts (requires AWS S3)
+TRANSCRIPT_STORAGE_BACKEND=aws
+TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID=your-aws-access-key
+TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+TRANSCRIPT_STORAGE_AWS_BUCKET_NAME=reflector-media
+TRANSCRIPT_STORAGE_AWS_REGION=us-east-1
 
 # LLM - for generating titles, summaries, and topics
 LLM_API_KEY=sk-your-openai-api-key
 LLM_MODEL=gpt-4o-mini
+# LLM_URL=https://api.openai.com/v1  # Optional: custom endpoint (vLLM, LiteLLM, Ollama, etc.)
 
 # Auth - disable for initial setup (see a dedicated step for authentication)
 AUTH_BACKEND=none
