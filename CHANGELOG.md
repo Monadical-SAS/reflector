@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.2](https://github.com/Monadical-SAS/reflector/compare/v0.23.1...v0.23.2) (2025-12-11)
+
+
+### Bug Fixes
+
+* build on push tags ([#785](https://github.com/Monadical-SAS/reflector/issues/785)) ([d7f140b](https://github.com/Monadical-SAS/reflector/commit/d7f140b7d1f4660d5da7a0da1357f68869e0b5cd))
+
 ## [0.23.1](https://github.com/Monadical-SAS/reflector/compare/v0.23.0...v0.23.1) (2025-12-11)
 
 
