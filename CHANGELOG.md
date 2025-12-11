@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/Monadical-SAS/reflector/compare/v0.23.0...v0.23.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* populate room_name in transcript GET endpoint ([#783](https://github.com/Monadical-SAS/reflector/issues/783)) ([0eba147](https://github.com/Monadical-SAS/reflector/commit/0eba1470181c7b9e0a79964a1ef28c09bcbdd9d7))
+
 ## [0.23.0](https://github.com/Monadical-SAS/reflector/compare/v0.22.4...v0.23.0) (2025-12-10)
 
 
