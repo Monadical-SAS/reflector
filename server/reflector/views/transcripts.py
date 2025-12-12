@@ -94,6 +94,7 @@ class GetTranscriptMinimal(BaseModel):
     title: str | None
     short_summary: str | None
     long_summary: str | None
+    action_items: dict | None = None
     created_at: datetime
     share_mode: str = Field("private")
     source_language: str | None
@@ -501,6 +502,7 @@ async def transcript_get(
         "title": transcript.title,
         "short_summary": transcript.short_summary,
         "long_summary": transcript.long_summary,
+        "action_items": transcript.action_items,
         "created_at": transcript.created_at,
         "share_mode": transcript.share_mode,
         "source_language": transcript.source_language,
