@@ -1,14 +1,21 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 
+# Install curl for fetching OpenAPI spec
+RUN apk add --no-cache curl
+
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
 
-# Copy source (includes static/openapi.json if pre-fetched)
+# Copy source
 COPY . .
+
+# Fetch OpenAPI spec from production API
+ARG OPENAPI_URL=https://api-reflector.monadical.com/openapi.json
+RUN mkdir -p ./static && curl -sf "${OPENAPI_URL}" -o ./static/openapi.json || echo '{}' > ./static/openapi.json
 
 # Fix docusaurus config: change onBrokenLinks to 'warn' for Docker build
 RUN sed -i "s/onBrokenLinks: 'throw'/onBrokenLinks: 'warn'/g" docusaurus.config.ts
