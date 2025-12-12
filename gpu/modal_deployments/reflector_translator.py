@@ -103,7 +103,7 @@ def configure_seamless_m4t():
 
 
 transcriber_image = (
-    Image.debian_slim(python_version="3.10.8")
+    Image.debian_slim(python_version="3.10")
     .apt_install("git")
     .apt_install("wget")
     .apt_install("libsndfile-dev")
@@ -119,6 +119,7 @@ transcriber_image = (
         "fairseq2",
         "pyyaml",
         "hf-transfer~=0.1",
+        "pydantic",
     )
     .run_function(install_seamless_communication)
     .run_function(download_seamlessm4t_model)

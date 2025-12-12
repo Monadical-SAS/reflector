@@ -1,0 +1,285 @@
+---
+sidebar_position: 5
+title: Authentication Setup
+---
+
+# Authentication Setup
+
+This page covers authentication setup in detail. For the complete deployment guide, see [Deployment Guide](./overview).
+
+Reflector uses [Authentik](https://goauthentik.io/) for OAuth/OIDC authentication. This guide walks you through setting up Authentik and connecting it to Reflector.
+
+The guide simplistically sets Authentic on the same server as Reflector. You can use your own Authentic instance instead.
+
+## Overview
+
+Reflector's authentication flow:
+1. User clicks "Sign In" on frontend
+2. Frontend redirects to Authentik login page
+3. User authenticates with Authentik
+4. Authentik redirects back with OAuth tokens
+5. Frontend stores tokens, backends verify JWT signature
+
+## Option 1: Self-Hosted Authentik (Same Server)
+
+This setup runs Authentik on the same server as Reflector, with Caddy proxying to both.
+
+### Deploy Authentik
+
+```bash
+# Create directory for Authentik
+mkdir -p ~/authentik && cd ~/authentik
+
+# Download docker-compose file
+curl -O https://goauthentik.io/docker-compose.yml
+
+# Generate secrets and bootstrap credentials
+cat > .env << 'EOF'
+PG_PASS=$(openssl rand -base64 36 | tr -d '\n')
+AUTHENTIK_SECRET_KEY=$(openssl rand -base64 60 | tr -d '\n')
+# Privacy-focused choice for self-hosted deployments
+AUTHENTIK_ERROR_REPORTING__ENABLED=false
+AUTHENTIK_BOOTSTRAP_PASSWORD=YourSecurePassword123
+AUTHENTIK_BOOTSTRAP_EMAIL=admin@example.com
+EOF
+
+# Start Authentik
+sudo docker compose up -d
+```
+
+Authentik takes ~2 minutes to run migrations and apply blueprints on first start.
+
+### Connect Authentik to Reflector's Network
+
+If Authentik runs in a separate Docker Compose project, connect it to Reflector's network so Caddy can proxy to it:
+
+```bash
+# Wait for Authentik to be healthy
+# Connect Authentik server to Reflector's network
+sudo docker network connect reflector_default authentik-server-1
+```
+
+**Important:** This step must be repeated if you restart Authentik with `docker compose down`. Add it to your deployment scripts or use `docker compose up -d` (which preserves containers) instead of down/up.
+
+### Add Authentik to Caddy
+
+Uncomment the Authentik section in your `Caddyfile` and set your domain:
+
+```bash
+nano Caddyfile
+```
+
+Uncomment and edit:
+```
+{$AUTHENTIK_DOMAIN:authentik.example.com} {
+    reverse_proxy authentik-server-1:9000
+}
+```
+
+Reload Caddy:
+```bash
+docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+### Create OAuth2 Provider in Authentik
+
+**Option A: Automated Setup (Recommended)**
+
+**Location: Reflector server**
+
+Run the setup script from the Reflector repository:
+
+```bash
+ssh user@your-server-ip
+cd ~/reflector
+./scripts/setup-authentik-oauth.sh https://authentik.example.com YourSecurePassword123 https://app.example.com
+```
+
+**Important:** The script must be run from the `~/reflector` directory on your server, as it creates files using relative paths.
+
+The script will output the configuration values to add to your `.env` files. Skip to "Update docker-compose.prod.yml".
+
+**Option B: Manual Setup**
+
+1. **Login to Authentik Admin** at `https://authentik.example.com/`
+   - Username: `akadmin`
+   - Password: The `AUTHENTIK_BOOTSTRAP_PASSWORD` you set in .env
+
+2. **Create OAuth2 Provider:**
+   - Go to **Applications > Providers > Create**
+   - Select **OAuth2/OpenID Provider**
+   - Configure:
+     - **Name**: `Reflector`
+     - **Authorization flow**: `default-provider-authorization-implicit-consent`
+     - **Client type**: `Confidential`
+     - **Client ID**: Note this value (auto-generated)
+     - **Client Secret**: Note this value (auto-generated)
+     - **Redirect URIs**: Add entry with:
+       ```
+       https://app.example.com/api/auth/callback/authentik
+       ```
+   - Scroll down to **Advanced protocol settings**
+   - In **Scopes**, add these three mappings:
+     - `authentik default OAuth Mapping: OpenID 'email'`
+     - `authentik default OAuth Mapping: OpenID 'openid'`
+     - `authentik default OAuth Mapping: OpenID 'profile'`
+   - Click **Finish**
+
+3. **Create Application:**
+   - Go to **Applications > Applications > Create**
+   - Configure:
+     - **Name**: `Reflector`
+     - **Slug**: `reflector` (auto-filled)
+     - **Provider**: Select the `Reflector` provider you just created
+   - Click **Create**
+
+### Get Public Key for JWT Verification
+
+**Location: Reflector server**
+
+Extract the public key from Authentik's JWKS endpoint:
+
+```bash
+mkdir -p ~/reflector/server/reflector/auth/jwt/keys
+curl -s https://authentik.example.com/application/o/reflector/jwks/ | \
+  jq -r '.keys[0].x5c[0]' | base64 -d | openssl x509 -pubkey -noout \
+  > ~/reflector/server/reflector/auth/jwt/keys/authentik_public.pem
+```
+
+### Update docker-compose.prod.yml
+
+**Location: Reflector server**
+
+**Note:** This step is already done in the current `docker-compose.prod.yml`. Verify the volume mounts exist:
+
+```yaml
+server:
+  image: monadicalsas/reflector-backend:latest
+  # ... other config ...
+  volumes:
+    - server_data:/app/data
+    - ./server/reflector/auth/jwt/keys:/app/reflector/auth/jwt/keys:ro
+
+worker:
+  image: monadicalsas/reflector-backend:latest
+  # ... other config ...
+  volumes:
+    - server_data:/app/data
+    - ./server/reflector/auth/jwt/keys:/app/reflector/auth/jwt/keys:ro
+```
+
+### Configure Reflector Backend
+
+**Location: Reflector server**
+
+Update `server/.env`:
+```env
+# Authentication
+AUTH_BACKEND=jwt
+AUTH_JWT_PUBLIC_KEY=authentik_public.pem
+AUTH_JWT_AUDIENCE=<your-client-id>
+CORS_ALLOW_CREDENTIALS=true
+```
+
+Replace `<your-client-id>` with the Client ID from previous steps.
+
+### Configure Reflector Frontend
+
+**Location: Reflector server**
+
+Update `www/.env`:
+```env
+# Authentication
+FEATURE_REQUIRE_LOGIN=true
+
+# Authentik OAuth
+AUTHENTIK_ISSUER=https://authentik.example.com/application/o/reflector
+AUTHENTIK_REFRESH_TOKEN_URL=https://authentik.example.com/application/o/token/
+AUTHENTIK_CLIENT_ID=<your-client-id>
+AUTHENTIK_CLIENT_SECRET=<your-client-secret>
+
+# NextAuth
+NEXTAUTH_SECRET=<generate-with-openssl-rand-hex-32>
+```
+
+### Restart Services
+
+**Location: Reflector server**
+
+```bash
+cd ~/reflector
+sudo docker compose -f docker-compose.prod.yml up -d --force-recreate server worker web
+```
+
+### Verify Authentication
+
+1. Visit `https://app.example.com`
+2. Click "Log in" or navigate to `/api/auth/signin`
+3. Click "Sign in with Authentik"
+4. Login with your Authentik credentials
+5. You should be redirected back and see "Log out" in the header
+
+## Option 2: Disable Authentication
+
+For testing or internal deployments where authentication isn't needed:
+
+**Backend `server/.env`:**
+```env
+AUTH_BACKEND=none
+```
+
+**Frontend `www/.env`:**
+```env
+FEATURE_REQUIRE_LOGIN=false
+```
+
+**Note:** The pre-built Docker images have `FEATURE_REQUIRE_LOGIN=true` baked in. To disable auth, you'll need to rebuild the frontend image with the env var set at build time, or set up Authentik.
+
+## Troubleshooting
+
+### "Invalid redirect URI" error
+- Verify the redirect URI in Authentik matches exactly:
+  ```
+  https://app.example.com/api/auth/callback/authentik
+  ```
+- Check for trailing slashes - they must match exactly
+
+### "Invalid audience" JWT error
+- Ensure `AUTH_JWT_AUDIENCE` in `server/.env` matches the Client ID from Authentik
+- The audience value is the OAuth Client ID, not the issuer URL
+
+### "JWT verification failed" error
+- Verify the public key file is mounted in the container
+- Check `AUTH_JWT_PUBLIC_KEY` points to the correct filename
+- Ensure the key was extracted from the correct provider's JWKS endpoint
+
+### Caddy returns 503 for Authentik
+- Verify Authentik container is connected to Reflector's network:
+  ```bash
+  sudo docker network connect reflector_default authentik-server-1
+  ```
+- Check Authentik is healthy: `cd ~/authentik && sudo docker compose ps`
+
+### Users can't access protected pages
+- Verify `FEATURE_REQUIRE_LOGIN=true` in frontend
+- Check `AUTH_BACKEND=jwt` in backend
+- Verify CORS settings allow credentials
+
+### Token refresh errors
+- Ensure Redis is running (frontend uses Redis for token caching)
+- Verify `KV_URL` is set correctly in frontend env
+- Check `AUTHENTIK_REFRESH_TOKEN_URL` is correct
+
+## API Key Authentication
+
+For programmatic access (scripts, integrations), users can generate API keys:
+
+1. Login to Reflector
+2. Go to Settings > API Keys
+3. Click "Generate New Key"
+4. Use the key in requests:
+   ```bash
+   curl -H "X-API-Key: your-api-key" https://api.example.com/v1/transcripts
+   ```
+
+API keys are stored hashed and can be revoked at any time.
