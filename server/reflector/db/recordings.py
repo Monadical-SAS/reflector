@@ -22,7 +22,9 @@ recordings = sa.Table(
     ),
     sa.Column("meeting_id", sa.String),
     sa.Column("track_keys", sa.JSON, nullable=True),
+    sa.Column("workflow_id", sa.String, nullable=True),
     sa.Index("idx_recording_meeting_id", "meeting_id"),
+    sa.Index("idx_recording_workflow_id", "workflow_id"),
 )
 
 
@@ -38,6 +40,8 @@ class Recording(BaseModel):
     # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
     # None means not a multitrack recording, [] means multitrack with no tracks
     track_keys: list[str] | None = None
+    # Conductor workflow ID for tracking pipeline execution
+    workflow_id: str | None = None
 
     @property
     def is_multitrack(self) -> bool:

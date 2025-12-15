@@ -286,6 +286,35 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
+    # Start Conductor workflow if enabled
+    if settings.CONDUCTOR_ENABLED:
+        from reflector.conductor.client import ConductorClientManager  # noqa: PLC0415
+
+        workflow_id = ConductorClientManager.start_workflow(
+            name="diarization_pipeline",
+            version=1,
+            input_data={
+                "recording_id": recording_id,
+                "room_name": daily_room_name,
+                "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
+                "bucket_name": bucket_name,
+                "transcript_id": transcript.id,
+                "room_id": room.id,
+            },
+        )
+        logger.info(
+            "Started Conductor workflow",
+            workflow_id=workflow_id,
+            transcript_id=transcript.id,
+        )
+
+        # Store workflow_id on recording for status tracking
+        await recordings_controller.update(recording, {"workflow_id": workflow_id})
+
+        if not settings.CONDUCTOR_SHADOW_MODE:
+            return  # Don't trigger Celery
+
+    # Celery pipeline (runs when Conductor disabled OR in shadow mode)
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,

@@ -37,7 +37,7 @@ async def process_transcript_inner(
 ) -> AsyncResult:
     validation = await validate_transcript_for_processing(transcript)
     on_validation(validation)
-    config = await prepare_transcript_processing(validation)
+    config = await prepare_transcript_processing(validation, room_id=transcript.room_id)
     on_preprocess(config)
     return dispatch_transcript_processing(config)
 

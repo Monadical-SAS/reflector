@@ -150,5 +150,11 @@ class Settings(BaseSettings):
     ZULIP_API_KEY: str | None = None
     ZULIP_BOT_EMAIL: str | None = None
 
+    # Conductor workflow orchestration
+    CONDUCTOR_SERVER_URL: str = "http://conductor:8080/api"
+    CONDUCTOR_DEBUG: bool = False
+    CONDUCTOR_ENABLED: bool = False
+    CONDUCTOR_SHADOW_MODE: bool = False
+
 
 settings = Settings()
