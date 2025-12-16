@@ -302,6 +302,11 @@ async def _process_multitrack_recording_inner(
                 "transcript_id": transcript.id,
                 "room_id": room.id,
             },
+            additional_metadata={
+                "transcript_id": transcript.id,
+                "recording_id": recording_id,
+                "daily_recording_id": recording_id,
+            },
         )
         logger.info(
             "Started Hatchet workflow",

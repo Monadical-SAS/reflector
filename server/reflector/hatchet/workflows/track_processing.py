@@ -18,7 +18,16 @@ from pydantic import BaseModel
 
 from reflector.hatchet.client import HatchetClientManager
 from reflector.hatchet.progress import emit_progress_async
+from reflector.hatchet.workflows.models import PadTrackResult, TranscribeTrackResult
 from reflector.logger import logger
+
+
+def _to_dict(output) -> dict:
+    """Convert task output to dict, handling both dict and Pydantic model returns."""
+    if isinstance(output, dict):
+        return output
+    return output.model_dump()
+
 
 # Audio constants matching existing pipeline
 OPUS_STANDARD_SAMPLE_RATE = 48000
@@ -161,7 +170,7 @@ def _apply_audio_padding_to_file(
 
 
 @track_workflow.task(execution_timeout=timedelta(seconds=300), retries=3)
-async def pad_track(input: TrackInput, ctx: Context) -> dict:
+async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
     """Pad single audio track with silence for alignment.
 
     Extracts stream.start_time from WebM container metadata and applies
@@ -213,11 +222,11 @@ async def pad_track(input: TrackInput, ctx: Context) -> dict:
                 await emit_progress_async(
                     input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
                 )
-                return {
-                    "padded_url": source_url,
-                    "size": 0,
-                    "track_index": input.track_index,
-                }
+                return PadTrackResult(
+                    padded_url=source_url,
+                    size=0,
+                    track_index=input.track_index,
+                )
 
             # Create temp file for padded output
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
@@ -265,11 +274,11 @@ async def pad_track(input: TrackInput, ctx: Context) -> dict:
             input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
         )
 
-        return {
-            "padded_url": padded_url,
-            "size": file_size,
-            "track_index": input.track_index,
-        }
+        return PadTrackResult(
+            padded_url=padded_url,
+            size=file_size,
+            track_index=input.track_index,
+        )
 
     except Exception as e:
         logger.error("[Hatchet] pad_track failed", error=str(e), exc_info=True)
@@ -282,7 +291,7 @@ async def pad_track(input: TrackInput, ctx: Context) -> dict:
 @track_workflow.task(
     parents=[pad_track], execution_timeout=timedelta(seconds=600), retries=3
 )
-async def transcribe_track(input: TrackInput, ctx: Context) -> dict:
+async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackResult:
     """Transcribe audio track using GPU (Modal.com) or local Whisper."""
     logger.info(
         "[Hatchet] transcribe_track",
@@ -295,7 +304,7 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> dict:
     )
 
     try:
-        pad_result = ctx.task_output(pad_track)
+        pad_result = _to_dict(ctx.task_output(pad_track))
         audio_url = pad_result.get("padded_url")
 
         if not audio_url:
@@ -324,10 +333,10 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> dict:
             input.transcript_id, "transcribe_track", "completed", ctx.workflow_run_id
         )
 
-        return {
-            "words": words,
-            "track_index": input.track_index,
-        }
+        return TranscribeTrackResult(
+            words=words,
+            track_index=input.track_index,
+        )
 
     except Exception as e:
         logger.error("[Hatchet] transcribe_track failed", error=str(e), exc_info=True)

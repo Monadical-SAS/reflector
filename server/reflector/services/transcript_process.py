@@ -224,6 +224,26 @@ def dispatch_transcript_processing(
                             transcript, {"workflow_run_id": None}
                         )
 
+                    # Re-fetch transcript to check for concurrent dispatch (TOCTOU protection)
+                    transcript = await transcripts_controller.get_by_id(
+                        config.transcript_id
+                    )
+                    if transcript and transcript.workflow_run_id:
+                        # Another process started a workflow between validation and now
+                        try:
+                            status = await HatchetClientManager.get_workflow_run_status(
+                                transcript.workflow_run_id
+                            )
+                            if "RUNNING" in status or "QUEUED" in status:
+                                logger.info(
+                                    "Concurrent workflow detected, skipping dispatch",
+                                    workflow_id=transcript.workflow_run_id,
+                                )
+                                return transcript.workflow_run_id
+                        except Exception:
+                            # If we can't get status, proceed with new workflow
+                            pass
+
                     workflow_id = await HatchetClientManager.start_workflow(
                         workflow_name="DiarizationPipeline",
                         input_data={
@@ -233,6 +253,11 @@ def dispatch_transcript_processing(
                             "bucket_name": config.bucket_name,
                             "transcript_id": config.transcript_id,
                             "room_id": config.room_id,
+                        },
+                        additional_metadata={
+                            "transcript_id": config.transcript_id,
+                            "recording_id": config.recording_id,
+                            "daily_recording_id": config.recording_id,
                         },
                     )
 

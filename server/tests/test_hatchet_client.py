@@ -2,6 +2,9 @@
 Tests for HatchetClientManager error handling and validation.
 
 Only tests that catch real bugs - not mock verification tests.
+
+Note: The `reset_hatchet_client` fixture (autouse=True in conftest.py)
+automatically resets the singleton before and after each test.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -17,8 +20,6 @@ async def test_hatchet_client_can_replay_handles_exception():
     gracefully allow reprocessing when workflow state is unknown.
     """
     from reflector.hatchet.client import HatchetClientManager
-
-    HatchetClientManager._instance = None
 
     with patch("reflector.hatchet.client.settings") as mock_settings:
         mock_settings.HATCHET_CLIENT_TOKEN = "test-token"
@@ -37,8 +38,6 @@ async def test_hatchet_client_can_replay_handles_exception():
             # Should return False on error (workflow might be gone)
             assert can_replay is False
 
-    HatchetClientManager._instance = None
-
 
 def test_hatchet_client_raises_without_token():
     """Test that get_client raises ValueError without token.
@@ -48,12 +47,8 @@ def test_hatchet_client_raises_without_token():
     """
     from reflector.hatchet.client import HatchetClientManager
 
-    HatchetClientManager._instance = None
-
     with patch("reflector.hatchet.client.settings") as mock_settings:
         mock_settings.HATCHET_CLIENT_TOKEN = None
 
         with pytest.raises(ValueError, match="HATCHET_CLIENT_TOKEN must be set"):
             HatchetClientManager.get_client()
-
-    HatchetClientManager._instance = None

@@ -1,37 +1,71 @@
-"""Hatchet Python client wrapper."""
+"""Hatchet Python client wrapper.
 
-from hatchet_sdk import Hatchet
+Uses singleton pattern because:
+1. Hatchet client maintains persistent gRPC connections for workflow registration
+2. Creating multiple clients would cause registration conflicts and resource leaks
+3. The SDK is designed for a single client instance per process
+4. Tests use `HatchetClientManager.reset()` to isolate state between tests
+"""
+
+import logging
+
+from hatchet_sdk import ClientConfig, Hatchet
 
 from reflector.logger import logger
 from reflector.settings import settings
 
 
 class HatchetClientManager:
-    """Singleton manager for Hatchet client connections."""
+    """Singleton manager for Hatchet client connections.
+
+    Singleton pattern is used because Hatchet SDK maintains persistent gRPC
+    connections for workflow registration, and multiple clients would conflict.
+
+    For testing, use the `reset()` method or the `reset_hatchet_client` fixture
+    to ensure test isolation.
+    """
 
     _instance: Hatchet | None = None
 
     @classmethod
     def get_client(cls) -> Hatchet:
-        """Get or create the Hatchet client."""
+        """Get or create the Hatchet client.
+
+        Configures root logger so all logger.info() calls in workflows
+        appear in the Hatchet dashboard logs.
+        """
         if cls._instance is None:
             if not settings.HATCHET_CLIENT_TOKEN:
                 raise ValueError("HATCHET_CLIENT_TOKEN must be set")
 
+            # Pass root logger to Hatchet so workflow logs appear in dashboard
+            root_logger = logging.getLogger()
             cls._instance = Hatchet(
                 debug=settings.HATCHET_DEBUG,
+                config=ClientConfig(logger=root_logger),
             )
         return cls._instance
 
     @classmethod
     async def start_workflow(
-        cls, workflow_name: str, input_data: dict, key: str | None = None
+        cls,
+        workflow_name: str,
+        input_data: dict,
+        additional_metadata: dict | None = None,
     ) -> str:
-        """Start a workflow and return the workflow run ID."""
+        """Start a workflow and return the workflow run ID.
+
+        Args:
+            workflow_name: Name of the workflow to trigger.
+            input_data: Input data for the workflow run.
+            additional_metadata: Optional metadata for filtering in dashboard
+                (e.g., transcript_id, recording_id).
+        """
         client = cls.get_client()
         result = await client.runs.aio_create(
             workflow_name,
             input_data,
+            additional_metadata=additional_metadata,
         )
         # SDK v1.21+ returns V1WorkflowRunDetails with run.metadata.id
         return result.run.metadata.id
