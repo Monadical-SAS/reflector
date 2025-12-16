@@ -176,10 +176,56 @@ def dispatch_transcript_processing(
     config: ProcessingConfig, force: bool = False
 ) -> AsyncResult | None:
     if isinstance(config, MultitrackProcessingConfig):
-        # Start durable workflow if enabled (Hatchet or Conductor)
-        durable_started = False
+        # Check if room has use_hatchet=True (overrides env vars)
+        room_forces_hatchet = False
+        if config.room_id:
+            import asyncio
 
-        if settings.HATCHET_ENABLED:
+            from reflector.db.rooms import rooms_controller
+
+            async def _check_room_hatchet():
+                import databases
+
+                from reflector.db import _database_context
+
+                db = databases.Database(settings.DATABASE_URL)
+                _database_context.set(db)
+                await db.connect()
+                try:
+                    room = await rooms_controller.get_by_id(config.room_id)
+                    return room.use_hatchet if room else False
+                finally:
+                    await db.disconnect()
+                    _database_context.set(None)
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    room_forces_hatchet = pool.submit(
+                        asyncio.run, _check_room_hatchet()
+                    ).result()
+            else:
+                room_forces_hatchet = asyncio.run(_check_room_hatchet())
+
+        # Start durable workflow if enabled (Hatchet or Conductor)
+        # or if room has use_hatchet=True
+        durable_started = False
+        use_hatchet = settings.HATCHET_ENABLED or room_forces_hatchet
+
+        if room_forces_hatchet:
+            logger.info(
+                "Room forces Hatchet workflow",
+                room_id=config.room_id,
+                transcript_id=config.transcript_id,
+            )
+
+        if use_hatchet:
             import asyncio
 
             import databases
@@ -287,11 +333,11 @@ def dispatch_transcript_processing(
             logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
             durable_started = True
 
-        # If durable workflow started and not in shadow mode, skip Celery
-        if durable_started and not settings.DURABLE_WORKFLOW_SHADOW_MODE:
+        # If durable workflow started, skip Celery
+        if durable_started:
             return None
 
-        # Celery pipeline (shadow mode or durable workflows disabled)
+        # Celery pipeline (durable workflows disabled)
         return task_pipeline_multitrack_process.delay(
             transcript_id=config.transcript_id,
             bucket_name=config.bucket_name,

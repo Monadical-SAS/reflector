@@ -153,7 +153,6 @@ class Settings(BaseSettings):
     # Durable workflow orchestration
     # Provider: "hatchet" (or "none" to disable)
     DURABLE_WORKFLOW_PROVIDER: str = "none"
-    DURABLE_WORKFLOW_SHADOW_MODE: bool = False  # Run both provider + Celery
 
     # Hatchet workflow orchestration
     HATCHET_CLIENT_TOKEN: str | None = None

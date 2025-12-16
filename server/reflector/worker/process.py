@@ -320,11 +320,11 @@ async def _process_multitrack_recording_inner(
         )
         durable_started = True
 
-    # If durable workflow started and not in shadow mode, skip Celery
-    if durable_started and not settings.DURABLE_WORKFLOW_SHADOW_MODE:
+    # If durable workflow started, skip Celery
+    if durable_started:
         return
 
-    # Celery pipeline (runs when durable workflows disabled OR in shadow mode)
+    # Celery pipeline (runs when durable workflows disabled)
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,

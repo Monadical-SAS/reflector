@@ -57,6 +57,12 @@ rooms = sqlalchemy.Table(
         sqlalchemy.String,
         nullable=False,
     ),
+    sqlalchemy.Column(
+        "use_hatchet",
+        sqlalchemy.Boolean,
+        nullable=False,
+        server_default=false(),
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
 )
@@ -85,6 +91,7 @@ class Room(BaseModel):
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
     platform: Platform = Field(default_factory=lambda: settings.DEFAULT_VIDEO_PLATFORM)
+    use_hatchet: bool = False
 
 
 class RoomController:
