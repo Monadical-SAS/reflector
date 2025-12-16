@@ -151,13 +151,9 @@ class Settings(BaseSettings):
     ZULIP_BOT_EMAIL: str | None = None
 
     # Durable workflow orchestration
-    # Provider: "hatchet" or "conductor" (or "none" to disable)
+    # Provider: "hatchet" (or "none" to disable)
     DURABLE_WORKFLOW_PROVIDER: str = "none"
     DURABLE_WORKFLOW_SHADOW_MODE: bool = False  # Run both provider + Celery
-
-    # Conductor workflow orchestration
-    CONDUCTOR_SERVER_URL: str = "http://conductor:8080/api"
-    CONDUCTOR_DEBUG: bool = False
 
     # Hatchet workflow orchestration
     HATCHET_CLIENT_TOKEN: str | None = None
@@ -165,19 +161,9 @@ class Settings(BaseSettings):
     HATCHET_DEBUG: bool = False
 
     @property
-    def CONDUCTOR_ENABLED(self) -> bool:
-        """Legacy compatibility: True if Conductor is the active provider."""
-        return self.DURABLE_WORKFLOW_PROVIDER == "conductor"
-
-    @property
     def HATCHET_ENABLED(self) -> bool:
         """True if Hatchet is the active provider."""
         return self.DURABLE_WORKFLOW_PROVIDER == "hatchet"
-
-    @property
-    def CONDUCTOR_SHADOW_MODE(self) -> bool:
-        """Legacy compatibility for shadow mode."""
-        return self.DURABLE_WORKFLOW_SHADOW_MODE and self.CONDUCTOR_ENABLED
 
 
 settings = Settings()

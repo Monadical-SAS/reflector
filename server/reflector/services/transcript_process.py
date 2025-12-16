@@ -12,7 +12,6 @@ from typing import Literal, Union, assert_never
 import celery
 from celery.result import AsyncResult
 
-from reflector.conductor.client import ConductorClientManager
 from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import Transcript
 from reflector.hatchet.client import HatchetClientManager
@@ -261,26 +260,6 @@ def dispatch_transcript_processing(
                 workflow_id = asyncio.run(_handle_hatchet())
 
             logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
-            durable_started = True
-
-        elif settings.CONDUCTOR_ENABLED:
-            workflow_id = ConductorClientManager.start_workflow(
-                name="diarization_pipeline",
-                version=1,
-                input_data={
-                    "recording_id": config.recording_id,
-                    "room_name": None,  # Not available in reprocess path
-                    "tracks": [{"s3_key": k} for k in config.track_keys],
-                    "bucket_name": config.bucket_name,
-                    "transcript_id": config.transcript_id,
-                    "room_id": config.room_id,
-                },
-            )
-            logger.info(
-                "Started Conductor workflow (reprocess)",
-                workflow_id=workflow_id,
-                transcript_id=config.transcript_id,
-            )
             durable_started = True
 
         # If durable workflow started and not in shadow mode, skip Celery

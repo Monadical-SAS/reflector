@@ -286,7 +286,7 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
-    # Start durable workflow if enabled (Hatchet or Conductor)
+    # Start durable workflow if enabled (Hatchet)
     durable_started = False
 
     if settings.HATCHET_ENABLED:
@@ -309,33 +309,10 @@ async def _process_multitrack_recording_inner(
             transcript_id=transcript.id,
         )
 
-        # Store workflow_id on recording for status tracking
-        await recordings_controller.update(recording, {"workflow_id": workflow_id})
-        durable_started = True
-
-    elif settings.CONDUCTOR_ENABLED:
-        from reflector.conductor.client import ConductorClientManager  # noqa: PLC0415
-
-        workflow_id = ConductorClientManager.start_workflow(
-            name="diarization_pipeline",
-            version=1,
-            input_data={
-                "recording_id": recording_id,
-                "room_name": daily_room_name,
-                "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
-                "bucket_name": bucket_name,
-                "transcript_id": transcript.id,
-                "room_id": room.id,
-            },
+        # Store workflow_run_id on transcript for replay/resume
+        await transcripts_controller.update(
+            transcript, {"workflow_run_id": workflow_id}
         )
-        logger.info(
-            "Started Conductor workflow",
-            workflow_id=workflow_id,
-            transcript_id=transcript.id,
-        )
-
-        # Store workflow_id on recording for status tracking
-        await recordings_controller.update(recording, {"workflow_id": workflow_id})
         durable_started = True
 
     # If durable workflow started and not in shadow mode, skip Celery

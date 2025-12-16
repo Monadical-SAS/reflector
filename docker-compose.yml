@@ -34,20 +34,6 @@ services:
     environment:
       ENTRYPOINT: beat
 
-  conductor-worker:
-    build:
-      context: server
-    volumes:
-      - ./server/:/app/
-      - /app/.venv
-    env_file:
-      - ./server/.env
-    environment:
-      ENTRYPOINT: conductor-worker
-    depends_on:
-      conductor:
-        condition: service_healthy
-
   hatchet-worker:
     build:
       context: server
@@ -91,19 +77,6 @@ services:
       POSTGRES_DB: reflector
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-
-  conductor:
-    image: conductoross/conductor-standalone:3.15.0
-    ports:
-      - "8180:8080"
-      - "5001:5000"
-    environment:
-      - conductor.db.type=memory
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
   hatchet-postgres:
     image: postgres:15.6
