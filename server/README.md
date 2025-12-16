@@ -53,6 +53,16 @@ response = sqs.receive_message(QueueUrl=queue_url, ...)
 uv run /app/requeue_uploaded_file.py TRANSCRIPT_ID
 ```
 
+## Hatchet Setup (Fresh DB)
+
+After resetting the Hatchet database:
+
+1. Create API token at http://localhost:8889 → Settings → API Tokens
+2. Update `server/.env`: `HATCHET_CLIENT_TOKEN=<new-token>`
+3. Restart: `docker compose restart server hatchet-worker`
+
+Workflows register automatically when hatchet-worker starts.
+
 ## Pipeline Management
 
 ### Continue stuck pipeline from final summaries (identify_participants) step:

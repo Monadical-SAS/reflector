@@ -69,6 +69,7 @@ services:
 
   postgres:
     image: postgres:17
+    command: postgres -c 'max_connections=200'
     ports:
       - 5432:5432
     environment:
@@ -77,21 +78,9 @@ services:
       POSTGRES_DB: reflector
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-
-  hatchet-postgres:
-    image: postgres:15.6
-    command: postgres -c 'max_connections=200'
-    restart: always
-    environment:
-      - POSTGRES_USER=hatchet
-      - POSTGRES_PASSWORD=hatchet
-      - POSTGRES_DB=hatchet
-    ports:
-      - "5436:5432"
-    volumes:
-      - ./data/hatchet-postgres:/var/lib/postgresql/data
+      - ./server/docker/init-hatchet-db.sql:/docker-entrypoint-initdb.d/init-hatchet-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d hatchet -U hatchet"]
+      test: ["CMD-SHELL", "pg_isready -d reflector -U reflector"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -103,10 +92,10 @@ services:
       - "8889:8888"
       - "7078:7077"
     depends_on:
-      hatchet-postgres:
+      postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://hatchet:hatchet@hatchet-postgres:5432/hatchet?sslmode=disable"
+      DATABASE_URL: "postgresql://reflector:reflector@postgres:5432/hatchet?sslmode=disable"
       SERVER_AUTH_COOKIE_DOMAIN: localhost
       SERVER_AUTH_COOKIE_INSECURE: "t"
       SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
