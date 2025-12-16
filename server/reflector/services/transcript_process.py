@@ -102,6 +102,7 @@ async def validate_transcript_for_processing(
     if transcript.status == "idle":
         return ValidationNotReady(detail="Recording is not ready for processing")
 
+    # Check Celery tasks
     if task_is_scheduled_or_active(
         "reflector.pipelines.main_file_pipeline.task_pipeline_file_process",
         transcript_id=transcript.id,
@@ -110,6 +111,23 @@ async def validate_transcript_for_processing(
         transcript_id=transcript.id,
     ):
         return ValidationAlreadyScheduled(detail="already running")
+
+    # Check Hatchet workflows (if enabled)
+    if settings.HATCHET_ENABLED and transcript.workflow_run_id:
+        from reflector.hatchet.client import HatchetClientManager
+
+        try:
+            status = await HatchetClientManager.get_workflow_run_status(
+                transcript.workflow_run_id
+            )
+            # If workflow is running or queued, don't allow new processing
+            if "RUNNING" in status or "QUEUED" in status:
+                return ValidationAlreadyScheduled(
+                    detail="Hatchet workflow already running"
+                )
+        except Exception:
+            # If we can't get status, allow processing (workflow might be gone)
+            pass
 
     return ValidationOk(
         recording_id=transcript.recording_id, transcript_id=transcript.id
@@ -155,7 +173,9 @@ async def prepare_transcript_processing(
     )
 
 
-def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult | None:
+def dispatch_transcript_processing(
+    config: ProcessingConfig, force: bool = False
+) -> AsyncResult | None:
     if isinstance(config, MultitrackProcessingConfig):
         # Start durable workflow if enabled (Hatchet or Conductor)
         durable_started = False
@@ -163,18 +183,69 @@ def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult | No
         if settings.HATCHET_ENABLED:
             import asyncio
 
-            async def _start_hatchet():
-                return await HatchetClientManager.start_workflow(
-                    workflow_name="DiarizationPipeline",
-                    input_data={
-                        "recording_id": config.recording_id,
-                        "room_name": None,  # Not available in reprocess path
-                        "tracks": [{"s3_key": k} for k in config.track_keys],
-                        "bucket_name": config.bucket_name,
-                        "transcript_id": config.transcript_id,
-                        "room_id": config.room_id,
-                    },
-                )
+            import databases
+
+            from reflector.db import _database_context
+            from reflector.db.transcripts import transcripts_controller
+
+            async def _handle_hatchet():
+                db = databases.Database(settings.DATABASE_URL)
+                _database_context.set(db)
+                await db.connect()
+
+                try:
+                    transcript = await transcripts_controller.get_by_id(
+                        config.transcript_id
+                    )
+
+                    if transcript and transcript.workflow_run_id and not force:
+                        can_replay = await HatchetClientManager.can_replay(
+                            transcript.workflow_run_id
+                        )
+                        if can_replay:
+                            await HatchetClientManager.replay_workflow(
+                                transcript.workflow_run_id
+                            )
+                            logger.info(
+                                "Replaying Hatchet workflow",
+                                workflow_id=transcript.workflow_run_id,
+                            )
+                            return transcript.workflow_run_id
+
+                    # Force: cancel old workflow if exists
+                    if force and transcript and transcript.workflow_run_id:
+                        await HatchetClientManager.cancel_workflow(
+                            transcript.workflow_run_id
+                        )
+                        logger.info(
+                            "Cancelled old workflow (--force)",
+                            workflow_id=transcript.workflow_run_id,
+                        )
+                        await transcripts_controller.update(
+                            transcript, {"workflow_run_id": None}
+                        )
+
+                    workflow_id = await HatchetClientManager.start_workflow(
+                        workflow_name="DiarizationPipeline",
+                        input_data={
+                            "recording_id": config.recording_id,
+                            "room_name": None,
+                            "tracks": [{"s3_key": k} for k in config.track_keys],
+                            "bucket_name": config.bucket_name,
+                            "transcript_id": config.transcript_id,
+                            "room_id": config.room_id,
+                        },
+                    )
+
+                    if transcript:
+                        await transcripts_controller.update(
+                            transcript, {"workflow_run_id": workflow_id}
+                        )
+
+                    return workflow_id
+                finally:
+                    await db.disconnect()
+                    _database_context.set(None)
 
             try:
                 loop = asyncio.get_running_loop()
@@ -182,19 +253,14 @@ def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult | No
                 loop = None
 
             if loop and loop.is_running():
-                # Already in async context
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    workflow_id = pool.submit(asyncio.run, _start_hatchet()).result()
+                    workflow_id = pool.submit(asyncio.run, _handle_hatchet()).result()
             else:
-                workflow_id = asyncio.run(_start_hatchet())
+                workflow_id = asyncio.run(_handle_hatchet())
 
-            logger.info(
-                "Started Hatchet workflow (reprocess)",
-                workflow_id=workflow_id,
-                transcript_id=config.transcript_id,
-            )
+            logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
             durable_started = True
 
         elif settings.CONDUCTOR_ENABLED:
