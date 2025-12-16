@@ -253,6 +253,42 @@ async def process_tracks(input: ParentInput, ctx: Context) -> dict:
 
 ---
 
+## Challenge 8: Workflow Replay and Code Updates
+
+### Symptoms
+After fixing a bug in workflow code, clicking "Replay Event" in Hatchet UI still shows the old error/behavior.
+
+### Root Cause
+Hatchet replay creates a **new workflow instance** with the latest registered workflow version. However, the worker must be restarted to register the new code version. Without restart, the worker is still running the old Python module in memory.
+
+From [Hatchet docs](https://github.com/hatchet-dev/hatchet/blob/059a4e562cd7feb5cc5728c14b04974decd72400/frontend/v0-docs/pages/home/features/retries/manual.mdx):
+> "To retry a failed step, simply click on the step in the run details view and then click the 'Replay Event' button. This will create a new instance of the workflow, starting from the failed step, and using the same input data as the original run."
+
+### Resolution
+**Required steps to see code changes in replayed workflows:**
+
+1. **Edit the code** - make your changes to workflow files
+2. **Restart the worker** - registers new workflow version:
+   ```bash
+   docker compose restart hatchet-worker
+   ```
+3. **Replay in Hatchet UI** - click "Replay Event" on failed step
+4. **Verify new code runs** - check logs for your changes
+
+**For CLI-based reprocessing:**
+```bash
+# Default: replays existing workflow with latest code (after worker restart)
+docker compose exec server uv run -m reflector.tools.process_transcript <transcript_id>
+
+# Force: cancels old workflow and starts fresh
+docker compose exec server uv run -m reflector.tools.process_transcript <transcript_id> --force
+```
+
+### Key Insight
+**Replay uses updated code, but ONLY after worker restart.** Python module caching means the worker process must be restarted to pick up code changes. Simply rebuilding the container is not enough if the worker process is still running old bytecode.
+
+---
+
 ## Debugging Workflow
 
 ### 1. Enable Debug Mode First
@@ -326,7 +362,8 @@ docker compose up -d --build --force-recreate hatchet-worker
 | Workflow not found | 400 Bad Request | Use exact case-sensitive workflow name |
 | Tuple iteration error | `'tuple' has no attribute` | Access `.data` on Pydantic response models |
 | DB conflicts | "another operation in progress" | Fresh DB connection per task |
-| Old code running | Fixed code but same error | Force rebuild container, clear `__pycache__` |
+| Old code running | Fixed code but same error | Restart worker: `docker compose restart hatchet-worker` |
+| Replay shows old behavior | Code changed but replay unchanged | Restart worker, then replay in UI |
 
 ---
 
