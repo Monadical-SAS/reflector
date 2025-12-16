@@ -332,7 +332,7 @@ async def test_prepare_multitrack_config():
     ) as mock_rc:
         mock_rc.get_by_id = AsyncMock(return_value=mock_recording)
 
-        result = await prepare_transcript_processing(validation, room_id="test-room")
+        result = await prepare_transcript_processing(validation)
 
     assert isinstance(result, MultitrackProcessingConfig)
     assert result.bucket_name == "test-bucket"

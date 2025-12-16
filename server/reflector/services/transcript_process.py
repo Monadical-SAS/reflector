@@ -54,6 +54,7 @@ class ValidationOk:
     # transcript currently doesnt always have recording_id
     recording_id: NonEmptyString | None
     transcript_id: NonEmptyString
+    room_id: NonEmptyString | None = None
 
 
 @dataclass
@@ -129,13 +130,13 @@ async def validate_transcript_for_processing(
             pass
 
     return ValidationOk(
-        recording_id=transcript.recording_id, transcript_id=transcript.id
+        recording_id=transcript.recording_id,
+        transcript_id=transcript.id,
+        room_id=transcript.room_id,
     )
 
 
-async def prepare_transcript_processing(
-    validation: ValidationOk, room_id: str | None = None
-) -> PrepareResult:
+async def prepare_transcript_processing(validation: ValidationOk) -> PrepareResult:
     """
     Determine processing mode from transcript/recording data.
     """
@@ -164,7 +165,7 @@ async def prepare_transcript_processing(
             track_keys=track_keys,
             transcript_id=validation.transcript_id,
             recording_id=recording_id,
-            room_id=room_id,
+            room_id=validation.room_id,
         )
 
     return FileProcessingConfig(

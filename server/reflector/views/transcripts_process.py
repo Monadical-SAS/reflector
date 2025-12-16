@@ -45,7 +45,7 @@ async def transcript_process(
     else:
         assert_never(validation)
 
-    config = await prepare_transcript_processing(validation, room_id=transcript.room_id)
+    config = await prepare_transcript_processing(validation)
 
     if isinstance(config, ProcessError):
         raise HTTPException(status_code=500, detail=config.detail)
