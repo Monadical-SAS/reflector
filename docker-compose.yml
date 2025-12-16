@@ -48,6 +48,20 @@ services:
       conductor:
         condition: service_healthy
 
+  hatchet-worker:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: hatchet-worker
+    depends_on:
+      hatchet:
+        condition: service_healthy
+
   redis:
     image: redis:7.2
     ports:
@@ -81,8 +95,8 @@ services:
   conductor:
     image: conductoross/conductor-standalone:3.15.0
     ports:
-      - 8180:8080
-      - 5001:5000
+      - "8180:8080"
+      - "5001:5000"
     environment:
       - conductor.db.type=memory
     healthcheck:
@@ -90,6 +104,54 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  hatchet-postgres:
+    image: postgres:15.6
+    command: postgres -c 'max_connections=200'
+    restart: always
+    environment:
+      - POSTGRES_USER=hatchet
+      - POSTGRES_PASSWORD=hatchet
+      - POSTGRES_DB=hatchet
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./data/hatchet-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d hatchet -U hatchet"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  hatchet:
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest
+    ports:
+      - "8889:8888"
+      - "7078:7077"
+    depends_on:
+      hatchet-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://hatchet:hatchet@hatchet-postgres:5432/hatchet?sslmode=disable"
+      SERVER_AUTH_COOKIE_DOMAIN: localhost
+      SERVER_AUTH_COOKIE_INSECURE: "t"
+      SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
+      SERVER_GRPC_INSECURE: "t"
+      SERVER_GRPC_BROADCAST_ADDRESS: hatchet:7077
+      SERVER_GRPC_PORT: "7077"
+      SERVER_URL: http://localhost:8889
+      SERVER_AUTH_SET_EMAIL_VERIFIED: "t"
+      SERVER_DEFAULT_ENGINE_VERSION: "V1"
+      SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: hatchet:7077
+    volumes:
+      - ./data/hatchet-config:/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 networks:
   default:

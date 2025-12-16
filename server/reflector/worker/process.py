@@ -286,8 +286,34 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
-    # Start Conductor workflow if enabled
-    if settings.CONDUCTOR_ENABLED:
+    # Start durable workflow if enabled (Hatchet or Conductor)
+    durable_started = False
+
+    if settings.HATCHET_ENABLED:
+        from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
+
+        workflow_id = await HatchetClientManager.start_workflow(
+            workflow_name="DiarizationPipeline",
+            input_data={
+                "recording_id": recording_id,
+                "room_name": daily_room_name,
+                "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
+                "bucket_name": bucket_name,
+                "transcript_id": transcript.id,
+                "room_id": room.id,
+            },
+        )
+        logger.info(
+            "Started Hatchet workflow",
+            workflow_id=workflow_id,
+            transcript_id=transcript.id,
+        )
+
+        # Store workflow_id on recording for status tracking
+        await recordings_controller.update(recording, {"workflow_id": workflow_id})
+        durable_started = True
+
+    elif settings.CONDUCTOR_ENABLED:
         from reflector.conductor.client import ConductorClientManager  # noqa: PLC0415
 
         workflow_id = ConductorClientManager.start_workflow(
@@ -310,11 +336,13 @@ async def _process_multitrack_recording_inner(
 
         # Store workflow_id on recording for status tracking
         await recordings_controller.update(recording, {"workflow_id": workflow_id})
+        durable_started = True
 
-        if not settings.CONDUCTOR_SHADOW_MODE:
-            return  # Don't trigger Celery
+    # If durable workflow started and not in shadow mode, skip Celery
+    if durable_started and not settings.DURABLE_WORKFLOW_SHADOW_MODE:
+        return
 
-    # Celery pipeline (runs when Conductor disabled OR in shadow mode)
+    # Celery pipeline (runs when durable workflows disabled OR in shadow mode)
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,

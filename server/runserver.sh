@@ -9,6 +9,8 @@ elif [ "${ENTRYPOINT}" = "beat" ]; then
     uv run celery -A reflector.worker.app beat --loglevel=info
 elif [ "${ENTRYPOINT}" = "conductor-worker" ]; then
     uv run python -m reflector.conductor.run_workers
+elif [ "${ENTRYPOINT}" = "hatchet-worker" ]; then
+    uv run python -m reflector.hatchet.run_workers
 else
     echo "Unknown command"
 fi

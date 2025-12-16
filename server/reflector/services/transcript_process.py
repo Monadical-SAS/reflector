@@ -15,6 +15,7 @@ from celery.result import AsyncResult
 from reflector.conductor.client import ConductorClientManager
 from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import Transcript
+from reflector.hatchet.client import HatchetClientManager
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_multitrack_pipeline import (
@@ -156,8 +157,47 @@ async def prepare_transcript_processing(
 
 def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult | None:
     if isinstance(config, MultitrackProcessingConfig):
-        # Start Conductor workflow if enabled
-        if settings.CONDUCTOR_ENABLED:
+        # Start durable workflow if enabled (Hatchet or Conductor)
+        durable_started = False
+
+        if settings.HATCHET_ENABLED:
+            import asyncio
+
+            async def _start_hatchet():
+                return await HatchetClientManager.start_workflow(
+                    workflow_name="DiarizationPipeline",
+                    input_data={
+                        "recording_id": config.recording_id,
+                        "room_name": None,  # Not available in reprocess path
+                        "tracks": [{"s3_key": k} for k in config.track_keys],
+                        "bucket_name": config.bucket_name,
+                        "transcript_id": config.transcript_id,
+                        "room_id": config.room_id,
+                    },
+                )
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # Already in async context
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    workflow_id = pool.submit(asyncio.run, _start_hatchet()).result()
+            else:
+                workflow_id = asyncio.run(_start_hatchet())
+
+            logger.info(
+                "Started Hatchet workflow (reprocess)",
+                workflow_id=workflow_id,
+                transcript_id=config.transcript_id,
+            )
+            durable_started = True
+
+        elif settings.CONDUCTOR_ENABLED:
             workflow_id = ConductorClientManager.start_workflow(
                 name="diarization_pipeline",
                 version=1,
@@ -175,11 +215,13 @@ def dispatch_transcript_processing(config: ProcessingConfig) -> AsyncResult | No
                 workflow_id=workflow_id,
                 transcript_id=config.transcript_id,
             )
+            durable_started = True
 
-            if not settings.CONDUCTOR_SHADOW_MODE:
-                return None  # Conductor-only, no Celery result
+        # If durable workflow started and not in shadow mode, skip Celery
+        if durable_started and not settings.DURABLE_WORKFLOW_SHADOW_MODE:
+            return None
 
-        # Celery pipeline (shadow mode or Conductor disabled)
+        # Celery pipeline (shadow mode or durable workflows disabled)
         return task_pipeline_multitrack_process.delay(
             transcript_id=config.transcript_id,
             bucket_name=config.bucket_name,
