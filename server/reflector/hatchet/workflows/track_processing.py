@@ -176,6 +176,7 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
     Extracts stream.start_time from WebM container metadata and applies
     silence padding using PyAV filter graph (adelay).
     """
+    ctx.log(f"pad_track: track {input.track_index}, s3_key={input.s3_key}")
     logger.info(
         "[Hatchet] pad_track",
         track_index=input.track_index,
@@ -213,7 +214,7 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
                 in_container, input.track_index
             )
 
-            # If no padding needed, return original URL
+            # If no padding needed, return original S3 key
             if start_time_seconds <= 0:
                 logger.info(
                     f"Track {input.track_index} requires no padding",
@@ -223,7 +224,8 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
                     input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
                 )
                 return PadTrackResult(
-                    padded_url=source_url,
+                    padded_key=input.s3_key,
+                    bucket_name=input.bucket_name,
                     size=0,
                     track_index=input.track_index,
                 )
@@ -257,25 +259,22 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
             finally:
                 Path(temp_path).unlink(missing_ok=True)
 
-        # Get presigned URL for padded file
-        padded_url = await storage.get_file_url(
-            storage_path,
-            operation="get_object",
-            expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
-        )
-
+        ctx.log(f"pad_track complete: track {input.track_index} -> {storage_path}")
         logger.info(
             "[Hatchet] pad_track complete",
             track_index=input.track_index,
-            padded_url=padded_url[:50] + "...",
+            padded_key=storage_path,
         )
 
         await emit_progress_async(
             input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
         )
 
+        # Return S3 key (not presigned URL) - consumer tasks presign on demand
+        # This avoids stale URLs when workflow is replayed
         return PadTrackResult(
-            padded_url=padded_url,
+            padded_key=storage_path,
+            bucket_name=None,  # None = use default transcript storage bucket
             size=file_size,
             track_index=input.track_index,
         )
@@ -293,6 +292,7 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
 )
 async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackResult:
     """Transcribe audio track using GPU (Modal.com) or local Whisper."""
+    ctx.log(f"transcribe_track: track {input.track_index}, language={input.language}")
     logger.info(
         "[Hatchet] transcribe_track",
         track_index=input.track_index,
@@ -305,10 +305,29 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
 
     try:
         pad_result = _to_dict(ctx.task_output(pad_track))
-        audio_url = pad_result.get("padded_url")
+        padded_key = pad_result.get("padded_key")
+        bucket_name = pad_result.get("bucket_name")
 
-        if not audio_url:
-            raise ValueError("Missing padded_url from pad_track")
+        if not padded_key:
+            raise ValueError("Missing padded_key from pad_track")
+
+        # Presign URL on demand (avoids stale URLs on workflow replay)
+        from reflector.settings import settings
+        from reflector.storage.storage_aws import AwsStorage
+
+        storage = AwsStorage(
+            aws_bucket_name=settings.TRANSCRIPT_STORAGE_AWS_BUCKET_NAME,
+            aws_region=settings.TRANSCRIPT_STORAGE_AWS_REGION,
+            aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+        )
+
+        audio_url = await storage.get_file_url(
+            padded_key,
+            operation="get_object",
+            expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
+            bucket=bucket_name,
+        )
 
         from reflector.pipelines.transcription_helpers import (
             transcribe_file_with_processor,
@@ -323,6 +342,9 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
             word_dict["speaker"] = input.track_index
             words.append(word_dict)
 
+        ctx.log(
+            f"transcribe_track complete: track {input.track_index}, {len(words)} words"
+        )
         logger.info(
             "[Hatchet] transcribe_track complete",
             track_index=input.track_index,

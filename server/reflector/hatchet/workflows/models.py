@@ -17,7 +17,8 @@ from pydantic import BaseModel
 class PadTrackResult(BaseModel):
     """Result from pad_track task."""
 
-    padded_url: str
+    padded_key: str  # S3 key (not presigned URL) - presign on demand to avoid stale URLs on replay
+    bucket_name: str | None  # None means use default transcript storage bucket
     size: int
     track_index: int
 
@@ -52,11 +53,18 @@ class ParticipantsResult(BaseModel):
     target_language: str
 
 
+class PaddedTrackInfo(BaseModel):
+    """Info for a padded track - S3 key + bucket for on-demand presigning."""
+
+    key: str
+    bucket_name: str | None  # None = use default storage bucket
+
+
 class ProcessTracksResult(BaseModel):
     """Result from process_tracks task."""
 
     all_words: list[dict[str, Any]]
-    padded_urls: list[str | None]
+    padded_tracks: list[PaddedTrackInfo]  # S3 keys, not presigned URLs
     word_count: int
     num_tracks: int
     target_language: str
