@@ -32,19 +32,17 @@ from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
 from reflector.processors.types import TitleSummary
 from reflector.processors.types import Transcript as TranscriptType
 from reflector.storage import Storage, get_transcripts_storage
+from reflector.utils.audio_constants import (
+    OPUS_DEFAULT_BIT_RATE,
+    OPUS_STANDARD_SAMPLE_RATE,
+    PRESIGNED_URL_EXPIRATION_SECONDS,
+)
 from reflector.utils.daily import (
     filter_cam_audio_tracks,
     parse_daily_recording_filename,
 )
 from reflector.utils.string import NonEmptyString
 from reflector.video_platforms.factory import create_platform_client
-
-# Audio encoding constants
-OPUS_STANDARD_SAMPLE_RATE = 48000
-OPUS_DEFAULT_BIT_RATE = 128000
-
-# Storage operation constants
-PRESIGNED_URL_EXPIRATION_SECONDS = 7200  # 2 hours
 
 
 class PipelineMainMultitrack(PipelineMainBase):

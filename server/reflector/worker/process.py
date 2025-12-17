@@ -303,7 +303,6 @@ async def _process_multitrack_recording_inner(
             workflow_name="DiarizationPipeline",
             input_data={
                 "recording_id": recording_id,
-                "room_name": daily_room_name,
                 "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
                 "bucket_name": bucket_name,
                 "transcript_id": transcript.id,

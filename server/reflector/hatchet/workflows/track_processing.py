@@ -26,9 +26,13 @@ from hatchet_sdk import Context
 from pydantic import BaseModel
 
 from reflector.hatchet.client import HatchetClientManager
-from reflector.hatchet.progress import emit_progress_async
 from reflector.hatchet.workflows.models import PadTrackResult, TranscribeTrackResult
 from reflector.logger import logger
+from reflector.utils.audio_constants import (
+    OPUS_DEFAULT_BIT_RATE,
+    OPUS_STANDARD_SAMPLE_RATE,
+    PRESIGNED_URL_EXPIRATION_SECONDS,
+)
 
 
 def _to_dict(output) -> dict:
@@ -36,12 +40,6 @@ def _to_dict(output) -> dict:
     if isinstance(output, dict):
         return output
     return output.model_dump()
-
-
-# Audio constants matching existing pipeline
-OPUS_STANDARD_SAMPLE_RATE = 48000
-OPUS_DEFAULT_BIT_RATE = 64000
-PRESIGNED_URL_EXPIRATION_SECONDS = 7200
 
 
 class TrackInput(BaseModel):
@@ -193,10 +191,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
         transcript_id=input.transcript_id,
     )
 
-    await emit_progress_async(
-        input.transcript_id, "pad_track", "in_progress", ctx.workflow_run_id
-    )
-
     try:
         # Create fresh storage instance to avoid aioboto3 fork issues
         from reflector.settings import settings  # noqa: PLC0415
@@ -228,9 +222,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
                 logger.info(
                     f"Track {input.track_index} requires no padding",
                     track_index=input.track_index,
-                )
-                await emit_progress_async(
-                    input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
                 )
                 return PadTrackResult(
                     padded_key=input.s3_key,
@@ -275,10 +266,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
             padded_key=storage_path,
         )
 
-        await emit_progress_async(
-            input.transcript_id, "pad_track", "completed", ctx.workflow_run_id
-        )
-
         # Return S3 key (not presigned URL) - consumer tasks presign on demand
         # This avoids stale URLs when workflow is replayed
         return PadTrackResult(
@@ -290,9 +277,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
 
     except Exception as e:
         logger.error("[Hatchet] pad_track failed", error=str(e), exc_info=True)
-        await emit_progress_async(
-            input.transcript_id, "pad_track", "failed", ctx.workflow_run_id
-        )
         raise
 
 
@@ -306,10 +290,6 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
         "[Hatchet] transcribe_track",
         track_index=input.track_index,
         language=input.language,
-    )
-
-    await emit_progress_async(
-        input.transcript_id, "transcribe_track", "in_progress", ctx.workflow_run_id
     )
 
     try:
@@ -360,10 +340,6 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
             word_count=len(words),
         )
 
-        await emit_progress_async(
-            input.transcript_id, "transcribe_track", "completed", ctx.workflow_run_id
-        )
-
         return TranscribeTrackResult(
             words=words,
             track_index=input.track_index,
@@ -371,7 +347,4 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
 
     except Exception as e:
         logger.error("[Hatchet] transcribe_track failed", error=str(e), exc_info=True)
-        await emit_progress_async(
-            input.transcript_id, "transcribe_track", "failed", ctx.workflow_run_id
-        )
         raise

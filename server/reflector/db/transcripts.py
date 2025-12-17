@@ -183,16 +183,6 @@ class TranscriptEvent(BaseModel):
     data: dict
 
 
-class PipelineProgressData(BaseModel):
-    """Data payload for PIPELINE_PROGRESS WebSocket events."""
-
-    workflow_id: str | None = None
-    current_step: str
-    step_index: int
-    total_steps: int
-    step_status: Literal["pending", "in_progress", "completed", "failed"]
-
-
 class TranscriptParticipant(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str = Field(default_factory=generate_uuid4)

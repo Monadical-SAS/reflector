@@ -251,7 +251,6 @@ async def dispatch_transcript_processing(
                 workflow_name="DiarizationPipeline",
                 input_data={
                     "recording_id": config.recording_id,
-                    "room_name": None,
                     "tracks": [{"s3_key": k} for k in config.track_keys],
                     "bucket_name": config.bucket_name,
                     "transcript_id": config.transcript_id,

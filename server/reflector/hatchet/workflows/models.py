@@ -40,7 +40,6 @@ class RecordingResult(BaseModel):
 
     id: str | None
     mtg_session_id: str | None
-    room_name: str | None
     duration: float
 
 
