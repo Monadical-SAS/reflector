@@ -208,7 +208,7 @@ class SummaryBuilder:
     def _enhance_prompt_with_participants(self, prompt: str) -> str:
         """Add participant instructions to any prompt if participants are known."""
         if self.participant_instructions:
-            self.logger.debug("Adding participant instructions to prompts")
+            self.logger.debug("Adding participant instructions to prompt")
             return f"{prompt}\n\n{self.participant_instructions}"
         return prompt
 

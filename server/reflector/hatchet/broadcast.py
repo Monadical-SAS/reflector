@@ -1,5 +1,7 @@
 """WebSocket broadcasting helpers for Hatchet workflows.
 
+DUPLICATION NOTE: To be kept when Celery is deprecated. Currently dupes Celery logic.
+
 Provides WebSocket broadcasting for Hatchet that matches Celery's @broadcast_to_sockets
 decorator behavior. Events are broadcast to transcript rooms and user rooms.
 """
@@ -8,13 +10,16 @@ from typing import Any
 
 from reflector.db.transcripts import Transcript, TranscriptEvent, transcripts_controller
 from reflector.logger import logger
+from reflector.utils.string import NonEmptyString
 from reflector.ws_manager import get_ws_manager
 
 # Events that should also be sent to user room (matches Celery behavior)
 USER_ROOM_EVENTS = {"STATUS", "FINAL_TITLE", "DURATION"}
 
 
-async def broadcast_event(transcript_id: str, event: TranscriptEvent) -> None:
+async def broadcast_event(
+    transcript_id: NonEmptyString, event: TranscriptEvent
+) -> None:
     """Broadcast a TranscriptEvent to WebSocket subscribers.
 
     Fire-and-forget: errors are logged but don't interrupt workflow execution.
@@ -56,7 +61,7 @@ async def broadcast_event(transcript_id: str, event: TranscriptEvent) -> None:
         )
 
 
-async def set_status_and_broadcast(transcript_id: str, status: str) -> None:
+async def set_status_and_broadcast(transcript_id: NonEmptyString, status: str) -> None:
     """Set transcript status and broadcast to WebSocket.
 
     Wrapper around transcripts_controller.set_status that adds WebSocket broadcasting.
@@ -67,7 +72,7 @@ async def set_status_and_broadcast(transcript_id: str, status: str) -> None:
 
 
 async def append_event_and_broadcast(
-    transcript_id: str,
+    transcript_id: NonEmptyString,
     transcript: Transcript,
     event_name: str,
     data: Any,

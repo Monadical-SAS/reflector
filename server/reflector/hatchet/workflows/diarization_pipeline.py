@@ -92,7 +92,11 @@ diarization_pipeline = hatchet.workflow(
 
 @asynccontextmanager
 async def fresh_db_connection():
-    """Context manager for database connections in Hatchet workers."""
+    """Context manager for database connections in Hatchet workers.
+    TECH DEBT: Made to make connection fork-aware without changing db code too much.
+    The real fix would be making the db module fork-aware instead of bypassing it.
+    Current pattern is acceptable given Hatchet's process model.
+    """
     import databases  # noqa: PLC0415
 
     from reflector.db import _database_context  # noqa: PLC0415
@@ -108,7 +112,7 @@ async def fresh_db_connection():
         _database_context.set(None)
 
 
-async def set_workflow_error_status(transcript_id: str) -> bool:
+async def set_workflow_error_status(transcript_id: NonEmptyString) -> bool:
     """Set transcript status to 'error' on workflow failure.
 
     Returns:
