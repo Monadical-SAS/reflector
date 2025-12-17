@@ -14,13 +14,10 @@ import functools
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from fractions import Fraction
 from pathlib import Path
 from typing import Callable
 
-import av
 import httpx
-from av.audio.resampler import AudioResampler
 from hatchet_sdk import Context
 from pydantic import BaseModel
 
@@ -30,6 +27,7 @@ from reflector.hatchet.broadcast import (
     set_status_and_broadcast,
 )
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.utils import to_dict
 from reflector.hatchet.workflows.models import (
     ConsentResult,
     FinalizeResult,
@@ -61,6 +59,10 @@ from reflector.storage.storage_aws import AwsStorage
 from reflector.utils.audio_constants import (
     PRESIGNED_URL_EXPIRATION_SECONDS,
     WAVEFORM_SEGMENTS,
+)
+from reflector.utils.audio_mixdown import (
+    detect_sample_rate_from_tracks,
+    mixdown_tracks_pyav,
 )
 from reflector.utils.audio_waveform import get_audio_waveform
 from reflector.utils.daily import (
@@ -144,17 +146,6 @@ def _get_storage():
         aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
     )
-
-
-def _to_dict(output) -> dict:
-    """Convert task output to dict, handling both dict and Pydantic model returns.
-
-    Hatchet SDK returns Pydantic models when tasks have typed return annotations,
-    but older code expects dicts. This helper normalizes the output.
-    """
-    if isinstance(output, dict):
-        return output
-    return output.model_dump()
 
 
 def with_error_handling(step_name: str, set_error_status: bool = True) -> Callable:
@@ -242,7 +233,7 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
     ctx.log(f"get_participants: transcript_id={input.transcript_id}")
     logger.info("[Hatchet] get_participants", transcript_id=input.transcript_id)
 
-    recording_data = _to_dict(ctx.task_output(get_recording))
+    recording_data = to_dict(ctx.task_output(get_recording))
     mtg_session_id = recording_data.get("mtg_session_id")
 
     async with fresh_db_connection():
@@ -341,7 +332,7 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
         transcript_id=input.transcript_id,
     )
 
-    participants_data = _to_dict(ctx.task_output(get_participants))
+    participants_data = to_dict(ctx.task_output(get_participants))
     source_language = participants_data.get("source_language", "en")
 
     child_coroutines = [
@@ -417,7 +408,7 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     ctx.log("mixdown_tracks: mixing padded tracks into single audio file")
     logger.info("[Hatchet] mixdown_tracks", transcript_id=input.transcript_id)
 
-    track_data = _to_dict(ctx.task_output(process_tracks))
+    track_data = to_dict(ctx.task_output(process_tracks))
     padded_tracks_data = track_data.get("padded_tracks", [])
 
     if not padded_tracks_data:
@@ -428,7 +419,7 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     # Presign URLs on demand (avoids stale URLs on workflow replay)
     padded_urls = []
     for track_info in padded_tracks_data:
-        # Handle both dict (from _to_dict) and PaddedTrackInfo
+        # Handle both dict (from to_dict) and PaddedTrackInfo
         if isinstance(track_info, dict):
             key = track_info.get("key")
             bucket = track_info.get("bucket_name")
@@ -445,149 +436,36 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
             )
             padded_urls.append(url)
 
-    # Use PipelineMainMultitrack.mixdown_tracks which uses PyAV filter graph
     valid_urls = [url for url in padded_urls if url]
     if not valid_urls:
         raise ValueError("No valid padded tracks to mixdown")
 
-    target_sample_rate = None
-    for url in valid_urls:
-        container = None
-        try:
-            container = av.open(url)
-            for frame in container.decode(audio=0):
-                target_sample_rate = frame.sample_rate
-                break
-        except Exception:
-            continue
-        finally:
-            if container is not None:
-                container.close()
-        if target_sample_rate:
-            break
-
+    # Detect sample rate from tracks
+    target_sample_rate = detect_sample_rate_from_tracks(valid_urls, logger=logger)
     if not target_sample_rate:
+        logger.error("Mixdown failed - no decodable audio frames found")
         raise ValueError("No decodable audio frames in any track")
 
-    # Build PyAV filter graph: N abuffer -> amix -> aformat -> sink
-    graph = av.filter.Graph()
-    inputs = []
-
-    for idx, url in enumerate(valid_urls):
-        args = (
-            f"time_base=1/{target_sample_rate}:"
-            f"sample_rate={target_sample_rate}:"
-            f"sample_fmt=s32:"
-            f"channel_layout=stereo"
-        )
-        in_ctx = graph.add("abuffer", args=args, name=f"in{idx}")
-        inputs.append(in_ctx)
-
-    mixer = graph.add("amix", args=f"inputs={len(inputs)}:normalize=0", name="mix")
-    fmt = graph.add(
-        "aformat",
-        args=f"sample_fmts=s32:channel_layouts=stereo:sample_rates={target_sample_rate}",
-        name="fmt",
-    )
-    sink = graph.add("abuffersink", name="out")
-
-    for idx, in_ctx in enumerate(inputs):
-        in_ctx.link_to(mixer, 0, idx)
-    mixer.link_to(fmt)
-    fmt.link_to(sink)
-    graph.configure()
-
+    # Create temp file and writer for MP3 output
     output_path = tempfile.mktemp(suffix=".mp3")
-    containers = []
+    duration_ms = [0.0]  # Mutable container for callback capture
 
-    try:
-        for url in valid_urls:
-            try:
-                c = av.open(
-                    url,
-                    options={
-                        "reconnect": "1",
-                        "reconnect_streamed": "1",
-                        "reconnect_delay_max": "5",
-                    },
-                )
-                containers.append(c)
-            except Exception as e:
-                logger.warning(
-                    "[Hatchet] mixdown: failed to open container",
-                    url=url,
-                    error=str(e),
-                )
+    async def capture_duration(d):
+        duration_ms[0] = d
 
-        if not containers:
-            raise ValueError("Could not open any track containers")
+    writer = AudioFileWriterProcessor(path=output_path, on_duration=capture_duration)
 
-        # Create AudioFileWriterProcessor for MP3 output with duration capture
-        duration_ms = [0.0]  # Mutable container for callback capture
+    # Run mixdown using shared utility
+    await mixdown_tracks_pyav(
+        valid_urls,
+        writer,
+        target_sample_rate,
+        offsets_seconds=None,
+        logger=logger,
+    )
+    await writer.flush()
 
-        async def capture_duration(d):
-            duration_ms[0] = d
-
-        writer = AudioFileWriterProcessor(
-            path=output_path, on_duration=capture_duration
-        )
-
-        decoders = [c.decode(audio=0) for c in containers]
-        active = [True] * len(decoders)
-        resamplers = [
-            AudioResampler(format="s32", layout="stereo", rate=target_sample_rate)
-            for _ in decoders
-        ]
-
-        while any(active):
-            for i, (dec, is_active) in enumerate(zip(decoders, active)):
-                if not is_active:
-                    continue
-                try:
-                    frame = next(dec)
-                except StopIteration:
-                    active[i] = False
-                    inputs[i].push(None)
-                    continue
-
-                if frame.sample_rate != target_sample_rate:
-                    continue
-                out_frames = resamplers[i].resample(frame) or []
-                for rf in out_frames:
-                    rf.sample_rate = target_sample_rate
-                    rf.time_base = Fraction(1, target_sample_rate)
-                    inputs[i].push(rf)
-
-                while True:
-                    try:
-                        mixed = sink.pull()
-                    except Exception:
-                        break
-                    mixed.sample_rate = target_sample_rate
-                    mixed.time_base = Fraction(1, target_sample_rate)
-                    await writer.push(mixed)
-
-        # Flush remaining frames
-        while True:
-            try:
-                mixed = sink.pull()
-            except Exception:
-                break
-            mixed.sample_rate = target_sample_rate
-            mixed.time_base = Fraction(1, target_sample_rate)
-            await writer.push(mixed)
-
-        await writer.flush()
-
-        # Duration is captured via callback in milliseconds (from AudioFileWriterProcessor)
-
-    finally:
-        for c in containers:
-            try:
-                c.close()
-            except Exception:
-                pass
-
+    # Upload to storage
     file_size = Path(output_path).stat().st_size
     storage_path = f"{input.transcript_id}/audio.mp3"
 
@@ -596,6 +474,7 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     Path(output_path).unlink(missing_ok=True)
 
+    # Update DB with audio location
     async with fresh_db_connection():
         from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
@@ -633,7 +512,7 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
     )
 
     # Cleanup temporary padded S3 files (deferred until after mixdown)
-    track_data = _to_dict(ctx.task_output(process_tracks))
+    track_data = to_dict(ctx.task_output(process_tracks))
     created_padded_files = track_data.get("created_padded_files", [])
     if created_padded_files:
         logger.info(
@@ -653,7 +532,7 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
                     error=str(result),
                 )
 
-    mixdown_data = _to_dict(ctx.task_output(mixdown_tracks))
+    mixdown_data = to_dict(ctx.task_output(mixdown_tracks))
     audio_key = mixdown_data.get("audio_key")
 
     storage = _get_storage()
@@ -703,7 +582,7 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
     ctx.log("detect_topics: analyzing transcript for topics")
     logger.info("[Hatchet] detect_topics", transcript_id=input.transcript_id)
 
-    track_data = _to_dict(ctx.task_output(process_tracks))
+    track_data = to_dict(ctx.task_output(process_tracks))
     words = track_data.get("all_words", [])
     target_language = track_data.get("target_language", "en")
 
@@ -762,7 +641,7 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
     ctx.log("generate_title: generating title from topics")
     logger.info("[Hatchet] generate_title", transcript_id=input.transcript_id)
 
-    topics_data = _to_dict(ctx.task_output(detect_topics))
+    topics_data = to_dict(ctx.task_output(detect_topics))
     topics = topics_data.get("topics", [])
 
     from reflector.db.transcripts import (  # noqa: PLC0415
@@ -813,7 +692,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     ctx.log("generate_summary: generating long and short summaries")
     logger.info("[Hatchet] generate_summary", transcript_id=input.transcript_id)
 
-    topics_data = _to_dict(ctx.task_output(detect_topics))
+    topics_data = to_dict(ctx.task_output(detect_topics))
     topics = topics_data.get("topics", [])
 
     from reflector.db.transcripts import (  # noqa: PLC0415
@@ -895,8 +774,8 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
     ctx.log("finalize: saving transcript and setting status to 'ended'")
     logger.info("[Hatchet] finalize", transcript_id=input.transcript_id)
 
-    mixdown_data = _to_dict(ctx.task_output(mixdown_tracks))
-    track_data = _to_dict(ctx.task_output(process_tracks))
+    mixdown_data = to_dict(ctx.task_output(mixdown_tracks))
+    track_data = to_dict(ctx.task_output(process_tracks))
 
     duration = mixdown_data.get("duration", 0)
     all_words = track_data.get("all_words", [])
