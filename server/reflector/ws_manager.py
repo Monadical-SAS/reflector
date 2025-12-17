@@ -109,29 +109,19 @@ class WebsocketManager:
                     await socket.send_json(data)
 
 
+_ws_manager_instance: WebsocketManager | None = None
+_ws_manager_lock = threading.Lock()
+
+
 def get_ws_manager() -> WebsocketManager:
-    """
-    Returns the WebsocketManager instance for managing websockets.
-
-    This function initializes and returns the WebsocketManager instance,
-    which is responsible for managing websockets and handling websocket
-    connections.
-
-    Returns:
-        WebsocketManager: The initialized WebsocketManager instance.
-
-    Raises:
-        ImportError: If the 'reflector.settings' module cannot be imported.
-        RedisConnectionError: If there is an error connecting to the Redis server.
-    """
-    local = threading.local()
-    if hasattr(local, "ws_manager"):
-        return local.ws_manager
-
-    pubsub_client = RedisPubSubManager(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-    )
-    ws_manager = WebsocketManager(pubsub_client=pubsub_client)
-    local.ws_manager = ws_manager
-    return ws_manager
+    """Returns the WebsocketManager singleton instance."""
+    global _ws_manager_instance
+    if _ws_manager_instance is None:
+        with _ws_manager_lock:
+            if _ws_manager_instance is None:
+                pubsub_client = RedisPubSubManager(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                )
+                _ws_manager_instance = WebsocketManager(pubsub_client=pubsub_client)
+    return _ws_manager_instance

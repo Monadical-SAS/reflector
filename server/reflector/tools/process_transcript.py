@@ -15,6 +15,7 @@ import time
 from typing import Callable
 
 from celery.result import AsyncResult
+from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.transcripts import Transcript, transcripts_controller
 from reflector.services.transcript_process import (
@@ -35,12 +36,12 @@ async def process_transcript_inner(
     on_validation: Callable[[ValidationResult], None],
     on_preprocess: Callable[[PrepareResult], None],
     force: bool = False,
-) -> AsyncResult:
+) -> AsyncResult | None:
     validation = await validate_transcript_for_processing(transcript)
     on_validation(validation)
     config = await prepare_transcript_processing(validation)
     on_preprocess(config)
-    return dispatch_transcript_processing(config, force=force)
+    return await dispatch_transcript_processing(config, force=force)
 
 
 async def process_transcript(
@@ -92,7 +93,38 @@ async def process_transcript(
             force=force,
         )
 
-        if sync:
+        if result is None:
+            # Hatchet workflow dispatched
+            if sync:
+                from reflector.hatchet.client import HatchetClientManager
+
+                # Re-fetch transcript to get workflow_run_id
+                transcript = await transcripts_controller.get_by_id(transcript_id)
+                if not transcript or not transcript.workflow_run_id:
+                    print("Error: workflow_run_id not found", file=sys.stderr)
+                    sys.exit(1)
+
+                print("Waiting for Hatchet workflow...", file=sys.stderr)
+                while True:
+                    status = await HatchetClientManager.get_workflow_run_status(
+                        transcript.workflow_run_id
+                    )
+                    print(f"  Status: {status}", file=sys.stderr)
+
+                    if status == V1TaskStatus.COMPLETED:
+                        print("Workflow completed successfully", file=sys.stderr)
+                        break
+                    elif status in (V1TaskStatus.FAILED, V1TaskStatus.CANCELLED):
+                        print(f"Workflow failed: {status}", file=sys.stderr)
+                        sys.exit(1)
+
+                    await asyncio.sleep(5)
+            else:
+                print(
+                    "Task dispatched (use --sync to wait for completion)",
+                    file=sys.stderr,
+                )
+        elif sync:
             print("Waiting for task completion...", file=sys.stderr)
             while not result.ready():
                 print(f"  Status: {result.state}", file=sys.stderr)

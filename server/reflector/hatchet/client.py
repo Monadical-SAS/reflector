@@ -8,8 +8,10 @@ Uses singleton pattern because:
 """
 
 import logging
+import threading
 
 from hatchet_sdk import ClientConfig, Hatchet
+from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.logger import logger
 from reflector.settings import settings
@@ -26,24 +28,23 @@ class HatchetClientManager:
     """
 
     _instance: Hatchet | None = None
+    _lock = threading.Lock()
 
     @classmethod
     def get_client(cls) -> Hatchet:
-        """Get or create the Hatchet client.
-
-        Configures root logger so all logger.info() calls in workflows
-        appear in the Hatchet dashboard logs.
-        """
+        """Get or create the Hatchet client (thread-safe singleton)."""
         if cls._instance is None:
-            if not settings.HATCHET_CLIENT_TOKEN:
-                raise ValueError("HATCHET_CLIENT_TOKEN must be set")
+            with cls._lock:
+                if cls._instance is None:
+                    if not settings.HATCHET_CLIENT_TOKEN:
+                        raise ValueError("HATCHET_CLIENT_TOKEN must be set")
 
-            # Pass root logger to Hatchet so workflow logs appear in dashboard
-            root_logger = logging.getLogger()
-            cls._instance = Hatchet(
-                debug=settings.HATCHET_DEBUG,
-                config=ClientConfig(logger=root_logger),
-            )
+                    # Pass root logger to Hatchet so workflow logs appear in dashboard
+                    root_logger = logging.getLogger()
+                    cls._instance = Hatchet(
+                        debug=settings.HATCHET_DEBUG,
+                        config=ClientConfig(logger=root_logger),
+                    )
         return cls._instance
 
     @classmethod
@@ -71,11 +72,10 @@ class HatchetClientManager:
         return result.run.metadata.id
 
     @classmethod
-    async def get_workflow_run_status(cls, workflow_run_id: str) -> str:
+    async def get_workflow_run_status(cls, workflow_run_id: str) -> V1TaskStatus:
         """Get workflow run status."""
         client = cls.get_client()
-        status = await client.runs.aio_get_status(workflow_run_id)
-        return str(status)
+        return await client.runs.aio_get_status(workflow_run_id)
 
     @classmethod
     async def cancel_workflow(cls, workflow_run_id: str) -> None:
@@ -96,7 +96,7 @@ class HatchetClientManager:
         """Check if workflow can be replayed (is FAILED)."""
         try:
             status = await cls.get_workflow_run_status(workflow_run_id)
-            return "FAILED" in status
+            return status == V1TaskStatus.FAILED
         except Exception as e:
             logger.warning(
                 "[Hatchet] Failed to check replay status",
@@ -115,4 +115,5 @@ class HatchetClientManager:
     @classmethod
     def reset(cls) -> None:
         """Reset the client instance (for testing)."""
-        cls._instance = None
+        with cls._lock:
+            cls._instance = None

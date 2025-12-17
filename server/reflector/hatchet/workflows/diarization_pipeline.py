@@ -501,16 +501,19 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     # Determine target sample rate from first track
     target_sample_rate = None
     for url in valid_urls:
+        container = None
         try:
             container = av.open(url)
             for frame in container.decode(audio=0):
                 target_sample_rate = frame.sample_rate
                 break
-            container.close()
-            if target_sample_rate:
-                break
         except Exception:
             continue
+        finally:
+            if container is not None:
+                container.close()
+        if target_sample_rate:
+            break
 
     if not target_sample_rate:
         raise ValueError("No decodable audio frames in any track")

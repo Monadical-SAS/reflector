@@ -286,10 +286,18 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
-    # Start durable workflow if enabled (Hatchet)
+    # Start durable workflow if enabled (Hatchet) or room overrides it
     durable_started = False
+    use_hatchet = settings.HATCHET_ENABLED or (room and room.use_hatchet)
 
-    if settings.HATCHET_ENABLED:
+    if room and room.use_hatchet and not settings.HATCHET_ENABLED:
+        logger.info(
+            "Room forces Hatchet workflow",
+            room_id=room.id,
+            transcript_id=transcript.id,
+        )
+
+    if use_hatchet:
         from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
 
         workflow_id = await HatchetClientManager.start_workflow(

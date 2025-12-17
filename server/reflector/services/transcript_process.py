@@ -11,6 +11,7 @@ from typing import Literal, Union, assert_never
 
 import celery
 from celery.result import AsyncResult
+from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import Transcript
@@ -114,14 +115,12 @@ async def validate_transcript_for_processing(
 
     # Check Hatchet workflows (if enabled)
     if settings.HATCHET_ENABLED and transcript.workflow_run_id:
-        from reflector.hatchet.client import HatchetClientManager
-
         try:
             status = await HatchetClientManager.get_workflow_run_status(
                 transcript.workflow_run_id
             )
             # If workflow is running or queued, don't allow new processing
-            if "RUNNING" in status or "QUEUED" in status:
+            if status in (V1TaskStatus.RUNNING, V1TaskStatus.QUEUED):
                 return ValidationAlreadyScheduled(
                     detail="Hatchet workflow already running"
                 )
@@ -173,50 +172,25 @@ async def prepare_transcript_processing(validation: ValidationOk) -> PrepareResu
     )
 
 
-def dispatch_transcript_processing(
+async def dispatch_transcript_processing(
     config: ProcessingConfig, force: bool = False
 ) -> AsyncResult | None:
+    """Dispatch transcript processing to appropriate backend (Hatchet or Celery).
+
+    Returns AsyncResult for Celery tasks, None for Hatchet workflows.
+    """
+    from reflector.db.rooms import rooms_controller
+    from reflector.db.transcripts import transcripts_controller
+
     if isinstance(config, MultitrackProcessingConfig):
         # Check if room has use_hatchet=True (overrides env vars)
         room_forces_hatchet = False
         if config.room_id:
-            import asyncio
-
-            from reflector.db.rooms import rooms_controller
-
-            async def _check_room_hatchet():
-                import databases
-
-                from reflector.db import _database_context
-
-                db = databases.Database(settings.DATABASE_URL)
-                _database_context.set(db)
-                await db.connect()
-                try:
-                    room = await rooms_controller.get_by_id(config.room_id)
-                    return room.use_hatchet if room else False
-                finally:
-                    await db.disconnect()
-                    _database_context.set(None)
-
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    room_forces_hatchet = pool.submit(
-                        asyncio.run, _check_room_hatchet()
-                    ).result()
-            else:
-                room_forces_hatchet = asyncio.run(_check_room_hatchet())
+            room = await rooms_controller.get_by_id(config.room_id)
+            room_forces_hatchet = room.use_hatchet if room else False
 
         # Start durable workflow if enabled (Hatchet or Conductor)
         # or if room has use_hatchet=True
-        durable_started = False
         use_hatchet = settings.HATCHET_ENABLED or room_forces_hatchet
 
         if room_forces_hatchet:
@@ -227,115 +201,76 @@ def dispatch_transcript_processing(
             )
 
         if use_hatchet:
-            import asyncio
-
-            import databases
-
-            from reflector.db import _database_context
-            from reflector.db.transcripts import transcripts_controller
-
-            async def _handle_hatchet():
-                db = databases.Database(settings.DATABASE_URL)
-                _database_context.set(db)
-                await db.connect()
-
-                try:
-                    transcript = await transcripts_controller.get_by_id(
-                        config.transcript_id
+            # First check if we can replay (outside transaction since it's read-only)
+            transcript = await transcripts_controller.get_by_id(config.transcript_id)
+            if transcript and transcript.workflow_run_id and not force:
+                can_replay = await HatchetClientManager.can_replay(
+                    transcript.workflow_run_id
+                )
+                if can_replay:
+                    await HatchetClientManager.replay_workflow(
+                        transcript.workflow_run_id
                     )
+                    logger.info(
+                        "Replaying Hatchet workflow",
+                        workflow_id=transcript.workflow_run_id,
+                    )
+                    return None
 
-                    if transcript and transcript.workflow_run_id and not force:
-                        can_replay = await HatchetClientManager.can_replay(
-                            transcript.workflow_run_id
-                        )
-                        if can_replay:
-                            await HatchetClientManager.replay_workflow(
-                                transcript.workflow_run_id
-                            )
-                            logger.info(
-                                "Replaying Hatchet workflow",
-                                workflow_id=transcript.workflow_run_id,
-                            )
-                            return transcript.workflow_run_id
+            # Force: cancel old workflow if exists
+            if force and transcript and transcript.workflow_run_id:
+                await HatchetClientManager.cancel_workflow(transcript.workflow_run_id)
+                logger.info(
+                    "Cancelled old workflow (--force)",
+                    workflow_id=transcript.workflow_run_id,
+                )
+                await transcripts_controller.update(
+                    transcript, {"workflow_run_id": None}
+                )
 
-                    # Force: cancel old workflow if exists
-                    if force and transcript and transcript.workflow_run_id:
-                        await HatchetClientManager.cancel_workflow(
-                            transcript.workflow_run_id
-                        )
+            # Re-fetch and check for concurrent dispatch (optimistic approach).
+            # No database lock - worst case is duplicate dispatch, but Hatchet
+            # workflows are idempotent so this is acceptable.
+            transcript = await transcripts_controller.get_by_id(config.transcript_id)
+            if transcript and transcript.workflow_run_id:
+                # Another process started a workflow between validation and now
+                try:
+                    status = await HatchetClientManager.get_workflow_run_status(
+                        transcript.workflow_run_id
+                    )
+                    if status in (V1TaskStatus.RUNNING, V1TaskStatus.QUEUED):
                         logger.info(
-                            "Cancelled old workflow (--force)",
+                            "Concurrent workflow detected, skipping dispatch",
                             workflow_id=transcript.workflow_run_id,
                         )
-                        await transcripts_controller.update(
-                            transcript, {"workflow_run_id": None}
-                        )
+                        return None
+                except Exception:
+                    # If we can't get status, proceed with new workflow
+                    pass
 
-                    # Re-fetch transcript to check for concurrent dispatch (TOCTOU protection)
-                    transcript = await transcripts_controller.get_by_id(
-                        config.transcript_id
-                    )
-                    if transcript and transcript.workflow_run_id:
-                        # Another process started a workflow between validation and now
-                        try:
-                            status = await HatchetClientManager.get_workflow_run_status(
-                                transcript.workflow_run_id
-                            )
-                            if "RUNNING" in status or "QUEUED" in status:
-                                logger.info(
-                                    "Concurrent workflow detected, skipping dispatch",
-                                    workflow_id=transcript.workflow_run_id,
-                                )
-                                return transcript.workflow_run_id
-                        except Exception:
-                            # If we can't get status, proceed with new workflow
-                            pass
+            workflow_id = await HatchetClientManager.start_workflow(
+                workflow_name="DiarizationPipeline",
+                input_data={
+                    "recording_id": config.recording_id,
+                    "room_name": None,
+                    "tracks": [{"s3_key": k} for k in config.track_keys],
+                    "bucket_name": config.bucket_name,
+                    "transcript_id": config.transcript_id,
+                    "room_id": config.room_id,
+                },
+                additional_metadata={
+                    "transcript_id": config.transcript_id,
+                    "recording_id": config.recording_id,
+                    "daily_recording_id": config.recording_id,
+                },
+            )
 
-                    workflow_id = await HatchetClientManager.start_workflow(
-                        workflow_name="DiarizationPipeline",
-                        input_data={
-                            "recording_id": config.recording_id,
-                            "room_name": None,
-                            "tracks": [{"s3_key": k} for k in config.track_keys],
-                            "bucket_name": config.bucket_name,
-                            "transcript_id": config.transcript_id,
-                            "room_id": config.room_id,
-                        },
-                        additional_metadata={
-                            "transcript_id": config.transcript_id,
-                            "recording_id": config.recording_id,
-                            "daily_recording_id": config.recording_id,
-                        },
-                    )
-
-                    if transcript:
-                        await transcripts_controller.update(
-                            transcript, {"workflow_run_id": workflow_id}
-                        )
-
-                    return workflow_id
-                finally:
-                    await db.disconnect()
-                    _database_context.set(None)
-
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    workflow_id = pool.submit(asyncio.run, _handle_hatchet()).result()
-            else:
-                workflow_id = asyncio.run(_handle_hatchet())
+            if transcript:
+                await transcripts_controller.update(
+                    transcript, {"workflow_run_id": workflow_id}
+                )
 
             logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
-            durable_started = True
-
-        # If durable workflow started, skip Celery
-        if durable_started:
             return None
 
         # Celery pipeline (durable workflows disabled)

@@ -11,6 +11,7 @@ These tests verify:
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.transcripts import Transcript
 
@@ -35,8 +36,12 @@ async def test_hatchet_validation_blocks_running_workflow():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(return_value="RUNNING")
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
+            mock_hatchet.get_workflow_run_status = AsyncMock(
+                return_value=V1TaskStatus.RUNNING
+            )
 
             with patch(
                 "reflector.services.transcript_process.task_is_scheduled_or_active"
@@ -69,8 +74,12 @@ async def test_hatchet_validation_blocks_queued_workflow():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(return_value="QUEUED")
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
+            mock_hatchet.get_workflow_run_status = AsyncMock(
+                return_value=V1TaskStatus.QUEUED
+            )
 
             with patch(
                 "reflector.services.transcript_process.task_is_scheduled_or_active"
@@ -103,8 +112,12 @@ async def test_hatchet_validation_allows_failed_workflow():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(return_value="FAILED")
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
+            mock_hatchet.get_workflow_run_status = AsyncMock(
+                return_value=V1TaskStatus.FAILED
+            )
 
             with patch(
                 "reflector.services.transcript_process.task_is_scheduled_or_active"
@@ -138,8 +151,12 @@ async def test_hatchet_validation_allows_completed_workflow():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(return_value="COMPLETED")
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
+            mock_hatchet.get_workflow_run_status = AsyncMock(
+                return_value=V1TaskStatus.COMPLETED
+            )
 
             with patch(
                 "reflector.services.transcript_process.task_is_scheduled_or_active"
@@ -172,7 +189,9 @@ async def test_hatchet_validation_allows_when_status_check_fails():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
             # Status check fails (workflow might be deleted)
             mock_hatchet.get_workflow_run_status = AsyncMock(
                 side_effect=Exception("Workflow not found")
@@ -210,7 +229,9 @@ async def test_hatchet_validation_skipped_when_no_workflow_id():
     with patch("reflector.services.transcript_process.settings") as mock_settings:
         mock_settings.HATCHET_ENABLED = True
 
-        with patch("reflector.hatchet.client.HatchetClientManager") as mock_hatchet:
+        with patch(
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet:
             # Should not be called
             mock_hatchet.get_workflow_run_status = AsyncMock()
 
@@ -338,7 +359,7 @@ async def test_prepare_multitrack_config():
     assert result.bucket_name == "test-bucket"
     assert result.track_keys == ["track1.webm", "track2.webm"]
     assert result.transcript_id == "test-transcript-id"
-    assert result.room_id == "test-room"
+    assert result.room_id is None  # ValidationOk didn't specify room_id
 
 
 @pytest.mark.usefixtures("setup_database")
