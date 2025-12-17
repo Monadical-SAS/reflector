@@ -649,7 +649,7 @@ async def reprocess_failed_recordings():
     Find recordings in Whereby S3 bucket and check if they have proper transcriptions.
     If not, requeue them for processing.
 
-    Note: Daily.co recordings are processed via webhooks, not this cron job.
+    Note: Daily.co multitrack recordings are handled by reprocess_failed_daily_recordings.
     """
     logger.info("Checking Whereby recordings that need processing or reprocessing")
 
@@ -699,6 +699,104 @@ async def reprocess_failed_recordings():
         logger.error(f"Error checking S3 bucket: {str(e)}")
 
     logger.info(f"Reprocessing complete. Requeued {reprocessed_count} recordings")
+    return reprocessed_count
+
+
+@shared_task
+@asynctask
+async def reprocess_failed_daily_recordings():
+    """
+    Find Daily.co multitrack recordings in the database and check if they have proper transcriptions.
+    If not, requeue them for processing.
+    """
+    logger.info(
+        "Checking Daily.co multitrack recordings that need processing or reprocessing"
+    )
+
+    if not settings.DAILYCO_STORAGE_AWS_BUCKET_NAME:
+        logger.debug(
+            "DAILYCO_STORAGE_AWS_BUCKET_NAME not configured; skipping Daily recording reprocessing"
+        )
+        return 0
+
+    bucket_name = settings.DAILYCO_STORAGE_AWS_BUCKET_NAME
+    reprocessed_count = 0
+
+    try:
+        multitrack_recordings = (
+            await recordings_controller.get_multitrack_needing_reprocessing(bucket_name)
+        )
+
+        logger.info(
+            "Found multitrack recordings needing reprocessing",
+            count=len(multitrack_recordings),
+            bucket=bucket_name,
+        )
+
+        for recording in multitrack_recordings:
+            if not recording.meeting_id:
+                logger.debug(
+                    "Skipping recording without meeting_id",
+                    recording_id=recording.id,
+                )
+                continue
+
+            meeting = await meetings_controller.get_by_id(recording.meeting_id)
+            if not meeting:
+                logger.warning(
+                    "Meeting not found for recording",
+                    recording_id=recording.id,
+                    meeting_id=recording.meeting_id,
+                )
+                continue
+
+            transcript = None
+            try:
+                transcript = await transcripts_controller.get_by_recording_id(
+                    recording.id
+                )
+            except ValidationError:
+                await transcripts_controller.remove_by_recording_id(recording.id)
+                logger.warning(
+                    "Removed invalid transcript for recording",
+                    recording_id=recording.id,
+                )
+
+            if transcript is None or transcript.status == "error":
+                if not recording.track_keys:
+                    logger.warning(
+                        "Recording has no track_keys, cannot reprocess",
+                        recording_id=recording.id,
+                    )
+                    continue
+
+                logger.info(
+                    "Queueing Daily recording for reprocessing",
+                    recording_id=recording.id,
+                    room_name=meeting.room_name,
+                    track_count=len(recording.track_keys),
+                    transcript_status=transcript.status if transcript else None,
+                )
+
+                process_multitrack_recording.delay(
+                    bucket_name=bucket_name,
+                    daily_room_name=meeting.room_name,
+                    recording_id=recording.id,
+                    track_keys=recording.track_keys,
+                )
+                reprocessed_count += 1
+
+    except Exception as e:
+        logger.error(
+            "Error checking Daily multitrack recordings",
+            error=str(e),
+            exc_info=True,
+        )
+
+    logger.info(
+        "Daily reprocessing complete",
+        requeued_count=reprocessed_count,
+    )
     return reprocessed_count
 
 
