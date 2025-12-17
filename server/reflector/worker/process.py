@@ -12,7 +12,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 
-from reflector.dailyco_api import RecordingResponse
+from reflector.dailyco_api import FinishedRecordingResponse, RecordingResponse
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
@@ -365,16 +365,38 @@ async def poll_daily_recordings():
         )
         return
 
-    recording_ids = [rec.id for rec in api_recordings]
+    finished_recordings: List[FinishedRecordingResponse] = []
+    for rec in api_recordings:
+        finished = rec.to_finished()
+        if finished is None:
+            logger.debug(
+                "Skipping unfinished recording",
+                recording_id=rec.id,
+                room_name=rec.room_name,
+                status=rec.status,
+            )
+            continue
+        finished_recordings.append(finished)
+
+    if not finished_recordings:
+        logger.debug(
+            "No finished recordings found from Daily.co API",
+            total_api_count=len(api_recordings),
+        )
+        return
+
+    recording_ids = [rec.id for rec in finished_recordings]
     existing_recordings = await recordings_controller.get_by_ids(recording_ids)
     existing_ids = {rec.id for rec in existing_recordings}
 
-    missing_recordings = [rec for rec in api_recordings if rec.id not in existing_ids]
+    missing_recordings = [
+        rec for rec in finished_recordings if rec.id not in existing_ids
+    ]
 
     if not missing_recordings:
         logger.debug(
             "All recordings already in DB",
-            api_count=len(api_recordings),
+            api_count=len(finished_recordings),
             existing_count=len(existing_recordings),
         )
         return
@@ -382,7 +404,7 @@ async def poll_daily_recordings():
     logger.info(
         "Found recordings missing from DB",
         missing_count=len(missing_recordings),
-        total_api_count=len(api_recordings),
+        total_api_count=len(finished_recordings),
         existing_count=len(existing_recordings),
     )
 

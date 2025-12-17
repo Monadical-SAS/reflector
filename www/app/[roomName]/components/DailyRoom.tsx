@@ -105,7 +105,19 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
           }
         });
 
-        await frame.join({ url: roomUrl });
+        await frame.join({
+          url: roomUrl,
+          sendSettings: {
+            video: {
+              // Optimize bandwidth for camera video
+              // allowAdaptiveLayers automatically adjusts quality based on network conditions
+              allowAdaptiveLayers: true,
+              // Use bandwidth-optimized preset as fallback for browsers without adaptive support
+              maxQuality: "medium",
+            },
+            // Note: screenVideo intentionally not configured to preserve full quality for screen shares
+          },
+        });
       } catch (error) {
         console.error("Error creating Daily frame:", error);
       }
