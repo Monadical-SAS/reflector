@@ -12,6 +12,7 @@ from pydantic import (
     Field,
     constr,
     field_serializer,
+    field_validator,
 )
 
 import reflector.auth as auth
@@ -101,6 +102,13 @@ class GetTranscriptMinimal(BaseModel):
     target_language: str | None
     reviewed: bool
     meeting_id: str | None
+
+    @field_validator("action_items", mode="before")
+    @classmethod
+    def validate_action_items(cls, v):
+        if v == "null":
+            return None
+        return v
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
