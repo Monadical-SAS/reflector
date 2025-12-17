@@ -30,10 +30,12 @@ recordings = sa.Table(
 class Recording(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     bucket_name: str
+    # for single-track
     object_key: str
     recorded_at: datetime
     status: Literal["pending", "processing", "completed", "failed"] = "pending"
     meeting_id: str | None = None
+    # for multitrack reprocessing
     # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
     # None means not a multitrack recording, [] means multitrack with no tracks
     track_keys: list[str] | None = None
@@ -68,6 +70,7 @@ class RecordingController:
     async def remove_by_id(self, id: str) -> None:
         query = recordings.delete().where(recordings.c.id == id)
         await get_database().execute(query)
+        # no check for existence
 
     async def get_by_ids(self, recording_ids: list[str]) -> list[Recording]:
         if not recording_ids:
@@ -87,7 +90,9 @@ class RecordingController:
 
         This is more efficient than fetching all recordings and filtering in Python.
         """
-        from reflector.db.transcripts import transcripts
+        from reflector.db.transcripts import (
+            transcripts,  # noqa: PLC0415
+        )
 
         query = (
             recordings.select()
