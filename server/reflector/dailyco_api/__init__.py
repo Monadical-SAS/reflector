@@ -18,6 +18,7 @@ from .requests import (
 
 # Response models
 from .responses import (
+    FinishedRecordingResponse,
     MeetingParticipant,
     MeetingParticipantsResponse,
     MeetingResponse,
@@ -79,6 +80,7 @@ __all__ = [
     "MeetingParticipant",
     "MeetingResponse",
     "RecordingResponse",
+    "FinishedRecordingResponse",
     "RecordingS3Info",
     "MeetingTokenResponse",
     "WebhookResponse",
