@@ -320,13 +320,11 @@ async def _process_multitrack_recording_inner(
             transcript_id=transcript.id,
         )
 
-        # Store workflow_run_id on transcript for replay/resume
         await transcripts_controller.update(
             transcript, {"workflow_run_id": workflow_id}
         )
         durable_started = True
 
-    # If durable workflow started, skip Celery
     if durable_started:
         return
 

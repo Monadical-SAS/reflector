@@ -119,6 +119,7 @@ async def post_transcript_notification(transcript: Transcript) -> int | None:
 
     Uses transcript.room_id directly (Hatchet flow).
     Celery's pipeline_post_to_zulip uses recording→meeting→room path instead.
+    DUPLICATION NOTE: This function will stay when we use Celery no more, and Celery one will be removed.
     """
     if not transcript.room_id:
         return None

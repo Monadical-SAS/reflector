@@ -166,7 +166,6 @@ class SummaryBuilder:
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
         self.participant_instructions: str | None = None
-        self._logged_participant_instructions: bool = False
         if filename:
             self.read_transcript_from_file(filename)
 
@@ -209,9 +208,7 @@ class SummaryBuilder:
     def _enhance_prompt_with_participants(self, prompt: str) -> str:
         """Add participant instructions to any prompt if participants are known."""
         if self.participant_instructions:
-            if not self._logged_participant_instructions:
-                self.logger.debug("Adding participant instructions to prompts")
-                self._logged_participant_instructions = True
+            self.logger.debug("Adding participant instructions to prompts")
             return f"{prompt}\n\n{self.participant_instructions}"
         return prompt
 
