@@ -11,6 +11,7 @@ from typing import Literal, Union, assert_never
 
 import celery
 from celery.result import AsyncResult
+from hatchet_sdk.clients.rest.exceptions import ApiException
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.recordings import recordings_controller
@@ -124,8 +125,8 @@ async def validate_transcript_for_processing(
                 return ValidationAlreadyScheduled(
                     detail="Hatchet workflow already running"
                 )
-        except Exception:
-            # If we can't get status, allow processing (workflow might be gone)
+        except ApiException:
+            # Workflow might be gone (404) or API issue - allow processing
             pass
 
     return ValidationOk(
@@ -244,8 +245,8 @@ async def dispatch_transcript_processing(
                             workflow_id=transcript.workflow_run_id,
                         )
                         return None
-                except Exception:
-                    # If we can't get status, proceed with new workflow
+                except ApiException:
+                    # Workflow might be gone (404) or API issue - proceed with new workflow
                     pass
 
             workflow_id = await HatchetClientManager.start_workflow(

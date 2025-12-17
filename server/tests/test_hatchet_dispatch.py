@@ -11,6 +11,7 @@ These tests verify:
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from hatchet_sdk.clients.rest.exceptions import ApiException
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.transcripts import Transcript
@@ -194,7 +195,7 @@ async def test_hatchet_validation_allows_when_status_check_fails():
         ) as mock_hatchet:
             # Status check fails (workflow might be deleted)
             mock_hatchet.get_workflow_run_status = AsyncMock(
-                side_effect=Exception("Workflow not found")
+                side_effect=ApiException("Workflow not found")
             )
 
             with patch(

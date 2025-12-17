@@ -109,7 +109,7 @@ async def process_transcript(
                     status = await HatchetClientManager.get_workflow_run_status(
                         transcript.workflow_run_id
                     )
-                    print(f"  Status: {status}", file=sys.stderr)
+                    print(f"  Status: {status.value}", file=sys.stderr)
 
                     if status == V1TaskStatus.COMPLETED:
                         print("Workflow completed successfully", file=sys.stderr)
