@@ -762,29 +762,28 @@ async def reprocess_failed_daily_recordings():
                     recording_id=recording.id,
                 )
 
-            if transcript is None or transcript.status == "error":
-                if not recording.track_keys:
-                    logger.warning(
-                        "Recording has no track_keys, cannot reprocess",
-                        recording_id=recording.id,
-                    )
-                    continue
-
-                logger.info(
-                    "Queueing Daily recording for reprocessing",
+            if not recording.track_keys:
+                logger.warning(
+                    "Recording has no track_keys, cannot reprocess",
                     recording_id=recording.id,
-                    room_name=meeting.room_name,
-                    track_count=len(recording.track_keys),
-                    transcript_status=transcript.status if transcript else None,
                 )
+                continue
 
-                process_multitrack_recording.delay(
-                    bucket_name=bucket_name,
-                    daily_room_name=meeting.room_name,
-                    recording_id=recording.id,
-                    track_keys=recording.track_keys,
-                )
-                reprocessed_count += 1
+            logger.info(
+                "Queueing Daily recording for reprocessing",
+                recording_id=recording.id,
+                room_name=meeting.room_name,
+                track_count=len(recording.track_keys),
+                transcript_status=transcript.status if transcript else None,
+            )
+
+            process_multitrack_recording.delay(
+                bucket_name=bucket_name,
+                daily_room_name=meeting.room_name,
+                recording_id=recording.id,
+                track_keys=recording.track_keys,
+            )
+            reprocessed_count += 1
 
     except Exception as e:
         logger.error(
