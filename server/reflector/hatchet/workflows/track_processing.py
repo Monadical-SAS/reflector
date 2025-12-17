@@ -43,7 +43,6 @@ class TrackInput(BaseModel):
     language: str = "en"
 
 
-# Get hatchet client and define workflow
 hatchet = HatchetClientManager.get_client()
 
 track_workflow = hatchet.workflow(name="TrackProcessing", input_validator=TrackInput)
@@ -76,7 +75,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
             aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
         )
 
-        # Get presigned URL for source file
         source_url = await storage.get_file_url(
             input.s3_key,
             operation="get_object",
@@ -84,7 +82,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
             bucket=input.bucket_name,
         )
 
-        # Open container and extract start time
         with av.open(source_url) as in_container:
             start_time_seconds = extract_stream_start_time_from_container(
                 in_container, input.track_index, logger=logger
@@ -103,7 +100,6 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
                     track_index=input.track_index,
                 )
 
-            # Create temp file for padded output
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
                 temp_path = temp_file.name
 

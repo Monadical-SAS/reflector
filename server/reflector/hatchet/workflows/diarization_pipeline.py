@@ -90,11 +90,6 @@ diarization_pipeline = hatchet.workflow(
 )
 
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-
 @asynccontextmanager
 async def fresh_db_connection():
     """Context manager for database connections in Hatchet workers."""
@@ -175,11 +170,6 @@ def with_error_handling(step_name: str, set_error_status: bool = True) -> Callab
         return wrapper
 
     return decorator
-
-
-# ============================================================================
-# Pipeline Tasks
-# ============================================================================
 
 
 @diarization_pipeline.task(execution_timeout=timedelta(seconds=60), retries=3)
@@ -350,7 +340,6 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
 
     results = await asyncio.gather(*child_coroutines)
 
-    # Get target_language for later use in detect_topics
     target_language = participants_data.get("target_language", "en")
 
     # Collect results from each track (don't mutate lists while iterating)
@@ -440,13 +429,11 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     if not valid_urls:
         raise ValueError("No valid padded tracks to mixdown")
 
-    # Detect sample rate from tracks
     target_sample_rate = detect_sample_rate_from_tracks(valid_urls, logger=logger)
     if not target_sample_rate:
         logger.error("Mixdown failed - no decodable audio frames found")
         raise ValueError("No decodable audio frames in any track")
 
-    # Create temp file and writer for MP3 output
     output_path = tempfile.mktemp(suffix=".mp3")
     duration_ms = [0.0]  # Mutable container for callback capture
 
@@ -455,7 +442,6 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     writer = AudioFileWriterProcessor(path=output_path, on_duration=capture_duration)
 
-    # Run mixdown using shared utility
     await mixdown_tracks_pyav(
         valid_urls,
         writer,
@@ -465,7 +451,6 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     )
     await writer.flush()
 
-    # Upload to storage
     file_size = Path(output_path).stat().st_size
     storage_path = f"{input.transcript_id}/audio.mp3"
 
@@ -474,7 +459,6 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     Path(output_path).unlink(missing_ok=True)
 
-    # Update DB with audio location
     async with fresh_db_connection():
         from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 

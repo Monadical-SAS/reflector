@@ -159,7 +159,6 @@ class PipelineMainMultitrack(PipelineMainBase):
                     with open(temp_path, "rb") as padded_file:
                         await storage.put_file(storage_path, padded_file)
                 finally:
-                    # Clean up temp file
                     Path(temp_path).unlink(missing_ok=True)
 
                 padded_url = await storage.get_file_url(
@@ -196,7 +195,6 @@ class PipelineMainMultitrack(PipelineMainBase):
         offsets_seconds: list[float] | None = None,
     ) -> None:
         """Multi-track mixdown using PyAV filter graph (amix), reading from S3 presigned URLs."""
-        # Detect sample rate from tracks
         target_sample_rate = detect_sample_rate_from_tracks(
             track_urls, logger=self.logger
         )
@@ -204,7 +202,6 @@ class PipelineMainMultitrack(PipelineMainBase):
             self.logger.error("Mixdown failed - no decodable audio frames found")
             raise Exception("Mixdown failed: No decodable audio frames in any track")
 
-        # Run mixdown using shared utility
         await mixdown_tracks_pyav(
             track_urls,
             writer,

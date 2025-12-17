@@ -27,7 +27,6 @@ async def broadcast_event(transcript_id: str, event: TranscriptEvent) -> None:
     try:
         ws_manager = get_ws_manager()
 
-        # Broadcast to transcript room
         await ws_manager.send_json(
             room_id=f"ts:{transcript_id}",
             message=event.model_dump(mode="json"),
@@ -38,7 +37,6 @@ async def broadcast_event(transcript_id: str, event: TranscriptEvent) -> None:
             event_type=event.event,
         )
 
-        # Also broadcast to user room for certain events
         if event.event in USER_ROOM_EVENTS:
             transcript = await transcripts_controller.get_by_id(transcript_id)
             if transcript and transcript.user_id:

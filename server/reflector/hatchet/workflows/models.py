@@ -9,16 +9,16 @@ from typing import Any
 
 from pydantic import BaseModel
 
-# ============================================================================
-# Track Processing Results (track_processing.py)
-# ============================================================================
+from reflector.utils.string import NonEmptyString
 
 
 class PadTrackResult(BaseModel):
     """Result from pad_track task."""
 
-    padded_key: str  # S3 key (not presigned URL) - presign on demand to avoid stale URLs on replay
-    bucket_name: str | None  # None means use default transcript storage bucket
+    padded_key: NonEmptyString  # S3 key (not presigned URL) - presign on demand to avoid stale URLs on replay
+    bucket_name: (
+        NonEmptyString | None
+    )  # None means use default transcript storage bucket
     size: int
     track_index: int
 
@@ -30,16 +30,11 @@ class TranscribeTrackResult(BaseModel):
     track_index: int
 
 
-# ============================================================================
-# Diarization Pipeline Results (diarization_pipeline.py)
-# ============================================================================
-
-
 class RecordingResult(BaseModel):
     """Result from get_recording task."""
 
-    id: str | None
-    mtg_session_id: str | None
+    id: NonEmptyString | None
+    mtg_session_id: NonEmptyString | None
     duration: float
 
 
@@ -48,15 +43,15 @@ class ParticipantsResult(BaseModel):
 
     participants: list[dict[str, Any]]
     num_tracks: int
-    source_language: str
-    target_language: str
+    source_language: NonEmptyString
+    target_language: NonEmptyString
 
 
 class PaddedTrackInfo(BaseModel):
     """Info for a padded track - S3 key + bucket for on-demand presigning."""
 
-    key: str
-    bucket_name: str | None  # None = use default storage bucket
+    key: NonEmptyString
+    bucket_name: NonEmptyString | None  # None = use default storage bucket
 
 
 class ProcessTracksResult(BaseModel):
@@ -66,14 +61,14 @@ class ProcessTracksResult(BaseModel):
     padded_tracks: list[PaddedTrackInfo]  # S3 keys, not presigned URLs
     word_count: int
     num_tracks: int
-    target_language: str
-    created_padded_files: list[str]
+    target_language: NonEmptyString
+    created_padded_files: list[NonEmptyString]
 
 
 class MixdownResult(BaseModel):
     """Result from mixdown_tracks task."""
 
-    audio_key: str
+    audio_key: NonEmptyString
     duration: float
     tracks_mixed: int
 
@@ -106,7 +101,7 @@ class SummaryResult(BaseModel):
 class FinalizeResult(BaseModel):
     """Result from finalize task."""
 
-    status: str
+    status: NonEmptyString
 
 
 class ConsentResult(BaseModel):
