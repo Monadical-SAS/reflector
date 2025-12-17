@@ -188,7 +188,7 @@ async def dispatch_transcript_processing(
             room = await rooms_controller.get_by_id(config.room_id)
             room_forces_hatchet = room.use_hatchet if room else False
 
-        # Start durable workflow if enabled (Hatchet or Conductor)
+        # Start durable workflow if enabled (Hatchet)
         # or if room has use_hatchet=True
         use_hatchet = settings.HATCHET_ENABLED or room_forces_hatchet
 

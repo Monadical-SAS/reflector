@@ -1,5 +1,6 @@
 """
 Run Hatchet workers for the diarization pipeline.
+Runs as a separate process, just like Celery workers.
 
 Usage:
     uv run -m reflector.hatchet.run_workers
@@ -30,8 +31,9 @@ def main() -> None:
         debug=settings.HATCHET_DEBUG,
     )
 
-    # Import here (not top-level) - workflow imports trigger HatchetClientManager.get_client()
-    # which requires HATCHET_CLIENT_TOKEN; must validate settings first
+    # Import here (not top-level) - workflow modules call HatchetClientManager.get_client()
+    # at module level because Hatchet SDK decorators (@workflow.task) bind at import time.
+    # Can't use lazy init: decorators need the client object when function is defined.
     from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
     from reflector.hatchet.workflows import (  # noqa: PLC0415
         diarization_pipeline,
@@ -40,13 +42,11 @@ def main() -> None:
 
     hatchet = HatchetClientManager.get_client()
 
-    # Create worker with both workflows
     worker = hatchet.worker(
         "reflector-diarization-worker",
         workflows=[diarization_pipeline, track_workflow],
     )
 
-    # Handle graceful shutdown
     def shutdown_handler(signum: int, frame) -> None:
         logger.info("Received shutdown signal, stopping workers...")
         # Worker cleanup happens automatically on exit

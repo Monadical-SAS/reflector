@@ -1,13 +1,12 @@
 """Progress event emission for Hatchet workers."""
 
-import asyncio
 from typing import Literal
 
 from reflector.db.transcripts import PipelineProgressData
 from reflector.logger import logger
 from reflector.ws_manager import get_ws_manager
 
-# Step mapping for progress tracking (matches Conductor pipeline)
+# Step mapping for progress tracking
 PIPELINE_STEPS = {
     "get_recording": 1,
     "get_participants": 2,
@@ -61,45 +60,6 @@ async def _emit_progress_async(
         status=status,
         step_index=step_index,
     )
-
-
-def emit_progress(
-    transcript_id: str,
-    step: str,
-    status: Literal["pending", "in_progress", "completed", "failed"],
-    workflow_id: str | None = None,
-) -> None:
-    """Emit a pipeline progress event (sync wrapper for Hatchet workers).
-
-    Args:
-        transcript_id: The transcript ID to emit progress for
-        step: The current step name (e.g., "transcribe_track")
-        status: The step status
-        workflow_id: Optional workflow run ID
-    """
-    try:
-        # Get or create event loop for sync context
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop is not None and loop.is_running():
-            # Already in async context, schedule the coroutine
-            asyncio.create_task(
-                _emit_progress_async(transcript_id, step, status, workflow_id)
-            )
-        else:
-            # Not in async context, run synchronously
-            asyncio.run(_emit_progress_async(transcript_id, step, status, workflow_id))
-    except Exception as e:
-        # Progress emission should never break the pipeline
-        logger.warning(
-            "[Hatchet Progress] Failed to emit progress event",
-            error=str(e),
-            transcript_id=transcript_id,
-            step=step,
-        )
 
 
 async def emit_progress_async(

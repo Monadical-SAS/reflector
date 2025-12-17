@@ -57,9 +57,29 @@ uv run /app/requeue_uploaded_file.py TRANSCRIPT_ID
 
 After resetting the Hatchet database:
 
+### Option A: Automatic (CLI)
+
+```bash
+# Get default tenant ID and create token in one command
+TENANT_ID=$(docker compose exec -T postgres psql -U reflector -d hatchet -t -c \
+  "SELECT id FROM \"Tenant\" WHERE slug = 'default';" | tr -d ' \n') && \
+TOKEN=$(docker compose exec -T hatchet /hatchet-admin token create \
+  --config /config --tenant-id "$TENANT_ID" 2>/dev/null | tr -d '\n') && \
+echo "HATCHET_CLIENT_TOKEN=$TOKEN"
+```
+
+Copy the output to `server/.env`.
+
+### Option B: Manual (UI)
+
 1. Create API token at http://localhost:8889 → Settings → API Tokens
 2. Update `server/.env`: `HATCHET_CLIENT_TOKEN=<new-token>`
-3. Restart: `docker compose restart server hatchet-worker`
+
+### Then restart workers
+
+```bash
+docker compose restart server hatchet-worker
+```
 
 Workflows register automatically when hatchet-worker starts.
 

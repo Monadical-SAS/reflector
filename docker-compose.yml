@@ -104,7 +104,7 @@ services:
       SERVER_GRPC_PORT: "7077"
       SERVER_URL: http://localhost:8889
       SERVER_AUTH_SET_EMAIL_VERIFIED: "t"
-      SERVER_DEFAULT_ENGINE_VERSION: "V1"
+      # SERVER_DEFAULT_ENGINE_VERSION: "V1"  # default
       SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: hatchet:7077
     volumes:
       - ./data/hatchet-config:/config

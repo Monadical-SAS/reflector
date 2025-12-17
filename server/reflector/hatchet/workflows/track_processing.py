@@ -3,6 +3,15 @@ Hatchet child workflow: TrackProcessing
 
 Handles individual audio track processing: padding and transcription.
 Spawned dynamically by the main diarization pipeline for each track.
+
+Architecture note: This is a separate workflow (not inline tasks in DiarizationPipeline)
+because Hatchet workflow DAGs are defined statically, but the number of tracks varies
+at runtime. Child workflow spawning via `aio_run()` + `asyncio.gather()` is the
+standard pattern for dynamic fan-out. See `process_tracks` in diarization_pipeline.py.
+
+Note: This file uses deferred imports (inside tasks) intentionally.
+Hatchet workers run in forked processes; fresh imports per task ensure
+storage/DB connections are not shared across forks.
 """
 
 import math
@@ -190,8 +199,8 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
 
     try:
         # Create fresh storage instance to avoid aioboto3 fork issues
-        from reflector.settings import settings
-        from reflector.storage.storage_aws import AwsStorage
+        from reflector.settings import settings  # noqa: PLC0415
+        from reflector.storage.storage_aws import AwsStorage  # noqa: PLC0415
 
         storage = AwsStorage(
             aws_bucket_name=settings.TRANSCRIPT_STORAGE_AWS_BUCKET_NAME,
@@ -312,8 +321,8 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
             raise ValueError("Missing padded_key from pad_track")
 
         # Presign URL on demand (avoids stale URLs on workflow replay)
-        from reflector.settings import settings
-        from reflector.storage.storage_aws import AwsStorage
+        from reflector.settings import settings  # noqa: PLC0415
+        from reflector.storage.storage_aws import AwsStorage  # noqa: PLC0415
 
         storage = AwsStorage(
             aws_bucket_name=settings.TRANSCRIPT_STORAGE_AWS_BUCKET_NAME,
@@ -329,7 +338,7 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
             bucket=bucket_name,
         )
 
-        from reflector.pipelines.transcription_helpers import (
+        from reflector.pipelines.transcription_helpers import (  # noqa: PLC0415
             transcribe_file_with_processor,
         )
 

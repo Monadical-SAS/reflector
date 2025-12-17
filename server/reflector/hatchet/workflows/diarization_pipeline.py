@@ -3,6 +3,10 @@ Hatchet main workflow: DiarizationPipeline
 
 Multitrack diarization pipeline for Daily.co recordings.
 Orchestrates the full processing flow from recording metadata to final transcript.
+
+Note: This file uses deferred imports (inside functions/tasks) intentionally.
+Hatchet workers run in forked processes; fresh imports per task ensure DB connections
+are not shared across forks, avoiding connection pooling issues.
 """
 
 import asyncio
@@ -92,9 +96,9 @@ diarization_pipeline = hatchet.workflow(
 @asynccontextmanager
 async def fresh_db_connection():
     """Context manager for database connections in Hatchet workers."""
-    import databases
+    import databases  # noqa: PLC0415
 
-    from reflector.db import _database_context
+    from reflector.db import _database_context  # noqa: PLC0415
 
     _database_context.set(None)
     db = databases.Database(settings.DATABASE_URL)
@@ -116,7 +120,7 @@ async def set_workflow_error_status(transcript_id: str) -> bool:
     """
     try:
         async with fresh_db_connection():
-            from reflector.db.transcripts import transcripts_controller
+            from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
             await transcripts_controller.set_status(transcript_id, "error")
             logger.info(
@@ -205,7 +209,7 @@ async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
 
     # Set transcript status to "processing" at workflow start
     async with fresh_db_connection():
-        from reflector.db.transcripts import transcripts_controller
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
@@ -273,7 +277,7 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
 
     # Get transcript and reset events/topics/participants
     async with fresh_db_connection():
-        from reflector.db.transcripts import (
+        from reflector.db.transcripts import (  # noqa: PLC0415
             TranscriptParticipant,
             transcripts_controller,
         )
@@ -651,7 +655,7 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     # Update transcript with audio_location
     async with fresh_db_connection():
-        from reflector.db.transcripts import transcripts_controller
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
@@ -689,7 +693,10 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
         input.transcript_id, "generate_waveform", "in_progress", ctx.workflow_run_id
     )
 
-    from reflector.db.transcripts import TranscriptWaveform, transcripts_controller
+    from reflector.db.transcripts import (  # noqa: PLC0415
+        TranscriptWaveform,
+        transcripts_controller,
+    )
 
     # Cleanup temporary padded S3 files (deferred until after mixdown)
     track_data = _to_dict(ctx.task_output(process_tracks))
@@ -776,8 +783,11 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
     words = track_data.get("all_words", [])
     target_language = track_data.get("target_language", "en")
 
-    from reflector.db.transcripts import TranscriptTopic, transcripts_controller
-    from reflector.processors.types import (
+    from reflector.db.transcripts import (  # noqa: PLC0415
+        TranscriptTopic,
+        transcripts_controller,
+    )
+    from reflector.processors.types import (  # noqa: PLC0415
         TitleSummaryWithId as TitleSummaryWithIdProcessorType,
     )
 
@@ -841,7 +851,7 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
     topics_data = _to_dict(ctx.task_output(detect_topics))
     topics = topics_data.get("topics", [])
 
-    from reflector.db.transcripts import (
+    from reflector.db.transcripts import (  # noqa: PLC0415
         TranscriptFinalTitle,
         transcripts_controller,
     )
@@ -901,7 +911,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     topics_data = _to_dict(ctx.task_output(detect_topics))
     topics = topics_data.get("topics", [])
 
-    from reflector.db.transcripts import (
+    from reflector.db.transcripts import (  # noqa: PLC0415
         TranscriptFinalLongSummary,
         TranscriptFinalShortSummary,
         transcripts_controller,
@@ -995,9 +1005,14 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
     all_words = track_data.get("all_words", [])
 
     async with fresh_db_connection():
-        from reflector.db.transcripts import TranscriptText, transcripts_controller
-        from reflector.processors.types import Transcript as TranscriptType
-        from reflector.processors.types import Word
+        from reflector.db.transcripts import (  # noqa: PLC0415
+            TranscriptText,
+            transcripts_controller,
+        )
+        from reflector.processors.types import (  # noqa: PLC0415
+            Transcript as TranscriptType,
+        )
+        from reflector.processors.types import Word  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript is None:
@@ -1057,8 +1072,8 @@ async def cleanup_consent(input: PipelineInput, ctx: Context) -> ConsentResult:
     )
 
     async with fresh_db_connection():
-        from reflector.db.meetings import meetings_controller
-        from reflector.db.transcripts import transcripts_controller
+        from reflector.db.meetings import meetings_controller  # noqa: PLC0415
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript and transcript.meeting_id:
@@ -1099,7 +1114,7 @@ async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
         return ZulipResult(zulip_message_id=None, skipped=True)
 
     async with fresh_db_connection():
-        from reflector.db.transcripts import transcripts_controller
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
@@ -1135,8 +1150,8 @@ async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
         return WebhookResult(webhook_sent=False, skipped=True)
 
     async with fresh_db_connection():
-        from reflector.db.rooms import rooms_controller
-        from reflector.db.transcripts import transcripts_controller
+        from reflector.db.rooms import rooms_controller  # noqa: PLC0415
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         room = await rooms_controller.get_by_id(input.room_id)
         transcript = await transcripts_controller.get_by_id(input.transcript_id)

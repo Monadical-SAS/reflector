@@ -20,11 +20,7 @@ from reflector.settings import settings
 class HatchetClientManager:
     """Singleton manager for Hatchet client connections.
 
-    Singleton pattern is used because Hatchet SDK maintains persistent gRPC
-    connections for workflow registration, and multiple clients would conflict.
-
-    For testing, use the `reset()` method or the `reset_hatchet_client` fixture
-    to ensure test isolation.
+    See module docstring for rationale. For test isolation, use `reset()`.
     """
 
     _instance: Hatchet | None = None
@@ -68,25 +64,21 @@ class HatchetClientManager:
             input_data,
             additional_metadata=additional_metadata,
         )
-        # SDK v1.21+ returns V1WorkflowRunDetails with run.metadata.id
         return result.run.metadata.id
 
     @classmethod
     async def get_workflow_run_status(cls, workflow_run_id: str) -> V1TaskStatus:
-        """Get workflow run status."""
         client = cls.get_client()
         return await client.runs.aio_get_status(workflow_run_id)
 
     @classmethod
     async def cancel_workflow(cls, workflow_run_id: str) -> None:
-        """Cancel a workflow."""
         client = cls.get_client()
         await client.runs.aio_cancel(workflow_run_id)
         logger.info("[Hatchet] Cancelled workflow", workflow_run_id=workflow_run_id)
 
     @classmethod
     async def replay_workflow(cls, workflow_run_id: str) -> None:
-        """Replay a failed workflow."""
         client = cls.get_client()
         await client.runs.aio_replay(workflow_run_id)
         logger.info("[Hatchet] Replaying workflow", workflow_run_id=workflow_run_id)
