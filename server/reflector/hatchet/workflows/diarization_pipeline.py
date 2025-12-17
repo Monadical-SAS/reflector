@@ -10,13 +10,17 @@ import functools
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from fractions import Fraction
 from pathlib import Path
 from typing import Callable
 
 import av
+import httpx
+from av.audio.resampler import AudioResampler
 from hatchet_sdk import Context
 from pydantic import BaseModel
 
+from reflector.dailyco_api.client import DailyApiClient
 from reflector.hatchet.client import HatchetClientManager
 from reflector.hatchet.progress import emit_progress_async
 from reflector.hatchet.workflows.models import (
@@ -36,6 +40,23 @@ from reflector.hatchet.workflows.models import (
 )
 from reflector.hatchet.workflows.track_processing import TrackInput, track_workflow
 from reflector.logger import logger
+from reflector.pipelines import topic_processing
+from reflector.processors import AudioFileWriterProcessor
+from reflector.processors.types import (
+    TitleSummary,
+    Word,
+)
+from reflector.processors.types import (
+    Transcript as TranscriptType,
+)
+from reflector.settings import settings
+from reflector.storage.storage_aws import AwsStorage
+from reflector.utils.audio_waveform import get_audio_waveform
+from reflector.utils.daily import (
+    filter_cam_audio_tracks,
+    parse_daily_recording_filename,
+)
+from reflector.zulip import post_transcript_notification
 
 # Audio constants
 OPUS_STANDARD_SAMPLE_RATE = 48000
@@ -74,7 +95,6 @@ async def fresh_db_connection():
     import databases
 
     from reflector.db import _database_context
-    from reflector.settings import settings
 
     _database_context.set(None)
     db = databases.Database(settings.DATABASE_URL)
@@ -116,9 +136,6 @@ async def set_workflow_error_status(transcript_id: str) -> bool:
 
 def _get_storage():
     """Create fresh storage instance."""
-    from reflector.settings import settings
-    from reflector.storage.storage_aws import AwsStorage
-
     return AwsStorage(
         aws_bucket_name=settings.TRANSCRIPT_STORAGE_AWS_BUCKET_NAME,
         aws_region=settings.TRANSCRIPT_STORAGE_AWS_REGION,
@@ -198,9 +215,6 @@ async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
                 transcript_id=input.transcript_id,
             )
 
-    from reflector.dailyco_api.client import DailyApiClient
-    from reflector.settings import settings
-
     if not input.recording_id:
         # No recording_id in reprocess path - return minimal data
         await emit_progress_async(
@@ -256,13 +270,6 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
 
     recording_data = _to_dict(ctx.task_output(get_recording))
     mtg_session_id = recording_data.get("mtg_session_id")
-
-    from reflector.dailyco_api.client import DailyApiClient
-    from reflector.settings import settings
-    from reflector.utils.daily import (
-        filter_cam_audio_tracks,
-        parse_daily_recording_filename,
-    )
 
     # Get transcript and reset events/topics/participants
     async with fresh_db_connection():
@@ -488,12 +495,6 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
             padded_urls.append(url)
 
     # Use PipelineMainMultitrack.mixdown_tracks which uses PyAV filter graph
-    from fractions import Fraction
-
-    from av.audio.resampler import AudioResampler
-
-    from reflector.processors import AudioFileWriterProcessor
-
     valid_urls = [url for url in padded_urls if url]
     if not valid_urls:
         raise ValueError("No valid padded tracks to mixdown")
@@ -688,10 +689,7 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
         input.transcript_id, "generate_waveform", "in_progress", ctx.workflow_run_id
     )
 
-    import httpx
-
     from reflector.db.transcripts import TranscriptWaveform, transcripts_controller
-    from reflector.utils.audio_waveform import get_audio_waveform
 
     # Cleanup temporary padded S3 files (deferred until after mixdown)
     track_data = _to_dict(ctx.task_output(process_tracks))
@@ -779,12 +777,9 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
     target_language = track_data.get("target_language", "en")
 
     from reflector.db.transcripts import TranscriptTopic, transcripts_controller
-    from reflector.pipelines import topic_processing
     from reflector.processors.types import (
         TitleSummaryWithId as TitleSummaryWithIdProcessorType,
     )
-    from reflector.processors.types import Transcript as TranscriptType
-    from reflector.processors.types import Word
 
     # Convert word dicts to Word objects
     word_objects = [Word(**w) for w in words]
@@ -850,8 +845,6 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
         TranscriptFinalTitle,
         transcripts_controller,
     )
-    from reflector.pipelines import topic_processing
-    from reflector.processors.types import TitleSummary
 
     topic_objects = [TitleSummary(**t) for t in topics]
 
@@ -913,8 +906,6 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
         TranscriptFinalShortSummary,
         transcripts_controller,
     )
-    from reflector.pipelines import topic_processing
-    from reflector.processors.types import TitleSummary
 
     topic_objects = [TitleSummary(**t) for t in topics]
 
@@ -1100,16 +1091,12 @@ async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
         input.transcript_id, "post_zulip", "in_progress", ctx.workflow_run_id
     )
 
-    from reflector.settings import settings
-
     if not settings.ZULIP_REALM:
         logger.info("[Hatchet] post_zulip skipped (Zulip not configured)")
         await emit_progress_async(
             input.transcript_id, "post_zulip", "completed", ctx.workflow_run_id
         )
         return ZulipResult(zulip_message_id=None, skipped=True)
-
-    from reflector.zulip import post_transcript_notification
 
     async with fresh_db_connection():
         from reflector.db.transcripts import transcripts_controller
@@ -1155,8 +1142,6 @@ async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
 
         if room and room.webhook_url and transcript:
-            import httpx
-
             webhook_payload = {
                 "event": "transcript.completed",
                 "transcript_id": input.transcript_id,

@@ -17,7 +17,9 @@ from typing import Callable
 from celery.result import AsyncResult
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
+from reflector.db import get_database
 from reflector.db.transcripts import Transcript, transcripts_controller
+from reflector.hatchet.client import HatchetClientManager
 from reflector.services.transcript_process import (
     FileProcessingConfig,
     MultitrackProcessingConfig,
@@ -55,8 +57,6 @@ async def process_transcript(
         sync: If True, wait for task completion. If False, dispatch and exit.
         force: If True, cancel old workflow and start new (latest code). If False, replay failed workflow.
     """
-    from reflector.db import get_database
-
     database = get_database()
     await database.connect()
 
@@ -96,8 +96,6 @@ async def process_transcript(
         if result is None:
             # Hatchet workflow dispatched
             if sync:
-                from reflector.hatchet.client import HatchetClientManager
-
                 # Re-fetch transcript to get workflow_run_id
                 transcript = await transcripts_controller.get_by_id(transcript_id)
                 if not transcript or not transcript.workflow_run_id:

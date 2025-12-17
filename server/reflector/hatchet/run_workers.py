@@ -30,9 +30,13 @@ def main() -> None:
         debug=settings.HATCHET_DEBUG,
     )
 
-    # Import workflows to register them
-    from reflector.hatchet.client import HatchetClientManager
-    from reflector.hatchet.workflows import diarization_pipeline, track_workflow
+    # Import here (not top-level) - workflow imports trigger HatchetClientManager.get_client()
+    # which requires HATCHET_CLIENT_TOKEN; must validate settings first
+    from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
+    from reflector.hatchet.workflows import (  # noqa: PLC0415
+        diarization_pipeline,
+        track_workflow,
+    )
 
     hatchet = HatchetClientManager.get_client()
 

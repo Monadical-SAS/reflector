@@ -24,6 +24,7 @@ from reflector.db.transcripts import (
     SourceKind,
     transcripts_controller,
 )
+from reflector.hatchet.client import HatchetClientManager
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.main_multitrack_pipeline import (
@@ -298,8 +299,6 @@ async def _process_multitrack_recording_inner(
         )
 
     if use_hatchet:
-        from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
-
         workflow_id = await HatchetClientManager.start_workflow(
             workflow_name="DiarizationPipeline",
             input_data={

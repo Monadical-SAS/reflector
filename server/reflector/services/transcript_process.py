@@ -15,7 +15,8 @@ from hatchet_sdk.clients.rest.exceptions import ApiException
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.recordings import recordings_controller
-from reflector.db.transcripts import Transcript
+from reflector.db.rooms import rooms_controller
+from reflector.db.transcripts import Transcript, transcripts_controller
 from reflector.hatchet.client import HatchetClientManager
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
@@ -180,9 +181,6 @@ async def dispatch_transcript_processing(
 
     Returns AsyncResult for Celery tasks, None for Hatchet workflows.
     """
-    from reflector.db.rooms import rooms_controller
-    from reflector.db.transcripts import transcripts_controller
-
     if isinstance(config, MultitrackProcessingConfig):
         # Check if room has use_hatchet=True (overrides env vars)
         room_forces_hatchet = False
