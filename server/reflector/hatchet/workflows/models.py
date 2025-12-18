@@ -107,8 +107,6 @@ class FinalizeResult(BaseModel):
 class ConsentResult(BaseModel):
     """Result from cleanup_consent task."""
 
-    consent_checked: bool
-
 
 class ZulipResult(BaseModel):
     """Result from post_zulip task."""
