@@ -567,12 +567,17 @@ async def rooms_join_meeting(
 
     if meeting.platform == "daily" and user_id is not None:
         client = create_platform_client(meeting.platform)
+        end_date = meeting.end_date
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+        remaining_seconds = int((end_date - current_time).total_seconds())
         token = await client.create_meeting_token(
             meeting.room_name,
             start_cloud_recording=meeting.recording_type == "cloud",
             enable_recording_ui=meeting.recording_type == "local",
             user_id=user_id,
             is_owner=user_id == room.user_id,
+            max_recording_duration_seconds=remaining_seconds,
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)
