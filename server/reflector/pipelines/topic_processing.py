@@ -89,7 +89,7 @@ async def generate_summaries(
     *,
     on_long_summary_callback: Callable,
     on_short_summary_callback: Callable,
-    on_action_items_callback: Callable | None = None,
+    on_action_items_callback: Callable,
     empty_pipeline: EmptyPipeline,
     logger: structlog.BoundLogger,
 ):
@@ -101,9 +101,8 @@ async def generate_summaries(
         "transcript": transcript,
         "callback": on_long_summary_callback,
         "on_short_summary": on_short_summary_callback,
+        "on_action_items": on_action_items_callback,
     }
-    if on_action_items_callback:
-        processor_kwargs["on_action_items"] = on_action_items_callback
 
     processor = TranscriptFinalSummaryProcessor(**processor_kwargs)
     processor.set_pipeline(empty_pipeline)
