@@ -34,7 +34,7 @@ Public mode provides immediate access to core transcription features without req
 Private mode unlocks the full potential of Reflector with authentication and persistent storage.
 
 ### Additional Features
-- **Virtual Meeting Rooms**: Whereby integration
+- **Virtual Meeting Rooms**: Whereby and Daily.co integration
 - **Team Collaboration**: Share transcripts with team
 - **Persistent Storage**: Long-term transcript archive
 - **Advanced Analytics**: Meeting insights and trends
@@ -99,10 +99,8 @@ REFLECTOR_AUTH_BACKEND=authentik
 ## Security Considerations
 
 ### Public Mode Security
-- Rate limiting to prevent abuse
 - File size restrictions
 - Automatic cleanup of old data
-- No PII storage
 
 ### Private Mode Security
 - Encrypted data storage

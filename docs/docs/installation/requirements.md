@@ -42,6 +42,7 @@ This page lists hardware and software requirements. For the complete deployment 
 
 - **Daily.co account** - For video conferencing (free tier available at https://dashboard.daily.co)
 - **AWS S3 bucket + IAM Role** - For Daily.co to store recordings
+- **Another AWS S3 bucket (optional, can reuse the one above)** - For Reflector to store "compiled" mp3 files and transient diarization process temporary files
 
 ### Optional
 

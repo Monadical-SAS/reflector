@@ -27,18 +27,13 @@ The file processing pipeline handles uploaded audio files, optimizing for accura
 ### 2. Pre-processing
 
 **Audio Normalization:**
-```python
+```yaml
 # Convert to standard format
 - Sample rate: 16kHz (Whisper requirement)
 - Channels: Mono
 - Bit depth: 16-bit
 - Format: WAV
 ```
-
-**Volume Normalization:**
-- Target: -23 LUFS (broadcast standard)
-- Prevents clipping
-- Improves transcription accuracy
 
 **Noise Reduction (Optional):**
 - Background noise removal

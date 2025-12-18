@@ -15,7 +15,7 @@ The user interface is built with **Next.js 14** using the App Router pattern, pr
 
 - Server-side rendering for optimal performance
 - Real-time WebSocket connections for live transcription
-- WebRTC support for audio streaming
+- WebRTC support for audio streaming and live meetings
 - Responsive design with Chakra UI components
 
 ### Backend API Server

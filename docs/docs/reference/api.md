@@ -220,13 +220,6 @@ Modify room configuration and permissions.
 - `429 Too Many Requests`: Rate limit exceeded
 - `500 Internal Server Error`: Server error
 
-## Rate Limiting
-
-- **Anonymous users**: 100 requests per minute
-- **Authenticated users**: 1000 requests per minute
-- **WebSocket connections**: 10 concurrent per user
-- **File uploads**: 10 per hour for anonymous, 100 per hour for authenticated
-
 ## WebSocket Protocol
 
 The WebSocket connection provides real-time updates during transcription processing. The server sends structured messages to communicate different events and data updates.

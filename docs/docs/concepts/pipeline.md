@@ -36,7 +36,6 @@ Accepts various input sources:
 
 Prepares audio for optimal processing:
 - **Format Conversion**: Convert to 16kHz mono WAV
-- **Normalization**: Adjust volume to -23 LUFS
 - **Noise Reduction**: Optional background noise removal
 - **Validation**: Check duration and quality
 
@@ -148,7 +147,6 @@ chunk_overlap_seconds: 1
 
 # Quality settings
 enable_noise_reduction: true
-enable_normalization: true
 min_speech_confidence: 0.5
 
 # Post-processing

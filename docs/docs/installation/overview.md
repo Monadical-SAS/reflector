@@ -176,8 +176,6 @@ Save these credentials - you'll need them in the next step.
 
 ## Configure Environment
 
-**Location: YOUR SERVER (via SSH, in the `reflector` directory)**
-
 Reflector has two env files:
 - `server/.env` - Backend configuration
 - `www/.env` - Frontend configuration
@@ -268,8 +266,6 @@ FEATURE_REQUIRE_LOGIN=false
 
 ## Configure Caddy
 
-**Location: YOUR SERVER (via SSH)**
-
 ```bash
 cp Caddyfile.example Caddyfile
 nano Caddyfile
@@ -290,8 +286,6 @@ Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy'
 ---
 
 ## Start Services
-
-**Location: YOUR SERVER (via SSH)**
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
@@ -315,12 +309,6 @@ docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade hea
 ```bash
 docker compose -f docker-compose.prod.yml ps
 # All should show "Up"
-```
-
-### Check logs for errors
-```bash
-docker compose -f docker-compose.prod.yml logs server --tail 20
-docker compose -f docker-compose.prod.yml logs worker --tail 20
 ```
 
 ### Test API
@@ -382,6 +370,12 @@ docker compose -f docker-compose.prod.yml up -d server worker
 
 ## Troubleshooting
 
+### Check logs for errors
+```bash
+docker compose -f docker-compose.prod.yml logs server --tail 20
+docker compose -f docker-compose.prod.yml logs worker --tail 20
+```
+
 ### Services won't start
 ```bash
 docker compose -f docker-compose.prod.yml logs
@@ -405,11 +399,3 @@ docker compose -f docker-compose.prod.yml logs
 - Set `FEATURE_REQUIRE_LOGIN=false` in `www/.env`
 - Rebuild frontend: `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
 
----
-
-## Next Steps
-
-- [Modal Setup](./modal-setup) - Cloud GPU processing details
-- [Self-Hosted GPU Setup](./self-hosted-gpu-setup) - Own GPU server deployment
-- [Authentication Setup](./auth-setup) - Authentik OAuth
-- [System Requirements](./requirements) - Hardware specs
