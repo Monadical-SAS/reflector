@@ -121,7 +121,10 @@ class RecordingS3Info(BaseModel):
 
 class RecordingResponse(BaseModel):
     """
-    Response from recording retrieval endpoint.
+    Response from recording retrieval endpoint (network layer).
+
+    Duration may be None for recordings still being processed by Daily.
+    Use FinishedRecordingResponse for recordings ready for processing.
 
     Reference: https://docs.daily.co/reference/rest-api/recordings
     """
@@ -135,7 +138,9 @@ class RecordingResponse(BaseModel):
     max_participants: int | None = Field(
         None, description="Maximum participants during recording (may be missing)"
     )
-    duration: int = Field(description="Recording duration in seconds")
+    duration: int | None = Field(
+        None, description="Recording duration in seconds (None if still processing)"
+    )
     share_token: NonEmptyString | None = Field(
         None, description="Token for sharing recording"
     )
@@ -148,6 +153,25 @@ class RecordingResponse(BaseModel):
     mtgSessionId: NonEmptyString | None = Field(
         None, description="Meeting session identifier (may be missing)"
     )
+
+    def to_finished(self) -> "FinishedRecordingResponse | None":
+        """Convert to FinishedRecordingResponse if duration is available and status is finished."""
+        if self.duration is None or self.status != "finished":
+            return None
+        return FinishedRecordingResponse(**self.model_dump())
+
+
+class FinishedRecordingResponse(RecordingResponse):
+    """
+    Recording with confirmed duration - ready for processing.
+
+    This model guarantees duration is present and status is finished.
+    """
+
+    status: Literal["finished"] = Field(
+        description="Recording status (always 'finished')"
+    )
+    duration: int = Field(description="Recording duration in seconds")
 
 
 class MeetingTokenResponse(BaseModel):

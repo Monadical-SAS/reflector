@@ -4,6 +4,7 @@
 services:
   web:
     image: monadicalsas/reflector-frontend:latest
+    pull_policy: always
     environment:
       - KV_URL=${KV_URL:-redis://redis:6379}
       - SITE_URL=${SITE_URL}
