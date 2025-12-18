@@ -17,6 +17,7 @@ from pydantic import (
 import reflector.auth as auth
 from reflector.db import get_database
 from reflector.db.recordings import recordings_controller
+from reflector.db.rooms import rooms_controller
 from reflector.db.search import (
     DEFAULT_SEARCH_LIMIT,
     SearchLimit,
@@ -473,6 +474,11 @@ async def transcript_get(
 
     is_multitrack = await _get_is_multitrack(transcript)
 
+    room_name = None
+    if transcript.room_id:
+        room = await rooms_controller.get_by_id(transcript.room_id)
+        room_name = room.name if room else None
+
     participants = []
     if transcript.participants:
         user_ids = [p.user_id for p in transcript.participants if p.user_id is not None]
@@ -495,6 +501,7 @@ async def transcript_get(
         "title": transcript.title,
         "short_summary": transcript.short_summary,
         "long_summary": transcript.long_summary,
+        "action_items": transcript.action_items,
         "created_at": transcript.created_at,
         "share_mode": transcript.share_mode,
         "source_language": transcript.source_language,
@@ -503,6 +510,7 @@ async def transcript_get(
         "meeting_id": transcript.meeting_id,
         "source_kind": transcript.source_kind,
         "room_id": transcript.room_id,
+        "room_name": room_name,
         "audio_deleted": transcript.audio_deleted,
         "participants": participants,
     }

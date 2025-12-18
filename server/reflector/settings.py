@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     LLM_PARSE_MAX_RETRIES: int = (
         3  # Max retries for JSON/validation errors (total attempts = retries + 1)
     )
+    LLM_STRUCTURED_RESPONSE_TIMEOUT: int = (
+        300  # Timeout in seconds for structured responses (5 minutes)
+    )
 
     # Diarization
     # backends:

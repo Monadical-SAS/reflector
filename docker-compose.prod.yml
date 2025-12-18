@@ -12,6 +12,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./www/.env
+    pull_policy: always
     environment:
       - KV_URL=redis://redis:6379
     depends_on:

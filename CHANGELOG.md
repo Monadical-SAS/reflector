@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.23.2](https://github.com/Monadical-SAS/reflector/compare/v0.23.1...v0.23.2) (2025-12-11)
+
+
+### Bug Fixes
+
+* build on push tags ([#785](https://github.com/Monadical-SAS/reflector/issues/785)) ([d7f140b](https://github.com/Monadical-SAS/reflector/commit/d7f140b7d1f4660d5da7a0da1357f68869e0b5cd))
+
+## [0.23.1](https://github.com/Monadical-SAS/reflector/compare/v0.23.0...v0.23.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* populate room_name in transcript GET endpoint ([#783](https://github.com/Monadical-SAS/reflector/issues/783)) ([0eba147](https://github.com/Monadical-SAS/reflector/commit/0eba1470181c7b9e0a79964a1ef28c09bcbdd9d7))
+
 ## [0.23.0](https://github.com/Monadical-SAS/reflector/compare/v0.22.4...v0.23.0) (2025-12-10)
 
 
