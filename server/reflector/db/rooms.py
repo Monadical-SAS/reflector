@@ -57,6 +57,12 @@ rooms = sqlalchemy.Table(
         sqlalchemy.String,
         nullable=False,
     ),
+    sqlalchemy.Column(
+        "skip_consent",
+        sqlalchemy.Boolean,
+        nullable=False,
+        server_default=sqlalchemy.sql.false(),
+    ),
     sqlalchemy.Index("idx_room_is_shared", "is_shared"),
     sqlalchemy.Index("idx_room_ics_enabled", "ics_enabled"),
 )
@@ -85,6 +91,7 @@ class Room(BaseModel):
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
     platform: Platform = Field(default_factory=lambda: settings.DEFAULT_VIDEO_PLATFORM)
+    skip_consent: bool = False
 
 
 class RoomController:
@@ -139,6 +146,7 @@ class RoomController:
         ics_fetch_interval: int = 300,
         ics_enabled: bool = False,
         platform: Platform = settings.DEFAULT_VIDEO_PLATFORM,
+        skip_consent: bool = False,
     ):
         """
         Add a new room
@@ -163,6 +171,7 @@ class RoomController:
             "ics_fetch_interval": ics_fetch_interval,
             "ics_enabled": ics_enabled,
             "platform": platform,
+            "skip_consent": skip_consent,
         }
 
         room = Room(**room_data)

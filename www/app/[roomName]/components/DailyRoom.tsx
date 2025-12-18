@@ -8,6 +8,7 @@ import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
 import {
   ConsentDialogButton,
+  RecordingIndicator,
   recordingTypeRequiresConsent,
 } from "../../lib/consent";
 import { useRoomJoinMeeting } from "../../lib/apiHooks";
@@ -162,7 +163,12 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       {meeting.recording_type &&
         recordingTypeRequiresConsent(meeting.recording_type) &&
-        meeting.id && <ConsentDialogButton meetingId={meeting.id} />}
+        meeting.id &&
+        (meeting.skip_consent ? (
+          <RecordingIndicator />
+        ) : (
+          <ConsentDialogButton meetingId={meeting.id} />
+        ))}
     </Box>
   );
 }

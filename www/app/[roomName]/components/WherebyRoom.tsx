@@ -8,6 +8,7 @@ import { getWherebyUrl, useWhereby } from "../../lib/wherebyClient";
 import { assertExistsAndNonEmptyString, NonEmptyString } from "../../lib/utils";
 import {
   ConsentDialogButton as BaseConsentDialogButton,
+  RecordingIndicator,
   useConsentDialog,
   recordingTypeRequiresConsent,
 } from "../../lib/consent";
@@ -90,12 +91,15 @@ export default function WherebyRoom({ meeting }: WherebyRoomProps) {
       />
       {recordingType &&
         recordingTypeRequiresConsent(recordingType) &&
-        meetingId && (
+        meetingId &&
+        (meeting.skip_consent ? (
+          <RecordingIndicator />
+        ) : (
           <WherebyConsentDialogButton
             meetingId={assertExistsAndNonEmptyString(meetingId)}
             wherebyRef={wherebyRef}
           />
-        )}
+        ))}
     </>
   );
 }

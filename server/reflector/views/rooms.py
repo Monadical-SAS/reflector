@@ -44,6 +44,7 @@ class Room(BaseModel):
     ics_last_sync: Optional[datetime] = None
     ics_last_etag: Optional[str] = None
     platform: Platform
+    skip_consent: bool = False
 
 
 class RoomDetails(Room):
@@ -72,6 +73,7 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform
+    skip_consent: bool = False
 
 
 class CreateRoom(BaseModel):
@@ -90,6 +92,7 @@ class CreateRoom(BaseModel):
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
     platform: Platform
+    skip_consent: bool = False
 
 
 class UpdateRoom(BaseModel):
@@ -108,6 +111,7 @@ class UpdateRoom(BaseModel):
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
     platform: Optional[Platform] = None
+    skip_consent: Optional[bool] = None
 
 
 class CreateRoomMeeting(BaseModel):
@@ -249,6 +253,7 @@ async def rooms_create(
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
         platform=room.platform,
+        skip_consent=room.skip_consent,
     )
 
 
