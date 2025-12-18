@@ -374,7 +374,12 @@ class TranscriptController:
         room_id: str | None = None,
         search_term: str | None = None,
         return_query: bool = False,
-        exclude_columns: list[str] = ["topics", "events", "participants"],
+        exclude_columns: list[str] = [
+            "topics",
+            "events",
+            "participants",
+            "action_items",
+        ],
     ) -> list[Transcript]:
         """
         Get all transcripts
