@@ -13,9 +13,12 @@ export default function UserInfo() {
     <Spinner size="xs" className="mx-3" />
   ) : !isAuthenticated && !isRefreshing ? (
     <Link
-      href="/"
+      href="#"
       className="font-light px-2"
-      onClick={() => auth.signIn("authentik")}
+      onClick={(e) => {
+        e.preventDefault();
+        auth.signIn("authentik");
+      }}
     >
       Log in
     </Link>
