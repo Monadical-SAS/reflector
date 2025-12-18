@@ -2,7 +2,16 @@ from typing import Annotated, TypeVar
 
 from pydantic import Field, TypeAdapter, constr
 
-from reflector.utils.common import assert_not_none
+T_NotNone = TypeVar("T_NotNone")
+
+
+def assert_not_none(
+    value: T_NotNone | None, message: str = "Value is None"
+) -> T_NotNone:
+    if value is None:
+        raise ValueError(message)
+    return value
+
 
 NonEmptyStringBase = constr(min_length=1, strip_whitespace=False)
 NonEmptyString = Annotated[
@@ -25,10 +34,10 @@ def try_parse_non_empty_string(s: str) -> NonEmptyString | None:
     return parse_non_empty_string(s)
 
 
-T = TypeVar("T", bound=str)
+T_Str = TypeVar("T_Str", bound=str)
 
 
-def assert_equal[T](s1: T, s2: T) -> T:
+def assert_equal(s1: T_Str, s2: T_Str) -> T_Str:
     if s1 != s2:
         raise ValueError(f"assert_equal: {s1} != {s2}")
     return s1

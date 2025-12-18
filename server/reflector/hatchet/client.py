@@ -88,7 +88,7 @@ class HatchetClientManager:
         """Check if workflow can be replayed (is FAILED)."""
         try:
             status = await cls.get_workflow_run_status(workflow_run_id)
-            return status == V1TaskStatus.FAILED
+            return status == V1TaskStatus.FAILED or status == V1TaskStatus.CANCELLED
         except Exception as e:
             logger.warning(
                 "[Hatchet] Failed to check replay status",
