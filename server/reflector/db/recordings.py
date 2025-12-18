@@ -70,8 +70,8 @@ class RecordingController:
     async def remove_by_id(self, id: str) -> None:
         query = recordings.delete().where(recordings.c.id == id)
         await get_database().execute(query)
-        # no check for existence
 
+    # no check for existence
     async def get_by_ids(self, recording_ids: list[str]) -> list[Recording]:
         if not recording_ids:
             return []
