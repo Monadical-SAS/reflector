@@ -16,6 +16,9 @@ from llama_index.core.workflow import (
 )
 from llama_index.llms.openai_like import OpenAILike
 from pydantic import BaseModel, ValidationError
+from workflows.errors import WorkflowTimeoutError
+
+from reflector.utils.retry import retry
 
 T = TypeVar("T", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -231,24 +234,33 @@ class LLM:
         tone_name: str | None = None,
     ) -> T:
         """Get structured output from LLM with validation retry via Workflow."""
-        workflow = StructuredOutputWorkflow(
-            output_cls=output_cls,
-            max_retries=self.settings_obj.LLM_PARSE_MAX_RETRIES + 1,
-            timeout=120,
-        )
 
-        result = await workflow.run(
-            prompt=prompt,
-            texts=texts,
-            tone_name=tone_name,
-        )
-
-        if "error" in result:
-            error_msg = result["error"] or "Max retries exceeded"
-            raise LLMParseError(
+        async def run_workflow():
+            workflow = StructuredOutputWorkflow(
                 output_cls=output_cls,
-                error_msg=error_msg,
-                attempts=result.get("attempts", 0),
+                max_retries=self.settings_obj.LLM_PARSE_MAX_RETRIES + 1,
+                timeout=120,
             )
 
-        return result["success"]
+            result = await workflow.run(
+                prompt=prompt,
+                texts=texts,
+                tone_name=tone_name,
+            )
+
+            if "error" in result:
+                error_msg = result["error"] or "Max retries exceeded"
+                raise LLMParseError(
+                    output_cls=output_cls,
+                    error_msg=error_msg,
+                    attempts=result.get("attempts", 0),
+                )
+
+            return result["success"]
+
+        return await retry(run_workflow)(
+            retry_attempts=3,
+            retry_backoff_interval=1.0,
+            retry_backoff_max=30.0,
+            retry_ignore_exc_types=(WorkflowTimeoutError,),
+        )
