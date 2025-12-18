@@ -59,8 +59,14 @@ async def mixdown_tracks_pyav(
         logger: Optional logger instance
 
     Raises:
-        ValueError: If no valid tracks or containers can be opened
+        ValueError: If offsets_seconds length doesn't match track_urls,
+            no valid tracks provided, or no containers can be opened
     """
+    if offsets_seconds is not None and len(offsets_seconds) != len(track_urls):
+        raise ValueError(
+            f"offsets_seconds length ({len(offsets_seconds)}) must match track_urls ({len(track_urls)})"
+        )
+
     valid_track_urls = [url for url in track_urls if url]
     if not valid_track_urls:
         if logger:

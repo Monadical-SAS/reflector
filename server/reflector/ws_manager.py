@@ -16,6 +16,7 @@ import threading
 import redis.asyncio as redis
 from fastapi import WebSocket
 
+from reflector.events import subscribers_shutdown
 from reflector.settings import settings
 
 
@@ -125,3 +126,14 @@ def get_ws_manager() -> WebsocketManager:
                 )
                 _ws_manager_instance = WebsocketManager(pubsub_client=pubsub_client)
     return _ws_manager_instance
+
+
+async def cleanup_ws_manager(_app=None) -> None:
+    """Cleanup WebsocketManager singleton on shutdown."""
+    global _ws_manager_instance
+    if _ws_manager_instance is not None:
+        await _ws_manager_instance.pubsub_client.disconnect()
+        _ws_manager_instance = None
+
+
+subscribers_shutdown.append(cleanup_ws_manager)
