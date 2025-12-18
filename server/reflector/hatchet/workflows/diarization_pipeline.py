@@ -121,7 +121,7 @@ async def set_workflow_error_status(transcript_id: NonEmptyString) -> bool:
     """
     try:
         async with fresh_db_connection():
-            await set_status_and_broadcast(transcript_id, "error")
+            await set_status_and_broadcast(transcript_id, "error", logger=logger)
             return True
     except Exception as e:
         logger.critical(
@@ -184,7 +184,9 @@ async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
-            await set_status_and_broadcast(input.transcript_id, "processing")
+            await set_status_and_broadcast(
+                input.transcript_id, "processing", logger=logger
+            )
             ctx.log(f"Set transcript status to processing: {input.transcript_id}")
 
     if not settings.DAILY_API_KEY:
@@ -485,7 +487,11 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
             if transcript:
                 waveform_data = TranscriptWaveform(waveform=waveform)
                 await append_event_and_broadcast(
-                    input.transcript_id, transcript, "WAVEFORM", waveform_data
+                    input.transcript_id,
+                    transcript,
+                    "WAVEFORM",
+                    waveform_data,
+                    logger=logger,
                 )
 
     finally:
@@ -535,7 +541,7 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
                 topic.id = data.id
             await transcripts_controller.upsert_topic(transcript, topic)
             await append_event_and_broadcast(
-                input.transcript_id, transcript, "TOPIC", topic
+                input.transcript_id, transcript, "TOPIC", topic, logger=logger
             )
 
         topics = await topic_processing.detect_topics(
@@ -586,7 +592,11 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
                     {"title": final_title.title},
                 )
             await append_event_and_broadcast(
-                input.transcript_id, transcript, "FINAL_TITLE", final_title
+                input.transcript_id,
+                transcript,
+                "FINAL_TITLE",
+                final_title,
+                logger=logger,
             )
 
         await topic_processing.generate_title(
@@ -642,6 +652,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 transcript,
                 "FINAL_LONG_SUMMARY",
                 final_long_summary,
+                logger=logger,
             )
 
         async def on_short_summary_callback(data):
@@ -659,6 +670,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 transcript,
                 "FINAL_SHORT_SUMMARY",
                 final_short_summary,
+                logger=logger,
             )
 
         await topic_processing.generate_summaries(
@@ -734,6 +746,7 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
                 text=merged_transcript.text,
                 translation=merged_transcript.translation,
             ),
+            logger=logger,
         )
 
         # Save duration and clear workflow_run_id (workflow completed successfully)
@@ -748,10 +761,10 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
 
         duration_data = TranscriptDuration(duration=duration)
         await append_event_and_broadcast(
-            input.transcript_id, transcript, "DURATION", duration_data
+            input.transcript_id, transcript, "DURATION", duration_data, logger=logger
         )
 
-        await set_status_and_broadcast(input.transcript_id, "ended")
+        await set_status_and_broadcast(input.transcript_id, "ended", logger=logger)
 
         ctx.log(
             f"finalize complete: transcript {input.transcript_id} status set to 'ended'"

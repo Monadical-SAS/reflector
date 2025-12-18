@@ -8,8 +8,9 @@ decorator behavior. Events are broadcast to transcript rooms and user rooms.
 
 from typing import Any
 
+import structlog
+
 from reflector.db.transcripts import Transcript, TranscriptEvent, transcripts_controller
-from reflector.logger import logger
 from reflector.utils.string import NonEmptyString
 from reflector.ws_manager import get_ws_manager
 
@@ -18,14 +19,16 @@ USER_ROOM_EVENTS = {"STATUS", "FINAL_TITLE", "DURATION"}
 
 
 async def broadcast_event(
-    transcript_id: NonEmptyString, event: TranscriptEvent
+    transcript_id: NonEmptyString,
+    event: TranscriptEvent,
+    logger: structlog.BoundLogger,
 ) -> None:
     """Broadcast a TranscriptEvent to WebSocket subscribers.
 
     Fire-and-forget: errors are logged but don't interrupt workflow execution.
     """
     logger.info(
-        "[Hatchet Broadcast] Broadcasting event",
+        "Broadcasting event",
         transcript_id=transcript_id,
         event_type=event.event,
     )
@@ -37,7 +40,7 @@ async def broadcast_event(
             message=event.model_dump(mode="json"),
         )
         logger.info(
-            "[Hatchet Broadcast] Event sent to transcript room",
+            "Event sent to transcript room",
             transcript_id=transcript_id,
             event_type=event.event,
         )
@@ -54,21 +57,25 @@ async def broadcast_event(
                 )
     except Exception as e:
         logger.warning(
-            "[Hatchet Broadcast] Failed to broadcast event",
+            "Failed to broadcast event",
             error=str(e),
             transcript_id=transcript_id,
             event_type=event.event,
         )
 
 
-async def set_status_and_broadcast(transcript_id: NonEmptyString, status: str) -> None:
+async def set_status_and_broadcast(
+    transcript_id: NonEmptyString,
+    status: str,
+    logger: structlog.BoundLogger,
+) -> None:
     """Set transcript status and broadcast to WebSocket.
 
     Wrapper around transcripts_controller.set_status that adds WebSocket broadcasting.
     """
     event = await transcripts_controller.set_status(transcript_id, status)
     if event:
-        await broadcast_event(transcript_id, event)
+        await broadcast_event(transcript_id, event, logger=logger)
 
 
 async def append_event_and_broadcast(
@@ -76,6 +83,7 @@ async def append_event_and_broadcast(
     transcript: Transcript,
     event_name: str,
     data: Any,
+    logger: structlog.BoundLogger,
 ) -> TranscriptEvent:
     """Append event to transcript and broadcast to WebSocket.
 
@@ -86,5 +94,5 @@ async def append_event_and_broadcast(
         event=event_name,
         data=data,
     )
-    await broadcast_event(transcript_id, event)
+    await broadcast_event(transcript_id, event, logger=logger)
     return event
