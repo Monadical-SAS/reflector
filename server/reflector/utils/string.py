@@ -2,6 +2,8 @@ from typing import Annotated, TypeVar
 
 from pydantic import Field, TypeAdapter, constr
 
+from reflector.utils.common import assert_not_none
+
 NonEmptyStringBase = constr(min_length=1, strip_whitespace=False)
 NonEmptyString = Annotated[
     NonEmptyStringBase,
@@ -30,3 +32,11 @@ def assert_equal[T](s1: T, s2: T) -> T:
     if s1 != s2:
         raise ValueError(f"assert_equal: {s1} != {s2}")
     return s1
+
+
+def assert_non_none_and_non_empty(
+    value: str | None, error: str | None = None
+) -> NonEmptyString:
+    return parse_non_empty_string(
+        assert_not_none(value, error or "Value is None"), error
+    )

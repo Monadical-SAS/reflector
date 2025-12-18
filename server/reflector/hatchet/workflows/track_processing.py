@@ -23,7 +23,6 @@ from hatchet_sdk import Context
 from pydantic import BaseModel
 
 from reflector.hatchet.client import HatchetClientManager
-from reflector.hatchet.utils import to_dict
 from reflector.hatchet.workflows.models import PadTrackResult, TranscribeTrackResult
 from reflector.logger import logger
 from reflector.utils.audio_constants import PRESIGNED_URL_EXPIRATION_SECONDS
@@ -166,9 +165,9 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
     )
 
     try:
-        pad_result = to_dict(ctx.task_output(pad_track))
-        padded_key = pad_result.get("padded_key")
-        bucket_name = pad_result.get("bucket_name")
+        pad_result = ctx.task_output(pad_track)
+        padded_key = pad_result.padded_key
+        bucket_name = pad_result.bucket_name
 
         if not padded_key:
             raise ValueError("Missing padded_key from pad_track")
