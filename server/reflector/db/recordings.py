@@ -91,7 +91,7 @@ class RecordingController:
         This is more efficient than fetching all recordings and filtering in Python.
         """
         from reflector.db.transcripts import (
-            transcripts,  # noqa: PLC0415
+            transcripts,  # noqa: PLC0415 cyclic import
         )
 
         query = (
