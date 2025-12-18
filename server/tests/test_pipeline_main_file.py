@@ -267,7 +267,7 @@ async def mock_summary_processor():
         async def flush_with_callback():
             mock_summary.flush_called = True
             from reflector.processors.types import (
-                FinalActionItems,
+                ActionItems,
                 FinalLongSummary,
                 FinalShortSummary,
             )
@@ -282,7 +282,7 @@ async def mock_summary_processor():
                 )
             if hasattr(mock_summary, "_on_action_items"):
                 await mock_summary._on_action_items(
-                    FinalActionItems(action_items={"test": "action item"})
+                    ActionItems(action_items={"test": "action item"})
                 )
 
         mock_summary.flush = flush_with_callback

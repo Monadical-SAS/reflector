@@ -2,7 +2,7 @@ from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.summary.summary_builder import SummaryBuilder
 from reflector.processors.types import (
-    FinalActionItems,
+    ActionItems,
     FinalLongSummary,
     FinalShortSummary,
     TitleSummary,
@@ -120,7 +120,7 @@ class TranscriptFinalSummaryProcessor(Processor):
 
         if self.builder and self.builder.action_items:
             action_items = self.builder.action_items.model_dump()
-            final_action_items = FinalActionItems(action_items=action_items)
-            await self.emit(final_action_items, name="action_items")
+            action_items = ActionItems(action_items=action_items)
+            await self.emit(action_items, name="action_items")
 
         await self.emit(final_long_summary)

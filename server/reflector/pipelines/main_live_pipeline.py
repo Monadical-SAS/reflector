@@ -27,8 +27,8 @@ from reflector.db.recordings import recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
     Transcript,
+    TranscriptActionItems,
     TranscriptDuration,
-    TranscriptFinalActionItems,
     TranscriptFinalLongSummary,
     TranscriptFinalShortSummary,
     TranscriptFinalTitle,
@@ -309,19 +309,19 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
 
     @broadcast_to_sockets
     async def on_action_items(self, data):
-        final_action_items = TranscriptFinalActionItems(action_items=data.action_items)
+        action_items = TranscriptActionItems(action_items=data.action_items)
         async with self.transaction():
             transcript = await self.get_transcript()
             await transcripts_controller.update(
                 transcript,
                 {
-                    "action_items": final_action_items.action_items,
+                    "action_items": action_items.action_items,
                 },
             )
             return await transcripts_controller.append_event(
                 transcript=transcript,
-                event="FINAL_ACTION_ITEMS",
-                data=final_action_items,
+                event="ACTION_ITEMS",
+                data=action_items,
             )
 
     @broadcast_to_sockets

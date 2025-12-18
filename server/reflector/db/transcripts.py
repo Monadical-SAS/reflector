@@ -165,7 +165,7 @@ class TranscriptFinalLongSummary(BaseModel):
     long_summary: str
 
 
-class TranscriptFinalActionItems(BaseModel):
+class TranscriptActionItems(BaseModel):
     action_items: dict
 
 
