@@ -539,7 +539,7 @@ class SummaryBuilder:
 
         return ActionItemsResponse(decisions=decisions, next_steps=next_steps)
 
-    async def identify_action_items(self) -> None:
+    async def identify_action_items(self) -> ActionItemsResponse | None:
         """Identify action items (decisions and next steps) from the transcript."""
         self.logger.info("--- identify action items using TreeSummarize")
 
@@ -547,8 +547,8 @@ class SummaryBuilder:
             self.logger.warning(
                 "No transcript available for action items identification"
             )
-            self.action_items = ActionItemsResponse(decisions=[], next_steps=[])
-            return
+            self.action_items = None
+            return None
 
         action_items_prompt = ACTION_ITEMS_PROMPT
 
@@ -585,12 +585,15 @@ class SummaryBuilder:
                     transcript_length=len(self.transcript),
                 )
 
+            return response
+
         except Exception as e:
             self.logger.error(
                 f"Error identifying action items: {e}",
                 exc_info=True,
             )
-            self.action_items = ActionItemsResponse(decisions=[], next_steps=[])
+            self.action_items = None
+            return None
 
     async def generate_summary(self, only_subjects: bool = False) -> None:
         """
