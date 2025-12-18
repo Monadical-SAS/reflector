@@ -232,14 +232,17 @@ class LLM:
         texts: list[str],
         output_cls: Type[T],
         tone_name: str | None = None,
+        timeout: int | None = None,
     ) -> T:
         """Get structured output from LLM with validation retry via Workflow."""
+        if timeout is None:
+            timeout = self.settings_obj.LLM_STRUCTURED_RESPONSE_TIMEOUT
 
         async def run_workflow():
             workflow = StructuredOutputWorkflow(
                 output_cls=output_cls,
                 max_retries=self.settings_obj.LLM_PARSE_MAX_RETRIES + 1,
-                timeout=120,
+                timeout=timeout,
             )
 
             result = await workflow.run(

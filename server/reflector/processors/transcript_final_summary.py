@@ -1,7 +1,12 @@
 from reflector.llm import LLM
 from reflector.processors.base import Processor
 from reflector.processors.summary.summary_builder import SummaryBuilder
-from reflector.processors.types import FinalLongSummary, FinalShortSummary, TitleSummary
+from reflector.processors.types import (
+    ActionItems,
+    FinalLongSummary,
+    FinalShortSummary,
+    TitleSummary,
+)
 from reflector.settings import settings
 
 
@@ -27,15 +32,20 @@ class TranscriptFinalSummaryProcessor(Processor):
         builder = SummaryBuilder(self.llm, logger=self.logger)
         builder.set_transcript(text)
 
-        # Use known participants if available, otherwise identify them
         if self.transcript and self.transcript.participants:
-            # Extract participant names from the stored participants
             participant_names = [p.name for p in self.transcript.participants if p.name]
             if participant_names:
                 self.logger.info(
                     f"Using {len(participant_names)} known participants from transcript"
                 )
-                builder.set_known_participants(participant_names)
+                participant_name_to_id = {
+                    p.name: p.id
+                    for p in self.transcript.participants
+                    if p.name and p.id
+                }
+                builder.set_known_participants(
+                    participant_names, participant_name_to_id=participant_name_to_id
+                )
             else:
                 self.logger.info(
                     "Participants field exists but is empty, identifying participants"
@@ -63,7 +73,6 @@ class TranscriptFinalSummaryProcessor(Processor):
             self.logger.warning("No summary to output")
             return
 
-        # build the speakermap from the transcript
         speakermap = {}
         if self.transcript:
             speakermap = {
@@ -76,8 +85,6 @@ class TranscriptFinalSummaryProcessor(Processor):
                 speakermap=speakermap,
             )
 
-        # build the transcript as a single string
-        # Replace speaker IDs with actual participant names if available
         text_transcript = []
         unique_speakers = set()
         for topic in self.chunks:
@@ -110,5 +117,10 @@ class TranscriptFinalSummaryProcessor(Processor):
                 duration=duration,
             )
             await self.emit(final_short_summary, name="short_summary")
+
+        if self.builder and self.builder.action_items:
+            action_items = self.builder.action_items.model_dump()
+            action_items = ActionItems(action_items=action_items)
+            await self.emit(action_items, name="action_items")
 
         await self.emit(final_long_summary)
