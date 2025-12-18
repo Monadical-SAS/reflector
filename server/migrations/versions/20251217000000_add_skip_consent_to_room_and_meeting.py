@@ -1,7 +1,7 @@
 """add skip_consent to room and meeting
 
 Revision ID: 20251217000000
-Revises: bbafedfa510c
+Revises: 05f8688d6895
 Create Date: 2025-12-17 00:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "20251217000000"
-down_revision: Union[str, None] = "bbafedfa510c"
+down_revision: Union[str, None] = "05f8688d6895"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
