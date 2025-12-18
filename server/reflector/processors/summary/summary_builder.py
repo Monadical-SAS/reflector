@@ -557,7 +557,7 @@ class SummaryBuilder:
                 action_items_prompt,
                 ActionItemsResponse,
                 tone_name="Action item identifier",
-                timeout=300,
+                timeout=settings.LLM_STRUCTURED_RESPONSE_TIMEOUT,
             )
 
             response = self._map_participant_names_to_ids(response)

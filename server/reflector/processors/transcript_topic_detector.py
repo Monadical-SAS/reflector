@@ -82,7 +82,7 @@ class TranscriptTopicDetectorProcessor(Processor):
             [text],
             TopicResponse,
             tone_name="Topic analyzer",
-            timeout=300,
+            timeout=settings.LLM_STRUCTURED_RESPONSE_TIMEOUT,
         )
         return response
 
