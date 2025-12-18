@@ -264,6 +264,10 @@ class FinalShortSummary(BaseModel):
     duration: float
 
 
+class ActionItems(BaseModel):
+    action_items: dict  # JSON-serializable dict from ActionItemsResponse
+
+
 class FinalTitle(BaseModel):
     title: str
 

@@ -123,6 +123,7 @@ async def send_transcript_webhook(
                 "target_language": transcript.target_language,
                 "status": transcript.status,
                 "frontend_url": frontend_url,
+                "action_items": transcript.action_items,
             },
             "room": {
                 "id": room.id,

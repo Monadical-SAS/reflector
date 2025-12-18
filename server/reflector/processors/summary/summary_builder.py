@@ -96,6 +96,36 @@ RECAP_PROMPT = dedent(
     """
 ).strip()
 
+ACTION_ITEMS_PROMPT = dedent(
+    """
+    Identify action items from this meeting transcript. Your goal is to identify what was decided and what needs to happen next.
+
+    Look for:
+
+    1. **Decisions Made**: Any decisions, choices, or conclusions reached during the meeting. For each decision:
+       - What was decided? (be specific)
+       - Who made the decision or was involved? (use actual participant names)
+       - Why was this decision made? (key factors, reasoning, or rationale)
+
+    2. **Next Steps / Action Items**: Any tasks, follow-ups, or actions that were mentioned or assigned. For each action item:
+       - What specific task needs to be done? (be concrete and actionable)
+       - Who is responsible? (use actual participant names if mentioned, or "team" if unclear)
+       - When is it due? (any deadlines, timeframes, or "by next meeting" type commitments)
+       - What context is needed? (any additional details that help understand the task)
+
+    Guidelines:
+    - Be thorough and identify all action items, even if they seem minor
+    - Include items that were agreed upon, assigned, or committed to
+    - Include decisions even if they seem obvious or implicit
+    - If someone says "I'll do X" or "We should do Y", that's an action item
+    - If someone says "Let's go with option A", that's a decision
+    - Use the exact participant names from the transcript
+    - If no participant name is mentioned, you can leave assigned_to/decided_by as null
+
+    Only return empty lists if the transcript contains NO decisions and NO action items whatsoever.
+    """
+).strip()
+
 STRUCTURED_RESPONSE_PROMPT_TEMPLATE = dedent(
     """
     Based on the following analysis, provide the information in the requested JSON format:
@@ -155,6 +185,53 @@ class SubjectsResponse(BaseModel):
     )
 
 
+class ActionItem(BaseModel):
+    """A single action item from the meeting"""
+
+    task: str = Field(description="The task or action item to be completed")
+    assigned_to: str | None = Field(
+        default=None, description="Person or team assigned to this task (name)"
+    )
+    assigned_to_participant_id: str | None = Field(
+        default=None, description="Participant ID if assigned_to matches a participant"
+    )
+    deadline: str | None = Field(
+        default=None, description="Deadline or timeframe mentioned for this task"
+    )
+    context: str | None = Field(
+        default=None, description="Additional context or notes about this task"
+    )
+
+
+class Decision(BaseModel):
+    """A decision made during the meeting"""
+
+    decision: str = Field(description="What was decided")
+    rationale: str | None = Field(
+        default=None,
+        description="Reasoning or key factors that influenced this decision",
+    )
+    decided_by: str | None = Field(
+        default=None, description="Person or group who made the decision (name)"
+    )
+    decided_by_participant_id: str | None = Field(
+        default=None, description="Participant ID if decided_by matches a participant"
+    )
+
+
+class ActionItemsResponse(BaseModel):
+    """Pydantic model for identified action items"""
+
+    decisions: list[Decision] = Field(
+        default_factory=list,
+        description="List of decisions made during the meeting",
+    )
+    next_steps: list[ActionItem] = Field(
+        default_factory=list,
+        description="List of action items and next steps to be taken",
+    )
+
+
 class SummaryBuilder:
     def __init__(self, llm: LLM, filename: str | None = None, logger=None) -> None:
         self.transcript: str | None = None
@@ -166,6 +243,8 @@ class SummaryBuilder:
         self.model_name: str = llm.model_name
         self.logger = logger or structlog.get_logger()
         self.participant_instructions: str | None = None
+        self.action_items: ActionItemsResponse | None = None
+        self.participant_name_to_id: dict[str, str] = {}
         if filename:
             self.read_transcript_from_file(filename)
 
@@ -189,13 +268,20 @@ class SummaryBuilder:
         self.llm = llm
 
     async def _get_structured_response(
-        self, prompt: str, output_cls: Type[T], tone_name: str | None = None
+        self,
+        prompt: str,
+        output_cls: Type[T],
+        tone_name: str | None = None,
+        timeout: int | None = None,
     ) -> T:
         """Generic function to get structured output from LLM for non-function-calling models."""
-        # Add participant instructions to the prompt if available
         enhanced_prompt = self._enhance_prompt_with_participants(prompt)
         return await self.llm.get_structured_response(
-            enhanced_prompt, [self.transcript], output_cls, tone_name=tone_name
+            enhanced_prompt,
+            [self.transcript],
+            output_cls,
+            tone_name=tone_name,
+            timeout=timeout,
         )
 
     async def _get_response(
@@ -216,11 +302,19 @@ class SummaryBuilder:
     # Participants
     # ----------------------------------------------------------------------------
 
-    def set_known_participants(self, participants: list[str]) -> None:
+    def set_known_participants(
+        self,
+        participants: list[str],
+        participant_name_to_id: dict[str, str] | None = None,
+    ) -> None:
         """
         Set known participants directly without LLM identification.
         This is used when participants are already identified and stored.
         They are appended at the end of the transcript, providing more context for the assistant.
+
+        Args:
+            participants: List of participant names
+            participant_name_to_id: Optional mapping of participant names to their IDs
         """
         if not participants:
             self.logger.warning("No participants provided")
@@ -231,10 +325,12 @@ class SummaryBuilder:
             participants=participants,
         )
 
+        if participant_name_to_id:
+            self.participant_name_to_id = participant_name_to_id
+
         participants_md = self.format_list_md(participants)
         self.transcript += f"\n\n# Participants\n\n{participants_md}"
 
-        # Set instructions that will be automatically added to all prompts
         participants_list = ", ".join(participants)
         self.participant_instructions = dedent(
             f"""
@@ -413,6 +509,92 @@ class SummaryBuilder:
         self.recap = str(recap_response)
         self.logger.info(f"Quick recap: {self.recap}")
 
+    def _map_participant_names_to_ids(
+        self, response: ActionItemsResponse
+    ) -> ActionItemsResponse:
+        """Map participant names in action items to participant IDs."""
+        if not self.participant_name_to_id:
+            return response
+
+        decisions = []
+        for decision in response.decisions:
+            new_decision = decision.model_copy()
+            if (
+                decision.decided_by
+                and decision.decided_by in self.participant_name_to_id
+            ):
+                new_decision.decided_by_participant_id = self.participant_name_to_id[
+                    decision.decided_by
+                ]
+            decisions.append(new_decision)
+
+        next_steps = []
+        for item in response.next_steps:
+            new_item = item.model_copy()
+            if item.assigned_to and item.assigned_to in self.participant_name_to_id:
+                new_item.assigned_to_participant_id = self.participant_name_to_id[
+                    item.assigned_to
+                ]
+            next_steps.append(new_item)
+
+        return ActionItemsResponse(decisions=decisions, next_steps=next_steps)
+
+    async def identify_action_items(self) -> ActionItemsResponse | None:
+        """Identify action items (decisions and next steps) from the transcript."""
+        self.logger.info("--- identify action items using TreeSummarize")
+
+        if not self.transcript:
+            self.logger.warning(
+                "No transcript available for action items identification"
+            )
+            self.action_items = None
+            return None
+
+        action_items_prompt = ACTION_ITEMS_PROMPT
+
+        try:
+            response = await self._get_structured_response(
+                action_items_prompt,
+                ActionItemsResponse,
+                tone_name="Action item identifier",
+                timeout=settings.LLM_STRUCTURED_RESPONSE_TIMEOUT,
+            )
+
+            response = self._map_participant_names_to_ids(response)
+
+            self.action_items = response
+            self.logger.info(
+                f"Identified {len(response.decisions)} decisions and {len(response.next_steps)} action items",
+                decisions_count=len(response.decisions),
+                next_steps_count=len(response.next_steps),
+            )
+
+            if response.decisions:
+                self.logger.debug(
+                    "Decisions identified",
+                    decisions=[d.decision for d in response.decisions],
+                )
+            if response.next_steps:
+                self.logger.debug(
+                    "Action items identified",
+                    tasks=[item.task for item in response.next_steps],
+                )
+            if not response.decisions and not response.next_steps:
+                self.logger.warning(
+                    "No action items identified from transcript",
+                    transcript_length=len(self.transcript),
+                )
+
+            return response
+
+        except Exception as e:
+            self.logger.error(
+                f"Error identifying action items: {e}",
+                exc_info=True,
+            )
+            self.action_items = None
+            return None
+
     async def generate_summary(self, only_subjects: bool = False) -> None:
         """
         Generate summary by extracting subjects, creating summaries for each, and generating a recap.
@@ -424,6 +606,7 @@ class SummaryBuilder:
 
         await self.generate_subject_summaries()
         await self.generate_recap()
+        await self.identify_action_items()
 
     # ----------------------------------------------------------------------------
     # Markdown
@@ -525,8 +708,6 @@ if __name__ == "__main__":
 
         if args.summary:
             await sm.generate_summary()
-
-        # Note: action items generation has been removed
 
         print("")
         print("-" * 80)
