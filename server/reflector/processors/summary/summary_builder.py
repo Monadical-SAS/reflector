@@ -509,25 +509,35 @@ class SummaryBuilder:
         self.recap = str(recap_response)
         self.logger.info(f"Quick recap: {self.recap}")
 
-    def _map_participant_names_to_ids(self, response: ActionItemsResponse) -> None:
+    def _map_participant_names_to_ids(
+        self, response: ActionItemsResponse
+    ) -> ActionItemsResponse:
         """Map participant names in action items to participant IDs."""
         if not self.participant_name_to_id:
-            return
+            return response
 
+        decisions = []
         for decision in response.decisions:
+            new_decision = decision.model_copy()
             if (
                 decision.decided_by
                 and decision.decided_by in self.participant_name_to_id
             ):
-                decision.decided_by_participant_id = self.participant_name_to_id[
+                new_decision.decided_by_participant_id = self.participant_name_to_id[
                     decision.decided_by
                 ]
+            decisions.append(new_decision)
 
+        next_steps = []
         for item in response.next_steps:
+            new_item = item.model_copy()
             if item.assigned_to and item.assigned_to in self.participant_name_to_id:
-                item.assigned_to_participant_id = self.participant_name_to_id[
+                new_item.assigned_to_participant_id = self.participant_name_to_id[
                     item.assigned_to
                 ]
+            next_steps.append(new_item)
+
+        return ActionItemsResponse(decisions=decisions, next_steps=next_steps)
 
     async def identify_action_items(self) -> None:
         """Identify action items (decisions and next steps) from the transcript."""
@@ -550,7 +560,7 @@ class SummaryBuilder:
                 timeout=300,
             )
 
-            self._map_participant_names_to_ids(response)
+            response = self._map_participant_names_to_ids(response)
 
             self.action_items = response
             self.logger.info(
