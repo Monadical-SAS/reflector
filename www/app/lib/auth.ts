@@ -18,3 +18,8 @@ export const LOGIN_REQUIRED_PAGES = [
 export const PROTECTED_PAGES = new RegExp(
   LOGIN_REQUIRED_PAGES.map((page) => `^${page}$`).join("|"),
 );
+
+export function getLogoutRedirectUrl(pathname: string): string {
+  const transcriptPagePattern = /^\/transcripts\/[^/]+$/;
+  return transcriptPagePattern.test(pathname) ? pathname : "/";
+}
