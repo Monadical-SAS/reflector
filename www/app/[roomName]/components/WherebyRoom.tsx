@@ -7,7 +7,6 @@ import { useAuth } from "../../lib/AuthProvider";
 import { getWherebyUrl, useWhereby } from "../../lib/wherebyClient";
 import {
   ConsentDialogButton as BaseConsentDialogButton,
-  RecordingIndicator,
   useConsentDialog,
 } from "../../lib/consent";
 import { assertMeetingId, MeetingId } from "../../lib/types";
@@ -71,7 +70,7 @@ export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
   const wherebyRoomUrl = getWherebyUrl(meeting);
   const meetingId = meeting.id;
 
-  const { showRecordingIndicator, showConsentButton } = useConsentDialog({
+  const { showConsentButton } = useConsentDialog({
     meetingId: assertMeetingId(meetingId),
     recordingType: meeting.recording_type,
     skipConsent: room.skip_consent,
@@ -105,7 +104,6 @@ export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
         room={wherebyRoomUrl}
         style={{ width: "100vw", height: "100vh" }}
       />
-      {showRecordingIndicator && <RecordingIndicator />}
       {showConsentButton && (
         <WherebyConsentDialogButton
           meetingId={assertMeetingId(meetingId)}
