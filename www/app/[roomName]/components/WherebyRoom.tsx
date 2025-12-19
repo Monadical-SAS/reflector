@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
 import { getWherebyUrl, useWhereby } from "../../lib/wherebyClient";
-import { assertExistsAndNonEmptyString, NonEmptyString } from "../../lib/utils";
 import {
   ConsentDialogButton as BaseConsentDialogButton,
   RecordingIndicator,
   useConsentDialog,
-  recordingTypeRequiresConsent,
 } from "../../lib/consent";
+import { assertMeetingId, MeetingId } from "../../lib/types";
 
 type Meeting = components["schemas"]["Meeting"];
 type Room = components["schemas"]["RoomDetails"];
@@ -23,9 +22,13 @@ interface WherebyRoomProps {
 
 function WherebyConsentDialogButton({
   meetingId,
+  recordingType,
+  skipConsent,
   wherebyRef,
 }: {
-  meetingId: NonEmptyString;
+  meetingId: MeetingId;
+  recordingType: Meeting["recording_type"];
+  skipConsent: boolean;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -48,7 +51,13 @@ function WherebyConsentDialogButton({
     };
   }, [wherebyRef]);
 
-  return <BaseConsentDialogButton meetingId={meetingId} />;
+  return (
+    <BaseConsentDialogButton
+      meetingId={meetingId}
+      recordingType={recordingType}
+      skipConsent={skipConsent}
+    />
+  );
 }
 
 export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
@@ -60,8 +69,13 @@ export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
   const isAuthenticated = status === "authenticated";
 
   const wherebyRoomUrl = getWherebyUrl(meeting);
-  const recordingType = meeting.recording_type;
   const meetingId = meeting.id;
+
+  const { showRecordingIndicator, showConsentButton } = useConsentDialog({
+    meetingId: assertMeetingId(meetingId),
+    recordingType: meeting.recording_type,
+    skipConsent: room.skip_consent,
+  });
 
   const isLoading = status === "loading";
 
@@ -91,17 +105,15 @@ export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
         room={wherebyRoomUrl}
         style={{ width: "100vw", height: "100vh" }}
       />
-      {recordingType &&
-        recordingTypeRequiresConsent(recordingType) &&
-        meetingId &&
-        (room.skip_consent ? (
-          <RecordingIndicator />
-        ) : (
-          <WherebyConsentDialogButton
-            meetingId={assertExistsAndNonEmptyString(meetingId)}
-            wherebyRef={wherebyRef}
-          />
-        ))}
+      {showRecordingIndicator && <RecordingIndicator />}
+      {showConsentButton && (
+        <WherebyConsentDialogButton
+          meetingId={assertMeetingId(meetingId)}
+          recordingType={meeting.recording_type}
+          skipConsent={room.skip_consent}
+          wherebyRef={wherebyRef}
+        />
+      )}
     </>
   );
 }

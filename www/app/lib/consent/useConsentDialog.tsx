@@ -7,8 +7,23 @@ import { useMeetingAudioConsent } from "../apiHooks";
 import { ConsentDialog } from "./ConsentDialog";
 import { TOAST_CHECK_INTERVAL_MS } from "./constants";
 import type { ConsentDialogResult } from "./types";
+import { MeetingId } from "../types";
+import { recordingTypeRequiresConsent } from "./utils";
+import type { components } from "../../reflector-api";
 
-export function useConsentDialog(meetingId: string): ConsentDialogResult {
+type Meeting = components["schemas"]["Meeting"];
+
+type UseConsentDialogParams = {
+  meetingId: MeetingId;
+  recordingType: Meeting["recording_type"];
+  skipConsent: boolean;
+};
+
+export function useConsentDialog({
+  meetingId,
+  recordingType,
+  skipConsent,
+}: UseConsentDialogParams): ConsentDialogResult {
   const {
     state: consentState,
     touch,
@@ -105,11 +120,23 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
     });
   }, [handleConsent, modalOpen]);
 
+  const requiresConsent = Boolean(
+    recordingType && recordingTypeRequiresConsent(recordingType),
+  );
+
+  const showRecordingIndicator =
+    requiresConsent && (skipConsent || hasAccepted(meetingId));
+
+  const showConsentButton =
+    requiresConsent && !skipConsent && !hasAnswered(meetingId);
+
   return {
     showConsentModal,
     consentState,
     hasAnswered,
     hasAccepted,
     consentLoading: audioConsentMutation.isPending,
+    showRecordingIndicator,
+    showConsentButton,
   };
 }

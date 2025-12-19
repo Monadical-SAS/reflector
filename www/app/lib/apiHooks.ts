@@ -5,6 +5,7 @@ import { useError } from "../(errors)/errorContext";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
+import { MeetingId } from "./types";
 
 /*
  * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
@@ -718,7 +719,7 @@ export function useRoomActiveMeetings(roomName: string | null) {
 
 export function useRoomGetMeeting(
   roomName: string | null,
-  meetingId: string | null,
+  meetingId: MeetingId | null,
 ) {
   return $api.useQuery(
     "get",

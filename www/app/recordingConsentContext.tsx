@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { MeetingId } from "./lib/types";
 
-// Map of meetingId -> accepted (true/false)
-type ConsentMap = Map<string, boolean>;
+type ConsentMap = Map<MeetingId, boolean>;
 
 type ConsentContextState =
   | { ready: false }
@@ -14,9 +14,9 @@ type ConsentContextState =
 
 interface RecordingConsentContextValue {
   state: ConsentContextState;
-  touch: (meetingId: string, accepted: boolean) => void;
-  hasAnswered: (meetingId: string) => boolean;
-  hasAccepted: (meetingId: string) => boolean;
+  touch: (meetingId: MeetingId, accepted: boolean) => void;
+  hasAnswered: (meetingId: MeetingId) => boolean;
+  hasAccepted: (meetingId: MeetingId) => boolean;
 }
 
 const RecordingConsentContext = createContext<
@@ -39,24 +39,33 @@ interface RecordingConsentProviderProps {
 
 const LOCAL_STORAGE_KEY = "recording_consent_meetings";
 
+const ACCEPTED = "T" as const;
+type Accepted = typeof ACCEPTED;
+const REJECTED = "F" as const;
+type Rejected = typeof REJECTED;
+type Consent = Accepted | Rejected;
+const SEPARATOR = "|" as const;
+type Separator = typeof SEPARATOR;
+const DEFAULT_CONSENT = ACCEPTED;
+type Entry = `${MeetingId}${Separator}${Consent}`;
+type EntryAndDefault = Entry | MeetingId;
+
 // Format: "meetingId|T" or "meetingId|F", legacy format "meetingId" is treated as accepted
-const encodeEntry = (meetingId: string, accepted: boolean): string =>
-  `${meetingId}|${accepted ? "T" : "F"}`;
+const encodeEntry = (meetingId: MeetingId, accepted: boolean): Entry =>
+  `${meetingId}|${accepted ? ACCEPTED : REJECTED}`;
 
 const decodeEntry = (
-  entry: string,
-): { meetingId: string; accepted: boolean } | null => {
-  if (!entry || typeof entry !== "string") return null;
-  const pipeIndex = entry.lastIndexOf("|");
+  entry: EntryAndDefault,
+): { meetingId: MeetingId; accepted: boolean } | null => {
+  const pipeIndex = entry.lastIndexOf(SEPARATOR);
   if (pipeIndex === -1) {
     // Legacy format: no pipe means accepted (backward compat)
-    return { meetingId: entry, accepted: true };
+    return { meetingId: entry as MeetingId, accepted: true };
   }
   const suffix = entry.slice(pipeIndex + 1);
-  const meetingId = entry.slice(0, pipeIndex);
-  if (!meetingId) return null;
+  const meetingId = entry.slice(0, pipeIndex) as MeetingId;
   // T = accepted, F = rejected, anything else = accepted (safe default)
-  const accepted = suffix !== "F";
+  const accepted = suffix !== REJECTED;
   return { meetingId, accepted };
 };
 
@@ -78,7 +87,7 @@ export const RecordingConsentProvider: React.FC<
     }
   };
 
-  const touch = (meetingId: string, accepted: boolean): void => {
+  const touch = (meetingId: MeetingId, accepted: boolean): void => {
     if (!state.ready) {
       console.warn("Attempted to touch consent before context is ready");
       return;
@@ -90,12 +99,12 @@ export const RecordingConsentProvider: React.FC<
     setState({ ready: true, consentForMeetings: newMap });
   };
 
-  const hasAnswered = (meetingId: string): boolean => {
+  const hasAnswered = (meetingId: MeetingId): boolean => {
     if (!state.ready) return false;
     return state.consentForMeetings.has(meetingId);
   };
 
-  const hasAccepted = (meetingId: string): boolean => {
+  const hasAccepted = (meetingId: MeetingId): boolean => {
     if (!state.ready) return false;
     return state.consentForMeetings.get(meetingId) === true;
   };
@@ -121,7 +130,7 @@ export const RecordingConsentProvider: React.FC<
         return;
       }
 
-      const consentForMeetings = new Map<string, boolean>();
+      const consentForMeetings = new Map<MeetingId, boolean>();
       for (const entry of parsed) {
         const decoded = decodeEntry(entry);
         if (decoded) {

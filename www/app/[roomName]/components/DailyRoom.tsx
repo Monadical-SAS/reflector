@@ -21,13 +21,11 @@ import DailyIframe, {
 } from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
-import {
-  recordingTypeRequiresConsent,
-  useConsentDialog,
-} from "../../lib/consent";
+import { useConsentDialog } from "../../lib/consent";
 import { useRoomJoinMeeting } from "../../lib/apiHooks";
 import { omit } from "remeda";
 import { assertExists } from "../../lib/utils";
+import { assertMeetingId } from "../../lib/types";
 
 const CONSENT_BUTTON_ID = "recording-consent";
 const RECORDING_INDICATOR_ID = "recording-indicator";
@@ -179,21 +177,15 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
 
   const roomName = params?.roomName as string;
 
-  const needsConsent =
-    meeting.recording_type &&
-    recordingTypeRequiresConsent(meeting.recording_type) &&
-    !room.skip_consent;
-  const { showConsentModal, consentState, hasAnswered, hasAccepted } =
-    useConsentDialog(meeting.id);
-
-  // Show recording indicator when:
-  // - skip_consent=true, OR
-  // - user has accepted consent
-  // If user rejects, recording still happens but we don't show indicator
-  const showRecordingInTray =
-    meeting.recording_type &&
-    recordingTypeRequiresConsent(meeting.recording_type) &&
-    (room.skip_consent || hasAccepted(meeting.id));
+  const {
+    showConsentModal,
+    showRecordingIndicator: showRecordingInTray,
+    showConsentButton,
+  } = useConsentDialog({
+    meetingId: assertMeetingId(meeting.id),
+    recordingType: meeting.recording_type,
+    skipConsent: room.skip_consent,
+  });
   const showConsentModalRef = useRef(showConsentModal);
   showConsentModalRef.current = showConsentModal;
 
@@ -292,8 +284,6 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
         : null,
     );
   }, [showRecordingInTray, recordingIconUrl, setCustomTrayButton]);
-
-  const showConsentButton = needsConsent && !hasAnswered(meeting.id);
 
   useEffect(() => {
     setCustomTrayButton(

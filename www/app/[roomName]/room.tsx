@@ -6,7 +6,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useContext,
   RefObject,
   use,
 } from "react";
@@ -25,8 +24,6 @@ import { useRecordingConsent } from "../recordingConsentContext";
 import {
   useMeetingAudioConsent,
   useRoomGetByName,
-  useRoomActiveMeetings,
-  useRoomUpcomingMeetings,
   useRoomsCreateMeeting,
   useRoomGetMeeting,
 } from "../lib/apiHooks";
@@ -39,12 +36,9 @@ import { FaBars } from "react-icons/fa6";
 import { useAuth } from "../lib/AuthProvider";
 import { getWherebyUrl, useWhereby } from "../lib/wherebyClient";
 import { useError } from "../(errors)/errorContext";
-import {
-  assertExistsAndNonEmptyString,
-  NonEmptyString,
-  parseNonEmptyString,
-} from "../lib/utils";
+import { parseNonEmptyString } from "../lib/utils";
 import { printApiError } from "../api/_error";
+import { assertMeetingId, MeetingId } from "../lib/types";
 
 export type RoomDetails = {
   params: Promise<{
@@ -92,7 +86,7 @@ const useConsentWherebyFocusManagement = (
 };
 
 const useConsentDialog = (
-  meetingId: string,
+  meetingId: MeetingId,
   wherebyRef: RefObject<HTMLElement> /*accessibility*/,
 ) => {
   const { state: consentState, touch, hasAnswered } = useRecordingConsent();
@@ -101,7 +95,7 @@ const useConsentDialog = (
   const audioConsentMutation = useMeetingAudioConsent();
 
   const handleConsent = useCallback(
-    async (meetingId: string, given: boolean) => {
+    async (meetingId: MeetingId, given: boolean) => {
       try {
         await audioConsentMutation.mutateAsync({
           params: {
@@ -225,7 +219,7 @@ function ConsentDialogButton({
   meetingId,
   wherebyRef,
 }: {
-  meetingId: NonEmptyString;
+  meetingId: MeetingId;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
   const { showConsentModal, consentState, hasAnswered, consentLoading } =
@@ -284,7 +278,10 @@ export default function Room(details: RoomDetails) {
     room && !room.ics_enabled && !pageMeetingId ? roomName : null,
   );
 
-  const explicitMeeting = useRoomGetMeeting(roomName, pageMeetingId || null);
+  const explicitMeeting = useRoomGetMeeting(
+    roomName,
+    pageMeetingId ? assertMeetingId(pageMeetingId) : null,
+  );
   const wherebyRoomUrl = explicitMeeting.data
     ? getWherebyUrl(explicitMeeting.data)
     : defaultMeeting.response
@@ -437,7 +434,7 @@ export default function Room(details: RoomDetails) {
             recordingTypeRequiresConsent(recordingType) &&
             meetingId && (
               <ConsentDialogButton
-                meetingId={assertExistsAndNonEmptyString(meetingId)}
+                meetingId={assertMeetingId(meetingId)}
                 wherebyRef={wherebyRef}
               />
             )}
