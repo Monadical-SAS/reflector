@@ -1544,11 +1544,6 @@ export interface components {
        * @enum {string}
        */
       platform: "whereby" | "daily";
-      /**
-       * Skip Consent
-       * @default false
-       */
-      skip_consent: boolean;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {

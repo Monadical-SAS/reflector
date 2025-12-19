@@ -73,7 +73,6 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform
-    skip_consent: bool = False
 
 
 class CreateRoom(BaseModel):

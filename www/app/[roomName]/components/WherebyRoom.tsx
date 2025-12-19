@@ -14,9 +14,11 @@ import {
 } from "../../lib/consent";
 
 type Meeting = components["schemas"]["Meeting"];
+type Room = components["schemas"]["RoomDetails"];
 
 interface WherebyRoomProps {
   meeting: Meeting;
+  room: Room;
 }
 
 function WherebyConsentDialogButton({
@@ -49,7 +51,7 @@ function WherebyConsentDialogButton({
   return <BaseConsentDialogButton meetingId={meetingId} />;
 }
 
-export default function WherebyRoom({ meeting }: WherebyRoomProps) {
+export default function WherebyRoom({ meeting, room }: WherebyRoomProps) {
   const wherebyLoaded = useWhereby();
   const wherebyRef = useRef<HTMLElement>(null);
   const router = useRouter();
@@ -92,7 +94,7 @@ export default function WherebyRoom({ meeting }: WherebyRoomProps) {
       {recordingType &&
         recordingTypeRequiresConsent(recordingType) &&
         meetingId &&
-        (meeting.skip_consent ? (
+        (room.skip_consent ? (
           <RecordingIndicator />
         ) : (
           <WherebyConsentDialogButton

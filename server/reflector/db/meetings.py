@@ -63,12 +63,6 @@ meetings = sa.Table(
         nullable=False,
         server_default=assert_equal(WHEREBY_PLATFORM, "whereby"),
     ),
-    sa.Column(
-        "skip_consent",
-        sa.Boolean,
-        nullable=False,
-        server_default=sa.false(),
-    ),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -116,7 +110,6 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform = WHEREBY_PLATFORM
-    skip_consent: bool = False
 
 
 class MeetingController:
@@ -147,7 +140,6 @@ class MeetingController:
             calendar_event_id=calendar_event_id,
             calendar_metadata=calendar_metadata,
             platform=room.platform,
-            skip_consent=room.skip_consent,
         )
         query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)

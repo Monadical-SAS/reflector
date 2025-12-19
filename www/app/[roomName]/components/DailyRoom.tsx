@@ -15,12 +15,14 @@ import { useRoomJoinMeeting } from "../../lib/apiHooks";
 import { assertExists } from "../../lib/utils";
 
 type Meeting = components["schemas"]["Meeting"];
+type Room = components["schemas"]["RoomDetails"];
 
 interface DailyRoomProps {
   meeting: Meeting;
+  room: Room;
 }
 
-export default function DailyRoom({ meeting }: DailyRoomProps) {
+export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const router = useRouter();
   const params = useParams();
   const auth = useAuth();
@@ -164,7 +166,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       {meeting.recording_type &&
         recordingTypeRequiresConsent(meeting.recording_type) &&
         meeting.id &&
-        (meeting.skip_consent ? (
+        (room.skip_consent ? (
           <RecordingIndicator />
         ) : (
           <ConsentDialogButton meetingId={meeting.id} />

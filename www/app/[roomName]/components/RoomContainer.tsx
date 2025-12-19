@@ -192,9 +192,9 @@ export default function RoomContainer(details: RoomDetails) {
 
   switch (platform) {
     case "daily":
-      return <DailyRoom meeting={meeting} />;
+      return <DailyRoom meeting={meeting} room={room} />;
     case "whereby":
-      return <WherebyRoom meeting={meeting} />;
+      return <WherebyRoom meeting={meeting} room={room} />;
     default: {
       const _exhaustive: never = platform;
       return (
