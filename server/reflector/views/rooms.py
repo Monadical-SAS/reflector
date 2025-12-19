@@ -570,7 +570,9 @@ async def rooms_join_meeting(
         end_date = meeting.end_date
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
-        remaining_seconds = int((end_date - current_time).total_seconds())
+        remaining_seconds = min(
+            3 * 60 * 60, int((end_date - current_time).total_seconds())
+        )
         token = await client.create_meeting_token(
             meeting.room_name,
             start_cloud_recording=meeting.recording_type == "cloud",
