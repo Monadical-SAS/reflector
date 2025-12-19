@@ -2,8 +2,9 @@ export interface ConsentDialogResult {
   showConsentModal: () => void;
   consentState: {
     ready: boolean;
-    consentAnsweredForMeetings?: Set<string>;
+    consentForMeetings?: Map<string, boolean>;
   };
-  hasConsent: (meetingId: string) => boolean;
+  hasAnswered: (meetingId: string) => boolean;
+  hasAccepted: (meetingId: string) => boolean;
   consentLoading: boolean;
 }

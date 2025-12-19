@@ -95,7 +95,7 @@ const useConsentDialog = (
   meetingId: string,
   wherebyRef: RefObject<HTMLElement> /*accessibility*/,
 ) => {
-  const { state: consentState, touch, hasConsent } = useRecordingConsent();
+  const { state: consentState, touch, hasAnswered } = useRecordingConsent();
   // toast would open duplicates, even with using "id=" prop
   const [modalOpen, setModalOpen] = useState(false);
   const audioConsentMutation = useMeetingAudioConsent();
@@ -114,7 +114,7 @@ const useConsentDialog = (
           },
         });
 
-        touch(meetingId);
+        touch(meetingId, given);
       } catch (error) {
         console.error("Error submitting consent:", error);
       }
@@ -216,7 +216,7 @@ const useConsentDialog = (
   return {
     showConsentModal,
     consentState,
-    hasConsent,
+    hasAnswered,
     consentLoading: audioConsentMutation.isPending,
   };
 };
@@ -228,10 +228,10 @@ function ConsentDialogButton({
   meetingId: NonEmptyString;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
-  const { showConsentModal, consentState, hasConsent, consentLoading } =
+  const { showConsentModal, consentState, hasAnswered, consentLoading } =
     useConsentDialog(meetingId, wherebyRef);
 
-  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
+  if (!consentState.ready || hasAnswered(meetingId) || consentLoading) {
     return null;
   }
 

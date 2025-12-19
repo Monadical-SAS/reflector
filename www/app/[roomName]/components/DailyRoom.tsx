@@ -162,9 +162,7 @@ const useFrame = (
   );
   return [
     frame_,
-    setFrame,
     {
-      joined,
       setCustomTrayButton,
     },
   ] as const;
@@ -181,19 +179,21 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
 
   const roomName = params?.roomName as string;
 
-  const showRecordingInTray =
-    meeting.recording_type &&
-    recordingTypeRequiresConsent(meeting.recording_type) &&
-    // users know about recording in case of no-skip-consent from the consent dialog
-    room.skip_consent;
-
   const needsConsent =
     meeting.recording_type &&
     recordingTypeRequiresConsent(meeting.recording_type) &&
     !room.skip_consent;
-  const { showConsentModal, consentState, hasConsent } = useConsentDialog(
-    meeting.id,
-  );
+  const { showConsentModal, consentState, hasAnswered, hasAccepted } =
+    useConsentDialog(meeting.id);
+
+  // Show recording indicator when:
+  // - skip_consent=true, OR
+  // - user has accepted consent
+  // If user rejects, recording still happens but we don't show indicator
+  const showRecordingInTray =
+    meeting.recording_type &&
+    recordingTypeRequiresConsent(meeting.recording_type) &&
+    (room.skip_consent || hasAccepted(meeting.id));
   const showConsentModalRef = useRef(showConsentModal);
   showConsentModalRef.current = showConsentModal;
 
@@ -255,7 +255,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     [],
   );
 
-  const [frame, setFrame, { setCustomTrayButton }] = useFrame(container, {
+  const [frame, { setCustomTrayButton }] = useFrame(container, {
     onLeftMeeting: handleLeave,
     onCustomButtonClick: handleCustomButtonClick,
     onJoinMeeting: handleFrameJoinMeeting,
@@ -293,18 +293,20 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     );
   }, [showRecordingInTray, recordingIconUrl, setCustomTrayButton]);
 
-  /*
-       if (needsConsent && !hasConsent(meeting.id)) {
-          const iconUrl = new URL("/consent-icon.svg", window.location.origin);
-          frameOptions.customTrayButtons = {
-            [CONSENT_BUTTON_ID]: {
-              iconPath: iconUrl.href,
-              label: "Consent",
-              tooltip: "Recording consent - click to respond",
-            },
-          };
-        }
-   */
+  const showConsentButton = needsConsent && !hasAnswered(meeting.id);
+
+  useEffect(() => {
+    setCustomTrayButton(
+      CONSENT_BUTTON_ID,
+      showConsentButton
+        ? {
+            iconPath: recordingIconUrl.href,
+            label: "Recording (click to consent)",
+            tooltip: "Recording (click to consent)",
+          }
+        : null,
+    );
+  }, [showConsentButton, recordingIconUrl, setCustomTrayButton]);
 
   if (authLastUserId === undefined) {
     return (

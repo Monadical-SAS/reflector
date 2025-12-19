@@ -9,7 +9,12 @@ import { TOAST_CHECK_INTERVAL_MS } from "./constants";
 import type { ConsentDialogResult } from "./types";
 
 export function useConsentDialog(meetingId: string): ConsentDialogResult {
-  const { state: consentState, touch, hasConsent } = useRecordingConsent();
+  const {
+    state: consentState,
+    touch,
+    hasAnswered,
+    hasAccepted,
+  } = useRecordingConsent();
   const [modalOpen, setModalOpen] = useState(false);
   const audioConsentMutation = useMeetingAudioConsent();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,7 +47,7 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
           },
         });
 
-        touch(meetingId);
+        touch(meetingId, given);
       } catch (error) {
         console.error("Error submitting consent:", error);
       }
@@ -103,7 +108,8 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
   return {
     showConsentModal,
     consentState,
-    hasConsent,
+    hasAnswered,
+    hasAccepted,
     consentLoading: audioConsentMutation.isPending,
   };
 }

@@ -15,10 +15,10 @@ interface ConsentDialogButtonProps {
 }
 
 export function ConsentDialogButton({ meetingId }: ConsentDialogButtonProps) {
-  const { showConsentModal, consentState, hasConsent, consentLoading } =
+  const { showConsentModal, consentState, hasAnswered, consentLoading } =
     useConsentDialog(meetingId);
 
-  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
+  if (!consentState.ready || hasAnswered(meetingId) || consentLoading) {
     return null;
   }
 
