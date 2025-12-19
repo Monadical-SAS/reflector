@@ -571,10 +571,17 @@ async def rooms_join_meeting(
 
     if meeting.platform == "daily" and user_id is not None:
         client = create_platform_client(meeting.platform)
+        # Show Daily's built-in recording UI when:
+        # - local recording (user controls when to record), OR
+        # - cloud recording with consent disabled (skip_consent=True)
+        # Hide it when cloud recording with consent enabled (we show custom consent UI)
+        enable_recording_ui = meeting.recording_type == "local" or (
+            meeting.recording_type == "cloud" and room.skip_consent
+        )
         token = await client.create_meeting_token(
             meeting.room_name,
             start_cloud_recording=meeting.recording_type == "cloud",
-            enable_recording_ui=meeting.recording_type == "local",
+            enable_recording_ui=enable_recording_ui,
             user_id=user_id,
             is_owner=user_id == room.user_id,
         )
