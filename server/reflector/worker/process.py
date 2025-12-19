@@ -570,12 +570,12 @@ async def process_meetings():
                 client = create_platform_client(meeting.platform)
                 room_sessions = await client.get_room_sessions(meeting.room_name)
 
-                has_active_sessions = room_sessions and any(
-                    s.ended_at is None for s in room_sessions
+                has_active_sessions = bool(
+                    room_sessions and any(s.ended_at is None for s in room_sessions)
                 )
                 has_had_sessions = bool(room_sessions)
                 logger_.info(
-                    f"found {has_active_sessions} active sessions, had {has_had_sessions}"
+                    f"has_active_sessions={has_active_sessions}, has_had_sessions={has_had_sessions}"
                 )
 
                 if has_active_sessions:
