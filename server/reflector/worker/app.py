@@ -38,6 +38,10 @@ else:
             "task": "reflector.worker.process.reprocess_failed_recordings",
             "schedule": crontab(hour=5, minute=0),  # Midnight EST
         },
+        "reprocess_failed_daily_recordings": {
+            "task": "reflector.worker.process.reprocess_failed_daily_recordings",
+            "schedule": crontab(hour=5, minute=0),  # Midnight EST
+        },
         "poll_daily_recordings": {
             "task": "reflector.worker.process.poll_daily_recordings",
             "schedule": 180.0,  # Every 3 minutes (configurable lookback window)

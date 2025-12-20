@@ -485,6 +485,7 @@ class PipelineMainMultitrack(PipelineMainBase):
             transcript,
             on_long_summary_callback=self.on_long_summary,
             on_short_summary_callback=self.on_short_summary,
+            on_action_items_callback=self.on_action_items,
             empty_pipeline=self.empty_pipeline,
             logger=self.logger,
         )

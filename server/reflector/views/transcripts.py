@@ -501,6 +501,7 @@ async def transcript_get(
         "title": transcript.title,
         "short_summary": transcript.short_summary,
         "long_summary": transcript.long_summary,
+        "action_items": transcript.action_items,
         "created_at": transcript.created_at,
         "share_mode": transcript.share_mode,
         "source_language": transcript.source_language,

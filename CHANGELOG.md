@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.24.0](https://github.com/Monadical-SAS/reflector/compare/v0.23.2...v0.24.0) (2025-12-18)
+
+
+### Features
+
+* identify action items ([#790](https://github.com/Monadical-SAS/reflector/issues/790)) ([964cd78](https://github.com/Monadical-SAS/reflector/commit/964cd78bb699d83d012ae4b8c96565df25b90a5d))
+
+
+### Bug Fixes
+
+* automatically reprocess daily recordings ([#797](https://github.com/Monadical-SAS/reflector/issues/797)) ([5f458aa](https://github.com/Monadical-SAS/reflector/commit/5f458aa4a7ec3d00ca5ec49d62fcc8ad232b138e))
+* daily video optimisation ([#789](https://github.com/Monadical-SAS/reflector/issues/789)) ([16284e1](https://github.com/Monadical-SAS/reflector/commit/16284e1ac3faede2b74f0d91b50c0b5612af2c35))
+* main menu login ([#800](https://github.com/Monadical-SAS/reflector/issues/800)) ([0bc971b](https://github.com/Monadical-SAS/reflector/commit/0bc971ba966a52d719c8c240b47dc7b3bdea4391))
+* retry on workflow timeout ([#798](https://github.com/Monadical-SAS/reflector/issues/798)) ([5f7dfad](https://github.com/Monadical-SAS/reflector/commit/5f7dfadabd3e8017406ad3720ba495a59963ee34))
+
 ## [0.23.2](https://github.com/Monadical-SAS/reflector/compare/v0.23.1...v0.23.2) (2025-12-11)
 
 

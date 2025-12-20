@@ -44,6 +44,7 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("title", sqlalchemy.String),
     sqlalchemy.Column("short_summary", sqlalchemy.String),
     sqlalchemy.Column("long_summary", sqlalchemy.String),
+    sqlalchemy.Column("action_items", sqlalchemy.JSON),
     sqlalchemy.Column("topics", sqlalchemy.JSON),
     sqlalchemy.Column("events", sqlalchemy.JSON),
     sqlalchemy.Column("participants", sqlalchemy.JSON),
@@ -166,6 +167,10 @@ class TranscriptFinalLongSummary(BaseModel):
     long_summary: str
 
 
+class TranscriptActionItems(BaseModel):
+    action_items: dict
+
+
 class TranscriptFinalTitle(BaseModel):
     title: str
 
@@ -206,6 +211,7 @@ class Transcript(BaseModel):
     locked: bool = False
     short_summary: str | None = None
     long_summary: str | None = None
+    action_items: dict | None = None
     topics: list[TranscriptTopic] = []
     events: list[TranscriptEvent] = []
     participants: list[TranscriptParticipant] | None = []
@@ -371,7 +377,12 @@ class TranscriptController:
         room_id: str | None = None,
         search_term: str | None = None,
         return_query: bool = False,
-        exclude_columns: list[str] = ["topics", "events", "participants"],
+        exclude_columns: list[str] = [
+            "topics",
+            "events",
+            "participants",
+            "action_items",
+        ],
     ) -> list[Transcript]:
         """
         Get all transcripts

@@ -3,6 +3,7 @@ from typing import Literal
 
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 
 from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
@@ -78,6 +79,36 @@ class RecordingController:
         query = recordings.select().where(recordings.c.id.in_(recording_ids))
         results = await get_database().fetch_all(query)
         return [Recording(**row) for row in results]
+
+    async def get_multitrack_needing_reprocessing(
+        self, bucket_name: str
+    ) -> list[Recording]:
+        """
+        Get multitrack recordings that need reprocessing:
+        - Have track_keys (multitrack)
+        - Either have no transcript OR transcript has error status
+
+        This is more efficient than fetching all recordings and filtering in Python.
+        """
+        from reflector.db.transcripts import (
+            transcripts,  # noqa: PLC0415 cyclic import
+        )
+
+        query = (
+            recordings.select()
+            .outerjoin(transcripts, recordings.c.id == transcripts.c.recording_id)
+            .where(
+                recordings.c.bucket_name == bucket_name,
+                recordings.c.track_keys.isnot(None),
+                or_(
+                    transcripts.c.id.is_(None),
+                    transcripts.c.status == "error",
+                ),
+            )
+        )
+        results = await get_database().fetch_all(query)
+        recordings_list = [Recording(**row) for row in results]
+        return [r for r in recordings_list if r.is_multitrack]
 
 
 recordings_controller = RecordingController()

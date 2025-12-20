@@ -78,7 +78,11 @@ class TranscriptTopicDetectorProcessor(Processor):
         """
         prompt = TOPIC_PROMPT.format(text=text)
         response = await self.llm.get_structured_response(
-            prompt, [text], TopicResponse, tone_name="Topic analyzer"
+            prompt,
+            [text],
+            TopicResponse,
+            tone_name="Topic analyzer",
+            timeout=settings.LLM_STRUCTURED_RESPONSE_TIMEOUT,
         )
         return response
 

@@ -266,7 +266,11 @@ async def mock_summary_processor():
         # When flush is called, simulate summary generation by calling the callbacks
         async def flush_with_callback():
             mock_summary.flush_called = True
-            from reflector.processors.types import FinalLongSummary, FinalShortSummary
+            from reflector.processors.types import (
+                ActionItems,
+                FinalLongSummary,
+                FinalShortSummary,
+            )
 
             if hasattr(mock_summary, "_callback"):
                 await mock_summary._callback(
@@ -276,12 +280,19 @@ async def mock_summary_processor():
                 await mock_summary._on_short_summary(
                     FinalShortSummary(short_summary="Test short summary", duration=10.0)
                 )
+            if hasattr(mock_summary, "_on_action_items"):
+                await mock_summary._on_action_items(
+                    ActionItems(action_items={"test": "action item"})
+                )
 
         mock_summary.flush = flush_with_callback
 
-        def init_with_callback(transcript=None, callback=None, on_short_summary=None):
+        def init_with_callback(
+            transcript=None, callback=None, on_short_summary=None, on_action_items=None
+        ):
             mock_summary._callback = callback
             mock_summary._on_short_summary = on_short_summary
+            mock_summary._on_action_items = on_action_items
             return mock_summary
 
         mock_summary_class.side_effect = init_with_callback
