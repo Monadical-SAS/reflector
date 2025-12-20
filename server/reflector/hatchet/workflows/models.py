@@ -96,6 +96,7 @@ class SummaryResult(BaseModel):
 
     summary: str | None
     short_summary: str | None
+    action_items: dict | None = None
 
 
 class FinalizeResult(BaseModel):

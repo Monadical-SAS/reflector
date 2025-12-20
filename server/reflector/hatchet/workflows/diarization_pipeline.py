@@ -623,6 +623,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     topics = topics_result.topics
 
     from reflector.db.transcripts import (  # noqa: PLC0415
+        TranscriptActionItems,
         TranscriptFinalLongSummary,
         TranscriptFinalShortSummary,
         transcripts_controller,
@@ -633,6 +634,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     empty_pipeline = topic_processing.EmptyPipeline(logger=logger)
     summary_result = None
     short_summary_result = None
+    action_items_result = None
 
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
@@ -673,18 +675,39 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 logger=logger,
             )
 
+        async def on_action_items_callback(data):
+            nonlocal action_items_result
+            action_items_result = data.action_items
+            action_items = TranscriptActionItems(action_items=data.action_items)
+            await transcripts_controller.update(
+                transcript,
+                {"action_items": action_items.action_items},
+            )
+            await append_event_and_broadcast(
+                input.transcript_id,
+                transcript,
+                "ACTION_ITEMS",
+                action_items,
+                logger=logger,
+            )
+
         await topic_processing.generate_summaries(
             topic_objects,
-            transcript,  # DB transcript for context
+            transcript,
             on_long_summary_callback=on_long_summary_callback,
             on_short_summary_callback=on_short_summary_callback,
+            on_action_items_callback=on_action_items_callback,
             empty_pipeline=empty_pipeline,
             logger=logger,
         )
 
     ctx.log("generate_summary complete")
 
-    return SummaryResult(summary=summary_result, short_summary=short_summary_result)
+    return SummaryResult(
+        summary=summary_result,
+        short_summary=short_summary_result,
+        action_items=action_items_result,
+    )
 
 
 @diarization_pipeline.task(
