@@ -85,10 +85,14 @@ class HatchetClientManager:
 
     @classmethod
     async def can_replay(cls, workflow_run_id: str) -> bool:
-        """Check if workflow can be replayed (is FAILED)."""
+        """Check if workflow can be replayed (is FAILED only).
+
+        CANCELLED workflows should start fresh (new run ID) rather than replay,
+        since cancellation indicates user intent to abort.
+        """
         try:
             status = await cls.get_workflow_run_status(workflow_run_id)
-            return status == V1TaskStatus.FAILED or status == V1TaskStatus.CANCELLED
+            return status == V1TaskStatus.FAILED
         except Exception as e:
             logger.warning(
                 "[Hatchet] Failed to check replay status",

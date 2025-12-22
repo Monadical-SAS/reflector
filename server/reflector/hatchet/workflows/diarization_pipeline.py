@@ -11,6 +11,7 @@ are not shared across forks, avoiding connection pooling issues.
 
 import asyncio
 import functools
+import json
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -176,27 +177,44 @@ def with_error_handling(step_name: str, set_error_status: bool = True) -> Callab
 @with_error_handling("get_recording")
 async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
     """Fetch recording metadata from Daily.co API."""
-    ctx.log(f"get_recording: recording_id={input.recording_id}")
+    ctx.log(f"get_recording: starting for recording_id={input.recording_id}")
+    ctx.log(
+        f"get_recording: transcript_id={input.transcript_id}, room_id={input.room_id}"
+    )
+    ctx.log(
+        f"get_recording: bucket_name={input.bucket_name}, tracks={len(input.tracks)}"
+    )
 
     # Set transcript status to "processing" at workflow start (broadcasts to WebSocket)
+    ctx.log("get_recording: establishing DB connection...")
     async with fresh_db_connection():
         from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
+        ctx.log("get_recording: DB connection established, fetching transcript...")
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
+        ctx.log(f"get_recording: transcript exists={transcript is not None}")
         if transcript:
+            ctx.log(
+                f"get_recording: current status={transcript.status}, setting to 'processing'..."
+            )
             await set_status_and_broadcast(
                 input.transcript_id, "processing", logger=logger
             )
-            ctx.log(f"Set transcript status to processing: {input.transcript_id}")
+            ctx.log(f"get_recording: status set to 'processing' and broadcasted")
 
     if not settings.DAILY_API_KEY:
+        ctx.log("get_recording: ERROR - DAILY_API_KEY not configured")
         raise ValueError("DAILY_API_KEY not configured")
 
+    ctx.log(
+        f"get_recording: calling Daily.co API for recording_id={input.recording_id}..."
+    )
     async with DailyApiClient(api_key=settings.DAILY_API_KEY) as client:
         recording = await client.get_recording(input.recording_id)
+    ctx.log(f"get_recording: Daily.co API returned successfully")
 
     ctx.log(
-        f"get_recording complete: room={recording.room_name}, duration={recording.duration}s"
+        f"get_recording complete: room={recording.room_name}, duration={recording.duration}s, mtg_session_id={recording.mtgSessionId}"
     )
 
     return RecordingResult(
@@ -485,6 +503,14 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
         async with fresh_db_connection():
             transcript = await transcripts_controller.get_by_id(input.transcript_id)
             if transcript:
+                # Write waveform to file (same as Celery AudioWaveformProcessor)
+                transcript.data_path.mkdir(parents=True, exist_ok=True)
+                with open(transcript.audio_waveform_filename, "w") as f:
+                    json.dump(waveform, f)
+                ctx.log(
+                    f"generate_waveform: wrote waveform to {transcript.audio_waveform_filename}"
+                )
+
                 waveform_data = TranscriptWaveform(waveform=waveform)
                 await append_event_and_broadcast(
                     input.transcript_id,
@@ -559,15 +585,16 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
 
 
 @diarization_pipeline.task(
-    parents=[detect_topics], execution_timeout=timedelta(seconds=120), retries=3
+    parents=[detect_topics], execution_timeout=timedelta(seconds=600), retries=3
 )
 @with_error_handling("generate_title")
 async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
     """Generate meeting title using LLM and save to database (matches Celery on_title callback)."""
-    ctx.log("generate_title: generating title from topics")
+    ctx.log(f"generate_title: starting for transcript_id={input.transcript_id}")
 
     topics_result = ctx.task_output(detect_topics)
     topics = topics_result.topics
+    ctx.log(f"generate_title: received {len(topics)} topics from detect_topics")
 
     from reflector.db.transcripts import (  # noqa: PLC0415
         TranscriptFinalTitle,
@@ -575,15 +602,19 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
     )
 
     topic_objects = [TitleSummary(**t) for t in topics]
+    ctx.log(f"generate_title: created {len(topic_objects)} TitleSummary objects")
 
     empty_pipeline = topic_processing.EmptyPipeline(logger=logger)
     title_result = None
 
     async with fresh_db_connection():
+        ctx.log("generate_title: DB connection established")
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
+        ctx.log(f"generate_title: fetched transcript, exists={transcript is not None}")
 
         async def on_title_callback(data):
             nonlocal title_result
+            ctx.log(f"generate_title: on_title_callback received title='{data.title}'")
             title_result = data.title
             final_title = TranscriptFinalTitle(title=data.title)
             if not transcript.title:
@@ -591,6 +622,7 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
                     transcript,
                     {"title": final_title.title},
                 )
+                ctx.log("generate_title: saved title to DB")
             await append_event_and_broadcast(
                 input.transcript_id,
                 transcript,
@@ -598,13 +630,16 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
                 final_title,
                 logger=logger,
             )
+            ctx.log("generate_title: broadcasted FINAL_TITLE event")
 
+        ctx.log("generate_title: calling topic_processing.generate_title (LLM call)...")
         await topic_processing.generate_title(
             topic_objects,
             on_title_callback=on_title_callback,
             empty_pipeline=empty_pipeline,
             logger=logger,
         )
+        ctx.log("generate_title: topic_processing.generate_title returned")
 
     ctx.log(f"generate_title complete: '{title_result}'")
 
@@ -612,15 +647,16 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
 
 
 @diarization_pipeline.task(
-    parents=[detect_topics], execution_timeout=timedelta(seconds=300), retries=3
+    parents=[detect_topics], execution_timeout=timedelta(seconds=600), retries=3
 )
 @with_error_handling("generate_summary")
 async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     """Generate meeting summary using LLM and save to database (matches Celery callbacks)."""
-    ctx.log("generate_summary: generating long and short summaries")
+    ctx.log(f"generate_summary: starting for transcript_id={input.transcript_id}")
 
     topics_result = ctx.task_output(detect_topics)
     topics = topics_result.topics
+    ctx.log(f"generate_summary: received {len(topics)} topics from detect_topics")
 
     from reflector.db.transcripts import (  # noqa: PLC0415
         TranscriptActionItems,
@@ -630,6 +666,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     )
 
     topic_objects = [TitleSummary(**t) for t in topics]
+    ctx.log(f"generate_summary: created {len(topic_objects)} TitleSummary objects")
 
     empty_pipeline = topic_processing.EmptyPipeline(logger=logger)
     summary_result = None
@@ -637,10 +674,17 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
     action_items_result = None
 
     async with fresh_db_connection():
+        ctx.log("generate_summary: DB connection established")
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
+        ctx.log(
+            f"generate_summary: fetched transcript, exists={transcript is not None}"
+        )
 
         async def on_long_summary_callback(data):
             nonlocal summary_result
+            ctx.log(
+                f"generate_summary: on_long_summary_callback received ({len(data.long_summary)} chars)"
+            )
             summary_result = data.long_summary
             final_long_summary = TranscriptFinalLongSummary(
                 long_summary=data.long_summary
@@ -649,6 +693,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 transcript,
                 {"long_summary": final_long_summary.long_summary},
             )
+            ctx.log("generate_summary: saved long_summary to DB")
             await append_event_and_broadcast(
                 input.transcript_id,
                 transcript,
@@ -656,9 +701,13 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 final_long_summary,
                 logger=logger,
             )
+            ctx.log("generate_summary: broadcasted FINAL_LONG_SUMMARY event")
 
         async def on_short_summary_callback(data):
             nonlocal short_summary_result
+            ctx.log(
+                f"generate_summary: on_short_summary_callback received ({len(data.short_summary)} chars)"
+            )
             short_summary_result = data.short_summary
             final_short_summary = TranscriptFinalShortSummary(
                 short_summary=data.short_summary
@@ -667,6 +716,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 transcript,
                 {"short_summary": final_short_summary.short_summary},
             )
+            ctx.log("generate_summary: saved short_summary to DB")
             await append_event_and_broadcast(
                 input.transcript_id,
                 transcript,
@@ -674,15 +724,20 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 final_short_summary,
                 logger=logger,
             )
+            ctx.log("generate_summary: broadcasted FINAL_SHORT_SUMMARY event")
 
         async def on_action_items_callback(data):
             nonlocal action_items_result
+            ctx.log(
+                f"generate_summary: on_action_items_callback received ({len(data.action_items)} items)"
+            )
             action_items_result = data.action_items
             action_items = TranscriptActionItems(action_items=data.action_items)
             await transcripts_controller.update(
                 transcript,
                 {"action_items": action_items.action_items},
             )
+            ctx.log("generate_summary: saved action_items to DB")
             await append_event_and_broadcast(
                 input.transcript_id,
                 transcript,
@@ -690,7 +745,11 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
                 action_items,
                 logger=logger,
             )
+            ctx.log("generate_summary: broadcasted ACTION_ITEMS event")
 
+        ctx.log(
+            "generate_summary: calling topic_processing.generate_summaries (LLM calls)..."
+        )
         await topic_processing.generate_summaries(
             topic_objects,
             transcript,
@@ -700,6 +759,7 @@ async def generate_summary(input: PipelineInput, ctx: Context) -> SummaryResult:
             empty_pipeline=empty_pipeline,
             logger=logger,
         )
+        ctx.log("generate_summary: topic_processing.generate_summaries returned")
 
     ctx.log("generate_summary complete")
 

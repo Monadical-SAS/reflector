@@ -215,6 +215,17 @@ async def dispatch_transcript_processing(
                         workflow_id=transcript.workflow_run_id,
                     )
                     return None
+                else:
+                    # Workflow exists but can't replay (CANCELLED, COMPLETED, etc.)
+                    # Log and proceed to start new workflow
+                    status = await HatchetClientManager.get_workflow_run_status(
+                        transcript.workflow_run_id
+                    )
+                    logger.info(
+                        "Old workflow not replayable, starting new",
+                        old_workflow_id=transcript.workflow_run_id,
+                        old_status=status.value,
+                    )
 
             # Force: cancel old workflow if exists
             if force and transcript and transcript.workflow_run_id:
