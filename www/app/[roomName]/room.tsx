@@ -6,7 +6,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useContext,
   RefObject,
   use,
 } from "react";
@@ -25,8 +24,6 @@ import { useRecordingConsent } from "../recordingConsentContext";
 import {
   useMeetingAudioConsent,
   useRoomGetByName,
-  useRoomActiveMeetings,
-  useRoomUpcomingMeetings,
   useRoomsCreateMeeting,
   useRoomGetMeeting,
 } from "../lib/apiHooks";
@@ -39,12 +36,9 @@ import { FaBars } from "react-icons/fa6";
 import { useAuth } from "../lib/AuthProvider";
 import { getWherebyUrl, useWhereby } from "../lib/wherebyClient";
 import { useError } from "../(errors)/errorContext";
-import {
-  assertExistsAndNonEmptyString,
-  NonEmptyString,
-  parseNonEmptyString,
-} from "../lib/utils";
+import { parseNonEmptyString } from "../lib/utils";
 import { printApiError } from "../api/_error";
+import { assertMeetingId, MeetingId } from "../lib/types";
 
 export type RoomDetails = {
   params: Promise<{
@@ -92,16 +86,16 @@ const useConsentWherebyFocusManagement = (
 };
 
 const useConsentDialog = (
-  meetingId: string,
+  meetingId: MeetingId,
   wherebyRef: RefObject<HTMLElement> /*accessibility*/,
 ) => {
-  const { state: consentState, touch, hasConsent } = useRecordingConsent();
+  const { state: consentState, touch, hasAnswered } = useRecordingConsent();
   // toast would open duplicates, even with using "id=" prop
   const [modalOpen, setModalOpen] = useState(false);
   const audioConsentMutation = useMeetingAudioConsent();
 
   const handleConsent = useCallback(
-    async (meetingId: string, given: boolean) => {
+    async (meetingId: MeetingId, given: boolean) => {
       try {
         await audioConsentMutation.mutateAsync({
           params: {
@@ -114,7 +108,7 @@ const useConsentDialog = (
           },
         });
 
-        touch(meetingId);
+        touch(meetingId, given);
       } catch (error) {
         console.error("Error submitting consent:", error);
       }
@@ -216,7 +210,7 @@ const useConsentDialog = (
   return {
     showConsentModal,
     consentState,
-    hasConsent,
+    hasAnswered,
     consentLoading: audioConsentMutation.isPending,
   };
 };
@@ -225,13 +219,13 @@ function ConsentDialogButton({
   meetingId,
   wherebyRef,
 }: {
-  meetingId: NonEmptyString;
+  meetingId: MeetingId;
   wherebyRef: React.RefObject<HTMLElement>;
 }) {
-  const { showConsentModal, consentState, hasConsent, consentLoading } =
+  const { showConsentModal, consentState, hasAnswered, consentLoading } =
     useConsentDialog(meetingId, wherebyRef);
 
-  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
+  if (!consentState.ready || hasAnswered(meetingId) || consentLoading) {
     return null;
   }
 
@@ -284,7 +278,10 @@ export default function Room(details: RoomDetails) {
     room && !room.ics_enabled && !pageMeetingId ? roomName : null,
   );
 
-  const explicitMeeting = useRoomGetMeeting(roomName, pageMeetingId || null);
+  const explicitMeeting = useRoomGetMeeting(
+    roomName,
+    pageMeetingId ? assertMeetingId(pageMeetingId) : null,
+  );
   const wherebyRoomUrl = explicitMeeting.data
     ? getWherebyUrl(explicitMeeting.data)
     : defaultMeeting.response
@@ -437,7 +434,7 @@ export default function Room(details: RoomDetails) {
             recordingTypeRequiresConsent(recordingType) &&
             meetingId && (
               <ConsentDialogButton
-                meetingId={assertExistsAndNonEmptyString(meetingId)}
+                meetingId={assertMeetingId(meetingId)}
                 wherebyRef={wherebyRef}
               />
             )}

@@ -893,8 +893,16 @@ export interface components {
        * @default false
        */
       ics_enabled: boolean;
-      /** Platform */
-      platform?: ("whereby" | "daily") | null;
+      /**
+       * Platform
+       * @enum {string}
+       */
+      platform: "whereby" | "daily";
+      /**
+       * Skip Consent
+       * @default false
+       */
+      skip_consent: boolean;
     };
     /** CreateRoomMeeting */
     CreateRoomMeeting: {
@@ -1123,7 +1131,9 @@ export interface components {
       /** Audio Deleted */
       audio_deleted?: boolean | null;
       /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      participants:
+        | components["schemas"]["TranscriptParticipantWithEmail"][]
+        | null;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
@@ -1184,7 +1194,9 @@ export interface components {
       /** Audio Deleted */
       audio_deleted?: boolean | null;
       /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      participants:
+        | components["schemas"]["TranscriptParticipantWithEmail"][]
+        | null;
     };
     /**
      * GetTranscriptWithText
@@ -1246,7 +1258,9 @@ export interface components {
       /** Audio Deleted */
       audio_deleted?: boolean | null;
       /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      participants:
+        | components["schemas"]["TranscriptParticipantWithEmail"][]
+        | null;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
@@ -1315,7 +1329,9 @@ export interface components {
       /** Audio Deleted */
       audio_deleted?: boolean | null;
       /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      participants:
+        | components["schemas"]["TranscriptParticipantWithEmail"][]
+        | null;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
@@ -1386,7 +1402,9 @@ export interface components {
       /** Audio Deleted */
       audio_deleted?: boolean | null;
       /** Participants */
-      participants: components["schemas"]["TranscriptParticipant"][] | null;
+      participants:
+        | components["schemas"]["TranscriptParticipantWithEmail"][]
+        | null;
       /**
        * @description discriminator enum property added by openapi-typescript
        * @enum {string}
@@ -1567,6 +1585,11 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** ProcessStatus */
+    ProcessStatus: {
+      /** Status */
+      status: string;
+    };
     /** Room */
     Room: {
       /** Id */
@@ -1617,6 +1640,11 @@ export interface components {
        * @enum {string}
        */
       platform: "whereby" | "daily";
+      /**
+       * Skip Consent
+       * @default false
+       */
+      skip_consent: boolean;
     };
     /** RoomDetails */
     RoomDetails: {
@@ -1668,6 +1696,11 @@ export interface components {
        * @enum {string}
        */
       platform: "whereby" | "daily";
+      /**
+       * Skip Consent
+       * @default false
+       */
+      skip_consent: boolean;
       /** Webhook Url */
       webhook_url: string | null;
       /** Webhook Secret */
@@ -1813,6 +1846,19 @@ export interface components {
       /** User Id */
       user_id?: string | null;
     };
+    /** TranscriptParticipantWithEmail */
+    TranscriptParticipantWithEmail: {
+      /** Id */
+      id?: string;
+      /** Speaker */
+      speaker: number | null;
+      /** Name */
+      name: string;
+      /** User Id */
+      user_id?: string | null;
+      /** Email */
+      email?: string | null;
+    };
     /**
      * TranscriptSegment
      * @description A single transcript segment with speaker and timing information.
@@ -1868,6 +1914,8 @@ export interface components {
       ics_enabled?: boolean | null;
       /** Platform */
       platform?: ("whereby" | "daily") | null;
+      /** Skip Consent */
+      skip_consent?: boolean | null;
     };
     /** UpdateTranscript */
     UpdateTranscript: {
@@ -3362,7 +3410,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json": components["schemas"]["ProcessStatus"];
         };
       };
       /** @description Validation Error */

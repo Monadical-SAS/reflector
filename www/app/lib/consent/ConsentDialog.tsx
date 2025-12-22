@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Box, Button, Text, VStack, HStack } from "@chakra-ui/react";
 import { CONSENT_DIALOG_TEXT } from "./constants";
 
@@ -9,6 +10,15 @@ interface ConsentDialogProps {
 }
 
 export function ConsentDialog({ onAccept, onReject }: ConsentDialogProps) {
+  const [acceptButton, setAcceptButton] = useState<HTMLButtonElement | null>(
+    null,
+  );
+
+  useEffect(() => {
+    // Auto-focus accept button so Escape key works (Daily iframe captures keyboard otherwise)
+    acceptButton?.focus();
+  }, [acceptButton]);
+
   return (
     <Box
       p={6}
@@ -26,7 +36,12 @@ export function ConsentDialog({ onAccept, onReject }: ConsentDialogProps) {
           <Button variant="ghost" size="sm" onClick={onReject}>
             {CONSENT_DIALOG_TEXT.rejectButton}
           </Button>
-          <Button colorPalette="primary" size="sm" onClick={onAccept}>
+          <Button
+            ref={setAcceptButton}
+            colorPalette="primary"
+            size="sm"
+            onClick={onAccept}
+          >
             {CONSENT_DIALOG_TEXT.acceptButton}
           </Button>
         </HStack>

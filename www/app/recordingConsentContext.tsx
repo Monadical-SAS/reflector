@@ -1,18 +1,22 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { MeetingId } from "./lib/types";
+
+type ConsentMap = Map<MeetingId, boolean>;
 
 type ConsentContextState =
   | { ready: false }
   | {
       ready: true;
-      consentAnsweredForMeetings: Set<string>;
+      consentForMeetings: ConsentMap;
     };
 
 interface RecordingConsentContextValue {
   state: ConsentContextState;
-  touch: (meetingId: string) => void;
-  hasConsent: (meetingId: string) => boolean;
+  touch: (meetingId: MeetingId, accepted: boolean) => void;
+  hasAnswered: (meetingId: MeetingId) => boolean;
+  hasAccepted: (meetingId: MeetingId) => boolean;
 }
 
 const RecordingConsentContext = createContext<
@@ -35,81 +39,116 @@ interface RecordingConsentProviderProps {
 
 const LOCAL_STORAGE_KEY = "recording_consent_meetings";
 
+const ACCEPTED = "T" as const;
+type Accepted = typeof ACCEPTED;
+const REJECTED = "F" as const;
+type Rejected = typeof REJECTED;
+type Consent = Accepted | Rejected;
+const SEPARATOR = "|" as const;
+type Separator = typeof SEPARATOR;
+const DEFAULT_CONSENT = ACCEPTED;
+type Entry = `${MeetingId}${Separator}${Consent}`;
+type EntryAndDefault = Entry | MeetingId;
+
+// Format: "meetingId|T" or "meetingId|F", legacy format "meetingId" is treated as accepted
+const encodeEntry = (meetingId: MeetingId, accepted: boolean): Entry =>
+  `${meetingId}|${accepted ? ACCEPTED : REJECTED}`;
+
+const decodeEntry = (
+  entry: EntryAndDefault,
+): { meetingId: MeetingId; accepted: boolean } | null => {
+  const pipeIndex = entry.lastIndexOf(SEPARATOR);
+  if (pipeIndex === -1) {
+    // Legacy format: no pipe means accepted (backward compat)
+    return { meetingId: entry as MeetingId, accepted: true };
+  }
+  const suffix = entry.slice(pipeIndex + 1);
+  const meetingId = entry.slice(0, pipeIndex) as MeetingId;
+  // T = accepted, F = rejected, anything else = accepted (safe default)
+  const accepted = suffix !== REJECTED;
+  return { meetingId, accepted };
+};
+
 export const RecordingConsentProvider: React.FC<
   RecordingConsentProviderProps
 > = ({ children }) => {
   const [state, setState] = useState<ConsentContextState>({ ready: false });
 
-  const safeWriteToStorage = (meetingIds: string[]): void => {
+  const safeWriteToStorage = (consentMap: ConsentMap): void => {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(meetingIds));
+        const entries = Array.from(consentMap.entries())
+          .slice(-5)
+          .map(([id, accepted]) => encodeEntry(id, accepted));
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries));
       }
     } catch (error) {
       console.error("Failed to save consent data to localStorage:", error);
     }
   };
 
-  // writes to local storage and to the state of context both
-  const touch = (meetingId: string): void => {
+  const touch = (meetingId: MeetingId, accepted: boolean): void => {
     if (!state.ready) {
       console.warn("Attempted to touch consent before context is ready");
       return;
     }
 
-    // has success regardless local storage write success: we don't handle that
-    // and don't want to crash anything with just consent functionality
-    const newSet = state.consentAnsweredForMeetings.has(meetingId)
-      ? state.consentAnsweredForMeetings
-      : new Set([...state.consentAnsweredForMeetings, meetingId]);
-    // note: preserves the set insertion order
-    const array = Array.from(newSet).slice(-5); // Keep latest 5
-    safeWriteToStorage(array);
-    setState({ ready: true, consentAnsweredForMeetings: newSet });
+    const newMap = new Map(state.consentForMeetings);
+    newMap.set(meetingId, accepted);
+    safeWriteToStorage(newMap);
+    setState({ ready: true, consentForMeetings: newMap });
   };
 
-  const hasConsent = (meetingId: string): boolean => {
+  const hasAnswered = (meetingId: MeetingId): boolean => {
     if (!state.ready) return false;
-    return state.consentAnsweredForMeetings.has(meetingId);
+    return state.consentForMeetings.has(meetingId);
+  };
+
+  const hasAccepted = (meetingId: MeetingId): boolean => {
+    if (!state.ready) return false;
+    return state.consentForMeetings.get(meetingId) === true;
   };
 
   // initialize on mount
   useEffect(() => {
     try {
       if (typeof window === "undefined" || !window.localStorage) {
-        setState({ ready: true, consentAnsweredForMeetings: new Set() });
+        setState({ ready: true, consentForMeetings: new Map() });
         return;
       }
 
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (!stored) {
-        setState({ ready: true, consentAnsweredForMeetings: new Set() });
+        setState({ ready: true, consentForMeetings: new Map() });
         return;
       }
 
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) {
         console.warn("Invalid consent data format in localStorage, resetting");
-        setState({ ready: true, consentAnsweredForMeetings: new Set() });
+        setState({ ready: true, consentForMeetings: new Map() });
         return;
       }
 
-      // pre-historic way of parsing!
-      const consentAnsweredForMeetings = new Set(
-        parsed.filter((id) => !!id && typeof id === "string"),
-      );
-      setState({ ready: true, consentAnsweredForMeetings });
+      const consentForMeetings = new Map<MeetingId, boolean>();
+      for (const entry of parsed) {
+        const decoded = decodeEntry(entry);
+        if (decoded) {
+          consentForMeetings.set(decoded.meetingId, decoded.accepted);
+        }
+      }
+      setState({ ready: true, consentForMeetings });
     } catch (error) {
-      // we don't want to fail the page here; the component is not essential.
       console.error("Failed to parse consent data from localStorage:", error);
-      setState({ ready: true, consentAnsweredForMeetings: new Set() });
+      setState({ ready: true, consentForMeetings: new Map() });
     }
   }, []);
 
   const value: RecordingConsentContextValue = {
     state,
     touch,
-    hasConsent,
+    hasAnswered,
+    hasAccepted,
   };
 
   return (

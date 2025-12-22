@@ -1,34 +1,193 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Box, Spinner, Center, Text } from "@chakra-ui/react";
 import { useRouter, useParams } from "next/navigation";
-import DailyIframe, { DailyCall } from "@daily-co/daily-js";
+import DailyIframe, {
+  DailyCall,
+  DailyCallOptions,
+  DailyCustomTrayButton,
+  DailyCustomTrayButtons,
+  DailyEventObjectCustomButtonClick,
+  DailyFactoryOptions,
+  DailyParticipantsObject,
+} from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
-import {
-  ConsentDialogButton,
-  recordingTypeRequiresConsent,
-} from "../../lib/consent";
+import { useConsentDialog } from "../../lib/consent";
 import { useRoomJoinMeeting } from "../../lib/apiHooks";
+import { omit } from "remeda";
 import { assertExists } from "../../lib/utils";
+import { assertMeetingId } from "../../lib/types";
+
+const CONSENT_BUTTON_ID = "recording-consent";
+const RECORDING_INDICATOR_ID = "recording-indicator";
 
 type Meeting = components["schemas"]["Meeting"];
+type Room = components["schemas"]["RoomDetails"];
 
-interface DailyRoomProps {
+type DailyRoomProps = {
   meeting: Meeting;
-}
+  room: Room;
+};
 
-export default function DailyRoom({ meeting }: DailyRoomProps) {
+const useCustomTrayButtons = (
+  frame: {
+    updateCustomTrayButtons: (
+      customTrayButtons: DailyCustomTrayButtons,
+    ) => void;
+    joined: boolean;
+  } | null,
+) => {
+  const [, setCustomTrayButtons] = useState<DailyCustomTrayButtons>({});
+  return useCallback(
+    (id: string, button: DailyCustomTrayButton | null) => {
+      setCustomTrayButtons((prev) => {
+        // would blink state when frame blinks but it's ok here
+        const state =
+          button === null ? omit(prev, [id]) : { ...prev, [id]: button };
+        if (frame !== null && frame.joined)
+          frame.updateCustomTrayButtons(state);
+        return state;
+      });
+    },
+    [setCustomTrayButtons, frame],
+  );
+};
+
+const USE_FRAME_INIT_STATE = {
+  frame: null as DailyCall | null,
+  joined: false as boolean,
+} as const;
+
+// Daily js and not Daily react used right now because daily-js allows for prebuild interface vs. -react is customizable but has no nice defaults
+const useFrame = (
+  container: HTMLDivElement | null,
+  cbs: {
+    onLeftMeeting: () => void;
+    onCustomButtonClick: (ev: DailyEventObjectCustomButtonClick) => void;
+    onJoinMeeting: (
+      startRecording: (args: { type: "raw-tracks" }) => void,
+    ) => void;
+  },
+) => {
+  const [{ frame, joined }, setState] = useState(USE_FRAME_INIT_STATE);
+  const setJoined = useCallback(
+    (joined: boolean) => setState((prev) => ({ ...prev, joined })),
+    [setState],
+  );
+  const setFrame = useCallback(
+    (frame: DailyCall | null) => setState((prev) => ({ ...prev, frame })),
+    [setState],
+  );
+  useEffect(() => {
+    if (!container) return;
+    const init = async () => {
+      const existingFrame = DailyIframe.getCallInstance();
+      if (existingFrame) {
+        console.error("existing daily frame present");
+        await existingFrame.destroy();
+      }
+      const frameOptions: DailyFactoryOptions = {
+        iframeStyle: {
+          width: "100vw",
+          height: "100vh",
+          border: "none",
+        },
+        showLeaveButton: true,
+        showFullscreenButton: true,
+      };
+      const frame = DailyIframe.createFrame(container, frameOptions);
+      setFrame(frame);
+    };
+    init().catch(
+      console.error.bind(console, "Failed to initialize daily frame:"),
+    );
+    return () => {
+      frame
+        ?.destroy()
+        .catch(console.error.bind(console, "Failed to destroy daily frame:"));
+      setState(USE_FRAME_INIT_STATE);
+    };
+  }, [container]);
+  useEffect(() => {
+    if (!frame) return;
+    frame.on("left-meeting", cbs.onLeftMeeting);
+    frame.on("custom-button-click", cbs.onCustomButtonClick);
+    const joinCb = () => {
+      if (!frame) {
+        console.error("frame is null in joined-meeting callback");
+        return;
+      }
+      cbs.onJoinMeeting(frame.startRecording.bind(frame));
+    };
+    frame.on("joined-meeting", joinCb);
+    return () => {
+      frame.off("left-meeting", cbs.onLeftMeeting);
+      frame.off("custom-button-click", cbs.onCustomButtonClick);
+      frame.off("joined-meeting", joinCb);
+    };
+  }, [frame, cbs]);
+  const frame_ = useMemo(() => {
+    if (frame === null) return frame;
+    return {
+      join: async (
+        properties?: DailyCallOptions,
+      ): Promise<DailyParticipantsObject | void> => {
+        await frame.join(properties);
+        setJoined(!frame.isDestroyed());
+      },
+      updateCustomTrayButtons: (
+        customTrayButtons: DailyCustomTrayButtons,
+      ): DailyCall => frame.updateCustomTrayButtons(customTrayButtons),
+    };
+  }, [frame]);
+  const setCustomTrayButton = useCustomTrayButtons(
+    useMemo(() => {
+      if (frame_ === null) return null;
+      return {
+        updateCustomTrayButtons: frame_.updateCustomTrayButtons,
+        joined,
+      };
+    }, [frame_, joined]),
+  );
+  return [
+    frame_,
+    {
+      setCustomTrayButton,
+    },
+  ] as const;
+};
+
+export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const router = useRouter();
   const params = useParams();
   const auth = useAuth();
   const authLastUserId = auth.lastUserId;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const joinMutation = useRoomJoinMeeting();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
   const roomName = params?.roomName as string;
+
+  const {
+    showConsentModal,
+    showRecordingIndicator: showRecordingInTray,
+    showConsentButton,
+  } = useConsentDialog({
+    meetingId: assertMeetingId(meeting.id),
+    recordingType: meeting.recording_type,
+    skipConsent: room.skip_consent,
+  });
+  const showConsentModalRef = useRef(showConsentModal);
+  showConsentModalRef.current = showConsentModal;
 
   useEffect(() => {
     if (authLastUserId === undefined || !meeting?.id || !roomName) return;
@@ -49,7 +208,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
       }
     };
 
-    join();
+    join().catch(console.error.bind(console, "Failed to join meeting:"));
   }, [meeting?.id, roomName, authLastUserId]);
 
   const roomUrl = joinedMeeting?.room_url;
@@ -58,84 +217,86 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
     router.push("/browse");
   }, [router]);
 
-  useEffect(() => {
-    if (authLastUserId === undefined || !roomUrl || !containerRef.current)
-      return;
+  const handleCustomButtonClick = useCallback(
+    (ev: DailyEventObjectCustomButtonClick) => {
+      if (ev.button_id === CONSENT_BUTTON_ID) {
+        showConsentModalRef.current();
+      }
+    },
+    [
+      /*keep static; iframe recreation depends on it*/
+    ],
+  );
 
-    let frame: DailyCall | null = null;
-    let destroyed = false;
-
-    const createAndJoin = async () => {
+  const handleFrameJoinMeeting = useCallback(
+    (startRecording: (args: { type: "raw-tracks" }) => void) => {
       try {
-        const existingFrame = DailyIframe.getCallInstance();
-        if (existingFrame) {
-          await existingFrame.destroy();
+        if (meeting.recording_type === "cloud") {
+          console.log("Starting cloud recording");
+          startRecording({ type: "raw-tracks" });
         }
-
-        frame = DailyIframe.createFrame(containerRef.current!, {
-          iframeStyle: {
-            width: "100vw",
-            height: "100vh",
-            border: "none",
-          },
-          showLeaveButton: true,
-          showFullscreenButton: true,
-        });
-
-        if (destroyed) {
-          await frame.destroy();
-          return;
-        }
-
-        frame.on("left-meeting", handleLeave);
-
-        frame.on("joined-meeting", async () => {
-          try {
-            const frameInstance = assertExists(
-              frame,
-              "frame object got lost somewhere after frame.on was called",
-            );
-
-            if (meeting.recording_type === "cloud") {
-              console.log("Starting cloud recording");
-              await frameInstance.startRecording({ type: "raw-tracks" });
-            }
-          } catch (error) {
-            console.error("Failed to start recording:", error);
-          }
-        });
-
-        await frame.join({
-          url: roomUrl,
-          sendSettings: {
-            video: {
-              // Optimize bandwidth for camera video
-              // allowAdaptiveLayers automatically adjusts quality based on network conditions
-              allowAdaptiveLayers: true,
-              // Use bandwidth-optimized preset as fallback for browsers without adaptive support
-              maxQuality: "medium",
-            },
-            // Note: screenVideo intentionally not configured to preserve full quality for screen shares
-          },
-        });
       } catch (error) {
-        console.error("Error creating Daily frame:", error);
+        console.error("Failed to start recording:", error);
       }
-    };
+    },
+    [meeting.recording_type],
+  );
 
-    createAndJoin().catch((error) => {
-      console.error("Failed to create and join meeting:", error);
-    });
+  const recordingIconUrl = useMemo(
+    () => new URL("/recording-icon.svg", window.location.origin),
+    [],
+  );
 
-    return () => {
-      destroyed = true;
-      if (frame) {
-        frame.destroy().catch((e) => {
-          console.error("Error destroying frame:", e);
-        });
-      }
-    };
-  }, [roomUrl, authLastUserId, handleLeave]);
+  const [frame, { setCustomTrayButton }] = useFrame(container, {
+    onLeftMeeting: handleLeave,
+    onCustomButtonClick: handleCustomButtonClick,
+    onJoinMeeting: handleFrameJoinMeeting,
+  });
+
+  useEffect(() => {
+    if (!frame || !roomUrl) return;
+    frame
+      .join({
+        url: roomUrl,
+        sendSettings: {
+          video: {
+            // Optimize bandwidth for camera video
+            // allowAdaptiveLayers automatically adjusts quality based on network conditions
+            allowAdaptiveLayers: true,
+            // Use bandwidth-optimized preset as fallback for browsers without adaptive support
+            maxQuality: "medium",
+          },
+          // Note: screenVideo intentionally not configured to preserve full quality for screen shares
+        },
+      })
+      .catch(console.error.bind(console, "Failed to join daily room:"));
+  }, [frame, roomUrl]);
+
+  useEffect(() => {
+    setCustomTrayButton(
+      RECORDING_INDICATOR_ID,
+      showRecordingInTray
+        ? {
+            iconPath: recordingIconUrl.href,
+            label: "Recording",
+            tooltip: "Recording in progress",
+          }
+        : null,
+    );
+  }, [showRecordingInTray, recordingIconUrl, setCustomTrayButton]);
+
+  useEffect(() => {
+    setCustomTrayButton(
+      CONSENT_BUTTON_ID,
+      showConsentButton
+        ? {
+            iconPath: recordingIconUrl.href,
+            label: "Recording (click to consent)",
+            tooltip: "Recording (click to consent)",
+          }
+        : null,
+    );
+  }, [showConsentButton, recordingIconUrl, setCustomTrayButton]);
 
   if (authLastUserId === undefined) {
     return (
@@ -159,10 +320,7 @@ export default function DailyRoom({ meeting }: DailyRoomProps) {
 
   return (
     <Box position="relative" width="100vw" height="100vh">
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      {meeting.recording_type &&
-        recordingTypeRequiresConsent(meeting.recording_type) &&
-        meeting.id && <ConsentDialogButton meetingId={meeting.id} />}
+      <div ref={setContainer} style={{ width: "100%", height: "100%" }} />
     </Box>
   );
 }

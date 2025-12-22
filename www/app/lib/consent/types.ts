@@ -1,9 +1,14 @@
-export interface ConsentDialogResult {
+import { MeetingId } from "../types";
+
+export type ConsentDialogResult = {
   showConsentModal: () => void;
   consentState: {
     ready: boolean;
-    consentAnsweredForMeetings?: Set<string>;
+    consentForMeetings?: Map<MeetingId, boolean>;
   };
-  hasConsent: (meetingId: string) => boolean;
+  hasAnswered: (meetingId: MeetingId) => boolean;
+  hasAccepted: (meetingId: MeetingId) => boolean;
   consentLoading: boolean;
-}
+  showRecordingIndicator: boolean;
+  showConsentButton: boolean;
+};

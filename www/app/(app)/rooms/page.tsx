@@ -91,6 +91,7 @@ const roomInitialState = {
   icsEnabled: false,
   icsFetchInterval: 5,
   platform: "whereby",
+  skipConsent: false,
 };
 
 export default function RoomsList() {
@@ -175,6 +176,7 @@ export default function RoomsList() {
             icsEnabled: detailedEditedRoom.ics_enabled || false,
             icsFetchInterval: detailedEditedRoom.ics_fetch_interval || 5,
             platform: detailedEditedRoom.platform,
+            skipConsent: detailedEditedRoom.skip_consent || false,
           }
         : null,
     [detailedEditedRoom],
@@ -326,6 +328,7 @@ export default function RoomsList() {
         ics_enabled: room.icsEnabled,
         ics_fetch_interval: room.icsFetchInterval,
         platform,
+        skip_consent: room.skipConsent,
       };
 
       if (isEditing) {
@@ -388,6 +391,7 @@ export default function RoomsList() {
       icsEnabled: roomData.ics_enabled || false,
       icsFetchInterval: roomData.ics_fetch_interval || 5,
       platform: roomData.platform,
+      skipConsent: roomData.skip_consent || false,
     });
     setEditRoomId(roomId);
     setIsEditing(true);
@@ -796,6 +800,34 @@ export default function RoomsList() {
                         <Checkbox.Label>Shared room</Checkbox.Label>
                       </Checkbox.Root>
                     </Field.Root>
+                    {room.recordingType === "cloud" && (
+                      <Field.Root mt={4}>
+                        <Checkbox.Root
+                          name="skipConsent"
+                          checked={room.skipConsent}
+                          onCheckedChange={(e) => {
+                            const syntheticEvent = {
+                              target: {
+                                name: "skipConsent",
+                                type: "checkbox",
+                                checked: e.checked,
+                              },
+                            };
+                            handleRoomChange(syntheticEvent);
+                          }}
+                        >
+                          <Checkbox.HiddenInput />
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          <Checkbox.Label>Skip consent dialog</Checkbox.Label>
+                        </Checkbox.Root>
+                        <Field.HelperText>
+                          When enabled, participants won't be asked for
+                          recording consent. Audio will be stored automatically.
+                        </Field.HelperText>
+                      </Field.Root>
+                    )}
                   </Tabs.Content>
 
                   <Tabs.Content value="share" pt={6}>
