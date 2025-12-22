@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.25.0](https://github.com/Monadical-SAS/reflector/compare/v0.24.0...v0.25.0) (2025-12-22)
+
+
+### Features
+
+* consent disable feature ([#799](https://github.com/Monadical-SAS/reflector/issues/799)) ([2257834](https://github.com/Monadical-SAS/reflector/commit/225783496f2e265d5cb58e3539a20bf6b55589b8))
+* durable ([#794](https://github.com/Monadical-SAS/reflector/issues/794)) ([1dac999](https://github.com/Monadical-SAS/reflector/commit/1dac999b56997582ce400e7d56e915adc1e4728d))
+* increase daily recording max duration ([#801](https://github.com/Monadical-SAS/reflector/issues/801)) ([f580b99](https://github.com/Monadical-SAS/reflector/commit/f580b996eef49cce16433c505abfc6454dd45de1))
+
+
+### Bug Fixes
+
+* logout redirect ([#802](https://github.com/Monadical-SAS/reflector/issues/802)) ([f0ee7b5](https://github.com/Monadical-SAS/reflector/commit/f0ee7b531a0911f214ccbb84d399e9a6c9b700c0))
+
 ## [0.24.0](https://github.com/Monadical-SAS/reflector/compare/v0.23.2...v0.24.0) (2025-12-18)
 
 
