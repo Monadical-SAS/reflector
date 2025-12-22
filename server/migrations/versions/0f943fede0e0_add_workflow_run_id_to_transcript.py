@@ -1,7 +1,7 @@
 """add workflow_run_id to transcript
 
 Revision ID: 0f943fede0e0
-Revises: 05f8688d6895
+Revises: 20251217000000
 Create Date: 2025-12-16 01:54:13.855106
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "0f943fede0e0"
-down_revision: Union[str, None] = "05f8688d6895"
+down_revision: Union[str, None] = "20251217000000"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
