@@ -97,13 +97,8 @@ class PipelineMainFile(PipelineMainBase):
                 },
             )
 
-        # Extract audio and write to transcript location
         audio_path = await self.extract_and_write_audio(file_path, transcript)
-
-        # Upload for processing
         audio_url = await self.upload_audio(audio_path, transcript)
-
-        # Run parallel processing
         await self.run_parallel_processing(
             audio_path,
             audio_url,
@@ -197,7 +192,6 @@ class PipelineMainFile(PipelineMainBase):
         transcript_result = results[0]
         diarization_result = results[1]
 
-        # Handle errors - raise any exception that occurred
         self._handle_gather_exceptions(results, "parallel processing")
         for result in results:
             if isinstance(result, Exception):
@@ -212,7 +206,6 @@ class PipelineMainFile(PipelineMainBase):
             transcript=transcript_result, diarization=diarization_result or []
         )
 
-        # Store result for retrieval
         diarized_transcript: Transcript | None = None
 
         async def capture_result(transcript):
@@ -349,7 +342,6 @@ async def task_pipeline_file_process(*, transcript_id: str):
     try:
         await pipeline.set_status(transcript_id, "processing")
 
-        # Find the file to process
         audio_file = next(transcript.data_path.glob("upload.*"), None)
         if not audio_file:
             audio_file = next(transcript.data_path.glob("audio.*"), None)

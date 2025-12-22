@@ -50,5 +50,5 @@ async def transcript_process(
     if isinstance(config, ProcessError):
         raise HTTPException(status_code=500, detail=config.detail)
     else:
-        dispatch_transcript_processing(config)
+        await dispatch_transcript_processing(config)
         return ProcessStatus(status="ok")

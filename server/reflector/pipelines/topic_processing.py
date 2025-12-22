@@ -74,13 +74,24 @@ async def generate_title(
         logger.warning("No topics for title generation")
         return
 
+    logger.info(
+        "generate_title: creating TranscriptFinalTitleProcessor",
+        topic_count=len(topics),
+    )
     processor = TranscriptFinalTitleProcessor(callback=on_title_callback)
     processor.set_pipeline(empty_pipeline)
 
-    for topic in topics:
+    for i, topic in enumerate(topics):
+        logger.info(
+            "generate_title: pushing topic to processor",
+            topic_index=i,
+            topic_title=topic.title[:50] if topic.title else None,
+        )
         await processor.push(topic)
 
+    logger.info("generate_title: calling processor.flush() - this triggers LLM call")
     await processor.flush()
+    logger.info("generate_title: processor.flush() completed")
 
 
 async def generate_summaries(
@@ -97,6 +108,10 @@ async def generate_summaries(
         logger.warning("No topics for summary generation")
         return
 
+    logger.info(
+        "generate_summaries: creating TranscriptFinalSummaryProcessor",
+        topic_count=len(topics),
+    )
     processor_kwargs = {
         "transcript": transcript,
         "callback": on_long_summary_callback,
@@ -107,7 +122,16 @@ async def generate_summaries(
     processor = TranscriptFinalSummaryProcessor(**processor_kwargs)
     processor.set_pipeline(empty_pipeline)
 
-    for topic in topics:
+    for i, topic in enumerate(topics):
+        logger.info(
+            "generate_summaries: pushing topic to processor",
+            topic_index=i,
+            topic_title=topic.title[:50] if topic.title else None,
+        )
         await processor.push(topic)
 
+    logger.info(
+        "generate_summaries: calling processor.flush() - this triggers LLM calls"
+    )
     await processor.flush()
+    logger.info("generate_summaries: processor.flush() completed")

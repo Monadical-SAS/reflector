@@ -24,6 +24,7 @@ from reflector.db.transcripts import (
     SourceKind,
     transcripts_controller,
 )
+from reflector.hatchet.client import HatchetClientManager
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.main_multitrack_pipeline import (
@@ -286,6 +287,45 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
+    # Start durable workflow if enabled (Hatchet) or room overrides it
+    durable_started = False
+    use_hatchet = settings.HATCHET_ENABLED or (room and room.use_hatchet)
+
+    if room and room.use_hatchet and not settings.HATCHET_ENABLED:
+        logger.info(
+            "Room forces Hatchet workflow",
+            room_id=room.id,
+            transcript_id=transcript.id,
+        )
+
+    if use_hatchet:
+        workflow_id = await HatchetClientManager.start_workflow(
+            workflow_name="DiarizationPipeline",
+            input_data={
+                "recording_id": recording_id,
+                "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
+                "bucket_name": bucket_name,
+                "transcript_id": transcript.id,
+                "room_id": room.id,
+            },
+            additional_metadata={
+                "transcript_id": transcript.id,
+                "recording_id": recording_id,
+                "daily_recording_id": recording_id,
+            },
+        )
+        logger.info(
+            "Started Hatchet workflow",
+            workflow_id=workflow_id,
+            transcript_id=transcript.id,
+        )
+
+        await transcripts_controller.update(
+            transcript, {"workflow_run_id": workflow_id}
+        )
+        return
+
+    # Celery pipeline (runs when durable workflows disabled)
     task_pipeline_multitrack_process.delay(
         transcript_id=transcript.id,
         bucket_name=bucket_name,
@@ -772,6 +812,11 @@ async def reprocess_failed_daily_recordings():
                 )
                 continue
 
+            # Fetch room to check use_hatchet flag
+            room = None
+            if meeting.room_id:
+                room = await rooms_controller.get_by_id(meeting.room_id)
+
             transcript = None
             try:
                 transcript = await transcripts_controller.get_by_recording_id(
@@ -791,20 +836,62 @@ async def reprocess_failed_daily_recordings():
                 )
                 continue
 
-            logger.info(
-                "Queueing Daily recording for reprocessing",
-                recording_id=recording.id,
-                room_name=meeting.room_name,
-                track_count=len(recording.track_keys),
-                transcript_status=transcript.status if transcript else None,
-            )
+            use_hatchet = settings.HATCHET_ENABLED or (room and room.use_hatchet)
 
-            process_multitrack_recording.delay(
-                bucket_name=bucket_name,
-                daily_room_name=meeting.room_name,
-                recording_id=recording.id,
-                track_keys=recording.track_keys,
-            )
+            if use_hatchet:
+                # Hatchet requires a transcript for workflow_run_id tracking
+                if not transcript:
+                    logger.warning(
+                        "No transcript for Hatchet reprocessing, skipping",
+                        recording_id=recording.id,
+                    )
+                    continue
+
+                workflow_id = await HatchetClientManager.start_workflow(
+                    workflow_name="DiarizationPipeline",
+                    input_data={
+                        "recording_id": recording.id,
+                        "tracks": [
+                            {"s3_key": k}
+                            for k in filter_cam_audio_tracks(recording.track_keys)
+                        ],
+                        "bucket_name": bucket_name,
+                        "transcript_id": transcript.id,
+                        "room_id": room.id if room else None,
+                    },
+                    additional_metadata={
+                        "transcript_id": transcript.id,
+                        "recording_id": recording.id,
+                        "reprocess": True,
+                    },
+                )
+                await transcripts_controller.update(
+                    transcript, {"workflow_run_id": workflow_id}
+                )
+
+                logger.info(
+                    "Queued Daily recording for Hatchet reprocessing",
+                    recording_id=recording.id,
+                    workflow_id=workflow_id,
+                    room_name=meeting.room_name,
+                    track_count=len(recording.track_keys),
+                )
+            else:
+                logger.info(
+                    "Queueing Daily recording for Celery reprocessing",
+                    recording_id=recording.id,
+                    room_name=meeting.room_name,
+                    track_count=len(recording.track_keys),
+                    transcript_status=transcript.status if transcript else None,
+                )
+
+                process_multitrack_recording.delay(
+                    bucket_name=bucket_name,
+                    daily_room_name=meeting.room_name,
+                    recording_id=recording.id,
+                    track_keys=recording.track_keys,
+                )
+
             reprocessed_count += 1
 
     except Exception as e:

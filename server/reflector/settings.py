@@ -153,5 +153,19 @@ class Settings(BaseSettings):
     ZULIP_API_KEY: str | None = None
     ZULIP_BOT_EMAIL: str | None = None
 
+    # Durable workflow orchestration
+    # Provider: "hatchet" (or "none" to disable)
+    DURABLE_WORKFLOW_PROVIDER: str = "none"
+
+    # Hatchet workflow orchestration
+    HATCHET_CLIENT_TOKEN: str | None = None
+    HATCHET_CLIENT_TLS_STRATEGY: str = "none"  # none, tls, mtls
+    HATCHET_DEBUG: bool = False
+
+    @property
+    def HATCHET_ENABLED(self) -> bool:
+        """True if Hatchet is the active provider."""
+        return self.DURABLE_WORKFLOW_PROVIDER == "hatchet"
+
 
 settings = Settings()

@@ -527,6 +527,22 @@ def fake_mp3_upload():
         yield
 
 
+@pytest.fixture(autouse=True)
+def reset_hatchet_client():
+    """Reset HatchetClientManager singleton before and after each test.
+
+    This ensures test isolation - each test starts with a fresh client state.
+    The fixture is autouse=True so it applies to all tests automatically.
+    """
+    from reflector.hatchet.client import HatchetClientManager
+
+    # Reset before test
+    HatchetClientManager.reset()
+    yield
+    # Reset after test to clean up
+    HatchetClientManager.reset()
+
+
 @pytest.fixture
 async def fake_transcript_with_topics(tmpdir, client):
     import shutil

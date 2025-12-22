@@ -3,7 +3,8 @@ from urllib.parse import urlparse
 
 import httpx
 
-from reflector.db.transcripts import Transcript
+from reflector.db.rooms import rooms_controller
+from reflector.db.transcripts import Transcript, transcripts_controller
 from reflector.settings import settings
 
 
@@ -111,6 +112,49 @@ def get_zulip_message(transcript: Transcript, include_topics: bool):
 
     message = header_text + summary + topic_text + "-----\n"
     return message
+
+
+async def post_transcript_notification(transcript: Transcript) -> int | None:
+    """Post or update transcript notification in Zulip.
+
+    Uses transcript.room_id directly (Hatchet flow).
+    Celery's pipeline_post_to_zulip uses recording→meeting→room path instead.
+    DUPLICATION NOTE: This function will stay when we use Celery no more, and Celery one will be removed.
+    """
+    if not transcript.room_id:
+        return None
+
+    room = await rooms_controller.get_by_id(transcript.room_id)
+    if not room or not room.zulip_stream or not room.zulip_auto_post:
+        return None
+
+    message = get_zulip_message(transcript=transcript, include_topics=True)
+    message_updated = False
+
+    if transcript.zulip_message_id:
+        try:
+            await update_zulip_message(
+                transcript.zulip_message_id,
+                room.zulip_stream,
+                room.zulip_topic,
+                message,
+            )
+            message_updated = True
+        except Exception:
+            pass
+
+    if not message_updated:
+        response = await send_message_to_zulip(
+            room.zulip_stream, room.zulip_topic, message
+        )
+        message_id = response.get("id")
+        if message_id:
+            await transcripts_controller.update(
+                transcript, {"zulip_message_id": message_id}
+            )
+        return message_id
+
+    return transcript.zulip_message_id
 
 
 def extract_domain(url: str) -> str:

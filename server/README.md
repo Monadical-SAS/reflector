@@ -53,6 +53,36 @@ response = sqs.receive_message(QueueUrl=queue_url, ...)
 uv run /app/requeue_uploaded_file.py TRANSCRIPT_ID
 ```
 
+## Hatchet Setup (Fresh DB)
+
+After resetting the Hatchet database:
+
+### Option A: Automatic (CLI)
+
+```bash
+# Get default tenant ID and create token in one command
+TENANT_ID=$(docker compose exec -T postgres psql -U reflector -d hatchet -t -c \
+  "SELECT id FROM \"Tenant\" WHERE slug = 'default';" | tr -d ' \n') && \
+TOKEN=$(docker compose exec -T hatchet /hatchet-admin token create \
+  --config /config --tenant-id "$TENANT_ID" 2>/dev/null | tr -d '\n') && \
+echo "HATCHET_CLIENT_TOKEN=$TOKEN"
+```
+
+Copy the output to `server/.env`.
+
+### Option B: Manual (UI)
+
+1. Create API token at http://localhost:8889 → Settings → API Tokens
+2. Update `server/.env`: `HATCHET_CLIENT_TOKEN=<new-token>`
+
+### Then restart workers
+
+```bash
+docker compose restart server hatchet-worker
+```
+
+Workflows register automatically when hatchet-worker starts.
+
 ## Pipeline Management
 
 ### Continue stuck pipeline from final summaries (identify_participants) step:
