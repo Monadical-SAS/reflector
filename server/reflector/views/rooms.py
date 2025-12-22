@@ -44,6 +44,7 @@ class Room(BaseModel):
     ics_last_sync: Optional[datetime] = None
     ics_last_etag: Optional[str] = None
     platform: Platform
+    skip_consent: bool = False
 
 
 class RoomDetails(Room):
@@ -90,6 +91,7 @@ class CreateRoom(BaseModel):
     ics_fetch_interval: int = 300
     ics_enabled: bool = False
     platform: Platform
+    skip_consent: bool = False
 
 
 class UpdateRoom(BaseModel):
@@ -108,6 +110,7 @@ class UpdateRoom(BaseModel):
     ics_fetch_interval: Optional[int] = None
     ics_enabled: Optional[bool] = None
     platform: Optional[Platform] = None
+    skip_consent: Optional[bool] = None
 
 
 class CreateRoomMeeting(BaseModel):
@@ -249,6 +252,7 @@ async def rooms_create(
         ics_fetch_interval=room.ics_fetch_interval,
         ics_enabled=room.ics_enabled,
         platform=room.platform,
+        skip_consent=room.skip_consent,
     )
 
 
@@ -567,6 +571,13 @@ async def rooms_join_meeting(
 
     if meeting.platform == "daily" and user_id is not None:
         client = create_platform_client(meeting.platform)
+        # Show Daily's built-in recording UI when:
+        # - local recording (user controls when to record), OR
+        # - cloud recording with consent disabled (skip_consent=True)
+        # Hide it when cloud recording with consent enabled (we show custom consent UI)
+        enable_recording_ui = meeting.recording_type == "local" or (
+            meeting.recording_type == "cloud" and room.skip_consent
+        )
         end_date = meeting.end_date
         if end_date.tzinfo is None:
             end_date = end_date.replace(tzinfo=timezone.utc)
@@ -576,7 +587,7 @@ async def rooms_join_meeting(
         token = await client.create_meeting_token(
             meeting.room_name,
             start_cloud_recording=meeting.recording_type == "cloud",
-            enable_recording_ui=meeting.recording_type == "local",
+            enable_recording_ui=enable_recording_ui,
             user_id=user_id,
             is_owner=user_id == room.user_id,
             max_recording_duration_seconds=remaining_seconds,

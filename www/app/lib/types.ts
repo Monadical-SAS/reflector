@@ -1,6 +1,10 @@
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
-import { parseMaybeNonEmptyString } from "./utils";
+import {
+  assertExistsAndNonEmptyString,
+  NonEmptyString,
+  parseMaybeNonEmptyString,
+} from "./utils";
 
 export interface JWTWithAccessToken extends JWT {
   accessToken: string;
@@ -77,4 +81,11 @@ export const assertCustomSession = <T extends Session>(
 
 export type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
+};
+
+export type MeetingId = NonEmptyString & { __type: "MeetingId" };
+export const assertMeetingId = (s: string): MeetingId => {
+  const nes = assertExistsAndNonEmptyString(s);
+  // just cast for now
+  return nes as MeetingId;
 };
