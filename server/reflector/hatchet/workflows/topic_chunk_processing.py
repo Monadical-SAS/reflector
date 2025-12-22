@@ -6,7 +6,6 @@ Spawned dynamically by detect_topics via aio_run_many() for parallel processing.
 """
 
 from datetime import timedelta
-from typing import Any
 
 from hatchet_sdk import Context
 from pydantic import BaseModel
@@ -15,6 +14,7 @@ from reflector.hatchet.client import HatchetClientManager
 from reflector.hatchet.workflows.models import TopicChunkResult
 from reflector.logger import logger
 from reflector.processors.prompts import TOPIC_PROMPT
+from reflector.processors.types import Word
 
 
 class TopicChunkInput(BaseModel):
@@ -24,7 +24,7 @@ class TopicChunkInput(BaseModel):
     chunk_text: str
     timestamp: float
     duration: float
-    words: list[dict[str, Any]]
+    words: list[Word]
 
 
 hatchet = HatchetClientManager.get_client()

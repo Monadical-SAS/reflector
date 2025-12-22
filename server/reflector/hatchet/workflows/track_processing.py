@@ -197,23 +197,20 @@ async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackRe
         transcript = await transcribe_file_with_processor(audio_url, input.language)
 
         # Tag all words with speaker index
-        words = []
         for word in transcript.words:
-            word_dict = word.model_dump()
-            word_dict["speaker"] = input.track_index
-            words.append(word_dict)
+            word.speaker = input.track_index
 
         ctx.log(
-            f"transcribe_track complete: track {input.track_index}, {len(words)} words"
+            f"transcribe_track complete: track {input.track_index}, {len(transcript.words)} words"
         )
         logger.info(
             "[Hatchet] transcribe_track complete",
             track_index=input.track_index,
-            word_count=len(words),
+            word_count=len(transcript.words),
         )
 
         return TranscribeTrackResult(
-            words=words,
+            words=transcript.words,
             track_index=input.track_index,
         )
 

@@ -5,11 +5,18 @@ Provides static typing for all task outputs, enabling type checking
 and better IDE support.
 """
 
-from typing import Any
-
 from pydantic import BaseModel
 
+from reflector.processors.types import TitleSummary, Word
 from reflector.utils.string import NonEmptyString
+
+
+class ParticipantInfo(BaseModel):
+    """Participant info with speaker index for workflow result."""
+
+    participant_id: NonEmptyString
+    user_name: NonEmptyString
+    speaker: int
 
 
 class PadTrackResult(BaseModel):
@@ -26,7 +33,7 @@ class PadTrackResult(BaseModel):
 class TranscribeTrackResult(BaseModel):
     """Result from transcribe_track task."""
 
-    words: list[dict[str, Any]]
+    words: list[Word]
     track_index: int
 
 
@@ -41,7 +48,7 @@ class RecordingResult(BaseModel):
 class ParticipantsResult(BaseModel):
     """Result from get_participants task."""
 
-    participants: list[dict[str, Any]]
+    participants: list[ParticipantInfo]
     num_tracks: int
     source_language: NonEmptyString
     target_language: NonEmptyString
@@ -57,7 +64,7 @@ class PaddedTrackInfo(BaseModel):
 class ProcessTracksResult(BaseModel):
     """Result from process_tracks task."""
 
-    all_words: list[dict[str, Any]]
+    all_words: list[Word]
     padded_tracks: list[PaddedTrackInfo]  # S3 keys, not presigned URLs
     word_count: int
     num_tracks: int
@@ -87,13 +94,13 @@ class TopicChunkResult(BaseModel):
     summary: str
     timestamp: float
     duration: float
-    words: list[dict[str, Any]]
+    words: list[Word]
 
 
 class TopicsResult(BaseModel):
     """Result from detect_topics task."""
 
-    topics: list[dict[str, Any]]
+    topics: list[TitleSummary]
 
 
 class TitleResult(BaseModel):
@@ -123,7 +130,7 @@ class SubjectSummaryResult(BaseModel):
 class ProcessSubjectsResult(BaseModel):
     """Result from process_subjects fan-out task."""
 
-    subject_summaries: list[dict[str, Any]]  # List of SubjectSummaryResult dicts
+    subject_summaries: list[SubjectSummaryResult]
 
 
 class RecapResult(BaseModel):

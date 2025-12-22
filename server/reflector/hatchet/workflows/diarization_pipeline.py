@@ -34,14 +34,19 @@ from reflector.hatchet.workflows.models import (
     FinalizeResult,
     MixdownResult,
     PaddedTrackInfo,
+    PadTrackResult,
+    ParticipantInfo,
     ParticipantsResult,
     ProcessSubjectsResult,
     ProcessTracksResult,
     RecapResult,
     RecordingResult,
     SubjectsResult,
+    SubjectSummaryResult,
     TitleResult,
+    TopicChunkResult,
     TopicsResult,
+    TranscribeTrackResult,
     WaveformResult,
     WebhookResult,
     ZulipResult,
@@ -58,13 +63,8 @@ from reflector.hatchet.workflows.track_processing import TrackInput, track_workf
 from reflector.logger import logger
 from reflector.pipelines import topic_processing
 from reflector.processors import AudioFileWriterProcessor
-from reflector.processors.types import (
-    TitleSummary,
-    Word,
-)
-from reflector.processors.types import (
-    Transcript as TranscriptType,
-)
+from reflector.processors.types import TitleSummary, Word
+from reflector.processors.types import Transcript as TranscriptType
 from reflector.settings import settings
 from reflector.storage.storage_aws import AwsStorage
 from reflector.utils.audio_constants import (
@@ -285,7 +285,7 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
         track_keys = [t["s3_key"] for t in input.tracks]
         cam_audio_keys = filter_cam_audio_tracks(track_keys)
 
-        participants_list = []
+        participants_list: list[ParticipantInfo] = []
         for idx, key in enumerate(cam_audio_keys):
             try:
                 parsed = parse_daily_recording_filename(key)
@@ -307,11 +307,11 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
             )
             await transcripts_controller.upsert_participant(transcript, participant)
             participants_list.append(
-                {
-                    "participant_id": participant_id,
-                    "user_name": name,
-                    "speaker": idx,
-                }
+                ParticipantInfo(
+                    participant_id=participant_id,
+                    user_name=name,
+                    speaker=idx,
+                )
             )
 
         ctx.log(f"get_participants complete: {len(participants_list)} participants")
@@ -352,31 +352,30 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
 
     target_language = participants_result.target_language
 
-    track_words = []
+    track_words: list[list[Word]] = []
     padded_tracks = []
     created_padded_files = set()
 
     for result in results:
-        transcribe_result = result.get("transcribe_track", {})
-        track_words.append(transcribe_result.get("words", []))
+        transcribe_result = TranscribeTrackResult(**result["transcribe_track"])
+        track_words.append(transcribe_result.words)
 
-        pad_result = result.get("pad_track", {})
-        padded_key = pad_result.get("padded_key")
-        bucket_name = pad_result.get("bucket_name")
+        pad_result = PadTrackResult(**result["pad_track"])
 
         # Store S3 key info (not presigned URL) - consumer tasks presign on demand
-        if padded_key:
+        if pad_result.padded_key:
             padded_tracks.append(
-                PaddedTrackInfo(key=padded_key, bucket_name=bucket_name)
+                PaddedTrackInfo(
+                    key=pad_result.padded_key, bucket_name=pad_result.bucket_name
+                )
             )
 
-        track_index = pad_result.get("track_index")
-        if pad_result.get("size", 0) > 0 and track_index is not None:
-            storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{track_index}.webm"
+        if pad_result.size > 0:
+            storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{pad_result.track_index}.webm"
             created_padded_files.add(storage_path)
 
     all_words = [word for words in track_words for word in words]
-    all_words.sort(key=lambda w: w.get("start", 0))
+    all_words.sort(key=lambda w: w.start)
 
     ctx.log(
         f"process_tracks complete: {len(all_words)} words from {len(input.tracks)} tracks"
@@ -569,9 +568,9 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
 
         first_word = chunk_words[0]
         last_word = chunk_words[-1]
-        timestamp = first_word.get("start", 0)
-        duration = last_word.get("end", 0) - timestamp
-        chunk_text = " ".join(w.get("word", "") for w in chunk_words)
+        timestamp = first_word.start
+        duration = last_word.end - timestamp
+        chunk_text = " ".join(w.text for w in chunk_words)
 
         chunks.append(
             {
@@ -604,40 +603,37 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
 
     results = await topic_chunk_workflow.aio_run_many(bulk_runs)
 
-    topic_results = [
-        result.get("detect_chunk_topic", {})
+    topic_chunks = [
+        TopicChunkResult(**result["detect_chunk_topic"])
         for result in results
-        if result.get("detect_chunk_topic")
+        if "detect_chunk_topic" in result
     ]
 
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
 
-        for topic_data in topic_results:
+        for chunk in topic_chunks:
             topic = TranscriptTopic(
-                title=topic_data.get("title", ""),
-                summary=topic_data.get("summary", ""),
-                timestamp=topic_data.get("timestamp", 0),
-                transcript=" ".join(
-                    w.get("word", "") for w in topic_data.get("words", [])
-                ),
-                words=topic_data.get("words", []),
+                title=chunk.title,
+                summary=chunk.summary,
+                timestamp=chunk.timestamp,
+                transcript=" ".join(w.text for w in chunk.words),
+                words=[w.model_dump() for w in chunk.words],
             )
             await transcripts_controller.upsert_topic(transcript, topic)
             await append_event_and_broadcast(
                 input.transcript_id, transcript, "TOPIC", topic, logger=logger
             )
 
-    # Convert to TitleSummary format for downstream steps
     topics_list = [
-        {
-            "title": t.get("title", ""),
-            "summary": t.get("summary", ""),
-            "timestamp": t.get("timestamp", 0),
-            "duration": t.get("duration", 0),
-            "transcript": {"words": t.get("words", [])},
-        }
-        for t in topic_results
+        TitleSummary(
+            title=chunk.title,
+            summary=chunk.summary,
+            timestamp=chunk.timestamp,
+            duration=chunk.duration,
+            transcript=TranscriptType(words=chunk.words),
+        )
+        for chunk in topic_chunks
     ]
 
     ctx.log(f"detect_topics complete: found {len(topics_list)} topics")
@@ -662,8 +658,7 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
         transcripts_controller,
     )
 
-    topic_objects = [TitleSummary(**t) for t in topics]
-    ctx.log(f"generate_title: created {len(topic_objects)} TitleSummary objects")
+    ctx.log(f"generate_title: received {len(topics)} TitleSummary objects")
 
     empty_pipeline = topic_processing.EmptyPipeline(logger=logger)
     title_result = None
@@ -695,7 +690,7 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
 
         ctx.log("generate_title: calling topic_processing.generate_title (LLM call)...")
         await topic_processing.generate_title(
-            topic_objects,
+            topics,
             on_title_callback=on_title_callback,
             empty_pipeline=empty_pipeline,
             logger=logger,
@@ -735,8 +730,6 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
         SummaryBuilder,
     )
 
-    topic_objects = [TitleSummary(**t) for t in topics]
-
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
 
@@ -750,7 +743,7 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
             }
 
         text_lines = []
-        for topic in topic_objects:
+        for topic in topics:
             for segment in topic.transcript.as_segments():
                 name = speakermap.get(segment.speaker, f"Speaker {segment.speaker}")
                 text_lines.append(f"{name}: {segment.text}")
@@ -818,7 +811,9 @@ async def process_subjects(input: PipelineInput, ctx: Context) -> ProcessSubject
     results = await subject_workflow.aio_run_many(bulk_runs)
 
     subject_summaries = [
-        result.get("generate_detailed_summary", {}) for result in results
+        SubjectSummaryResult(**result["generate_detailed_summary"])
+        for result in results
+        if "generate_detailed_summary" in result
     ]
 
     ctx.log(f"process_subjects complete: {len(subject_summaries)} summaries")
@@ -858,7 +853,7 @@ async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
         return RecapResult(short_summary="", long_summary="")
 
     summaries = [
-        {"subject": s.get("subject", ""), "summary": s.get("paragraph_summary", "")}
+        {"subject": s.subject, "summary": s.paragraph_summary}
         for s in subject_summaries
     ]
 
@@ -963,7 +958,6 @@ async def identify_action_items(
 
     action_items_dict = action_items_response.model_dump()
 
-    # Save to database and broadcast
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
@@ -1035,8 +1029,7 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
         if transcript is None:
             raise ValueError(f"Transcript {input.transcript_id} not found in database")
 
-        word_objects = [Word(**w) for w in all_words]
-        merged_transcript = TranscriptType(words=word_objects, translation=None)
+        merged_transcript = TranscriptType(words=all_words, translation=None)
 
         await append_event_and_broadcast(
             input.transcript_id,
