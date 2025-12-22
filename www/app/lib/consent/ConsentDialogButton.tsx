@@ -9,16 +9,26 @@ import {
   CONSENT_BUTTON_Z_INDEX,
   CONSENT_DIALOG_TEXT,
 } from "./constants";
+import { MeetingId } from "../types";
+import type { components } from "../../reflector-api";
 
-interface ConsentDialogButtonProps {
-  meetingId: string;
-}
+type Meeting = components["schemas"]["Meeting"];
 
-export function ConsentDialogButton({ meetingId }: ConsentDialogButtonProps) {
-  const { showConsentModal, consentState, hasConsent, consentLoading } =
-    useConsentDialog(meetingId);
+type ConsentDialogButtonProps = {
+  meetingId: MeetingId;
+  recordingType: Meeting["recording_type"];
+  skipConsent: boolean;
+};
 
-  if (!consentState.ready || hasConsent(meetingId) || consentLoading) {
+export function ConsentDialogButton({
+  meetingId,
+  recordingType,
+  skipConsent,
+}: ConsentDialogButtonProps) {
+  const { showConsentModal, consentState, showConsentButton, consentLoading } =
+    useConsentDialog({ meetingId, recordingType, skipConsent });
+
+  if (!consentState.ready || !showConsentButton || consentLoading) {
     return null;
   }
 

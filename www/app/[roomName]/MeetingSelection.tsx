@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { formatDateTime, formatStartedAgo } from "../lib/timeUtils";
 import MeetingMinimalHeader from "../components/MeetingMinimalHeader";
 import { NonEmptyString } from "../lib/utils";
+import { MeetingId } from "../lib/types";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -98,7 +99,7 @@ export default function MeetingSelection({
     onMeetingSelect(meeting);
   };
 
-  const handleEndMeeting = async (meetingId: string) => {
+  const handleEndMeeting = async (meetingId: MeetingId) => {
     try {
       await deactivateMeetingMutation.mutateAsync({
         params: {
