@@ -37,6 +37,8 @@ def main() -> None:
     from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
     from reflector.hatchet.workflows import (  # noqa: PLC0415
         diarization_pipeline,
+        subject_workflow,
+        topic_chunk_workflow,
         track_workflow,
     )
 
@@ -44,7 +46,12 @@ def main() -> None:
 
     worker = hatchet.worker(
         "reflector-diarization-worker",
-        workflows=[diarization_pipeline, track_workflow],
+        workflows=[
+            diarization_pipeline,
+            subject_workflow,
+            topic_chunk_workflow,
+            track_workflow,
+        ],
     )
 
     def shutdown_handler(signum: int, frame) -> None:

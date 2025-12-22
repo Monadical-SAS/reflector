@@ -79,6 +79,17 @@ class WaveformResult(BaseModel):
     waveform_generated: bool
 
 
+class TopicChunkResult(BaseModel):
+    """Result from topic chunk child workflow."""
+
+    chunk_index: int
+    title: str
+    summary: str
+    timestamp: float
+    duration: float
+    words: list[dict[str, Any]]
+
+
 class TopicsResult(BaseModel):
     """Result from detect_topics task."""
 
@@ -91,12 +102,41 @@ class TitleResult(BaseModel):
     title: str | None
 
 
-class SummaryResult(BaseModel):
-    """Result from generate_summary task."""
+class SubjectsResult(BaseModel):
+    """Result from extract_subjects task."""
 
-    summary: str | None
-    short_summary: str | None
-    action_items: dict | None = None
+    subjects: list[str]
+    transcript_text: str  # Formatted transcript for LLM consumption
+    participant_names: list[str]
+    participant_name_to_id: dict[str, str]
+
+
+class SubjectSummaryResult(BaseModel):
+    """Result from subject summary child workflow."""
+
+    subject: str
+    subject_index: int
+    detailed_summary: str
+    paragraph_summary: str
+
+
+class ProcessSubjectsResult(BaseModel):
+    """Result from process_subjects fan-out task."""
+
+    subject_summaries: list[dict[str, Any]]  # List of SubjectSummaryResult dicts
+
+
+class RecapResult(BaseModel):
+    """Result from generate_recap task."""
+
+    short_summary: str  # Recap paragraph
+    long_summary: str  # Full markdown summary
+
+
+class ActionItemsResult(BaseModel):
+    """Result from identify_action_items task."""
+
+    action_items: dict  # ActionItemsResponse as dict (may have empty lists)
 
 
 class FinalizeResult(BaseModel):
