@@ -604,9 +604,7 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
     results = await topic_chunk_workflow.aio_run_many(bulk_runs)
 
     topic_chunks = [
-        TopicChunkResult(**result["detect_chunk_topic"])
-        for result in results
-        if "detect_chunk_topic" in result
+        TopicChunkResult(**result["detect_chunk_topic"]) for result in results
     ]
 
     async with fresh_db_connection():
@@ -813,7 +811,6 @@ async def process_subjects(input: PipelineInput, ctx: Context) -> ProcessSubject
     subject_summaries = [
         SubjectSummaryResult(**result["generate_detailed_summary"])
         for result in results
-        if "generate_detailed_summary" in result
     ]
 
     ctx.log(f"process_subjects complete: {len(subject_summaries)} summaries")
