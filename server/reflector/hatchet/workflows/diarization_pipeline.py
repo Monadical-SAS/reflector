@@ -558,8 +558,11 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
         TranscriptTopic,
         transcripts_controller,
     )
+    from reflector.utils.transcript_constants import (  # noqa: PLC0415
+        TOPIC_CHUNK_WORD_COUNT,
+    )
 
-    chunk_size = 300
+    chunk_size = TOPIC_CHUNK_WORD_COUNT
     chunks = []
     for i in range(0, len(words), chunk_size):
         chunk_words = words[i : i + chunk_size]
@@ -850,6 +853,7 @@ async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
     from reflector.processors.summary.prompts import (  # noqa: PLC0415
         RECAP_PROMPT,
         build_participant_instructions,
+        build_summary_markdown,
     )
 
     subject_summaries = process_result.subject_summaries
@@ -883,18 +887,7 @@ async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
     )
     short_summary = str(recap_response)
 
-    lines = []
-    lines.append("# Quick recap")
-    lines.append("")
-    lines.append(short_summary)
-    lines.append("")
-    lines.append("# Summary")
-    lines.append("")
-    for s in summaries:
-        lines.append(f"**{s['subject']}**")
-        lines.append(s["summary"])
-        lines.append("")
-    long_summary = "\n".join(lines)
+    long_summary = build_summary_markdown(short_summary, summaries)
 
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)

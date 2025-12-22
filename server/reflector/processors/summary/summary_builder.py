@@ -20,6 +20,7 @@ from reflector.processors.summary.prompts import (
     PARAGRAPH_SUMMARY_PROMPT,
     RECAP_PROMPT,
     build_participant_instructions,
+    build_summary_markdown,
 )
 from reflector.settings import settings
 
@@ -556,22 +557,7 @@ class SummaryBuilder:
     # ----------------------------------------------------------------------------
 
     def as_markdown(self) -> str:
-        lines: list[str] = []
-        if self.recap:
-            lines.append("# Quick recap")
-            lines.append("")
-            lines.append(self.recap)
-            lines.append("")
-
-        if self.summaries:
-            lines.append("# Summary")
-            lines.append("")
-            for summary in self.summaries:
-                lines.append(f"**{summary['subject']}**")
-                lines.append(summary["summary"])
-                lines.append("")
-
-        return "\n".join(lines)
+        return build_summary_markdown(self.recap, self.summaries)
 
     def format_list_md(self, data: list[str]) -> str:
         return "\n".join([f"- {item}" for item in data])

@@ -69,3 +69,23 @@ RECAP_PROMPT = dedent(
     As we already know it is a meeting, do not start with 'During the meeting' or equivalent.
     """
 ).strip()
+
+
+def build_summary_markdown(recap: str, summaries: list[dict[str, str]]) -> str:
+    """Build markdown summary from recap and subject summaries."""
+    lines: list[str] = []
+    if recap:
+        lines.append("# Quick recap")
+        lines.append("")
+        lines.append(recap)
+        lines.append("")
+
+    if summaries:
+        lines.append("# Summary")
+        lines.append("")
+        for summary in summaries:
+            lines.append(f"**{summary['subject']}**")
+            lines.append(summary["summary"])
+            lines.append("")
+
+    return "\n".join(lines)
