@@ -756,6 +756,7 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
                 p.name: p.id for p in transcript.participants if p.name and p.id
             }
 
+        # TODO: refactor SummaryBuilder methods into standalone functions
         llm = LLM(settings=settings)
         builder = SummaryBuilder(llm, logger=logger)
         builder.set_transcript(transcript_text)
@@ -937,6 +938,7 @@ async def identify_action_items(
         SummaryBuilder,
     )
 
+    # TODO: refactor SummaryBuilder methods into standalone functions
     llm = LLM(settings=settings)
     builder = SummaryBuilder(llm, logger=logger)
     builder.set_transcript(subjects_result.transcript_text)
