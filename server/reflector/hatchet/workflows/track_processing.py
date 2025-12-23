@@ -23,6 +23,7 @@ from hatchet_sdk import Context
 from pydantic import BaseModel
 
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.constants import TIMEOUT_AUDIO, TIMEOUT_HEAVY
 from reflector.hatchet.workflows.models import PadTrackResult, TranscribeTrackResult
 from reflector.logger import logger
 from reflector.utils.audio_constants import PRESIGNED_URL_EXPIRATION_SECONDS
@@ -47,7 +48,7 @@ hatchet = HatchetClientManager.get_client()
 track_workflow = hatchet.workflow(name="TrackProcessing", input_validator=TrackInput)
 
 
-@track_workflow.task(execution_timeout=timedelta(seconds=300), retries=3)
+@track_workflow.task(execution_timeout=timedelta(seconds=TIMEOUT_AUDIO), retries=3)
 async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
     """Pad single audio track with silence for alignment.
 
@@ -153,7 +154,7 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
 
 
 @track_workflow.task(
-    parents=[pad_track], execution_timeout=timedelta(seconds=600), retries=3
+    parents=[pad_track], execution_timeout=timedelta(seconds=TIMEOUT_HEAVY), retries=3
 )
 async def transcribe_track(input: TrackInput, ctx: Context) -> TranscribeTrackResult:
     """Transcribe audio track using GPU (Modal.com) or local Whisper."""

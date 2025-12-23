@@ -12,6 +12,9 @@ Usage:
 import signal
 import sys
 
+from hatchet_sdk.rate_limit import RateLimitDuration
+
+from reflector.hatchet.constants import LLM_RATE_LIMIT_KEY, LLM_RATE_LIMIT_PER_SECOND
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -44,8 +47,12 @@ def main() -> None:
 
     hatchet = HatchetClientManager.get_client()
 
+    hatchet.rate_limits.put(
+        LLM_RATE_LIMIT_KEY, LLM_RATE_LIMIT_PER_SECOND, RateLimitDuration.SECOND
+    )
+
     worker = hatchet.worker(
-        "reflector-diarization-worker",
+        "reflector-pipeline-worker",
         workflows=[
             diarization_pipeline,
             subject_workflow,

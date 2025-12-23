@@ -28,6 +28,13 @@ from reflector.hatchet.broadcast import (
     set_status_and_broadcast,
 )
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.constants import (
+    TIMEOUT_AUDIO,
+    TIMEOUT_HEAVY,
+    TIMEOUT_LONG,
+    TIMEOUT_MEDIUM,
+    TIMEOUT_SHORT,
+)
 from reflector.hatchet.workflows.models import (
     ActionItemsResult,
     ConsentResult,
@@ -184,7 +191,9 @@ def with_error_handling(step_name: str, set_error_status: bool = True) -> Callab
     return decorator
 
 
-@diarization_pipeline.task(execution_timeout=timedelta(seconds=60), retries=3)
+@diarization_pipeline.task(
+    execution_timeout=timedelta(seconds=TIMEOUT_SHORT), retries=3
+)
 @with_error_handling("get_recording")
 async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
     """Fetch recording metadata from Daily.co API."""
@@ -236,7 +245,9 @@ async def get_recording(input: PipelineInput, ctx: Context) -> RecordingResult:
 
 
 @diarization_pipeline.task(
-    parents=[get_recording], execution_timeout=timedelta(seconds=60), retries=3
+    parents=[get_recording],
+    execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
+    retries=3,
 )
 @with_error_handling("get_participants")
 async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsResult:
@@ -325,7 +336,9 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
 
 
 @diarization_pipeline.task(
-    parents=[get_participants], execution_timeout=timedelta(seconds=600), retries=3
+    parents=[get_participants],
+    execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
+    retries=3,
 )
 @with_error_handling("process_tracks")
 async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksResult:
@@ -392,7 +405,9 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
 
 
 @diarization_pipeline.task(
-    parents=[process_tracks], execution_timeout=timedelta(seconds=300), retries=3
+    parents=[process_tracks],
+    execution_timeout=timedelta(seconds=TIMEOUT_AUDIO),
+    retries=3,
 )
 @with_error_handling("mixdown_tracks")
 async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
@@ -473,7 +488,9 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
 
 @diarization_pipeline.task(
-    parents=[mixdown_tracks], execution_timeout=timedelta(seconds=120), retries=3
+    parents=[mixdown_tracks],
+    execution_timeout=timedelta(seconds=TIMEOUT_MEDIUM),
+    retries=3,
 )
 @with_error_handling("generate_waveform")
 async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResult:
@@ -539,7 +556,9 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
 
 
 @diarization_pipeline.task(
-    parents=[mixdown_tracks], execution_timeout=timedelta(seconds=600), retries=3
+    parents=[mixdown_tracks],
+    execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
+    retries=3,
 )
 @with_error_handling("detect_topics")
 async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
@@ -640,7 +659,9 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
 
 
 @diarization_pipeline.task(
-    parents=[detect_topics], execution_timeout=timedelta(seconds=600), retries=3
+    parents=[detect_topics],
+    execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
+    retries=3,
 )
 @with_error_handling("generate_title")
 async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
@@ -701,7 +722,9 @@ async def generate_title(input: PipelineInput, ctx: Context) -> TitleResult:
 
 
 @diarization_pipeline.task(
-    parents=[detect_topics], execution_timeout=timedelta(seconds=120), retries=3
+    parents=[detect_topics],
+    execution_timeout=timedelta(seconds=TIMEOUT_MEDIUM),
+    retries=3,
 )
 @with_error_handling("extract_subjects")
 async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult:
@@ -780,7 +803,9 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
 
 
 @diarization_pipeline.task(
-    parents=[extract_subjects], execution_timeout=timedelta(seconds=600), retries=3
+    parents=[extract_subjects],
+    execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
+    retries=3,
 )
 @with_error_handling("process_subjects")
 async def process_subjects(input: PipelineInput, ctx: Context) -> ProcessSubjectsResult:
@@ -820,7 +845,9 @@ async def process_subjects(input: PipelineInput, ctx: Context) -> ProcessSubject
 
 
 @diarization_pipeline.task(
-    parents=[process_subjects], execution_timeout=timedelta(seconds=120), retries=3
+    parents=[process_subjects],
+    execution_timeout=timedelta(seconds=TIMEOUT_MEDIUM),
+    retries=3,
 )
 @with_error_handling("generate_recap")
 async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
@@ -912,7 +939,9 @@ async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
 
 
 @diarization_pipeline.task(
-    parents=[extract_subjects], execution_timeout=timedelta(seconds=180), retries=3
+    parents=[extract_subjects],
+    execution_timeout=timedelta(seconds=TIMEOUT_LONG),
+    retries=3,
 )
 @with_error_handling("identify_action_items")
 async def identify_action_items(
@@ -982,7 +1011,7 @@ async def identify_action_items(
 
 @diarization_pipeline.task(
     parents=[generate_waveform, generate_title, generate_recap, identify_action_items],
-    execution_timeout=timedelta(seconds=60),
+    execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
     retries=3,
 )
 @with_error_handling("finalize")
@@ -1066,7 +1095,7 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
 
 
 @diarization_pipeline.task(
-    parents=[finalize], execution_timeout=timedelta(seconds=60), retries=3
+    parents=[finalize], execution_timeout=timedelta(seconds=TIMEOUT_SHORT), retries=3
 )
 @with_error_handling("cleanup_consent", set_error_status=False)
 async def cleanup_consent(input: PipelineInput, ctx: Context) -> ConsentResult:
@@ -1166,7 +1195,9 @@ async def cleanup_consent(input: PipelineInput, ctx: Context) -> ConsentResult:
 
 
 @diarization_pipeline.task(
-    parents=[cleanup_consent], execution_timeout=timedelta(seconds=60), retries=5
+    parents=[cleanup_consent],
+    execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
+    retries=5,
 )
 @with_error_handling("post_zulip", set_error_status=False)
 async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
@@ -1191,7 +1222,9 @@ async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
 
 
 @diarization_pipeline.task(
-    parents=[post_zulip], execution_timeout=timedelta(seconds=120), retries=30
+    parents=[post_zulip],
+    execution_timeout=timedelta(seconds=TIMEOUT_MEDIUM),
+    retries=30,
 )
 @with_error_handling("send_webhook", set_error_status=False)
 async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:

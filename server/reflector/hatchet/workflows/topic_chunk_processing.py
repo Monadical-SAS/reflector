@@ -8,9 +8,11 @@ Spawned dynamically by detect_topics via aio_run_many() for parallel processing.
 from datetime import timedelta
 
 from hatchet_sdk import Context
+from hatchet_sdk.rate_limit import RateLimit
 from pydantic import BaseModel
 
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.constants import LLM_RATE_LIMIT_KEY, TIMEOUT_SHORT
 from reflector.hatchet.workflows.models import TopicChunkResult
 from reflector.logger import logger
 from reflector.processors.prompts import TOPIC_PROMPT
@@ -34,7 +36,11 @@ topic_chunk_workflow = hatchet.workflow(
 )
 
 
-@topic_chunk_workflow.task(execution_timeout=timedelta(seconds=60), retries=3)
+@topic_chunk_workflow.task(
+    execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
+    retries=3,
+    rate_limits=[RateLimit(static_key=LLM_RATE_LIMIT_KEY, units=1)],
+)
 async def detect_chunk_topic(input: TopicChunkInput, ctx: Context) -> TopicChunkResult:
     """Detect topic for a single transcript chunk."""
     ctx.log(f"detect_chunk_topic: chunk {input.chunk_index}")
