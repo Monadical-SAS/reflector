@@ -7,7 +7,7 @@ Spawned dynamically by detect_topics via aio_run_many() for parallel processing.
 
 from datetime import timedelta
 
-from hatchet_sdk import ConcurrencyExpression, Context
+from hatchet_sdk import ConcurrencyExpression, ConcurrencyLimitStrategy, Context
 from hatchet_sdk.rate_limit import RateLimit
 from pydantic import BaseModel
 
@@ -37,6 +37,7 @@ topic_chunk_workflow = hatchet.workflow(
     concurrency=ConcurrencyExpression(
         expression="true",  # constant CEL expression = global limit
         max_runs=20,
+        limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
     ),
 )
 
