@@ -556,7 +556,7 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
 
 
 @diarization_pipeline.task(
-    parents=[mixdown_tracks],
+    parents=[process_tracks],
     execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
     retries=3,
 )
