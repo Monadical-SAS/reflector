@@ -57,7 +57,6 @@ async def send_transcript_webhook(
             log.info("No webhook URL configured for room, skipping")
             return
 
-        # Build payload using shared function
         payload = await build_transcript_webhook_payload(
             transcript_id=transcript_id,
             room_id=room_id,
