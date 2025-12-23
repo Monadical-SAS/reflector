@@ -1,4 +1,4 @@
-"""Webhook utilities and Pydantic models.
+"""Webhook utilities.
 
 Shared webhook functionality for both Hatchet and Celery pipelines.
 """
@@ -13,71 +13,31 @@ from pydantic import BaseModel
 
 from reflector.logger import logger
 from reflector.settings import settings
+from reflector.utils.webhook_outgoing_models import (
+    WebhookCalendarEventPayload,
+    WebhookParticipantPayload,
+    WebhookPayload,
+    WebhookRoomPayload,
+    WebhookTestPayload,
+    WebhookTopicPayload,
+    WebhookTranscriptPayload,
+)
 
-
-class WebhookTopicPayload(BaseModel):
-    title: str
-    summary: str
-    timestamp: float
-    duration: float | None
-    webvtt: str
-
-
-class WebhookParticipantPayload(BaseModel):
-    id: str
-    name: str | None
-    speaker: int | None
-
-
-class WebhookRoomPayload(BaseModel):
-    id: str
-    name: str
-
-
-class WebhookCalendarEventPayload(BaseModel):
-    id: str
-    ics_uid: str | None = None
-    title: str | None = None
-    start_time: datetime | None = None
-    end_time: datetime | None = None
-    description: str | None = None
-    location: str | None = None
-    attendees: list[str] | None = None
-
-
-class WebhookTranscriptPayload(BaseModel):
-    id: str
-    room_id: str | None
-    created_at: datetime
-    duration: float | None
-    title: str | None
-    short_summary: str | None
-    long_summary: str | None
-    webvtt: str | None
-    topics: list[WebhookTopicPayload]
-    participants: list[WebhookParticipantPayload]
-    source_language: str
-    target_language: str
-    status: str
-    frontend_url: str
-    action_items: dict | None
-
-
-class WebhookPayload(BaseModel):
-    event: str
-    event_id: str
-    timestamp: datetime
-    transcript: WebhookTranscriptPayload
-    room: WebhookRoomPayload
-    calendar_event: WebhookCalendarEventPayload | None = None
-
-
-class WebhookTestPayload(BaseModel):
-    event: str = "test"
-    event_id: str
-    timestamp: datetime
-    message: str
-    room: WebhookRoomPayload
+__all__ = [
+    "WebhookCalendarEventPayload",
+    "WebhookParticipantPayload",
+    "WebhookPayload",
+    "WebhookRoomPayload",
+    "WebhookTestPayload",
+    "WebhookTopicPayload",
+    "WebhookTranscriptPayload",
+    "_serialize_payload",
+    "build_transcript_webhook_payload",
+    "build_test_webhook_payload",
+    "build_webhook_headers",
+    "generate_webhook_signature",
+    "send_webhook_request",
+]
 
 
 def _serialize_payload(payload: BaseModel) -> bytes:

@@ -4,7 +4,6 @@ Hatchet main workflow: DailyMultitrackPipeline
 Multitrack processing pipeline for Daily.co recordings.
 Orchestrates the full processing flow from recording metadata to final transcript.
 
-Note: This workflow was previously named DiarizationPipeline, which was misleading.
 Daily.co recordings don't require ML diarization - speaker identification comes from
 track index (each participant's audio is a separate track).
 
