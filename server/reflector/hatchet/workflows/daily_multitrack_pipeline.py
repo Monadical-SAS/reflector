@@ -108,7 +108,7 @@ class PipelineInput(BaseModel):
 hatchet = HatchetClientManager.get_client()
 
 daily_multitrack_pipeline = hatchet.workflow(
-    name="DailyMultitrackPipeline", input_validator=PipelineInput
+    name="DiarizationPipeline", input_validator=PipelineInput
 )
 
 
@@ -1225,9 +1225,9 @@ async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
 
 
 @daily_multitrack_pipeline.task(
-    parents=[post_zulip],
+    parents=[cleanup_consent],
     execution_timeout=timedelta(seconds=TIMEOUT_MEDIUM),
-    retries=30,
+    retries=5,
 )
 @with_error_handling("send_webhook", set_error_status=False)
 async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
