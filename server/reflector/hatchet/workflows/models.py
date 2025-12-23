@@ -5,11 +5,18 @@ Provides static typing for all task outputs, enabling type checking
 and better IDE support.
 """
 
-from typing import Any
-
 from pydantic import BaseModel
 
+from reflector.processors.types import TitleSummary, Word
 from reflector.utils.string import NonEmptyString
+
+
+class ParticipantInfo(BaseModel):
+    """Participant info with speaker index for workflow result."""
+
+    participant_id: NonEmptyString
+    user_name: NonEmptyString
+    speaker: int
 
 
 class PadTrackResult(BaseModel):
@@ -26,7 +33,7 @@ class PadTrackResult(BaseModel):
 class TranscribeTrackResult(BaseModel):
     """Result from transcribe_track task."""
 
-    words: list[dict[str, Any]]
+    words: list[Word]
     track_index: int
 
 
@@ -41,7 +48,7 @@ class RecordingResult(BaseModel):
 class ParticipantsResult(BaseModel):
     """Result from get_participants task."""
 
-    participants: list[dict[str, Any]]
+    participants: list[ParticipantInfo]
     num_tracks: int
     source_language: NonEmptyString
     target_language: NonEmptyString
@@ -57,7 +64,7 @@ class PaddedTrackInfo(BaseModel):
 class ProcessTracksResult(BaseModel):
     """Result from process_tracks task."""
 
-    all_words: list[dict[str, Any]]
+    all_words: list[Word]
     padded_tracks: list[PaddedTrackInfo]  # S3 keys, not presigned URLs
     word_count: int
     num_tracks: int
@@ -79,10 +86,21 @@ class WaveformResult(BaseModel):
     waveform_generated: bool
 
 
+class TopicChunkResult(BaseModel):
+    """Result from topic chunk child workflow."""
+
+    chunk_index: int
+    title: str
+    summary: str
+    timestamp: float
+    duration: float
+    words: list[Word]
+
+
 class TopicsResult(BaseModel):
     """Result from detect_topics task."""
 
-    topics: list[dict[str, Any]]
+    topics: list[TitleSummary]
 
 
 class TitleResult(BaseModel):
@@ -91,12 +109,41 @@ class TitleResult(BaseModel):
     title: str | None
 
 
-class SummaryResult(BaseModel):
-    """Result from generate_summary task."""
+class SubjectsResult(BaseModel):
+    """Result from extract_subjects task."""
 
-    summary: str | None
-    short_summary: str | None
-    action_items: dict | None = None
+    subjects: list[str]
+    transcript_text: str  # Formatted transcript for LLM consumption
+    participant_names: list[str]
+    participant_name_to_id: dict[str, str]
+
+
+class SubjectSummaryResult(BaseModel):
+    """Result from subject summary child workflow."""
+
+    subject: str
+    subject_index: int
+    detailed_summary: str
+    paragraph_summary: str
+
+
+class ProcessSubjectsResult(BaseModel):
+    """Result from process_subjects fan-out task."""
+
+    subject_summaries: list[SubjectSummaryResult]
+
+
+class RecapResult(BaseModel):
+    """Result from generate_recap task."""
+
+    short_summary: str  # Recap paragraph
+    long_summary: str  # Full markdown summary
+
+
+class ActionItemsResult(BaseModel):
+    """Result from identify_action_items task."""
+
+    action_items: dict  # ActionItemsResponse as dict (may have empty lists)
 
 
 class FinalizeResult(BaseModel):

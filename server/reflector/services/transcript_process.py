@@ -102,7 +102,8 @@ async def validate_transcript_for_processing(
     if transcript.locked:
         return ValidationLocked(detail="Recording is locked")
 
-    if transcript.status == "idle":
+    # hatchet is idempotent anyways + if it wasn't dispatched successfully
+    if transcript.status == "idle" and not settings.HATCHET_ENABLED:
         return ValidationNotReady(detail="Recording is not ready for processing")
 
     # Check Celery tasks
@@ -115,13 +116,11 @@ async def validate_transcript_for_processing(
     ):
         return ValidationAlreadyScheduled(detail="already running")
 
-    # Check Hatchet workflows (if enabled)
     if settings.HATCHET_ENABLED and transcript.workflow_run_id:
         try:
             status = await HatchetClientManager.get_workflow_run_status(
                 transcript.workflow_run_id
             )
-            # If workflow is running or queued, don't allow new processing
             if status in (V1TaskStatus.RUNNING, V1TaskStatus.QUEUED):
                 return ValidationAlreadyScheduled(
                     detail="Hatchet workflow already running"

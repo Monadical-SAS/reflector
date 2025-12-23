@@ -12,6 +12,9 @@ Usage:
 import signal
 import sys
 
+from hatchet_sdk.rate_limit import RateLimitDuration
+
+from reflector.hatchet.constants import LLM_RATE_LIMIT_KEY, LLM_RATE_LIMIT_PER_SECOND
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -37,14 +40,25 @@ def main() -> None:
     from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
     from reflector.hatchet.workflows import (  # noqa: PLC0415
         diarization_pipeline,
+        subject_workflow,
+        topic_chunk_workflow,
         track_workflow,
     )
 
     hatchet = HatchetClientManager.get_client()
 
+    hatchet.rate_limits.put(
+        LLM_RATE_LIMIT_KEY, LLM_RATE_LIMIT_PER_SECOND, RateLimitDuration.SECOND
+    )
+
     worker = hatchet.worker(
-        "reflector-diarization-worker",
-        workflows=[diarization_pipeline, track_workflow],
+        "reflector-pipeline-worker",
+        workflows=[
+            diarization_pipeline,
+            subject_workflow,
+            topic_chunk_workflow,
+            track_workflow,
+        ],
     )
 
     def shutdown_handler(signum: int, frame) -> None:
