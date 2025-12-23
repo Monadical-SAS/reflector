@@ -11,7 +11,10 @@ from reflector.processors.audio_chunker_auto import AudioChunkerAutoProcessor
 
 class AudioChunkerSileroProcessor(AudioChunkerProcessor):
     """
-    Assemble audio frames into chunks with VAD-based speech detection using Silero VAD
+    Assemble audio frames into chunks with VAD-based speech detection using Silero VAD.
+
+    Expects input audio to be already downscaled to 16kHz mono s16 format
+    (handled by AudioDownscaleProcessor in the pipeline).
     """
 
     def __init__(
@@ -31,12 +34,13 @@ class AudioChunkerSileroProcessor(AudioChunkerProcessor):
         self._init_vad(use_onnx)
 
     def _init_vad(self, use_onnx=False):
-        """Initialize Silero VAD model"""
+        """Initialize Silero VAD model for 16kHz audio"""
         try:
             torch.set_num_threads(1)
             self.vad_model = load_silero_vad(onnx=use_onnx)
+            # VAD expects 16kHz audio (guaranteed by AudioDownscaleProcessor)
             self.vad_iterator = VADIterator(self.vad_model, sampling_rate=16000)
-            self.logger.info("Silero VAD initialized successfully")
+            self.logger.info("Silero VAD initialized for 16kHz audio")
 
         except Exception as e:
             self.logger.error(f"Failed to initialize Silero VAD: {e}")
@@ -75,7 +79,7 @@ class AudioChunkerSileroProcessor(AudioChunkerProcessor):
             return None
 
         # Processing block with current buffer size
-        print(f"Processing block: {len(self.frames)} frames in buffer")
+        # print(f"Processing block: {len(self.frames)} frames in buffer")
 
         try:
             # Convert frames to numpy array for VAD
@@ -189,38 +193,29 @@ class AudioChunkerSileroProcessor(AudioChunkerProcessor):
         return None
 
     def _frames_to_numpy(self, frames: list[av.AudioFrame]) -> Optional[np.ndarray]:
-        """Convert av.AudioFrame list to numpy array for VAD processing"""
+        """Convert av.AudioFrame list to numpy array for VAD processing
+
+        Input frames are already 16kHz mono s16 format from AudioDownscaleProcessor.
+        Only need to convert s16 to float32 for Silero VAD.
+        """
         if not frames:
             return None
 
         try:
-            audio_data = []
-            for frame in frames:
-                frame_array = frame.to_ndarray()
-
-                if len(frame_array.shape) == 2:
-                    frame_array = frame_array.flatten()
-
-                audio_data.append(frame_array)
-
-            if not audio_data:
+            # Concatenate all frame arrays
+            audio_arrays = [frame.to_ndarray().flatten() for frame in frames]
+            if not audio_arrays:
                 return None
 
-            combined_audio = np.concatenate(audio_data)
+            combined_audio = np.concatenate(audio_arrays)
 
-            # Ensure float32 format
-            if combined_audio.dtype == np.int16:
-                # Normalize int16 audio to float32 in range [-1.0, 1.0]
-                combined_audio = combined_audio.astype(np.float32) / 32768.0
-            elif combined_audio.dtype != np.float32:
-                combined_audio = combined_audio.astype(np.float32)
-
-            return combined_audio
+            # Convert s16 to float32 (Silero VAD requires float32 in range [-1.0, 1.0])
+            # Input is guaranteed to be s16 from AudioDownscaleProcessor
+            return combined_audio.astype(np.float32) / 32768.0
 
         except Exception as e:
             self.logger.error(f"Error converting frames to numpy: {e}")
-
-        return None
+            return None
 
     def _find_speech_segment_end(self, audio_array: np.ndarray) -> Optional[int]:
         """Find complete speech segments and return frame index at segment end"""
