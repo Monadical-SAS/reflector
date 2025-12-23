@@ -35,7 +35,7 @@ topic_chunk_workflow = hatchet.workflow(
     name="TopicChunkProcessing",
     input_validator=TopicChunkInput,
     concurrency=ConcurrencyExpression(
-        expression="true",  # constant CEL expression = global limit
+        expression="'global'",  # constant string = global limit across all runs
         max_runs=20,
         limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
     ),
