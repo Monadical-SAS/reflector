@@ -142,7 +142,6 @@ async def test_webhook(room_id: str) -> dict:
 
         payload_bytes = _serialize_payload(payload)
 
-        # Build headers with signature
         headers = build_webhook_headers(
             event_type="test",
             payload_bytes=payload_bytes,

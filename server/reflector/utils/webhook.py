@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from reflector.logger import logger
 from reflector.settings import settings
+from reflector.utils.string import NonEmptyString
 from reflector.utils.webhook_outgoing_models import (
     WebhookCalendarEventPayload,
     WebhookParticipantPayload,
@@ -100,8 +101,8 @@ async def send_webhook_request(
 
 
 async def build_transcript_webhook_payload(
-    transcript_id: str,
-    room_id: str,
+    transcript_id: NonEmptyString,
+    room_id: NonEmptyString,
 ) -> WebhookPayload | None:
     """Build webhook payload by fetching transcript and room data from database."""
     # Inline imports required: this utils module would create circular imports
@@ -195,7 +196,9 @@ async def build_transcript_webhook_payload(
     )
 
 
-async def build_test_webhook_payload(room_id: str) -> WebhookTestPayload | None:
+async def build_test_webhook_payload(
+    room_id: NonEmptyString,
+) -> WebhookTestPayload | None:
     """Build test webhook payload."""
     # Inline import: avoid circular dependency (utils -> db -> utils)
     from reflector.db.rooms import rooms_controller  # noqa: PLC0415
