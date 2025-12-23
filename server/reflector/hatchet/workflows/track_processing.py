@@ -4,10 +4,10 @@ Hatchet child workflow: TrackProcessing
 Handles individual audio track processing: padding and transcription.
 Spawned dynamically by the main diarization pipeline for each track.
 
-Architecture note: This is a separate workflow (not inline tasks in DiarizationPipeline)
+Architecture note: This is a separate workflow (not inline tasks in DailyMultitrackPipeline)
 because Hatchet workflow DAGs are defined statically, but the number of tracks varies
 at runtime. Child workflow spawning via `aio_run()` + `asyncio.gather()` is the
-standard pattern for dynamic fan-out. See `process_tracks` in diarization_pipeline.py.
+standard pattern for dynamic fan-out. See `process_tracks` in daily_multitrack_pipeline.py.
 
 Note: This file uses deferred imports (inside tasks) intentionally.
 Hatchet workers run in forked processes; fresh imports per task ensure

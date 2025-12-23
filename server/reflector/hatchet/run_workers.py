@@ -1,5 +1,5 @@
 """
-Run Hatchet workers for the diarization pipeline.
+Run Hatchet workers for processing pipelines.
 Runs as a separate process, just like Celery workers.
 
 Usage:
@@ -39,7 +39,7 @@ def main() -> None:
     # Can't use lazy init: decorators need the client object when function is defined.
     from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
     from reflector.hatchet.workflows import (  # noqa: PLC0415
-        diarization_pipeline,
+        daily_multitrack_pipeline,
         subject_workflow,
         topic_chunk_workflow,
         track_workflow,
@@ -54,7 +54,7 @@ def main() -> None:
     worker = hatchet.worker(
         "reflector-pipeline-worker",
         workflows=[
-            diarization_pipeline,
+            daily_multitrack_pipeline,
             subject_workflow,
             topic_chunk_workflow,
             track_workflow,

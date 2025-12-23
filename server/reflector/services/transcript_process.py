@@ -258,7 +258,7 @@ async def dispatch_transcript_processing(
                     pass
 
             workflow_id = await HatchetClientManager.start_workflow(
-                workflow_name="DiarizationPipeline",
+                workflow_name="DailyMultitrackPipeline",
                 input_data={
                     "recording_id": config.recording_id,
                     "tracks": [{"s3_key": k} for k in config.track_keys],
