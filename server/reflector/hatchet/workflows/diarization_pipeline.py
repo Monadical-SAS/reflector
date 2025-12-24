@@ -415,7 +415,19 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
     ctx.log("mixdown_tracks: mixing padded tracks into single audio file")
 
     track_result = ctx.task_output(process_tracks)
+    recording_result = ctx.task_output(get_recording)
     padded_tracks = track_result.padded_tracks
+
+    # Dynamic timeout: scales with track count and recording duration
+    # Base 300s + 60s per track + 1s per 10s of recording
+    track_count = len(padded_tracks) if padded_tracks else 0
+    recording_duration = recording_result.duration or 0
+    timeout_estimate = 300 + (track_count * 60) + int(recording_duration / 10)
+    ctx.refresh_timeout(f"{timeout_estimate}s")
+    ctx.log(
+        f"mixdown_tracks: dynamic timeout set to {timeout_estimate}s "
+        f"(tracks={track_count}, duration={recording_duration:.0f}s)"
+    )
 
     # TODO think of NonEmpty type to avoid those checks, e.g. sized.NonEmpty from https://github.com/antonagestam/phantom-types/
     if not padded_tracks:
