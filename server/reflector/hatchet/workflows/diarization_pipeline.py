@@ -13,6 +13,7 @@ import asyncio
 import functools
 import json
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -464,12 +465,28 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     writer = AudioFileWriterProcessor(path=output_path, on_duration=capture_duration)
 
+    # Progress tracking with time-based logging (every 5 seconds)
+    mixdown_start_time = time.monotonic()
+    last_log_time = [mixdown_start_time]
+    current_progress = [0.0]
+
+    def progress_callback(progress_pct: float):
+        current_progress[0] = progress_pct
+        now = time.monotonic()
+        if now - last_log_time[0] >= 5.0:
+            elapsed = now - mixdown_start_time
+            ctx.log(
+                f"mixdown_tracks progress: {progress_pct:.1f}% (elapsed: {elapsed:.1f}s)"
+            )
+            last_log_time[0] = now
+
     await mixdown_tracks_pyav(
         valid_urls,
         writer,
         target_sample_rate,
         offsets_seconds=None,
         logger=logger,
+        progress_callback=progress_callback,
     )
     await writer.flush()
 
@@ -966,7 +983,11 @@ async def identify_action_items(
 
     if not subjects_result.transcript_text:
         ctx.log("identify_action_items: no transcript text, returning empty")
-        return ActionItemsResult(action_items={"decisions": [], "next_steps": []})
+        from reflector.processors.summary.summary_builder import (  # noqa: PLC0415
+            ActionItemsResponse,
+        )
+
+        return ActionItemsResult(action_items=ActionItemsResponse())
 
     # Deferred imports: Hatchet workers fork processes, fresh imports avoid
     # sharing DB connections and LLM HTTP pools across forks
@@ -996,11 +1017,11 @@ async def identify_action_items(
     if action_items_response is None:
         raise RuntimeError("Failed to identify action items - LLM call failed")
 
-    action_items_dict = action_items_response.model_dump()
-
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
+            # Serialize to dict for DB storage and WebSocket broadcast
+            action_items_dict = action_items_response.model_dump()
             action_items = TranscriptActionItems(action_items=action_items_dict)
             await transcripts_controller.update(
                 transcript, {"action_items": action_items.action_items}
@@ -1014,11 +1035,11 @@ async def identify_action_items(
             )
 
     ctx.log(
-        f"identify_action_items complete: {len(action_items_dict.get('decisions', []))} decisions, "
-        f"{len(action_items_dict.get('next_steps', []))} next steps"
+        f"identify_action_items complete: {len(action_items_response.decisions)} decisions, "
+        f"{len(action_items_response.next_steps)} next steps"
     )
 
-    return ActionItemsResult(action_items=action_items_dict)
+    return ActionItemsResult(action_items=action_items_response)
 
 
 @diarization_pipeline.task(

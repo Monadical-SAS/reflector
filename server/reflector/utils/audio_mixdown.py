@@ -43,6 +43,7 @@ async def mixdown_tracks_pyav(
     target_sample_rate: int,
     offsets_seconds: list[float] | None = None,
     logger=None,
+    progress_callback=None,
 ) -> None:
     """Multi-track mixdown using PyAV filter graph (amix).
 
@@ -57,6 +58,8 @@ async def mixdown_tracks_pyav(
             If provided, must have same length as track_urls. Delays are relative
             to the minimum offset (earliest track has delay=0).
         logger: Optional logger instance
+        progress_callback: Optional callback(progress_pct: float) called on progress updates.
+            Progress is 0-100 based on max frame time vs total duration.
 
     Raises:
         ValueError: If offsets_seconds length doesn't match track_urls,
@@ -171,6 +174,14 @@ async def mixdown_tracks_pyav(
                 logger.error("Mixdown failed - no valid containers opened")
             raise ValueError("Mixdown failed: Could not open any track containers")
 
+        # Calculate total duration for progress reporting
+        max_duration_sec = 0.0
+        for c in containers:
+            if c.duration is not None:
+                dur_sec = c.duration / av.time_base
+                max_duration_sec = max(max_duration_sec, dur_sec)
+        current_max_time = 0.0
+
         decoders = [c.decode(audio=0) for c in containers]
         active = [True] * len(decoders)
         resamplers = [
@@ -192,6 +203,16 @@ async def mixdown_tracks_pyav(
 
                 if frame.sample_rate != target_sample_rate:
                     continue
+
+                # Update progress based on frame timestamp
+                if progress_callback and frame.time is not None:
+                    current_max_time = max(current_max_time, frame.time)
+                    if max_duration_sec > 0:
+                        progress_pct = min(
+                            100.0, (current_max_time / max_duration_sec) * 100
+                        )
+                        progress_callback(progress_pct)
+
                 out_frames = resamplers[i].resample(frame) or []
                 for rf in out_frames:
                     rf.sample_rate = target_sample_rate
