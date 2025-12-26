@@ -81,7 +81,8 @@ async def set_status_and_broadcast(
 async def append_event_and_broadcast(
     transcript_id: NonEmptyString,
     transcript: Transcript,
-    event_name: str,
+    event_name: NonEmptyString,
+    # TODO proper dictionary event => type
     data: Any,
     logger: structlog.BoundLogger,
 ) -> TranscriptEvent:
