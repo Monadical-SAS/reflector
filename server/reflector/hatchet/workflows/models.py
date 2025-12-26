@@ -7,7 +7,7 @@ and better IDE support.
 
 from pydantic import BaseModel
 
-from reflector.processors.summary.summary_builder import ActionItemsResponse
+from reflector.processors.summary.models import ActionItemsResponse
 from reflector.processors.types import TitleSummary, Word
 from reflector.utils.string import NonEmptyString
 

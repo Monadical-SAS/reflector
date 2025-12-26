@@ -71,6 +71,13 @@ from reflector.hatchet.workflows.track_processing import TrackInput, track_workf
 from reflector.logger import logger
 from reflector.pipelines import topic_processing
 from reflector.processors import AudioFileWriterProcessor
+from reflector.processors.summary.models import ActionItemsResponse
+from reflector.processors.summary.prompts import (
+    RECAP_PROMPT,
+    build_participant_instructions,
+    build_summary_markdown,
+)
+from reflector.processors.summary.summary_builder import SummaryBuilder
 from reflector.processors.types import TitleSummary, Word
 from reflector.processors.types import Transcript as TranscriptType
 from reflector.settings import settings
@@ -475,7 +482,6 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     writer = AudioFileWriterProcessor(path=output_path, on_duration=capture_duration)
 
-    # Progress tracking with time-based logging (every 5 seconds)
     mixdown_start_time = time.monotonic()
     last_log_time = [mixdown_start_time]
     current_progress = [0.0]
@@ -790,9 +796,6 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
     # sharing DB connections and LLM HTTP pools across forks
     from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
     from reflector.llm import LLM  # noqa: PLC0415
-    from reflector.processors.summary.summary_builder import (  # noqa: PLC0415
-        SummaryBuilder,
-    )
 
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
@@ -908,11 +911,6 @@ async def generate_recap(input: PipelineInput, ctx: Context) -> RecapResult:
         transcripts_controller,
     )
     from reflector.llm import LLM  # noqa: PLC0415
-    from reflector.processors.summary.prompts import (  # noqa: PLC0415
-        RECAP_PROMPT,
-        build_participant_instructions,
-        build_summary_markdown,
-    )
 
     subject_summaries = process_result.subject_summaries
 
@@ -997,10 +995,6 @@ async def identify_action_items(
 
     if not subjects_result.transcript_text:
         ctx.log("identify_action_items: no transcript text, returning empty")
-        from reflector.processors.summary.summary_builder import (  # noqa: PLC0415
-            ActionItemsResponse,
-        )
-
         return ActionItemsResult(action_items=ActionItemsResponse())
 
     # Deferred imports: Hatchet workers fork processes, fresh imports avoid
@@ -1010,9 +1004,6 @@ async def identify_action_items(
         transcripts_controller,
     )
     from reflector.llm import LLM  # noqa: PLC0415
-    from reflector.processors.summary.summary_builder import (  # noqa: PLC0415
-        SummaryBuilder,
-    )
 
     # TODO: refactor SummaryBuilder methods into standalone functions
     llm = LLM(settings=settings)
