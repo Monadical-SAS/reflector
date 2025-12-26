@@ -36,11 +36,6 @@ async def send_transcript_webhook(
     room_id: str,
     event_id: str,
 ):
-    """Send webhook notification for completed transcript.
-
-    Uses shared Pydantic models and signature generation from utils/webhook.py
-    to ensure consistency with Hatchet pipeline.
-    """
     log = logger.bind(
         transcript_id=transcript_id,
         room_id=room_id,
