@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import uuid
 from datetime import datetime, timezone
+from typing import Union
 
 import httpx
 from pydantic import BaseModel
@@ -25,12 +26,18 @@ from reflector.utils.webhook_outgoing_models import (
 )
 
 __all__ = [
-    "build_transcript_webhook_payload",
-    "build_test_webhook_payload",
+    "fetch_transcript_webhook_payload",
+    "fetch_test_webhook_payload",
     "build_webhook_headers",
     "generate_webhook_signature",
     "send_webhook_request",
 ]
+
+from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.meetings import meetings_controller
+from reflector.db.rooms import rooms_controller
+from reflector.db.transcripts import transcripts_controller
+from reflector.utils.webvtt import topics_to_webvtt
 
 
 def _serialize_payload(payload: BaseModel) -> bytes:
@@ -100,27 +107,19 @@ async def send_webhook_request(
         return response
 
 
-async def build_transcript_webhook_payload(
+async def fetch_transcript_webhook_payload(
     transcript_id: NonEmptyString,
     room_id: NonEmptyString,
-) -> WebhookPayload | None:
+) -> Union[WebhookPayload, str]:
     """Build webhook payload by fetching transcript and room data from database."""
-    # Inline imports required: this utils module would create circular imports
-    # if db modules were imported at top level (utils -> db -> ... -> utils).
-    # This pattern is consistent with Hatchet task files.
-    from reflector.db.calendar_events import calendar_events_controller  # noqa: PLC0415
-    from reflector.db.meetings import meetings_controller  # noqa: PLC0415
-    from reflector.db.rooms import rooms_controller  # noqa: PLC0415
-    from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
-    from reflector.utils.webvtt import topics_to_webvtt  # noqa: PLC0415
 
     transcript = await transcripts_controller.get_by_id(transcript_id)
     if not transcript:
-        return None
+        return f"Transcript {transcript_id} not found"
 
     room = await rooms_controller.get_by_id(room_id)
     if not room:
-        return None
+        return f"Room {room_id} not found"
 
     topics_data = [
         WebhookTopicPayload(
@@ -196,12 +195,10 @@ async def build_transcript_webhook_payload(
     )
 
 
-async def build_test_webhook_payload(
+async def fetch_test_webhook_payload(
     room_id: NonEmptyString,
 ) -> WebhookTestPayload | None:
     """Build test webhook payload."""
-    # Inline import: avoid circular dependency (utils -> db -> utils)
-    from reflector.db.rooms import rooms_controller  # noqa: PLC0415
 
     room = await rooms_controller.get_by_id(room_id)
     if not room:

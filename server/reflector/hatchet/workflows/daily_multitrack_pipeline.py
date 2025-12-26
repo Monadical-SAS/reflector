@@ -175,8 +175,6 @@ def _spawn_storage():
 
 
 class Loggable(Protocol):
-    """Protocol for objects with a log method."""
-
     def log(self, message: str) -> None: ...
 
 
@@ -1306,7 +1304,7 @@ async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
     async with fresh_db_connection():
         from reflector.db.rooms import rooms_controller  # noqa: PLC0415
         from reflector.utils.webhook import (  # noqa: PLC0415
-            build_transcript_webhook_payload,
+            fetch_transcript_webhook_payload,
             send_webhook_request,
         )
 
@@ -1315,13 +1313,13 @@ async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
             ctx.log("send_webhook skipped (no webhook_url configured)")
             return WebhookResult(webhook_sent=False, skipped=True)
 
-        payload = await build_transcript_webhook_payload(
+        payload = await fetch_transcript_webhook_payload(
             transcript_id=input.transcript_id,
             room_id=input.room_id,
         )
 
-        if not payload:
-            ctx.log("send_webhook skipped (could not build payload)")
+        if isinstance(payload, str):
+            ctx.log(f"send_webhook skipped (could not build payload): {payload}")
             return WebhookResult(webhook_sent=False, skipped=True)
 
         ctx.log(

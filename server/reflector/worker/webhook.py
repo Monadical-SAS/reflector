@@ -14,8 +14,8 @@ from reflector.utils.webhook import (
     WebhookRoomPayload,
     WebhookTestPayload,
     _serialize_payload,
-    build_transcript_webhook_payload,
     build_webhook_headers,
+    fetch_transcript_webhook_payload,
     send_webhook_request,
 )
 
@@ -57,13 +57,13 @@ async def send_transcript_webhook(
             log.info("No webhook URL configured for room, skipping")
             return
 
-        payload = await build_transcript_webhook_payload(
+        payload = await fetch_transcript_webhook_payload(
             transcript_id=transcript_id,
             room_id=room_id,
         )
 
-        if not payload:
-            log.error("Could not build webhook payload, skipping")
+        if isinstance(payload, str):
+            log.error(f"Could not build webhook payload, skipping: {payload}")
             return
 
         log.info(
