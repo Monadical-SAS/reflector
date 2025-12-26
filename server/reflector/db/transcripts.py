@@ -5,7 +5,7 @@ import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -180,7 +180,7 @@ class TranscriptDuration(BaseModel):
 
 
 class TranscriptWaveform(BaseModel):
-    waveform: list[float]
+    waveform: Sequence[float]
 
 
 class TranscriptEvent(BaseModel):

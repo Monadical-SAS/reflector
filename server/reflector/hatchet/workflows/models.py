@@ -43,7 +43,7 @@ class RecordingResult(BaseModel):
 
     id: NonEmptyString | None
     mtg_session_id: NonEmptyString | None
-    duration: float
+    duration: int | None
 
 
 class ParticipantsResult(BaseModel):
