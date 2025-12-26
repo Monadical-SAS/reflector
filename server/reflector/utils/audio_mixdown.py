@@ -43,6 +43,8 @@ async def mixdown_tracks_pyav(
     target_sample_rate: int,
     offsets_seconds: list[float] | None = None,
     logger=None,
+    progress_callback=None,
+    expected_duration_sec: float | None = None,
 ) -> None:
     """Multi-track mixdown using PyAV filter graph (amix).
 
@@ -57,6 +59,10 @@ async def mixdown_tracks_pyav(
             If provided, must have same length as track_urls. Delays are relative
             to the minimum offset (earliest track has delay=0).
         logger: Optional logger instance
+        progress_callback: Optional callback(progress_pct: float | None, audio_position: float)
+            called on progress updates. progress_pct is 0-100 if duration known, None otherwise.
+            audio_position is current position in seconds.
+        expected_duration_sec: Optional fallback duration if container metadata unavailable.
 
     Raises:
         ValueError: If offsets_seconds length doesn't match track_urls,
@@ -171,6 +177,17 @@ async def mixdown_tracks_pyav(
                 logger.error("Mixdown failed - no valid containers opened")
             raise ValueError("Mixdown failed: Could not open any track containers")
 
+        # Calculate total duration for progress reporting.
+        # Try container metadata first, fall back to expected_duration_sec if provided.
+        max_duration_sec = 0.0
+        for c in containers:
+            if c.duration is not None:
+                dur_sec = c.duration / av.time_base
+                max_duration_sec = max(max_duration_sec, dur_sec)
+        if max_duration_sec == 0.0 and expected_duration_sec:
+            max_duration_sec = expected_duration_sec
+        current_max_time = 0.0
+
         decoders = [c.decode(audio=0) for c in containers]
         active = [True] * len(decoders)
         resamplers = [
@@ -192,6 +209,18 @@ async def mixdown_tracks_pyav(
 
                 if frame.sample_rate != target_sample_rate:
                     continue
+
+                # Update progress based on frame timestamp
+                if progress_callback and frame.time is not None:
+                    current_max_time = max(current_max_time, frame.time)
+                    if max_duration_sec > 0:
+                        progress_pct = min(
+                            100.0, (current_max_time / max_duration_sec) * 100
+                        )
+                    else:
+                        progress_pct = None  # Duration unavailable
+                    progress_callback(progress_pct, current_max_time)
+
                 out_frames = resamplers[i].resample(frame) or []
                 for rf in out_frames:
                     rf.sample_rate = target_sample_rate

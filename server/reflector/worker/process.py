@@ -287,9 +287,7 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
-    # Start durable workflow if enabled (Hatchet) or room overrides it
-    durable_started = False
-    use_hatchet = settings.HATCHET_ENABLED or (room and room.use_hatchet)
+    use_hatchet = settings.HATCHET_ENABLED and room and room.use_hatchet
 
     if room and room.use_hatchet and not settings.HATCHET_ENABLED:
         logger.info(
@@ -836,7 +834,7 @@ async def reprocess_failed_daily_recordings():
                 )
                 continue
 
-            use_hatchet = settings.HATCHET_ENABLED or (room and room.use_hatchet)
+            use_hatchet = settings.HATCHET_ENABLED and room and room.use_hatchet
 
             if use_hatchet:
                 # Hatchet requires a transcript for workflow_run_id tracking
