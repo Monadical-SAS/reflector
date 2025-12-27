@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.27.0](https://github.com/Monadical-SAS/reflector/compare/v0.26.0...v0.27.0) (2025-12-26)
+
+
+### Features
+
+* devex/hatchet log progress track ([#813](https://github.com/Monadical-SAS/reflector/issues/813)) ([2d0df48](https://github.com/Monadical-SAS/reflector/commit/2d0df487674e5486208cd599e3338ebff8b6e470))
+
+
+### Bug Fixes
+
+* webhook parity, pipeline rename, waveform constant fix ([#806](https://github.com/Monadical-SAS/reflector/issues/806)) ([5f7b1ff](https://github.com/Monadical-SAS/reflector/commit/5f7b1ff1a68ebbb907684c7c5f55c1f82dac8550))
+
 ## [0.26.0](https://github.com/Monadical-SAS/reflector/compare/v0.25.0...v0.26.0) (2025-12-23)
 
 
