@@ -298,7 +298,7 @@ async def _process_multitrack_recording_inner(
 
     if use_hatchet:
         workflow_id = await HatchetClientManager.start_workflow(
-            workflow_name="DailyMultitrackPipeline",
+            workflow_name="DiarizationPipeline",
             input_data={
                 "recording_id": recording_id,
                 "tracks": [{"s3_key": k} for k in filter_cam_audio_tracks(track_keys)],
@@ -846,7 +846,7 @@ async def reprocess_failed_daily_recordings():
                     continue
 
                 workflow_id = await HatchetClientManager.start_workflow(
-                    workflow_name="DailyMultitrackPipeline",
+                    workflow_name="DiarizationPipeline",
                     input_data={
                         "recording_id": recording.id,
                         "tracks": [
