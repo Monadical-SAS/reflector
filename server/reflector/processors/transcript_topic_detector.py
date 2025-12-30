@@ -1,34 +1,11 @@
-from textwrap import dedent
-
 from pydantic import AliasChoices, BaseModel, Field
 
 from reflector.llm import LLM
 from reflector.processors.base import Processor
+from reflector.processors.prompts import TOPIC_PROMPT
 from reflector.processors.types import TitleSummary, Transcript
 from reflector.settings import settings
 from reflector.utils.text import clean_title
-
-TOPIC_PROMPT = dedent(
-    """
-    Analyze the following transcript segment and extract the main topic being discussed.
-    Focus on the substantive content and ignore small talk or administrative chatter.
-
-    Create a title that:
-    - Captures the specific subject matter being discussed
-    - Is descriptive and self-explanatory
-    - Uses professional language
-    - Is specific rather than generic
-
-    For the summary:
-    - Summarize the key points in maximum two sentences
-    - Focus on what was discussed, decided, or accomplished
-    - Be concise but informative
-
-    <transcript>
-    {text}
-    </transcript>
-    """
-).strip()
 
 
 class TopicResponse(BaseModel):

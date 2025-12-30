@@ -47,7 +47,7 @@ class DailyApiError(Exception):
         )
 
         super().__init__(
-            f"Daily.co API error: {operation} failed with status {self.status_code}"
+            f"Daily.co API error: {operation} failed with status {self.status_code}: {response.text}"
         )
 
 

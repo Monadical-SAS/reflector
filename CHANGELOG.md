@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.27.0](https://github.com/Monadical-SAS/reflector/compare/v0.26.0...v0.27.0) (2025-12-26)
+
+
+### Features
+
+* devex/hatchet log progress track ([#813](https://github.com/Monadical-SAS/reflector/issues/813)) ([2d0df48](https://github.com/Monadical-SAS/reflector/commit/2d0df487674e5486208cd599e3338ebff8b6e470))
+
+
+### Bug Fixes
+
+* webhook parity, pipeline rename, waveform constant fix ([#806](https://github.com/Monadical-SAS/reflector/issues/806)) ([5f7b1ff](https://github.com/Monadical-SAS/reflector/commit/5f7b1ff1a68ebbb907684c7c5f55c1f82dac8550))
+
+## [0.26.0](https://github.com/Monadical-SAS/reflector/compare/v0.25.0...v0.26.0) (2025-12-23)
+
+
+### Features
+
+* parallelize hatchet ([#804](https://github.com/Monadical-SAS/reflector/issues/804)) ([594bcc0](https://github.com/Monadical-SAS/reflector/commit/594bcc09e0ca744163de2f1525ebbf7c52a68448))
+
+## [0.25.0](https://github.com/Monadical-SAS/reflector/compare/v0.24.0...v0.25.0) (2025-12-22)
+
+
+### Features
+
+* consent disable feature ([#799](https://github.com/Monadical-SAS/reflector/issues/799)) ([2257834](https://github.com/Monadical-SAS/reflector/commit/225783496f2e265d5cb58e3539a20bf6b55589b8))
+* durable ([#794](https://github.com/Monadical-SAS/reflector/issues/794)) ([1dac999](https://github.com/Monadical-SAS/reflector/commit/1dac999b56997582ce400e7d56e915adc1e4728d))
+* increase daily recording max duration ([#801](https://github.com/Monadical-SAS/reflector/issues/801)) ([f580b99](https://github.com/Monadical-SAS/reflector/commit/f580b996eef49cce16433c505abfc6454dd45de1))
+
+
+### Bug Fixes
+
+* logout redirect ([#802](https://github.com/Monadical-SAS/reflector/issues/802)) ([f0ee7b5](https://github.com/Monadical-SAS/reflector/commit/f0ee7b531a0911f214ccbb84d399e9a6c9b700c0))
+
+## [0.24.0](https://github.com/Monadical-SAS/reflector/compare/v0.23.2...v0.24.0) (2025-12-18)
+
+
+### Features
+
+* identify action items ([#790](https://github.com/Monadical-SAS/reflector/issues/790)) ([964cd78](https://github.com/Monadical-SAS/reflector/commit/964cd78bb699d83d012ae4b8c96565df25b90a5d))
+
+
+### Bug Fixes
+
+* automatically reprocess daily recordings ([#797](https://github.com/Monadical-SAS/reflector/issues/797)) ([5f458aa](https://github.com/Monadical-SAS/reflector/commit/5f458aa4a7ec3d00ca5ec49d62fcc8ad232b138e))
+* daily video optimisation ([#789](https://github.com/Monadical-SAS/reflector/issues/789)) ([16284e1](https://github.com/Monadical-SAS/reflector/commit/16284e1ac3faede2b74f0d91b50c0b5612af2c35))
+* main menu login ([#800](https://github.com/Monadical-SAS/reflector/issues/800)) ([0bc971b](https://github.com/Monadical-SAS/reflector/commit/0bc971ba966a52d719c8c240b47dc7b3bdea4391))
+* retry on workflow timeout ([#798](https://github.com/Monadical-SAS/reflector/issues/798)) ([5f7dfad](https://github.com/Monadical-SAS/reflector/commit/5f7dfadabd3e8017406ad3720ba495a59963ee34))
+
 ## [0.23.2](https://github.com/Monadical-SAS/reflector/compare/v0.23.1...v0.23.2) (2025-12-11)
 
 

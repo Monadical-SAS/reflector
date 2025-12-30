@@ -5,7 +5,7 @@ import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -84,6 +84,8 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("audio_deleted", sqlalchemy.Boolean),
     sqlalchemy.Column("room_id", sqlalchemy.String),
     sqlalchemy.Column("webvtt", sqlalchemy.Text),
+    # Hatchet workflow run ID for resumption of failed workflows
+    sqlalchemy.Column("workflow_run_id", sqlalchemy.String),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
@@ -178,7 +180,7 @@ class TranscriptDuration(BaseModel):
 
 
 class TranscriptWaveform(BaseModel):
-    waveform: list[float]
+    waveform: Sequence[float]
 
 
 class TranscriptEvent(BaseModel):
@@ -223,6 +225,7 @@ class Transcript(BaseModel):
     zulip_message_id: int | None = None
     audio_deleted: bool | None = None
     webvtt: str | None = None
+    workflow_run_id: str | None = None  # Hatchet workflow run ID for resumption
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:

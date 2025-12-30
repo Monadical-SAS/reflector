@@ -7,9 +7,29 @@ import { useMeetingAudioConsent } from "../apiHooks";
 import { ConsentDialog } from "./ConsentDialog";
 import { TOAST_CHECK_INTERVAL_MS } from "./constants";
 import type { ConsentDialogResult } from "./types";
+import { MeetingId } from "../types";
+import { recordingTypeRequiresConsent } from "./utils";
+import type { components } from "../../reflector-api";
 
-export function useConsentDialog(meetingId: string): ConsentDialogResult {
-  const { state: consentState, touch, hasConsent } = useRecordingConsent();
+type Meeting = components["schemas"]["Meeting"];
+
+type UseConsentDialogParams = {
+  meetingId: MeetingId;
+  recordingType: Meeting["recording_type"];
+  skipConsent: boolean;
+};
+
+export function useConsentDialog({
+  meetingId,
+  recordingType,
+  skipConsent,
+}: UseConsentDialogParams): ConsentDialogResult {
+  const {
+    state: consentState,
+    touch,
+    hasAnswered,
+    hasAccepted,
+  } = useRecordingConsent();
   const [modalOpen, setModalOpen] = useState(false);
   const audioConsentMutation = useMeetingAudioConsent();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,7 +62,7 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
           },
         });
 
-        touch(meetingId);
+        touch(meetingId, given);
       } catch (error) {
         console.error("Error submitting consent:", error);
       }
@@ -100,10 +120,23 @@ export function useConsentDialog(meetingId: string): ConsentDialogResult {
     });
   }, [handleConsent, modalOpen]);
 
+  const requiresConsent = Boolean(
+    recordingType && recordingTypeRequiresConsent(recordingType),
+  );
+
+  const showRecordingIndicator =
+    requiresConsent && (skipConsent || hasAccepted(meetingId));
+
+  const showConsentButton =
+    requiresConsent && !skipConsent && !hasAnswered(meetingId);
+
   return {
     showConsentModal,
     consentState,
-    hasConsent,
+    hasAnswered,
+    hasAccepted,
     consentLoading: audioConsentMutation.isPending,
+    showRecordingIndicator,
+    showConsentButton,
   };
 }

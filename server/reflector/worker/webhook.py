@@ -1,8 +1,5 @@
 """Webhook task for sending transcript notifications."""
 
-import hashlib
-import hmac
-import json
 import uuid
 from datetime import datetime, timezone
 
@@ -11,26 +8,18 @@ import structlog
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
-from reflector.db.calendar_events import calendar_events_controller
-from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
-from reflector.db.transcripts import transcripts_controller
 from reflector.pipelines.main_live_pipeline import asynctask
-from reflector.settings import settings
-from reflector.utils.webvtt import topics_to_webvtt
+from reflector.utils.webhook import (
+    WebhookRoomPayload,
+    WebhookTestPayload,
+    _serialize_payload,
+    build_webhook_headers,
+    fetch_transcript_webhook_payload,
+    send_webhook_request,
+)
 
 logger = structlog.wrap_logger(get_task_logger(__name__))
-
-
-def generate_webhook_signature(payload: bytes, secret: str, timestamp: str) -> str:
-    """Generate HMAC signature for webhook payload."""
-    signed_payload = f"{timestamp}.{payload.decode('utf-8')}"
-    hmac_obj = hmac.new(
-        secret.encode("utf-8"),
-        signed_payload.encode("utf-8"),
-        hashlib.sha256,
-    )
-    return hmac_obj.hexdigest()
 
 
 @shared_task(
@@ -54,12 +43,6 @@ async def send_transcript_webhook(
     )
 
     try:
-        # Fetch transcript and room
-        transcript = await transcripts_controller.get_by_id(transcript_id)
-        if not transcript:
-            log.error("Transcript not found, skipping webhook")
-            return
-
         room = await rooms_controller.get_by_id(room_id)
         if not room:
             log.error("Room not found, skipping webhook")
@@ -69,135 +52,36 @@ async def send_transcript_webhook(
             log.info("No webhook URL configured for room, skipping")
             return
 
-        # Generate WebVTT content from topics
-        topics_data = []
+        payload = await fetch_transcript_webhook_payload(
+            transcript_id=transcript_id,
+            room_id=room_id,
+        )
 
-        if transcript.topics:
-            # Build topics data with diarized content per topic
-            for topic in transcript.topics:
-                topic_webvtt = topics_to_webvtt([topic]) if topic.words else ""
-                topics_data.append(
-                    {
-                        "title": topic.title,
-                        "summary": topic.summary,
-                        "timestamp": topic.timestamp,
-                        "duration": topic.duration,
-                        "webvtt": topic_webvtt,
-                    }
-                )
+        if isinstance(payload, str):
+            log.error(f"Could not build webhook payload, skipping: {payload}")
+            return
 
-        # Fetch meeting and calendar event if they exist
-        calendar_event = None
-        try:
-            if transcript.meeting_id:
-                meeting = await meetings_controller.get_by_id(transcript.meeting_id)
-                if meeting and meeting.calendar_event_id:
-                    calendar_event = await calendar_events_controller.get_by_id(
-                        meeting.calendar_event_id
-                    )
-        except Exception as e:
-            logger.error("Error fetching meeting or calendar event", error=str(e))
+        log.info(
+            "Sending webhook",
+            url=room.webhook_url,
+            topics=len(payload.transcript.topics),
+            participants=len(payload.transcript.participants),
+        )
 
-        # Build webhook payload
-        frontend_url = f"{settings.UI_BASE_URL}/transcripts/{transcript.id}"
-        participants = [
-            {"id": p.id, "name": p.name, "speaker": p.speaker}
-            for p in (transcript.participants or [])
-        ]
-        payload_data = {
-            "event": "transcript.completed",
-            "event_id": event_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "transcript": {
-                "id": transcript.id,
-                "room_id": transcript.room_id,
-                "created_at": transcript.created_at.isoformat(),
-                "duration": transcript.duration,
-                "title": transcript.title,
-                "short_summary": transcript.short_summary,
-                "long_summary": transcript.long_summary,
-                "webvtt": transcript.webvtt,
-                "topics": topics_data,
-                "participants": participants,
-                "source_language": transcript.source_language,
-                "target_language": transcript.target_language,
-                "status": transcript.status,
-                "frontend_url": frontend_url,
-                "action_items": transcript.action_items,
-            },
-            "room": {
-                "id": room.id,
-                "name": room.name,
-            },
-        }
+        response = await send_webhook_request(
+            url=room.webhook_url,
+            payload=payload,
+            event_type="transcript.completed",
+            webhook_secret=room.webhook_secret,
+            retry_count=self.request.retries,
+            timeout=30.0,
+        )
 
-        # Always include calendar_event field, even if no event is present
-        payload_data["calendar_event"] = {}
-
-        # Add calendar event data if present
-        if calendar_event:
-            calendar_data = {
-                "id": calendar_event.id,
-                "ics_uid": calendar_event.ics_uid,
-                "title": calendar_event.title,
-                "start_time": calendar_event.start_time.isoformat()
-                if calendar_event.start_time
-                else None,
-                "end_time": calendar_event.end_time.isoformat()
-                if calendar_event.end_time
-                else None,
-            }
-
-            # Add optional fields only if they exist
-            if calendar_event.description:
-                calendar_data["description"] = calendar_event.description
-            if calendar_event.location:
-                calendar_data["location"] = calendar_event.location
-            if calendar_event.attendees:
-                calendar_data["attendees"] = calendar_event.attendees
-
-            payload_data["calendar_event"] = calendar_data
-
-        # Convert to JSON
-        payload_json = json.dumps(payload_data, separators=(",", ":"))
-        payload_bytes = payload_json.encode("utf-8")
-
-        # Generate signature if secret is configured
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Reflector-Webhook/1.0",
-            "X-Webhook-Event": "transcript.completed",
-            "X-Webhook-Retry": str(self.request.retries),
-        }
-
-        if room.webhook_secret:
-            timestamp = str(int(datetime.now(timezone.utc).timestamp()))
-            signature = generate_webhook_signature(
-                payload_bytes, room.webhook_secret, timestamp
-            )
-            headers["X-Webhook-Signature"] = f"t={timestamp},v1={signature}"
-
-        # Send webhook with timeout
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            log.info(
-                "Sending webhook",
-                url=room.webhook_url,
-                payload_size=len(payload_bytes),
-            )
-
-            response = await client.post(
-                room.webhook_url,
-                content=payload_bytes,
-                headers=headers,
-            )
-
-            response.raise_for_status()
-
-            log.info(
-                "Webhook sent successfully",
-                status_code=response.status_code,
-                response_size=len(response.content),
-            )
+        log.info(
+            "Webhook sent successfully",
+            status_code=response.status_code,
+            response_size=len(response.content),
+        )
 
     except httpx.HTTPStatusError as e:
         log.error(
@@ -226,8 +110,8 @@ async def send_transcript_webhook(
 
 
 async def test_webhook(room_id: str) -> dict:
-    """
-    Test webhook configuration by sending a sample payload.
+    """Test webhook configuration by sending a sample payload.
+
     Returns immediately with success/failure status.
     This is the shared implementation used by both the API endpoint and Celery task.
     """
@@ -239,34 +123,24 @@ async def test_webhook(room_id: str) -> dict:
         if not room.webhook_url:
             return {"success": False, "error": "No webhook URL configured"}
 
-        now = (datetime.now(timezone.utc).isoformat(),)
-        payload_data = {
-            "event": "test",
-            "event_id": uuid.uuid4().hex,
-            "timestamp": now,
-            "message": "This is a test webhook from Reflector",
-            "room": {
-                "id": room.id,
-                "name": room.name,
-            },
-        }
+        payload = WebhookTestPayload(
+            event="test",
+            event_id=uuid.uuid4().hex,
+            timestamp=datetime.now(timezone.utc),
+            message="This is a test webhook from Reflector",
+            room=WebhookRoomPayload(
+                id=room.id,
+                name=room.name,
+            ),
+        )
 
-        payload_json = json.dumps(payload_data, separators=(",", ":"))
-        payload_bytes = payload_json.encode("utf-8")
+        payload_bytes = _serialize_payload(payload)
 
-        # Generate headers with signature
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Reflector-Webhook/1.0",
-            "X-Webhook-Event": "test",
-        }
-
-        if room.webhook_secret:
-            timestamp = str(int(datetime.now(timezone.utc).timestamp()))
-            signature = generate_webhook_signature(
-                payload_bytes, room.webhook_secret, timestamp
-            )
-            headers["X-Webhook-Signature"] = f"t={timestamp},v1={signature}"
+        headers = build_webhook_headers(
+            event_type="test",
+            payload_bytes=payload_bytes,
+            webhook_secret=room.webhook_secret,
+        )
 
         # Send test webhook with short timeout
         async with httpx.AsyncClient(timeout=10.0) as client:

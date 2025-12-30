@@ -3,8 +3,12 @@ from pathlib import Path
 import av
 import numpy as np
 
+from reflector.utils.audio_constants import WAVEFORM_SEGMENTS
 
-def get_audio_waveform(path: Path | str, segments_count: int = 256) -> list[int]:
+
+def get_audio_waveform(
+    path: Path | str, segments_count: int = WAVEFORM_SEGMENTS
+) -> list[int]:
     if isinstance(path, Path):
         path = path.as_posix()
 
@@ -70,7 +74,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("path", type=Path)
-    parser.add_argument("--segments-count", type=int, default=256)
+    parser.add_argument("--segments-count", type=int, default=WAVEFORM_SEGMENTS)
     args = parser.parse_args()
 
     print(get_audio_waveform(args.path, args.segments_count))
