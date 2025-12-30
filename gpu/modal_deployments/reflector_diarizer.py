@@ -24,6 +24,12 @@ app = modal.App(name="reflector-diarizer")
 upload_volume = modal.Volume.from_name("diarizer-uploads", create_if_missing=True)
 
 
+# IMPORTANT: This function is duplicated in multiple files for deployment isolation.
+# If you modify the audio format detection logic, you MUST update all copies:
+#   - gpu/self_hosted/app/utils.py
+#   - gpu/modal_deployments/reflector_transcriber.py (2 copies)
+#   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+#   - gpu/modal_deployments/reflector_diarizer.py (this file)
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
     parsed_url = urlparse(url)
     url_path = parsed_url.path
@@ -39,6 +45,8 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtens
         return AudioFileExtension("wav")
     if "audio/mp4" in content_type:
         return AudioFileExtension("mp4")
+    if "audio/webm" in content_type or "video/webm" in content_type:
+        return AudioFileExtension("webm")
 
     raise ValueError(
         f"Unsupported audio format for URL: {url}. "
@@ -105,7 +113,7 @@ def download_pyannote_audio():
 
 
 diarizer_image = (
-    modal.Image.debian_slim(python_version="3.10.8")
+    modal.Image.debian_slim(python_version="3.10")
     .pip_install(
         "pyannote.audio==3.1.0",
         "requests",
@@ -116,7 +124,7 @@ diarizer_image = (
         "transformers==4.34.0",
         "sentencepiece",
         "protobuf",
-        "numpy",
+        "numpy<2",
         "huggingface_hub",
         "hf-transfer",
     )

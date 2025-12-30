@@ -1,0 +1,46 @@
+/**
+ * Reflector Documentation Theme
+ * Based on frontend colors from www/app/styles/theme.ts
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --ifm-color-primary: #3158E2;
+  --ifm-color-primary-dark: #2847C9;
+  --ifm-color-primary-darker: #2442BF;
+  --ifm-color-primary-darkest: #1D369C;
+  --ifm-color-primary-light: #4A6FE5;
+  --ifm-color-primary-lighter: #5F81E8;
+  --ifm-color-primary-lightest: #8DA6F0;
+
+  --ifm-background-color: #FFFFFF;
+  --ifm-background-surface-color: #F4F4F4;
+  --ifm-font-color-base: #1A202C;
+  --ifm-font-color-secondary: #838383;
+
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(49, 88, 226, 0.1);
+
+  --ifm-font-family-base: 'Poppins', system-ui, -apple-system, sans-serif;
+  --ifm-font-family-monospace: 'Fira Code', 'Monaco', 'Consolas', monospace;
+  --ifm-navbar-background-color: #FFFFFF;
+  --ifm-heading-font-weight: 600;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #B1CBFF;
+  --ifm-color-primary-dark: #91B3FF;
+  --ifm-color-primary-darker: #81A7FF;
+  --ifm-color-primary-darkest: #5189FF;
+  --ifm-color-primary-light: #D1DFFF;
+  --ifm-color-primary-lighter: #E1EBFF;
+  --ifm-color-primary-lightest: #F0F5FF;
+
+  --ifm-background-color: #0C0D0E;
+  --ifm-background-surface-color: #1A202C;
+  --ifm-font-color-base: #E2E8F0;
+  --ifm-font-color-secondary: #A0AEC0;
+  --docusaurus-highlighted-code-line-bg: rgba(177, 203, 255, 0.1);
+  --ifm-navbar-background-color: #1A202C;
+}
