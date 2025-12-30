@@ -95,7 +95,6 @@ REFLECTOR_AUTH_BACKEND=authentik
 - Automatic cleanup of old data
 
 ### Private Mode Security
-- Audit logging
 - Access control lists
 - Data retention policies
 

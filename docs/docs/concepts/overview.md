@@ -60,26 +60,35 @@ ML models run on GPU-accelerated infrastructure:
 
 ## Data Flow
 
-### File Processing Flow
+### Daily.co Meeting Recording Flow
+
+1. **Recording**: Daily.co captures separate audio tracks per participant
+2. **Webhook**: Daily.co notifies Reflector when recording is ready
+3. **Track Download**: Individual participant tracks fetched from S3
+4. **Padding**: Tracks padded with silence based on join time for synchronization
+5. **Transcription**: Each track transcribed independently (speaker = track index)
+6. **Merge**: Transcriptions sorted by timestamp and combined
+7. **Mixdown**: Tracks mixed to single MP3 for playback
+8. **Post-Processing**: Topics, title, and summaries generated via LLM
+9. **Delivery**: Results stored and user notified via WebSocket
+
+### File Upload Flow
 
 1. **Upload**: User uploads audio file through web interface
-2. **Storage**: File stored temporarily or in S3
-3. **Queue**: Processing job added to Celery queue
-4. **Chunking**: Audio split into segments (~16s default, or VAD-based)
-5. **Parallel Processing**: Chunks processed simultaneously
-6. **Assembly**: Results merged and aligned
-7. **Post-Processing**: Summary, topics, translation
-8. **Delivery**: Results stored and user notified
+2. **Storage**: File stored temporarily
+3. **Transcription**: Full file transcribed via Whisper
+4. **Diarization**: ML-based speaker identification (Pyannote)
+5. **Post-Processing**: Topics, title, summaries
+6. **Delivery**: Results stored and user notified
 
 ### Live Streaming Flow
 
-1. **WebRTC Connection**: Browser establishes peer connection
+1. **WebRTC Connection**: Browser establishes peer connection via Daily.co or Whereby
 2. **Audio Capture**: Microphone audio streamed to server
 3. **Buffering**: Audio buffered for processing
-4. **VAD**: Voice activity detection segments speech
-5. **Real-time Processing**: Segments transcribed immediately
-6. **WebSocket Updates**: Results streamed back to client
-7. **Continuous Assembly**: Full transcript built progressively
+4. **Real-time Processing**: Segments transcribed as they arrive
+5. **WebSocket Updates**: Results streamed back to client
+6. **Continuous Assembly**: Full transcript built progressively
 
 ## Deployment Architecture
 
