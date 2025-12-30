@@ -28,7 +28,9 @@ See [Modal.com Setup](./modal-setup) for cloud GPU deployment.
 
 The self-hosted GPU service provides the same API endpoints as Modal:
 - `POST /v1/audio/transcriptions` - Whisper transcription
+- `POST /v1/audio/transcriptions-from-url` - Transcribe from URL
 - `POST /diarize` - Pyannote speaker diarization
+- `POST /translate` - Audio translation
 
 Your main Reflector server connects to this service exactly like it connects to Modal - only the URL changes.
 
@@ -63,17 +65,17 @@ Your main Reflector server connects to this service exactly like it connects to 
 ```bash
 sudo apt update
 sudo apt install -y nvidia-driver-535
+sudo reboot
 
-# Load kernel modules
-sudo modprobe nvidia
-
-# Verify installation
+# After reboot, verify installation
 nvidia-smi
 ```
 
 Expected output: GPU details with driver version and CUDA version.
 
 ### Step 2: Install Docker
+
+Follow the [official Docker installation guide](https://docs.docker.com/engine/install/ubuntu/) for your distribution, or use the convenience script:
 
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
@@ -87,7 +89,7 @@ exit
 ### Step 3: Install NVIDIA Container Toolkit
 
 ```bash
-# Add NVIDIA repository
+# Add NVIDIA repository and install toolkit
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 
@@ -95,11 +97,7 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
   sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
-# Install toolkit
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-
-# Configure Docker runtime
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
@@ -120,32 +118,10 @@ EOF
 cat .env
 ```
 
-### Step 5: Create Docker Compose File
+### Step 5: Build and Start
 
-```bash
-cat > compose.yml << 'EOF'
-services:
-  reflector_gpu:
-    build:
-      context: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./cache:/root/.cache
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-EOF
-```
+The repository includes a `compose.yml` file. Build and start:
 
-### Step 6: Build and Start
 
 ```bash
 # Build image (takes ~5 minutes, downloads ~10GB)
@@ -176,14 +152,14 @@ Should show GPU with ~3GB VRAM used (models loaded).
 
 ### Step 1: Install NVIDIA Driver
 
+Same as Docker deployment - install driver and reboot:
+
 ```bash
 sudo apt update
 sudo apt install -y nvidia-driver-535
+sudo reboot
 
-# Load kernel modules
-sudo modprobe nvidia
-
-# Verify installation
+# After reboot, verify installation
 nvidia-smi
 ```
 
@@ -294,18 +270,25 @@ sudo apt install -y caddy
 
 ### Configure Reverse Proxy
 
+Edit the Caddyfile with your domain:
+
 ```bash
-sudo tee /etc/caddy/Caddyfile << 'EOF'
+sudo nano /etc/caddy/Caddyfile
+```
+
+Add (replace `gpu.example.com` with your domain):
+
+```
 gpu.example.com {
     reverse_proxy localhost:8000
 }
-EOF
-
-# Reload Caddy (auto-provisions SSL certificate)
-sudo systemctl reload caddy
 ```
 
-Replace `gpu.example.com` with your domain.
+Reload Caddy (auto-provisions SSL certificate):
+
+```bash
+sudo systemctl reload caddy
+```
 
 ### Verify HTTPS
 

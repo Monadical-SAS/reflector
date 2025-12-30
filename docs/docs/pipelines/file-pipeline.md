@@ -15,6 +15,7 @@ The file processing pipeline handles uploaded audio files, optimizing for accura
 - MP3 (most common)
 - WAV (uncompressed)
 - M4A (Apple format)
+- MOV (Apple video)
 - WebM (browser recordings)
 - MP4 (video with audio track)
 

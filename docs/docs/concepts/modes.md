@@ -37,7 +37,7 @@ Private mode unlocks the full potential of Reflector with authentication and per
 - **Virtual Meeting Rooms**: Whereby and Daily.co integration
 - **Team Collaboration**: Share transcripts with team
 - **Persistent Storage**: Long-term transcript archive
-- **Advanced Analytics**: Meeting insights and trends
+- **Meeting History**: Search and browse past transcripts
 - **Custom Integration**: Webhooks and API access
 - **User Management**: Role-based access control
 
@@ -93,7 +93,7 @@ REFLECTOR_AUTH_BACKEND=authentik
 | API Access | Limited | Full |
 | User Management | ❌ | ✅ |
 | Custom Branding | ❌ | ✅ |
-| Analytics | ❌ | ✅ |
+| Meeting History | ❌ | ✅ |
 | Webhooks | ❌ | ✅ |
 
 ## Security Considerations
@@ -103,9 +103,8 @@ REFLECTOR_AUTH_BACKEND=authentik
 - Automatic cleanup of old data
 
 ### Private Mode Security
-- Encrypted data storage
 - Audit logging
-- Session management
+- JWT token management
 - Access control lists
 - Data retention policies
 
@@ -122,4 +121,4 @@ REFLECTOR_AUTH_BACKEND=authentik
 - You require persistent storage
 - You're processing sensitive content
 - You need meeting room functionality
-- You want advanced analytics
+- You want searchable meeting history

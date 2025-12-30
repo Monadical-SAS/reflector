@@ -15,7 +15,7 @@ The user interface is built with **Next.js 14** using the App Router pattern, pr
 
 - Server-side rendering for optimal performance
 - Real-time WebSocket connections for live transcription
-- WebRTC support for audio streaming and live meetings
+- WebRTC support for audio streaming and live meetings (via Daily.co or Whereby)
 - Responsive design with Chakra UI components
 
 ### Backend API Server
@@ -54,7 +54,7 @@ Background tasks are managed by **Celery** workers with **Redis** as the message
 ML models run on GPU-accelerated infrastructure:
 
 - **Modal.com** for serverless GPU processing
-- Support for local GPU deployment (coming soon)
+- **Self-hosted GPU** with Docker or systemd deployment
 - Automatic scaling based on demand
 - Cost-effective pay-per-use model
 
@@ -65,7 +65,7 @@ ML models run on GPU-accelerated infrastructure:
 1. **Upload**: User uploads audio file through web interface
 2. **Storage**: File stored temporarily or in S3
 3. **Queue**: Processing job added to Celery queue
-4. **Chunking**: Audio split into 30-second segments
+4. **Chunking**: Audio split into segments (~16s default, or VAD-based)
 5. **Parallel Processing**: Chunks processed simultaneously
 6. **Assembly**: Results merged and aligned
 7. **Post-Processing**: Summary, topics, translation
@@ -115,7 +115,6 @@ services:
 
 - **GPU Workers**: Scale up for faster model inference
 - **Memory Optimization**: Efficient audio buffering
-- **CPU Optimization**: Multi-threaded processing where applicable
 
 ## Security Architecture
 
@@ -127,7 +126,6 @@ services:
 
 ### Data Protection
 
-- **Encryption at Rest**: Database and S3 encryption
 - **Encryption in Transit**: TLS for all connections
 - **Temporary Storage**: Automatic cleanup of processed files
 

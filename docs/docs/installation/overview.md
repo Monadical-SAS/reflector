@@ -291,15 +291,7 @@ Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy'
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Wait for PostgreSQL to be ready, then run migrations:
-
-```bash
-# Wait for postgres to be healthy (may take 30-60 seconds on first run)
-docker compose -f docker-compose.prod.yml exec postgres pg_isready -U reflector
-
-# Run database migrations
-docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
-```
+Wait for containers to start (first run may take 1-2 minutes to pull images and initialize). Migrations run automatically on server startup.
 
 ---
 
@@ -321,6 +313,8 @@ curl https://api.example.com/health
 - Visit https://app.example.com
 - You should see the Reflector interface
 - Try uploading an audio file to test transcription
+
+If any verification fails, see [Troubleshooting](#troubleshooting) below.
 
 ---
 
