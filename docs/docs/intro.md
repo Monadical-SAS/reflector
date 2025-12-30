@@ -19,20 +19,20 @@ Reflector is a web application that utilizes AI to process audio content, provid
 
 ## Features
 
-| Feature | Public Mode | Private Mode |
-|---------|------------|--------------|
-| **Authentication** | None required | Required |
-| **Audio Upload** | ✅ | ✅ |
-| **Live Microphone Streaming** | ✅ | ✅ |
-| **Transcription** | ✅ | ✅ |
-| **Speaker Diarization** | ✅ | ✅ |
-| **Translation** | ✅ | ✅ |
-| **Topic Detection** | ✅ | ✅ |
-| **Summarization** | ✅ | ✅ |
-| **Virtual Meeting Rooms (Whereby)** | ❌ | ✅ |
-| **Browse Transcripts Page** | ❌ | ✅ |
-| **Search Functionality** | ❌ | ✅ |
-| **Persistent Storage** | ❌ | ✅ |
+| Feature                                    | Public Mode | Private Mode |
+|--------------------------------------------|------------|--------------|
+| **Authentication**                         | None required | Required |
+| **Audio Upload**                           | ✅ | ✅ |
+| **Live Microphone Streaming**              | ✅ | ✅ |
+| **Transcription**                          | ✅ | ✅ |
+| **Speaker Diarization**                    | ✅ | ✅ |
+| **Translation**                            | ✅ | ✅ |
+| **Topic Detection**                        | ✅ | ✅ |
+| **Summarization**                          | ✅ | ✅ |
+| **Virtual Meeting Rooms (Whereby, Daily)** | ❌ | ✅ |
+| **Browse Transcripts Page**                | ❌ | ✅ |
+| **Search Functionality**                   | ❌ | ✅ |
+| **Persistent Storage**                     | ❌ | ✅ |
 
 ## Architecture Overview
 

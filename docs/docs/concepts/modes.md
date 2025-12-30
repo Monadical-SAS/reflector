@@ -50,12 +50,6 @@ Enterprise-grade SSO with support for:
 - LDAP / Active Directory
 - Multi-factor authentication
 
-#### JWT Authentication
-Stateless token-based auth for:
-- API access
-- Service-to-service communication
-- Mobile applications
-
 ### Room Management
 
 Virtual rooms provide dedicated spaces for meetings:
@@ -73,8 +67,6 @@ The mode is determined by your deployment configuration:
 REFLECTOR_AUTH_BACKEND=none
 
 # Private Mode (with authentication)
-REFLECTOR_AUTH_BACKEND=jwt
-# or
 REFLECTOR_AUTH_BACKEND=authentik
 ```
 
@@ -104,7 +96,6 @@ REFLECTOR_AUTH_BACKEND=authentik
 
 ### Private Mode Security
 - Audit logging
-- JWT token management
 - Access control lists
 - Data retention policies
 
