@@ -35,7 +35,7 @@ Modal CLI requires browser authentication, so this must run on a machine with a 
 ### Install Modal CLI
 
 ```bash
-pip install modal
+uv tool install modal
 ```
 
 ### Authenticate with Modal
@@ -121,7 +121,7 @@ Typical costs for audio processing:
 
 ### "Modal CLI not installed"
 ```bash
-pip install modal
+uv tool install modal
 ```
 
 ### "Not authenticated with Modal"

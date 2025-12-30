@@ -82,7 +82,7 @@ There's an install script to help with this setup. It's using modal API to set a
 As an alternative, all those operations that script does could be performed in modal settings in modal UI.
 
 ```bash
-pip install modal
+uv tool install modal
 modal setup  # opens browser for authentication
 
 git clone https://github.com/monadical-sas/reflector.git
@@ -98,14 +98,14 @@ See [Modal Setup](./modal-setup) for troubleshooting and details.
 
 **Location: YOUR GPU SERVER**
 
-Requires: NVIDIA GPU with 8GB+ VRAM, Ubuntu 22.04+, 40-50GB disk (Docker) or 25-30GB (Systemd).
+Requires: NVIDIA GPU with 8GB+ VRAM, Ubuntu 22.04+, 40-50GB disk.
 
 See [Self-Hosted GPU Setup](./self-hosted-gpu-setup) for complete instructions. Quick summary:
 
-1. Install NVIDIA drivers and Docker (or uv for systemd)
+1. Install NVIDIA drivers and Docker
 2. Clone repository: `git clone https://github.com/monadical-sas/reflector.git`
 3. Configure `.env` with HuggingFace token
-4. Start service (Docker compose or systemd)
+4. Start service with Docker compose
 5. Set up Caddy reverse proxy for HTTPS
 
 **Save your API key and HTTPS URL** - you'll need them soon.
@@ -134,6 +134,8 @@ docker --version  # verify
 ### Firewall
 
 Ensure ports 80 (HTTP) and 443 (HTTPS) are open for inbound traffic. The method varies by cloud provider and OS configuration.
+
+**For live transcription without Daily/Whereby rooms**: WebRTC requires UDP port range 49152-65535 for media traffic.
 
 ### Clone Repository
 

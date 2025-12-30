@@ -54,7 +54,7 @@ Background tasks are managed by **Celery** workers with **Redis** as the message
 ML models run on GPU-accelerated infrastructure:
 
 - **Modal.com** for serverless GPU processing
-- **Self-hosted GPU** with Docker or systemd deployment
+- **Self-hosted GPU** with Docker deployment
 - Automatic scaling based on demand
 - Cost-effective pay-per-use model
 

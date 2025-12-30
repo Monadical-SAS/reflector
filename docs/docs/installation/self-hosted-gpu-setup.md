@@ -40,9 +40,7 @@ Your main Reflector server connects to this service exactly like it connects to 
 - **GPU**: NVIDIA GPU with 8GB+ VRAM (tested on Tesla T4 with 15GB)
 - **CPU**: 4+ cores recommended
 - **RAM**: 8GB minimum, 16GB recommended
-- **Disk**:
-  - Docker method: 40-50GB minimum
-  - Systemd method: 25-30GB minimum
+- **Disk**: 40-50GB minimum
 
 ### Software
 - Public IP address
@@ -53,10 +51,6 @@ Your main Reflector server connects to this service exactly like it connects to 
   - https://huggingface.co/pyannote/speaker-diarization-3.1
   - https://huggingface.co/pyannote/segmentation-3.0
 - **HuggingFace access token** from https://huggingface.co/settings/tokens
-
-## Choose Deployment Method
-
----
 
 ## Docker Deployment
 
@@ -75,10 +69,11 @@ Expected output: GPU details with driver version and CUDA version.
 
 ### Step 2: Install Docker
 
-Follow the [official Docker installation guide](https://docs.docker.com/engine/install/ubuntu/) for your distribution, or use the convenience script:
+Follow the [official Docker installation guide](https://docs.docker.com/engine/install/ubuntu/) for your distribution.
+
+After installation, add your user to the docker group:
 
 ```bash
-curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
 
 # Log out and back in for group changes
@@ -148,110 +143,9 @@ Should show GPU with ~3GB VRAM used (models loaded).
 
 ---
 
-## Systemd Deployment
-
-### Step 1: Install NVIDIA Driver
-
-Same as Docker deployment - install driver and reboot:
-
-```bash
-sudo apt update
-sudo apt install -y nvidia-driver-535
-sudo reboot
-
-# After reboot, verify installation
-nvidia-smi
-```
-
-### Step 2: Install Dependencies
-
-```bash
-# Install ffmpeg
-sudo apt install -y ffmpeg
-
-# Install uv package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.local/bin/env
-
-# Clone repository
-git clone https://github.com/monadical-sas/reflector.git
-cd reflector/gpu/self_hosted
-```
-
-### Step 3: Configure Environment
-
-```bash
-# Create environment file
-cat > .env << EOF
-REFLECTOR_GPU_APIKEY=$(openssl rand -hex 16)
-HF_TOKEN=your_huggingface_token_here
-EOF
-
-# Note the generated API key
-cat .env
-```
-
-### Step 4: Install Python Packages
-
-```bash
-# Install dependencies (~3GB download)
-uv sync
-```
-
-### Step 5: Create Systemd Service
-
-```bash
-# Generate library paths for NVIDIA packages
-export NVIDIA_LIBS=$(find ~/reflector/gpu/self_hosted/.venv/lib/python3.12/site-packages/nvidia -name lib -type d | tr '\n' ':')
-
-# Load environment variables
-source ~/reflector/gpu/self_hosted/.env
-
-# Create service file
-sudo tee /etc/systemd/system/reflector-gpu.service << EOFSVC
-[Unit]
-Description=Reflector GPU Service (Transcription & Diarization)
-After=network.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$HOME/reflector/gpu/self_hosted
-Environment="PATH=$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="HF_TOKEN=${HF_TOKEN}"
-Environment="REFLECTOR_GPU_APIKEY=${REFLECTOR_GPU_APIKEY}"
-Environment="LD_LIBRARY_PATH=${NVIDIA_LIBS}"
-ExecStart=$HOME/reflector/gpu/self_hosted/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOFSVC
-
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable reflector-gpu
-sudo systemctl start reflector-gpu
-```
-
-### Step 6: Verify Service
-
-```bash
-# Check status
-sudo systemctl status reflector-gpu
-
-# View logs
-sudo journalctl -u reflector-gpu -f
-```
-
-Look for: `INFO: Application startup complete.`
-
----
-
 ## Configure HTTPS with Caddy
 
-Both deployment methods need HTTPS for production. Caddy handles SSL automatically.
+Caddy handles SSL automatically.
 
 ### Install Caddy
 
@@ -328,8 +222,6 @@ docker compose -f docker-compose.prod.yml restart server worker
 
 All commands in this section assume you're in `~/reflector/gpu/self_hosted/`.
 
-### Docker
-
 ```bash
 # View logs
 sudo docker compose logs -f
@@ -342,22 +234,6 @@ sudo docker compose down
 
 # Check status
 sudo docker compose ps
-```
-
-### Systemd
-
-```bash
-# View logs
-sudo journalctl -u reflector-gpu -f
-
-# Restart service
-sudo systemctl restart reflector-gpu
-
-# Stop service
-sudo systemctl stop reflector-gpu
-
-# Check status
-sudo systemctl status reflector-gpu
 ```
 
 ### Monitor GPU
@@ -390,14 +266,8 @@ nvidia-smi
 
 1. Verify HF_TOKEN is valid: `echo $HF_TOKEN`
 2. Check model access at https://huggingface.co/pyannote/speaker-diarization-3.1
-3. Regenerate service/compose with correct token
-4. Restart service
-
-### cuDNN library loading errors (Systemd only)
-
-Symptom: `Unable to load libcudnn_cnn.so`
-
-Regenerate the systemd service file - the `LD_LIBRARY_PATH` must include all NVIDIA package directories.
+3. Update .env with correct token
+4. Restart service: `sudo docker compose restart`
 
 ### Cannot connect to HTTPS endpoint
 
@@ -429,20 +299,9 @@ sudo docker compose logs
 
 ## Updating
 
-### Docker
-
 ```bash
 cd ~/reflector/gpu/self_hosted
 git pull
 sudo docker compose build
 sudo docker compose up -d
-```
-
-### Systemd
-
-```bash
-cd ~/reflector/gpu/self_hosted
-git pull
-uv sync
-sudo systemctl restart reflector-gpu
 ```
