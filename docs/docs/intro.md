@@ -17,6 +17,8 @@ Reflector is a web application that utilizes AI to process audio content, provid
 - **Topic Detection & Summarization**: Extract key topics and generate concise summaries using LLMs
 - **Meeting Recording**: Create permanent records of meetings with searchable transcripts
 
+![Reflector Transcript View](/img/reflector-transcript-view.png)
+
 ## Features
 
 | Feature                                    | Public Mode | Private Mode |

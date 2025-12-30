@@ -8,11 +8,11 @@ Remaining items from Tito's review. See CHANGES.md for completed items.
 
 | File | Issue | Priority | Notes |
 |------|-------|----------|-------|
-| `intro.md:10` | Add screenshots | Low | Requires running app to capture |
+| ~~`intro.md:10`~~ | ~~Add screenshots~~ | ~~Low~~ | ✅ **DONE** - Added transcript view screenshot |
 | `file-pipeline.md:47` | chunk_size example shows 30s | Low | Unclear what example config should show (~16s actual) |
-| `self-hosted-gpu-setup.md:235` | systemd template in repo | Medium | Code task - create `/gpu/self_hosted/reflector-gpu.service` |
-| `installation/overview.md:85` | uv tool install clarification | Low | Original comment unclear |
-| `installation/overview.md:101` | "Why systemd?" clarification | Low | Context seems sufficient |
+| ~~`self-hosted-gpu-setup.md:235`~~ | ~~systemd template in repo~~ | ~~Medium~~ | ✅ **REMOVED** - Systemd support removed entirely |
+| ~~`installation/overview.md:85`~~ | ~~uv tool install~~ | ~~Low~~ | ✅ **DONE** - Changed to `uv tool install modal` |
+| ~~`installation/overview.md:101`~~ | ~~"Why systemd?"~~ | ~~Low~~ | ✅ **REMOVED** - Systemd support removed entirely |
 | `installation/overview.md:271` | Caddyfile copy removal | Low | Keeping for clarity |
 
 ---
