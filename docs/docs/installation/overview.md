@@ -293,7 +293,7 @@ Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy'
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-Wait for containers to start (first run may take 1-2 minutes to pull images and initialize). Migrations run automatically on server startup.
+Wait for containers to start (first run may take 1-2 minutes to pull images and initialize).
 
 ---
 
@@ -394,4 +394,18 @@ docker compose -f docker-compose.prod.yml logs
 ### "Login required" but auth not configured
 - Set `FEATURE_REQUIRE_LOGIN=false` in `www/.env`
 - Rebuild frontend: `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
+
+### Database migrations or connectivity issues
+Migrations run automatically on server startup. To check database connectivity or debug migration failures:
+
+```bash
+# Check server logs for migration errors
+docker compose -f docker-compose.prod.yml logs server | grep -i -E "(alembic|migration|database|postgres)"
+
+# Verify database connectivity
+docker compose -f docker-compose.prod.yml exec server uv run python -c "from reflector.db import engine; print('DB connected')"
+
+# Manually run migrations (if needed)
+docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
+```
 
