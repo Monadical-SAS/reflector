@@ -5,7 +5,7 @@ title: Introduction
 
 # Welcome to Reflector
 
-Reflector is a privacy-focused, self-hosted AI-powered audio transcription and meeting analysis platform that provides real-time transcription, speaker diarization, translation, and summarization for audio content and live meetings. With complete control over your data and infrastructure, you can run models on your own hardware (roadmap - currently supports Modal.com for GPU processing).
+Reflector is a privacy-focused, self-hosted AI-powered audio transcription and meeting analysis platform that provides real-time transcription, speaker diarization, and summarization for audio content and live meetings. With complete control over your data and infrastructure, you can run models on your own hardware (roadmap - currently supports Modal.com for GPU processing).
 
 ## What is Reflector?
 
@@ -13,7 +13,6 @@ Reflector is a web application that utilizes AI to process audio content, provid
 
 - **Real-time Transcription**: Convert speech to text using [Whisper](https://github.com/openai/whisper) (multi-language) or [Parakeet](https://github.com/NVIDIA/NeMo) (English) models
 - **Speaker Diarization**: Identify and label different speakers using [Pyannote](https://github.com/pyannote/pyannote-audio) 3.1
-- **Live Translation**: Translate audio content in real-time to 100+ languages with [Facebook Seamless-M4T](https://github.com/facebookresearch/seamless_communication)
 - **Topic Detection & Summarization**: Extract key topics and generate concise summaries using LLMs
 - **Meeting Recording**: Create permanent records of meetings with searchable transcripts
 
@@ -28,7 +27,6 @@ Reflector is a web application that utilizes AI to process audio content, provid
 | **Live Microphone Streaming**              | ✅ | ✅ |
 | **Transcription**                          | ✅ | ✅ |
 | **Speaker Diarization**                    | ✅ | ✅ |
-| **Translation**                            | ✅ | ✅ |
 | **Topic Detection**                        | ✅ | ✅ |
 | **Summarization**                          | ✅ | ✅ |
 | **Virtual Meeting Rooms (Whereby, Daily)** | ❌ | ✅ |
@@ -40,7 +38,7 @@ Reflector is a web application that utilizes AI to process audio content, provid
 
 Reflector consists of three main components:
 
-- **Frontend**: React application built with Next.js 14
+- **Frontend**: React application built with Next.js
 - **Backend**: Python server using FastAPI
 - **Processing**: Scalable GPU workers for ML inference (Modal.com or local)
 

@@ -1,7 +1,0 @@
----
-title: translation
----
-
-# translation
-
-Documentation coming soon. See [TODO.md](/docs/TODO) for required information.

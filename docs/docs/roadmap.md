@@ -12,9 +12,8 @@ Our development roadmap for Reflector, focusing on expanding capabilities while 
 ### 🌍 Multi-Language Support Enhancement
 
 **Current State:**
-- Whisper supports 99+ languages for transcription
+- Whisper supports multi-language transcription
 - Parakeet supports English only with high accuracy
-- Translation available to 100+ languages
 
 **Planned Improvements:**
 - Default language selection per room/user
@@ -56,32 +55,6 @@ Moving beyond Whereby to support self-hosted video conferencing:
 - Calendar-based access control
 - Meeting agenda import
 - Action item export to calendar
-
-### 🖥️ Self-Hosted GPU Service
-
-**For organizations with dedicated GPU hardware (H100, A100, RTX 4090):**
-
-**Docker GPU Worker Image:**
-- Self-contained processing service
-- CUDA 11/12 support
-- Pre-loaded models:
-  - Whisper (all sizes)
-  - Pyannote diarization
-  - Seamless-M4T translation
-- Automatic model management
-
-**Deployment Options:**
-- Kubernetes GPU operators
-- Docker Compose with nvidia-docker
-- Bare metal installation
-- Hybrid cloud/on-premise
-
-**Benefits:**
-- No Modal.com dependency
-- Complete data isolation
-- Predictable costs
-- Maximum performance
-- Custom model support
 
 ## Future Considerations
 

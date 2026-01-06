@@ -29,7 +29,7 @@ graph LR
 Accepts various input sources:
 - **File Upload**: MP3, WAV, M4A, WebM, MP4
 - **WebRTC Stream**: Live browser audio
-- **Recording Integration**: Whereby recordings
+- **Recording Integration**: Daily.co and Whereby recordings
 - **API Upload**: Direct API submission
 
 ### Pre-processing
@@ -42,9 +42,8 @@ Prepares audio for optimal processing:
 ### Chunking
 
 Splits audio for parallel processing:
-- **Fixed Size**: 30-second chunks by default
-- **Overlap**: 1-second overlap for continuity
-- **Silence Detection**: Attempt to split at silence
+- **Configurable Size**: Audio split into processable segments
+- **Silence Detection**: Optional splitting at natural pauses
 - **Metadata**: Track chunk positions
 
 ### Transcription
@@ -75,7 +74,6 @@ Merges all processing results:
 
 Enhances the final output:
 - **Formatting**: Apply punctuation and capitalization
-- **Translation**: Convert to target languages
 - **Summarization**: Generate concise summaries
 - **Topic Extraction**: Identify key themes
 - **Action Items**: Extract tasks and decisions
@@ -106,93 +104,7 @@ For meetings:
 - Best of both modes
 - Maximum accuracy
 
-## Pipeline Configuration
-
-### Model Selection
-
-Choose models based on requirements:
-
-```python
-# High accuracy (slower)
-config = {
-    "transcription_model": "whisper-large-v3",
-    "diarization_model": "pyannote-3.1",
-    "translation_model": "seamless-m4t-large"
-}
-
-# Balanced (default)
-config = {
-    "transcription_model": "whisper-base",
-    "diarization_model": "pyannote-3.1",
-    "translation_model": "seamless-m4t-medium"
-}
-
-# Fast processing
-config = {
-    "transcription_model": "whisper-tiny",
-    "diarization_model": "pyannote-3.1-fast",
-    "translation_model": "seamless-m4t-small"
-}
-```
-
-### Processing Options
-
-Customize pipeline behavior:
-
-```yaml
-# Parallel processing
-max_parallel_chunks: 10
-chunk_size_seconds: 30
-chunk_overlap_seconds: 1
-
-# Quality settings
-enable_noise_reduction: true
-min_speech_confidence: 0.5
-
-# Post-processing
-enable_translation: true
-target_languages: ["es", "fr", "de"]
-enable_summarization: true
-summary_length: "medium"
-```
-
-## Performance Characteristics
-
-### Processing Times
-
-For 1 hour of audio:
-
-| Pipeline Config | Processing Time | Accuracy |
-|----------------|-----------------|----------|
-| Fast | 2-3 minutes | 85-90% |
-| Balanced | 5-8 minutes | 92-95% |
-| High Accuracy | 15-20 minutes | 95-98% |
-
-### Resource Usage
-
-| Component | CPU Usage | Memory | GPU |
-|-----------|-----------|---------|-----|
-| Transcription | Medium | 2-4 GB | Required |
-| Diarization | High | 4-8 GB | Required |
-| Translation | Low | 2-3 GB | Optional |
-| Post-processing | Low | 1-2 GB | Not needed |
-
 ## Pipeline Orchestration
-
-### Celery Task Chain
-
-The pipeline is orchestrated using Celery:
-
-```python
-chain = (
-    chunk_audio.s(audio_id) |
-    group(transcribe_chunk.s(chunk) for chunk in chunks) |
-    merge_transcriptions.s() |
-    diarize_audio.s() |
-    align_speakers.s() |
-    post_process.s()
-)
-```
 
 ### Error Handling
 
@@ -243,7 +155,6 @@ Minimize network overhead:
 Monitor processing quality:
 - **Word Error Rate (WER)**: Transcription accuracy
 - **Diarization Error Rate (DER)**: Speaker identification accuracy
-- **Translation BLEU Score**: Translation quality
 - **Summary Coherence**: Summary quality metrics
 
 ### Validation Steps

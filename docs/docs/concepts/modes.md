@@ -12,10 +12,10 @@ Reflector operates in two distinct modes to accommodate different use cases and 
 Public mode provides immediate access to core transcription features without requiring authentication.
 
 ### Features Available
-- **File Upload**: Process audio files up to 2GB
+- **File Upload**: Process audio files
 - **Live Transcription**: Stream audio from microphone
 - **Basic Processing**: Transcription and diarization
-- **Temporary Storage**: Results available for 24 hours
+- **Temporary Storage**: Temporary data retention (configurable)
 
 ### Limitations
 - No persistent storage
@@ -64,11 +64,13 @@ The mode is determined by your deployment configuration:
 
 ```yaml
 # Public Mode (no authentication)
-REFLECTOR_AUTH_BACKEND=none
+AUTH_BACKEND=none
 
 # Private Mode (with authentication)
-REFLECTOR_AUTH_BACKEND=authentik
+AUTH_BACKEND=jwt
 ```
+
+See [Authentication Setup](../installation/auth-setup) for configuring JWT authentication.
 
 ## Feature Comparison
 
@@ -77,7 +79,6 @@ REFLECTOR_AUTH_BACKEND=authentik
 | File Upload | ✅ | ✅ |
 | Live Transcription | ✅ | ✅ |
 | Speaker Diarization | ✅ | ✅ |
-| Translation | ✅ | ✅ |
 | Summarization | ✅ | ✅ |
 | Meeting Rooms | ❌ | ✅ |
 | Persistent Storage | ❌ | ✅ |
