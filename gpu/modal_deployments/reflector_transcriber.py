@@ -89,6 +89,7 @@ image = (
         "torch==2.5.1",
         "faster-whisper==1.1.1",
         "fastapi==0.115.12",
+        "python-multipart",
         "requests",
         "librosa==0.10.1",
         "numpy<2",
@@ -98,6 +99,12 @@ image = (
 )
 
 
+# IMPORTANT: This function is duplicated in multiple files for deployment isolation.
+# If you modify the audio format detection logic, you MUST update all copies:
+#   - gpu/self_hosted/app/utils.py
+#   - gpu/modal_deployments/reflector_transcriber.py (this file - 2 copies!)
+#   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+#   - gpu/modal_deployments/reflector_diarizer.py
 def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtension:
     parsed_url = urlparse(url)
     url_path = parsed_url.path
@@ -113,6 +120,8 @@ def detect_audio_format(url: str, headers: Mapping[str, str]) -> AudioFileExtens
         return AudioFileExtension("wav")
     if "audio/mp4" in content_type:
         return AudioFileExtension("mp4")
+    if "audio/webm" in content_type or "video/webm" in content_type:
+        return AudioFileExtension("webm")
 
     raise ValueError(
         f"Unsupported audio format for URL: {url}. "
@@ -315,6 +324,11 @@ class TranscriberWhisperFile:
         import numpy as np
         from silero_vad import VADIterator
 
+        # IMPORTANT: This VAD segment logic is duplicated in multiple files for deployment isolation.
+        # If you modify this function, you MUST update all copies:
+        #   - gpu/modal_deployments/reflector_transcriber.py (this file)
+        #   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+        #   - gpu/self_hosted/app/services/transcriber.py
         def vad_segments(
             audio_array,
             sample_rate: int = SAMPLERATE,
@@ -322,6 +336,7 @@ class TranscriberWhisperFile:
         ) -> Generator[TimeSegment, None, None]:
             """Generate speech segments as TimeSegment using Silero VAD."""
             iterator = VADIterator(self.vad_model, sampling_rate=sample_rate)
+            audio_duration = len(audio_array) / float(SAMPLERATE)
             start = None
             for i in range(0, len(audio_array), window_size):
                 chunk = audio_array[i : i + window_size]
@@ -341,6 +356,9 @@ class TranscriberWhisperFile:
                         start / float(SAMPLERATE), end / float(SAMPLERATE)
                     )
                     start = None
+            # Handle case where audio ends while speech is still active
+            if start is not None:
+                yield TimeSegment(start / float(SAMPLERATE), audio_duration)
             iterator.reset_states()
 
         upload_volume.reload()
@@ -406,6 +424,12 @@ class TranscriberWhisperFile:
         return {"text": " ".join(all_text), "words": all_words}
 
 
+# IMPORTANT: This function is duplicated in multiple files for deployment isolation.
+# If you modify the audio format detection logic, you MUST update all copies:
+#   - gpu/self_hosted/app/utils.py
+#   - gpu/modal_deployments/reflector_transcriber.py (this file - 2 copies!)
+#   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+#   - gpu/modal_deployments/reflector_diarizer.py
 def detect_audio_format(url: str, headers: dict) -> str:
     from urllib.parse import urlparse
 
@@ -423,6 +447,8 @@ def detect_audio_format(url: str, headers: dict) -> str:
         return "wav"
     if "audio/mp4" in content_type:
         return "mp4"
+    if "audio/webm" in content_type or "video/webm" in content_type:
+        return "webm"
 
     raise HTTPException(
         status_code=400,

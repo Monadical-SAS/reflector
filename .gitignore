@@ -1,6 +1,7 @@
 .DS_Store
 server/.env
 .env
+Caddyfile
 server/exportdanswer
 .vercel
 .env*.local
@@ -18,4 +19,5 @@ CLAUDE.local.md
 www/.env.development
 www/.env.production
 .playwright-mcp
+docs/pnpm-lock.yaml
 .secrets

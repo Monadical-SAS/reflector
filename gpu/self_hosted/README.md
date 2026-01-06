@@ -56,9 +56,13 @@ Docker
 
 - Not yet provided in this directory. A Dockerfile will be added later. For now, use Local run above
 
-Conformance tests
+# Setup
 
-# From this directory
+[SETUP.md](SETUP.md)
+
+# Conformance tests
+
+## From this directory
 
 TRANSCRIPT_URL=http://localhost:8000 \
 TRANSCRIPT_API_KEY=dev-key \

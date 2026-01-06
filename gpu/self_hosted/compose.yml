@@ -8,3 +8,11 @@ services:
       - .env
     volumes:
       - ./cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped

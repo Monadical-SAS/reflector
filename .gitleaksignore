@@ -1,1 +1,5 @@
 b9d891d3424f371642cb032ecfd0e2564470a72c:server/tests/test_transcripts_recording_deletion.py:generic-api-key:15
+docs/docs/installation/auth-setup.md:curl-auth-header:250
+docs/docs/installation/daily-setup.md:curl-auth-header:277
+gpu/self_hosted/DEV_SETUP.md:curl-auth-header:74
+gpu/self_hosted/DEV_SETUP.md:curl-auth-header:83

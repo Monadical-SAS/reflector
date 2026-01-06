@@ -1,26 +1,61 @@
-# Production Docker Compose configuration for Frontend
+# Production Docker Compose configuration
 # Usage: docker compose -f docker-compose.prod.yml up -d
+#
+# Prerequisites:
+# 1. Copy .env.example to .env and configure for both server/ and www/
+# 2. Copy Caddyfile.example to Caddyfile and edit with your domains
+# 3. Deploy Modal GPU functions (see gpu/modal_deployments/deploy-all.sh)
 
 services:
   web:
     image: monadicalsas/reflector-frontend:latest
+    restart: unless-stopped
+    env_file:
+      - ./www/.env
     pull_policy: always
     environment:
-      - KV_URL=${KV_URL:-redis://redis:6379}
-      - SITE_URL=${SITE_URL}
-      - API_URL=${API_URL}
-      - WEBSOCKET_URL=${WEBSOCKET_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-changeme-in-production}
-      - AUTHENTIK_ISSUER=${AUTHENTIK_ISSUER}
-      - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
-      - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
-      - AUTHENTIK_REFRESH_TOKEN_URL=${AUTHENTIK_REFRESH_TOKEN_URL}
-      - SENTRY_DSN=${SENTRY_DSN}
-      - SENTRY_IGNORE_API_RESOLUTION_ERROR=${SENTRY_IGNORE_API_RESOLUTION_ERROR:-1}
+      - KV_URL=redis://redis:6379
     depends_on:
       - redis
+
+  server:
+    image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: server
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - server_data:/app/data
+      - ./server/reflector/auth/jwt/keys:/app/reflector/auth/jwt/keys:ro
+
+  worker:
+    image: monadicalsas/reflector-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: worker
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - server_data:/app/data
+      - ./server/reflector/auth/jwt/keys:/app/reflector/auth/jwt/keys:ro
+
+  beat:
+    image: monadicalsas/reflector-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: beat
+    depends_on:
+      - postgres
+      - redis
 
   redis:
     image: redis:7.2-alpine
@@ -33,5 +68,46 @@ services:
     volumes:
       - redis_data:/data
 
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reflector"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - server
+
+  docs:
+    build: ./docs
+    restart: unless-stopped
+
 volumes:
   redis_data:
+  postgres_data:
+  server_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    attachable: true

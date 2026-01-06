@@ -129,6 +129,11 @@ class WhisperService:
             audio = np.frombuffer(proc.stdout, dtype=np.float32)
             return audio
 
+        # IMPORTANT: This VAD segment logic is duplicated in multiple files for deployment isolation.
+        # If you modify this function, you MUST update all copies:
+        #   - gpu/modal_deployments/reflector_transcriber.py
+        #   - gpu/modal_deployments/reflector_transcriber_parakeet.py
+        #   - gpu/self_hosted/app/services/transcriber.py (this file)
         def vad_segments(
             audio_array,
             sample_rate: int = SAMPLE_RATE,
@@ -153,6 +158,10 @@ class WhisperService:
                     end = speech["end"]
                     yield (start / float(SAMPLE_RATE), end / float(SAMPLE_RATE))
                     start = None
+            # Handle case where audio ends while speech is still active
+            if start is not None:
+                audio_duration = len(audio_array) / float(sample_rate)
+                yield (start / float(SAMPLE_RATE), audio_duration)
             iterator.reset_states()
 
         audio_array = load_audio_via_ffmpeg(file_path, SAMPLE_RATE)

@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     AUDIO_CHUNKER_BACKEND: str = "frames"
 
     # Audio Transcription
-    # backends: whisper, modal
+    # backends:
+    #   - whisper: in-process model loading (no HTTP, runs in same process)
+    #   - modal: HTTP API client (works with Modal.com OR self-hosted gpu/self_hosted/)
     TRANSCRIPT_BACKEND: str = "whisper"
     TRANSCRIPT_URL: str | None = None
     TRANSCRIPT_TIMEOUT: int = 90
@@ -82,6 +84,9 @@ class Settings(BaseSettings):
     )
 
     # Diarization
+    # backends:
+    #   - pyannote: in-process model loading (no HTTP, runs in same process)
+    #   - modal: HTTP API client (works with Modal.com OR self-hosted gpu/self_hosted/)
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None

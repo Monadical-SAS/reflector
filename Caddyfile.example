@@ -1,0 +1,22 @@
+# Reflector Caddyfile
+# Replace example.com with your actual domains
+# CORS is handled by the backend - Caddy just proxies
+#
+# For environment variable substitution, set:
+#   FRONTEND_DOMAIN=app.example.com
+#   API_DOMAIN=api.example.com
+#   AUTHENTIK_DOMAIN=authentik.example.com  (optional, for authentication)
+# Or edit this file directly with your domains.
+
+{$FRONTEND_DOMAIN:app.example.com} {
+	reverse_proxy web:3000
+}
+
+{$API_DOMAIN:api.example.com} {
+	reverse_proxy server:1250
+}
+
+# Uncomment if using Authentik for authentication (see auth-setup.md)
+# {$AUTHENTIK_DOMAIN:authentik.example.com} {
+# 	reverse_proxy authentik-server-1:9000
+# }
