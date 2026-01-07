@@ -25,24 +25,13 @@ const sidebars: SidebarsConfig = {
         'installation/self-hosted-gpu-setup',
         'installation/auth-setup',
         'installation/daily-setup',
-        {
-          type: 'category',
-          label: 'Other Integrations',
-          collapsed: true,
-          items: [
-            'installation/whereby-setup',
-            'installation/zulip-setup',
-          ],
-        },
       ],
     },
     {
       type: 'category',
       label: 'Pipelines',
       items: [
-        'pipelines/overview',
         'pipelines/file-pipeline',
-        'pipelines/live-pipeline',
       ],
     },
     {
@@ -51,33 +40,8 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: 'category',
-          label: 'Architecture',
-          items: [
-            'reference/architecture/overview',
-            'reference/architecture/backend',
-            'reference/architecture/frontend',
-            'reference/architecture/workers',
-            'reference/architecture/database',
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Processors',
-          items: [
-            'reference/processors/transcription',
-            'reference/processors/diarization',
-            'reference/processors/translation',
-            'reference/processors/analysis',
-          ],
-        },
-        {
-          type: 'category',
           label: 'API',
           items: [
-            {
-              type: 'doc',
-              id: 'reference/api/overview',
-            },
             {
               type: 'link',
               label: 'OpenAPI Reference',
@@ -85,7 +49,6 @@ const sidebars: SidebarsConfig = {
             },
           ],
         },
-        'reference/configuration',
       ],
     },
     'roadmap',
