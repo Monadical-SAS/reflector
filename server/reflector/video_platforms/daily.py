@@ -179,21 +179,16 @@ class DailyClient(VideoPlatformClient):
     async def create_meeting_token(
         self,
         room_name: DailyRoomName,
-        start_cloud_recording: bool,
         enable_recording_ui: bool,
         user_id: NonEmptyString | None = None,
         is_owner: bool = False,
         max_recording_duration_seconds: int | None = None,
     ) -> NonEmptyString:
-        start_cloud_recording_opts = None
-        if start_cloud_recording and max_recording_duration_seconds:
-            start_cloud_recording_opts = {"maxDuration": max_recording_duration_seconds}
-
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
-            start_cloud_recording=start_cloud_recording,
-            start_cloud_recording_opts=start_cloud_recording_opts,
+            start_cloud_recording=False,
+            start_cloud_recording_opts=None,
             enable_recording_ui=enable_recording_ui,
             is_owner=is_owner,
         )

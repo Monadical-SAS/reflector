@@ -586,7 +586,6 @@ async def rooms_join_meeting(
         )
         token = await client.create_meeting_token(
             meeting.room_name,
-            start_cloud_recording=meeting.recording_type == "cloud",
             enable_recording_ui=enable_recording_ui,
             user_id=user_id,
             is_owner=user_id == room.user_id,
