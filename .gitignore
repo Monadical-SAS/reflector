@@ -21,3 +21,4 @@ www/.env.production
 .playwright-mcp
 docs/pnpm-lock.yaml
 .secrets
+opencode.json

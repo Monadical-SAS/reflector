@@ -58,7 +58,9 @@ class DailyClient(VideoPlatformClient):
         enable_recording = None
         if room.recording_type == self.RECORDING_LOCAL:
             enable_recording = "local"
-        elif room.recording_type == self.RECORDING_CLOUD:
+        elif (
+            room.recording_type == self.RECORDING_CLOUD
+        ):  # daily "cloud" is not our "cloud"
             enable_recording = "raw-tracks"
 
         properties = RoomProperties(
