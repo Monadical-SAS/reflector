@@ -176,15 +176,17 @@ Parse timestamps:
 Track 0:
   Filename offset: 438ms
   PyAV metadata:   229ms
-  Difference:      209ms
+  Difference:      ~200ms
 
 Track 1:
   Filename offset: 8339ms
   PyAV metadata:   8130ms
-  Difference:      209ms
+  Difference:      ~200ms
 ```
 
-**Consistent 209ms delta** suggests network/encoding delay between file upload initiation (filename) and actual audio stream start (metadata).
+**Consistent ~200ms delta** suggests network/encoding delay between file upload initiation (filename) and actual audio stream start (metadata).
+
+**Note:** The ~200ms difference observed in this test recording is not crucial for timing accuracy. Either method (filename timestamps or PyAV metadata) works well for multi-track alignment. Filename timestamps are preferable as they are better officially documented by Daily.co.
 
 **Current implementation uses PyAV metadata** because:
 - More accurate (represents when audio actually started)

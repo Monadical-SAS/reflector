@@ -91,12 +91,12 @@ class PipelineMainMultitrack(PipelineMainBase):
             - Track 0: (1760988935922 - 1760988935484) / 1000 = 0.438s
             - Track 1: (1760988943823 - 1760988935484) / 1000 = 8.339s
 
-            TIME DIFFERENCE: PyAV metadata vs filename timestamps differ by ~209ms:
-            - Track 0: filename=438ms, metadata=229ms (diff: 209ms)
-            - Track 1: filename=8339ms, metadata=8130ms (diff: 209ms)
+            TIME DIFFERENCE: PyAV metadata vs filename timestamps differ by ~200ms:
+            - Track 0: filename=438ms, metadata=229ms (diff: ~200ms)
+            - Track 1: filename=8339ms, metadata=8130ms (diff: ~200ms)
 
-            Consistent delta suggests network/encoding delay. PyAV metadata is ground truth
-            (represents when audio stream actually started vs when file upload initiated).
+            Note: The ~200ms difference isn't crucial - either method works for alignment.
+            Filename timestamps are preferable due to being better officially documented.
 
             Example with 2 participants:
                 Track A: start_time=0.2s → Joined 200ms after recording began

@@ -25,7 +25,9 @@ def extract_stream_start_time_from_container(
     """Extract meeting-relative start time from WebM stream metadata.
 
     Uses PyAV to read stream.start_time from WebM container.
-    More accurate than filename timestamps by ~209ms due to network/encoding delays.
+    Note: Differs from filename timestamps by ~200ms in test recordings, but this difference
+    is not crucial - either method works. Filename timestamps are preferable due to being
+    better officially documented by Daily.co.
 
     Args:
         container: PyAV container opened from audio file/URL
