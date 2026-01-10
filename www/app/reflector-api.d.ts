@@ -75,6 +75,31 @@ export interface paths {
     patch: operations["v1_meeting_deactivate"];
     trace?: never;
   };
+  "/v1/meetings/{meeting_id}/recordings/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start Recording
+     * @description Start raw-tracks recording via Daily.co REST API.
+     *
+     *     Called by frontend after starting cloud recording via daily-js.
+     *     Uses same instanceId to link both recordings.
+     *
+     *     Note: No authentication required - anonymous users supported.
+     */
+    post: operations["v1_start_recording"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/rooms": {
     parameters: {
       query?: never;
@@ -1818,6 +1843,19 @@ export interface components {
       /** Words */
       words: components["schemas"]["Word"][];
     };
+    /** StartRecordingRequest */
+    StartRecordingRequest: {
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "cloud" | "raw-tracks";
+      /**
+       * Instanceid
+       * @description A non-empty string
+       */
+      instanceId: string;
+    };
     /** Stream */
     Stream: {
       /** Stream Id */
@@ -2113,6 +2151,43 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_start_recording: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartRecordingRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */

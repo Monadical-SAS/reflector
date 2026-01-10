@@ -44,7 +44,7 @@ else:
         },
         "poll_daily_recordings": {
             "task": "reflector.worker.process.poll_daily_recordings",
-            "schedule": 180.0,  # Every 3 minutes (configurable lookback window)
+            "schedule": 15.0,  # Every 15 seconds for dev (was 180.0 / 3 min for prod)
         },
         "trigger_daily_reconciliation": {
             "task": "reflector.worker.process.trigger_daily_reconciliation",

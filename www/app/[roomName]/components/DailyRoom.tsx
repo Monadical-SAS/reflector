@@ -22,13 +22,21 @@ import DailyIframe, {
 import type { components } from "../../reflector-api";
 import { useAuth } from "../../lib/AuthProvider";
 import { useConsentDialog } from "../../lib/consent";
-import { useRoomJoinMeeting } from "../../lib/apiHooks";
+import {
+  useRoomJoinMeeting,
+  useMeetingStartRecording,
+} from "../../lib/apiHooks";
 import { omit } from "remeda";
 import { assertExists } from "../../lib/utils";
-import { assertMeetingId } from "../../lib/types";
+import { assertMeetingId, DailyRecordingType } from "../../lib/types";
+import { v5 as uuidv5 } from "uuid";
 
 const CONSENT_BUTTON_ID = "recording-consent";
 const RECORDING_INDICATOR_ID = "recording-indicator";
+
+// Namespace UUID for generating deterministic raw-tracks instanceIds
+// Generated once for this application: uuidv4()
+const RAW_TRACKS_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 type Meeting = components["schemas"]["Meeting"];
 type Room = components["schemas"]["RoomDetails"];
@@ -74,7 +82,10 @@ const useFrame = (
     onLeftMeeting: () => void;
     onCustomButtonClick: (ev: DailyEventObjectCustomButtonClick) => void;
     onJoinMeeting: (
-      startRecording: (args: { type: "raw-tracks" }) => void,
+      startRecording: (args: {
+        type: DailyRecordingType;
+        instanceId: string;
+      }) => void,
     ) => void;
   },
 ) => {
@@ -173,7 +184,17 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const authLastUserId = auth.lastUserId;
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const joinMutation = useRoomJoinMeeting();
+  const startRecordingMutation = useMeetingStartRecording();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
+
+  // Generate deterministic instanceIds so all participants use SAME IDs
+  // Cloud and raw-tracks need DIFFERENT instanceIds (Daily.co restriction)
+  // useMemo ensures stable values across React StrictMode double-renders
+  const cloudInstanceId = useMemo(() => meeting.id, [meeting.id]);
+  const rawTracksInstanceId = useMemo(
+    () => uuidv5(meeting.id, RAW_TRACKS_NAMESPACE),
+    [meeting.id],
+  );
 
   const roomName = params?.roomName as string;
 
@@ -229,17 +250,89 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   );
 
   const handleFrameJoinMeeting = useCallback(
-    (startRecording: (args: { type: "raw-tracks" }) => void) => {
+    (
+      startRecording: (args: {
+        type: DailyRecordingType;
+        instanceId: string;
+      }) => void,
+    ) => {
       try {
         if (meeting.recording_type === "cloud") {
-          console.log("Starting cloud recording");
-          startRecording({ type: "raw-tracks" });
+          console.log("Starting dual recording via REST API", {
+            cloudInstanceId,
+            rawTracksInstanceId,
+          });
+
+          // Start both cloud and raw-tracks via backend REST API (with retry on 404)
+          // Daily.co needs time to register call as "hosting" for REST API
+          const startRecordingWithRetry = (
+            type: DailyRecordingType,
+            instanceId: string,
+            attempt: number = 1,
+          ) => {
+            setTimeout(
+              () => {
+                startRecordingMutation.mutate(
+                  {
+                    params: {
+                      path: {
+                        meeting_id: meeting.id,
+                      },
+                    },
+                    body: {
+                      type,
+                      instanceId,
+                    },
+                  },
+                  {
+                    onError: (error: any) => {
+                      const errorText = error?.detail || error?.message || "";
+                      const is404NotHosting = errorText.includes(
+                        "does not seem to be hosting a call",
+                      );
+                      const isActiveStream = errorText.includes(
+                        "has an active stream",
+                      );
+
+                      if (is404NotHosting && attempt < 5) {
+                        console.log(
+                          `${type}: Call not hosting yet, retry ${attempt + 1}/5 in 2s...`,
+                        );
+                        startRecordingWithRetry(type, instanceId, attempt + 1);
+                      } else if (isActiveStream) {
+                        // Expected: another participant already started recording with same instanceId
+                        console.log(
+                          `${type}: Recording already active (started by another participant)`,
+                        );
+                      } else {
+                        console.error(
+                          `Failed to start ${type} recording:`,
+                          error,
+                        );
+                      }
+                    },
+                  },
+                );
+              },
+              attempt === 1 ? 2000 : 2000,
+            ); // 2s initial delay, then 2s between retries
+          };
+
+          // Start both recordings
+          startRecordingWithRetry("cloud", cloudInstanceId);
+          startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
         }
       } catch (error) {
-        console.error("Failed to start recording:", error);
+        console.error("Failed to start recordings:", error);
       }
     },
-    [meeting.recording_type],
+    [
+      meeting.recording_type,
+      meeting.id,
+      startRecordingMutation,
+      cloudInstanceId,
+      rawTracksInstanceId,
+    ],
   );
 
   const recordingIconUrl = useMemo(

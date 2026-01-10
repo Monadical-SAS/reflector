@@ -2,10 +2,11 @@ import type { components } from "../../reflector-api";
 import { useTranscriptCreate } from "../../lib/apiHooks";
 
 type CreateTranscript = components["schemas"]["CreateTranscript"];
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 
 type UseCreateTranscript = {
-  transcript: GetTranscript | null;
+  transcript: GetTranscriptWithParticipants | null;
   loading: boolean;
   error: Error | null;
   create: (transcriptCreationDetails: CreateTranscript) => Promise<void>;

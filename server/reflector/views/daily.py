@@ -174,46 +174,81 @@ async def _handle_recording_started(event: RecordingStartedEvent):
 async def _handle_recording_ready(event: RecordingReadyEvent):
     room_name = event.payload.room_name
     recording_id = event.payload.recording_id
-    tracks = event.payload.tracks
-
-    if not tracks:
-        logger.warning(
-            "recording.ready-to-download: missing tracks",
-            room_name=room_name,
-            recording_id=recording_id,
-            payload=event.payload,
-        )
-        return
+    recording_type = event.payload.type  # "cloud" or "raw-tracks"
 
     logger.info(
         "Recording ready for download",
         room_name=room_name,
         recording_id=recording_id,
-        num_tracks=len(tracks),
+        recording_type=recording_type,
         platform="daily",
     )
 
     bucket_name = settings.DAILYCO_STORAGE_AWS_BUCKET_NAME
     if not bucket_name:
-        logger.error(
-            "DAILYCO_STORAGE_AWS_BUCKET_NAME not configured; cannot process Daily recording"
-        )
+        logger.error("DAILYCO_STORAGE_AWS_BUCKET_NAME not configured")
         return
 
-    track_keys = [t.s3Key for t in tracks if t.type == "audio"]
+    if recording_type == "cloud":
+        # Cloud recording: single MP4 file written by Daily.co to DAILYCO_STORAGE bucket
+        s3_key = event.payload.s3_key
 
-    logger.info(
-        "Recording webhook queuing processing",
-        recording_id=recording_id,
-        room_name=room_name,
-    )
+        # Store cloud recording reference in meeting table
+        meeting = await meetings_controller.get_by_room_name(room_name)
+        if not meeting:
+            logger.warning(
+                "Cloud recording: meeting not found",
+                room_name=room_name,
+                recording_id=recording_id,
+            )
+            return
 
-    process_multitrack_recording.delay(
-        bucket_name=bucket_name,
-        daily_room_name=room_name,
-        recording_id=recording_id,
-        track_keys=track_keys,
-    )
+        await meetings_controller.update_meeting(
+            meeting.id,
+            cloud_recording_s3_key=s3_key,
+            cloud_recording_duration=event.payload.duration,
+        )
+
+        logger.info(
+            "Cloud recording stored",
+            meeting_id=meeting.id,
+            s3_key=s3_key,
+            duration=event.payload.duration,
+        )
+
+    elif recording_type == "raw-tracks":
+        # Existing multi-track processing (unchanged)
+        tracks = event.payload.tracks
+        if not tracks:
+            logger.warning(
+                "raw-tracks recording: missing tracks array",
+                room_name=room_name,
+                recording_id=recording_id,
+            )
+            return
+
+        track_keys = [t.s3Key for t in tracks if t.type == "audio"]
+
+        logger.info(
+            "Raw-tracks recording queuing processing",
+            recording_id=recording_id,
+            room_name=room_name,
+            num_tracks=len(track_keys),
+        )
+
+        process_multitrack_recording.delay(
+            bucket_name=bucket_name,
+            daily_room_name=room_name,
+            recording_id=recording_id,
+            track_keys=track_keys,
+        )
+
+    else:
+        logger.warning(
+            "Unknown recording type",
+            recording_type=recording_type,
+            recording_id=recording_id,
+        )
 
 
 async def _handle_recording_error(event: RecordingErrorEvent):

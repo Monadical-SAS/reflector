@@ -12,6 +12,7 @@ from reflector.dailyco_api import (
     RoomProperties,
     verify_webhook_signature,
 )
+from reflector.dailyco_api import RecordingType as DailyRecordingType
 from reflector.db.daily_participant_sessions import (
     daily_participant_sessions_controller,
 )
@@ -60,8 +61,8 @@ class DailyClient(VideoPlatformClient):
             enable_recording = "local"
         elif (
             room.recording_type == self.RECORDING_CLOUD
-        ):  # daily "cloud" is not our "cloud"
-            enable_recording = "raw-tracks"
+        ):  # For dual recording: don't set enable_recording, start both via REST API
+            enable_recording = None
 
         properties = RoomProperties(
             enable_recording=enable_recording,
@@ -195,6 +196,28 @@ class DailyClient(VideoPlatformClient):
         request = CreateMeetingTokenRequest(properties=properties)
         result = await self._api_client.create_meeting_token(request)
         return result.token
+
+    async def start_recording(
+        self,
+        room_name: DailyRoomName,
+        recording_type: DailyRecordingType,
+        instance_id: NonEmptyString,
+    ) -> dict:
+        """Start recording via Daily.co REST API.
+
+        Args:
+            room_name: Daily.co room name
+            recording_type: Recording type
+            instance_id: UUID for this recording session
+
+        Returns:
+            Recording start confirmation from Daily.co API
+        """
+        return await self._api_client.start_recording(
+            room_name=room_name,
+            recording_type=recording_type,
+            instance_id=instance_id,
+        )
 
     async def close(self):
         """Clean up API client resources."""

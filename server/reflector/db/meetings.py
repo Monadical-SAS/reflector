@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
@@ -63,6 +63,8 @@ meetings = sa.Table(
         nullable=False,
         server_default=assert_equal(WHEREBY_PLATFORM, "whereby"),
     ),
+    sa.Column("cloud_recording_s3_key", sa.String, nullable=True),
+    sa.Column("cloud_recording_duration", sa.Integer, nullable=True),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -110,6 +112,13 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform = WHEREBY_PLATFORM
+    cloud_recording_s3_key: str | None = None
+    cloud_recording_duration: int | None = None
+
+    @computed_field
+    @property
+    def cloud_recording_available(self) -> bool:
+        return bool(self.cloud_recording_s3_key)
 
 
 class MeetingController:
@@ -141,7 +150,9 @@ class MeetingController:
             calendar_metadata=calendar_metadata,
             platform=room.platform,
         )
-        query = meetings.insert().values(**meeting.model_dump())
+        query = meetings.insert().values(
+            **meeting.model_dump(exclude={"cloud_recording_available"})
+        )
         await get_database().execute(query)
         return meeting
 
@@ -170,6 +181,12 @@ class MeetingController:
         if not result:
             return None
         return Meeting(**result)
+
+    async def get_by_room_name_all(self, room_name: str) -> list[Meeting]:
+        """Get all meetings for a room name (not just most recent)."""
+        query = meetings.select().where(meetings.c.room_name == room_name)
+        results = await get_database().fetch_all(query)
+        return [Meeting(**dict(r)) for r in results]
 
     async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         """

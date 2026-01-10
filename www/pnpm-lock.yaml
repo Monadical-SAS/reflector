@@ -124,6 +124,9 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.9.2
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
       wavesurfer.js:
         specifier: ^7.4.2
         version: 7.10.1
@@ -8771,6 +8774,13 @@ packages:
         integrity: sha512-Fykw5U4eZESbq739BeLvEBFRuJODfrlmjx5eJux7W817LjRaq4b7/i4t2zxQmhcX+fAj4nMfRdTzO4tmwLKn0w==,
       }
 
+  uuid@13.0.0:
+    resolution:
+      {
+        integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==,
+      }
+    hasBin: true
+
   uuid@8.3.2:
     resolution:
       {
@@ -15400,6 +15410,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid-validate@0.0.3: {}
+
+  uuid@13.0.0: {}
 
   uuid@8.3.2: {}
 

@@ -17,7 +17,7 @@ from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
 )
-from reflector.db.meetings import meetings_controller
+from reflector.db.meetings import Meeting, meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
@@ -337,9 +337,11 @@ async def poll_daily_recordings():
     """Poll Daily.co API for recordings and process missing ones.
 
     Fetches latest recordings from Daily.co API (default limit 100), compares with DB,
-    and queues processing for recordings not already in DB.
+    and stores/queues missing recordings:
+    - Cloud recordings: Store S3 key in meeting table
+    - Raw-tracks recordings: Queue multitrack processing
 
-    For each missing recording, uses audio tracks from API response.
+    Runs every 3 minutes as fallback for webhook failures.
 
     Worker-level locking provides idempotency (see process_multitrack_recording).
     """
@@ -380,51 +382,162 @@ async def poll_daily_recordings():
         )
         return
 
-    recording_ids = [rec.id for rec in finished_recordings]
+    # Separate cloud and raw-tracks recordings
+    # Infer type if not provided by API:
+    # - Cloud recordings: s3key exists, tracks array EMPTY
+    # - Raw-tracks: s3key exists, tracks array HAS items (audio files)
+    cloud_recordings = []
+    raw_tracks_recordings = []
+    for rec in finished_recordings:
+        if rec.type:
+            inferred_type = rec.type
+        elif len(rec.tracks) > 0:
+            # Has tracks = raw-tracks (even if s3key exists)
+            inferred_type = "raw-tracks"
+        elif rec.s3key and len(rec.tracks) == 0:
+            # Has s3key but no tracks = cloud recording
+            inferred_type = "cloud"
+        else:
+            # Fallback
+            inferred_type = "raw-tracks"
+
+        if inferred_type == "cloud":
+            cloud_recordings.append(rec)
+        else:
+            raw_tracks_recordings.append(rec)
+
+    logger.debug(
+        "Poll results",
+        total=len(finished_recordings),
+        cloud=len(cloud_recordings),
+        raw_tracks=len(raw_tracks_recordings),
+    )
+
+    # Process cloud recordings
+    await _poll_cloud_recordings(cloud_recordings)
+
+    # Process raw-tracks recordings (existing logic)
+    await _poll_raw_tracks_recordings(raw_tracks_recordings, bucket_name)
+
+
+async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingResponse]):
+    """Store cloud recordings missing from meeting table."""
+    if not cloud_recordings:
+        return
+
+    # Get all meetings with matching room names
+    room_names = list({rec.room_name for rec in cloud_recordings})
+    meetings_by_room: dict[str, List[Meeting]] = {}
+
+    for room_name in room_names:
+        meetings = await meetings_controller.get_by_room_name_all(room_name)
+        if meetings:
+            meetings_by_room[room_name] = meetings
+
+    stored_count = 0
+    for recording in cloud_recordings:
+        meetings = meetings_by_room.get(recording.room_name, [])
+        if not meetings:
+            logger.warning(
+                "Cloud recording: no meetings found for room",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+            )
+            continue
+
+        # Find meeting without cloud recording that overlaps with recording time
+        # TODO: improve matching logic (recording.start_ts, meeting.start_date)
+        target_meeting = None
+        for meeting in meetings:
+            if not meeting.cloud_recording_s3_key:
+                target_meeting = meeting
+                break
+
+        if not target_meeting:
+            logger.debug(
+                "Cloud recording: all meetings already have cloud recordings",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+            )
+            continue
+
+        # Extract S3 key from recording (cloud recordings use s3key field)
+        s3_key = recording.s3key or (recording.s3.key if recording.s3 else None)
+        if not s3_key:
+            logger.warning(
+                "Cloud recording: missing S3 key",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+            )
+            continue
+
+        await meetings_controller.update_meeting(
+            target_meeting.id,
+            cloud_recording_s3_key=s3_key,
+            cloud_recording_duration=recording.duration,
+        )
+
+        logger.info(
+            "Cloud recording stored via polling",
+            meeting_id=target_meeting.id,
+            recording_id=recording.id,
+            s3_key=s3_key,
+            duration=recording.duration,
+        )
+        stored_count += 1
+
+    logger.info(
+        "Cloud recording polling complete",
+        total=len(cloud_recordings),
+        stored=stored_count,
+    )
+
+
+async def _poll_raw_tracks_recordings(
+    raw_tracks_recordings: List[FinishedRecordingResponse],
+    bucket_name: str,
+):
+    """Queue raw-tracks recordings missing from DB (existing logic)."""
+    if not raw_tracks_recordings:
+        return
+
+    recording_ids = [rec.id for rec in raw_tracks_recordings]
     existing_recordings = await recordings_controller.get_by_ids(recording_ids)
     existing_ids = {rec.id for rec in existing_recordings}
 
     missing_recordings = [
-        rec for rec in finished_recordings if rec.id not in existing_ids
+        rec for rec in raw_tracks_recordings if rec.id not in existing_ids
     ]
 
     if not missing_recordings:
         logger.debug(
-            "All recordings already in DB",
-            api_count=len(finished_recordings),
+            "All raw-tracks recordings already in DB",
+            api_count=len(raw_tracks_recordings),
             existing_count=len(existing_recordings),
         )
         return
 
     logger.info(
-        "Found recordings missing from DB",
+        "Found raw-tracks recordings missing from DB",
         missing_count=len(missing_recordings),
-        total_api_count=len(finished_recordings),
+        total_api_count=len(raw_tracks_recordings),
         existing_count=len(existing_recordings),
     )
 
     for recording in missing_recordings:
         if not recording.tracks:
-            if recording.status == "finished":
-                logger.warning(
-                    "Finished recording has no tracks (no audio captured)",
-                    recording_id=recording.id,
-                    room_name=recording.room_name,
-                )
-            else:
-                logger.debug(
-                    "No tracks in recording yet",
-                    recording_id=recording.id,
-                    room_name=recording.room_name,
-                    status=recording.status,
-                )
+            logger.warning(
+                "Finished raw-tracks recording has no tracks (no audio captured)",
+                recording_id=recording.id,
+                room_name=recording.room_name,
+            )
             continue
 
         track_keys = [t.s3Key for t in recording.tracks if t.type == "audio"]
 
         if not track_keys:
             logger.warning(
-                "No audio tracks found in recording (only video tracks)",
+                "No audio tracks found in raw-tracks recording",
                 recording_id=recording.id,
                 room_name=recording.room_name,
                 total_tracks=len(recording.tracks),
@@ -432,7 +545,7 @@ async def poll_daily_recordings():
             continue
 
         logger.info(
-            "Queueing missing recording for processing",
+            "Queueing missing raw-tracks recording for processing",
             recording_id=recording.id,
             room_name=recording.room_name,
             track_count=len(track_keys),
