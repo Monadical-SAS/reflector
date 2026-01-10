@@ -186,7 +186,7 @@ class MeetingController:
         """Get all meetings for a room name (not just most recent)."""
         query = meetings.select().where(meetings.c.room_name == room_name)
         results = await get_database().fetch_all(query)
-        return [Meeting(**dict(r)) for r in results]
+        return [Meeting(**r) for r in results]
 
     async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         """

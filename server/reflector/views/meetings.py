@@ -123,8 +123,12 @@ async def start_recording(
 
     except Exception as e:
         logger.error(
-            "Failed to start raw-tracks recording",
-            extra={"meeting_id": meeting_id, "error": str(e)},
+            f"Failed to start {body.type} recording",
+            extra={
+                "meeting_id": meeting_id,
+                "recording_type": body.type,
+                "error": str(e),
+            },
         )
         raise HTTPException(
             status_code=500, detail=f"Failed to start recording: {str(e)}"

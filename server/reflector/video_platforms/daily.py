@@ -16,6 +16,7 @@ from reflector.dailyco_api import RecordingType as DailyRecordingType
 from reflector.db.daily_participant_sessions import (
     daily_participant_sessions_controller,
 )
+from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.storage import get_dailyco_storage
@@ -59,9 +60,8 @@ class DailyClient(VideoPlatformClient):
         enable_recording = None
         if room.recording_type == self.RECORDING_LOCAL:
             enable_recording = "local"
-        elif (
-            room.recording_type == self.RECORDING_CLOUD
-        ):  # For dual recording: don't set enable_recording, start both via REST API
+        elif room.recording_type == self.RECORDING_CLOUD:
+            # Don't set enable_recording - recordings started via REST API (not auto-start)
             enable_recording = None
 
         properties = RoomProperties(
@@ -107,8 +107,6 @@ class DailyClient(VideoPlatformClient):
         Daily.co doesn't provide historical session API, so we query our database
         where participant.joined/left webhooks are stored.
         """
-        from reflector.db.meetings import meetings_controller  # noqa: PLC0415
-
         meeting = await meetings_controller.get_by_room_name(room_name)
         if not meeting:
             return []
@@ -188,8 +186,6 @@ class DailyClient(VideoPlatformClient):
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
-            start_cloud_recording=False,
-            start_cloud_recording_opts=None,
             enable_recording_ui=enable_recording_ui,
             is_owner=is_owner,
         )

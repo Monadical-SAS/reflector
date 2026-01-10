@@ -6,6 +6,9 @@ from celery.schedules import crontab
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)
+
+# Polling intervals (seconds)
+POLL_DAILY_RECORDINGS_INTERVAL_SEC = 15.0  # Dev: 15s, Prod: 180s
 if celery.current_app.main != "default":
     logger.info(f"Celery already configured ({celery.current_app})")
     app = celery.current_app
@@ -44,7 +47,7 @@ else:
         },
         "poll_daily_recordings": {
             "task": "reflector.worker.process.poll_daily_recordings",
-            "schedule": 15.0,  # Every 15 seconds for dev (was 180.0 / 3 min for prod)
+            "schedule": POLL_DAILY_RECORDINGS_INTERVAL_SEC,
         },
         "trigger_daily_reconciliation": {
             "task": "reflector.worker.process.trigger_daily_reconciliation",

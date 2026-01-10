@@ -398,8 +398,14 @@ async def poll_daily_recordings():
             # Has s3key but no tracks = cloud recording
             inferred_type = "cloud"
         else:
-            # Fallback
-            inferred_type = "raw-tracks"
+            logger.warning(
+                "Cannot determine recording type, skipping",
+                recording_id=rec.id,
+                room_name=rec.room_name,
+                has_s3key=bool(rec.s3key),
+                tracks_count=len(rec.tracks),
+            )
+            continue
 
         if inferred_type == "cloud":
             cloud_recordings.append(rec)
