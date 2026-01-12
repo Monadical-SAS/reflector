@@ -1,0 +1,14 @@
+{
+  "assignee": null,
+  "claim_note": "",
+  "claimed_at": null,
+  "created_at": "2026-01-12T22:41:17.670877Z",
+  "depends_on": [],
+  "epic": "fn-1",
+  "id": "fn-1.4",
+  "priority": null,
+  "spec_path": ".flow/tasks/fn-1.4.md",
+  "status": "todo",
+  "title": "Register WebSocket route",
+  "updated_at": "2026-01-12T22:41:17.671053Z"
+}
