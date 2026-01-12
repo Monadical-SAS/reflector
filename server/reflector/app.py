@@ -18,6 +18,7 @@ from reflector.views.rooms import router as rooms_router
 from reflector.views.rtc_offer import router as rtc_offer_router
 from reflector.views.transcripts import router as transcripts_router
 from reflector.views.transcripts_audio import router as transcripts_audio_router
+from reflector.views.transcripts_chat import router as transcripts_chat_router
 from reflector.views.transcripts_participants import (
     router as transcripts_participants_router,
 )
@@ -90,6 +91,7 @@ app.include_router(transcripts_participants_router, prefix="/v1")
 app.include_router(transcripts_speaker_router, prefix="/v1")
 app.include_router(transcripts_upload_router, prefix="/v1")
 app.include_router(transcripts_websocket_router, prefix="/v1")
+app.include_router(transcripts_chat_router, prefix="/v1")
 app.include_router(transcripts_webrtc_router, prefix="/v1")
 app.include_router(transcripts_process_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")

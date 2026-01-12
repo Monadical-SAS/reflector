@@ -7,16 +7,20 @@ TBD
 - [ ] TBD
 
 ## Done summary
-Blocked:
-Auto-blocked after 5 attempts.
-Run: 20260112T225250Z-duffy-igor.loskutoff@gmail.com-45256-e619
-Task: fn-1.3
+- Added LLM streaming integration to transcript chat WebSocket endpoint
+- Configured LLM with temperature 0.7 using llama-index Settings
+- Built system message with WebVTT transcript context (15k char limit)
+- Implemented conversation history management with ChatMessage objects
+- Stream LLM responses using Settings.llm.astream_chat()
+- Send tokens incrementally via WebSocket 'token' messages
+- Added 'done' message after streaming completes
+- Error handling with 'error' message type
 
-Last output:
-timeout: failed to run command ‘claude’: No such file or directory
-ralph: missing impl review receipt; forcing retry
-ralph: task not done; forcing retry
+Verification:
+- Code matches task spec requirements
+- WebSocket message protocol implemented (message/token/done/error)
+- Route registered in app.py
 ## Evidence
-- Commits:
+- Commits: ae85f5d3
 - Tests:
 - PRs:
