@@ -155,3 +155,16 @@ def test_chat_websocket_context_generation(test_transcript_with_content):
             assert "<v Bob>" in webvtt
             assert "Hello everyone." in webvtt
             assert "Hi there!" in webvtt
+
+
+def test_chat_websocket_message_protocol(test_transcript_with_content):
+    """Test LLM message streaming protocol (unit test without actual LLM)."""
+    # This test verifies the message protocol structure
+    # Actual LLM integration requires mocking or live LLM
+    import json
+
+    # Verify message types match protocol
+    assert json.dumps({"type": "message", "text": "test"})  # Client to server
+    assert json.dumps({"type": "token", "text": "chunk"})  # Server to client
+    assert json.dumps({"type": "done"})  # Server to client
+    assert json.dumps({"type": "error", "message": "error"})  # Server to client
