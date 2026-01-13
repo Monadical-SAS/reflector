@@ -175,7 +175,7 @@ async def process_multitrack_recording(
     daily_room_name: DailyRoomName,
     recording_id: str,
     track_keys: list[str],
-    recording_start_ts: int | None = None,
+    recording_start_ts: int,
 ):
     """
     Process raw-tracks (multitrack) recording from Daily.co.
@@ -185,7 +185,7 @@ async def process_multitrack_recording(
         daily_room_name: Daily.co room name
         recording_id: Daily.co recording ID
         track_keys: S3 keys for audio tracks
-        recording_start_ts: Unix timestamp when recording started (for time-based meeting matching)
+        recording_start_ts: Unix timestamp when recording started (required for time-based meeting matching)
     """
     logger.info(
         "Processing multitrack recording",
@@ -224,7 +224,7 @@ async def process_multitrack_recording(
         )
 
         await _process_multitrack_recording_inner(
-            bucket_name, daily_room_name, recording_id, track_keys
+            bucket_name, daily_room_name, recording_id, track_keys, recording_start_ts
         )
 
 
@@ -233,6 +233,7 @@ async def _process_multitrack_recording_inner(
     daily_room_name: DailyRoomName,
     recording_id: str,
     track_keys: list[str],
+    recording_start_ts: int,
 ):
     """Inner function containing the actual processing logic."""
 
@@ -252,45 +253,31 @@ async def _process_multitrack_recording_inner(
             exc_info=True,
         )
 
-    # Find meeting: use time-based matching if recording_start_ts available
-    if recording_start_ts:
-        recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
-        meeting = await meetings_controller.get_by_room_name_and_time(
-            room_name=daily_room_name,
-            recording_start=recording_start,
-            time_window_hours=168,  # 1 week
-        )
-        if not meeting:
-            logger.error(
-                "Raw-tracks: no meeting found within 1-week window (time-based match)",
-                recording_id=recording_id,
-                room_name=daily_room_name,
-                recording_start_ts=recording_start_ts,
-                recording_start=recording_start.isoformat(),
-            )
-            raise Exception(
-                f"Meeting not found for recording {recording_id} within 1-week window"
-            )
-        logger.info(
-            "Found meeting via time-based matching",
-            meeting_id=meeting.id,
-            room_name=daily_room_name,
+    # Find meeting via time-based matching
+    recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
+    meeting = await meetings_controller.get_by_room_name_and_time(
+        room_name=daily_room_name,
+        recording_start=recording_start,
+        time_window_hours=168,  # 1 week
+    )
+    if not meeting:
+        logger.error(
+            "Raw-tracks: no meeting found within 1-week window (time-based match)",
             recording_id=recording_id,
-            time_delta_seconds=abs(
-                (meeting.start_date - recording_start).total_seconds()
-            ),
-        )
-    else:
-        # Fallback: most recent meeting (legacy behavior, less accurate)
-        meeting = await meetings_controller.get_by_room_name(daily_room_name)
-        if not meeting:
-            raise Exception(f"Meeting not found: {daily_room_name}")
-        logger.warning(
-            "Found meeting via fallback (most recent) - no recording_start_ts provided",
-            meeting_id=meeting.id,
             room_name=daily_room_name,
-            recording_id=recording_id,
+            recording_start_ts=recording_start_ts,
+            recording_start=recording_start.isoformat(),
         )
+        raise Exception(
+            f"Meeting not found for recording {recording_id} within 1-week window"
+        )
+    logger.info(
+        "Found meeting via time-based matching",
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+        recording_id=recording_id,
+        time_delta_seconds=abs((meeting.start_date - recording_start).total_seconds()),
+    )
 
     room_name_base = extract_base_room_name(daily_room_name)
 
