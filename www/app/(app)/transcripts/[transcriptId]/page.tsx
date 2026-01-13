@@ -18,9 +18,15 @@ import {
   Skeleton,
   Text,
   Spinner,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { useTranscriptGet } from "../../../lib/apiHooks";
 import { TranscriptStatus } from "../../../lib/transcript";
+import {
+  TranscriptChatModal,
+  TranscriptChatButton,
+} from "../TranscriptChatModal";
+import { useTranscriptChat } from "../useTranscriptChat";
 
 type TranscriptDetails = {
   params: Promise<{
@@ -52,6 +58,9 @@ export default function TranscriptDetails(details: TranscriptDetails) {
   const useActiveTopic = useState<Topic | null>(null);
   const [finalSummaryElement, setFinalSummaryElement] =
     useState<HTMLDivElement | null>(null);
+
+  const { open, onOpen, onClose } = useDisclosure();
+  const chat = useTranscriptChat(transcriptId);
 
   useEffect(() => {
     if (!waiting || !transcript.data) return;
@@ -119,6 +128,15 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   return (
     <>
+      <TranscriptChatModal
+        open={open}
+        onClose={onClose}
+        messages={chat.messages}
+        sendMessage={chat.sendMessage}
+        isStreaming={chat.isStreaming}
+        currentStreamingText={chat.currentStreamingText}
+      />
+      <TranscriptChatButton onClick={onOpen} />
       <Grid
         templateColumns="1fr"
         templateRows="auto minmax(0, 1fr)"
