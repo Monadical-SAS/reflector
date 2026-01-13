@@ -240,6 +240,7 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
             daily_room_name=room_name,
             recording_id=recording_id,
             track_keys=track_keys,
+            recording_start_ts=event.payload.start_ts,
         )
 
     else:

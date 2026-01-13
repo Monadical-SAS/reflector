@@ -17,7 +17,7 @@ from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
 )
-from reflector.db.meetings import Meeting, meetings_controller
+from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import (
@@ -175,13 +175,25 @@ async def process_multitrack_recording(
     daily_room_name: DailyRoomName,
     recording_id: str,
     track_keys: list[str],
+    recording_start_ts: int | None = None,
 ):
+    """
+    Process raw-tracks (multitrack) recording from Daily.co.
+
+    Args:
+        bucket_name: S3 bucket containing tracks
+        daily_room_name: Daily.co room name
+        recording_id: Daily.co recording ID
+        track_keys: S3 keys for audio tracks
+        recording_start_ts: Unix timestamp when recording started (for time-based meeting matching)
+    """
     logger.info(
         "Processing multitrack recording",
         bucket=bucket_name,
         room_name=daily_room_name,
         recording_id=recording_id,
         provided_keys=len(track_keys),
+        recording_start_ts=recording_start_ts,
     )
 
     if not track_keys:
@@ -240,23 +252,51 @@ async def _process_multitrack_recording_inner(
             exc_info=True,
         )
 
-    meeting = await meetings_controller.get_by_room_name(daily_room_name)
+    # Find meeting: use time-based matching if recording_start_ts available
+    if recording_start_ts:
+        recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
+        meeting = await meetings_controller.get_by_room_name_and_time(
+            room_name=daily_room_name,
+            recording_start=recording_start,
+            time_window_hours=168,  # 1 week
+        )
+        if not meeting:
+            logger.error(
+                "Raw-tracks: no meeting found within 1-week window (time-based match)",
+                recording_id=recording_id,
+                room_name=daily_room_name,
+                recording_start_ts=recording_start_ts,
+                recording_start=recording_start.isoformat(),
+            )
+            raise Exception(
+                f"Meeting not found for recording {recording_id} within 1-week window"
+            )
+        logger.info(
+            "Found meeting via time-based matching",
+            meeting_id=meeting.id,
+            room_name=daily_room_name,
+            recording_id=recording_id,
+            time_delta_seconds=abs(
+                (meeting.start_date - recording_start).total_seconds()
+            ),
+        )
+    else:
+        # Fallback: most recent meeting (legacy behavior, less accurate)
+        meeting = await meetings_controller.get_by_room_name(daily_room_name)
+        if not meeting:
+            raise Exception(f"Meeting not found: {daily_room_name}")
+        logger.warning(
+            "Found meeting via fallback (most recent) - no recording_start_ts provided",
+            meeting_id=meeting.id,
+            room_name=daily_room_name,
+            recording_id=recording_id,
+        )
 
     room_name_base = extract_base_room_name(daily_room_name)
 
     room = await rooms_controller.get_by_name(room_name_base)
     if not room:
         raise Exception(f"Room not found: {room_name_base}")
-
-    if not meeting:
-        raise Exception(f"Meeting not found: {room_name_base}")
-
-    logger.info(
-        "Found existing Meeting for recording",
-        meeting_id=meeting.id,
-        room_name=daily_room_name,
-        recording_id=recording_id,
-    )
 
     recording = await recordings_controller.get_by_id(recording_id)
     if not recording:
@@ -421,48 +461,50 @@ async def poll_daily_recordings():
     # Process cloud recordings
     await _poll_cloud_recordings(cloud_recordings)
 
-    # Process raw-tracks recordings (existing logic)
+    # Process raw-tracks recordings
     await _poll_raw_tracks_recordings(raw_tracks_recordings, bucket_name)
 
 
 async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingResponse]):
-    """Store cloud recordings missing from meeting table."""
+    """
+    Store cloud recordings missing from meeting table.
+
+    Uses time-based matching to handle duplicate room_name values.
+    See meetings_controller.get_by_room_name_and_time() for details on the hack.
+    """
     if not cloud_recordings:
         return
 
-    # Get all meetings with matching room names
-    room_names = list({rec.room_name for rec in cloud_recordings})
-    meetings_by_room: dict[str, List[Meeting]] = {}
-
-    for room_name in room_names:
-        meetings = await meetings_controller.get_by_room_name_all(room_name)
-        if meetings:
-            meetings_by_room[room_name] = meetings
-
     stored_count = 0
     for recording in cloud_recordings:
-        meetings = meetings_by_room.get(recording.room_name, [])
-        if not meetings:
+        # Convert Unix timestamp to datetime for matching
+        recording_start = datetime.fromtimestamp(recording.start_ts, tz=timezone.utc)
+
+        # Find meeting by time proximity (1-week window)
+        meeting = await meetings_controller.get_by_room_name_and_time(
+            room_name=recording.room_name,
+            recording_start=recording_start,
+            time_window_hours=168,  # 1 week
+        )
+
+        if not meeting:
             logger.warning(
-                "Cloud recording: no meetings found for room",
+                "Cloud recording: no meeting found within 1-week window",
                 recording_id=recording.id,
                 room_name=recording.room_name,
+                recording_start_ts=recording.start_ts,
+                recording_start=recording_start.isoformat(),
             )
             continue
 
-        # Find meeting without cloud recording that overlaps with recording time
-        # TODO: improve matching logic (recording.start_ts, meeting.start_date)
-        target_meeting = None
-        for meeting in meetings:
-            if not meeting.daily_composed_video_s3_key:
-                target_meeting = meeting
-                break
-
-        if not target_meeting:
+        # Skip if meeting already has cloud recording
+        if meeting.daily_composed_video_s3_key:
             logger.debug(
-                "Cloud recording: all meetings already have cloud recordings",
+                "Cloud recording: meeting already has cloud recording",
                 recording_id=recording.id,
                 room_name=recording.room_name,
+                meeting_id=meeting.id,
+                existing_s3_key=meeting.daily_composed_video_s3_key,
             )
             continue
 
@@ -477,17 +519,20 @@ async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingRespons
             continue
 
         await meetings_controller.update_meeting(
-            target_meeting.id,
+            meeting.id,
             daily_composed_video_s3_key=s3_key,
             daily_composed_video_duration=recording.duration,
         )
 
         logger.info(
-            "Cloud recording stored via polling",
-            meeting_id=target_meeting.id,
+            "Cloud recording stored via polling (time-based match)",
+            meeting_id=meeting.id,
             recording_id=recording.id,
             s3_key=s3_key,
             duration=recording.duration,
+            time_delta_seconds=abs(
+                (meeting.start_date - recording_start).total_seconds()
+            ),
         )
         stored_count += 1
 
@@ -561,6 +606,7 @@ async def _poll_raw_tracks_recordings(
             daily_room_name=recording.room_name,
             recording_id=recording.id,
             track_keys=track_keys,
+            recording_start_ts=recording.start_ts,
         )
 
 
@@ -1001,11 +1047,16 @@ async def reprocess_failed_daily_recordings():
                     transcript_status=transcript.status if transcript else None,
                 )
 
+                # For reprocessing, use meeting's start_date as recording_start_ts
+                # (meeting already known via recording.meeting_id)
+                recording_start_ts = int(meeting.start_date.timestamp())
+
                 process_multitrack_recording.delay(
                     bucket_name=bucket_name,
                     daily_room_name=meeting.room_name,
                     recording_id=recording.id,
                     track_keys=recording.track_keys,
+                    recording_start_ts=recording_start_ts,
                 )
 
             reprocessed_count += 1
