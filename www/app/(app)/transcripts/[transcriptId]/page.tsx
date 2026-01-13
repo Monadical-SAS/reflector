@@ -272,13 +272,34 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             onTopicClick={handleTopicClick}
           />
 
-          {/* Transcript with colored gutter (bottom section - normal document flow) */}
+          {/* Transcript with colored gutter (bottom section - scrollable container) */}
           {topics.topics && topics.topics.length > 0 && (
-            <TranscriptWithGutter
-              topics={topics.topics}
-              getSpeakerName={getSpeakerName}
-              onGutterClick={handleGutterClick}
-            />
+            <Box
+              overflowY="auto"
+              maxH="600px"
+              pr={2}
+              css={{
+                "&::-webkit-scrollbar": {
+                  width: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "transparent",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "#CBD5E0",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  background: "#A0AEC0",
+                },
+              }}
+            >
+              <TranscriptWithGutter
+                topics={topics.topics}
+                getSpeakerName={getSpeakerName}
+                onGutterClick={handleGutterClick}
+              />
+            </Box>
           )}
 
           {/* Final Summary (at bottom) */}
