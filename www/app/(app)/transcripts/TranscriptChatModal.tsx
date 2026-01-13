@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Box, Dialog, Input, IconButton } from "@chakra-ui/react";
 import { MessageCircle } from "lucide-react";
+import Markdown from "react-markdown";
+import "../../styles/markdown.css";
 import type { Message } from "./useTranscriptChat";
 
 interface TranscriptChatModalProps {
@@ -46,13 +48,21 @@ export function TranscriptChatModal({
                 bg={msg.role === "user" ? "blue.50" : "gray.50"}
                 borderRadius="md"
               >
-                {msg.text}
+                {msg.role === "user" ? (
+                  msg.text
+                ) : (
+                  <div className="markdown">
+                    <Markdown>{msg.text}</Markdown>
+                  </div>
+                )}
               </Box>
             ))}
 
             {isStreaming && (
               <Box p={3} bg="gray.50" borderRadius="md">
-                {currentStreamingText}
+                <div className="markdown">
+                  <Markdown>{currentStreamingText}</Markdown>
+                </div>
                 <Box as="span" className="animate-pulse">
                   ▊
                 </Box>

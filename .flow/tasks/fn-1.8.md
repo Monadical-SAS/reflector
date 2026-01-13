@@ -19,18 +19,25 @@ Fix WebSocket chat tests to use proper async WebSocket testing approach (matchin
 - [x] No event loop or asyncio errors in test output
 
 ## Done summary
+Fixed WebSocket chat tests by switching from TestClient to proper async testing with httpx_ws and threaded server pattern. All 6 tests now pass without event loop errors.
 
-Fixed WebSocket chat tests by switching from TestClient (which has event loop issues) to proper async testing approach using httpx_ws and threaded server pattern (matching existing test_transcripts_rtc_ws.py).
+## Changes
+
+- Rewrote all WebSocket tests to use aconnect_ws from httpx_ws
+- Added chat_appserver fixture using threaded Uvicorn server (port 1256)
+- Tests now use separate event loop in server thread
+- Matches existing pattern from test_transcripts_rtc_ws.py
+
+## Tests Passing
 
 All 6 tests now pass:
-- test_chat_websocket_connection_success: validates WebSocket connection and echo behavior
-- test_chat_websocket_nonexistent_transcript: validates error handling for invalid transcript
-- test_chat_websocket_multiple_messages: validates handling multiple sequential messages
-- test_chat_websocket_disconnect_graceful: validates clean disconnection
-- test_chat_websocket_context_generation: validates WebVTT context generation with participants/words
-- test_chat_websocket_unknown_message_type: validates echo behavior for unknown message types
-
+1. test_chat_websocket_connection_success - validates WebSocket connection and echo behavior
+2. test_chat_websocket_nonexistent_transcript - validates error handling for invalid transcript
+3. test_chat_websocket_multiple_messages - validates handling multiple sequential messages
+4. test_chat_websocket_disconnect_graceful - validates clean disconnection
+5. test_chat_websocket_context_generation - validates WebVTT context generation
+6. test_chat_websocket_unknown_message_type - validates echo for unknown message types
 ## Evidence
-- Commits:
-- Tests:
+- Commits: 68df8257
+- Tests: test_chat_websocket_connection_success, test_chat_websocket_nonexistent_transcript, test_chat_websocket_multiple_messages, test_chat_websocket_disconnect_graceful, test_chat_websocket_context_generation, test_chat_websocket_unknown_message_type
 - PRs:

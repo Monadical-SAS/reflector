@@ -5,10 +5,28 @@
   "created_at": "2026-01-12T22:41:17.996329Z",
   "depends_on": [],
   "epic": "fn-1",
+  "evidence": {
+    "commits": [
+      "68df8257"
+    ],
+    "files_changed": [
+      ".flow/tasks/fn-1.8.json",
+      ".flow/tasks/fn-1.8.md",
+      "server/tests/test_transcripts_chat.py"
+    ],
+    "tests": [
+      "test_chat_websocket_connection_success",
+      "test_chat_websocket_nonexistent_transcript",
+      "test_chat_websocket_multiple_messages",
+      "test_chat_websocket_disconnect_graceful",
+      "test_chat_websocket_context_generation",
+      "test_chat_websocket_unknown_message_type"
+    ]
+  },
   "id": "fn-1.8",
   "priority": null,
   "spec_path": ".flow/tasks/fn-1.8.md",
-  "status": "in_progress",
+  "status": "done",
   "title": "End-to-end testing",
-  "updated_at": "2026-01-13T01:10:06.678981Z"
+  "updated_at": "2026-01-13T01:18:10.893171Z"
 }
