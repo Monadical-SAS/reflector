@@ -3,7 +3,9 @@ import Modal from "../modal";
 import useTopics from "../useTopics";
 import useWaveform from "../useWaveform";
 import useMp3 from "../useMp3";
+import useParticipants from "../useParticipants";
 import { TopicList } from "./_components/TopicList";
+import { TranscriptWithGutter } from "./_components/TranscriptWithGutter";
 import { Topic } from "../webSocketTypes";
 import React, { useEffect, useState, use } from "react";
 import FinalSummary from "./finalSummary";
@@ -45,13 +47,90 @@ export default function TranscriptDetails(details: TranscriptDetails) {
 
   const mp3 = useMp3(transcriptId, waiting);
   const topics = useTopics(transcriptId);
+  const participants = useParticipants(transcriptId);
   const waveform = useWaveform(
     transcriptId,
     waiting || mp3.audioDeleted === true,
   );
   const useActiveTopic = useState<Topic | null>(null);
+  const [activeTopic, setActiveTopic] = useActiveTopic;
   const [finalSummaryElement, setFinalSummaryElement] =
     useState<HTMLDivElement | null>(null);
+
+  // IntersectionObserver for active topic detection based on scroll position
+  useEffect(() => {
+    if (!topics.topics || topics.topics.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the most visible segment
+        let mostVisibleEntry: IntersectionObserverEntry | null = null;
+        let maxRatio = 0;
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio;
+            mostVisibleEntry = entry;
+          }
+        });
+
+        if (mostVisibleEntry) {
+          // Extract topicId from segment id (format: "segment-{topicId}-{idx}")
+          const segmentId = mostVisibleEntry.target.id;
+          const match = segmentId.match(/^segment-([^-]+)-/);
+          if (match) {
+            const topicId = match[1];
+            const topic = topics.topics?.find((t) => t.id === topicId);
+            if (topic && activeTopic?.id !== topic.id) {
+              setActiveTopic(topic);
+            }
+          }
+        }
+      },
+      {
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+        rootMargin: "-20% 0px -20% 0px",
+      },
+    );
+
+    // Observe all segment elements
+    const segments = document.querySelectorAll('[id^="segment-"]');
+    segments.forEach((segment) => observer.observe(segment));
+
+    return () => observer.disconnect();
+  }, [topics.topics, activeTopic?.id, setActiveTopic]);
+
+  // Scroll handlers for bidirectional navigation
+  const handleTopicClick = (topicId: string) => {
+    // Scroll to first segment of this topic in transcript
+    const firstSegment = document.querySelector(`[id^="segment-${topicId}-"]`);
+    if (firstSegment) {
+      firstSegment.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  };
+
+  const handleGutterClick = (topicId: string) => {
+    // Scroll to topic in list
+    const topicChip = document.getElementById(`topic-${topicId}`);
+    if (topicChip) {
+      topicChip.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  };
+
+  const getSpeakerName = (speakerNumber: number) => {
+    if (!participants.response) return `Speaker ${speakerNumber}`;
+    return (
+      participants.response.find(
+        (participant) => participant.speaker == speakerNumber,
+      )?.name || `Speaker ${speakerNumber}`
+    );
+  };
 
   useEffect(() => {
     if (!waiting || !transcript.data) return;
@@ -150,43 +229,39 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             )}
           </>
         )}
-        <Grid
-          templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
-          templateRows={{
-            base: "auto minmax(0, 1fr) minmax(0, 1fr)",
-            md: "auto minmax(0, 1fr)",
-          }}
+        <Flex
+          direction="column"
           gap={4}
-          gridRowGap={2}
           padding={4}
           paddingBottom={0}
           background="gray.bg"
-          border={"2px solid"}
-          borderColor={"gray.bg"}
+          border="2px solid"
+          borderColor="gray.bg"
           borderRadius={8}
         >
-          <GridItem colSpan={{ base: 1, md: 2 }}>
-            <Flex direction="column" gap={0}>
-              <Flex alignItems="center" gap={2}>
-                <TranscriptTitle
-                  title={transcript.data?.title || "Unnamed Transcript"}
-                  transcriptId={transcriptId}
-                  onUpdate={() => {
-                    transcript.refetch().then(() => {});
-                  }}
-                  transcript={transcript.data || null}
-                  topics={topics.topics}
-                  finalSummaryElement={finalSummaryElement}
-                />
-              </Flex>
-              {mp3.audioDeleted && (
-                <Text fontSize="xs" color="gray.600" fontStyle="italic">
-                  No audio is available because one or more participants didn't
-                  consent to keep the audio
-                </Text>
-              )}
+          {/* Title */}
+          <Flex direction="column" gap={0}>
+            <Flex alignItems="center" gap={2}>
+              <TranscriptTitle
+                title={transcript.data?.title || "Unnamed Transcript"}
+                transcriptId={transcriptId}
+                onUpdate={() => {
+                  transcript.refetch().then(() => {});
+                }}
+                transcript={transcript.data || null}
+                topics={topics.topics}
+                finalSummaryElement={finalSummaryElement}
+              />
             </Flex>
-          </GridItem>
+            {mp3.audioDeleted && (
+              <Text fontSize="xs" color="gray.600" fontStyle="italic">
+                No audio is available because one or more participants didn't
+                consent to keep the audio
+              </Text>
+            )}
+          </Flex>
+
+          {/* Topics List (top section - fixed height, scrollable) */}
           <TopicList
             topics={topics.topics || []}
             useActiveTopic={useActiveTopic}
@@ -194,21 +269,31 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             transcriptId={transcriptId}
             status={transcript.data?.status || null}
             currentTranscriptText=""
+            onTopicClick={handleTopicClick}
           />
+
+          {/* Transcript with colored gutter (bottom section - normal document flow) */}
+          {topics.topics && topics.topics.length > 0 && (
+            <TranscriptWithGutter
+              topics={topics.topics}
+              getSpeakerName={getSpeakerName}
+              onGutterClick={handleGutterClick}
+            />
+          )}
+
+          {/* Final Summary (at bottom) */}
           {transcript.data && topics.topics ? (
-            <>
-              <FinalSummary
-                transcript={transcript.data}
-                topics={topics.topics}
-                onUpdate={() => {
-                  transcript.refetch().then(() => {});
-                }}
-                finalSummaryRef={setFinalSummaryElement}
-              />
-            </>
+            <FinalSummary
+              transcript={transcript.data}
+              topics={topics.topics}
+              onUpdate={() => {
+                transcript.refetch().then(() => {});
+              }}
+              finalSummaryRef={setFinalSummaryElement}
+            />
           ) : (
-            <Flex justify={"center"} alignItems={"center"} h={"100%"}>
-              <div className="flex flex-col h-full justify-center content-center">
+            <Flex justify="center" alignItems="center" h="200px">
+              <Flex direction="column" h="full" justify="center" align="center">
                 {transcript?.data?.status == "processing" ? (
                   <Text>Loading Transcript</Text>
                 ) : (
@@ -217,10 +302,10 @@ export default function TranscriptDetails(details: TranscriptDetails) {
                     back later
                   </Text>
                 )}
-              </div>
+              </Flex>
             </Flex>
           )}
-        </Grid>
+        </Flex>
       </Grid>
     </>
   );

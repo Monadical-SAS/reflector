@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import ScrollToBottom from "../../scrollToBottom";
 import { Topic } from "../../webSocketTypes";
-import useParticipants from "../../useParticipants";
-import { Box, Flex, Text, Accordion } from "@chakra-ui/react";
-import { TopicItem } from "./TopicItem";
+import { Box, Flex, Text } from "@chakra-ui/react";
+import { formatTime } from "../../../../lib/time";
+import { getTopicColor } from "../../../../lib/topicColors";
 import { TranscriptStatus } from "../../../../lib/transcript";
-
 import { featureEnabled } from "../../../../lib/features";
 
 type TopicListProps = {
@@ -18,6 +17,7 @@ type TopicListProps = {
   transcriptId: string;
   status: TranscriptStatus | null;
   currentTranscriptText: any;
+  onTopicClick?: (topicId: string) => void;
 };
 
 export function TopicList({
@@ -27,30 +27,13 @@ export function TopicList({
   transcriptId,
   status,
   currentTranscriptText,
+  onTopicClick,
 }: TopicListProps) {
   const [activeTopic, setActiveTopic] = useActiveTopic;
+  const [hoveredTopicId, setHoveredTopicId] = useState<string | null>(null);
   const [autoscrollEnabled, setAutoscrollEnabled] = useState<boolean>(true);
-  const participants = useParticipants(transcriptId);
 
-  const scrollToTopic = () => {
-    const topicDiv = document.getElementById(`topic-${activeTopic?.id}`);
-
-    setTimeout(() => {
-      topicDiv?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest",
-      });
-    }, 200);
-  };
-
-  useEffect(() => {
-    if (activeTopic && autoscroll) scrollToTopic();
-  }, [activeTopic, autoscroll]);
-
-  // scroll top is not rounded, heights are, so exact match won't work.
-  // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
-  const toggleScroll = (element) => {
+  const toggleScroll = (element: HTMLElement) => {
     const bottom =
       Math.abs(
         element.scrollHeight - element.clientHeight - element.scrollTop,
@@ -61,14 +44,19 @@ export function TopicList({
       setAutoscrollEnabled(true);
     }
   };
-  const handleScroll = (e) => {
-    toggleScroll(e.target);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    toggleScroll(e.target as HTMLElement);
+  };
+
+  const scrollToBottom = () => {
+    const topicsDiv = document.getElementById("topics-scroll-div");
+    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
   useEffect(() => {
     if (autoscroll) {
-      const topicsDiv = document.getElementById("scroll-div");
-
+      const topicsDiv = document.getElementById("topics-scroll-div");
       topicsDiv && toggleScroll(topicsDiv);
     }
   }, [activeTopic, autoscroll]);
@@ -77,37 +65,41 @@ export function TopicList({
     if (autoscroll && autoscrollEnabled) scrollToBottom();
   }, [topics.length, currentTranscriptText]);
 
-  const scrollToBottom = () => {
-    const topicsDiv = document.getElementById("scroll-div");
-
-    if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
-  };
-
-  const getSpeakerName = (speakerNumber: number) => {
-    if (!participants.response) return;
-    return (
-      participants.response.find(
-        (participant) => participant.speaker == speakerNumber,
-      )?.name || `Speaker ${speakerNumber}`
-    );
-  };
-
-  const requireLogin = featureEnabled("requireLogin");
-
   useEffect(() => {
     if (autoscroll) {
       setActiveTopic(topics[topics.length - 1]);
     }
   }, [topics, autoscroll]);
 
+  const handleTopicClick = (topic: Topic) => {
+    setActiveTopic(topic);
+    if (onTopicClick) {
+      onTopicClick(topic.id);
+    }
+  };
+
+  const handleTopicMouseEnter = (topic: Topic) => {
+    setHoveredTopicId(topic.id);
+    // If already active, toggle off when mousing over
+    if (activeTopic?.id === topic.id) {
+      setActiveTopic(null);
+    } else {
+      setActiveTopic(topic);
+    }
+  };
+
+  const handleTopicMouseLeave = () => {
+    setHoveredTopicId(null);
+  };
+
+  const requireLogin = featureEnabled("requireLogin");
+
   return (
     <Flex
-      position={"relative"}
-      w={"100%"}
-      h={"95%"}
-      flexDirection={"column"}
-      justify={"center"}
-      align={"center"}
+      position="relative"
+      w="full"
+      h="200px"
+      flexDirection="column"
       flexShrink={0}
     >
       {autoscroll && (
@@ -118,45 +110,71 @@ export function TopicList({
       )}
 
       <Box
-        id="scroll-div"
-        overflowY={"auto"}
-        h={"100%"}
+        id="topics-scroll-div"
+        overflowY="auto"
+        h="full"
         onScroll={handleScroll}
         width="full"
       >
         {topics.length > 0 && (
-          <Accordion.Root
-            multiple={false}
-            collapsible={true}
-            value={activeTopic ? [activeTopic.id] : []}
-            onValueChange={(details) => {
-              const selectedTopicId = details.value[0];
-              const selectedTopic = selectedTopicId
-                ? topics.find((t) => t.id === selectedTopicId)
-                : null;
-              setActiveTopic(selectedTopic || null);
-            }}
-          >
-            {topics.map((topic) => (
-              <TopicItem
-                key={topic.id}
-                topic={topic}
-                isActive={activeTopic?.id === topic.id}
-                getSpeakerName={getSpeakerName}
-              />
-            ))}
-          </Accordion.Root>
+          <Flex direction="column" gap={1} p={2}>
+            {topics.map((topic, index) => {
+              const color = getTopicColor(index);
+              const isActive = activeTopic?.id === topic.id;
+              const isHovered = hoveredTopicId === topic.id;
+
+              return (
+                <Flex
+                  key={topic.id}
+                  id={`topic-${topic.id}`}
+                  gap={2}
+                  align="center"
+                  py={1}
+                  px={2}
+                  cursor="pointer"
+                  bg={isActive || isHovered ? "gray.100" : "transparent"}
+                  _hover={{ bg: "gray.50" }}
+                  onClick={() => handleTopicClick(topic)}
+                  onMouseEnter={() => handleTopicMouseEnter(topic)}
+                  onMouseLeave={handleTopicMouseLeave}
+                >
+                  {/* Color indicator */}
+                  <Box
+                    w="12px"
+                    h="12px"
+                    borderRadius="full"
+                    bg={color}
+                    flexShrink={0}
+                  />
+
+                  {/* Topic title */}
+                  <Text
+                    flex={1}
+                    fontSize="sm"
+                    fontWeight={isActive ? "semibold" : "normal"}
+                  >
+                    {topic.title}
+                  </Text>
+
+                  {/* Timestamp */}
+                  <Text as="span" color="gray.500" fontSize="xs" flexShrink={0}>
+                    {formatTime(topic.timestamp)}
+                  </Text>
+                </Flex>
+              );
+            })}
+          </Flex>
         )}
 
         {status == "recording" && (
-          <Box textAlign={"center"}>
+          <Box textAlign="center">
             <Text>{currentTranscriptText}</Text>
           </Box>
         )}
         {(status == "recording" || status == "idle") &&
           currentTranscriptText.length == 0 &&
           topics.length == 0 && (
-            <Box textAlign={"center"} color="gray">
+            <Box textAlign="center" color="gray">
               <Text>
                 Full discussion transcript will appear here after you start
                 recording.
@@ -167,7 +185,7 @@ export function TopicList({
             </Box>
           )}
         {status == "processing" && (
-          <Box textAlign={"center"} color="gray">
+          <Box textAlign="center" color="gray">
             <Text>We are processing the recording, please wait.</Text>
             {!requireLogin && (
               <span>
@@ -177,12 +195,12 @@ export function TopicList({
           </Box>
         )}
         {status == "ended" && topics.length == 0 && (
-          <Box textAlign={"center"} color="gray">
+          <Box textAlign="center" color="gray">
             <Text>Recording has ended without topics being found.</Text>
           </Box>
         )}
         {status == "error" && (
-          <Box textAlign={"center"} color="gray">
+          <Box textAlign="center" color="gray">
             <Text>There was an error processing your recording</Text>
           </Box>
         )}
