@@ -1,14 +1,14 @@
 {
-  "assignee": null,
+  "assignee": "igor.loskutoff@gmail.com",
   "claim_note": "",
-  "claimed_at": null,
+  "claimed_at": "2026-01-13T01:10:06.678780Z",
   "created_at": "2026-01-12T22:41:17.996329Z",
   "depends_on": [],
   "epic": "fn-1",
   "id": "fn-1.8",
   "priority": null,
   "spec_path": ".flow/tasks/fn-1.8.md",
-  "status": "todo",
+  "status": "in_progress",
   "title": "End-to-end testing",
-  "updated_at": "2026-01-12T22:41:17.996509Z"
+  "updated_at": "2026-01-13T01:10:06.678981Z"
 }
