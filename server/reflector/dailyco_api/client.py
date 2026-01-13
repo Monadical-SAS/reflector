@@ -8,6 +8,7 @@ Reference: https://docs.daily.co/reference/rest-api
 
 from http import HTTPStatus
 from typing import Any, Literal
+from uuid import UUID
 
 import httpx
 import structlog
@@ -401,7 +402,7 @@ class DailyApiClient:
         self,
         room_name: NonEmptyString,
         recording_type: RecordingType,
-        instance_id: NonEmptyString,
+        instance_id: UUID,
     ) -> dict[str, Any]:
         """Start recording via REST API.
 
@@ -424,7 +425,7 @@ class DailyApiClient:
             headers=self.headers,
             json={
                 "type": recording_type,
-                "instanceId": instance_id,
+                "instanceId": str(instance_id),
             },
         )
         return await self._handle_response(response, "start_recording")

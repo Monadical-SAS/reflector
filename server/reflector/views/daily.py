@@ -174,7 +174,7 @@ async def _handle_recording_started(event: RecordingStartedEvent):
 async def _handle_recording_ready(event: RecordingReadyEvent):
     room_name = event.payload.room_name
     recording_id = event.payload.recording_id
-    recording_type = event.payload.type  # "cloud" or "raw-tracks"
+    recording_type = event.payload.type
 
     logger.info(
         "Recording ready for download",
@@ -190,7 +190,7 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
         return
 
     if recording_type == "cloud":
-        # Cloud recording: single MP4 file written by Daily.co to DAILYCO_STORAGE bucket
+        # single MP4 file written by Daily.co to a bucket
         s3_key = event.payload.s3_key
 
         # Store cloud recording reference in meeting table
@@ -205,8 +205,8 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
 
         await meetings_controller.update_meeting(
             meeting.id,
-            cloud_recording_s3_key=s3_key,
-            cloud_recording_duration=event.payload.duration,
+            daily_composed_video_s3_key=s3_key,
+            daily_composed_video_duration=event.payload.duration,
         )
 
         logger.info(
@@ -217,7 +217,6 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
         )
 
     elif recording_type == "raw-tracks":
-        # Existing multi-track processing (unchanged)
         tracks = event.payload.tracks
         if not tracks:
             logger.warning(

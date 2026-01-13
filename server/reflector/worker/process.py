@@ -341,7 +341,7 @@ async def poll_daily_recordings():
     - Cloud recordings: Store S3 key in meeting table
     - Raw-tracks recordings: Queue multitrack processing
 
-    Runs every 3 minutes as fallback for webhook failures.
+    Acts as fallback when webhooks active, primary discovery when webhooks unavailable.
 
     Worker-level locking provides idempotency (see process_multitrack_recording).
     """
@@ -383,31 +383,30 @@ async def poll_daily_recordings():
         return
 
     # Separate cloud and raw-tracks recordings
-    # Infer type if not provided by API:
-    # - Cloud recordings: s3key exists, tracks array EMPTY
-    # - Raw-tracks: s3key exists, tracks array HAS items (audio files)
     cloud_recordings = []
     raw_tracks_recordings = []
     for rec in finished_recordings:
         if rec.type:
-            inferred_type = rec.type
-        elif len(rec.tracks) > 0:
-            # Has tracks = raw-tracks (even if s3key exists)
-            inferred_type = "raw-tracks"
-        elif rec.s3key and len(rec.tracks) == 0:
-            # Has s3key but no tracks = cloud recording
-            inferred_type = "cloud"
+            # Daily.co API provides explicit type - use it
+            recording_type = rec.type
         else:
-            logger.warning(
-                "Cannot determine recording type, skipping",
+            # Type field missing - this should not happen - either llm assumption or API docs issue. to watch for.
+            # Inference logic commented out until we confirm it's needed:
+            # elif len(rec.tracks) > 0:
+            #     recording_type = "raw-tracks"  # Has tracks = raw-tracks
+            # elif rec.s3key and len(rec.tracks) == 0:
+            #     recording_type = "cloud"  # Has s3key but no tracks = cloud
+            logger.error(
+                "Recording missing type field from Daily.co API - skipping (needs investigation)",
                 recording_id=rec.id,
                 room_name=rec.room_name,
                 has_s3key=bool(rec.s3key),
                 tracks_count=len(rec.tracks),
+                mtg_session_id=rec.mtgSessionId,
             )
             continue
 
-        if inferred_type == "cloud":
+        if recording_type == "cloud":
             cloud_recordings.append(rec)
         else:
             raw_tracks_recordings.append(rec)
@@ -455,7 +454,7 @@ async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingRespons
         # TODO: improve matching logic (recording.start_ts, meeting.start_date)
         target_meeting = None
         for meeting in meetings:
-            if not meeting.cloud_recording_s3_key:
+            if not meeting.daily_composed_video_s3_key:
                 target_meeting = meeting
                 break
 
@@ -479,8 +478,8 @@ async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingRespons
 
         await meetings_controller.update_meeting(
             target_meeting.id,
-            cloud_recording_s3_key=s3_key,
-            cloud_recording_duration=recording.duration,
+            daily_composed_video_s3_key=s3_key,
+            daily_composed_video_duration=recording.duration,
         )
 
         logger.info(

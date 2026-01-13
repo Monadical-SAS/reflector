@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from typing import Annotated, Any, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -83,7 +84,7 @@ async def meeting_deactivate(
 
 class StartRecordingRequest(BaseModel):
     type: RecordingType
-    instanceId: NonEmptyString
+    instanceId: UUID
 
 
 @router.post("/meetings/{meeting_id}/recordings/start")
@@ -95,7 +96,7 @@ async def start_recording(
     Both cloud and raw-tracks are started via REST API to bypass enable_recording limitation.
     Uses different instanceIds for cloud vs raw-tracks.
 
-    Note: No authentication required - anonymous users supported.
+    Note: No authentication required - anonymous users supported. TODO this is a DOS vector
     """
     meeting = await meetings_controller.get_by_id(meeting_id)
     if not meeting:

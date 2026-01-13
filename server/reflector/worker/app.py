@@ -8,7 +8,9 @@ from reflector.settings import settings
 logger = structlog.get_logger(__name__)
 
 # Polling intervals (seconds)
-POLL_DAILY_RECORDINGS_INTERVAL_SEC = 15.0  # Dev: 15s, Prod: 180s
+# Webhook-aware: 180s when webhook configured (backup mode), 15s when no webhook (primary discovery)
+POLL_DAILY_RECORDINGS_INTERVAL_SEC = 180.0 if settings.DAILY_WEBHOOK_SECRET else 15.0
+
 if celery.current_app.main != "default":
     logger.info(f"Celery already configured ({celery.current_app})")
     app = celery.current_app

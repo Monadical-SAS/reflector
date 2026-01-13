@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from reflector.dailyco_api import (
     CreateMeetingTokenRequest,
@@ -197,7 +198,7 @@ class DailyClient(VideoPlatformClient):
         self,
         room_name: DailyRoomName,
         recording_type: DailyRecordingType,
-        instance_id: NonEmptyString,
+        instance_id: UUID,
     ) -> dict:
         """Start recording via Daily.co REST API.
 

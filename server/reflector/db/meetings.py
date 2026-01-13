@@ -63,8 +63,9 @@ meetings = sa.Table(
         nullable=False,
         server_default=assert_equal(WHEREBY_PLATFORM, "whereby"),
     ),
-    sa.Column("cloud_recording_s3_key", sa.String, nullable=True),
-    sa.Column("cloud_recording_duration", sa.Integer, nullable=True),
+    # Daily.co composed video (Brady Bunch grid layout) - Daily.co only, not Whereby
+    sa.Column("daily_composed_video_s3_key", sa.String, nullable=True),
+    sa.Column("daily_composed_video_duration", sa.Integer, nullable=True),
     sa.Index("idx_meeting_room_id", "room_id"),
     sa.Index("idx_meeting_calendar_event", "calendar_event_id"),
 )
@@ -112,13 +113,14 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform = WHEREBY_PLATFORM
-    cloud_recording_s3_key: str | None = None
-    cloud_recording_duration: int | None = None
+    # Daily.co composed video (Brady Bunch grid) - Daily.co only
+    daily_composed_video_s3_key: str | None = None
+    daily_composed_video_duration: int | None = None
 
     @computed_field
     @property
-    def cloud_recording_available(self) -> bool:
-        return bool(self.cloud_recording_s3_key)
+    def daily_composed_video_available(self) -> bool:
+        return bool(self.daily_composed_video_s3_key)
 
 
 class MeetingController:
@@ -151,7 +153,7 @@ class MeetingController:
             platform=room.platform,
         )
         query = meetings.insert().values(
-            **meeting.model_dump(exclude={"cloud_recording_available"})
+            **meeting.model_dump(exclude={"daily_composed_video_available"})
         )
         await get_database().execute(query)
         return meeting
