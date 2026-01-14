@@ -415,23 +415,44 @@ async def poll_daily_recordings():
     for rec in finished_recordings:
         if rec.type:
             # Daily.co API provides explicit type - use it
+            # LOG THIS: As of Jan 2026, Daily.co never returns type field.
+            # If this logs, Daily.co API changed - we can remove inference logic.
             recording_type = rec.type
-        else:
-            # Type field missing - this should not happen - either llm assumption or API docs issue. to watch for.
-            # Inference logic commented out until we confirm it's needed:
-            # elif len(rec.tracks) > 0:
-            #     recording_type = "raw-tracks"  # Has tracks = raw-tracks
-            # elif rec.s3key and len(rec.tracks) == 0:
-            #     recording_type = "cloud"  # Has s3key but no tracks = cloud
-            logger.error(
-                "Recording missing type field from Daily.co API - skipping (needs investigation)",
+            logger.warning(
+                "Recording has explicit type field from Daily.co API (unexpected, API may have changed)",
                 recording_id=rec.id,
                 room_name=rec.room_name,
+                recording_type=recording_type,
                 has_s3key=bool(rec.s3key),
                 tracks_count=len(rec.tracks),
-                mtg_session_id=rec.mtgSessionId,
             )
-            continue
+        else:
+            # DAILY.CO API LIMITATION:
+            # GET /recordings response does NOT include type field.
+            # Daily.co docs mention type field exists, but API never returns it.
+            # Verified: 84 recordings from Nov 2025 - Jan 2026 ALL have type=None.
+            #
+            # This is not a recent API change - Daily.co has never returned type.
+            # Must infer from structural properties.
+            #
+            # Inference heuristic (reliable for finished recordings):
+            # - Has tracks array → raw-tracks
+            # - Has s3key but no tracks → cloud
+            # - Neither → failed/incomplete recording
+            if len(rec.tracks) > 0:
+                recording_type = "raw-tracks"
+            elif rec.s3key and len(rec.tracks) == 0:
+                recording_type = "cloud"
+            else:
+                logger.warning(
+                    "Recording has no type, no s3key, and no tracks - likely failed recording",
+                    recording_id=rec.id,
+                    room_name=rec.room_name,
+                    status=rec.status,
+                    duration=rec.duration,
+                    mtg_session_id=rec.mtgSessionId,
+                )
+                continue
 
         if recording_type == "cloud":
             cloud_recordings.append(rec)
