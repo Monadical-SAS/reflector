@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 from sqlalchemy.dialects.postgresql import JSONB
 
 from reflector.db import get_database, metadata
@@ -117,11 +117,6 @@ class Meeting(BaseModel):
     daily_composed_video_s3_key: str | None = None
     daily_composed_video_duration: int | None = None
 
-    @computed_field
-    @property
-    def daily_composed_video_available(self) -> bool:
-        return bool(self.daily_composed_video_s3_key)
-
 
 class MeetingController:
     async def create(
@@ -152,9 +147,7 @@ class MeetingController:
             calendar_metadata=calendar_metadata,
             platform=room.platform,
         )
-        query = meetings.insert().values(
-            **meeting.model_dump(exclude={"daily_composed_video_available"})
-        )
+        query = meetings.insert().values(**meeting.model_dump())
         await get_database().execute(query)
         return meeting
 

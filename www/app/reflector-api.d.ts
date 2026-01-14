@@ -1573,11 +1573,6 @@ export interface components {
       daily_composed_video_s3_key?: string | null;
       /** Daily Composed Video Duration */
       daily_composed_video_duration?: number | null;
-      /**
-       * Daily Composed Video Available
-       * @default false
-       */
-      daily_composed_video_available: boolean;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {

@@ -75,7 +75,6 @@ class Meeting(BaseModel):
     platform: Platform
     daily_composed_video_s3_key: str | None = None
     daily_composed_video_duration: int | None = None
-    daily_composed_video_available: bool = False
 
 
 class CreateRoom(BaseModel):

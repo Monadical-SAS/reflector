@@ -27,9 +27,13 @@ import {
   useMeetingStartRecording,
 } from "../../lib/apiHooks";
 import { omit } from "remeda";
-import { assertExists } from "../../lib/utils";
+import {
+  assertExists,
+  NonEmptyString,
+  parseNonEmptyString,
+} from "../../lib/utils";
 import { assertMeetingId, DailyRecordingType } from "../../lib/types";
-import { v5 as uuidv5 } from "uuid";
+import { useUuidV5 } from "react-uuid-hook";
 
 const CONSENT_BUTTON_ID = "recording-consent";
 const RECORDING_INDICATOR_ID = "recording-indicator";
@@ -186,12 +190,9 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
   // Generate deterministic instanceIds so all participants use SAME IDs
-  // Cloud and raw-tracks need DIFFERENT instanceIds (Daily.co restriction)
-  // useMemo ensures stable values across React StrictMode double-renders
-  const cloudInstanceId = useMemo(() => meeting.id, [meeting.id]);
-  const rawTracksInstanceId = useMemo(
-    () => uuidv5(meeting.id, RAW_TRACKS_NAMESPACE),
-    [meeting.id],
+  const cloudInstanceId = parseNonEmptyString(meeting.id);
+  const rawTracksInstanceId = parseNonEmptyString(
+    useUuidV5(meeting.id, RAW_TRACKS_NAMESPACE),
   );
 
   const roomName = params?.roomName as string;
@@ -248,70 +249,63 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   );
 
   const handleFrameJoinMeeting = useCallback(() => {
-    try {
-      if (meeting.recording_type === "cloud") {
-        console.log("Starting dual recording via REST API", {
-          cloudInstanceId,
-          rawTracksInstanceId,
-        });
+    if (meeting.recording_type === "cloud") {
+      console.log("Starting dual recording via REST API", {
+        cloudInstanceId,
+        rawTracksInstanceId,
+      });
 
-        // Start both cloud and raw-tracks via backend REST API (with retry on 404)
-        // Daily.co needs time to register call as "hosting" for REST API
-        const startRecordingWithRetry = (
-          type: DailyRecordingType,
-          instanceId: string,
-          attempt: number = 1,
-        ) => {
-          setTimeout(() => {
-            startRecordingMutation.mutate(
-              {
-                params: {
-                  path: {
-                    meeting_id: meeting.id,
-                  },
-                },
-                body: {
-                  type,
-                  instanceId,
+      // Start both cloud and raw-tracks via backend REST API (with retry on 404)
+      // Daily.co needs time to register call as "hosting" for REST API
+      const startRecordingWithRetry = (
+        type: DailyRecordingType,
+        instanceId: NonEmptyString,
+        attempt: number = 1,
+      ) => {
+        setTimeout(() => {
+          startRecordingMutation.mutate(
+            {
+              params: {
+                path: {
+                  meeting_id: meeting.id,
                 },
               },
-              {
-                onError: (error: any) => {
-                  const errorText = error?.detail || error?.message || "";
-                  const is404NotHosting = errorText.includes(
-                    "does not seem to be hosting a call",
-                  );
-                  const isActiveStream = errorText.includes(
-                    "has an active stream",
-                  );
-
-                  if (
-                    is404NotHosting &&
-                    attempt < RECORDING_START_MAX_RETRIES
-                  ) {
-                    console.log(
-                      `${type}: Call not hosting yet, retry ${attempt + 1}/${RECORDING_START_MAX_RETRIES} in ${RECORDING_START_DELAY_MS}ms...`,
-                    );
-                    startRecordingWithRetry(type, instanceId, attempt + 1);
-                  } else if (isActiveStream) {
-                    console.log(
-                      `${type}: Recording already active (started by another participant)`,
-                    );
-                  } else {
-                    console.error(`Failed to start ${type} recording:`, error);
-                  }
-                },
+              body: {
+                type,
+                instanceId,
               },
-            );
-          }, RECORDING_START_DELAY_MS);
-        };
+            },
+            {
+              onError: (error: any) => {
+                const errorText = error?.detail || error?.message || "";
+                const is404NotHosting = errorText.includes(
+                  "does not seem to be hosting a call",
+                );
+                const isActiveStream = errorText.includes(
+                  "has an active stream",
+                );
 
-        // Start both recordings
-        startRecordingWithRetry("cloud", cloudInstanceId);
-        startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
-      }
-    } catch (error) {
-      console.error("Failed to start recordings:", error);
+                if (is404NotHosting && attempt < RECORDING_START_MAX_RETRIES) {
+                  console.log(
+                    `${type}: Call not hosting yet, retry ${attempt + 1}/${RECORDING_START_MAX_RETRIES} in ${RECORDING_START_DELAY_MS}ms...`,
+                  );
+                  startRecordingWithRetry(type, instanceId, attempt + 1);
+                } else if (isActiveStream) {
+                  console.log(
+                    `${type}: Recording already active (started by another participant)`,
+                  );
+                } else {
+                  console.error(`Failed to start ${type} recording:`, error);
+                }
+              },
+            },
+          );
+        }, RECORDING_START_DELAY_MS);
+      };
+
+      // Start both recordings
+      startRecordingWithRetry("cloud", cloudInstanceId);
+      startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
     }
   }, [
     meeting.recording_type,

@@ -90,5 +90,4 @@ export const assertMeetingId = (s: string): MeetingId => {
   return nes as MeetingId;
 };
 
-// Daily.co recording types for API calls
 export type DailyRecordingType = "cloud" | "raw-tracks";

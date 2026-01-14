@@ -106,6 +106,9 @@ importers:
       react-select-search:
         specifier: ^4.1.7
         version: 4.1.8(prop-types@15.8.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-uuid-hook:
+        specifier: ^0.0.6
+        version: 0.0.6(react@18.3.1)
       redlock:
         specifier: 5.0.0-beta.2
         version: 5.0.0-beta.2
@@ -124,9 +127,6 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.9.2
-      uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
       wavesurfer.js:
         specifier: ^7.4.2
         version: 7.10.1
@@ -7631,6 +7631,14 @@ packages:
       "@types/react":
         optional: true
 
+  react-uuid-hook@0.0.6:
+    resolution:
+      {
+        integrity: sha512-u9+EvFbqpWfLE/ReYFry0vYu1BAg1fY9ekr0XLSDNnfWyrnVFytpurwz5qYsIB0psevuvrpZHIcvu7AjUwqinA==,
+      }
+    peerDependencies:
+      react: ">=16.8.0"
+
   react@18.3.1:
     resolution:
       {
@@ -14579,6 +14587,11 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       "@types/react": 18.2.20
+
+  react-uuid-hook@0.0.6(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      uuid: 13.0.0
 
   react@18.3.1:
     dependencies:

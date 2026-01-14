@@ -263,9 +263,12 @@ async def _process_multitrack_recording_inner(
         # Reprocessing: recording exists with meeting already linked
         meeting = await meetings_controller.get_by_id(recording.meeting_id)
         if not meeting:
-            raise Exception(
-                f"Meeting {recording.meeting_id} not found for recording {recording_id}"
+            logger.error(
+                "Reprocessing: meeting not found for recording - skipping",
+                meeting_id=recording.meeting_id,
+                recording_id=recording_id,
             )
+            return
 
         logger.info(
             "Reprocessing: using existing recording.meeting_id",
@@ -284,15 +287,13 @@ async def _process_multitrack_recording_inner(
         )
         if not meeting:
             logger.error(
-                "Raw-tracks: no meeting found within 1-week window (time-based match)",
+                "Raw-tracks: no meeting found within 1-week window (time-based match) - skipping",
                 recording_id=recording_id,
                 room_name=daily_room_name,
                 recording_start_ts=recording_start_ts,
                 recording_start=recording_start.isoformat(),
             )
-            raise Exception(
-                f"Meeting not found for recording {recording_id} within 1-week window"
-            )
+            return  # Skip processing, will retry on next poll
         logger.info(
             "First processing: found meeting via time-based matching",
             meeting_id=meeting.id,
