@@ -192,7 +192,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   // Generate deterministic instanceIds so all participants use SAME IDs
   const cloudInstanceId = parseNonEmptyString(meeting.id);
   const rawTracksInstanceId = parseNonEmptyString(
-    useUuidV5(meeting.id, RAW_TRACKS_NAMESPACE),
+    useUuidV5(meeting.id, RAW_TRACKS_NAMESPACE)[0],
   );
 
   const roomName = params?.roomName as string;
