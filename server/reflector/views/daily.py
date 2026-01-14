@@ -19,6 +19,7 @@ from reflector.video_platforms.factory import create_platform_client
 from reflector.worker.process import (
     poll_daily_room_presence_task,
     process_multitrack_recording,
+    store_cloud_recording,
 )
 
 router = APIRouter()
@@ -190,30 +191,13 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
         return
 
     if recording_type == "cloud":
-        # single MP4 file written by Daily.co to a bucket
-        s3_key = event.payload.s3_key
-
-        # Store cloud recording reference in meeting table
-        meeting = await meetings_controller.get_by_room_name(room_name)
-        if not meeting:
-            logger.warning(
-                "Cloud recording: meeting not found",
-                room_name=room_name,
-                recording_id=recording_id,
-            )
-            return
-
-        await meetings_controller.update_meeting(
-            meeting.id,
-            daily_composed_video_s3_key=s3_key,
-            daily_composed_video_duration=event.payload.duration,
-        )
-
-        logger.info(
-            "Cloud recording stored",
-            meeting_id=meeting.id,
-            s3_key=s3_key,
+        await store_cloud_recording(
+            recording_id=recording_id,
+            room_name=room_name,
+            s3_key=event.payload.s3_key,
             duration=event.payload.duration,
+            start_ts=event.payload.start_ts,
+            source="webhook",
         )
 
     elif recording_type == "raw-tracks":

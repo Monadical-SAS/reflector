@@ -93,8 +93,8 @@ async def start_recording(
 ) -> dict[str, Any]:
     """Start cloud or raw-tracks recording via Daily.co REST API.
 
-    Both cloud and raw-tracks are started via REST API to bypass enable_recording limitation.
-    Uses different instanceIds for cloud vs raw-tracks.
+    Both cloud and raw-tracks are started via REST API to bypass enable_recording limitation of allowing only 1 recording at a time.
+    Uses different instanceIds for cloud vs raw-tracks (same won't work)
 
     Note: No authentication required - anonymous users supported. TODO this is a DOS vector
     """

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ from reflector.db import get_database, metadata
 from reflector.db.rooms import Room
 from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
 from reflector.utils import generate_uuid4
-from reflector.utils.string import assert_equal
+from reflector.utils.string import NonEmptyString, assert_equal
 
 meetings = sa.Table(
     "meeting",
@@ -192,7 +192,7 @@ class MeetingController:
 
     async def get_by_room_name_and_time(
         self,
-        room_name: str,
+        room_name: NonEmptyString,
         recording_start: datetime,
         time_window_hours: int = 168,
     ) -> Meeting | None:
@@ -213,7 +213,7 @@ class MeetingController:
 
         Args:
             room_name: Daily.co room name from recording
-            recording_start: Unix timestamp from recording.start_ts
+            recording_start: Timezone-aware datetime from recording.start_ts
             time_window_hours: Search window (default 168 = 1 week)
 
         Returns:
@@ -229,14 +229,12 @@ class MeetingController:
         - Tolerates clock skew
         - Rejects unrelated meetings from weeks ago
 
-        Production data showing duplicate room_names:
-        - Room: daily-private-igor-20251126162029
-        - Meeting 1: 2025-11-26 16:20:29.000000
-        - Meeting 2: 2025-11-26 16:20:29.990355 (0.99s later)
-        - Both have cloud recordings
-        - Time-based matching correctly distinguishes them
         """
-        from datetime import timedelta
+        # Validate timezone-aware datetime
+        if recording_start.tzinfo is None:
+            raise ValueError(
+                f"recording_start must be timezone-aware, got naive datetime: {recording_start}"
+            )
 
         window_start = recording_start - timedelta(hours=time_window_hours)
         window_end = recording_start + timedelta(hours=time_window_hours)
@@ -358,6 +356,39 @@ class MeetingController:
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
+
+    async def set_cloud_recording_if_missing(
+        self,
+        meeting_id: NonEmptyString,
+        s3_key: NonEmptyString,
+        duration: int,
+    ) -> bool:
+        """
+        Set cloud recording only if not already set.
+
+        Returns True if updated, False if already set.
+        Prevents webhook/polling race condition via atomic WHERE clause.
+        """
+        query = (
+            meetings.update()
+            .where(
+                sa.and_(
+                    meetings.c.id == meeting_id,
+                    meetings.c.daily_composed_video_s3_key.is_(None),
+                )
+            )
+            .values(
+                daily_composed_video_s3_key=s3_key,
+                daily_composed_video_duration=duration,
+            )
+        )
+        await get_database().execute(query)
+
+        # Check if update succeeded by verifying current value
+        meeting = await self.get_by_id(meeting_id)
+        if not meeting:
+            return False
+        return meeting.daily_composed_video_s3_key == s3_key
 
     async def increment_num_clients(self, meeting_id: str) -> None:
         """Atomically increment participant count."""

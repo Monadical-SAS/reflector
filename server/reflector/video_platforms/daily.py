@@ -203,12 +203,7 @@ class DailyClient(VideoPlatformClient):
         """Start recording via Daily.co REST API.
 
         Args:
-            room_name: Daily.co room name
-            recording_type: Recording type
-            instance_id: UUID for this recording session
-
-        Returns:
-            Recording start confirmation from Daily.co API
+            instance_id: UUID for this recording session - one UUID per "room" in Daily (which is "meeting" in Reflector)
         """
         return await self._api_client.start_recording(
             room_name=room_name,

@@ -2,7 +2,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Literal
 from urllib.parse import unquote
 
 import av
@@ -42,6 +42,7 @@ from reflector.utils.daily import (
     filter_cam_audio_tracks,
     recording_lock_key,
 )
+from reflector.utils.string import NonEmptyString
 from reflector.video_platforms.factory import create_platform_client
 from reflector.video_platforms.whereby_utils import (
     parse_whereby_recording_filename,
@@ -179,13 +180,6 @@ async def process_multitrack_recording(
 ):
     """
     Process raw-tracks (multitrack) recording from Daily.co.
-
-    Args:
-        bucket_name: S3 bucket containing tracks
-        daily_room_name: Daily.co room name
-        recording_id: Daily.co recording ID
-        track_keys: S3 keys for audio tracks
-        recording_start_ts: Unix timestamp when recording started (required for time-based meeting matching)
     """
     logger.info(
         "Processing multitrack recording",
@@ -253,7 +247,6 @@ async def _process_multitrack_recording_inner(
             exc_info=True,
         )
 
-    # Find meeting via time-based matching
     recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
     meeting = await meetings_controller.get_by_room_name_and_time(
         room_name=daily_room_name,
@@ -473,49 +466,86 @@ async def poll_daily_recordings():
     await _poll_raw_tracks_recordings(raw_tracks_recordings, bucket_name)
 
 
+async def store_cloud_recording(
+    recording_id: NonEmptyString,
+    room_name: NonEmptyString,
+    s3_key: NonEmptyString,
+    duration: int,
+    start_ts: int,
+    source: Literal["webhook", "polling"],
+) -> bool:
+    """
+    Store cloud recording reference in meeting table.
+
+    Common function for both webhook and polling code paths.
+    Uses time-based matching to handle duplicate room_name values.
+
+    Args:
+        recording_id: Daily.co recording ID
+        room_name: Daily.co room name
+        s3_key: S3 key where recording is stored
+        duration: Recording duration in seconds
+        start_ts: Unix timestamp when recording started
+        source: "webhook" or "polling" (for logging)
+
+    Returns:
+        True if stored, False if skipped/failed
+    """
+    recording_start = datetime.fromtimestamp(start_ts, tz=timezone.utc)
+
+    meeting = await meetings_controller.get_by_room_name_and_time(
+        room_name=room_name,
+        recording_start=recording_start,
+        time_window_hours=168,  # 1 week
+    )
+
+    if not meeting:
+        logger.warning(
+            f"Cloud recording ({source}): no meeting found within 1-week window",
+            recording_id=recording_id,
+            room_name=room_name,
+            recording_start_ts=start_ts,
+            recording_start=recording_start.isoformat(),
+        )
+        return False
+
+    success = await meetings_controller.set_cloud_recording_if_missing(
+        meeting_id=meeting.id,
+        s3_key=s3_key,
+        duration=duration,
+    )
+
+    if not success:
+        logger.debug(
+            f"Cloud recording ({source}): already set (race lost)",
+            recording_id=recording_id,
+            room_name=room_name,
+            meeting_id=meeting.id,
+        )
+        return False
+
+    logger.info(
+        f"Cloud recording stored via {source} (time-based match)",
+        meeting_id=meeting.id,
+        recording_id=recording_id,
+        s3_key=s3_key,
+        duration=duration,
+        time_delta_seconds=abs((meeting.start_date - recording_start).total_seconds()),
+    )
+    return True
+
+
 async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingResponse]):
     """
-    Store cloud recordings missing from meeting table.
+    Store cloud recordings missing from meeting table via polling.
 
-    Uses time-based matching to handle duplicate room_name values.
-    See meetings_controller.get_by_room_name_and_time() for details on the hack.
+    Uses time-based matching via store_cloud_recording().
     """
     if not cloud_recordings:
         return
 
     stored_count = 0
     for recording in cloud_recordings:
-        # Convert Unix timestamp to datetime for matching
-        recording_start = datetime.fromtimestamp(recording.start_ts, tz=timezone.utc)
-
-        # Find meeting by time proximity (1-week window)
-        meeting = await meetings_controller.get_by_room_name_and_time(
-            room_name=recording.room_name,
-            recording_start=recording_start,
-            time_window_hours=168,  # 1 week
-        )
-
-        if not meeting:
-            logger.warning(
-                "Cloud recording: no meeting found within 1-week window",
-                recording_id=recording.id,
-                room_name=recording.room_name,
-                recording_start_ts=recording.start_ts,
-                recording_start=recording_start.isoformat(),
-            )
-            continue
-
-        # Skip if meeting already has cloud recording
-        if meeting.daily_composed_video_s3_key:
-            logger.debug(
-                "Cloud recording: meeting already has cloud recording",
-                recording_id=recording.id,
-                room_name=recording.room_name,
-                meeting_id=meeting.id,
-                existing_s3_key=meeting.daily_composed_video_s3_key,
-            )
-            continue
-
         # Extract S3 key from recording (cloud recordings use s3key field)
         s3_key = recording.s3key or (recording.s3.key if recording.s3 else None)
         if not s3_key:
@@ -526,23 +556,16 @@ async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingRespons
             )
             continue
 
-        await meetings_controller.update_meeting(
-            meeting.id,
-            daily_composed_video_s3_key=s3_key,
-            daily_composed_video_duration=recording.duration,
-        )
-
-        logger.info(
-            "Cloud recording stored via polling (time-based match)",
-            meeting_id=meeting.id,
+        stored = await store_cloud_recording(
             recording_id=recording.id,
+            room_name=recording.room_name,
             s3_key=s3_key,
             duration=recording.duration,
-            time_delta_seconds=abs(
-                (meeting.start_date - recording_start).total_seconds()
-            ),
+            start_ts=recording.start_ts,
+            source="polling",
         )
-        stored_count += 1
+        if stored:
+            stored_count += 1
 
     logger.info(
         "Cloud recording polling complete",

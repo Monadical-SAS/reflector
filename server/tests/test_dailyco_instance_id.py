@@ -17,16 +17,11 @@ class TestInstanceIdDeterminism:
     """Test deterministic generation of instanceIds."""
 
     def test_cloud_instance_id_is_meeting_id(self):
-        """Cloud instanceId is meeting ID directly."""
-        meeting_id = "550e8400-e29b-41d4-a716-446655440000"
-        result = generate_cloud_instance_id(meeting_id)
-        assert str(result) == meeting_id
-
-    def test_cloud_instance_id_deterministic(self):
-        """Cloud instanceId generation is deterministic."""
+        """Cloud instanceId is meeting ID directly (implicitly tests determinism)."""
         meeting_id = "550e8400-e29b-41d4-a716-446655440000"
         result1 = generate_cloud_instance_id(meeting_id)
         result2 = generate_cloud_instance_id(meeting_id)
+        assert str(result1) == meeting_id
         assert result1 == result2
 
     def test_raw_tracks_instance_id_deterministic(self):
@@ -102,56 +97,51 @@ class TestEdgeCases:
         cloud_upper = generate_cloud_instance_id(meeting_id_upper)
         assert cloud_lower == cloud_upper
 
-    def test_raw_tracks_case_sensitive(self):
+    def test_uuid5_is_case_sensitive_warning(self):
         """
-        Raw-tracks instanceId is CASE-SENSITIVE (uuid5 hashes string directly).
+        Documents uuid5 case sensitivity - different case UUIDs produce different hashes.
 
-        This is fine - meeting IDs from DB are always lowercase.
-        Frontend also uses lowercase meeting.id from API.
+        Not a problem: meeting.id always lowercase from DB and API.
+        Frontend generates raw-tracks instanceId from lowercase meeting.id.
+        Backend receives lowercase meeting_id when matching.
+
+        This test documents the behavior, not a requirement.
         """
         meeting_id_lower = "550e8400-e29b-41d4-a716-446655440000"
         meeting_id_upper = "550E8400-E29B-41D4-A716-446655440000"
 
         raw_lower = generate_raw_tracks_instance_id(meeting_id_lower)
         raw_upper = generate_raw_tracks_instance_id(meeting_id_upper)
-        # Different cases produce different hashes
         assert raw_lower != raw_upper
 
 
 class TestMtgSessionIdVsInstanceId:
     """
-    Test that mtgSessionId (Daily.co-generated) differs from instanceId (we send).
+    Documents that Daily.co's mtgSessionId differs from our instanceId.
 
-    Based on production data analysis showing mtgSessionId is separate from instanceId.
+    Why this matters: We investigated using mtgSessionId for matching but discovered
+    it's Daily.co-generated and unrelated to instanceId we send. This test documents
+    that finding so we don't investigate it again.
+
+    Production data from 2026-01-13:
+    - Meeting ID:            4ad503b6-8189-4910-a8f7-68cdd1b7f990
+    - Cloud instanceId:      4ad503b6-8189-4910-a8f7-68cdd1b7f990 (same as meeting ID)
+    - Raw-tracks instanceId: 784b3af3-c7dd-57f0-ac54-2ee91c6927cb (UUIDv5 derived)
+    - Recording mtgSessionId: f25a2e09-740f-4932-9c0d-b1bebaa669c6 (different!)
+
+    Conclusion: Cannot use mtgSessionId for recording-to-meeting matching.
     """
 
-    def test_mtg_session_id_not_equal_to_cloud_instance_id(self):
-        """
-        mtgSessionId from Daily.co does NOT match cloud instanceId we send.
-
-        Real example from production:
-        - Meeting ID (cloud instanceId): 4ad503b6-8189-4910-a8f7-68cdd1b7f990
-        - Recording mtgSessionId:        f25a2e09-740f-4932-9c0d-b1bebaa669c6
-        """
-        meeting_id = "4ad503b6-8189-4910-a8f7-68cdd1b7f990"
-        mtg_session_id = "f25a2e09-740f-4932-9c0d-b1bebaa669c6"
-
-        cloud_instance_id = generate_cloud_instance_id(meeting_id)
-        assert str(cloud_instance_id) != mtg_session_id
-
-    def test_mtg_session_id_not_equal_to_raw_tracks_instance_id(self):
-        """
-        mtgSessionId from Daily.co does NOT match raw-tracks instanceId we send.
-
-        Real example from production:
-        - Meeting ID:                  4ad503b6-8189-4910-a8f7-68cdd1b7f990
-        - Raw-tracks instanceId:       784b3af3-c7dd-57f0-ac54-2ee91c6927cb
-        - Recording mtgSessionId:      f25a2e09-740f-4932-9c0d-b1bebaa669c6
-        """
+    def test_mtg_session_id_differs_from_our_instance_ids(self):
+        """mtgSessionId (Daily.co) != instanceId (ours) for both cloud and raw-tracks."""
         meeting_id = "4ad503b6-8189-4910-a8f7-68cdd1b7f990"
         expected_raw_tracks_id = "784b3af3-c7dd-57f0-ac54-2ee91c6927cb"
         mtg_session_id = "f25a2e09-740f-4932-9c0d-b1bebaa669c6"
 
+        cloud_instance_id = generate_cloud_instance_id(meeting_id)
         raw_tracks_instance_id = generate_raw_tracks_instance_id(meeting_id)
+
+        assert str(cloud_instance_id) == meeting_id
         assert str(raw_tracks_instance_id) == expected_raw_tracks_id
+        assert str(cloud_instance_id) != mtg_session_id
         assert str(raw_tracks_instance_id) != mtg_session_id
