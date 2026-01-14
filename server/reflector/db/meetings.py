@@ -362,6 +362,13 @@ class MeetingController:
         Returns True if updated, False if already set.
         Prevents webhook/polling race condition via atomic WHERE clause.
         """
+        # Check current value before update to detect actual change
+        meeting_before = await self.get_by_id(meeting_id)
+        if not meeting_before:
+            return False
+
+        was_null = meeting_before.daily_composed_video_s3_key is None
+
         query = (
             meetings.update()
             .where(
@@ -377,11 +384,9 @@ class MeetingController:
         )
         await get_database().execute(query)
 
-        # Check if update succeeded by verifying current value
-        meeting = await self.get_by_id(meeting_id)
-        if not meeting:
-            return False
-        return meeting.daily_composed_video_s3_key == s3_key
+        # Return True only if value was NULL before (actual update occurred)
+        # If was_null=False, the WHERE clause prevented the update
+        return was_null
 
     async def increment_num_clients(self, meeting_id: str) -> None:
         """Atomically increment participant count."""
