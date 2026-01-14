@@ -27,11 +27,6 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column("daily_composed_video_duration", sa.Integer(), nullable=True)
         )
-        batch_op.drop_index(
-            batch_op.f("idx_meeting_idempotency"),
-            postgresql_where="(idempotency_key IS NOT NULL)",
-        )
-        batch_op.drop_column("idempotency_key")
 
     with op.batch_alter_table("user_api_key", schema=None) as batch_op:
         batch_op.drop_constraint(
@@ -55,17 +50,6 @@ def downgrade() -> None:
         )
 
     with op.batch_alter_table("meeting", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "idempotency_key", sa.VARCHAR(), autoincrement=False, nullable=True
-            )
-        )
-        batch_op.create_index(
-            batch_op.f("idx_meeting_idempotency"),
-            ["room_id", "idempotency_key"],
-            unique=True,
-            postgresql_where="(idempotency_key IS NOT NULL)",
-        )
         batch_op.drop_column("daily_composed_video_duration")
         batch_op.drop_column("daily_composed_video_s3_key")
 
