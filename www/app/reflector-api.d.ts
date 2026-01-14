@@ -86,12 +86,12 @@ export interface paths {
     put?: never;
     /**
      * Start Recording
-     * @description Start raw-tracks recording via Daily.co REST API.
+     * @description Start cloud or raw-tracks recording via Daily.co REST API.
      *
-     *     Called by frontend after starting cloud recording via daily-js.
-     *     Uses same instanceId to link both recordings.
+     *     Both cloud and raw-tracks are started via REST API to bypass enable_recording limitation of allowing only 1 recording at a time.
+     *     Uses different instanceIds for cloud vs raw-tracks (same won't work)
      *
-     *     Note: No authentication required - anonymous users supported.
+     *     Note: No authentication required - anonymous users supported. TODO this is a DOS vector
      */
     post: operations["v1_start_recording"];
     delete?: never;
@@ -1569,6 +1569,15 @@ export interface components {
        * @enum {string}
        */
       platform: "whereby" | "daily";
+      /** Daily Composed Video S3 Key */
+      daily_composed_video_s3_key?: string | null;
+      /** Daily Composed Video Duration */
+      daily_composed_video_duration?: number | null;
+      /**
+       * Daily Composed Video Available
+       * @default false
+       */
+      daily_composed_video_available: boolean;
     };
     /** MeetingConsentRequest */
     MeetingConsentRequest: {
@@ -1852,7 +1861,7 @@ export interface components {
       type: "cloud" | "raw-tracks";
       /**
        * Instanceid
-       * @description A non-empty string
+       * Format: uuid
        */
       instanceId: string;
     };

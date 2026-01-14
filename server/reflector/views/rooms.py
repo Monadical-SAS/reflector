@@ -73,6 +73,9 @@ class Meeting(BaseModel):
     calendar_event_id: str | None = None
     calendar_metadata: dict[str, Any] | None = None
     platform: Platform
+    daily_composed_video_s3_key: str | None = None
+    daily_composed_video_duration: int | None = None
+    daily_composed_video_available: bool = False
 
 
 class CreateRoom(BaseModel):

@@ -229,7 +229,16 @@ async def _process_multitrack_recording_inner(
     track_keys: list[str],
     recording_start_ts: int,
 ):
-    """Inner function containing the actual processing logic."""
+    """
+    Process multitrack recording (first time or reprocessing).
+
+    For first processing (webhook/polling):
+    - Uses recording_start_ts for time-based meeting matching (no instanceId available)
+
+    For reprocessing:
+    - Uses recording.meeting_id directly (already linked during first processing)
+    - recording_start_ts is ignored
+    """
 
     tz = timezone.utc
     recorded_at = datetime.now(tz)
@@ -247,30 +256,52 @@ async def _process_multitrack_recording_inner(
             exc_info=True,
         )
 
-    recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
-    meeting = await meetings_controller.get_by_room_name_and_time(
-        room_name=daily_room_name,
-        recording_start=recording_start,
-        time_window_hours=168,  # 1 week
-    )
-    if not meeting:
-        logger.error(
-            "Raw-tracks: no meeting found within 1-week window (time-based match)",
+    # Check if recording already exists (reprocessing path)
+    recording = await recordings_controller.get_by_id(recording_id)
+
+    if recording and recording.meeting_id:
+        # Reprocessing: recording exists with meeting already linked
+        meeting = await meetings_controller.get_by_id(recording.meeting_id)
+        if not meeting:
+            raise Exception(
+                f"Meeting {recording.meeting_id} not found for recording {recording_id}"
+            )
+
+        logger.info(
+            "Reprocessing: using existing recording.meeting_id",
             recording_id=recording_id,
+            meeting_id=meeting.id,
             room_name=daily_room_name,
-            recording_start_ts=recording_start_ts,
-            recording_start=recording_start.isoformat(),
         )
-        raise Exception(
-            f"Meeting not found for recording {recording_id} within 1-week window"
+    else:
+        # First processing: recording doesn't exist, need time-based matching
+        # (Daily.co doesn't return instanceId in API, must match by timestamp)
+        recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
+        meeting = await meetings_controller.get_by_room_name_and_time(
+            room_name=daily_room_name,
+            recording_start=recording_start,
+            time_window_hours=168,  # 1 week
         )
-    logger.info(
-        "Found meeting via time-based matching",
-        meeting_id=meeting.id,
-        room_name=daily_room_name,
-        recording_id=recording_id,
-        time_delta_seconds=abs((meeting.start_date - recording_start).total_seconds()),
-    )
+        if not meeting:
+            logger.error(
+                "Raw-tracks: no meeting found within 1-week window (time-based match)",
+                recording_id=recording_id,
+                room_name=daily_room_name,
+                recording_start_ts=recording_start_ts,
+                recording_start=recording_start.isoformat(),
+            )
+            raise Exception(
+                f"Meeting not found for recording {recording_id} within 1-week window"
+            )
+        logger.info(
+            "First processing: found meeting via time-based matching",
+            meeting_id=meeting.id,
+            room_name=daily_room_name,
+            recording_id=recording_id,
+            time_delta_seconds=abs(
+                (meeting.start_date - recording_start).total_seconds()
+            ),
+        )
 
     room_name_base = extract_base_room_name(daily_room_name)
 
@@ -278,8 +309,8 @@ async def _process_multitrack_recording_inner(
     if not room:
         raise Exception(f"Room not found: {room_name_base}")
 
-    recording = await recordings_controller.get_by_id(recording_id)
     if not recording:
+        # Create recording (only happens during first processing)
         object_key_dir = os.path.dirname(track_keys[0]) if track_keys else ""
         recording = await recordings_controller.create(
             Recording(
@@ -291,7 +322,19 @@ async def _process_multitrack_recording_inner(
                 track_keys=track_keys,
             )
         )
-    # else: Recording already exists; metadata set at creation time
+    elif not recording.meeting_id:
+        # Recording exists but meeting_id is null (failed first processing)
+        # Update with meeting from time-based matching
+        await recordings_controller.set_meeting_id(
+            recording_id=recording.id,
+            meeting_id=meeting.id,
+        )
+        recording.meeting_id = meeting.id
+        logger.info(
+            "Updated existing recording with meeting_id",
+            recording_id=recording.id,
+            meeting_id=meeting.id,
+        )
 
     transcript = await transcripts_controller.get_by_recording_id(recording.id)
     if not transcript:
@@ -407,8 +450,7 @@ async def poll_daily_recordings():
     raw_tracks_recordings = []
     for rec in finished_recordings:
         if rec.type:
-            # Daily.co API provides explicit type - use it
-            # LOG THIS: As of Jan 2026, Daily.co never returns type field.
+            # Daily.co API returns null type - make sure this assumption stays
             # If this logs, Daily.co API changed - we can remove inference logic.
             recording_type = rec.type
             logger.warning(
@@ -1078,9 +1120,9 @@ async def reprocess_failed_daily_recordings():
                     transcript_status=transcript.status if transcript else None,
                 )
 
-                # For reprocessing, use meeting's start_date as recording_start_ts
-                # (meeting already known via recording.meeting_id)
-                recording_start_ts = int(meeting.start_date.timestamp())
+                # For reprocessing, pass actual recording time (though it's ignored - see _process_multitrack_recording_inner)
+                # Reprocessing uses recording.meeting_id directly instead of time-based matching
+                recording_start_ts = int(recording.recorded_at.timestamp())
 
                 process_multitrack_recording.delay(
                     bucket_name=bucket_name,
