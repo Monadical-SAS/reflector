@@ -116,6 +116,7 @@ class RecordingS3Info(BaseModel):
 
     bucket_name: NonEmptyString
     bucket_region: NonEmptyString
+    key: NonEmptyString | None = None
     endpoint: NonEmptyString | None = None
 
 
@@ -132,6 +133,9 @@ class RecordingResponse(BaseModel):
     id: NonEmptyString = Field(description="Recording identifier")
     room_name: NonEmptyString = Field(description="Room where recording occurred")
     start_ts: int = Field(description="Recording start timestamp (Unix epoch seconds)")
+    type: Literal["cloud", "raw-tracks"] | None = Field(
+        None, description="Recording type (may be missing from API)"
+    )
     status: RecordingStatus = Field(
         description="Recording status ('in-progress' or 'finished')"
     )
@@ -145,6 +149,9 @@ class RecordingResponse(BaseModel):
         None, description="Token for sharing recording"
     )
     s3: RecordingS3Info | None = Field(None, description="S3 bucket information")
+    s3key: NonEmptyString | None = Field(
+        None, description="S3 key for cloud recordings (top-level field)"
+    )
     tracks: list[DailyTrack] = Field(
         default_factory=list,
         description="Track list for raw-tracks recordings (always array, never null)",

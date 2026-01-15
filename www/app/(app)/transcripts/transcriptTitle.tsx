@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { components } from "../../reflector-api";
 
 type UpdateTranscript = components["schemas"]["UpdateTranscript"];
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import {
   useTranscriptUpdate,
@@ -20,7 +21,7 @@ type TranscriptTitle = {
   onUpdate: (newTitle: string) => void;
 
   // share props
-  transcript: GetTranscript | null;
+  transcript: GetTranscriptWithParticipants | null;
   topics: GetTranscriptTopic[] | null;
   finalSummaryElement: HTMLDivElement | null;
 };

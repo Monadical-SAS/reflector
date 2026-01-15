@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import type { components } from "../../reflector-api";
 
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import {
   BoxProps,
@@ -26,7 +27,7 @@ import {
 import { featureEnabled } from "../../lib/features";
 
 type ShareZulipProps = {
-  transcript: GetTranscript;
+  transcript: GetTranscriptWithParticipants;
   topics: GetTranscriptTopic[];
   disabled: boolean;
 };

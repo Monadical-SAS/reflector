@@ -3,7 +3,7 @@ Daily.co API Module
 """
 
 # Client
-from .client import DailyApiClient, DailyApiError
+from .client import DailyApiClient, DailyApiError, RecordingType
 
 # Request models
 from .requests import (
@@ -64,6 +64,7 @@ __all__ = [
     # Client
     "DailyApiClient",
     "DailyApiError",
+    "RecordingType",
     # Requests
     "CreateRoomRequest",
     "RoomProperties",

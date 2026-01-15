@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from reflector.dailyco_api import (
     CreateMeetingTokenRequest,
@@ -12,9 +13,11 @@ from reflector.dailyco_api import (
     RoomProperties,
     verify_webhook_signature,
 )
+from reflector.dailyco_api import RecordingType as DailyRecordingType
 from reflector.db.daily_participant_sessions import (
     daily_participant_sessions_controller,
 )
+from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import Room
 from reflector.logger import logger
 from reflector.storage import get_dailyco_storage
@@ -58,10 +61,9 @@ class DailyClient(VideoPlatformClient):
         enable_recording = None
         if room.recording_type == self.RECORDING_LOCAL:
             enable_recording = "local"
-        elif (
-            room.recording_type == self.RECORDING_CLOUD
-        ):  # daily "cloud" is not our "cloud"
-            enable_recording = "raw-tracks"
+        elif room.recording_type == self.RECORDING_CLOUD:
+            # Don't set enable_recording - recordings started via REST API (not auto-start)
+            enable_recording = None
 
         properties = RoomProperties(
             enable_recording=enable_recording,
@@ -106,8 +108,6 @@ class DailyClient(VideoPlatformClient):
         Daily.co doesn't provide historical session API, so we query our database
         where participant.joined/left webhooks are stored.
         """
-        from reflector.db.meetings import meetings_controller  # noqa: PLC0415
-
         meeting = await meetings_controller.get_by_room_name(room_name)
         if not meeting:
             return []
@@ -179,27 +179,37 @@ class DailyClient(VideoPlatformClient):
     async def create_meeting_token(
         self,
         room_name: DailyRoomName,
-        start_cloud_recording: bool,
         enable_recording_ui: bool,
         user_id: NonEmptyString | None = None,
         is_owner: bool = False,
         max_recording_duration_seconds: int | None = None,
     ) -> NonEmptyString:
-        start_cloud_recording_opts = None
-        if start_cloud_recording and max_recording_duration_seconds:
-            start_cloud_recording_opts = {"maxDuration": max_recording_duration_seconds}
-
         properties = MeetingTokenProperties(
             room_name=room_name,
             user_id=user_id,
-            start_cloud_recording=start_cloud_recording,
-            start_cloud_recording_opts=start_cloud_recording_opts,
             enable_recording_ui=enable_recording_ui,
             is_owner=is_owner,
         )
         request = CreateMeetingTokenRequest(properties=properties)
         result = await self._api_client.create_meeting_token(request)
         return result.token
+
+    async def start_recording(
+        self,
+        room_name: DailyRoomName,
+        recording_type: DailyRecordingType,
+        instance_id: UUID,
+    ) -> dict:
+        """Start recording via Daily.co REST API.
+
+        Args:
+            instance_id: UUID for this recording session - one UUID per "room" in Daily (which is "meeting" in Reflector)
+        """
+        return await self._api_client.start_recording(
+            room_name=room_name,
+            recording_type=recording_type,
+            instance_id=instance_id,
+        )
 
     async def close(self):
         """Clean up API client resources."""

@@ -7,6 +7,7 @@ from sqlalchemy import or_
 
 from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
+from reflector.utils.string import NonEmptyString
 
 recordings = sa.Table(
     "recording",
@@ -69,6 +70,19 @@ class RecordingController:
 
     async def remove_by_id(self, id: str) -> None:
         query = recordings.delete().where(recordings.c.id == id)
+        await get_database().execute(query)
+
+    async def set_meeting_id(
+        self,
+        recording_id: NonEmptyString,
+        meeting_id: NonEmptyString,
+    ) -> None:
+        """Link recording to meeting."""
+        query = (
+            recordings.update()
+            .where(recordings.c.id == recording_id)
+            .values(meeting_id=meeting_id)
+        )
         await get_database().execute(query)
 
     # no check for existence
