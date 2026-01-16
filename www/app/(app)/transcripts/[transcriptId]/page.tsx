@@ -200,7 +200,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     <>
       <Grid
         templateColumns="1fr"
-        templateRows="auto minmax(0, 1fr)"
+        templateRows="auto auto"
         gap={4}
         mt={4}
         mb={4}
@@ -229,80 +229,89 @@ export default function TranscriptDetails(details: TranscriptDetails) {
             )}
           </>
         )}
-        <Flex
-          direction="column"
+        <Grid
+          templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, 1fr)" }}
+          templateRows={{
+            base: "auto auto auto",
+            md: "auto auto",
+          }}
           gap={4}
+          gridRowGap={2}
           padding={4}
-          paddingBottom={0}
           background="gray.bg"
-          border="2px solid"
-          borderColor="gray.bg"
+          border={"2px solid"}
+          borderColor={"gray.bg"}
           borderRadius={8}
         >
           {/* Title */}
-          <Flex direction="column" gap={0}>
-            <Flex alignItems="center" gap={2}>
-              <TranscriptTitle
-                title={transcript.data?.title || "Unnamed Transcript"}
-                transcriptId={transcriptId}
-                onUpdate={() => {
-                  transcript.refetch().then(() => {});
-                }}
-                transcript={transcript.data || null}
-                topics={topics.topics}
-                finalSummaryElement={finalSummaryElement}
-              />
+          <GridItem colSpan={{ base: 1, md: 2 }}>
+            <Flex direction="column" gap={0}>
+              <Flex alignItems="center" gap={2}>
+                <TranscriptTitle
+                  title={transcript.data?.title || "Unnamed Transcript"}
+                  transcriptId={transcriptId}
+                  onUpdate={() => {
+                    transcript.refetch().then(() => {});
+                  }}
+                  transcript={transcript.data || null}
+                  topics={topics.topics}
+                  finalSummaryElement={finalSummaryElement}
+                />
+              </Flex>
+              {mp3.audioDeleted && (
+                <Text fontSize="xs" color="gray.600" fontStyle="italic">
+                  No audio is available because one or more participants didn't
+                  consent to keep the audio
+                </Text>
+              )}
             </Flex>
-            {mp3.audioDeleted && (
-              <Text fontSize="xs" color="gray.600" fontStyle="italic">
-                No audio is available because one or more participants didn't
-                consent to keep the audio
-              </Text>
+          </GridItem>
+
+          {/* Left column: Topics List */}
+          <GridItem display="flex" flexDirection="column" gap={4} h="100%">
+            <TopicList
+              topics={topics.topics || []}
+              useActiveTopic={useActiveTopic}
+              autoscroll={false}
+              transcriptId={transcriptId}
+              status={transcript.data?.status || null}
+              currentTranscriptText=""
+              onTopicClick={handleTopicClick}
+            />
+
+            {/* Transcript with colored gutter (scrollable) */}
+            {topics.topics && topics.topics.length > 0 && (
+              <Box
+                overflowY="auto"
+                flex={1}
+                minH="0"
+                pr={2}
+                css={{
+                  "&::-webkit-scrollbar": {
+                    width: "8px",
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    background: "transparent",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background: "#CBD5E0",
+                    borderRadius: "4px",
+                  },
+                  "&::-webkit-scrollbar-thumb:hover": {
+                    background: "#A0AEC0",
+                  },
+                }}
+              >
+                <TranscriptWithGutter
+                  topics={topics.topics}
+                  getSpeakerName={getSpeakerName}
+                  onGutterClick={handleGutterClick}
+                />
+              </Box>
             )}
-          </Flex>
+          </GridItem>
 
-          {/* Topics List (top section - fixed height, scrollable) */}
-          <TopicList
-            topics={topics.topics || []}
-            useActiveTopic={useActiveTopic}
-            autoscroll={false}
-            transcriptId={transcriptId}
-            status={transcript.data?.status || null}
-            currentTranscriptText=""
-            onTopicClick={handleTopicClick}
-          />
-
-          {/* Transcript with colored gutter (bottom section - scrollable container) */}
-          {topics.topics && topics.topics.length > 0 && (
-            <Box
-              overflowY="auto"
-              maxH="600px"
-              pr={2}
-              css={{
-                "&::-webkit-scrollbar": {
-                  width: "8px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  background: "transparent",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  background: "#CBD5E0",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb:hover": {
-                  background: "#A0AEC0",
-                },
-              }}
-            >
-              <TranscriptWithGutter
-                topics={topics.topics}
-                getSpeakerName={getSpeakerName}
-                onGutterClick={handleGutterClick}
-              />
-            </Box>
-          )}
-
-          {/* Final Summary (at bottom) */}
+          {/* Right column: Final Summary */}
           {transcript.data && topics.topics ? (
             <FinalSummary
               transcript={transcript.data}
@@ -313,7 +322,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               finalSummaryRef={setFinalSummaryElement}
             />
           ) : (
-            <Flex justify="center" alignItems="center" h="200px">
+            <Flex justify="center" alignItems="center" h="100%">
               <Flex direction="column" h="full" justify="center" align="center">
                 {transcript?.data?.status == "processing" ? (
                   <Text>Loading Transcript</Text>
@@ -326,7 +335,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
               </Flex>
             </Flex>
           )}
-        </Flex>
+        </Grid>
       </Grid>
     </>
   );

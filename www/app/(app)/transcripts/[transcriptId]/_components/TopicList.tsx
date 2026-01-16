@@ -6,6 +6,7 @@ import { formatTime } from "../../../../lib/time";
 import { getTopicColor } from "../../../../lib/topicColors";
 import { TranscriptStatus } from "../../../../lib/transcript";
 import { featureEnabled } from "../../../../lib/features";
+import { TOPICS_SCROLL_DIV_ID } from "./constants";
 
 type TopicListProps = {
   topics: Topic[];
@@ -50,13 +51,13 @@ export function TopicList({
   };
 
   const scrollToBottom = () => {
-    const topicsDiv = document.getElementById("topics-scroll-div");
+    const topicsDiv = document.getElementById(TOPICS_SCROLL_DIV_ID);
     if (topicsDiv) topicsDiv.scrollTop = topicsDiv.scrollHeight;
   };
 
   useEffect(() => {
     if (autoscroll) {
-      const topicsDiv = document.getElementById("topics-scroll-div");
+      const topicsDiv = document.getElementById(TOPICS_SCROLL_DIV_ID);
       topicsDiv && toggleScroll(topicsDiv);
     }
   }, [activeTopic, autoscroll]);
@@ -110,7 +111,7 @@ export function TopicList({
       )}
 
       <Box
-        id="topics-scroll-div"
+        id={TOPICS_SCROLL_DIV_ID}
         overflowY="auto"
         h="full"
         onScroll={handleScroll}
