@@ -34,7 +34,7 @@ services:
     environment:
       ENTRYPOINT: beat
 
-  hatchet-worker:
+  hatchet-worker-cpu:
     build:
       context: server
     volumes:
@@ -43,7 +43,20 @@ services:
     env_file:
       - ./server/.env
     environment:
-      ENTRYPOINT: hatchet-worker
+      ENTRYPOINT: hatchet-worker-cpu
+    depends_on:
+      hatchet:
+        condition: service_healthy
+  hatchet-worker-llm:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: hatchet-worker-llm
     depends_on:
       hatchet:
         condition: service_healthy

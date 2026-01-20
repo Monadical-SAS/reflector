@@ -23,7 +23,12 @@ from pathlib import Path
 from typing import Any, Callable, Coroutine, Protocol, TypeVar
 
 import httpx
-from hatchet_sdk import Context
+from hatchet_sdk import (
+    ConcurrencyExpression,
+    ConcurrencyLimitStrategy,
+    Context,
+)
+from hatchet_sdk.labels import DesiredWorkerLabel
 from pydantic import BaseModel
 
 from reflector.dailyco_api.client import DailyApiClient
@@ -467,6 +472,20 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
     parents=[process_tracks],
     execution_timeout=timedelta(seconds=TIMEOUT_AUDIO),
     retries=3,
+    desired_worker_labels={
+        "pool": DesiredWorkerLabel(
+            value="cpu-heavy",
+            required=True,
+            weight=100,
+        ),
+    },
+    concurrency=[
+        ConcurrencyExpression(
+            expression="'mixdown-global'",
+            max_runs=1,  # Global limit: serialize mixdown to prevent resource contention
+            limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,  # Queue, don't cancel
+        )
+    ],
 )
 @with_error_handling(TaskName.MIXDOWN_TRACKS)
 async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
