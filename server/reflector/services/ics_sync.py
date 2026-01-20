@@ -319,21 +319,6 @@ class ICSSyncService:
             calendar = self.fetch_service.parse_ics(ics_content)
 
             content_hash = hashlib.md5(ics_content.encode()).hexdigest()
-            if room.ics_last_etag == content_hash:
-                logger.info("No changes in ICS for room", room_id=room.id)
-                room_url = f"{settings.UI_BASE_URL}/{room.name}"
-                events, total_events = self.fetch_service.extract_room_events(
-                    calendar, room.name, room_url
-                )
-                return {
-                    "status": SyncStatus.UNCHANGED,
-                    "hash": content_hash,
-                    "events_found": len(events),
-                    "total_events": total_events,
-                    "events_created": 0,
-                    "events_updated": 0,
-                    "events_deleted": 0,
-                }
 
             # Extract matching events
             room_url = f"{settings.UI_BASE_URL}/{room.name}"

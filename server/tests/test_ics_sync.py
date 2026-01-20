@@ -189,14 +189,17 @@ async def test_ics_sync_service_sync_room_calendar():
         assert events[0].ics_uid == "sync-event-1"
         assert events[0].title == "Sync Test Meeting"
 
-        # Second sync with same content (should be unchanged)
+        # Second sync with same content (calendar unchanged, but sync always runs)
         # Refresh room to get updated etag and force sync by setting old sync time
         room = await rooms_controller.get_by_id(room.id)
         await rooms_controller.update(
             room, {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)}
         )
         result = await sync_service.sync_room_calendar(room)
-        assert result["status"] == "unchanged"
+        assert result["status"] == "success"
+        assert result["events_created"] == 0
+        assert result["events_updated"] == 0
+        assert result["events_deleted"] == 0
 
         # Third sync with updated event
         event["summary"] = "Updated Meeting Title"
