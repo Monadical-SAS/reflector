@@ -13,6 +13,10 @@ from reflector.hatchet.workflows.track_processing import track_workflow
 from reflector.logger import logger
 from reflector.settings import settings
 
+SLOTS = 10
+WORKER_NAME = "llm-worker-pool"
+POOL = "llm-io"
+
 
 def main():
     if not settings.HATCHET_ENABLED:
@@ -23,16 +27,16 @@ def main():
 
     logger.info(
         "Starting Hatchet LLM worker pool (all tasks except mixdown)",
-        worker_name="llm-worker-pool",
-        slots=10,
-        labels={"pool": "llm-io"},
+        worker_name=WORKER_NAME,
+        slots=SLOTS,
+        labels={"pool": POOL},
     )
 
     llm_worker = hatchet.worker(
-        "llm-worker-pool",
-        slots=10,  # High concurrency OK for I/O-bound tasks
+        WORKER_NAME,
+        slots=SLOTS,  # not all slots are probably used
         labels={
-            "pool": "llm-io",
+            "pool": POOL,
         },
         workflows=[
             daily_multitrack_pipeline,
