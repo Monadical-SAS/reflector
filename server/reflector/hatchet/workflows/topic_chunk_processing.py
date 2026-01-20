@@ -7,7 +7,11 @@ Spawned dynamically by detect_topics via aio_run_many() for parallel processing.
 
 from datetime import timedelta
 
-from hatchet_sdk import ConcurrencyExpression, ConcurrencyLimitStrategy, Context
+from hatchet_sdk import (
+    ConcurrencyExpression,
+    ConcurrencyLimitStrategy,
+    Context,
+)
 from hatchet_sdk.rate_limit import RateLimit
 from pydantic import BaseModel
 
@@ -34,11 +38,13 @@ hatchet = HatchetClientManager.get_client()
 topic_chunk_workflow = hatchet.workflow(
     name="TopicChunkProcessing",
     input_validator=TopicChunkInput,
-    concurrency=ConcurrencyExpression(
-        expression="'global'",  # constant string = global limit across all runs
-        max_runs=20,
-        limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
-    ),
+    concurrency=[
+        ConcurrencyExpression(
+            expression="'global'",  # constant string = global limit across all runs
+            max_runs=20,
+            limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+        )
+    ],
 )
 
 
