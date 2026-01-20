@@ -482,8 +482,8 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
     concurrency=[
         ConcurrencyExpression(
             expression="'mixdown-global'",
-            max_runs=1,  # Global limit: serialize mixdown to prevent resource contention
-            limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,  # Queue, don't cancel
+            max_runs=1,  # serialize mixdown to prevent resource contention
+            limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,  # Queue
         )
     ],
 )
