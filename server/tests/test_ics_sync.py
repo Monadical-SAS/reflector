@@ -189,14 +189,17 @@ async def test_ics_sync_service_sync_room_calendar():
         assert events[0].ics_uid == "sync-event-1"
         assert events[0].title == "Sync Test Meeting"
 
-        # Second sync with same content (should be unchanged)
+        # Second sync with same content (calendar unchanged, but sync always runs)
         # Refresh room to get updated etag and force sync by setting old sync time
         room = await rooms_controller.get_by_id(room.id)
         await rooms_controller.update(
             room, {"ics_last_sync": datetime.now(timezone.utc) - timedelta(minutes=10)}
         )
         result = await sync_service.sync_room_calendar(room)
-        assert result["status"] == "unchanged"
+        assert result["status"] == "success"
+        assert result["events_created"] == 0
+        assert result["events_updated"] == 0
+        assert result["events_deleted"] == 0
 
         # Third sync with updated event
         event["summary"] = "Updated Meeting Title"
@@ -288,3 +291,43 @@ async def test_ics_sync_service_error_handling():
         result = await sync_service.sync_room_calendar(room)
         assert result["status"] == "error"
         assert "Network error" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_event_data_changed_exhaustiveness():
+    """Test that _event_data_changed compares all EventData fields (except ics_uid).
+
+    This test ensures programmers don't forget to update the comparison logic
+    when adding new fields to EventData/CalendarEvent.
+    """
+    from reflector.services.ics_sync import EventData
+
+    sync_service = ICSSyncService()
+
+    from reflector.db.calendar_events import CalendarEvent
+
+    now = datetime.now(timezone.utc)
+    event_data: EventData = {
+        "ics_uid": "test-123",
+        "title": "Test",
+        "description": "Desc",
+        "location": "Loc",
+        "start_time": now,
+        "end_time": now + timedelta(hours=1),
+        "attendees": [],
+        "ics_raw_data": "raw",
+    }
+
+    existing = CalendarEvent(
+        room_id="room1",
+        **event_data,
+    )
+
+    # Will raise RuntimeError if fields are missing from comparison
+    result = sync_service._event_data_changed(existing, event_data)
+    assert result is False
+
+    modified_data = event_data.copy()
+    modified_data["title"] = "Changed Title"
+    result = sync_service._event_data_changed(existing, modified_data)
+    assert result is True
