@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Literal
 
 import sqlalchemy as sa
@@ -183,84 +183,6 @@ class MeetingController:
         results = await get_database().fetch_all(query)
         return [Meeting(**r) for r in results]
 
-    async def get_by_room_name_and_time(
-        self,
-        room_name: NonEmptyString,
-        recording_start: datetime,
-        time_window_hours: int = 168,
-    ) -> Meeting | None:
-        """
-        Get meeting by room name closest to recording timestamp.
-
-        HACK ALERT: Daily.co doesn't return instanceId in recordings API response,
-        and mtgSessionId is separate from our instanceId. Time-based matching is
-        the least-bad workaround.
-
-        This handles edge case of duplicate room_name values in DB (race conditions,
-        double-clicks, etc.) by matching based on temporal proximity.
-
-        Algorithm:
-        1. Find meetings within time_window_hours of recording_start
-        2. Return meeting with start_date closest to recording_start
-        3. If tie, return first by meeting.id (deterministic)
-
-        Args:
-            room_name: Daily.co room name from recording
-            recording_start: Timezone-aware datetime from recording.start_ts
-            time_window_hours: Search window (default 168 = 1 week)
-
-        Returns:
-            Meeting closest to recording timestamp, or None if no matches
-
-        Failure modes:
-        - Multiple meetings in same room within ~5 minutes: picks closest
-        - All meetings outside time window: returns None
-        - Clock skew between Daily.co and DB: 1-week window tolerates this
-
-        Why 1 week window:
-        - Handles webhook failures (recording discovered days later)
-        - Tolerates clock skew
-        - Rejects unrelated meetings from weeks ago
-
-        """
-        # Validate timezone-aware datetime
-        if recording_start.tzinfo is None:
-            raise ValueError(
-                f"recording_start must be timezone-aware, got naive datetime: {recording_start}"
-            )
-
-        window_start = recording_start - timedelta(hours=time_window_hours)
-        window_end = recording_start + timedelta(hours=time_window_hours)
-
-        query = (
-            meetings.select()
-            .where(
-                sa.and_(
-                    meetings.c.room_name == room_name,
-                    meetings.c.start_date >= window_start,
-                    meetings.c.start_date <= window_end,
-                )
-            )
-            .order_by(meetings.c.start_date)
-        )
-
-        results = await get_database().fetch_all(query)
-        if not results:
-            return None
-
-        candidates = [Meeting(**r) for r in results]
-
-        # Find meeting with start_date closest to recording_start
-        closest = min(
-            candidates,
-            key=lambda m: (
-                abs((m.start_date - recording_start).total_seconds()),
-                m.id,  # Tie-breaker: deterministic by UUID
-            ),
-        )
-
-        return closest
-
     async def get_active(self, room: Room, current_time: datetime) -> Meeting | None:
         """
         Get latest active meeting for a room.
@@ -350,44 +272,6 @@ class MeetingController:
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
 
-    async def set_cloud_recording_if_missing(
-        self,
-        meeting_id: NonEmptyString,
-        s3_key: NonEmptyString,
-        duration: int,
-    ) -> bool:
-        """
-        Set cloud recording only if not already set.
-
-        Returns True if updated, False if already set.
-        Prevents webhook/polling race condition via atomic WHERE clause.
-        """
-        # Check current value before update to detect actual change
-        meeting_before = await self.get_by_id(meeting_id)
-        if not meeting_before:
-            return False
-
-        was_null = meeting_before.daily_composed_video_s3_key is None
-
-        query = (
-            meetings.update()
-            .where(
-                sa.and_(
-                    meetings.c.id == meeting_id,
-                    meetings.c.daily_composed_video_s3_key.is_(None),
-                )
-            )
-            .values(
-                daily_composed_video_s3_key=s3_key,
-                daily_composed_video_duration=duration,
-            )
-        )
-        await get_database().execute(query)
-
-        # Return True only if value was NULL before (actual update occurred)
-        # If was_null=False, the WHERE clause prevented the update
-        return was_null
-
     async def increment_num_clients(self, meeting_id: str) -> None:
         """Atomically increment participant count."""
         query = (
@@ -466,6 +350,27 @@ class MeetingConsentController:
         )
         result = await get_database().fetch_one(query)
         return result is not None
+
+    async def set_cloud_recording_if_missing(
+        self,
+        meeting_id: NonEmptyString,
+        s3_key: NonEmptyString,
+        duration: int,
+    ) -> bool:
+        """Returns True if updated, False if already set."""
+        query = (
+            meetings.update()
+            .where(
+                meetings.c.id == meeting_id,
+                meetings.c.daily_composed_video_s3_key.is_(None),
+            )
+            .values(
+                daily_composed_video_s3_key=s3_key,
+                daily_composed_video_duration=duration,
+            )
+        )
+        result = await get_database().execute(query)
+        return result.rowcount > 0
 
 
 meetings_controller = MeetingController()
