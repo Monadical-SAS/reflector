@@ -1,6 +1,5 @@
 import json
 import os
-import re
 from datetime import datetime, timezone
 from typing import List, Literal
 from urllib.parse import unquote
@@ -13,10 +12,12 @@ from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 
 from reflector.dailyco_api import FinishedRecordingResponse, RecordingResponse
+from reflector.dailyco_api.recording_orphans import create_and_log_orphan
 from reflector.db.daily_participant_sessions import (
     DailyParticipantSession,
     daily_participant_sessions_controller,
 )
+from reflector.db.daily_recording_requests import daily_recording_requests_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.recordings import Recording, recordings_controller
 from reflector.db.rooms import rooms_controller
@@ -230,112 +231,50 @@ async def _process_multitrack_recording_inner(
     recording_start_ts: int,
 ):
     """
-    Process multitrack recording (first time or reprocessing).
+    Process multitrack recording.
 
-    For first processing (webhook/polling):
-    - Uses recording_start_ts for time-based meeting matching (no instanceId available)
-
-    For reprocessing:
-    - Uses recording.meeting_id directly (already linked during first processing)
-    - recording_start_ts is ignored
+    Recording must already exist with meeting_id set (created by webhook/polling before queueing).
     """
 
-    tz = timezone.utc
-    recorded_at = datetime.now(tz)
-    try:
-        if track_keys:
-            folder = os.path.basename(os.path.dirname(track_keys[0]))
-            ts_match = re.search(r"(\d{14})$", folder)
-            if ts_match:
-                ts = ts_match.group(1)
-                recorded_at = datetime.strptime(ts, "%Y%m%d%H%M%S").replace(tzinfo=tz)
-    except Exception as e:
-        logger.warning(
-            f"Could not parse recorded_at from keys, using now() {recorded_at}",
-            e,
-            exc_info=True,
-        )
-
-    # Check if recording already exists (reprocessing path)
+    # Get recording (must exist - created by webhook/polling)
     recording = await recordings_controller.get_by_id(recording_id)
 
-    if recording and recording.meeting_id:
-        # Reprocessing: recording exists with meeting already linked
-        meeting = await meetings_controller.get_by_id(recording.meeting_id)
-        if not meeting:
-            logger.error(
-                "Reprocessing: meeting not found for recording - skipping",
-                meeting_id=recording.meeting_id,
-                recording_id=recording_id,
-            )
-            return
+    if not recording:
+        logger.error(
+            "Recording not found - should have been created by webhook/polling",
+            recording_id=recording_id,
+        )
+        return
 
-        logger.info(
-            "Reprocessing: using existing recording.meeting_id",
+    if not recording.meeting_id:
+        logger.error(
+            "Recording has no meeting_id - orphan should not be queued",
             recording_id=recording_id,
-            meeting_id=meeting.id,
-            room_name=daily_room_name,
         )
-    else:
-        # First processing: recording doesn't exist, need time-based matching
-        # (Daily.co doesn't return instanceId in API, must match by timestamp)
-        recording_start = datetime.fromtimestamp(recording_start_ts, tz=timezone.utc)
-        meeting = await meetings_controller.get_by_room_name_and_time(
-            room_name=daily_room_name,
-            recording_start=recording_start,
-            time_window_hours=168,  # 1 week
-        )
-        if not meeting:
-            logger.error(
-                "Raw-tracks: no meeting found within 1-week window (time-based match) - skipping",
-                recording_id=recording_id,
-                room_name=daily_room_name,
-                recording_start_ts=recording_start_ts,
-                recording_start=recording_start.isoformat(),
-            )
-            return  # Skip processing, will retry on next poll
-        logger.info(
-            "First processing: found meeting via time-based matching",
-            meeting_id=meeting.id,
-            room_name=daily_room_name,
+        return
+
+    # Get meeting
+    meeting = await meetings_controller.get_by_id(recording.meeting_id)
+    if not meeting:
+        logger.error(
+            "Meeting not found for recording",
+            meeting_id=recording.meeting_id,
             recording_id=recording_id,
-            time_delta_seconds=abs(
-                (meeting.start_date - recording_start).total_seconds()
-            ),
         )
+        return
+
+    logger.info(
+        "Processing multitrack recording",
+        recording_id=recording_id,
+        meeting_id=meeting.id,
+        room_name=daily_room_name,
+    )
 
     room_name_base = extract_base_room_name(daily_room_name)
 
     room = await rooms_controller.get_by_name(room_name_base)
     if not room:
         raise Exception(f"Room not found: {room_name_base}")
-
-    if not recording:
-        # Create recording (only happens during first processing)
-        object_key_dir = os.path.dirname(track_keys[0]) if track_keys else ""
-        recording = await recordings_controller.create(
-            Recording(
-                id=recording_id,
-                bucket_name=bucket_name,
-                object_key=object_key_dir,
-                recorded_at=recorded_at,
-                meeting_id=meeting.id,
-                track_keys=track_keys,
-            )
-        )
-    elif not recording.meeting_id:
-        # Recording exists but meeting_id is null (failed first processing)
-        # Update with meeting from time-based matching
-        await recordings_controller.set_meeting_id(
-            recording_id=recording.id,
-            meeting_id=meeting.id,
-        )
-        recording.meeting_id = meeting.id
-        logger.info(
-            "Updated existing recording with meeting_id",
-            recording_id=recording.id,
-            meeting_id=meeting.id,
-        )
 
     transcript = await transcripts_controller.get_by_recording_id(recording.id)
     if not transcript:
@@ -522,7 +461,7 @@ async def store_cloud_recording(
     Store cloud recording reference in meeting table.
 
     Common function for both webhook and polling code paths.
-    Uses time-based matching to handle duplicate room_name values.
+    Uses direct recording_id lookup via daily_recording_requests table.
 
     Args:
         recording_id: Daily.co recording ID
@@ -535,154 +474,169 @@ async def store_cloud_recording(
     Returns:
         True if stored, False if skipped/failed
     """
-    recording_start = datetime.fromtimestamp(start_ts, tz=timezone.utc)
+    # Lookup request
+    match = await daily_recording_requests_controller.find_by_recording_id(recording_id)
 
-    meeting = await meetings_controller.get_by_room_name_and_time(
-        room_name=room_name,
-        recording_start=recording_start,
-        time_window_hours=168,  # 1 week
-    )
-
-    if not meeting:
-        logger.warning(
-            f"Cloud recording ({source}): no meeting found within 1-week window",
+    if not match:
+        # ORPHAN: No request found (pre-migration recording or failed request creation)
+        await create_and_log_orphan(
             recording_id=recording_id,
+            bucket_name="",
             room_name=room_name,
-            recording_start_ts=start_ts,
-            recording_start=recording_start.isoformat(),
+            start_ts=start_ts,
+            track_keys=None,
+            source=source,
         )
         return False
 
+    meeting_id, _ = match
+
     success = await meetings_controller.set_cloud_recording_if_missing(
-        meeting_id=meeting.id,
+        meeting_id=meeting_id,
         s3_key=s3_key,
         duration=duration,
     )
 
     if not success:
         logger.debug(
-            f"Cloud recording ({source}): already set (race lost)",
+            f"Cloud recording ({source}): already set (stop/restart?)",
             recording_id=recording_id,
             room_name=room_name,
-            meeting_id=meeting.id,
+            meeting_id=meeting_id,
         )
         return False
 
     logger.info(
-        f"Cloud recording stored via {source} (time-based match)",
-        meeting_id=meeting.id,
+        f"Cloud recording stored via {source}",
+        meeting_id=meeting_id,
         recording_id=recording_id,
         s3_key=s3_key,
         duration=duration,
-        time_delta_seconds=abs((meeting.start_date - recording_start).total_seconds()),
     )
     return True
 
 
 async def _poll_cloud_recordings(cloud_recordings: List[FinishedRecordingResponse]):
-    """
-    Store cloud recordings missing from meeting table via polling.
+    """Process cloud recordings (database deduplication, worker-agnostic).
 
-    Uses time-based matching via store_cloud_recording().
+    Cloud recordings stored in meeting.daily_composed_video_s3_key, not recording table.
+    Only first cloud recording per meeting is kept (existing behavior).
     """
     if not cloud_recordings:
         return
 
-    stored_count = 0
-    for recording in cloud_recordings:
-        # Extract S3 key from recording (cloud recordings use s3key field)
-        s3_key = recording.s3key or (recording.s3.key if recording.s3 else None)
-        if not s3_key:
-            logger.warning(
-                "Cloud recording: missing S3 key",
-                recording_id=recording.id,
-                room_name=recording.room_name,
+    for rec in cloud_recordings:
+        # Lookup request
+        match = await daily_recording_requests_controller.find_by_recording_id(rec.id)
+
+        if not match:
+            await create_and_log_orphan(
+                recording_id=rec.id,
+                bucket_name="",
+                room_name=rec.room_name,
+                start_ts=rec.start_ts,
+                track_keys=None,
+                source="polling",
             )
             continue
 
-        stored = await store_cloud_recording(
-            recording_id=recording.id,
-            room_name=recording.room_name,
-            s3_key=s3_key,
-            duration=recording.duration,
-            start_ts=recording.start_ts,
-            source="polling",
-        )
-        if stored:
-            stored_count += 1
+        meeting_id, _ = match
 
-    logger.info(
-        "Cloud recording polling complete",
-        total=len(cloud_recordings),
-        stored=stored_count,
-    )
+        if not rec.s3key:
+            logger.error("Cloud recording missing s3_key", recording_id=rec.id)
+            continue
+
+        # Store in meeting table (atomic, only if not already set)
+        success = await meetings_controller.set_cloud_recording_if_missing(
+            meeting_id=meeting_id,
+            s3_key=rec.s3key,
+            duration=rec.duration,
+        )
+
+        if success:
+            logger.info(
+                "Stored cloud recording", recording_id=rec.id, meeting_id=meeting_id
+            )
+        else:
+            logger.warning(
+                "Cloud recording already exists for meeting (stop/restart?)",
+                recording_id=rec.id,
+                meeting_id=meeting_id,
+            )
 
 
 async def _poll_raw_tracks_recordings(
     raw_tracks_recordings: List[FinishedRecordingResponse],
-    bucket_name: str,
-):
-    """Queue raw-tracks recordings missing from DB (existing logic)."""
+    bucket_name: NonEmptyString,
+) -> None:
+    """Process raw-tracks (database deduplication, worker-agnostic)."""
     if not raw_tracks_recordings:
         return
 
-    recording_ids = [rec.id for rec in raw_tracks_recordings]
-    existing_recordings = await recordings_controller.get_by_ids(recording_ids)
-    existing_ids = {rec.id for rec in existing_recordings}
+    for rec in raw_tracks_recordings:
+        # Lookup request FIRST (before any DB writes)
+        match = await daily_recording_requests_controller.find_by_recording_id(rec.id)
 
-    missing_recordings = [
-        rec for rec in raw_tracks_recordings if rec.id not in existing_ids
-    ]
-
-    if not missing_recordings:
-        logger.debug(
-            "All raw-tracks recordings already in DB",
-            api_count=len(raw_tracks_recordings),
-            existing_count=len(existing_recordings),
-        )
-        return
-
-    logger.info(
-        "Found raw-tracks recordings missing from DB",
-        missing_count=len(missing_recordings),
-        total_api_count=len(raw_tracks_recordings),
-        existing_count=len(existing_recordings),
-    )
-
-    for recording in missing_recordings:
-        if not recording.tracks:
-            logger.warning(
-                "Finished raw-tracks recording has no tracks (no audio captured)",
-                recording_id=recording.id,
-                room_name=recording.room_name,
+        if not match:
+            await create_and_log_orphan(
+                recording_id=rec.id,
+                bucket_name=bucket_name,
+                room_name=rec.room_name,
+                start_ts=rec.start_ts,
+                track_keys=[t.s3Key for t in rec.tracks if t.type == "audio"],
+                source="polling",
             )
             continue
 
-        track_keys = [t.s3Key for t in recording.tracks if t.type == "audio"]
+        meeting_id, _ = match
 
-        if not track_keys:
-            logger.warning(
-                "No audio tracks found in raw-tracks recording",
-                recording_id=recording.id,
-                room_name=recording.room_name,
-                total_tracks=len(recording.tracks),
+        # Verify meeting exists
+        meeting = await meetings_controller.get_by_id(meeting_id)
+        if not meeting:
+            logger.error(
+                "Meeting not found", recording_id=rec.id, meeting_id=meeting_id
+            )
+            await create_and_log_orphan(
+                recording_id=rec.id,
+                bucket_name=bucket_name,
+                room_name=rec.room_name,
+                start_ts=rec.start_ts,
+                track_keys=[t.s3Key for t in rec.tracks if t.type == "audio"],
+                source="polling",
             )
             continue
 
-        logger.info(
-            "Queueing missing raw-tracks recording for processing",
-            recording_id=recording.id,
-            room_name=recording.room_name,
-            track_count=len(track_keys),
+        # DEDUPLICATION: Atomically create recording (single operation, no race window)
+        # ON CONFLICT → concurrent poller already got it, skip entire logic
+        track_keys = [t.s3Key for t in rec.tracks if t.type == "audio"]
+
+        created = await recordings_controller.try_create_with_meeting(
+            Recording(
+                id=rec.id,
+                bucket_name=bucket_name,
+                object_key=os.path.dirname(track_keys[0]) if track_keys else "",
+                recorded_at=datetime.fromtimestamp(rec.start_ts, tz=timezone.utc),
+                track_keys=track_keys,
+                meeting_id=meeting_id,  # Set at creation (constraint-safe)
+                status="pending",
+            )
         )
 
+        if not created:
+            # Conflict: another poller already created/queued this
+            # Skip all remaining logic (match already done by winner)
+            continue
+
+        # Only winner reaches here - queue processing (works with Celery or Hatchet)
         process_multitrack_recording.delay(
+            recording_id=rec.id,
+            daily_room_name=rec.room_name,
+            recording_start_ts=rec.start_ts,
             bucket_name=bucket_name,
-            daily_room_name=recording.room_name,
-            recording_id=recording.id,
             track_keys=track_keys,
-            recording_start_ts=recording.start_ts,
         )
+
+        logger.info("Queued recording", recording_id=rec.id, meeting_id=meeting_id)
 
 
 async def poll_daily_room_presence(meeting_id: str) -> None:

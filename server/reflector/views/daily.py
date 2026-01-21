@@ -1,4 +1,6 @@
 import json
+import os
+from datetime import datetime, timezone
 from typing import assert_never
 
 from fastapi import APIRouter, HTTPException, Request
@@ -12,7 +14,10 @@ from reflector.dailyco_api import (
     RecordingReadyEvent,
     RecordingStartedEvent,
 )
+from reflector.dailyco_api.recording_orphans import create_and_log_orphan
+from reflector.db.daily_recording_requests import daily_recording_requests_controller
 from reflector.db.meetings import meetings_controller
+from reflector.db.recordings import Recording, recordings_controller
 from reflector.logger import logger as _logger
 from reflector.settings import settings
 from reflector.video_platforms.factory import create_platform_client
@@ -212,10 +217,73 @@ async def _handle_recording_ready(event: RecordingReadyEvent):
 
         track_keys = [t.s3Key for t in tracks if t.type == "audio"]
 
+        # Lookup request
+        match = await daily_recording_requests_controller.find_by_recording_id(
+            recording_id
+        )
+
+        if not match:
+            await create_and_log_orphan(
+                recording_id=recording_id,
+                bucket_name=bucket_name,
+                room_name=room_name,
+                start_ts=event.payload.start_ts,
+                track_keys=track_keys,
+                source="webhook",
+            )
+            return
+
+        meeting_id, _ = match
+
+        # Verify meeting exists
+        meeting = await meetings_controller.get_by_id(meeting_id)
+        if not meeting:
+            logger.error(
+                "Meeting not found (webhook)",
+                recording_id=recording_id,
+                meeting_id=meeting_id,
+            )
+            await create_and_log_orphan(
+                recording_id=recording_id,
+                bucket_name=bucket_name,
+                room_name=room_name,
+                start_ts=event.payload.start_ts,
+                track_keys=track_keys,
+                source="webhook",
+            )
+            return
+
+        # Create recording atomically
+        created = await recordings_controller.try_create_with_meeting(
+            Recording(
+                id=recording_id,
+                bucket_name=bucket_name,
+                object_key=(
+                    os.path.dirname(track_keys[0]) if track_keys else room_name
+                ),
+                recorded_at=datetime.fromtimestamp(
+                    event.payload.start_ts, tz=timezone.utc
+                ),
+                track_keys=track_keys,
+                meeting_id=meeting_id,
+                status="pending",
+            )
+        )
+
+        if not created:
+            # Already created (polling got it first)
+            logger.debug(
+                "Recording already exists (webhook late)",
+                recording_id=recording_id,
+                meeting_id=meeting_id,
+            )
+            return
+
         logger.info(
-            "Raw-tracks recording queuing processing",
+            "Raw-tracks recording queuing processing (webhook)",
             recording_id=recording_id,
             room_name=room_name,
+            meeting_id=meeting_id,
             num_tracks=len(track_keys),
         )
 
