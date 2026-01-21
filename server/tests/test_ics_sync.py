@@ -291,3 +291,43 @@ async def test_ics_sync_service_error_handling():
         result = await sync_service.sync_room_calendar(room)
         assert result["status"] == "error"
         assert "Network error" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_event_data_changed_exhaustiveness():
+    """Test that _event_data_changed compares all EventData fields (except ics_uid).
+
+    This test ensures programmers don't forget to update the comparison logic
+    when adding new fields to EventData/CalendarEvent.
+    """
+    from reflector.services.ics_sync import EventData
+
+    sync_service = ICSSyncService()
+
+    from reflector.db.calendar_events import CalendarEvent
+
+    now = datetime.now(timezone.utc)
+    event_data: EventData = {
+        "ics_uid": "test-123",
+        "title": "Test",
+        "description": "Desc",
+        "location": "Loc",
+        "start_time": now,
+        "end_time": now + timedelta(hours=1),
+        "attendees": [],
+        "ics_raw_data": "raw",
+    }
+
+    existing = CalendarEvent(
+        room_id="room1",
+        **event_data,
+    )
+
+    # Will raise RuntimeError if fields are missing from comparison
+    result = sync_service._event_data_changed(existing, event_data)
+    assert result is False
+
+    modified_data = event_data.copy()
+    modified_data["title"] = "Changed Title"
+    result = sync_service._event_data_changed(existing, modified_data)
+    assert result is True
