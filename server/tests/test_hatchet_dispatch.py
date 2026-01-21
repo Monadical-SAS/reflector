@@ -2,10 +2,9 @@
 Tests for Hatchet workflow dispatch and routing logic.
 
 These tests verify:
-1. Routing to Hatchet when HATCHET_ENABLED=True
-2. Replay logic for failed workflows
-3. Force flag to cancel and restart
-4. Validation prevents concurrent workflows
+1. Hatchet workflow validation and replay logic
+2. Force flag to cancel and restart workflows
+3. Validation prevents concurrent workflows
 """
 
 from unittest.mock import AsyncMock, patch
@@ -34,25 +33,22 @@ async def test_hatchet_validation_blocks_running_workflow():
         workflow_run_id="running-workflow-123",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        mock_hatchet.get_workflow_run_status = AsyncMock(
+            return_value=V1TaskStatus.RUNNING
+        )
 
         with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(
-                return_value=V1TaskStatus.RUNNING
-            )
+            "reflector.services.transcript_process.task_is_scheduled_or_active"
+        ) as mock_celery_check:
+            mock_celery_check.return_value = False
 
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
+            result = await validate_transcript_for_processing(mock_transcript)
 
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            assert isinstance(result, ValidationAlreadyScheduled)
-            assert "running" in result.detail.lower()
+        assert isinstance(result, ValidationAlreadyScheduled)
+        assert "running" in result.detail.lower()
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -72,24 +68,21 @@ async def test_hatchet_validation_blocks_queued_workflow():
         workflow_run_id="queued-workflow-123",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        mock_hatchet.get_workflow_run_status = AsyncMock(
+            return_value=V1TaskStatus.QUEUED
+        )
 
         with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(
-                return_value=V1TaskStatus.QUEUED
-            )
+            "reflector.services.transcript_process.task_is_scheduled_or_active"
+        ) as mock_celery_check:
+            mock_celery_check.return_value = False
 
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
+            result = await validate_transcript_for_processing(mock_transcript)
 
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            assert isinstance(result, ValidationAlreadyScheduled)
+        assert isinstance(result, ValidationAlreadyScheduled)
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -110,25 +103,22 @@ async def test_hatchet_validation_allows_failed_workflow():
         recording_id="test-recording-id",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        mock_hatchet.get_workflow_run_status = AsyncMock(
+            return_value=V1TaskStatus.FAILED
+        )
 
         with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(
-                return_value=V1TaskStatus.FAILED
-            )
+            "reflector.services.transcript_process.task_is_scheduled_or_active"
+        ) as mock_celery_check:
+            mock_celery_check.return_value = False
 
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
+            result = await validate_transcript_for_processing(mock_transcript)
 
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            assert isinstance(result, ValidationOk)
-            assert result.transcript_id == "test-transcript-id"
+        assert isinstance(result, ValidationOk)
+        assert result.transcript_id == "test-transcript-id"
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -149,24 +139,21 @@ async def test_hatchet_validation_allows_completed_workflow():
         recording_id="test-recording-id",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        mock_hatchet.get_workflow_run_status = AsyncMock(
+            return_value=V1TaskStatus.COMPLETED
+        )
 
         with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            mock_hatchet.get_workflow_run_status = AsyncMock(
-                return_value=V1TaskStatus.COMPLETED
-            )
+            "reflector.services.transcript_process.task_is_scheduled_or_active"
+        ) as mock_celery_check:
+            mock_celery_check.return_value = False
 
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
+            result = await validate_transcript_for_processing(mock_transcript)
 
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            assert isinstance(result, ValidationOk)
+        assert isinstance(result, ValidationOk)
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -187,26 +174,23 @@ async def test_hatchet_validation_allows_when_status_check_fails():
         recording_id="test-recording-id",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        # Status check fails (workflow might be deleted)
+        mock_hatchet.get_workflow_run_status = AsyncMock(
+            side_effect=ApiException("Workflow not found")
+        )
 
         with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            # Status check fails (workflow might be deleted)
-            mock_hatchet.get_workflow_run_status = AsyncMock(
-                side_effect=ApiException("Workflow not found")
-            )
+            "reflector.services.transcript_process.task_is_scheduled_or_active"
+        ) as mock_celery_check:
+            mock_celery_check.return_value = False
 
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
+            result = await validate_transcript_for_processing(mock_transcript)
 
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            # Should allow processing when we can't get status
-            assert isinstance(result, ValidationOk)
+        # Should allow processing when we can't get status
+        assert isinstance(result, ValidationOk)
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -227,47 +211,11 @@ async def test_hatchet_validation_skipped_when_no_workflow_id():
         recording_id="test-recording-id",
     )
 
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = True
-
-        with patch(
-            "reflector.services.transcript_process.HatchetClientManager"
-        ) as mock_hatchet:
-            # Should not be called
-            mock_hatchet.get_workflow_run_status = AsyncMock()
-
-            with patch(
-                "reflector.services.transcript_process.task_is_scheduled_or_active"
-            ) as mock_celery_check:
-                mock_celery_check.return_value = False
-
-                result = await validate_transcript_for_processing(mock_transcript)
-
-            # Should not check Hatchet status
-            mock_hatchet.get_workflow_run_status.assert_not_called()
-            assert isinstance(result, ValidationOk)
-
-
-@pytest.mark.usefixtures("setup_database")
-@pytest.mark.asyncio
-async def test_hatchet_validation_skipped_when_disabled():
-    """Test that Hatchet validation is skipped when HATCHET_ENABLED is False."""
-    from reflector.services.transcript_process import (
-        ValidationOk,
-        validate_transcript_for_processing,
-    )
-
-    mock_transcript = Transcript(
-        id="test-transcript-id",
-        name="Test",
-        status="uploaded",
-        source_kind="room",
-        workflow_run_id="some-workflow-123",
-        recording_id="test-recording-id",
-    )
-
-    with patch("reflector.services.transcript_process.settings") as mock_settings:
-        mock_settings.HATCHET_ENABLED = False  # Hatchet disabled
+    with patch(
+        "reflector.services.transcript_process.HatchetClientManager"
+    ) as mock_hatchet:
+        # Should not be called
+        mock_hatchet.get_workflow_run_status = AsyncMock()
 
         with patch(
             "reflector.services.transcript_process.task_is_scheduled_or_active"
@@ -276,7 +224,8 @@ async def test_hatchet_validation_skipped_when_disabled():
 
             result = await validate_transcript_for_processing(mock_transcript)
 
-        # Should not check Hatchet at all
+        # Should not check Hatchet status
+        mock_hatchet.get_workflow_run_status.assert_not_called()
         assert isinstance(result, ValidationOk)
 
 
