@@ -54,8 +54,9 @@ from reflector.hatchet.workflows.models import (
     PadTrackResult,
     ParticipantInfo,
     ParticipantsResult,
+    ProcessPaddingsResult,
     ProcessSubjectsResult,
-    ProcessTracksResult,
+    ProcessTranscriptionsResult,
     RecapResult,
     RecordingResult,
     SubjectsResult,
@@ -68,6 +69,7 @@ from reflector.hatchet.workflows.models import (
     WebhookResult,
     ZulipResult,
 )
+from reflector.hatchet.workflows.padding_workflow import PaddingInput, padding_workflow
 from reflector.hatchet.workflows.subject_processing import (
     SubjectInput,
     subject_workflow,
@@ -76,7 +78,10 @@ from reflector.hatchet.workflows.topic_chunk_processing import (
     TopicChunkInput,
     topic_chunk_workflow,
 )
-from reflector.hatchet.workflows.track_processing import TrackInput, track_workflow
+from reflector.hatchet.workflows.transcription_workflow import (
+    TranscriptionInput,
+    transcription_workflow,
+)
 from reflector.logger import logger
 from reflector.pipelines import topic_processing
 from reflector.processors import AudioFileWriterProcessor
@@ -404,39 +409,29 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
     execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
     retries=3,
 )
-@with_error_handling(TaskName.PROCESS_TRACKS)
-async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksResult:
-    """Spawn child workflows for each track (dynamic fan-out)."""
-    ctx.log(f"process_tracks: spawning {len(input.tracks)} track workflows")
-
-    participants_result = ctx.task_output(get_participants)
-    source_language = participants_result.source_language
+@with_error_handling(TaskName.PROCESS_PADDINGS)
+async def process_paddings(input: PipelineInput, ctx: Context) -> ProcessPaddingsResult:
+    """Spawn child workflows for each track to apply padding (dynamic fan-out)."""
+    ctx.log(f"process_paddings: spawning {len(input.tracks)} padding workflows")
 
     bulk_runs = [
-        track_workflow.create_bulk_run_item(
-            input=TrackInput(
+        padding_workflow.create_bulk_run_item(
+            input=PaddingInput(
                 track_index=i,
                 s3_key=track["s3_key"],
                 bucket_name=input.bucket_name,
                 transcript_id=input.transcript_id,
-                language=source_language,
             )
         )
         for i, track in enumerate(input.tracks)
     ]
 
-    results = await track_workflow.aio_run_many(bulk_runs)
+    results = await padding_workflow.aio_run_many(bulk_runs)
 
-    target_language = participants_result.target_language
-
-    track_words: list[list[Word]] = []
     padded_tracks = []
     created_padded_files = set()
 
     for result in results:
-        transcribe_result = TranscribeTrackResult(**result[TaskName.TRANSCRIBE_TRACK])
-        track_words.append(transcribe_result.words)
-
         pad_result = PadTrackResult(**result[TaskName.PAD_TRACK])
 
         # Store S3 key info (not presigned URL) - consumer tasks presign on demand
@@ -451,25 +446,75 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
             storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{pad_result.track_index}.webm"
             created_padded_files.add(storage_path)
 
-    all_words = [word for words in track_words for word in words]
-    all_words.sort(key=lambda w: w.start)
+    ctx.log(f"process_paddings complete: {len(padded_tracks)} padded tracks")
 
-    ctx.log(
-        f"process_tracks complete: {len(all_words)} words from {len(input.tracks)} tracks"
-    )
-
-    return ProcessTracksResult(
-        all_words=all_words,
+    return ProcessPaddingsResult(
         padded_tracks=padded_tracks,
-        word_count=len(all_words),
         num_tracks=len(input.tracks),
-        target_language=target_language,
         created_padded_files=list(created_padded_files),
     )
 
 
 @daily_multitrack_pipeline.task(
-    parents=[process_tracks],
+    parents=[process_paddings],
+    execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
+    retries=3,
+)
+@with_error_handling(TaskName.PROCESS_TRANSCRIPTIONS)
+async def process_transcriptions(
+    input: PipelineInput, ctx: Context
+) -> ProcessTranscriptionsResult:
+    """Spawn child workflows for each padded track to transcribe (dynamic fan-out)."""
+    participants_result = ctx.task_output(get_participants)
+    paddings_result = ctx.task_output(process_paddings)
+
+    source_language = participants_result.source_language
+    if not source_language:
+        raise ValueError("source_language is required for transcription")
+
+    target_language = participants_result.target_language
+    padded_tracks = paddings_result.padded_tracks
+
+    ctx.log(
+        f"process_transcriptions: spawning {len(padded_tracks)} transcription workflows"
+    )
+
+    bulk_runs = [
+        transcription_workflow.create_bulk_run_item(
+            input=TranscriptionInput(
+                track_index=i,
+                padded_key=padded_track.key,
+                bucket_name=padded_track.bucket_name,
+                language=source_language,
+            )
+        )
+        for i, padded_track in enumerate(padded_tracks)
+    ]
+
+    results = await transcription_workflow.aio_run_many(bulk_runs)
+
+    track_words: list[list[Word]] = []
+    for result in results:
+        transcribe_result = TranscribeTrackResult(**result[TaskName.TRANSCRIBE_TRACK])
+        track_words.append(transcribe_result.words)
+
+    all_words = [word for words in track_words for word in words]
+    all_words.sort(key=lambda w: w.start)
+
+    ctx.log(
+        f"process_transcriptions complete: {len(all_words)} words from {len(padded_tracks)} tracks"
+    )
+
+    return ProcessTranscriptionsResult(
+        all_words=all_words,
+        word_count=len(all_words),
+        num_tracks=len(input.tracks),
+        target_language=target_language,
+    )
+
+
+@daily_multitrack_pipeline.task(
+    parents=[process_paddings],
     execution_timeout=timedelta(seconds=TIMEOUT_AUDIO),
     retries=3,
     desired_worker_labels={
@@ -489,12 +534,12 @@ async def process_tracks(input: PipelineInput, ctx: Context) -> ProcessTracksRes
 )
 @with_error_handling(TaskName.MIXDOWN_TRACKS)
 async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
-    """Mix all padded tracks into single audio file using PyAV (same as Celery)."""
+    """Mix all padded tracks into single audio file using PyAV."""
     ctx.log("mixdown_tracks: mixing padded tracks into single audio file")
 
-    track_result = ctx.task_output(process_tracks)
+    paddings_result = ctx.task_output(process_paddings)
     recording_result = ctx.task_output(get_recording)
-    padded_tracks = track_result.padded_tracks
+    padded_tracks = paddings_result.padded_tracks
 
     # Dynamic timeout: scales with track count and recording duration
     # Base 300s + 60s per track + 1s per 10s of recording
@@ -648,7 +693,7 @@ async def generate_waveform(input: PipelineInput, ctx: Context) -> WaveformResul
 
 
 @daily_multitrack_pipeline.task(
-    parents=[process_tracks],
+    parents=[process_transcriptions],
     execution_timeout=timedelta(seconds=TIMEOUT_HEAVY),
     retries=3,
 )
@@ -657,8 +702,8 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
     """Detect topics using parallel child workflows (one per chunk)."""
     ctx.log("detect_topics: analyzing transcript for topics")
 
-    track_result = ctx.task_output(process_tracks)
-    words = track_result.all_words
+    transcriptions_result = ctx.task_output(process_transcriptions)
+    words = transcriptions_result.all_words
 
     if not words:
         ctx.log("detect_topics: no words, returning empty topics")
@@ -1109,13 +1154,14 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
     ctx.log("finalize: saving transcript and setting status to 'ended'")
 
     mixdown_result = ctx.task_output(mixdown_tracks)
-    track_result = ctx.task_output(process_tracks)
+    transcriptions_result = ctx.task_output(process_transcriptions)
+    paddings_result = ctx.task_output(process_paddings)
 
     duration = mixdown_result.duration
-    all_words = track_result.all_words
+    all_words = transcriptions_result.all_words
 
     # Cleanup temporary padded S3 files (deferred until finalize for semantic parity with Celery)
-    created_padded_files = track_result.created_padded_files
+    created_padded_files = paddings_result.created_padded_files
     if created_padded_files:
         ctx.log(f"Cleaning up {len(created_padded_files)} temporary S3 files")
         storage = _spawn_storage()

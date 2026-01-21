@@ -23,10 +23,8 @@ class ParticipantInfo(BaseModel):
 class PadTrackResult(BaseModel):
     """Result from pad_track task."""
 
-    padded_key: NonEmptyString  # S3 key (not presigned URL) - presign on demand to avoid stale URLs on replay
-    bucket_name: (
-        NonEmptyString | None
-    )  # None means use default transcript storage bucket
+    padded_key: NonEmptyString
+    bucket_name: NonEmptyString | None
     size: int
     track_index: int
 
@@ -59,18 +57,24 @@ class PaddedTrackInfo(BaseModel):
     """Info for a padded track - S3 key + bucket for on-demand presigning."""
 
     key: NonEmptyString
-    bucket_name: NonEmptyString | None  # None = use default storage bucket
+    bucket_name: NonEmptyString | None
 
 
-class ProcessTracksResult(BaseModel):
-    """Result from process_tracks task."""
+class ProcessPaddingsResult(BaseModel):
+    """Result from process_paddings task."""
+
+    padded_tracks: list[PaddedTrackInfo]
+    num_tracks: int
+    created_padded_files: list[NonEmptyString]
+
+
+class ProcessTranscriptionsResult(BaseModel):
+    """Result from process_transcriptions task."""
 
     all_words: list[Word]
-    padded_tracks: list[PaddedTrackInfo]  # S3 keys, not presigned URLs
     word_count: int
     num_tracks: int
     target_language: NonEmptyString
-    created_padded_files: list[NonEmptyString]
 
 
 class MixdownResult(BaseModel):

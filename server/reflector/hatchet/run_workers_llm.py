@@ -9,7 +9,7 @@ from reflector.hatchet.workflows.daily_multitrack_pipeline import (
 )
 from reflector.hatchet.workflows.subject_processing import subject_workflow
 from reflector.hatchet.workflows.topic_chunk_processing import topic_chunk_workflow
-from reflector.hatchet.workflows.track_processing import track_workflow
+from reflector.hatchet.workflows.transcription_workflow import transcription_workflow
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -42,7 +42,7 @@ def main():
             daily_multitrack_pipeline,
             topic_chunk_workflow,
             subject_workflow,
-            track_workflow,
+            transcription_workflow,
         ],
     )
 
