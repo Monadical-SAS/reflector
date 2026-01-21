@@ -4,10 +4,10 @@ from typing import Literal
 import sqlalchemy as sa
 from pydantic import BaseModel, Field
 from sqlalchemy import or_
+from sqlalchemy.dialects.postgresql import insert
 
 from reflector.db import get_database, metadata
 from reflector.utils import generate_uuid4
-from reflector.utils.string import NonEmptyString
 
 recordings = sa.Table(
     "recording",
@@ -31,14 +31,13 @@ recordings = sa.Table(
 class Recording(BaseModel):
     id: str = Field(default_factory=generate_uuid4)
     bucket_name: str
-    # for single-track
     object_key: str
     recorded_at: datetime
-    status: Literal["pending", "processing", "completed", "failed"] = "pending"
+    status: Literal["pending", "processing", "completed", "failed", "orphan"] = (
+        "pending"
+    )
     meeting_id: str | None = None
-    # for multitrack reprocessing
-    # track_keys can be empty list [] if recording finished but no audio was captured (silence/muted)
-    # None means not a multitrack recording, [] means multitrack with no tracks
+    # None = single-track, [] = multitrack with no audio, [keys...] = multitrack with audio
     track_keys: list[str] | None = None
 
     @property
@@ -72,20 +71,6 @@ class RecordingController:
         query = recordings.delete().where(recordings.c.id == id)
         await get_database().execute(query)
 
-    async def set_meeting_id(
-        self,
-        recording_id: NonEmptyString,
-        meeting_id: NonEmptyString,
-    ) -> None:
-        """Link recording to meeting."""
-        query = (
-            recordings.update()
-            .where(recordings.c.id == recording_id)
-            .values(meeting_id=meeting_id)
-        )
-        await get_database().execute(query)
-
-    # no check for existence
     async def get_by_ids(self, recording_ids: list[str]) -> list[Recording]:
         if not recording_ids:
             return []
@@ -104,9 +89,12 @@ class RecordingController:
 
         This is more efficient than fetching all recordings and filtering in Python.
         """
-        from reflector.db.transcripts import (
-            transcripts,  # noqa: PLC0415 cyclic import
-        )
+        # INLINE IMPORT REQUIRED: Circular dependency
+        # - recordings.py needs transcripts table for JOIN query
+        # - transcripts.py imports recordings_controller
+        # - db/__init__.py loads recordings before transcripts (line 31 vs 33)
+        # - Top-level import would fail during module initialization
+        from reflector.db.transcripts import transcripts
 
         query = (
             recordings.select()
@@ -123,6 +111,28 @@ class RecordingController:
         results = await get_database().fetch_all(query)
         recordings_list = [Recording(**row) for row in results]
         return [r for r in recordings_list if r.is_multitrack]
+
+    async def try_create_with_meeting(self, recording: Recording) -> bool:
+        """Returns True if created, False if already exists."""
+        assert recording.meeting_id is not None, "meeting_id required for non-orphan"
+        assert recording.status != "orphan", "use create_orphan for orphans"
+
+        stmt = insert(recordings).values(**recording.model_dump())
+        stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
+        result = await get_database().execute(stmt)
+
+        return result.rowcount > 0
+
+    async def create_orphan(self, recording: Recording) -> bool:
+        """Returns True if created, False if already exists."""
+        assert recording.status == "orphan", "status must be 'orphan'"
+        assert recording.meeting_id is None, "meeting_id must be NULL for orphan"
+
+        stmt = insert(recordings).values(**recording.model_dump())
+        stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
+        result = await get_database().execute(stmt)
+
+        return result.rowcount > 0
 
 
 recordings_controller = RecordingController()

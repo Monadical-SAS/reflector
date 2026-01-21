@@ -10,6 +10,10 @@ from pydantic import BaseModel
 import reflector.auth as auth
 from reflector.dailyco_api import RecordingType
 from reflector.dailyco_api.client import DailyApiError
+from reflector.db.daily_recording_requests import (
+    DailyRecordingRequest,
+    daily_recording_requests_controller,
+)
 from reflector.db.meetings import (
     MeetingConsent,
     meeting_consent_controller,
@@ -112,6 +116,18 @@ async def start_recording(
             instance_id=body.instanceId,
         )
 
+        recording_id = result["id"]
+
+        await daily_recording_requests_controller.create(
+            DailyRecordingRequest(
+                recording_id=recording_id,
+                meeting_id=meeting_id,
+                instance_id=body.instanceId,
+                type=body.type,
+                requested_at=datetime.now(timezone.utc),
+            )
+        )
+
         logger.info(
             f"Started {body.type} recording via REST API",
             extra={
@@ -119,10 +135,11 @@ async def start_recording(
                 "room_name": meeting.room_name,
                 "recording_type": body.type,
                 "instance_id": body.instanceId,
+                "recording_id": recording_id,
             },
         )
 
-        return {"status": "ok", "result": result}
+        return {"status": "ok", "recording_id": recording_id}
 
     except DailyApiError as e:
         # Parse Daily.co error response to detect "has an active stream"
