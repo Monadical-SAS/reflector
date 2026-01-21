@@ -1,5 +1,4 @@
 import json
-import logging
 from datetime import datetime, timezone
 from typing import Annotated, Any, Optional
 from uuid import UUID
@@ -16,10 +15,9 @@ from reflector.db.meetings import (
     meetings_controller,
 )
 from reflector.db.rooms import rooms_controller
+from reflector.logger import logger
 from reflector.utils.string import NonEmptyString
 from reflector.video_platforms.factory import create_platform_client
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -104,6 +102,13 @@ async def start_recording(
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
+    log = logger.bind(
+        meeting_id=meeting_id,
+        room_name=meeting.room_name,
+        recording_type=body.type,
+        instance_id=body.instanceId,
+    )
+
     try:
         client = create_platform_client("daily")
         result = await client.start_recording(
@@ -112,15 +117,7 @@ async def start_recording(
             instance_id=body.instanceId,
         )
 
-        logger.info(
-            f"Started {body.type} recording via REST API",
-            extra={
-                "meeting_id": meeting_id,
-                "room_name": meeting.room_name,
-                "recording_type": body.type,
-                "instance_id": body.instanceId,
-            },
-        )
+        log.info(f"Started {body.type} recording via REST API")
 
         return {"status": "ok", "result": result}
 
@@ -133,42 +130,22 @@ async def start_recording(
             # "has an active stream" means recording already started by another participant
             # This is SUCCESS from business logic perspective - return 200
             if "has an active stream" in error_info:
-                logger.info(
-                    f"{body.type} recording already active (started by another participant)",
-                    extra={
-                        "meeting_id": meeting_id,
-                        "room_name": meeting.room_name,
-                        "recording_type": body.type,
-                        "instance_id": body.instanceId,
-                    },
+                log.info(
+                    f"{body.type} recording already active (started by another participant)"
                 )
                 return {"status": "already_active", "instanceId": str(body.instanceId)}
         except (json.JSONDecodeError, KeyError):
             pass  # Fall through to error handling
 
         # All other Daily.co API errors
-        logger.error(
-            f"Failed to start {body.type} recording",
-            extra={
-                "meeting_id": meeting_id,
-                "recording_type": body.type,
-                "error": str(e),
-            },
-        )
+        log.error(f"Failed to start {body.type} recording", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Failed to start recording: {str(e)}"
         )
 
     except Exception as e:
         # Non-Daily.co errors
-        logger.error(
-            f"Failed to start {body.type} recording",
-            extra={
-                "meeting_id": meeting_id,
-                "recording_type": body.type,
-                "error": str(e),
-            },
-        )
+        log.error(f"Failed to start {body.type} recording", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Failed to start recording: {str(e)}"
         )
