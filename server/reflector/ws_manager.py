@@ -99,8 +99,7 @@ class WebsocketManager:
     async def _pubsub_data_reader(self, pubsub_subscriber):
         while True:
             message = await pubsub_subscriber.get_message(
-                ignore_subscribe_messages=True,
-                timeout=1.0,
+                ignore_subscribe_messages=True
             )
             if message is not None:
                 room_id = message["channel"].decode("utf-8")
