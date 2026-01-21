@@ -351,11 +351,12 @@ async def _process_multitrack_recording_inner(
             room_id=room.id,
         )
 
-    use_hatchet = settings.HATCHET_ENABLED and room and room.use_hatchet
+    use_celery = room and room.use_celery
+    use_hatchet = not use_celery
 
-    if room and room.use_hatchet and not settings.HATCHET_ENABLED:
+    if use_celery:
         logger.info(
-            "Room forces Hatchet workflow",
+            "Room uses legacy Celery processing",
             room_id=room.id,
             transcript_id=transcript.id,
         )
@@ -1048,7 +1049,6 @@ async def reprocess_failed_daily_recordings():
                 )
                 continue
 
-            # Fetch room to check use_hatchet flag
             room = None
             if meeting.room_id:
                 room = await rooms_controller.get_by_id(meeting.room_id)
@@ -1072,10 +1072,10 @@ async def reprocess_failed_daily_recordings():
                 )
                 continue
 
-            use_hatchet = settings.HATCHET_ENABLED and room and room.use_hatchet
+            use_celery = room and room.use_celery
+            use_hatchet = not use_celery
 
             if use_hatchet:
-                # Hatchet requires a transcript for workflow_run_id tracking
                 if not transcript:
                     logger.warning(
                         "No transcript for Hatchet reprocessing, skipping",
