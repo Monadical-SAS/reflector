@@ -101,8 +101,8 @@ async def validate_transcript_for_processing(
     if transcript.locked:
         return ValidationLocked(detail="Recording is locked")
 
-    # Hatchet is idempotent - idle status means not dispatched successfully
-    if transcript.status == "idle":
+    # Check if recording is ready for processing
+    if transcript.status == "idle" and not transcript.workflow_run_id:
         return ValidationNotReady(detail="Recording is not ready for processing")
 
     # Check Celery tasks
