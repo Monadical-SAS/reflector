@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranscriptGet } from "../../lib/apiHooks";
+import { parseMaybeNonEmptyString } from "../../lib/utils";
 import { useAuth } from "../../lib/AuthProvider";
 import { API_URL } from "../../lib/apiClient";
 
@@ -27,7 +28,7 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
     data: transcript,
     isLoading: transcriptMetadataLoading,
     error: transcriptError,
-  } = useTranscriptGet(later ? null : transcriptId);
+  } = useTranscriptGet(later ? null : parseMaybeNonEmptyString(transcriptId));
 
   const [serviceWorker, setServiceWorker] =
     useState<ServiceWorkerRegistration | null>(null);

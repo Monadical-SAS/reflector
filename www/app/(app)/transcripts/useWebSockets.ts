@@ -7,7 +7,12 @@ type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
 import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
-import { invalidateTranscriptWaveform } from "../../lib/apiHooks";
+import {
+  invalidateTranscript,
+  invalidateTranscriptTopics,
+  invalidateTranscriptWaveform,
+} from "../../lib/apiHooks";
+import { NonEmptyString } from "../../lib/utils";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -370,15 +375,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             });
             console.debug("TOPIC event:", message.data);
             // Invalidate topics query to sync with WebSocket data
-            queryClient.invalidateQueries({
-              queryKey: $api.queryOptions(
-                "get",
-                "/v1/transcripts/{transcript_id}/topics",
-                {
-                  params: { path: { transcript_id: transcriptId } },
-                },
-              ).queryKey,
-            });
+            invalidateTranscriptTopics(
+              queryClient,
+              transcriptId as NonEmptyString,
+            );
             break;
 
           case "FINAL_SHORT_SUMMARY":
@@ -389,15 +389,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             if (message.data) {
               setFinalSummary(message.data);
               // Invalidate transcript query to sync summary
-              queryClient.invalidateQueries({
-                queryKey: $api.queryOptions(
-                  "get",
-                  "/v1/transcripts/{transcript_id}",
-                  {
-                    params: { path: { transcript_id: transcriptId } },
-                  },
-                ).queryKey,
-              });
+              invalidateTranscript(queryClient, transcriptId as NonEmptyString);
             }
             break;
 
@@ -406,15 +398,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             if (message.data) {
               setTitle(message.data.title);
               // Invalidate transcript query to sync title
-              queryClient.invalidateQueries({
-                queryKey: $api.queryOptions(
-                  "get",
-                  "/v1/transcripts/{transcript_id}",
-                  {
-                    params: { path: { transcript_id: transcriptId } },
-                  },
-                ).queryKey,
-              });
+              invalidateTranscript(queryClient, transcriptId as NonEmptyString);
             }
             break;
 
@@ -425,7 +409,10 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             );
             if (message.data) {
               setWaveForm(message.data.waveform);
-              invalidateTranscriptWaveform(queryClient, transcriptId);
+              invalidateTranscriptWaveform(
+                queryClient,
+                transcriptId as NonEmptyString,
+              );
             }
             break;
           case "DURATION":

@@ -11,6 +11,7 @@ import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
 import { useWebSockets } from "../useWebSockets";
 import { useRouter } from "next/navigation";
+import { parseNonEmptyString } from "../../../lib/utils";
 import {
   Box,
   Flex,
@@ -31,7 +32,7 @@ type TranscriptDetails = {
 
 export default function TranscriptDetails(details: TranscriptDetails) {
   const params = use(details.params);
-  const transcriptId = params.transcriptId;
+  const transcriptId = parseNonEmptyString(params.transcriptId);
   const router = useRouter();
   const statusToRedirect = [
     "idle",

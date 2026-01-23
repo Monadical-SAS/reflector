@@ -121,6 +121,16 @@ export function useTranscriptGet(transcriptId: NonEmptyString | null) {
   );
 }
 
+export const invalidateTranscript = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
+      params: { path: { transcript_id: transcriptId } },
+    }).queryKey,
+  });
+
 export function useRoomGet(roomId: string | null) {
   const { isAuthenticated } = useAuthReady();
 
@@ -358,6 +368,20 @@ export function useTranscriptTopics(transcriptId: NonEmptyString | null) {
     },
   );
 }
+
+export const invalidateTranscriptTopics = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions(
+      "get",
+      "/v1/transcripts/{transcript_id}/topics",
+      {
+        params: { path: { transcript_id: transcriptId } },
+      },
+    ).queryKey,
+  });
 
 export function useTranscriptTopicsWithWords(
   transcriptId: NonEmptyString | null,

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { components } from "../../reflector-api";
+import { parseMaybeNonEmptyString } from "../../lib/utils";
 
 type UpdateTranscript = components["schemas"]["UpdateTranscript"];
 type GetTranscriptWithParticipants =
@@ -32,7 +33,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [isEditing, setIsEditing] = useState(false);
   const updateTranscriptMutation = useTranscriptUpdate();
   const participantsQuery = useTranscriptParticipants(
-    props.transcript?.id || null,
+    props.transcript?.id ? parseMaybeNonEmptyString(props.transcript.id) : null,
   );
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {
