@@ -7,6 +7,7 @@ type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
 import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
+import { invalidateTranscriptWaveform } from "../../lib/apiHooks";
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -424,6 +425,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             );
             if (message.data) {
               setWaveForm(message.data.waveform);
+              invalidateTranscriptWaveform(queryClient, transcriptId);
             }
             break;
           case "DURATION":
