@@ -434,11 +434,12 @@ async def process_paddings(input: PipelineInput, ctx: Context) -> ProcessPadding
     for result in results:
         pad_result = PadTrackResult(**result[TaskName.PAD_TRACK])
 
-        # Store S3 key info (not presigned URL) - consumer tasks presign on demand
         if pad_result.padded_key:
             padded_tracks.append(
                 PaddedTrackInfo(
-                    key=pad_result.padded_key, bucket_name=pad_result.bucket_name
+                    key=pad_result.padded_key,
+                    bucket_name=pad_result.bucket_name,
+                    track_index=pad_result.track_index,
                 )
             )
 
@@ -482,13 +483,13 @@ async def process_transcriptions(
     bulk_runs = [
         transcription_workflow.create_bulk_run_item(
             input=TranscriptionInput(
-                track_index=i,
+                track_index=padded_track.track_index,
                 padded_key=padded_track.key,
                 bucket_name=padded_track.bucket_name,
                 language=source_language,
             )
         )
-        for i, padded_track in enumerate(padded_tracks)
+        for padded_track in padded_tracks
     ]
 
     results = await transcription_workflow.aio_run_many(bulk_runs)

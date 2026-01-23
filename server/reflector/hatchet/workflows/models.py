@@ -58,6 +58,7 @@ class PaddedTrackInfo(BaseModel):
 
     key: NonEmptyString
     bucket_name: NonEmptyString | None
+    track_index: int
 
 
 class ProcessPaddingsResult(BaseModel):
