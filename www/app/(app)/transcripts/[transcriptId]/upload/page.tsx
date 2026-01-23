@@ -7,6 +7,7 @@ import useMp3 from "../../useMp3";
 import { Center, VStack, Text, Heading } from "@chakra-ui/react";
 import FileUploadButton from "../../fileUploadButton";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
+import { parseNonEmptyString } from "../../../../lib/utils";
 
 type TranscriptUpload = {
   params: Promise<{
@@ -16,12 +17,13 @@ type TranscriptUpload = {
 
 const TranscriptUpload = (details: TranscriptUpload) => {
   const params = use(details.params);
-  const transcript = useTranscriptGet(params.transcriptId);
+  const transcriptId = parseNonEmptyString(params.transcriptId);
+  const transcript = useTranscriptGet(transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
 
-  const webSockets = useWebSockets(params.transcriptId);
+  const webSockets = useWebSockets(transcriptId);
 
-  const mp3 = useMp3(params.transcriptId, true);
+  const mp3 = useMp3(transcriptId, true);
 
   const router = useRouter();
 

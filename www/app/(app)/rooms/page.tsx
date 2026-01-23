@@ -302,10 +302,10 @@ export default function RoomsList() {
         return;
       }
 
-      const platform: "whereby" | "daily" | null =
+      const platform: "whereby" | "daily" =
         room.platform === "whereby" || room.platform === "daily"
           ? room.platform
-          : null;
+          : "daily";
 
       const roomData = {
         name: room.name,

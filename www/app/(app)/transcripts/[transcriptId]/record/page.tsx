@@ -12,6 +12,7 @@ import { Box, Text, Grid, Heading, VStack, Flex } from "@chakra-ui/react";
 import LiveTrancription from "../../liveTranscription";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
 import { TranscriptStatus } from "../../../../lib/transcript";
+import { parseNonEmptyString } from "../../../../lib/utils";
 
 type TranscriptDetails = {
   params: Promise<{
@@ -21,13 +22,14 @@ type TranscriptDetails = {
 
 const TranscriptRecord = (details: TranscriptDetails) => {
   const params = use(details.params);
-  const transcript = useTranscriptGet(params.transcriptId);
+  const transcriptId = parseNonEmptyString(params.transcriptId);
+  const transcript = useTranscriptGet(transcriptId);
   const [transcriptStarted, setTranscriptStarted] = useState(false);
   const useActiveTopic = useState<Topic | null>(null);
 
-  const webSockets = useWebSockets(params.transcriptId);
+  const webSockets = useWebSockets(transcriptId);
 
-  const mp3 = useMp3(params.transcriptId, true);
+  const mp3 = useMp3(transcriptId, true);
 
   const router = useRouter();
 

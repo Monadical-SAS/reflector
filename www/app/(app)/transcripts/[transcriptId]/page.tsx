@@ -9,7 +9,9 @@ import React, { useEffect, useState, use } from "react";
 import FinalSummary from "./finalSummary";
 import TranscriptTitle from "../transcriptTitle";
 import Player from "../player";
+import { useWebSockets } from "../useWebSockets";
 import { useRouter } from "next/navigation";
+import { parseNonEmptyString } from "../../../lib/utils";
 import {
   Box,
   Flex,
@@ -30,7 +32,7 @@ type TranscriptDetails = {
 
 export default function TranscriptDetails(details: TranscriptDetails) {
   const params = use(details.params);
-  const transcriptId = params.transcriptId;
+  const transcriptId = parseNonEmptyString(params.transcriptId);
   const router = useRouter();
   const statusToRedirect = [
     "idle",
@@ -49,6 +51,7 @@ export default function TranscriptDetails(details: TranscriptDetails) {
     transcriptId,
     waiting || mp3.audioDeleted === true,
   );
+  useWebSockets(transcriptId);
   const useActiveTopic = useState<Topic | null>(null);
   const [finalSummaryElement, setFinalSummaryElement] =
     useState<HTMLDivElement | null>(null);
