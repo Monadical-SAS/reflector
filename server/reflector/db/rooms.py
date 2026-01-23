@@ -58,7 +58,7 @@ rooms = sqlalchemy.Table(
         nullable=False,
     ),
     sqlalchemy.Column(
-        "use_hatchet",
+        "use_celery",
         sqlalchemy.Boolean,
         nullable=False,
         server_default=false(),
@@ -97,7 +97,7 @@ class Room(BaseModel):
     ics_last_sync: datetime | None = None
     ics_last_etag: str | None = None
     platform: Platform = Field(default_factory=lambda: settings.DEFAULT_VIDEO_PLATFORM)
-    use_hatchet: bool = False
+    use_celery: bool = False
     skip_consent: bool = False
 
 

@@ -1,16 +1,23 @@
+import json
 from datetime import datetime, timezone
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 import reflector.auth as auth
+from reflector.dailyco_api import RecordingType
+from reflector.dailyco_api.client import DailyApiError
 from reflector.db.meetings import (
     MeetingConsent,
     meeting_consent_controller,
     meetings_controller,
 )
 from reflector.db.rooms import rooms_controller
+from reflector.logger import logger
+from reflector.utils.string import NonEmptyString
+from reflector.video_platforms.factory import create_platform_client
 
 router = APIRouter()
 
@@ -73,3 +80,72 @@ async def meeting_deactivate(
     await meetings_controller.update_meeting(meeting_id, is_active=False)
 
     return {"status": "success", "meeting_id": meeting_id}
+
+
+class StartRecordingRequest(BaseModel):
+    type: RecordingType
+    instanceId: UUID
+
+
+@router.post("/meetings/{meeting_id}/recordings/start")
+async def start_recording(
+    meeting_id: NonEmptyString, body: StartRecordingRequest
+) -> dict[str, Any]:
+    """Start cloud or raw-tracks recording via Daily.co REST API.
+
+    Both cloud and raw-tracks are started via REST API to bypass enable_recording limitation of allowing only 1 recording at a time.
+    Uses different instanceIds for cloud vs raw-tracks (same won't work)
+
+    Note: No authentication required - anonymous users supported. TODO this is a DOS vector
+    """
+    meeting = await meetings_controller.get_by_id(meeting_id)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    log = logger.bind(
+        meeting_id=meeting_id,
+        room_name=meeting.room_name,
+        recording_type=body.type,
+        instance_id=body.instanceId,
+    )
+
+    try:
+        client = create_platform_client("daily")
+        result = await client.start_recording(
+            room_name=meeting.room_name,
+            recording_type=body.type,
+            instance_id=body.instanceId,
+        )
+
+        log.info(f"Started {body.type} recording via REST API")
+
+        return {"status": "ok", "result": result}
+
+    except DailyApiError as e:
+        # Parse Daily.co error response to detect "has an active stream"
+        try:
+            error_body = json.loads(e.response_body)
+            error_info = error_body.get("info", "")
+
+            # "has an active stream" means recording already started by another participant
+            # This is SUCCESS from business logic perspective - return 200
+            if "has an active stream" in error_info:
+                log.info(
+                    f"{body.type} recording already active (started by another participant)"
+                )
+                return {"status": "already_active", "instanceId": str(body.instanceId)}
+        except (json.JSONDecodeError, KeyError):
+            pass  # Fall through to error handling
+
+        # All other Daily.co API errors
+        log.error(f"Failed to start {body.type} recording", error=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Failed to start recording: {str(e)}"
+        )
+
+    except Exception as e:
+        # Non-Daily.co errors
+        log.error(f"Failed to start {body.type} recording", error=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Failed to start recording: {str(e)}"
+        )

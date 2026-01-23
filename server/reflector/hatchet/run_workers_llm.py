@@ -12,7 +12,6 @@ from reflector.hatchet.workflows.subject_processing import subject_workflow
 from reflector.hatchet.workflows.topic_chunk_processing import topic_chunk_workflow
 from reflector.hatchet.workflows.transcription_workflow import transcription_workflow
 from reflector.logger import logger
-from reflector.settings import settings
 
 SLOTS = 10
 WORKER_NAME = "llm-worker-pool"
@@ -20,10 +19,6 @@ POOL = "llm-io"
 
 
 def main():
-    if not settings.HATCHET_ENABLED:
-        logger.error("HATCHET_ENABLED is False, not starting LLM workers")
-        return
-
     hatchet = HatchetClientManager.get_client()
 
     logger.info(

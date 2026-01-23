@@ -12,14 +12,9 @@ from reflector.hatchet.workflows.daily_multitrack_pipeline import (
     daily_multitrack_pipeline,
 )
 from reflector.logger import logger
-from reflector.settings import settings
 
 
 def main():
-    if not settings.HATCHET_ENABLED:
-        logger.error("HATCHET_ENABLED is False, not starting CPU workers")
-        return
-
     hatchet = HatchetClientManager.get_client()
 
     logger.info(

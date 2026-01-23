@@ -6,6 +6,7 @@ import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 import { MeetingId } from "./types";
+import { NonEmptyString } from "./utils";
 
 /*
  * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
@@ -103,7 +104,7 @@ export function useTranscriptProcess() {
   });
 }
 
-export function useTranscriptGet(transcriptId: string | null) {
+export function useTranscriptGet(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}",
@@ -119,6 +120,16 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
   );
 }
+
+export const invalidateTranscript = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
+      params: { path: { transcript_id: transcriptId } },
+    }).queryKey,
+  });
 
 export function useRoomGet(roomId: string | null) {
   const { isAuthenticated } = useAuthReady();
@@ -297,7 +308,7 @@ export function useTranscriptUploadAudio() {
   );
 }
 
-export function useTranscriptWaveform(transcriptId: string | null) {
+export function useTranscriptWaveform(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/audio/waveform",
@@ -312,7 +323,21 @@ export function useTranscriptWaveform(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptMP3(transcriptId: string | null) {
+export const invalidateTranscriptWaveform = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions(
+      "get",
+      "/v1/transcripts/{transcript_id}/audio/waveform",
+      {
+        params: { path: { transcript_id: transcriptId } },
+      },
+    ).queryKey,
+  });
+
+export function useTranscriptMP3(transcriptId: NonEmptyString | null) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
@@ -329,7 +354,7 @@ export function useTranscriptMP3(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptTopics(transcriptId: string | null) {
+export function useTranscriptTopics(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/topics",
@@ -344,7 +369,23 @@ export function useTranscriptTopics(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptTopicsWithWords(transcriptId: string | null) {
+export const invalidateTranscriptTopics = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions(
+      "get",
+      "/v1/transcripts/{transcript_id}/topics",
+      {
+        params: { path: { transcript_id: transcriptId } },
+      },
+    ).queryKey,
+  });
+
+export function useTranscriptTopicsWithWords(
+  transcriptId: NonEmptyString | null,
+) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
@@ -362,7 +403,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
 }
 
 export function useTranscriptTopicsWithWordsPerSpeaker(
-  transcriptId: string | null,
+  transcriptId: NonEmptyString | null,
   topicId: string | null,
 ) {
   const { isAuthenticated } = useAuthReady();
@@ -384,7 +425,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   );
 }
 
-export function useTranscriptParticipants(transcriptId: string | null) {
+export function useTranscriptParticipants(transcriptId: NonEmptyString | null) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
@@ -562,6 +603,20 @@ export function useTranscriptSpeakerMerge() {
       },
       onError: (error) => {
         setError(error as Error, "There was an error merging speakers");
+      },
+    },
+  );
+}
+
+export function useMeetingStartRecording() {
+  const { setError } = useError();
+
+  return $api.useMutation(
+    "post",
+    "/v1/meetings/{meeting_id}/recordings/start",
+    {
+      onError: (error) => {
+        setError(error as Error, "Failed to start recording");
       },
     },
   );

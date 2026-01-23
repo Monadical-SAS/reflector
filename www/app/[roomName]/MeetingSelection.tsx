@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation";
 import { formatDateTime, formatStartedAgo } from "../lib/timeUtils";
 import MeetingMinimalHeader from "../components/MeetingMinimalHeader";
 import { NonEmptyString } from "../lib/utils";
-import { MeetingId } from "../lib/types";
+import { MeetingId, assertMeetingId } from "../lib/types";
 
 type Meeting = components["schemas"]["Meeting"];
 
@@ -315,7 +315,9 @@ export default function MeetingSelection({
                         variant="outline"
                         colorScheme="red"
                         size="md"
-                        onClick={() => handleEndMeeting(meeting.id)}
+                        onClick={() =>
+                          handleEndMeeting(assertMeetingId(meeting.id))
+                        }
                         loading={deactivateMeetingMutation.isPending}
                       >
                         <Icon as={LuX} me={2} />
@@ -460,7 +462,9 @@ export default function MeetingSelection({
                           variant="outline"
                           colorScheme="red"
                           size="md"
-                          onClick={() => handleEndMeeting(meeting.id)}
+                          onClick={() =>
+                            handleEndMeeting(assertMeetingId(meeting.id))
+                          }
                           loading={deactivateMeetingMutation.isPending}
                         >
                           <Icon as={LuX} me={2} />

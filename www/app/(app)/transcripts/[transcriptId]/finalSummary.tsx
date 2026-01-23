@@ -3,7 +3,8 @@ import React from "react";
 import Markdown from "react-markdown";
 import "../../../styles/markdown.css";
 import type { components } from "../../../reflector-api";
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import { useTranscriptUpdate } from "../../../lib/apiHooks";
 import {
@@ -18,7 +19,7 @@ import { LuPen } from "react-icons/lu";
 import { useError } from "../../../(errors)/errorContext";
 
 type FinalSummaryProps = {
-  transcript: GetTranscript;
+  transcript: GetTranscriptWithParticipants;
   topics: GetTranscriptTopic[];
   onUpdate: (newSummary: string) => void;
   finalSummaryRef: React.Dispatch<React.SetStateAction<HTMLDivElement | null>>;
