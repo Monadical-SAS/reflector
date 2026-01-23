@@ -1141,7 +1141,7 @@ async def identify_action_items(
 
 
 @daily_multitrack_pipeline.task(
-    parents=[generate_waveform, generate_title, generate_recap, identify_action_items],
+    parents=[generate_title, generate_recap, identify_action_items],
     execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
     retries=3,
 )
