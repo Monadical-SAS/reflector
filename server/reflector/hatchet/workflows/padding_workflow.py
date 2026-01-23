@@ -120,7 +120,6 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
             finally:
                 Path(temp_path).unlink(missing_ok=True)
 
-        ctx.log(f"pad_track complete: track {input.track_index} -> {storage_path}")
         logger.info(
             "[Hatchet] pad_track complete",
             track_index=input.track_index,

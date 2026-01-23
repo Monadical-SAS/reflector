@@ -429,7 +429,7 @@ async def process_paddings(input: PipelineInput, ctx: Context) -> ProcessPadding
     results = await padding_workflow.aio_run_many(bulk_runs)
 
     padded_tracks = []
-    created_padded_files = set()
+    created_padded_files = []
 
     for result in results:
         pad_result = PadTrackResult(**result[TaskName.PAD_TRACK])
@@ -445,7 +445,7 @@ async def process_paddings(input: PipelineInput, ctx: Context) -> ProcessPadding
 
         if pad_result.size > 0:
             storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{pad_result.track_index}.webm"
-            created_padded_files.add(storage_path)
+            created_padded_files.append(storage_path)
 
     ctx.log(f"process_paddings complete: {len(padded_tracks)} padded tracks")
 
@@ -475,6 +475,9 @@ async def process_transcriptions(
 
     target_language = participants_result.target_language
     padded_tracks = paddings_result.padded_tracks
+
+    if not padded_tracks:
+        raise ValueError("No padded tracks available for transcription")
 
     ctx.log(
         f"process_transcriptions: spawning {len(padded_tracks)} transcription workflows"

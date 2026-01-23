@@ -21,7 +21,11 @@ class ParticipantInfo(BaseModel):
 
 
 class PadTrackResult(BaseModel):
-    """Result from pad_track task."""
+    """Result from pad_track task.
+
+    If size=0, track required no padding and padded_key contains original S3 key.
+    If size>0, track was padded and padded_key contains new padded file S3 key.
+    """
 
     padded_key: NonEmptyString
     bucket_name: NonEmptyString | None
