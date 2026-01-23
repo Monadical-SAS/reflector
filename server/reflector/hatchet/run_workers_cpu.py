@@ -1,9 +1,9 @@
 """
 CPU-heavy worker pool for audio processing tasks.
-Handles: mixdown_tracks (serialized), padding workflows (parallel child workflows)
+Handles: mixdown_tracks only (serialized with max_runs=1)
 
 Configuration:
-- slots=1: Mixdown serialized globally with max_runs=1
+- slots=1: Only one mixdown at a time
 - Worker affinity: pool=cpu-heavy
 """
 
@@ -11,7 +11,6 @@ from reflector.hatchet.client import HatchetClientManager
 from reflector.hatchet.workflows.daily_multitrack_pipeline import (
     daily_multitrack_pipeline,
 )
-from reflector.hatchet.workflows.padding_workflow import padding_workflow
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -24,7 +23,7 @@ def main():
     hatchet = HatchetClientManager.get_client()
 
     logger.info(
-        "Starting Hatchet CPU worker pool (mixdown + padding)",
+        "Starting Hatchet CPU worker pool (mixdown only)",
         worker_name="cpu-worker-pool",
         slots=1,
         labels={"pool": "cpu-heavy"},
@@ -36,7 +35,7 @@ def main():
         labels={
             "pool": "cpu-heavy",
         },
-        workflows=[daily_multitrack_pipeline, padding_workflow],
+        workflows=[daily_multitrack_pipeline],
     )
 
     try:

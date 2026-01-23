@@ -1,12 +1,13 @@
 """
 LLM/I/O worker pool for all non-CPU tasks.
-Handles: all tasks except mixdown_tracks (transcription, LLM inference, orchestration)
+Handles: all tasks except mixdown_tracks (padding, transcription, LLM inference, orchestration)
 """
 
 from reflector.hatchet.client import HatchetClientManager
 from reflector.hatchet.workflows.daily_multitrack_pipeline import (
     daily_multitrack_pipeline,
 )
+from reflector.hatchet.workflows.padding_workflow import padding_workflow
 from reflector.hatchet.workflows.subject_processing import subject_workflow
 from reflector.hatchet.workflows.topic_chunk_processing import topic_chunk_workflow
 from reflector.hatchet.workflows.transcription_workflow import transcription_workflow
@@ -34,7 +35,7 @@ def main():
 
     llm_worker = hatchet.worker(
         WORKER_NAME,
-        slots=SLOTS,  # not all slots are probably used
+        slots=SLOTS,
         labels={
             "pool": POOL,
         },
@@ -42,6 +43,7 @@ def main():
             daily_multitrack_pipeline,
             topic_chunk_workflow,
             subject_workflow,
+            padding_workflow,
             transcription_workflow,
         ],
     )
