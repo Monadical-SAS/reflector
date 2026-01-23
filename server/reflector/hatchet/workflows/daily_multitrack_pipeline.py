@@ -1141,7 +1141,7 @@ async def identify_action_items(
 
 
 @daily_multitrack_pipeline.task(
-    parents=[generate_title, generate_recap, identify_action_items],
+    parents=[generate_waveform, generate_title, generate_recap, identify_action_items],
     execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
     retries=3,
 )
@@ -1196,8 +1196,8 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
             transcript,
             "TRANSCRIPT",
             TranscriptText(
-                text="",
-                translation=None,
+                text=merged_transcript.text,
+                translation=merged_transcript.translation,
             ),
             logger=logger,
         )
