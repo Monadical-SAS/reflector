@@ -11,7 +11,7 @@ from typing import Literal, Union, assert_never
 
 import celery
 from celery.result import AsyncResult
-from hatchet_sdk.clients.rest.exceptions import ApiException
+from hatchet_sdk.clients.rest.exceptions import ApiException, NotFoundException
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.recordings import recordings_controller
@@ -212,24 +212,39 @@ async def dispatch_transcript_processing(
                     )
                     return None
                 else:
-                    # Workflow exists but can't replay (CANCELLED, COMPLETED, etc.)
+                    # Workflow can't replay (CANCELLED, COMPLETED, or 404 deleted)
                     # Log and proceed to start new workflow
-                    status = await HatchetClientManager.get_workflow_run_status(
-                        transcript.workflow_run_id
-                    )
-                    logger.info(
-                        "Old workflow not replayable, starting new",
-                        old_workflow_id=transcript.workflow_run_id,
-                        old_status=status.value,
-                    )
+                    try:
+                        status = await HatchetClientManager.get_workflow_run_status(
+                            transcript.workflow_run_id
+                        )
+                        logger.info(
+                            "Old workflow not replayable, starting new",
+                            old_workflow_id=transcript.workflow_run_id,
+                            old_status=status.value,
+                        )
+                    except NotFoundException:
+                        # Workflow deleted from Hatchet but ID still in DB
+                        logger.info(
+                            "Old workflow not found in Hatchet, starting new",
+                            old_workflow_id=transcript.workflow_run_id,
+                        )
 
             # Force: cancel old workflow if exists
             if force and transcript and transcript.workflow_run_id:
-                await HatchetClientManager.cancel_workflow(transcript.workflow_run_id)
-                logger.info(
-                    "Cancelled old workflow (--force)",
-                    workflow_id=transcript.workflow_run_id,
-                )
+                try:
+                    await HatchetClientManager.cancel_workflow(
+                        transcript.workflow_run_id
+                    )
+                    logger.info(
+                        "Cancelled old workflow (--force)",
+                        workflow_id=transcript.workflow_run_id,
+                    )
+                except NotFoundException:
+                    logger.info(
+                        "Old workflow already deleted (--force)",
+                        workflow_id=transcript.workflow_run_id,
+                    )
                 await transcripts_controller.update(
                     transcript, {"workflow_run_id": None}
                 )

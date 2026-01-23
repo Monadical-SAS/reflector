@@ -1149,8 +1149,8 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
             transcript,
             "TRANSCRIPT",
             TranscriptText(
-                text=merged_transcript.text,
-                translation=merged_transcript.translation,
+                text="",
+                translation=None,
             ),
             logger=logger,
         )
@@ -1347,14 +1347,34 @@ async def send_webhook(input: PipelineInput, ctx: Context) -> WebhookResult:
             f"participants={len(payload.transcript.participants)})"
         )
 
-        response = await send_webhook_request(
-            url=room.webhook_url,
-            payload=payload,
-            event_type="transcript.completed",
-            webhook_secret=room.webhook_secret,
-            timeout=30.0,
-        )
+        try:
+            response = await send_webhook_request(
+                url=room.webhook_url,
+                payload=payload,
+                event_type="transcript.completed",
+                webhook_secret=room.webhook_secret,
+                timeout=30.0,
+            )
 
-        ctx.log(f"send_webhook complete: status_code={response.status_code}")
+            ctx.log(f"send_webhook complete: status_code={response.status_code}")
+            return WebhookResult(webhook_sent=True, response_code=response.status_code)
 
-        return WebhookResult(webhook_sent=True, response_code=response.status_code)
+        except httpx.HTTPStatusError as e:
+            ctx.log(
+                f"send_webhook failed (HTTP {e.response.status_code}), continuing anyway"
+            )
+            return WebhookResult(
+                webhook_sent=False, response_code=e.response.status_code
+            )
+
+        except httpx.ConnectError as e:
+            ctx.log(f"send_webhook failed (connection error), continuing anyway: {e}")
+            return WebhookResult(webhook_sent=False)
+
+        except httpx.TimeoutException as e:
+            ctx.log(f"send_webhook failed (timeout), continuing anyway: {e}")
+            return WebhookResult(webhook_sent=False)
+
+        except Exception as e:
+            ctx.log(f"send_webhook unexpected error, continuing anyway: {e}")
+            return WebhookResult(webhook_sent=False)
