@@ -94,6 +94,8 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
                     track_index=input.track_index,
                 )
 
+            storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{input.track_index}.webm"
+
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
                 temp_path = temp_file.name
 
@@ -107,7 +109,6 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
                 )
 
                 file_size = Path(temp_path).stat().st_size
-                storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{input.track_index}.webm"
 
                 with open(temp_path, "rb") as padded_file:
                     await storage.put_file(storage_path, padded_file)

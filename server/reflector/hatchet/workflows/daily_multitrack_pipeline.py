@@ -434,14 +434,13 @@ async def process_paddings(input: PipelineInput, ctx: Context) -> ProcessPadding
     for result in results:
         pad_result = PadTrackResult(**result[TaskName.PAD_TRACK])
 
-        if pad_result.padded_key:
-            padded_tracks.append(
-                PaddedTrackInfo(
-                    key=pad_result.padded_key,
-                    bucket_name=pad_result.bucket_name,
-                    track_index=pad_result.track_index,
-                )
+        padded_tracks.append(
+            PaddedTrackInfo(
+                key=pad_result.padded_key,
+                bucket_name=pad_result.bucket_name,
+                track_index=pad_result.track_index,
             )
+        )
 
         if pad_result.size > 0:
             storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{pad_result.track_index}.webm"
