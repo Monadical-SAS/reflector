@@ -567,6 +567,20 @@ export function useTranscriptSpeakerMerge() {
   );
 }
 
+export function useMeetingStartRecording() {
+  const { setError } = useError();
+
+  return $api.useMutation(
+    "post",
+    "/v1/meetings/{meeting_id}/recordings/start",
+    {
+      onError: (error) => {
+        setError(error as Error, "Failed to start recording");
+      },
+    },
+  );
+}
+
 export function useMeetingAudioConsent() {
   const { setError } = useError();
 

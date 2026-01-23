@@ -89,3 +89,5 @@ export const assertMeetingId = (s: string): MeetingId => {
   // just cast for now
   return nes as MeetingId;
 };
+
+export type DailyRecordingType = "cloud" | "raw-tracks";

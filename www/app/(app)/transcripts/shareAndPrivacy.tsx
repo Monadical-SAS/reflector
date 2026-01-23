@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 
 import { ShareMode, toShareMode } from "../../lib/shareMode";
 import type { components } from "../../reflector-api";
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 type UpdateTranscript = components["schemas"]["UpdateTranscript"];
 import {
@@ -27,7 +28,7 @@ import { featureEnabled } from "../../lib/features";
 
 type ShareAndPrivacyProps = {
   finalSummaryElement: HTMLDivElement | null;
-  transcript: GetTranscript;
+  transcript: GetTranscriptWithParticipants;
   topics: GetTranscriptTopic[];
 };
 
