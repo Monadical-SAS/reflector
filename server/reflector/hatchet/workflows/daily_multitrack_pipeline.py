@@ -1198,8 +1198,8 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
             transcript,
             "TRANSCRIPT",
             TranscriptText(
-                text=merged_transcript.text,
-                translation=merged_transcript.translation,
+                text="",
+                translation=None,
             ),
             logger=logger,
         )
