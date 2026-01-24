@@ -69,14 +69,15 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
         )
 
         with av.open(source_url) as in_container:
-            if in_container.duration:
-                try:
-                    duration = timedelta(seconds=in_container.duration // 1_000_000)
-                    ctx.log(
-                        f"pad_track: track {input.track_index}, duration={duration}"
-                    )
-                except Exception:
-                    ctx.log(f"pad_track: track {input.track_index}, duration=ERROR")
+            with av.open(source_url) as in_container:
+                if in_container.duration:
+                    try:
+                        duration = timedelta(seconds=in_container.duration // 1_000_000)
+                        ctx.log(
+                            f"pad_track: track {input.track_index}, duration={duration}"
+                        )
+                    except (ValueError, TypeError, OverflowError) as e:
+                        ctx.log(f"pad_track: track {input.track_index}, duration error: {str(e)}")
 
             start_time_seconds = extract_stream_start_time_from_container(
                 in_container, input.track_index, logger=logger
