@@ -98,6 +98,17 @@ class Settings(BaseSettings):
     # Diarization: local pyannote.audio
     DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
+    # Audio Mixdown
+    # backends:
+    #   - local: in-process PyAV mixdown (runs in same process as Hatchet worker)
+    #   - modal: HTTP API client to Modal.com CPU container
+    MIXDOWN_BACKEND: str = "local"
+    MIXDOWN_URL: str | None = None
+    MIXDOWN_TIMEOUT: int = 900  # 15 minutes
+
+    # Mixdown: modal backend
+    MIXDOWN_MODAL_API_KEY: str | None = None
+
     # Sentry
     SENTRY_DSN: str | None = None
 
