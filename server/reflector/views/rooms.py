@@ -20,6 +20,7 @@ from reflector.services.ics_sync import ics_sync_service
 from reflector.settings import settings
 from reflector.utils.url import add_query_param
 from reflector.video_platforms.factory import create_platform_client
+from reflector.worker.process import poll_daily_room_presence_task
 from reflector.worker.webhook import test_webhook
 
 logger = logging.getLogger(__name__)
@@ -363,6 +364,31 @@ async def rooms_create_meeting(
         meeting.host_room_url = ""
 
     return meeting
+
+
+@router.post("/rooms/{room_name}/meetings/{meeting_id}/leave")
+async def rooms_leave_meeting(
+    room_name: str,
+    meeting_id: str,
+    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
+):
+    """Trigger presence recheck when user leaves meeting (e.g., tab close/navigation).
+
+    Immediately queues presence poll to detect dirty disconnects faster than 30s periodic poll.
+    Daily.co webhooks handle clean disconnects, but tab close/crash need this endpoint.
+    """
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    if meeting.platform == "daily":
+        poll_daily_room_presence_task.delay(meeting_id)
+
+    return {"status": "ok"}
 
 
 @router.post("/rooms/{room_id}/webhook/test", response_model=WebhookTestResult)

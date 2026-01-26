@@ -766,6 +766,13 @@ export function useRoomJoinMeeting() {
   );
 }
 
+export function useRoomLeaveMeeting() {
+  return $api.useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/leave",
+  );
+}
+
 export function useRoomIcsSync() {
   const { setError } = useError();
 
