@@ -131,6 +131,15 @@ if [ -z "$DIARIZER_URL" ]; then
 fi
 echo "  -> $DIARIZER_URL"
 
+echo ""
+echo "Deploying padding (CPU audio processing)..."
+PADDING_URL=$(modal deploy reflector_padding.py 2>&1 | grep -o 'https://[^ ]*web.modal.run' | head -1)
+if [ -z "$PADDING_URL" ]; then
+    echo "Error: Failed to deploy padding. Check Modal dashboard for details."
+    exit 1
+fi
+echo "  -> $PADDING_URL"
+
 # --- Output Configuration ---
 echo ""
 echo "=========================================="
@@ -147,4 +156,8 @@ echo ""
 echo "DIARIZATION_BACKEND=modal"
 echo "DIARIZATION_URL=$DIARIZER_URL"
 echo "DIARIZATION_MODAL_API_KEY=$API_KEY"
+echo ""
+echo "PADDING_BACKEND=modal"
+echo "PADDING_URL=$PADDING_URL"
+echo "PADDING_MODAL_API_KEY=$API_KEY"
 echo "# --- End Modal Configuration ---"
