@@ -24,6 +24,7 @@ import { useAuth } from "../../lib/AuthProvider";
 import { useConsentDialog } from "../../lib/consent";
 import {
   useRoomJoinMeeting,
+  useRoomLeaveMeeting,
   useMeetingStartRecording,
 } from "../../lib/apiHooks";
 import { omit } from "remeda";
@@ -236,6 +237,20 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const handleLeave = useCallback(() => {
     router.push("/browse");
   }, [router]);
+
+  // Trigger presence recheck on dirty disconnects (tab close, navigation away)
+  useEffect(() => {
+    if (!meeting?.id || !roomName) return;
+
+    const handleBeforeUnload = () => {
+      // sendBeacon guarantees delivery even if tab closes mid-request
+      const url = `/v1/rooms/${roomName}/meetings/${meeting.id}/leave`;
+      navigator.sendBeacon(url, JSON.stringify({}));
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [meeting?.id, roomName]);
 
   const handleCustomButtonClick = useCallback(
     (ev: DailyEventObjectCustomButtonClick) => {
