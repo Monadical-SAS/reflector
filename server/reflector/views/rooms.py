@@ -622,4 +622,7 @@ async def rooms_join_meeting(
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)
 
+    if meeting.platform == "daily":
+        poll_daily_room_presence_task.delay(meeting_id)
+
     return meeting
