@@ -77,7 +77,9 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
                             f"pad_track: track {input.track_index}, duration={duration}"
                         )
                     except (ValueError, TypeError, OverflowError) as e:
-                        ctx.log(f"pad_track: track {input.track_index}, duration error: {str(e)}")
+                        ctx.log(
+                            f"pad_track: track {input.track_index}, duration error: {str(e)}"
+                        )
 
             start_time_seconds = extract_stream_start_time_from_container(
                 in_container, input.track_index, logger=logger
