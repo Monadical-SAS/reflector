@@ -8,7 +8,8 @@ from enum import StrEnum
 class TaskName(StrEnum):
     GET_RECORDING = "get_recording"
     GET_PARTICIPANTS = "get_participants"
-    PROCESS_TRACKS = "process_tracks"
+    PROCESS_PADDINGS = "process_paddings"
+    PROCESS_TRANSCRIPTIONS = "process_transcriptions"
     MIXDOWN_TRACKS = "mixdown_tracks"
     GENERATE_WAVEFORM = "generate_waveform"
     DETECT_TOPICS = "detect_topics"

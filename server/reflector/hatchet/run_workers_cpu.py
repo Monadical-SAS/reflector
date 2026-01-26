@@ -1,9 +1,9 @@
 """
 CPU-heavy worker pool for audio processing tasks.
-Handles ONLY: mixdown_tracks
+Handles: mixdown_tracks only (serialized with max_runs=1)
 
 Configuration:
-- slots=1: Only mixdown (already serialized globally with max_runs=1)
+- slots=1: Only one mixdown at a time
 - Worker affinity: pool=cpu-heavy
 """
 
@@ -26,7 +26,7 @@ def main():
 
     cpu_worker = hatchet.worker(
         "cpu-worker-pool",
-        slots=1,  # Only 1 mixdown at a time (already serialized globally)
+        slots=1,
         labels={
             "pool": "cpu-heavy",
         },
