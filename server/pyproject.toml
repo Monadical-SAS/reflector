@@ -40,6 +40,7 @@ dependencies = [
     "webvtt-py>=0.5.0",
     "icalendar>=6.0.0",
     "hatchet-sdk>=0.47.0",
+    "modal>=0.68.0",
 ]
 
 [dependency-groups]

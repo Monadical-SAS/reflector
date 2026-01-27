@@ -14,9 +14,7 @@ Hatchet workers run in forked processes; fresh imports per task ensure
 storage/DB connections are not shared across forks.
 """
 
-import tempfile
 from datetime import timedelta
-from pathlib import Path
 
 import av
 from hatchet_sdk import Context
@@ -27,10 +25,7 @@ from reflector.hatchet.constants import TIMEOUT_AUDIO, TIMEOUT_HEAVY
 from reflector.hatchet.workflows.models import PadTrackResult, TranscribeTrackResult
 from reflector.logger import logger
 from reflector.utils.audio_constants import PRESIGNED_URL_EXPIRATION_SECONDS
-from reflector.utils.audio_padding import (
-    apply_audio_padding_to_file,
-    extract_stream_start_time_from_container,
-)
+from reflector.utils.audio_padding import extract_stream_start_time_from_container
 
 
 class TrackInput(BaseModel):
@@ -83,63 +78,44 @@ async def pad_track(input: TrackInput, ctx: Context) -> PadTrackResult:
         )
 
         with av.open(source_url) as in_container:
-            if in_container.duration:
-                try:
-                    duration = timedelta(seconds=in_container.duration // 1_000_000)
-                    ctx.log(
-                        f"pad_track: track {input.track_index}, duration={duration}"
-                    )
-                except Exception:
-                    ctx.log(f"pad_track: track {input.track_index}, duration=ERROR")
-
             start_time_seconds = extract_stream_start_time_from_container(
                 in_container, input.track_index, logger=logger
             )
 
-            # If no padding needed, return original S3 key
-            if start_time_seconds <= 0:
-                logger.info(
-                    f"Track {input.track_index} requires no padding",
-                    track_index=input.track_index,
-                )
-                return PadTrackResult(
-                    padded_key=input.s3_key,
-                    bucket_name=input.bucket_name,
-                    size=0,
-                    track_index=input.track_index,
-                )
+        # If no padding needed, return original S3 key
+        if start_time_seconds <= 0:
+            logger.info(
+                f"Track {input.track_index} requires no padding",
+                track_index=input.track_index,
+            )
+            return PadTrackResult(
+                padded_key=input.s3_key,
+                bucket_name=input.bucket_name,
+                size=0,
+                track_index=input.track_index,
+            )
 
-            with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_file:
-                temp_path = temp_file.name
+        storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{input.track_index}.webm"
 
-            try:
-                apply_audio_padding_to_file(
-                    in_container,
-                    temp_path,
-                    start_time_seconds,
-                    input.track_index,
-                    logger=logger,
-                )
+        # Presign PUT URL for output (Modal uploads directly)
+        output_url = await storage.get_file_url(
+            storage_path,
+            operation="put_object",
+            expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
+        )
 
-                file_size = Path(temp_path).stat().st_size
-                storage_path = f"file_pipeline_hatchet/{input.transcript_id}/tracks/padded_{input.track_index}.webm"
+        from reflector.processors.audio_padding_modal import (  # noqa: PLC0415
+            AudioPaddingModalProcessor,
+        )
 
-                logger.info(
-                    f"About to upload padded track",
-                    key=storage_path,
-                    size=file_size,
-                )
-
-                with open(temp_path, "rb") as padded_file:
-                    await storage.put_file(storage_path, padded_file)
-
-                logger.info(
-                    f"Uploaded padded track to S3",
-                    key=storage_path,
-                    size=file_size,
-                )
-            finally:
-                Path(temp_path).unlink(missing_ok=True)
+        processor = AudioPaddingModalProcessor()
+        result = await processor.pad_track(
+            track_url=source_url,
+            output_url=output_url,
+            start_time_seconds=start_time_seconds,
+            track_index=input.track_index,
+        )
+        file_size = result.size
 
         ctx.log(f"pad_track complete: track {input.track_index} -> {storage_path}")
         logger.info(
