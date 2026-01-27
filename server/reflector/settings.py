@@ -98,15 +98,9 @@ class Settings(BaseSettings):
     # Diarization: local pyannote.audio
     DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
-    # Audio Padding
-    # backends:
-    #   - local: in-process PyAV padding (runs in same process as Hatchet worker)
-    #   - modal: HTTP API client to Modal.com CPU container
-    PADDING_BACKEND: str = "local"
+    # Audio Padding (Modal.com backend)
     PADDING_URL: str | None = None
     PADDING_TIMEOUT: int = 900  # 15 minutes
-
-    # Padding: modal backend
     PADDING_MODAL_API_KEY: str | None = None
 
     # Sentry
