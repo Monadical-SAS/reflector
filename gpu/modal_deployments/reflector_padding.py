@@ -4,11 +4,18 @@ Reflector GPU backend - audio padding
 
 CPU-intensive audio padding service for adding silence to audio tracks.
 Uses PyAV filter graph (adelay) for precise track synchronization.
+
+IMPORTANT: This padding logic is duplicated from server/reflector/utils/audio_padding.py
+for Modal deployment isolation (Modal can't import from server/reflector/). If you modify
+the PyAV filter graph or padding algorithm, you MUST update both:
+  - gpu/modal_deployments/reflector_padding.py (this file)
+  - server/reflector/utils/audio_padding.py
+
+Constants duplicated from server/reflector/utils/audio_constants.py for same reason.
 """
 
 import os
 import tempfile
-import time
 from fractions import Fraction
 import math
 
@@ -222,7 +229,7 @@ def web():
             logger.info(f"Padding complete: {file_size} bytes")
             return file_size
 
-        except Exception as e:
+        except Exception:
             logger.error(
                 f"PyAV padding failed for track {track_idx}",
                 exc_info=True,
@@ -239,9 +246,20 @@ def web():
         if not request.track_url:
             raise HTTPException(status_code=400, detail="No track URL provided")
 
+        if not request.output_url:
+            raise HTTPException(status_code=400, detail="No output URL provided")
+
         if request.start_time_seconds <= 0:
             raise HTTPException(
                 status_code=400, detail="start_time_seconds must be positive"
+            )
+
+        # Prevent DoS via excessive padding (e.g., 10 hours of silence)
+        MAX_PADDING_SECONDS = 3600  # 1 hour max
+        if request.start_time_seconds > MAX_PADDING_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"start_time_seconds exceeds maximum {MAX_PADDING_SECONDS}s",
             )
 
         logger.info(

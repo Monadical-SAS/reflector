@@ -27,14 +27,14 @@ class AudioPaddingModalProcessor:
 
     def __init__(self, modal_api_key: str | None = None):
         if not settings.PADDING_URL:
-            raise ValueError("PADDING_URL required to use AudioPaddingModalProcessor")
+            raise Exception("PADDING_URL required to use AudioPaddingModalProcessor")
 
         self.padding_url = settings.PADDING_URL + "/v1"
         self.timeout = settings.PADDING_TIMEOUT
         self.modal_api_key = modal_api_key or settings.PADDING_MODAL_API_KEY
 
         if not self.modal_api_key:
-            raise ValueError(
+            raise Exception(
                 "PADDING_MODAL_API_KEY required to use AudioPaddingModalProcessor"
             )
 

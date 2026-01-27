@@ -110,6 +110,7 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
                 expires_in=PRESIGNED_URL_EXPIRATION_SECONDS,
             )
 
+            # Import Modal-specific dependencies inside conditional (only needed for Modal backend)
             import httpx  # noqa: PLC0415
 
             from reflector.processors.audio_padding_modal import (  # noqa: PLC0415
