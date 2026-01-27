@@ -39,7 +39,7 @@ image = (
 
 # Constants matching local implementation
 OPUS_STANDARD_SAMPLE_RATE = 48000
-OPUS_DEFAULT_BIT_RATE = 32000
+OPUS_DEFAULT_BIT_RATE = 128000  # 128kbps for good speech quality (matches audio_constants.py)
 
 
 @app.function(
