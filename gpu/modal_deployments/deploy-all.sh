@@ -131,6 +131,15 @@ if [ -z "$DIARIZER_URL" ]; then
 fi
 echo "  -> $DIARIZER_URL"
 
+echo ""
+echo "Deploying padding (CPU audio processing via Modal SDK)..."
+modal deploy reflector_padding.py
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to deploy padding. Check Modal dashboard for details."
+    exit 1
+fi
+echo "  -> reflector-padding.pad_track (Modal SDK function)"
+
 # --- Output Configuration ---
 echo ""
 echo "=========================================="
@@ -147,4 +156,6 @@ echo ""
 echo "DIARIZATION_BACKEND=modal"
 echo "DIARIZATION_URL=$DIARIZER_URL"
 echo "DIARIZATION_MODAL_API_KEY=$API_KEY"
+echo ""
+echo "# Padding uses Modal SDK (requires MODAL_TOKEN_ID/SECRET in worker containers)"
 echo "# --- End Modal Configuration ---"

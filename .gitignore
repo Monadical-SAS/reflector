@@ -1,5 +1,6 @@
 .DS_Store
 server/.env
+server/.env.production
 .env
 Caddyfile
 server/exportdanswer
