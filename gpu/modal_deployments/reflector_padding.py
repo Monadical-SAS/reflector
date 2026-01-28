@@ -42,23 +42,22 @@ OPUS_STANDARD_SAMPLE_RATE = 48000
 OPUS_DEFAULT_BIT_RATE = 128000  # 128kbps for good speech quality (matches audio_constants.py)
 
 
-# Direct callable function for Modal SDK
 @app.function(
     cpu=2.0,
     timeout=PADDING_TIMEOUT,
     scaledown_window=SCALEDOWN_WINDOW,
     image=image,
 )
-def pad_track_direct(
+def pad_track(
     track_url: str,
     output_url: str,
     start_time_seconds: float,
     track_index: int,
 ) -> dict:
-    """Direct Modal function for padding audio tracks.
+    """Modal function for padding audio tracks.
 
     Returns:
-        dict with keys: size (int), audio_uploaded (bool)
+        dict with keys: size (int)
     """
     import logging
     import av
@@ -84,7 +83,6 @@ def pad_track_direct(
     output_path = None
 
     try:
-        # Download track
         logger.info("Downloading track for padding")
         response = requests.get(track_url, stream=True, timeout=300)
         response.raise_for_status()
@@ -179,7 +177,7 @@ def pad_track_direct(
         upload_response.raise_for_status()
         logger.info(f"Upload complete: {file_size} bytes")
 
-        return {"size": file_size, "audio_uploaded": True}
+        return {"size": file_size}
 
     finally:
         if input_path and os.path.exists(input_path):
