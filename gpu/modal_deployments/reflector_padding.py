@@ -22,9 +22,11 @@ import asyncio
 
 import modal
 
-PADDING_TIMEOUT = 600  # 10 minutes - more would be unreasonable
+S3_TIMEOUT = 60 # happens 2 times
+PADDING_TIMEOUT = 600 + (S3_TIMEOUT * 2)
 SCALEDOWN_WINDOW = 60  # The maximum duration (in seconds) that individual containers can remain idle when scaling down.
-DISCONNECT_CHECK_INTERVAL = 2  # Check for client disconnect every 2 seconds (frequent enough to catch mid-processing)
+DISCONNECT_CHECK_INTERVAL = 2  # Check for client disconnect
+
 
 app = modal.App("reflector-padding")
 
@@ -139,7 +141,7 @@ def web():
 
         try:
             logger.info("Downloading track for padding")
-            response = requests.get(req.track_url, stream=True, timeout=300)
+            response = requests.get(req.track_url, stream=True, timeout=S3_TIMEOUT)
             response.raise_for_status()
 
             input_path = os.path.join(temp_dir, "track.webm")
@@ -253,7 +255,7 @@ def web():
             logger.info("Uploading padded track to S3")
 
             with open(output_path, "rb") as f:
-                upload_response = requests.put(req.output_url, data=f, timeout=300)
+                upload_response = requests.put(req.output_url, data=f, timeout=S3_TIMEOUT)
 
             upload_response.raise_for_status()
             logger.info(f"Upload complete: {file_size} bytes")

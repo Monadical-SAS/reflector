@@ -30,7 +30,6 @@ class AudioPaddingModalProcessor:
             )
 
         self.modal_api_key = modal_api_key or os.getenv("MODAL_API_KEY")
-        self.timeout = 660  # 11 minutes - longer than Modal's 10min timeout
 
     async def pad_track(
         self,
@@ -64,7 +63,7 @@ class AudioPaddingModalProcessor:
             headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient() as client:
                 response = await client.post(
                     url,
                     headers=headers,
