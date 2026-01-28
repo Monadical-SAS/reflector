@@ -70,7 +70,7 @@ class AudioPaddingModalProcessor:
             log.info("Modal padding complete", size=result["size"])
             return PaddingResponse(**result)
         except asyncio.CancelledError:
-            log.warning("Modal padding cancelled by Hatchet")
+            log.warning("Modal padding cancelled")  # (e.g. by Hatchet)
             fc.cancel(terminate_containers=True)
             raise
         except modal.exception.FunctionTimeoutError as e:
