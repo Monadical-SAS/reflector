@@ -5,7 +5,7 @@ Modal.com backend for audio padding.
 import asyncio
 import os
 
-import modal
+import httpx
 from pydantic import BaseModel
 
 from reflector.logger import logger
@@ -13,25 +13,24 @@ from reflector.logger import logger
 
 class PaddingResponse(BaseModel):
     size: int
+    cancelled: bool = False
 
 
 class AudioPaddingModalProcessor:
-    """Audio padding processor using Modal.com CPU backend via SDK."""
+    """Audio padding processor using Modal.com CPU backend via HTTP."""
 
-    def __init__(self):
-        if not os.getenv("MODAL_TOKEN_ID") or not os.getenv("MODAL_TOKEN_SECRET"):
+    def __init__(
+        self, padding_url: str | None = None, modal_api_key: str | None = None
+    ):
+        self.padding_url = padding_url or os.getenv("PADDING_URL")
+        if not self.padding_url:
             raise ValueError(
-                "Modal credentials missing. Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET environment variables."
+                "PADDING_URL required to use AudioPaddingModalProcessor. "
+                "Set PADDING_URL environment variable or pass padding_url parameter."
             )
 
-        try:
-            self.padding_fn = modal.Function.from_name("reflector-padding", "pad_track")
-        except modal.exception.AuthError as e:
-            raise ValueError(f"Modal authentication failed: {e}") from e
-        except modal.exception.NotFoundError as e:
-            raise ValueError(
-                f"Modal function 'reflector-padding.pad_track' not found: {e}"
-            ) from e
+        self.modal_api_key = modal_api_key or os.getenv("MODAL_API_KEY")
+        self.timeout = 660  # 11 minutes - longer than Modal's 10min timeout
 
     async def pad_track(
         self,
@@ -56,32 +55,59 @@ class AudioPaddingModalProcessor:
             )
 
         log = logger.bind(track_index=track_index, padding_seconds=start_time_seconds)
-        log.info("Spawning Modal padding task")
+        log.info("Sending Modal padding HTTP request")
 
-        fc = self.padding_fn.spawn(
-            track_url=track_url,
-            output_url=output_url,
-            start_time_seconds=start_time_seconds,
-            track_index=track_index,
-        )
+        url = f"{self.padding_url}/pad"
+
+        headers = {}
+        if self.modal_api_key:
+            headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
         try:
-            result = await fc.get.aio()
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json={
+                        "track_url": track_url,
+                        "output_url": output_url,
+                        "start_time_seconds": start_time_seconds,
+                        "track_index": track_index,
+                    },
+                    follow_redirects=True,
+                )
+
+                if response.status_code != 200:
+                    error_body = response.text
+                    log.error(
+                        "Modal padding API error",
+                        status_code=response.status_code,
+                        error_body=error_body,
+                    )
+
+                response.raise_for_status()
+                result = response.json()
+
+            # Check if work was cancelled
+            if result.get("cancelled"):
+                log.warning("Modal padding was cancelled by disconnect detection")
+                raise asyncio.CancelledError(
+                    "Padding cancelled due to client disconnect"
+                )
+
             log.info("Modal padding complete", size=result["size"])
             return PaddingResponse(**result)
         except asyncio.CancelledError:
-            log.warning("Modal padding cancelled")  # (e.g. by Hatchet)
-            fc.cancel(terminate_containers=True)
+            log.warning(
+                "Modal padding cancelled (Hatchet timeout, disconnect detected on Modal side)"
+            )
             raise
-        except modal.exception.FunctionTimeoutError as e:
+        except httpx.TimeoutException as e:
             log.error("Modal padding timeout", error=str(e), exc_info=True)
-            fc.cancel(terminate_containers=True)
             raise Exception(f"Modal padding timeout: {e}") from e
-        except modal.exception.ExecutionError as e:
-            log.error("Modal padding execution failed", error=str(e), exc_info=True)
-            fc.cancel(terminate_containers=True)
-            raise Exception(f"Modal padding execution failed: {e}") from e
+        except httpx.HTTPStatusError as e:
+            log.error("Modal padding HTTP error", error=str(e), exc_info=True)
+            raise Exception(f"Modal padding HTTP error: {e}") from e
         except Exception as e:
             log.error("Modal padding unexpected error", error=str(e), exc_info=True)
-            fc.cancel(terminate_containers=True)
             raise
