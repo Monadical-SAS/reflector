@@ -21,12 +21,12 @@ import math
 
 import modal
 
-PADDING_TIMEOUT = 240  # 4 minutes (must be < Hatchet TIMEOUT_AUDIO=300s)
-SCALEDOWN_WINDOW = 60  # 1 minute idle before shutdown
+PADDING_TIMEOUT = 600  # 10 minutes - more would be unreasonable
+SCALEDOWN_WINDOW = 60  # The maximum duration (in seconds) that individual containers can remain idle when scaling down.
 
 app = modal.App("reflector-padding")
 
-# CPU-based image (no GPU needed for audio processing)
+# CPU-based image
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg")  # Required by PyAV
@@ -37,9 +37,10 @@ image = (
     )
 )
 
-# Constants matching local implementation
+# ref B0F71CE8-FC59-4AA5-8414-DAFB836DB711
 OPUS_STANDARD_SAMPLE_RATE = 48000
-OPUS_DEFAULT_BIT_RATE = 128000  # 128kbps for good speech quality (matches audio_constants.py)
+# ref B0F71CE8-FC59-4AA5-8414-DAFB836DB711
+OPUS_DEFAULT_BIT_RATE = 128000
 
 
 @app.function(
