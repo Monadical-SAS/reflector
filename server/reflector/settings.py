@@ -100,7 +100,6 @@ class Settings(BaseSettings):
 
     # Audio Padding (Modal.com backend)
     PADDING_URL: str | None = None
-    PADDING_TIMEOUT: int = 900  # 15 minutes
     PADDING_MODAL_API_KEY: str | None = None
 
     # Sentry

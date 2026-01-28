@@ -74,8 +74,8 @@ def pad_track(
         raise ValueError("output_url cannot be empty")
     if start_time_seconds <= 0:
         raise ValueError(f"start_time_seconds must be positive, got {start_time_seconds}")
-    if start_time_seconds > 3600:
-        raise ValueError(f"start_time_seconds exceeds maximum 3600s")
+    if start_time_seconds > 18000:
+        raise ValueError(f"start_time_seconds exceeds maximum 18000s (5 hours)")
 
     logger.info(f"Padding request: track {track_index}, delay={start_time_seconds}s")
 
