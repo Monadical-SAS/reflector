@@ -73,9 +73,6 @@ def web():
     @web_app.post("/pad")
     async def pad_track_endpoint(request: Request, req: PaddingRequest) -> PaddingResponse:
         """Modal web endpoint for padding audio tracks with disconnect detection.
-
-        Returns:
-            PaddingResponse with size field
         """
         import logging
 
@@ -115,7 +112,6 @@ def web():
             )
             return PaddingResponse(**result)
         finally:
-            # Cleanup disconnect checker
             cancelled.set()
             disconnect_task.cancel()
             try:
@@ -154,7 +150,7 @@ def web():
                         total_bytes += len(chunk)
                         chunk_count += 1
 
-                        # Check for cancellation every ~100KB (12-13 chunks)
+                        # Check for cancellation every arbitrary amount of chunks
                         if chunk_count % 12 == 0:
                             now = time.time()
                             if now - last_check >= DISCONNECT_CHECK_INTERVAL:
@@ -164,7 +160,6 @@ def web():
                                 last_check = now
             logger.info(f"Track downloaded: {total_bytes} bytes")
 
-            # Final check after download
             if cancelled.is_set():
                 logger.info("Cancelled after download, exiting early")
                 return {"size": 0, "cancelled": True}
