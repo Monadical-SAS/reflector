@@ -24,16 +24,24 @@ import { useAuth } from "../../lib/AuthProvider";
 import { useConsentDialog } from "../../lib/consent";
 import {
   useRoomJoinMeeting,
+  useRoomJoinedMeeting,
   useRoomLeaveMeeting,
   useMeetingStartRecording,
+  leaveRoomPostUrl,
+  LeaveRoomBody,
 } from "../../lib/apiHooks";
 import { omit } from "remeda";
 import {
   assertExists,
+  assertExistsAndNonEmptyString,
   NonEmptyString,
   parseNonEmptyString,
 } from "../../lib/utils";
-import { assertMeetingId, DailyRecordingType } from "../../lib/types";
+import {
+  assertMeetingId,
+  DailyRecordingType,
+  MeetingId,
+} from "../../lib/types";
 import { useUuidV5 } from "react-uuid-hook";
 
 const CONSENT_BUTTON_ID = "recording-consent";
@@ -180,6 +188,58 @@ const useFrame = (
   ] as const;
 };
 
+const leaveDaily = () => {
+  const frame = DailyIframe.getCallInstance();
+  frame?.leave();
+};
+
+const useDirtyDisconnects = (
+  meetingId: NonEmptyString,
+  roomName: NonEmptyString,
+) => {
+  useEffect(() => {
+    if (!meetingId || !roomName) return;
+
+    const handleBeforeUnload = () => {
+      leaveDaily();
+      navigator.sendBeacon(
+        leaveRoomPostUrl(
+          {
+            room_name: roomName,
+            meeting_id: meetingId,
+          },
+          {
+            delay_seconds: 5,
+          },
+        ),
+        undefined satisfies LeaveRoomBody,
+      );
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [meetingId, roomName]);
+};
+
+const useDisconnects = (
+  meetingId: NonEmptyString,
+  roomName: NonEmptyString,
+  leaveMutation: ReturnType<typeof useRoomLeaveMeeting>,
+) => {
+  useDirtyDisconnects(meetingId, roomName);
+
+  useEffect(() => {
+    return () => {
+      leaveDaily();
+      leaveMutation.mutate({
+        params: {
+          path: { meeting_id: meetingId, room_name: roomName },
+          query: { delay_seconds: 5 },
+        },
+      });
+    };
+  }, [meetingId, roomName]);
+};
+
 export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const router = useRouter();
   const params = useParams();
@@ -187,6 +247,8 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const authLastUserId = auth.lastUserId;
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const joinMutation = useRoomJoinMeeting();
+  const joinedMutation = useRoomJoinedMeeting();
+  const leaveMutation = useRoomLeaveMeeting();
   const startRecordingMutation = useMeetingStartRecording();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
 
@@ -196,7 +258,9 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     useUuidV5(meeting.id, RAW_TRACKS_NAMESPACE)[0],
   );
 
-  const roomName = params?.roomName as string;
+  if (typeof params.roomName === "object")
+    throw new Error(`Invalid room name in params. array? ${params.roomName}`);
+  const roomName = assertExistsAndNonEmptyString(params.roomName);
 
   const {
     showConsentModal,
@@ -238,19 +302,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     router.push("/browse");
   }, [router]);
 
-  // Trigger presence recheck on dirty disconnects (tab close, navigation away)
-  useEffect(() => {
-    if (!meeting?.id || !roomName) return;
-
-    const handleBeforeUnload = () => {
-      // sendBeacon guarantees delivery even if tab closes mid-request
-      const url = `/v1/rooms/${roomName}/meetings/${meeting.id}/leave`;
-      navigator.sendBeacon(url, JSON.stringify({}));
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [meeting?.id, roomName]);
+  useDisconnects(meeting.id as MeetingId, roomName, leaveMutation);
 
   const handleCustomButtonClick = useCallback(
     (ev: DailyEventObjectCustomButtonClick) => {
@@ -264,6 +316,15 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   );
 
   const handleFrameJoinMeeting = useCallback(() => {
+    joinedMutation.mutate({
+      params: {
+        path: {
+          room_name: roomName,
+          meeting_id: meeting.id,
+        },
+      },
+    });
+
     if (meeting.recording_type === "cloud") {
       console.log("Starting dual recording via REST API", {
         cloudInstanceId,
@@ -323,8 +384,10 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
       startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
     }
   }, [
-    meeting.recording_type,
+    joinedMutation,
+    roomName,
     meeting.id,
+    meeting.recording_type,
     startRecordingMutation,
     cloudInstanceId,
     rawTracksInstanceId,

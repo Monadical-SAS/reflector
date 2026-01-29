@@ -171,6 +171,48 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/joined": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rooms Joined Meeting
+     * @description Trigger presence poll (ideally when user actually joins meeting in Daily iframe)
+     */
+    post: operations["v1_rooms_joined_meeting"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/leave": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rooms Leave Meeting
+     * @description Trigger presence recheck when user leaves meeting (e.g., tab close/navigation).
+     *
+     *     Queues presence poll with optional delay to allow Daily.co to detect disconnect.
+     */
+    post: operations["v1_rooms_leave_meeting"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/rooms/{room_id}/webhook/test": {
     parameters: {
       query?: never;
@@ -2422,6 +2464,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Meeting"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_joined_meeting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_leave_meeting: {
+    parameters: {
+      query?: {
+        delay_seconds?: number;
+      };
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

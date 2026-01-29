@@ -366,17 +366,12 @@ async def rooms_create_meeting(
     return meeting
 
 
-@router.post("/rooms/{room_name}/meetings/{meeting_id}/leave")
-async def rooms_leave_meeting(
+@router.post("/rooms/{room_name}/meetings/{meeting_id}/joined")
+async def rooms_joined_meeting(
     room_name: str,
     meeting_id: str,
-    user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
-    """Trigger presence recheck when user leaves meeting (e.g., tab close/navigation).
-
-    Immediately queues presence poll to detect dirty disconnects faster than 30s periodic poll.
-    Daily.co webhooks handle clean disconnects, but tab close/crash need this endpoint.
-    """
+    """Trigger presence poll (ideally when user actually joins meeting in Daily iframe)"""
     room = await rooms_controller.get_by_name(room_name)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -387,6 +382,33 @@ async def rooms_leave_meeting(
 
     if meeting.platform == "daily":
         poll_daily_room_presence_task.delay(meeting_id)
+
+    return {"status": "ok"}
+
+
+@router.post("/rooms/{room_name}/meetings/{meeting_id}/leave")
+async def rooms_leave_meeting(
+    room_name: str,
+    meeting_id: str,
+    delay_seconds: int = 2,
+):
+    """Trigger presence recheck when user leaves meeting (e.g., tab close/navigation).
+
+    Queues presence poll with optional delay to allow Daily.co to detect disconnect.
+    """
+    room = await rooms_controller.get_by_name(room_name)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    meeting = await meetings_controller.get_by_id(meeting_id, room=room)
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    if meeting.platform == "daily":
+        poll_daily_room_presence_task.apply_async(
+            args=[meeting_id],
+            countdown=delay_seconds,
+        )
 
     return {"status": "ok"}
 
@@ -621,8 +643,5 @@ async def rooms_join_meeting(
         )
         meeting = meeting.model_copy()
         meeting.room_url = add_query_param(meeting.room_url, "t", token)
-
-    if meeting.platform == "daily":
-        poll_daily_room_presence_task.delay(meeting_id)
 
     return meeting
