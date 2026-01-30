@@ -8,6 +8,7 @@ import os
 import httpx
 from pydantic import BaseModel
 
+from reflector.hatchet.constants import TIMEOUT_AUDIO
 from reflector.logger import logger
 
 
@@ -63,7 +64,7 @@ class AudioPaddingModalProcessor:
             headers["Authorization"] = f"Bearer {self.modal_api_key}"
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=TIMEOUT_AUDIO) as client:
                 response = await client.post(
                     url,
                     headers=headers,
