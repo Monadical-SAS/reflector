@@ -129,6 +129,10 @@ class DailyClient(VideoPlatformClient):
         """Get room presence/session data for a Daily.co room."""
         return await self._api_client.get_room_presence(room_name)
 
+    async def delete_room(self, room_name: str) -> None:
+        """Delete a Daily.co room (idempotent - succeeds even if room doesn't exist)."""
+        return await self._api_client.delete_room(room_name)
+
     async def get_meeting_participants(
         self, meeting_id: str
     ) -> MeetingParticipantsResponse:
