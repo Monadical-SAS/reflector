@@ -86,7 +86,7 @@ Daily.co Room: "daily-private-igor-20260110042117"
 | **Purpose** | Tracks active session state | Links recordings, transcripts, participants |
 | **Scope** | Per room instance | Per Reflector room + timestamp |
 
-**Critical Limitation:** Daily.co's recordings API often does NOT return `mtgSessionId`, requiring time-based matching (see [Time-Based Matching](#time-based-matching)).
+**Critical Limitation:** Daily.co's recordings API often does NOT return `mtgSessionId` (can be null), requiring time-based matching (see [Time-Based Matching](#time-based-matching)).
 
 ### Recording
 
@@ -100,6 +100,30 @@ Daily.co Room: "daily-private-igor-20260110042117"
 | **Linkage** | Via `room_name` + `start_ts` | FK `meeting_id` (set via time-based match) |
 
 **Critical Behavior:** Recording **stops/restarts** create **separate recording objects** with unique IDs.
+
+### instanceId (Reflector-Generated)
+
+**Definition:** UUID we generate and send when starting recording via REST API.
+
+**Generation:** Deterministic from meeting_id
+- Cloud: `instanceId = meeting_id` directly
+- Raw-tracks: `instanceId = UUIDv5(meeting_id, namespace)`
+
+**Key behaviors:**
+- ✅ **Reuse allowed:** Same instanceId can be used after stop (validated 2026-01-20)
+- ❌ **Not returned:** Daily.co does NOT echo instanceId back in GET /recordings response
+- ✅ **Present in error webhooks:** `recording.error` webhook includes instanceId
+- **Purpose:** Allows multiple concurrent recordings (cloud + raw-tracks) in same room
+
+**Stop/restart example:**
+```
+Recording 1: POST /start with instanceId="779e6376..." → recording_id="ee00c4e8..."
+Stop recording
+Recording 2: POST /start with instanceId="779e6376..." (SAME) → recording_id="b702f509..." (DIFFERENT)
+✅ Both succeed, different recording_ids returned
+```
+
+**Implication:** Cannot match recordings by instanceId (not in response) - must use recording_id.
 
 ---
 
@@ -196,6 +220,19 @@ Daily.co Room: "daily-private-igor-20260110042117"
 
 `mtgSessionId` identifies a **Daily.co meeting session** (not individual participants, not a room).
 
+**Reliability:** Can be null or present in GET /recordings response (unreliable).
+
+**When present:** Multiple recordings from same session (stop/restart with participants connected) share same mtgSessionId.
+
+**Example (validated 2026-01-20):**
+```json
+Recording 1: {"id": "ee00c4e8...", "mtgSessionId": "92c4136a-a8da-41c5-9c45-e9a2baae6bd6"}
+Recording 2: {"id": "b702f509...", "mtgSessionId": "92c4136a-a8da-41c5-9c45-e9a2baae6bd6"}
+// Same mtgSessionId (stop/restart in same session)
+```
+
+**When null:** Common - Daily.co API does not reliably populate this field.
+
 ### session_id (Per-Participant)
 
 **Different concept:** Per-participant connection identifier from webhooks.
@@ -220,15 +257,23 @@ TABLE daily_participant_session (
 
 Daily.co's recordings API does not reliably return `mtgSessionId`, making it impossible to directly link recordings to meetings via Daily.co's identifiers.
 
-**Example API response:**
+**Example API response (mtgSessionId can be null OR present):**
 ```json
 {
   "id": "recording-uuid",
   "room_name": "daily-private-igor-20260110042117",
   "start_ts": 1768018896,
-  "mtgSessionId": null  ← Missing!
+  "mtgSessionId": null  // ← Often null (unreliable)
+}
+
+// OR (when present):
+{
+  "id": "recording-uuid",
+  "mtgSessionId": "92c4136a-a8da-41c5-9c45-e9a2baae6bd6"  // ← Sometimes present
 }
 ```
+
+**Key insight:** Cannot rely on mtgSessionId for matching (unreliable). instanceId also not returned. Only reliable identifier is recording.id.
 
 ### Solution: Time-Based Matching
 
@@ -491,6 +536,10 @@ UI: User sees 3 separate transcripts
 
 
 ---
-**Document Version:** 1.0
-**Last Verified:** 2026-01-15
-**Data Source:** Production database + Daily.co API inspection
+**Document Version:** 1.1
+**Last Updated:** 2026-01-20
+**Data Source:** Production database + Daily.co API inspection + empirical testing
+**Changes in 1.1:**
+- Added instanceId behavior documentation (reuse allowed, not returned in API)
+- Clarified mtgSessionId reliability (can be null or present)
+- Added empirical validation of stop/restart behavior
