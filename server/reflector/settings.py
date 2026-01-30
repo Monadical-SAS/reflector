@@ -98,6 +98,10 @@ class Settings(BaseSettings):
     # Diarization: local pyannote.audio
     DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
+    # Audio Padding (Modal.com backend)
+    PADDING_URL: str | None = None
+    PADDING_MODAL_API_KEY: str | None = None
+
     # Sentry
     SENTRY_DSN: str | None = None
 
