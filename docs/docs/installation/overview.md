@@ -26,7 +26,7 @@ flowchart LR
 
 Before starting, you need:
 
-- **Production server** -  4+ cores, 8GB+ RAM, public IP
+- **Production server** - 4+ cores, 8GB+ RAM, public IP
 - **Two domain names** - e.g., `app.example.com` (frontend) and `api.example.com` (backend)
 - **GPU processing** - Choose one:
   - Modal.com account, OR
@@ -60,16 +60,17 @@ Type: A    Name: api    Value: <your-server-ip>
 
 Reflector requires GPU processing for transcription and speaker diarization. Choose one option:
 
-| | **Modal.com (Cloud)** | **Self-Hosted GPU** |
-|---|---|---|
+|              | **Modal.com (Cloud)**             | **Self-Hosted GPU**          |
+| ------------ | --------------------------------- | ---------------------------- |
 | **Best for** | No GPU hardware, zero maintenance | Own GPU server, full control |
-| **Pricing** | Pay-per-use | Fixed infrastructure cost |
+| **Pricing**  | Pay-per-use                       | Fixed infrastructure cost    |
 
 ### Option A: Modal.com (Serverless Cloud GPU)
 
 #### Accept HuggingFace Licenses
 
 Visit both pages and click "Accept":
+
 - https://huggingface.co/pyannote/speaker-diarization-3.1
 - https://huggingface.co/pyannote/segmentation-3.0
 
@@ -179,6 +180,7 @@ Save these credentials - you'll need them in the next step.
 ## Configure Environment
 
 Reflector has two env files:
+
 - `server/.env` - Backend configuration
 - `www/.env` - Frontend configuration
 
@@ -190,6 +192,7 @@ nano server/.env
 ```
 
 **Required settings:**
+
 ```env
 # Database (defaults work with docker-compose.prod.yml)
 DATABASE_URL=postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
@@ -249,6 +252,7 @@ nano www/.env
 ```
 
 **Required settings:**
+
 ```env
 # Your domains
 SITE_URL=https://app.example.com
@@ -266,7 +270,11 @@ FEATURE_REQUIRE_LOGIN=false
 
 ---
 
-## Configure Caddy
+## Reverse proxy (Caddy or existing)
+
+**If Coolify, Traefik, or nginx already use ports 80/443** (e.g. Coolify on your host): skip Caddy. Start the stack without the Caddy profile (see [Start Services](#start-services) below), then point your proxy at `web:3000` (frontend) and `server:1250` (API).
+
+**If you want Reflector to provide the reverse proxy and SSL:**
 
 ```bash
 cp Caddyfile.example Caddyfile
@@ -289,8 +297,16 @@ Replace `example.com` with your domains. The `{$VAR:default}` syntax uses Caddy'
 
 ## Start Services
 
+**Without Caddy** (e.g. Coolify already on 80/443):
+
 ```bash
 docker compose -f docker-compose.prod.yml up -d
+```
+
+**With Caddy** (Reflector handles SSL):
+
+```bash
+docker compose -f docker-compose.prod.yml --profile caddy up -d
 ```
 
 Wait for containers to start (first run may take 1-2 minutes to pull images and initialize).
@@ -300,18 +316,21 @@ Wait for containers to start (first run may take 1-2 minutes to pull images and 
 ## Verify Deployment
 
 ### Check services
+
 ```bash
 docker compose -f docker-compose.prod.yml ps
 # All should show "Up"
 ```
 
 ### Test API
+
 ```bash
 curl https://api.example.com/health
 # Should return: {"status":"healthy"}
 ```
 
 ### Test Frontend
+
 - Visit https://app.example.com
 - You should see the Reflector interface
 - Try uploading an audio file to test transcription
@@ -327,6 +346,7 @@ By default, Reflector is open (no login required). **Authentication is required 
 See [Authentication Setup](./auth-setup) for full Authentik OAuth configuration.
 
 Quick summary:
+
 1. Deploy Authentik on your server
 2. Create OAuth provider in Authentik
 3. Extract public key for JWT verification
@@ -358,6 +378,7 @@ DAILYCO_STORAGE_AWS_ROLE_ARN=<arn:aws:iam::ACCOUNT:role/DailyCo>
 ```
 
 Reload env and restart:
+
 ```bash
 docker compose -f docker-compose.prod.yml up -d server worker
 ```
@@ -367,35 +388,43 @@ docker compose -f docker-compose.prod.yml up -d server worker
 ## Troubleshooting
 
 ### Check logs for errors
+
 ```bash
 docker compose -f docker-compose.prod.yml logs server --tail 20
 docker compose -f docker-compose.prod.yml logs worker --tail 20
 ```
 
 ### Services won't start
+
 ```bash
 docker compose -f docker-compose.prod.yml logs
 ```
 
 ### CORS errors in browser
+
 - Verify `CORS_ORIGIN` in `server/.env` matches your frontend domain exactly (including `https://`)
 - Reload env: `docker compose -f docker-compose.prod.yml up -d server`
 
-### SSL certificate errors
+### SSL certificate errors (when using Caddy)
+
 - Caddy auto-provisions Let's Encrypt certificates
-- Ensure ports 80 and 443 are open
+- Ensure ports 80 and 443 are open and not used by another proxy
 - Check: `docker compose -f docker-compose.prod.yml logs caddy`
+- If port 80 is already in use (e.g. by Coolify), run without Caddy: `docker compose -f docker-compose.prod.yml up -d` and use your existing proxy
 
 ### Transcription not working
+
 - Check Modal dashboard: https://modal.com/apps
 - Verify URLs in `server/.env` match deployed functions
 - Check worker logs: `docker compose -f docker-compose.prod.yml logs worker`
 
 ### "Login required" but auth not configured
+
 - Set `FEATURE_REQUIRE_LOGIN=false` in `www/.env`
 - Rebuild frontend: `docker compose -f docker-compose.prod.yml up -d --force-recreate web`
 
 ### Database migrations or connectivity issues
+
 Migrations run automatically on server startup. To check database connectivity or debug migration failures:
 
 ```bash
@@ -408,4 +437,3 @@ docker compose -f docker-compose.prod.yml exec server uv run python -c "from ref
 # Manually run migrations (if needed)
 docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
 ```
-

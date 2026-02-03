@@ -1,9 +1,14 @@
 # Production Docker Compose configuration
 # Usage: docker compose -f docker-compose.prod.yml up -d
 #
+# Caddy (reverse proxy on ports 80/443) is OPTIONAL and behind the "caddy" profile:
+# - With Caddy (self-hosted, you manage SSL): docker compose -f docker-compose.prod.yml --profile caddy up -d
+# - Without Caddy (Coolify/Traefik/nginx already on 80/443): docker compose -f docker-compose.prod.yml up -d
+#   Then point your proxy at web:3000 (frontend) and server:1250 (API).
+#
 # Prerequisites:
 # 1. Copy .env.example to .env and configure for both server/ and www/
-# 2. Copy Caddyfile.example to Caddyfile and edit with your domains
+# 2. If using Caddy: copy Caddyfile.example to Caddyfile and edit your domains
 # 3. Deploy Modal GPU functions (see gpu/modal_deployments/deploy-all.sh)
 
 services:
@@ -84,6 +89,8 @@ services:
       retries: 3
 
   caddy:
+    profiles:
+      - caddy
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
