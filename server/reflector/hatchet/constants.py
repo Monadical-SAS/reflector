@@ -35,7 +35,9 @@ LLM_RATE_LIMIT_PER_SECOND = 10
 
 # Task execution timeouts (seconds)
 TIMEOUT_SHORT = 60  # Quick operations: API calls, DB updates
-TIMEOUT_MEDIUM = 120  # Single LLM calls, waveform generation
+TIMEOUT_MEDIUM = (
+    300  # Single LLM calls, waveform generation (5m for slow LLM responses)
+)
 TIMEOUT_LONG = 180  # Action items (larger context LLM)
 TIMEOUT_AUDIO = 720  # Audio processing: padding, mixdown
 TIMEOUT_HEAVY = 600  # Transcription, fan-out LLM tasks
