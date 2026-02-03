@@ -11,15 +11,15 @@ This page documents the Docker Compose configuration for Reflector. For the comp
 
 The `docker-compose.prod.yml` includes these services:
 
-| Service | Image | Purpose |
-|---------|-------|---------|
-| `web` | `monadicalsas/reflector-frontend` | Next.js frontend |
-| `server` | `monadicalsas/reflector-backend` | FastAPI backend |
-| `worker` | `monadicalsas/reflector-backend` | Celery worker for background tasks |
-| `beat` | `monadicalsas/reflector-backend` | Celery beat scheduler |
-| `redis` | `redis:7.2-alpine` | Message broker and cache |
-| `postgres` | `postgres:17-alpine` | Primary database |
-| `caddy` | `caddy:2-alpine` | Reverse proxy with auto-SSL |
+| Service    | Image                             | Purpose                                                                     |
+| ---------- | --------------------------------- | --------------------------------------------------------------------------- |
+| `web`      | `monadicalsas/reflector-frontend` | Next.js frontend                                                            |
+| `server`   | `monadicalsas/reflector-backend`  | FastAPI backend                                                             |
+| `worker`   | `monadicalsas/reflector-backend`  | Celery worker for background tasks                                          |
+| `beat`     | `monadicalsas/reflector-backend`  | Celery beat scheduler                                                       |
+| `redis`    | `redis:7.2-alpine`                | Message broker and cache                                                    |
+| `postgres` | `postgres:17-alpine`              | Primary database                                                            |
+| `caddy`    | `caddy:2-alpine`                  | Reverse proxy with auto-SSL (optional; see [Caddy profile](#caddy-profile)) |
 
 ## Environment Files
 
@@ -30,6 +30,7 @@ Reflector uses two separate environment files:
 Used by: `server`, `worker`, `beat`
 
 Key variables:
+
 ```env
 # Database connection
 DATABASE_URL=postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
@@ -54,6 +55,7 @@ TRANSCRIPT_MODAL_API_KEY=...
 Used by: `web`
 
 Key variables:
+
 ```env
 # Domain configuration
 SITE_URL=https://app.example.com
@@ -70,26 +72,42 @@ Note: `API_URL` is used client-side (browser), `SERVER_API_URL` is used server-s
 
 ## Volumes
 
-| Volume | Purpose |
-|--------|---------|
-| `redis_data` | Redis persistence |
-| `postgres_data` | PostgreSQL data |
-| `server_data` | Uploaded files, local storage |
-| `caddy_data` | SSL certificates |
-| `caddy_config` | Caddy configuration |
+| Volume          | Purpose                       |
+| --------------- | ----------------------------- |
+| `redis_data`    | Redis persistence             |
+| `postgres_data` | PostgreSQL data               |
+| `server_data`   | Uploaded files, local storage |
+| `caddy_data`    | SSL certificates              |
+| `caddy_config`  | Caddy configuration           |
 
 ## Network
 
 All services share the default network. The network is marked `attachable: true` to allow external containers (like Authentik) to join.
 
+## Caddy profile
+
+Caddy (ports 80 and 443) is **optional** and behind the `caddy` profile so it does not conflict with an existing reverse proxy (e.g. Coolify, Traefik, nginx).
+
+- **With Caddy** (you want Reflector to handle SSL):
+  `docker compose -f docker-compose.prod.yml --profile caddy up -d`
+- **Without Caddy** (Coolify or another proxy already on 80/443):
+  `docker compose -f docker-compose.prod.yml up -d`
+  Then configure your proxy to send traffic to `web:3000` (frontend) and `server:1250` (API).
+
 ## Common Commands
 
 ### Start all services
+
 ```bash
+# Without Caddy (e.g. when using Coolify)
 docker compose -f docker-compose.prod.yml up -d
+
+# With Caddy as reverse proxy
+docker compose -f docker-compose.prod.yml --profile caddy up -d
 ```
 
 ### View logs
+
 ```bash
 # All services
 docker compose -f docker-compose.prod.yml logs -f
@@ -99,6 +117,7 @@ docker compose -f docker-compose.prod.yml logs server --tail 50
 ```
 
 ### Restart a service
+
 ```bash
 # Quick restart (doesn't reload .env changes)
 docker compose -f docker-compose.prod.yml restart server
@@ -108,27 +127,32 @@ docker compose -f docker-compose.prod.yml up -d server
 ```
 
 ### Run database migrations
+
 ```bash
 docker compose -f docker-compose.prod.yml exec server uv run alembic upgrade head
 ```
 
 ### Access database
+
 ```bash
 docker compose -f docker-compose.prod.yml exec postgres psql -U reflector
 ```
 
 ### Pull latest images
+
 ```bash
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 ### Stop all services
+
 ```bash
 docker compose -f docker-compose.prod.yml down
 ```
 
 ### Full reset (WARNING: deletes data)
+
 ```bash
 docker compose -f docker-compose.prod.yml down -v
 ```
@@ -187,6 +211,7 @@ The Caddyfile supports environment variable substitution:
 Set `FRONTEND_DOMAIN` and `API_DOMAIN` environment variables, or edit the file directly.
 
 ### Reload Caddy after changes
+
 ```bash
 docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
