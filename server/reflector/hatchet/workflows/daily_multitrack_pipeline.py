@@ -322,6 +322,7 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
     mtg_session_id = recording.mtg_session_id
     async with fresh_db_connection():
         from reflector.db.transcripts import (  # noqa: PLC0415
+            TranscriptDuration,
             TranscriptParticipant,
             transcripts_controller,
         )
@@ -330,13 +331,24 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
         if not transcript:
             raise ValueError(f"Transcript {input.transcript_id} not found")
         # Note: title NOT cleared - preserves existing titles
+        # Duration from Daily API (seconds -> milliseconds) - master source
+        duration_ms = recording.duration * 1000 if recording.duration else 0
         await transcripts_controller.update(
             transcript,
             {
                 "events": [],
                 "topics": [],
                 "participants": [],
+                "duration": duration_ms,
             },
+        )
+
+        await append_event_and_broadcast(
+            input.transcript_id,
+            transcript,
+            "DURATION",
+            TranscriptDuration(duration=duration_ms),
+            logger=logger,
         )
 
         mtg_session_id = assert_non_none_and_non_empty(
@@ -561,27 +573,13 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
 
     Path(output_path).unlink(missing_ok=True)
 
-    duration = duration_ms_callback_capture_container[0]
-
     async with fresh_db_connection():
-        from reflector.db.transcripts import (  # noqa: PLC0415
-            TranscriptDuration,
-            transcripts_controller,
-        )
+        from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:
             await transcripts_controller.update(
-                transcript, {"audio_location": "storage", "duration": duration}
-            )
-
-            duration_data = TranscriptDuration(duration=duration)
-            await append_event_and_broadcast(
-                input.transcript_id,
-                transcript,
-                "DURATION",
-                duration_data,
-                logger=logger,
+                transcript, {"audio_location": "storage"}
             )
 
     ctx.log(f"mixdown_tracks complete: uploaded {file_size} bytes to {storage_path}")
