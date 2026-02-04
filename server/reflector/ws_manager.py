@@ -97,9 +97,10 @@ class WebsocketManager:
 
     async def _pubsub_data_reader(self, pubsub_subscriber):
         while True:
-            # No timeout - global singleton prevents CPU hog from multiple instances
+            # timeout=1.0 prevents tight CPU loop when no messages available
             message = await pubsub_subscriber.get_message(
-                ignore_subscribe_messages=True
+                ignore_subscribe_messages=True,
+                timeout=1.0,
             )
             if message is not None:
                 room_id = message["channel"].decode("utf-8")
@@ -109,10 +110,8 @@ class WebsocketManager:
                     await socket.send_json(data)
 
 
-# Process-global singleton (not thread-local)
-# The original threading.local() pattern was broken - it created a NEW
-# threading.local() object on every call, so caching never worked.
-# This caused infinite ws_manager instances → resource leaks → CPU hog.
+# Process-global singleton to ensure only one WebsocketManager instance exists.
+# Multiple instances would cause resource leaks and CPU issues.
 _ws_manager: WebsocketManager | None = None
 
 
