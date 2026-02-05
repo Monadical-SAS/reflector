@@ -21,7 +21,7 @@ import DailyIframe, {
   DailyParticipantsObject,
 } from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
-import { printApiError } from "../../api/_error";
+import { printApiError, ApiError } from "../../api/_error";
 import { useAuth } from "../../lib/AuthProvider";
 import { useConsentDialog } from "../../lib/consent";
 import {
@@ -401,11 +401,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   }
 
   if (joinMutation.isError) {
-    const apiDetail = printApiError(
-      joinMutation.error as {
-        detail?: components["schemas"]["ValidationError"][];
-      } | null,
-    );
+    const apiDetail = printApiError(joinMutation.error as ApiError);
     return (
       <Center width="100vw" height="100vh">
         <VStack gap={4}>

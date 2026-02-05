@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from reflector.db import get_database
 from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.meetings import meetings
 from reflector.db.rooms import rooms_controller
@@ -64,8 +65,6 @@ async def test_duplicate_calendar_event_does_not_create_duplicate_meeting():
         await create_upcoming_meetings_for_event(event1, create_window, room)
 
     # Verify meeting was created
-    from reflector.db import get_database
-
     results = await get_database().fetch_all(
         meetings.select().where(meetings.c.room_id == room.id)
     )
@@ -175,8 +174,6 @@ async def test_different_time_windows_create_separate_meetings():
 
         await create_upcoming_meetings_for_event(event1, create_window, room)
         await create_upcoming_meetings_for_event(event2, create_window, room)
-
-    from reflector.db import get_database
 
     results = await get_database().fetch_all(
         meetings.select().where(meetings.c.room_id == room.id)
