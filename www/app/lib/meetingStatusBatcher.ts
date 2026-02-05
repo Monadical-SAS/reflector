@@ -1,0 +1,25 @@
+import { create, keyResolver, windowScheduler } from "@yornaath/batshit";
+import { client } from "./apiClient";
+import type { components } from "../reflector-api";
+
+type MeetingStatusResult = {
+  roomName: string;
+  active_meetings: components["schemas"]["Meeting"][];
+  upcoming_events: components["schemas"]["CalendarEventResponse"][];
+};
+
+export const meetingStatusBatcher = create({
+  fetcher: async (roomNames: string[]): Promise<MeetingStatusResult[]> => {
+    const unique = [...new Set(roomNames)];
+    const { data } = await client.POST("/v1/rooms/meetings/bulk-status", {
+      body: { room_names: unique },
+    });
+    return roomNames.map((name) => ({
+      roomName: name,
+      active_meetings: data?.[name]?.active_meetings ?? [],
+      upcoming_events: data?.[name]?.upcoming_events ?? [],
+    }));
+  },
+  resolver: keyResolver("roomName"),
+  scheduler: windowScheduler(10),
+});

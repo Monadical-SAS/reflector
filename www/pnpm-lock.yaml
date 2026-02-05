@@ -37,6 +37,9 @@ importers:
       "@whereby.com/browser-sdk":
         specifier: ^3.3.4
         version: 3.13.1(@types/react@18.2.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      "@yornaath/batshit":
+        specifier: ^0.14.0
+        version: 0.14.0
       autoprefixer:
         specifier: 10.4.20
         version: 10.4.20(postcss@8.4.31)
@@ -3313,6 +3316,18 @@ packages:
     resolution:
       {
         integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==,
+      }
+
+  "@yornaath/batshit-devtools@1.7.1":
+    resolution:
+      {
+        integrity: sha512-AyttV1Njj5ug+XqEWY1smV45dTWMlWKtj1B8jcFYgBKUFyUlF/qEhD+iP1E5UaRYW6hQRYD9T2WNDwFTrOMWzQ==,
+      }
+
+  "@yornaath/batshit@0.14.0":
+    resolution:
+      {
+        integrity: sha512-0I+xMi5JoRs3+qVXXhk2AmsEl43MwrG+L+VW+nqw/qQqMFtgRPszLaxhJCfsBKnjfJ0gJzTI1Q9Q9+y903HyHQ==,
       }
 
   "@zag-js/accordion@1.21.0":
@@ -11348,6 +11363,12 @@ snapshots:
   "@xtuc/ieee754@1.2.0": {}
 
   "@xtuc/long@4.2.2": {}
+
+  "@yornaath/batshit-devtools@1.7.1": {}
+
+  "@yornaath/batshit@0.14.0":
+    dependencies:
+      "@yornaath/batshit-devtools": 1.7.1
 
   "@zag-js/accordion@1.21.0":
     dependencies:

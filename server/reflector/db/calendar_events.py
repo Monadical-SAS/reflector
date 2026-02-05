@@ -104,6 +104,26 @@ class CalendarEventController:
         results = await get_database().fetch_all(query)
         return [CalendarEvent(**result) for result in results]
 
+    async def get_upcoming_for_rooms(
+        self, room_ids: list[str], minutes_ahead: int = 120
+    ) -> list[CalendarEvent]:
+        now = datetime.now(timezone.utc)
+        future_time = now + timedelta(minutes=minutes_ahead)
+        query = (
+            calendar_events.select()
+            .where(
+                sa.and_(
+                    calendar_events.c.room_id.in_(room_ids),
+                    calendar_events.c.is_deleted == False,
+                    calendar_events.c.start_time <= future_time,
+                    calendar_events.c.end_time >= now,
+                )
+            )
+            .order_by(calendar_events.c.start_time.asc())
+        )
+        results = await get_database().fetch_all(query)
+        return [CalendarEvent(**result) for result in results]
+
     async def get_by_id(self, event_id: str) -> CalendarEvent | None:
         query = calendar_events.select().where(calendar_events.c.id == event_id)
         result = await get_database().fetch_one(query)
