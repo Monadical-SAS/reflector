@@ -142,17 +142,17 @@ async def test_whereby_recording_uses_file_pipeline(client):
             "reflector.services.transcript_process.task_pipeline_file_process"
         ) as mock_file_pipeline,
         patch(
-            "reflector.services.transcript_process.task_pipeline_multitrack_process"
-        ) as mock_multitrack_pipeline,
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet,
     ):
         response = await client.post(f"/transcripts/{transcript.id}/process")
 
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
-        # Whereby recordings should use file pipeline
+        # Whereby recordings should use file pipeline, not Hatchet
         mock_file_pipeline.delay.assert_called_once_with(transcript_id=transcript.id)
-        mock_multitrack_pipeline.delay.assert_not_called()
+        mock_hatchet.start_workflow.assert_not_called()
 
 
 @pytest.mark.usefixtures("setup_database")
