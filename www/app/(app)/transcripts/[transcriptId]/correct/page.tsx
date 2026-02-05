@@ -16,6 +16,7 @@ import {
 import { useError } from "../../../../(errors)/errorContext";
 import { useRouter } from "next/navigation";
 import { Box, Grid } from "@chakra-ui/react";
+import { parseNonEmptyString } from "../../../../lib/utils";
 
 export type TranscriptCorrect = {
   params: Promise<{
@@ -25,8 +26,7 @@ export type TranscriptCorrect = {
 
 export default function TranscriptCorrect(props: TranscriptCorrect) {
   const params = use(props.params);
-
-  const { transcriptId } = params;
+  const transcriptId = parseNonEmptyString(params.transcriptId);
 
   const updateTranscriptMutation = useTranscriptUpdate();
   const transcript = useTranscriptGet(transcriptId);

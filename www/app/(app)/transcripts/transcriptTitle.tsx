@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { components } from "../../reflector-api";
+import { parseMaybeNonEmptyString } from "../../lib/utils";
 
 type UpdateTranscript = components["schemas"]["UpdateTranscript"];
-type GetTranscript = components["schemas"]["GetTranscript"];
+type GetTranscriptWithParticipants =
+  components["schemas"]["GetTranscriptWithParticipants"];
 type GetTranscriptTopic = components["schemas"]["GetTranscriptTopic"];
 import {
   useTranscriptUpdate,
@@ -20,7 +22,7 @@ type TranscriptTitle = {
   onUpdate: (newTitle: string) => void;
 
   // share props
-  transcript: GetTranscript | null;
+  transcript: GetTranscriptWithParticipants | null;
   topics: GetTranscriptTopic[] | null;
   finalSummaryElement: HTMLDivElement | null;
 };
@@ -31,7 +33,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [isEditing, setIsEditing] = useState(false);
   const updateTranscriptMutation = useTranscriptUpdate();
   const participantsQuery = useTranscriptParticipants(
-    props.transcript?.id || null,
+    props.transcript?.id ? parseMaybeNonEmptyString(props.transcript.id) : null,
   );
 
   const updateTitle = async (newTitle: string, transcriptId: string) => {

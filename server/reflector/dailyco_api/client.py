@@ -7,7 +7,8 @@ Reference: https://docs.daily.co/reference/rest-api
 """
 
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Literal
+from uuid import UUID
 
 import httpx
 import structlog
@@ -31,6 +32,8 @@ from .responses import (
 )
 
 logger = structlog.get_logger(__name__)
+
+RecordingType = Literal["cloud", "raw-tracks"]
 
 
 class DailyApiError(Exception):
@@ -394,6 +397,38 @@ class DailyApiClient:
             )
 
         return [RecordingResponse(**r) for r in data["data"]]
+
+    async def start_recording(
+        self,
+        room_name: NonEmptyString,
+        recording_type: RecordingType,
+        instance_id: UUID,
+    ) -> dict[str, Any]:
+        """Start recording via REST API.
+
+        Reference: https://docs.daily.co/reference/rest-api/rooms/recordings/start
+
+        Args:
+            room_name: Daily.co room name
+            recording_type: Recording type
+            instance_id: UUID for this recording session
+
+        Returns:
+            Recording start confirmation from Daily.co API
+
+        Raises:
+            DailyApiError: If API request fails
+        """
+        client = await self._get_client()
+        response = await client.post(
+            f"{self.base_url}/rooms/{room_name}/recordings/start",
+            headers=self.headers,
+            json={
+                "type": recording_type,
+                "instanceId": str(instance_id),
+            },
+        )
+        return await self._handle_response(response, "start_recording")
 
     # ============================================================================
     # MEETING TOKENS

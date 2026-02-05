@@ -88,13 +88,6 @@ class MeetingTokenProperties(BaseModel):
     is_owner: bool = Field(
         default=False, description="Grant owner privileges to token holder"
     )
-    start_cloud_recording: bool = Field(
-        default=False, description="Automatically start cloud recording on join"
-    )
-    start_cloud_recording_opts: dict | None = Field(
-        default=None,
-        description="Options for startRecording when start_cloud_recording is true (e.g., maxDuration)",
-    )
     enable_recording_ui: bool = Field(
         default=True, description="Show recording controls in UI"
     )

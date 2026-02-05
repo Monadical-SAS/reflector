@@ -162,9 +162,24 @@ async def test_dailyco_recording_uses_multitrack_pipeline(client):
     from datetime import datetime, timezone
 
     from reflector.db.recordings import Recording, recordings_controller
+    from reflector.db.rooms import rooms_controller
     from reflector.db.transcripts import transcripts_controller
 
-    # Create transcript with Daily.co multitrack recording
+    room = await rooms_controller.add(
+        name="test-room",
+        user_id="test-user",
+        zulip_auto_post=False,
+        zulip_stream="",
+        zulip_topic="",
+        is_locked=False,
+        room_mode="normal",
+        recording_type="cloud",
+        recording_trigger="automatic-2nd-participant",
+        is_shared=False,
+    )
+    # Force Celery backend for test
+    await rooms_controller.update(room, {"use_celery": True})
+
     transcript = await transcripts_controller.add(
         "",
         source_kind="room",
@@ -172,6 +187,7 @@ async def test_dailyco_recording_uses_multitrack_pipeline(client):
         target_language="en",
         user_id="test-user",
         share_mode="public",
+        room_id=room.id,
     )
 
     track_keys = [

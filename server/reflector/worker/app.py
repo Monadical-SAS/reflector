@@ -6,6 +6,11 @@ from celery.schedules import crontab
 from reflector.settings import settings
 
 logger = structlog.get_logger(__name__)
+
+# Polling intervals (seconds)
+# Webhook-aware: 180s when webhook configured (backup mode), 15s when no webhook (primary discovery)
+POLL_DAILY_RECORDINGS_INTERVAL_SEC = 180.0 if settings.DAILY_WEBHOOK_SECRET else 15.0
+
 if celery.current_app.main != "default":
     logger.info(f"Celery already configured ({celery.current_app})")
     app = celery.current_app
@@ -44,7 +49,7 @@ else:
         },
         "poll_daily_recordings": {
             "task": "reflector.worker.process.poll_daily_recordings",
-            "schedule": 180.0,  # Every 3 minutes (configurable lookback window)
+            "schedule": POLL_DAILY_RECORDINGS_INTERVAL_SEC,
         },
         "trigger_daily_reconciliation": {
             "task": "reflector.worker.process.trigger_daily_reconciliation",

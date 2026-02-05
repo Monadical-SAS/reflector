@@ -1,6 +1,7 @@
 import type { components } from "../../reflector-api";
 type Participant = components["schemas"]["Participant"];
 import { useTranscriptParticipants } from "../../lib/apiHooks";
+import { parseMaybeNonEmptyString } from "../../lib/utils";
 
 type ErrorParticipants = {
   error: Error;
@@ -32,7 +33,7 @@ const useParticipants = (transcriptId: string): UseParticipants => {
     isLoading: loading,
     error,
     refetch,
-  } = useTranscriptParticipants(transcriptId || null);
+  } = useTranscriptParticipants(parseMaybeNonEmptyString(transcriptId));
 
   // Type-safe return based on state
   if (error) {

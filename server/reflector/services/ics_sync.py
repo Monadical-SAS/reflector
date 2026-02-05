@@ -319,21 +319,6 @@ class ICSSyncService:
             calendar = self.fetch_service.parse_ics(ics_content)
 
             content_hash = hashlib.md5(ics_content.encode()).hexdigest()
-            if room.ics_last_etag == content_hash:
-                logger.info("No changes in ICS for room", room_id=room.id)
-                room_url = f"{settings.UI_BASE_URL}/{room.name}"
-                events, total_events = self.fetch_service.extract_room_events(
-                    calendar, room.name, room_url
-                )
-                return {
-                    "status": SyncStatus.UNCHANGED,
-                    "hash": content_hash,
-                    "events_found": len(events),
-                    "total_events": total_events,
-                    "events_created": 0,
-                    "events_updated": 0,
-                    "events_deleted": 0,
-                }
 
             # Extract matching events
             room_url = f"{settings.UI_BASE_URL}/{room.name}"
@@ -371,6 +356,44 @@ class ICSSyncService:
         time_since_sync = datetime.now(timezone.utc) - room.ics_last_sync
         return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
+    def _event_data_changed(self, existing: CalendarEvent, new_data: EventData) -> bool:
+        """Check if event data has changed by comparing relevant fields.
+
+        IMPORTANT: When adding fields to CalendarEvent/EventData, update this method
+        and the _COMPARED_FIELDS set below for runtime validation.
+        """
+        # Fields that come from ICS and should trigger updates when changed
+        _COMPARED_FIELDS = {
+            "title",
+            "description",
+            "start_time",
+            "end_time",
+            "location",
+            "attendees",
+            "ics_raw_data",
+        }
+
+        # Runtime exhaustiveness check: ensure we're comparing all EventData fields
+        event_data_fields = set(EventData.__annotations__.keys()) - {"ics_uid"}
+        if event_data_fields != _COMPARED_FIELDS:
+            missing = event_data_fields - _COMPARED_FIELDS
+            extra = _COMPARED_FIELDS - event_data_fields
+            raise RuntimeError(
+                f"_event_data_changed() field mismatch: "
+                f"missing={missing}, extra={extra}. "
+                f"Update the comparison logic when adding/removing fields."
+            )
+
+        return (
+            existing.title != new_data["title"]
+            or existing.description != new_data["description"]
+            or existing.start_time != new_data["start_time"]
+            or existing.end_time != new_data["end_time"]
+            or existing.location != new_data["location"]
+            or existing.attendees != new_data["attendees"]
+            or existing.ics_raw_data != new_data["ics_raw_data"]
+        )
+
     async def _sync_events_to_database(
         self, room_id: str, events: list[EventData]
     ) -> SyncStats:
@@ -386,11 +409,14 @@ class ICSSyncService:
             )
 
             if existing:
-                updated += 1
+                # Only count as updated if data actually changed
+                if self._event_data_changed(existing, event_data):
+                    updated += 1
+                    await calendar_events_controller.upsert(calendar_event)
             else:
                 created += 1
+                await calendar_events_controller.upsert(calendar_event)
 
-            await calendar_events_controller.upsert(calendar_event)
             current_ics_uids.append(event_data["ics_uid"])
 
         # Soft delete events that are no longer in calendar

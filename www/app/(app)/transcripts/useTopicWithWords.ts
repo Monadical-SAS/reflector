@@ -1,5 +1,6 @@
 import type { components } from "../../reflector-api";
 import { useTranscriptTopicsWithWordsPerSpeaker } from "../../lib/apiHooks";
+import { parseMaybeNonEmptyString } from "../../lib/utils";
 
 type GetTranscriptTopicWithWordsPerSpeaker =
   components["schemas"]["GetTranscriptTopicWithWordsPerSpeaker"];
@@ -38,7 +39,7 @@ const useTopicWithWords = (
     error,
     refetch,
   } = useTranscriptTopicsWithWordsPerSpeaker(
-    transcriptId || null,
+    parseMaybeNonEmptyString(transcriptId),
     topicId || null,
   );
 
