@@ -56,7 +56,12 @@ def appserver_ws_user(setup_database):
 
     if server_instance:
         server_instance.should_exit = True
-        server_thread.join(timeout=30)
+        server_thread.join(timeout=2.0)
+
+    # Reset global singleton for test isolation
+    from reflector.ws_manager import reset_ws_manager
+
+    reset_ws_manager()
 
 
 @pytest.fixture(autouse=True)
@@ -133,6 +138,8 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
 
     # Connect and then trigger an event via HTTP create
     async with aconnect_ws(base_ws, subprotocols=subprotocols) as ws:
+        await asyncio.sleep(0.2)
+
         # Emit an event to the user's room via a standard HTTP action
         from httpx import AsyncClient
 
@@ -150,6 +157,7 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
             "email": "user-abc@example.com",
         }
 
+        # Use in-memory client (global singleton makes it share ws_manager)
         async with AsyncClient(app=app, base_url=f"http://{host}:{port}/v1") as ac:
             # Create a transcript as this user so that the server publishes TRANSCRIPT_CREATED to user room
             resp = await ac.post("/transcripts", json={"name": "WS Test"})

@@ -1,12 +1,13 @@
 "use client";
 
-import { $api } from "./apiClient";
+import { $api, API_URL } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { components } from "../reflector-api";
+import type { components, operations } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 import { MeetingId } from "./types";
 import { NonEmptyString } from "./utils";
+import { createFinalURL, createQuerySerializer } from "openapi-fetch";
 
 /*
  * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
@@ -805,6 +806,44 @@ export function useRoomJoinMeeting() {
       },
     },
   );
+}
+
+export const LEAVE_ROOM_POST_URL_TEMPLATE =
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/leave" as const;
+
+export const leaveRoomPostUrl = (
+  path: operations["v1_rooms_leave_meeting"]["parameters"]["path"],
+  query?: operations["v1_rooms_leave_meeting"]["parameters"]["query"],
+): string =>
+  createFinalURL(LEAVE_ROOM_POST_URL_TEMPLATE, {
+    baseUrl: API_URL,
+    params: { path, query },
+    querySerializer: createQuerySerializer(),
+  });
+
+export type LeaveRoomBody = operations["v1_rooms_leave_meeting"]["requestBody"];
+
+export function useRoomLeaveMeeting() {
+  return $api.useMutation("post", LEAVE_ROOM_POST_URL_TEMPLATE);
+}
+
+export const JOINED_ROOM_POST_URL_TEMPLATE =
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/joined" as const;
+
+export const joinedRoomPostUrl = (
+  params: operations["v1_rooms_joined_meeting"]["parameters"]["path"],
+): string =>
+  createFinalURL(JOINED_ROOM_POST_URL_TEMPLATE, {
+    baseUrl: API_URL,
+    params: { path: params },
+    querySerializer: () => "",
+  });
+
+export type JoinedRoomBody =
+  operations["v1_rooms_joined_meeting"]["requestBody"];
+
+export function useRoomJoinedMeeting() {
+  return $api.useMutation("post", JOINED_ROOM_POST_URL_TEMPLATE);
 }
 
 export function useRoomIcsSync() {

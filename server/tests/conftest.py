@@ -1,6 +1,5 @@
 import os
 from contextlib import asynccontextmanager
-from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 import pytest
@@ -333,11 +332,14 @@ def celery_enable_logging():
 
 @pytest.fixture(scope="session")
 def celery_config():
-    with NamedTemporaryFile() as f:
-        yield {
-            "broker_url": "memory://",
-            "result_backend": f"db+sqlite:///{f.name}",
-        }
+    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    redis_port = os.environ.get("REDIS_PORT", "6379")
+    # Use db 2 to avoid conflicts with main app
+    redis_url = f"redis://{redis_host}:{redis_port}/2"
+    yield {
+        "broker_url": redis_url,
+        "result_backend": redis_url,
+    }
 
 
 @pytest.fixture(scope="session")
@@ -370,9 +372,12 @@ async def ws_manager_in_memory(monkeypatch):
         def __init__(self, queue: asyncio.Queue):
             self.queue = queue
 
-        async def get_message(self, ignore_subscribe_messages: bool = True):
+        async def get_message(
+            self, ignore_subscribe_messages: bool = True, timeout: float | None = None
+        ):
+            wait_timeout = timeout if timeout is not None else 0.05
             try:
-                return await asyncio.wait_for(self.queue.get(), timeout=0.05)
+                return await asyncio.wait_for(self.queue.get(), timeout=wait_timeout)
             except Exception:
                 return None
 

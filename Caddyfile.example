@@ -1,6 +1,8 @@
-# Reflector Caddyfile
-# Replace example.com with your actual domains
-# CORS is handled by the backend - Caddy just proxies
+# Reflector Caddyfile (optional reverse proxy)
+# Use this only when you run Caddy via: docker compose -f docker-compose.prod.yml --profile caddy up -d
+# If Coolify, Traefik, or nginx already use ports 80/443, do NOT start Caddy; point your proxy at web:3000 and server:1250.
+#
+# Replace example.com with your actual domains. CORS is handled by the backend - Caddy just proxies.
 #
 # For environment variable substitution, set:
 #   FRONTEND_DOMAIN=app.example.com
