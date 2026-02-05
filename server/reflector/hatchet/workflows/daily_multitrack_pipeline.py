@@ -322,6 +322,7 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
     mtg_session_id = recording.mtg_session_id
     async with fresh_db_connection():
         from reflector.db.transcripts import (  # noqa: PLC0415
+            TranscriptDuration,
             TranscriptParticipant,
             transcripts_controller,
         )
@@ -330,13 +331,24 @@ async def get_participants(input: PipelineInput, ctx: Context) -> ParticipantsRe
         if not transcript:
             raise ValueError(f"Transcript {input.transcript_id} not found")
         # Note: title NOT cleared - preserves existing titles
+        # Duration from Daily API (seconds -> milliseconds) - master source
+        duration_ms = recording.duration * 1000 if recording.duration else 0
         await transcripts_controller.update(
             transcript,
             {
                 "events": [],
                 "topics": [],
                 "participants": [],
+                "duration": duration_ms,
             },
+        )
+
+        await append_event_and_broadcast(
+            input.transcript_id,
+            transcript,
+            "DURATION",
+            TranscriptDuration(duration=duration_ms),
+            logger=logger,
         )
 
         mtg_session_id = assert_non_none_and_non_empty(
@@ -1095,7 +1107,7 @@ async def identify_action_items(
 
 
 @daily_multitrack_pipeline.task(
-    parents=[generate_waveform, generate_title, generate_recap, identify_action_items],
+    parents=[process_tracks, generate_title, generate_recap, identify_action_items],
     execution_timeout=timedelta(seconds=TIMEOUT_SHORT),
     retries=3,
 )
@@ -1108,11 +1120,7 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
     """
     ctx.log("finalize: saving transcript and setting status to 'ended'")
 
-    mixdown_result = ctx.task_output(mixdown_tracks)
     track_result = ctx.task_output(process_tracks)
-
-    duration = mixdown_result.duration
-    all_words = track_result.all_words
 
     # Cleanup temporary padded S3 files (deferred until finalize for semantic parity with Celery)
     created_padded_files = track_result.created_padded_files
@@ -1133,7 +1141,6 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
 
     async with fresh_db_connection():
         from reflector.db.transcripts import (  # noqa: PLC0415
-            TranscriptDuration,
             TranscriptText,
             transcripts_controller,
         )
@@ -1141,8 +1148,6 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript is None:
             raise ValueError(f"Transcript {input.transcript_id} not found in database")
-
-        merged_transcript = TranscriptType(words=all_words, translation=None)
 
         await append_event_and_broadcast(
             input.transcript_id,
@@ -1155,19 +1160,13 @@ async def finalize(input: PipelineInput, ctx: Context) -> FinalizeResult:
             logger=logger,
         )
 
-        # Save duration and clear workflow_run_id (workflow completed successfully)
-        # Note: title/long_summary/short_summary already saved by their callbacks
+        # Clear workflow_run_id (workflow completed successfully)
+        # Note: title/long_summary/short_summary/duration already saved by their callbacks
         await transcripts_controller.update(
             transcript,
             {
-                "duration": duration,
                 "workflow_run_id": None,  # Clear on success - no need to resume
             },
-        )
-
-        duration_data = TranscriptDuration(duration=duration)
-        await append_event_and_broadcast(
-            input.transcript_id, transcript, "DURATION", duration_data, logger=logger
         )
 
         await set_status_and_broadcast(input.transcript_id, "ended", logger=logger)

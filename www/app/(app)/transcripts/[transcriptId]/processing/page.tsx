@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
+import { parseNonEmptyString } from "../../../../lib/utils";
 
 type TranscriptProcessing = {
   params: Promise<{
@@ -19,7 +20,7 @@ type TranscriptProcessing = {
 
 export default function TranscriptProcessing(details: TranscriptProcessing) {
   const params = use(details.params);
-  const transcriptId = params.transcriptId;
+  const transcriptId = parseNonEmptyString(params.transcriptId);
   const router = useRouter();
 
   const transcript = useTranscriptGet(transcriptId);

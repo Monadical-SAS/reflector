@@ -105,7 +105,7 @@ export function useTranscriptProcess() {
   });
 }
 
-export function useTranscriptGet(transcriptId: string | null) {
+export function useTranscriptGet(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}",
@@ -121,6 +121,16 @@ export function useTranscriptGet(transcriptId: string | null) {
     },
   );
 }
+
+export const invalidateTranscript = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions("get", "/v1/transcripts/{transcript_id}", {
+      params: { path: { transcript_id: transcriptId } },
+    }).queryKey,
+  });
 
 export function useRoomGet(roomId: string | null) {
   const { isAuthenticated } = useAuthReady();
@@ -299,7 +309,7 @@ export function useTranscriptUploadAudio() {
   );
 }
 
-export function useTranscriptWaveform(transcriptId: string | null) {
+export function useTranscriptWaveform(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/audio/waveform",
@@ -314,7 +324,21 @@ export function useTranscriptWaveform(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptMP3(transcriptId: string | null) {
+export const invalidateTranscriptWaveform = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions(
+      "get",
+      "/v1/transcripts/{transcript_id}/audio/waveform",
+      {
+        params: { path: { transcript_id: transcriptId } },
+      },
+    ).queryKey,
+  });
+
+export function useTranscriptMP3(transcriptId: NonEmptyString | null) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
@@ -331,7 +355,7 @@ export function useTranscriptMP3(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptTopics(transcriptId: string | null) {
+export function useTranscriptTopics(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
     "/v1/transcripts/{transcript_id}/topics",
@@ -346,7 +370,23 @@ export function useTranscriptTopics(transcriptId: string | null) {
   );
 }
 
-export function useTranscriptTopicsWithWords(transcriptId: string | null) {
+export const invalidateTranscriptTopics = (
+  queryClient: QueryClient,
+  transcriptId: NonEmptyString,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: $api.queryOptions(
+      "get",
+      "/v1/transcripts/{transcript_id}/topics",
+      {
+        params: { path: { transcript_id: transcriptId } },
+      },
+    ).queryKey,
+  });
+
+export function useTranscriptTopicsWithWords(
+  transcriptId: NonEmptyString | null,
+) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
@@ -364,7 +404,7 @@ export function useTranscriptTopicsWithWords(transcriptId: string | null) {
 }
 
 export function useTranscriptTopicsWithWordsPerSpeaker(
-  transcriptId: string | null,
+  transcriptId: NonEmptyString | null,
   topicId: string | null,
 ) {
   const { isAuthenticated } = useAuthReady();
@@ -386,7 +426,7 @@ export function useTranscriptTopicsWithWordsPerSpeaker(
   );
 }
 
-export function useTranscriptParticipants(transcriptId: string | null) {
+export function useTranscriptParticipants(transcriptId: NonEmptyString | null) {
   const { isAuthenticated } = useAuthReady();
 
   return $api.useQuery(
