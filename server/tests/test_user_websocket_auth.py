@@ -138,9 +138,6 @@ async def test_user_ws_accepts_valid_token_and_receives_events(appserver_ws_user
 
     # Connect and then trigger an event via HTTP create
     async with aconnect_ws(base_ws, subprotocols=subprotocols) as ws:
-        # Give Redis pubsub time to establish subscription before publishing
-        import asyncio
-
         await asyncio.sleep(0.2)
 
         # Emit an event to the user's room via a standard HTTP action

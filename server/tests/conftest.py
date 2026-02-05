@@ -332,10 +332,6 @@ def celery_enable_logging():
 
 @pytest.fixture(scope="session")
 def celery_config():
-    # Use Redis for chord/group task execution (memory:// broker doesn't support chords)
-    # Redis must be running - start with: docker compose up -d redis
-    import os
-
     redis_host = os.environ.get("REDIS_HOST", "localhost")
     redis_port = os.environ.get("REDIS_PORT", "6379")
     # Use db 2 to avoid conflicts with main app
