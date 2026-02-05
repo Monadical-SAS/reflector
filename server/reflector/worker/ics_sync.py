@@ -94,6 +94,21 @@ async def create_upcoming_meetings_for_event(event, create_window, room: Room):
     if existing_meeting:
         return
 
+    # Prevent duplicate meetings from aggregated calendar feeds
+    # (e.g. same event appears with different UIDs from Cal.com and Google Calendar)
+    end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
+    existing_by_time = await meetings_controller.get_by_room_and_time_window(
+        room, event.start_time, end_date
+    )
+    if existing_by_time:
+        logger.info(
+            "Skipping duplicate calendar event - meeting already exists for this time window",
+            room_id=room.id,
+            event_id=event.id,
+            existing_meeting_id=existing_by_time.id,
+        )
+        return
+
     logger.info(
         "Pre-creating meeting for calendar event",
         room_id=room.id,
@@ -102,8 +117,6 @@ async def create_upcoming_meetings_for_event(event, create_window, room: Room):
     )
 
     try:
-        end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
-
         client = create_platform_client(room.platform)
 
         meeting_data = await client.create_meeting(

@@ -346,6 +346,27 @@ class MeetingController:
             return None
         return Meeting(**result)
 
+    async def get_by_room_and_time_window(
+        self, room: Room, start_date: datetime, end_date: datetime
+    ) -> Meeting | None:
+        """Check if a meeting already exists for this room with the same time window."""
+        query = (
+            meetings.select()
+            .where(
+                sa.and_(
+                    meetings.c.room_id == room.id,
+                    meetings.c.start_date == start_date,
+                    meetings.c.end_date == end_date,
+                    meetings.c.is_active,
+                )
+            )
+            .limit(1)
+        )
+        result = await get_database().fetch_one(query)
+        if not result:
+            return None
+        return Meeting(**result)
+
     async def update_meeting(self, meeting_id: str, **kwargs):
         query = meetings.update().where(meetings.c.id == meeting_id).values(**kwargs)
         await get_database().execute(query)
