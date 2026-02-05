@@ -115,9 +115,7 @@ def appserver(tmpdir, setup_database, celery_session_app, celery_session_worker)
     settings.DATA_DIR = DATA_DIR
 
 
-@pytest.fixture(scope="session")
-def celery_includes():
-    return ["reflector.pipelines.main_live_pipeline"]
+# Using celery_includes from conftest.py which includes both pipelines
 
 
 @pytest.mark.usefixtures("setup_database")
