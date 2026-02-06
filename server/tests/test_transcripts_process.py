@@ -1,6 +1,6 @@
 import asyncio
 import time
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -142,17 +142,17 @@ async def test_whereby_recording_uses_file_pipeline(client):
             "reflector.services.transcript_process.task_pipeline_file_process"
         ) as mock_file_pipeline,
         patch(
-            "reflector.services.transcript_process.task_pipeline_multitrack_process"
-        ) as mock_multitrack_pipeline,
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet,
     ):
         response = await client.post(f"/transcripts/{transcript.id}/process")
 
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
-        # Whereby recordings should use file pipeline
+        # Whereby recordings should use file pipeline, not Hatchet
         mock_file_pipeline.delay.assert_called_once_with(transcript_id=transcript.id)
-        mock_multitrack_pipeline.delay.assert_not_called()
+        mock_hatchet.start_workflow.assert_not_called()
 
 
 @pytest.mark.usefixtures("setup_database")
@@ -177,8 +177,6 @@ async def test_dailyco_recording_uses_multitrack_pipeline(client):
         recording_trigger="automatic-2nd-participant",
         is_shared=False,
     )
-    # Force Celery backend for test
-    await rooms_controller.update(room, {"use_celery": True})
 
     transcript = await transcripts_controller.add(
         "",
@@ -213,18 +211,23 @@ async def test_dailyco_recording_uses_multitrack_pipeline(client):
             "reflector.services.transcript_process.task_pipeline_file_process"
         ) as mock_file_pipeline,
         patch(
-            "reflector.services.transcript_process.task_pipeline_multitrack_process"
-        ) as mock_multitrack_pipeline,
+            "reflector.services.transcript_process.HatchetClientManager"
+        ) as mock_hatchet,
     ):
+        mock_hatchet.start_workflow = AsyncMock(return_value="test-workflow-id")
+
         response = await client.post(f"/transcripts/{transcript.id}/process")
 
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
-        # Daily.co multitrack recordings should use multitrack pipeline
-        mock_multitrack_pipeline.delay.assert_called_once_with(
-            transcript_id=transcript.id,
-            bucket_name="daily-bucket",
-            track_keys=track_keys,
-        )
+        # Daily.co multitrack recordings should use Hatchet workflow
+        mock_hatchet.start_workflow.assert_called_once()
+        call_kwargs = mock_hatchet.start_workflow.call_args.kwargs
+        assert call_kwargs["workflow_name"] == "DiarizationPipeline"
+        assert call_kwargs["input_data"]["transcript_id"] == transcript.id
+        assert call_kwargs["input_data"]["bucket_name"] == "daily-bucket"
+        assert call_kwargs["input_data"]["tracks"] == [
+            {"s3_key": k} for k in track_keys
+        ]
         mock_file_pipeline.delay.assert_not_called()
