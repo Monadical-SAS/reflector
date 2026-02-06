@@ -1,5 +1,10 @@
+import { useMemo } from "react";
 import { Box, Heading, Text, VStack } from "@chakra-ui/react";
 import type { components } from "../../../reflector-api";
+import {
+  useRoomsBulkMeetingStatus,
+  BulkMeetingStatusMap,
+} from "../../../lib/apiHooks";
 
 type Room = components["schemas"]["Room"];
 import { RoomTable } from "./RoomTable";
@@ -31,6 +36,10 @@ export function RoomList({
   pt,
   loading,
 }: RoomListProps) {
+  const roomNames = useMemo(() => rooms.map((r) => r.name), [rooms]);
+  const bulkStatusQuery = useRoomsBulkMeetingStatus(roomNames);
+  const meetingStatusMap: BulkMeetingStatusMap = bulkStatusQuery.data ?? {};
+
   return (
     <VStack alignItems="start" gap={4} mb={mb} pt={pt}>
       <Heading size="md">{title}</Heading>
@@ -43,6 +52,8 @@ export function RoomList({
             onEdit={onEdit}
             onDelete={onDelete}
             loading={loading}
+            meetingStatusMap={meetingStatusMap}
+            meetingStatusLoading={bulkStatusQuery.isLoading}
           />
           <RoomCards
             rooms={rooms}

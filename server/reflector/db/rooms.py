@@ -238,6 +238,11 @@ class RoomController:
 
         return room
 
+    async def get_by_names(self, names: list[str]) -> list[Room]:
+        query = rooms.select().where(rooms.c.name.in_(names))
+        results = await get_database().fetch_all(query)
+        return [Room(**r) for r in results]
+
     async def get_ics_enabled(self) -> list[Room]:
         query = rooms.select().where(
             rooms.c.ics_enabled == True, rooms.c.ics_url != None
