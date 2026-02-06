@@ -737,20 +737,18 @@ export function useRoomUpcomingMeetings(roomName: string | null) {
   });
 }
 
-const MEETINGS_PATH_PARTIAL = "meetings" as const;
-const MEETINGS_ACTIVE_PATH_PARTIAL = `${MEETINGS_PATH_PARTIAL}/active` as const;
-const MEETINGS_UPCOMING_PATH_PARTIAL =
-  `${MEETINGS_PATH_PARTIAL}/upcoming` as const;
-const MEETING_LIST_PATH_PARTIALS = [
-  MEETINGS_ACTIVE_PATH_PARTIAL,
-  MEETINGS_UPCOMING_PATH_PARTIAL,
-];
-
-export const meetingStatusKeys = {
+// Query keys reuse $api.queryOptions so cache identity matches the original
+// per-room GET endpoints. The actual fetch goes through the batcher, but the
+// keys stay consistent with the rest of the codebase.
+const meetingStatusKeys = {
   active: (roomName: string) =>
-    ["rooms", roomName, MEETINGS_ACTIVE_PATH_PARTIAL] as const,
+    $api.queryOptions("get", "/v1/rooms/{room_name}/meetings/active", {
+      params: { path: { room_name: roomName } },
+    }).queryKey,
   upcoming: (roomName: string) =>
-    ["rooms", roomName, MEETINGS_UPCOMING_PATH_PARTIAL] as const,
+    $api.queryOptions("get", "/v1/rooms/{room_name}/meetings/upcoming", {
+      params: { path: { room_name: roomName } },
+    }).queryKey,
 };
 
 export function useRoomActiveMeetings(roomName: string | null) {

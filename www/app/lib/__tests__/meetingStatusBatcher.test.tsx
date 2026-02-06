@@ -14,6 +14,10 @@ jest.mock("../apiClient", () => ({
   $api: {
     useQuery: jest.fn(),
     useMutation: jest.fn(),
+    queryOptions: (method: string, path: string, init?: unknown) =>
+      init === undefined
+        ? { queryKey: [method, path] }
+        : { queryKey: [method, path, init] },
   },
   API_URL: "http://test",
   WEBSOCKET_URL: "ws://test",
