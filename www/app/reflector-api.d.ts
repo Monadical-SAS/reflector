@@ -118,6 +118,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/rooms/meetings/bulk-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rooms Bulk Meeting Status */
+    post: operations["v1_rooms_bulk_meeting_status"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/rooms/{room_id}": {
     parameters: {
       query?: never;
@@ -798,6 +815,11 @@ export interface components {
        * Format: binary
        */
       chunk: string;
+    };
+    /** BulkStatusRequest */
+    BulkStatusRequest: {
+      /** Room Names */
+      room_names: string[];
     };
     /** CalendarEventResponse */
     CalendarEventResponse: {
@@ -1675,6 +1697,13 @@ export interface components {
        */
       skip_consent: boolean;
     };
+    /** RoomMeetingStatus */
+    RoomMeetingStatus: {
+      /** Active Meetings */
+      active_meetings: components["schemas"]["Meeting"][];
+      /** Upcoming Events */
+      upcoming_events: components["schemas"]["CalendarEventResponse"][];
+    };
     /** RoomDetails */
     RoomDetails: {
       /** Id */
@@ -2259,6 +2288,41 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Room"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_rooms_bulk_meeting_status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkStatusRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: components["schemas"]["RoomMeetingStatus"];
+          };
         };
       };
       /** @description Validation Error */
