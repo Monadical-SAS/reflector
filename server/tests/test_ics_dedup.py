@@ -53,12 +53,16 @@ async def test_duplicate_calendar_event_does_not_create_duplicate_meeting():
         "reflector.worker.ics_sync.create_platform_client"
     ) as mock_platform_factory:
         mock_client = AsyncMock()
-        mock_client.create_meeting.return_value = AsyncMock(
-            meeting_id="meeting-1",
-            room_name="dedup-test-room-abc",
-            room_url="https://mock.video/dedup-test-room-abc",
-            host_room_url="https://mock.video/dedup-test-room-abc?host=true",
-        )
+
+        async def mock_create_meeting_1(room_name_prefix, *, end_date, room):
+            return AsyncMock(
+                meeting_id="meeting-1",
+                room_name="dedup-test-room-abc",
+                room_url="https://mock.video/dedup-test-room-abc",
+                host_room_url="https://mock.video/dedup-test-room-abc?host=true",
+            )
+
+        mock_client.create_meeting = mock_create_meeting_1
         mock_client.upload_logo = AsyncMock()
         mock_platform_factory.return_value = mock_client
 
@@ -86,19 +90,22 @@ async def test_duplicate_calendar_event_does_not_create_duplicate_meeting():
         "reflector.worker.ics_sync.create_platform_client"
     ) as mock_platform_factory:
         mock_client = AsyncMock()
-        mock_client.create_meeting.return_value = AsyncMock(
-            meeting_id="meeting-2",
-            room_name="dedup-test-room-def",
-            room_url="https://mock.video/dedup-test-room-def",
-            host_room_url="https://mock.video/dedup-test-room-def?host=true",
-        )
+        create_meeting_called = False
+
+        async def mock_create_meeting_2(room_name_prefix, *, end_date, room):
+            nonlocal create_meeting_called
+            create_meeting_called = True
+
+        mock_client.create_meeting = mock_create_meeting_2
         mock_client.upload_logo = AsyncMock()
         mock_platform_factory.return_value = mock_client
 
         await create_upcoming_meetings_for_event(event2, create_window, room)
 
         # Platform client should NOT have been called for the duplicate
-        mock_client.create_meeting.assert_not_called()
+        assert (
+            not create_meeting_called
+        ), "create_meeting should not be called for duplicate"
 
     # Verify still only 1 meeting
     results = await get_database().fetch_all(
