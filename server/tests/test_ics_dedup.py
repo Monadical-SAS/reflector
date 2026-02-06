@@ -158,7 +158,7 @@ async def test_different_time_windows_create_separate_meetings():
 
         call_count = 0
 
-        async def mock_create_meeting(room_name_prefix, end_date, room):
+        async def mock_create_meeting(room_name_prefix, *, end_date, room):
             nonlocal call_count
             call_count += 1
             return AsyncMock(

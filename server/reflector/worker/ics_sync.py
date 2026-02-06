@@ -5,7 +5,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from reflector.asynctask import asynctask
-from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.redis_cache import RedisAsyncLock
@@ -86,7 +86,9 @@ def _should_sync(room) -> bool:
 MEETING_DEFAULT_DURATION = timedelta(hours=1)
 
 
-async def create_upcoming_meetings_for_event(event, create_window, room: Room):
+async def create_upcoming_meetings_for_event(
+    event: CalendarEvent, create_window: datetime, room: Room
+):
     if event.start_time <= create_window:
         return
     existing_meeting = await meetings_controller.get_by_calendar_event(event.id, room)

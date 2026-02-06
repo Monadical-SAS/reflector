@@ -47,6 +47,70 @@ const RAW_TRACKS_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const RECORDING_START_DELAY_MS = 2000;
 const RECORDING_START_MAX_RETRIES = 5;
 
+function FatalErrorScreen({
+  error,
+  roomName,
+}: {
+  error: FatalError;
+  roomName: string;
+}) {
+  const router = useRouter();
+  switch (error.type) {
+    case "connection-error":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">
+              Connection lost. Please check your network.
+            </Text>
+            <Button onClick={() => window.location.reload()}>
+              Try Rejoining
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/${roomName}`)}
+            >
+              Leave
+            </Button>
+          </VStack>
+        </Center>
+      );
+    case "exp-room":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">The meeting time has ended.</Text>
+            <Button onClick={() => router.push(`/${roomName}`)}>
+              Back to Room
+            </Button>
+          </VStack>
+        </Center>
+      );
+    case "ejected":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">You were removed from this meeting.</Text>
+            <Button onClick={() => router.push(`/${roomName}`)}>
+              Back to Room
+            </Button>
+          </VStack>
+        </Center>
+      );
+    default:
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">Something went wrong: {error.message}</Text>
+            <Button onClick={() => router.push(`/${roomName}`)}>
+              Back to Room
+            </Button>
+          </VStack>
+        </Center>
+      );
+  }
+}
+
 type Meeting = components["schemas"]["Meeting"];
 type Room = components["schemas"]["RoomDetails"];
 
@@ -84,7 +148,12 @@ const USE_FRAME_INIT_STATE = {
   joined: false as boolean,
 } as const;
 
-type FatalError = { type: string; message: string };
+type DailyFatalErrorType =
+  | "connection-error"
+  | "exp-room"
+  | "ejected"
+  | (string & {});
+type FatalError = { type: DailyFatalErrorType; message: string };
 
 // Daily js and not Daily react used right now because daily-js allows for prebuild interface vs. -react is customizable but has no nice defaults
 const useFrame = (
@@ -419,61 +488,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   }
 
   if (fatalError) {
-    const renderFatalError = () => {
-      switch (fatalError.type) {
-        case "connection-error":
-          return (
-            <VStack gap={4}>
-              <Text color="red.500">
-                Connection lost. Please check your network.
-              </Text>
-              <Button onClick={() => window.location.reload()}>
-                Try Rejoining
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/${roomName}`)}
-              >
-                Leave
-              </Button>
-            </VStack>
-          );
-        case "exp-room":
-          return (
-            <VStack gap={4}>
-              <Text color="red.500">The meeting time has ended.</Text>
-              <Button onClick={() => router.push(`/${roomName}`)}>
-                Back to Room
-              </Button>
-            </VStack>
-          );
-        case "ejected":
-          return (
-            <VStack gap={4}>
-              <Text color="red.500">You were removed from this meeting.</Text>
-              <Button onClick={() => router.push(`/${roomName}`)}>
-                Back to Room
-              </Button>
-            </VStack>
-          );
-        default:
-          return (
-            <VStack gap={4}>
-              <Text color="red.500">
-                Something went wrong: {fatalError.message}
-              </Text>
-              <Button onClick={() => router.push(`/${roomName}`)}>
-                Back to Room
-              </Button>
-            </VStack>
-          );
-      }
-    };
-    return (
-      <Center width="100vw" height="100vh">
-        {renderFatalError()}
-      </Center>
-    );
+    return <FatalErrorScreen error={fatalError} roomName={roomName} />;
   }
 
   if (!roomUrl) {
