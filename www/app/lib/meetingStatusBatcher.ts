@@ -14,13 +14,19 @@ export function createMeetingStatusBatcher(windowMs: number = BATCH_WINDOW_MS) {
   return create({
     fetcher: async (roomNames: string[]): Promise<MeetingStatusResult[]> => {
       const unique = [...new Set(roomNames)];
-      const { data } = await client.POST("/v1/rooms/meetings/bulk-status", {
-        body: { room_names: unique },
-      });
+      const { data, error } = await client.POST(
+        "/v1/rooms/meetings/bulk-status",
+        { body: { room_names: unique } },
+      );
+      if (error || !data) {
+        throw new Error(
+          `bulk-status fetch failed: ${JSON.stringify(error ?? "no data")}`,
+        );
+      }
       return roomNames.map((name) => ({
         roomName: name,
-        active_meetings: data?.[name]?.active_meetings ?? [],
-        upcoming_events: data?.[name]?.upcoming_events ?? [],
+        active_meetings: data[name]?.active_meetings ?? [],
+        upcoming_events: data[name]?.upcoming_events ?? [],
       }));
     },
     resolver: keyResolver("roomName"),

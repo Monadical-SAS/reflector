@@ -67,19 +67,13 @@ function mockBulkStatusEndpoint(
   mockClient.POST.mockImplementation(
     async (_path: string, options: { body: { room_names: string[] } }) => {
       const roomNames: string[] = options.body.room_names;
-      const data = roomData
-        ? Object.fromEntries(
-            roomNames.map((name) => [
-              name,
-              roomData[name] ?? { active_meetings: [], upcoming_events: [] },
-            ]),
-          )
-        : Object.fromEntries(
-            roomNames.map((name) => [
-              name,
-              { active_meetings: [], upcoming_events: [] },
-            ]),
-          );
+      const src = roomData ?? {};
+      const data = Object.fromEntries(
+        roomNames.map((name) => [
+          name,
+          src[name] ?? { active_meetings: [], upcoming_events: [] },
+        ]),
+      );
       return { data, error: undefined, response: {} };
     },
   );
@@ -152,7 +146,6 @@ describe("meeting status batcher integration", () => {
     );
 
     // Without batching this would be 20 calls (2 hooks x 10 rooms).
-    // With the 200ms test window, all queries land in one batch → exactly 1 POST.
     expect(postCalls).toHaveLength(1);
 
     // The single call should contain all 10 rooms (deduplicated)

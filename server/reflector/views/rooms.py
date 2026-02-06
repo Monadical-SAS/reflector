@@ -8,13 +8,14 @@ from typing import Annotated, Any, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from redis.exceptions import LockError
 
 import reflector.auth as auth
 from reflector.db import get_database
 from reflector.db.calendar_events import calendar_events_controller
 from reflector.db.meetings import meetings_controller
+from reflector.db.rooms import Room as DbRoom
 from reflector.db.rooms import rooms_controller
 from reflector.redis_cache import RedisAsyncLock
 from reflector.schemas.platform import Platform
@@ -198,7 +199,7 @@ async def rooms_list(
 
 
 class BulkStatusRequest(BaseModel):
-    room_names: list[str]
+    room_names: list[str] = Field(max_length=100)
 
 
 class RoomMeetingStatus(BaseModel):
@@ -213,8 +214,14 @@ async def rooms_bulk_meeting_status(
 ):
     user_id = user["sub"] if user else None
 
-    rooms = await rooms_controller.get_by_names(request.room_names)
-    room_by_id: dict[str, Any] = {r.id: r for r in rooms}
+    all_rooms = await rooms_controller.get_by_names(request.room_names)
+    # Filter to rooms the user can see (owned or shared), matching rooms_list behavior
+    rooms = [
+        r
+        for r in all_rooms
+        if r.is_shared or (user_id is not None and r.user_id == user_id)
+    ]
+    room_by_id: dict[str, DbRoom] = {r.id: r for r in rooms}
     room_ids = list(room_by_id.keys())
 
     current_time = datetime.now(timezone.utc)
