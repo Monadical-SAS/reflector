@@ -31,9 +31,10 @@ from reflector.pipelines.main_multitrack_pipeline import (
     task_pipeline_multitrack_process,
 )
 from reflector.pipelines.topic_processing import EmptyPipeline
+from reflector.presence.pending_joins import has_pending_joins
 from reflector.processors import AudioFileWriterProcessor
 from reflector.processors.audio_waveform_processor import AudioWaveformProcessor
-from reflector.redis_cache import RedisAsyncLock
+from reflector.redis_cache import RedisAsyncLock, get_async_redis_client
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
 from reflector.utils.daily import (
@@ -869,6 +870,18 @@ async def process_meetings():
                     logger_.debug("Meeting not yet started, keep it")
 
                 if should_deactivate:
+                    # Check for pending joins before deactivating
+                    # Users might be in the process of connecting via WebRTC
+                    redis = await get_async_redis_client()
+                    try:
+                        if await has_pending_joins(redis, meeting.id):
+                            logger_.info(
+                                "Meeting has pending joins, skipping deactivation"
+                            )
+                            continue
+                    finally:
+                        await redis.aclose()
+
                     await meetings_controller.update_meeting(
                         meeting.id, is_active=False
                     )

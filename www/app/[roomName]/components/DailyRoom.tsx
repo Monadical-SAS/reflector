@@ -25,6 +25,8 @@ import { useConsentDialog } from "../../lib/consent";
 import {
   useRoomJoinMeeting,
   useMeetingStartRecording,
+  useMeetingJoining,
+  useMeetingJoined,
 } from "../../lib/apiHooks";
 import { omit } from "remeda";
 import {
@@ -187,7 +189,13 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const joinMutation = useRoomJoinMeeting();
   const startRecordingMutation = useMeetingStartRecording();
+  const joiningMutation = useMeetingJoining();
+  const joinedMutation = useMeetingJoined();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
+
+  // Generate a stable connection ID for this component instance
+  // Used to track pending joins per browser tab (prevents key collision for anonymous users)
+  const connectionId = useMemo(() => crypto.randomUUID(), []);
 
   // Generate deterministic instanceIds so all participants use SAME IDs
   const cloudInstanceId = parseNonEmptyString(meeting.id);
@@ -237,6 +245,20 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     router.push("/browse");
   }, [router]);
 
+  // Trigger presence recheck on dirty disconnects (tab close, navigation away)
+  useEffect(() => {
+    if (!meeting?.id || !roomName) return;
+
+    const handleBeforeUnload = () => {
+      // sendBeacon guarantees delivery even if tab closes mid-request
+      const url = `/v1/rooms/${roomName}/meetings/${meeting.id}/leave`;
+      navigator.sendBeacon(url, JSON.stringify({}));
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [meeting?.id, roomName]);
+
   const handleCustomButtonClick = useCallback(
     (ev: DailyEventObjectCustomButtonClick) => {
       if (ev.button_id === CONSENT_BUTTON_ID) {
@@ -249,6 +271,28 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   );
 
   const handleFrameJoinMeeting = useCallback(() => {
+    // Signal that WebRTC connection is established
+    // This clears the pending join intent, confirming successful connection
+    joinedMutation.mutate(
+      {
+        params: {
+          path: {
+            room_name: roomName,
+            meeting_id: meeting.id,
+          },
+        },
+        body: {
+          connection_id: connectionId,
+        },
+      },
+      {
+        onError: (error: unknown) => {
+          // Non-blocking: log but don't fail - this is cleanup, not critical
+          console.warn("Failed to signal joined:", error);
+        },
+      },
+    );
+
     if (meeting.recording_type === "cloud") {
       console.log("Starting dual recording via REST API", {
         cloudInstanceId,
@@ -310,6 +354,9 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   }, [
     meeting.recording_type,
     meeting.id,
+    roomName,
+    connectionId,
+    joinedMutation,
     startRecordingMutation,
     cloudInstanceId,
     rawTracksInstanceId,
@@ -328,8 +375,28 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
 
   useEffect(() => {
     if (!frame || !roomUrl) return;
-    frame
-      .join({
+
+    const joinRoom = async () => {
+      // Signal intent to join before WebRTC handshake starts
+      // This prevents race condition where meeting is deactivated during handshake
+      try {
+        await joiningMutation.mutateAsync({
+          params: {
+            path: {
+              room_name: roomName,
+              meeting_id: meeting.id,
+            },
+          },
+          body: {
+            connection_id: connectionId,
+          },
+        });
+      } catch (error) {
+        // Non-blocking: log but continue with join
+        console.warn("Failed to signal joining intent:", error);
+      }
+
+      await frame.join({
         url: roomUrl,
         sendSettings: {
           video: {
@@ -341,9 +408,13 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
           },
           // Note: screenVideo intentionally not configured to preserve full quality for screen shares
         },
-      })
-      .catch(console.error.bind(console, "Failed to join daily room:"));
-  }, [frame, roomUrl]);
+      });
+    };
+
+    joinRoom().catch(console.error.bind(console, "Failed to join daily room:"));
+    // joiningMutation excluded from deps - it's a stable hook reference
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frame, roomUrl, roomName, meeting.id, connectionId]);
 
   useEffect(() => {
     setCustomTrayButton(

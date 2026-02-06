@@ -807,6 +807,35 @@ export function useRoomJoinMeeting() {
   );
 }
 
+// Presence race fix endpoints (not yet in OpenAPI spec)
+// These signal join intent to prevent race conditions during WebRTC handshake
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useMeetingJoining(): any {
+  return ($api as any).useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/joining",
+    {},
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useMeetingJoined(): any {
+  return ($api as any).useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/joined",
+    {},
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useMeetingLeave(): any {
+  return ($api as any).useMutation(
+    "post",
+    "/v1/rooms/{room_name}/meetings/{meeting_id}/leave",
+    {},
+  );
+}
+
 export function useRoomIcsSync() {
   const { setError } = useError();
 
