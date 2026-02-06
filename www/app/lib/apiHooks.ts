@@ -782,15 +782,15 @@ export function useRoomActiveMeetings(roomName: string | null) {
 
 type RoomMeetingStatus = components["schemas"]["RoomMeetingStatus"];
 
-export type BulkMeetingStatusMap = Record<string, RoomMeetingStatus>;
+export type BulkMeetingStatusMap = Partial<Record<string, RoomMeetingStatus>>;
 
 export function useRoomsBulkMeetingStatus(roomNames: string[]) {
   const { isAuthenticated } = useAuthReady();
+  const sortedNames = [...roomNames].sort();
 
   return useQuery({
-    queryKey: ["bulk-meeting-status", roomNames],
+    queryKey: ["bulk-meeting-status", sortedNames],
     queryFn: async (): Promise<BulkMeetingStatusMap> => {
-      if (roomNames.length === 0) return {};
       const { data, error } = await client.POST(
         "/v1/rooms/meetings/bulk-status",
         { body: { room_names: roomNames } },
@@ -802,7 +802,7 @@ export function useRoomsBulkMeetingStatus(roomNames: string[]) {
       }
       return data;
     },
-    enabled: roomNames.length > 0 && isAuthenticated,
+    enabled: sortedNames.length > 0 && isAuthenticated,
   });
 }
 

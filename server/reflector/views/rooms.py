@@ -212,6 +212,9 @@ async def rooms_bulk_meeting_status(
     request: BulkStatusRequest,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ):
+    if not user and not settings.PUBLIC_MODE:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     user_id = user["sub"] if user else None
 
     all_rooms = await rooms_controller.get_by_names(request.room_names)
@@ -224,13 +227,19 @@ async def rooms_bulk_meeting_status(
     room_by_id: dict[str, DbRoom] = {r.id: r for r in rooms}
     room_ids = list(room_by_id.keys())
 
+    if not room_ids:
+        return {
+            name: RoomMeetingStatus(active_meetings=[], upcoming_events=[])
+            for name in request.room_names
+        }
+
     current_time = datetime.now(timezone.utc)
     active_meetings, upcoming_events = await asyncio.gather(
         meetings_controller.get_all_active_for_rooms(room_ids, current_time),
         calendar_events_controller.get_upcoming_for_rooms(room_ids),
     )
 
-    # Group by room name
+    # Group by room name, converting DB models to view models
     active_by_room: dict[str, list[Meeting]] = defaultdict(list)
     for m in active_meetings:
         room = room_by_id.get(m.room_id)
@@ -239,7 +248,9 @@ async def rooms_bulk_meeting_status(
         m.platform = room.platform
         if user_id != room.user_id and m.platform == "whereby":
             m.host_room_url = ""
-        active_by_room[room.name].append(m)
+        active_by_room[room.name].append(
+            Meeting.model_validate(m, from_attributes=True)
+        )
 
     upcoming_by_room: dict[str, list[CalendarEventResponse]] = defaultdict(list)
     for e in upcoming_events:
@@ -249,7 +260,9 @@ async def rooms_bulk_meeting_status(
         if user_id != room.user_id:
             e.description = None
             e.attendees = None
-        upcoming_by_room[room.name].append(e)
+        upcoming_by_room[room.name].append(
+            CalendarEventResponse.model_validate(e, from_attributes=True)
+        )
 
     result: dict[str, RoomMeetingStatus] = {}
     for name in request.room_names:

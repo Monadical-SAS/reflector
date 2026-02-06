@@ -194,4 +194,53 @@ describe("bulk meeting status (prop-drilling)", () => {
     // No POST calls when no rooms
     expect(mockClient.POST).not.toHaveBeenCalled();
   });
+
+  it("surfaces error when POST fails", async () => {
+    mockClient.POST.mockResolvedValue({
+      data: undefined,
+      error: { detail: "server error" },
+      response: {},
+    });
+
+    function ErrorDisplay({ roomNames }: { roomNames: string[] }) {
+      const { error } = useRoomsBulkMeetingStatus(roomNames);
+      if (error) return <div data-testid="error">{error.message}</div>;
+      return <div data-testid="error">no error</div>;
+    }
+
+    render(<ErrorDisplay roomNames={["room-x"]} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error")).toHaveTextContent(
+        "bulk-status fetch failed",
+      );
+    });
+  });
+
+  it("does not fetch when unauthenticated", async () => {
+    // Override useAuth to return unauthenticated
+    const authModule = jest.requireMock("../AuthProvider");
+    const originalUseAuth = authModule.useAuth;
+    authModule.useAuth = () => ({
+      ...originalUseAuth(),
+      status: "unauthenticated",
+    });
+
+    mockBulkStatusEndpoint();
+
+    render(<BulkStatusDisplay roomNames={["room-1"]} />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status")).toHaveTextContent("no data");
+    });
+
+    expect(mockClient.POST).not.toHaveBeenCalled();
+
+    // Restore
+    authModule.useAuth = originalUseAuth;
+  });
 });
