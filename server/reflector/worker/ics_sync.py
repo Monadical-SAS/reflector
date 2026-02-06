@@ -83,9 +83,6 @@ def _should_sync(room) -> bool:
     return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
 
-MEETING_DEFAULT_DURATION = timedelta(hours=1)
-
-
 async def create_upcoming_meetings_for_event(
     event: CalendarEvent, create_window: datetime, room: Room
 ):
@@ -98,7 +95,7 @@ async def create_upcoming_meetings_for_event(
 
     # Prevent duplicate meetings from aggregated calendar feeds
     # (e.g. same event appears with different UIDs from Cal.com and Google Calendar)
-    end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
+    end_date = event.end_time
     existing_by_time = await meetings_controller.get_by_room_and_time_window(
         room, event.start_time, end_date
     )

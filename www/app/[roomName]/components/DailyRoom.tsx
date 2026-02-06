@@ -17,6 +17,7 @@ import DailyIframe, {
   DailyCustomTrayButtons,
   DailyEventObjectCustomButtonClick,
   DailyEventObjectFatalError,
+  DailyFatalErrorType,
   DailyFactoryOptions,
   DailyParticipantsObject,
 } from "@daily-co/daily-js";
@@ -97,6 +98,41 @@ function FatalErrorScreen({
           </VStack>
         </Center>
       );
+    case "meeting-full":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">This meeting is full.</Text>
+            <Button onClick={() => router.push(`/${roomName}`)}>
+              Back to Room
+            </Button>
+          </VStack>
+        </Center>
+      );
+    case "not-allowed":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">
+              You are not allowed to join this meeting.
+            </Text>
+            <Button onClick={() => router.push(`/${roomName}`)}>
+              Back to Room
+            </Button>
+          </VStack>
+        </Center>
+      );
+    case "exp-token":
+      return (
+        <Center width="100vw" height="100vh">
+          <VStack gap={4}>
+            <Text color="red.500">Your session has expired.</Text>
+            <Button onClick={() => window.location.reload()}>
+              Try Rejoining
+            </Button>
+          </VStack>
+        </Center>
+      );
     default:
       return (
         <Center width="100vw" height="100vh">
@@ -148,12 +184,7 @@ const USE_FRAME_INIT_STATE = {
   joined: false as boolean,
 } as const;
 
-type DailyFatalErrorType =
-  | "connection-error"
-  | "exp-room"
-  | "ejected"
-  | (string & {});
-type FatalError = { type: DailyFatalErrorType; message: string };
+type FatalError = { type: DailyFatalErrorType | "unknown"; message: string };
 
 // Daily js and not Daily react used right now because daily-js allows for prebuild interface vs. -react is customizable but has no nice defaults
 const useFrame = (
