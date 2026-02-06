@@ -822,15 +822,47 @@ async def process_meetings():
                     end_date = end_date.replace(tzinfo=timezone.utc)
 
                 client = create_platform_client(meeting.platform)
-                room_sessions = await client.get_room_sessions(meeting.room_name)
+                has_active_sessions = False
+                has_had_sessions = False
 
-                has_active_sessions = bool(
-                    room_sessions and any(s.ended_at is None for s in room_sessions)
-                )
-                has_had_sessions = bool(room_sessions)
-                logger_.info(
-                    f"has_active_sessions={has_active_sessions}, has_had_sessions={has_had_sessions}"
-                )
+                if meeting.platform == "daily":
+                    try:
+                        presence = await client.get_room_presence(meeting.room_name)
+                        has_active_sessions = presence.total_count > 0
+
+                        room_sessions = await client.get_room_sessions(
+                            meeting.room_name
+                        )
+                        has_had_sessions = bool(room_sessions)
+
+                        logger_.info(
+                            "Daily.co presence check",
+                            has_active_sessions=has_active_sessions,
+                            has_had_sessions=has_had_sessions,
+                            presence_count=presence.total_count,
+                        )
+                    except Exception:
+                        logger_.warning(
+                            "Daily.co presence API failed, falling back to DB sessions",
+                            exc_info=True,
+                        )
+                        room_sessions = await client.get_room_sessions(
+                            meeting.room_name
+                        )
+                        has_active_sessions = bool(
+                            room_sessions
+                            and any(s.ended_at is None for s in room_sessions)
+                        )
+                        has_had_sessions = bool(room_sessions)
+                else:
+                    room_sessions = await client.get_room_sessions(meeting.room_name)
+                    has_active_sessions = bool(
+                        room_sessions and any(s.ended_at is None for s in room_sessions)
+                    )
+                    has_had_sessions = bool(room_sessions)
+                    logger_.info(
+                        f"has_active_sessions={has_active_sessions}, has_had_sessions={has_had_sessions}"
+                    )
 
                 if has_active_sessions:
                     logger_.debug("Meeting still has active sessions, keep it")
@@ -849,7 +881,20 @@ async def process_meetings():
                     await meetings_controller.update_meeting(
                         meeting.id, is_active=False
                     )
-                    logger_.info("Meeting is deactivated")
+                    logger_.info("Meeting deactivated in database")
+
+                    if meeting.platform == "daily":
+                        try:
+                            await client.delete_room(meeting.room_name)
+                            logger_.info(
+                                "Daily.co room deleted", room_name=meeting.room_name
+                            )
+                        except Exception:
+                            logger_.warning(
+                                "Failed to delete Daily.co room",
+                                room_name=meeting.room_name,
+                                exc_info=True,
+                            )
 
                 processed_count += 1
 
