@@ -48,6 +48,24 @@ const RAW_TRACKS_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const RECORDING_START_DELAY_MS = 2000;
 const RECORDING_START_MAX_RETRIES = 5;
 
+const FATAL_ERROR_MESSAGES: Partial<
+  Record<DailyFatalErrorType, { message: string; rejoinable?: boolean }>
+> = {
+  "connection-error": {
+    message: "Connection lost. Please check your network.",
+    rejoinable: true,
+  },
+  "exp-room": { message: "The meeting time has ended." },
+  "exp-token": { message: "Your session has expired.", rejoinable: true },
+  ejected: { message: "You were removed from this meeting." },
+  "meeting-full": { message: "This meeting is full." },
+  "not-allowed": { message: "You are not allowed to join this meeting." },
+  "nbf-room": { message: "This meeting hasn't started yet." },
+  "nbf-token": { message: "This meeting hasn't started yet." },
+  "no-room": { message: "This room does not exist." },
+  "end-of-life": { message: "This meeting room is no longer available." },
+};
+
 function FatalErrorScreen({
   error,
   roomName,
@@ -56,14 +74,17 @@ function FatalErrorScreen({
   roomName: string;
 }) {
   const router = useRouter();
-  switch (error.type) {
-    case "connection-error":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">
-              Connection lost. Please check your network.
-            </Text>
+  const info =
+    error.type !== "unknown" ? FATAL_ERROR_MESSAGES[error.type] : undefined;
+  const message = info?.message ?? `Something went wrong: ${error.message}`;
+  const rejoinable = info?.rejoinable ?? false;
+
+  return (
+    <Center width="100vw" height="100vh">
+      <VStack gap={4}>
+        <Text color="red.500">{message}</Text>
+        {rejoinable ? (
+          <>
             <Button onClick={() => window.location.reload()}>
               Try Rejoining
             </Button>
@@ -73,78 +94,15 @@ function FatalErrorScreen({
             >
               Leave
             </Button>
-          </VStack>
-        </Center>
-      );
-    case "exp-room":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">The meeting time has ended.</Text>
-            <Button onClick={() => router.push(`/${roomName}`)}>
-              Back to Room
-            </Button>
-          </VStack>
-        </Center>
-      );
-    case "ejected":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">You were removed from this meeting.</Text>
-            <Button onClick={() => router.push(`/${roomName}`)}>
-              Back to Room
-            </Button>
-          </VStack>
-        </Center>
-      );
-    case "meeting-full":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">This meeting is full.</Text>
-            <Button onClick={() => router.push(`/${roomName}`)}>
-              Back to Room
-            </Button>
-          </VStack>
-        </Center>
-      );
-    case "not-allowed":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">
-              You are not allowed to join this meeting.
-            </Text>
-            <Button onClick={() => router.push(`/${roomName}`)}>
-              Back to Room
-            </Button>
-          </VStack>
-        </Center>
-      );
-    case "exp-token":
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">Your session has expired.</Text>
-            <Button onClick={() => window.location.reload()}>
-              Try Rejoining
-            </Button>
-          </VStack>
-        </Center>
-      );
-    default:
-      return (
-        <Center width="100vw" height="100vh">
-          <VStack gap={4}>
-            <Text color="red.500">Something went wrong: {error.message}</Text>
-            <Button onClick={() => router.push(`/${roomName}`)}>
-              Back to Room
-            </Button>
-          </VStack>
-        </Center>
-      );
-  }
+          </>
+        ) : (
+          <Button onClick={() => router.push(`/${roomName}`)}>
+            Back to Room
+          </Button>
+        )}
+      </VStack>
+    </Center>
+  );
 }
 
 type Meeting = components["schemas"]["Meeting"];
