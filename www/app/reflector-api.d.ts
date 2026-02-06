@@ -372,11 +372,12 @@ export interface paths {
     put?: never;
     /**
      * Meeting Leave
-     * @description Trigger presence recheck when user leaves meeting.
+     * @description Trigger presence update when user leaves meeting.
      *
-     *     Called on tab close/navigation via sendBeacon(). Immediately queues presence
-     *     poll to detect dirty disconnects faster than 30s periodic poll.
-     *     Daily.co webhooks handle clean disconnects, but tab close/crash need this.
+     *     When session_id is provided in the body, closes the session directly
+     *     for instant presence update. Falls back to polling when session_id
+     *     is not available (e.g., sendBeacon without frame access).
+     *     Called on tab close/navigation via sendBeacon().
      */
     post: operations["v1_meeting_leave"];
     delete?: never;
@@ -1579,6 +1580,10 @@ export interface components {
        * @description A non-empty string
        */
       connection_id: string;
+      /** Session Id */
+      session_id?: string | null;
+      /** User Name */
+      user_name?: string | null;
     };
     /** JoinedResponse */
     JoinedResponse: {

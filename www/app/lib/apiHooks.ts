@@ -773,6 +773,7 @@ export function useRoomActiveMeetings(roomName: string | null) {
     },
     {
       enabled: !!roomName,
+      refetchInterval: 5000,
     },
   );
 }

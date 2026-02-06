@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from typing import assert_never
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,6 +12,9 @@ from reflector.dailyco_api import (
     RecordingErrorEvent,
     RecordingReadyEvent,
     RecordingStartedEvent,
+)
+from reflector.db.daily_participant_sessions import (
+    daily_participant_sessions_controller,
 )
 from reflector.db.meetings import meetings_controller
 from reflector.logger import logger as _logger
@@ -141,14 +145,56 @@ async def _handle_participant_joined(event: ParticipantJoinedEvent):
 
 
 async def _handle_participant_left(event: ParticipantLeftEvent):
-    """Queue poll task for presence reconciliation."""
-    await _queue_poll_for_room(
-        event.payload.room_name,
-        "participant.left",
-        event.payload.user_id,
-        event.payload.session_id,
-        duration=event.payload.duration,
+    """Close session directly on webhook and update num_clients.
+
+    The webhook IS the authoritative signal that a participant left.
+    We close the session immediately rather than polling Daily.co API,
+    which avoids the race where the API still shows the participant.
+    A delayed reconciliation poll is queued as a safety net.
+    """
+    room_name = event.payload.room_name
+    if not room_name:
+        logger.warning("participant.left: no room in payload")
+        return
+
+    meeting = await meetings_controller.get_by_room_name(room_name)
+    if not meeting:
+        logger.warning("participant.left: meeting not found", room_name=room_name)
+        return
+
+    log = logger.bind(
+        meeting_id=meeting.id,
+        room_name=room_name,
+        session_id=event.payload.session_id,
+        user_id=event.payload.user_id,
     )
+
+    existing = await daily_participant_sessions_controller.get_open_session(
+        meeting.id, event.payload.session_id
+    )
+
+    if existing:
+        now = datetime.now(timezone.utc)
+        await daily_participant_sessions_controller.batch_close_sessions(
+            [existing.id], left_at=now
+        )
+        active = await daily_participant_sessions_controller.get_active_by_meeting(
+            meeting.id
+        )
+        await meetings_controller.update_meeting(meeting.id, num_clients=len(active))
+        log.info(
+            "Participant left - session closed",
+            remaining_clients=len(active),
+            duration=event.payload.duration,
+        )
+    else:
+        log.info(
+            "Participant left - no open session found, skipping direct close",
+            duration=event.payload.duration,
+        )
+
+    # Delayed reconciliation poll as safety net
+    poll_daily_room_presence_task.apply_async(args=[meeting.id], countdown=5)
 
 
 async def _handle_recording_started(event: RecordingStartedEvent):

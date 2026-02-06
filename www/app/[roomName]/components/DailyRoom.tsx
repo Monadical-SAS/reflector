@@ -91,7 +91,7 @@ const useFrame = (
   cbs: {
     onLeftMeeting: () => void;
     onCustomButtonClick: (ev: DailyEventObjectCustomButtonClick) => void;
-    onJoinMeeting: () => void;
+    onJoinMeeting: (sessionId: string | null) => void;
   },
 ) => {
   const [{ frame, joined }, setState] = useState(USE_FRAME_INIT_STATE);
@@ -142,7 +142,8 @@ const useFrame = (
         console.error("frame is null in joined-meeting callback");
         return;
       }
-      cbs.onJoinMeeting();
+      const local = frame.participants()?.local;
+      cbs.onJoinMeeting(local?.session_id ?? null);
     };
     frame.on("joined-meeting", joinCb);
     return () => {
@@ -193,6 +194,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const joiningMutation = useMeetingJoining();
   const joinedMutation = useMeetingJoined();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   // Generate a stable connection ID for this component instance
   // Used to track pending joins per browser tab (prevents key collision for anonymous users)
@@ -243,8 +245,17 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const roomUrl = joinedMeeting?.room_url;
 
   const handleLeave = useCallback(() => {
+    if (meeting?.id && roomName) {
+      const payload = sessionIdRef.current
+        ? { session_id: sessionIdRef.current }
+        : {};
+      navigator.sendBeacon(
+        buildMeetingLeaveUrl(roomName, meeting.id),
+        JSON.stringify(payload),
+      );
+    }
     router.push("/browse");
-  }, [router]);
+  }, [router, roomName, meeting?.id]);
 
   // Trigger presence recheck on dirty disconnects (tab close, navigation away)
   useEffect(() => {
@@ -253,7 +264,10 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     const handleBeforeUnload = () => {
       // sendBeacon guarantees delivery even if tab closes mid-request
       const url = buildMeetingLeaveUrl(roomName, meeting.id);
-      navigator.sendBeacon(url, JSON.stringify({}));
+      const payload = sessionIdRef.current
+        ? { session_id: sessionIdRef.current }
+        : {};
+      navigator.sendBeacon(url, JSON.stringify(payload));
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -271,97 +285,106 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     ],
   );
 
-  const handleFrameJoinMeeting = useCallback(() => {
-    // Signal that WebRTC connection is established
-    // This clears the pending join intent, confirming successful connection
-    joinedMutation.mutate(
-      {
-        params: {
-          path: {
-            room_name: roomName,
-            meeting_id: meeting.id,
+  const handleFrameJoinMeeting = useCallback(
+    (sessionId: string | null) => {
+      sessionIdRef.current = sessionId;
+
+      // Signal that WebRTC connection is established
+      // This clears the pending join intent and creates session record directly
+      joinedMutation.mutate(
+        {
+          params: {
+            path: {
+              room_name: roomName,
+              meeting_id: meeting.id,
+            },
+          },
+          body: {
+            connection_id: connectionId,
+            session_id: sessionId,
           },
         },
-        body: {
-          connection_id: connectionId,
+        {
+          onError: (error: unknown) => {
+            // Non-blocking: log but don't fail - this is cleanup, not critical
+            console.warn("Failed to signal joined:", error);
+          },
         },
-      },
-      {
-        onError: (error: unknown) => {
-          // Non-blocking: log but don't fail - this is cleanup, not critical
-          console.warn("Failed to signal joined:", error);
-        },
-      },
-    );
+      );
 
-    if (meeting.recording_type === "cloud") {
-      console.log("Starting dual recording via REST API", {
-        cloudInstanceId,
-        rawTracksInstanceId,
-      });
+      if (meeting.recording_type === "cloud") {
+        console.log("Starting dual recording via REST API", {
+          cloudInstanceId,
+          rawTracksInstanceId,
+        });
 
-      // Start both cloud and raw-tracks via backend REST API (with retry on 404)
-      // Daily.co needs time to register call as "hosting" for REST API
-      const startRecordingWithRetry = (
-        type: DailyRecordingType,
-        instanceId: NonEmptyString,
-        attempt: number = 1,
-      ) => {
-        setTimeout(() => {
-          startRecordingMutation.mutate(
-            {
-              params: {
-                path: {
-                  meeting_id: meeting.id,
+        // Start both cloud and raw-tracks via backend REST API (with retry on 404)
+        // Daily.co needs time to register call as "hosting" for REST API
+        const startRecordingWithRetry = (
+          type: DailyRecordingType,
+          instanceId: NonEmptyString,
+          attempt: number = 1,
+        ) => {
+          setTimeout(() => {
+            startRecordingMutation.mutate(
+              {
+                params: {
+                  path: {
+                    meeting_id: meeting.id,
+                  },
+                },
+                body: {
+                  type,
+                  instanceId,
                 },
               },
-              body: {
-                type,
-                instanceId,
-              },
-            },
-            {
-              onError: (error: any) => {
-                const errorText = error?.detail || error?.message || "";
-                const is404NotHosting = errorText.includes(
-                  "does not seem to be hosting a call",
-                );
-                const isActiveStream = errorText.includes(
-                  "has an active stream",
-                );
-
-                if (is404NotHosting && attempt < RECORDING_START_MAX_RETRIES) {
-                  console.log(
-                    `${type}: Call not hosting yet, retry ${attempt + 1}/${RECORDING_START_MAX_RETRIES} in ${RECORDING_START_DELAY_MS}ms...`,
+              {
+                onError: (error: any) => {
+                  const errorText = error?.detail || error?.message || "";
+                  const is404NotHosting = errorText.includes(
+                    "does not seem to be hosting a call",
                   );
-                  startRecordingWithRetry(type, instanceId, attempt + 1);
-                } else if (isActiveStream) {
-                  console.log(
-                    `${type}: Recording already active (started by another participant)`,
+                  const isActiveStream = errorText.includes(
+                    "has an active stream",
                   );
-                } else {
-                  console.error(`Failed to start ${type} recording:`, error);
-                }
-              },
-            },
-          );
-        }, RECORDING_START_DELAY_MS);
-      };
 
-      // Start both recordings
-      startRecordingWithRetry("cloud", cloudInstanceId);
-      startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
-    }
-  }, [
-    meeting.recording_type,
-    meeting.id,
-    roomName,
-    connectionId,
-    joinedMutation,
-    startRecordingMutation,
-    cloudInstanceId,
-    rawTracksInstanceId,
-  ]);
+                  if (
+                    is404NotHosting &&
+                    attempt < RECORDING_START_MAX_RETRIES
+                  ) {
+                    console.log(
+                      `${type}: Call not hosting yet, retry ${attempt + 1}/${RECORDING_START_MAX_RETRIES} in ${RECORDING_START_DELAY_MS}ms...`,
+                    );
+                    startRecordingWithRetry(type, instanceId, attempt + 1);
+                  } else if (isActiveStream) {
+                    console.log(
+                      `${type}: Recording already active (started by another participant)`,
+                    );
+                  } else {
+                    console.error(`Failed to start ${type} recording:`, error);
+                  }
+                },
+              },
+            );
+          }, RECORDING_START_DELAY_MS);
+        };
+
+        // Start both recordings
+        startRecordingWithRetry("cloud", cloudInstanceId);
+        startRecordingWithRetry("raw-tracks", rawTracksInstanceId);
+      }
+    },
+    [
+      meeting.recording_type,
+      meeting.id,
+      roomName,
+      connectionId,
+      joinedMutation,
+      startRecordingMutation,
+      cloudInstanceId,
+      rawTracksInstanceId,
+    ],
+  );
 
   const recordingIconUrl = useMemo(
     () => new URL("/recording-icon.svg", window.location.origin),

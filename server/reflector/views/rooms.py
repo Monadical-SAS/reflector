@@ -1,8 +1,9 @@
+import json
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Annotated, Any, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi_pagination import Page
 from fastapi_pagination.ext.databases import apaginate
 from pydantic import BaseModel
@@ -11,6 +12,10 @@ from redis.exceptions import LockError
 import reflector.auth as auth
 from reflector.db import get_database
 from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.daily_participant_sessions import (
+    DailyParticipantSession,
+    daily_participant_sessions_controller,
+)
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import rooms_controller
 from reflector.logger import logger
@@ -617,6 +622,12 @@ class JoinedRequest(BaseModel):
     connection_id: NonEmptyString
     """Must match the connection_id sent to /joining."""
 
+    session_id: NonEmptyString | None = None
+    """Daily.co session_id for direct session creation. Optional for backward compat."""
+
+    user_name: str | None = None
+    """Display name from Daily.co participant data."""
+
 
 class JoinedResponse(BaseModel):
     status: Literal["ok"]
@@ -716,9 +727,32 @@ async def meeting_joined(
     finally:
         await redis.aclose()
 
-    # Trigger presence poll to detect the new participant faster than periodic poll
+    # Create session directly when session_id provided (instant presence update)
+    if body.session_id and meeting.platform == "daily":
+        session = DailyParticipantSession(
+            id=f"{meeting.id}:{body.session_id}",
+            meeting_id=meeting.id,
+            room_id=room.id,
+            session_id=body.session_id,
+            user_id=user["sub"] if user else None,
+            user_name=body.user_name or "Anonymous",
+            joined_at=datetime.now(timezone.utc),
+        )
+        await daily_participant_sessions_controller.batch_upsert_sessions([session])
+
+        active = await daily_participant_sessions_controller.get_active_by_meeting(
+            meeting.id
+        )
+        await meetings_controller.update_meeting(meeting.id, num_clients=len(active))
+        log.info(
+            "Session created directly",
+            session_id=body.session_id,
+            num_clients=len(active),
+        )
+
+    # Trigger presence poll as reconciliation safety net
     if meeting.platform == "daily":
-        poll_daily_room_presence_task.delay(meeting_id)
+        poll_daily_room_presence_task.apply_async(args=[meeting_id], countdown=3)
 
     return JoinedResponse(status="ok")
 
@@ -733,14 +767,28 @@ class LeaveResponse(BaseModel):
 async def meeting_leave(
     room_name: str,
     meeting_id: str,
+    request: Request,
     user: Annotated[Optional[auth.UserInfo], Depends(auth.current_user_optional)],
 ) -> LeaveResponse:
-    """Trigger presence recheck when user leaves meeting.
+    """Trigger presence update when user leaves meeting.
 
-    Called on tab close/navigation via sendBeacon(). Immediately queues presence
-    poll to detect dirty disconnects faster than 30s periodic poll.
-    Daily.co webhooks handle clean disconnects, but tab close/crash need this.
+    When session_id is provided in the body, closes the session directly
+    for instant presence update. Falls back to polling when session_id
+    is not available (e.g., sendBeacon without frame access).
+    Called on tab close/navigation via sendBeacon().
     """
+    # Parse session_id from body (sendBeacon may send text/plain or no body)
+    session_id: str | None = None
+    try:
+        body_bytes = await request.body()
+        if body_bytes:
+            data = json.loads(body_bytes)
+            raw = data.get("session_id")
+            if isinstance(raw, str) and raw.strip():
+                session_id = raw.strip()
+    except Exception:
+        pass
+
     room = await rooms_controller.get_by_name(room_name)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
@@ -749,7 +797,27 @@ async def meeting_leave(
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
-    if meeting.platform == "daily":
-        poll_daily_room_presence_task.delay(meeting_id)
+    # Close session directly when session_id provided
+    session_closed = False
+    if session_id and meeting.platform == "daily":
+        existing = await daily_participant_sessions_controller.get_open_session(
+            meeting.id, session_id
+        )
+        if existing:
+            await daily_participant_sessions_controller.batch_close_sessions(
+                [existing.id], left_at=datetime.now(timezone.utc)
+            )
+            active = await daily_participant_sessions_controller.get_active_by_meeting(
+                meeting.id
+            )
+            await meetings_controller.update_meeting(
+                meeting.id, num_clients=len(active)
+            )
+            session_closed = True
+
+    # Only queue poll if we couldn't close directly — the poll runs before
+    # Daily.co API removes the participant, which would undo our correct count
+    if meeting.platform == "daily" and not session_closed:
+        poll_daily_room_presence_task.apply_async(args=[meeting_id], countdown=3)
 
     return LeaveResponse(status="ok")
