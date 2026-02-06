@@ -239,7 +239,9 @@ async def rooms_bulk_meeting_status(
         m.platform = room.platform
         if user_id != room.user_id and m.platform == "whereby":
             m.host_room_url = ""
-        active_by_room[room.name].append(m)
+        active_by_room[room.name].append(
+            Meeting.model_validate(m, from_attributes=True)
+        )
 
     upcoming_by_room: dict[str, list[CalendarEventResponse]] = defaultdict(list)
     for e in upcoming_events:
@@ -249,7 +251,9 @@ async def rooms_bulk_meeting_status(
         if user_id != room.user_id:
             e.description = None
             e.attendees = None
-        upcoming_by_room[room.name].append(e)
+        upcoming_by_room[room.name].append(
+            CalendarEventResponse.model_validate(e, from_attributes=True)
+        )
 
     result: dict[str, RoomMeetingStatus] = {}
     for name in request.room_names:
