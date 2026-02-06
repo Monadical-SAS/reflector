@@ -301,6 +301,23 @@ class MeetingController:
         results = await get_database().fetch_all(query)
         return [Meeting(**result) for result in results]
 
+    async def get_all_active_for_rooms(
+        self, room_ids: list[str], current_time: datetime
+    ) -> list[Meeting]:
+        query = (
+            meetings.select()
+            .where(
+                sa.and_(
+                    meetings.c.room_id.in_(room_ids),
+                    meetings.c.end_date > current_time,
+                    meetings.c.is_active,
+                )
+            )
+            .order_by(meetings.c.end_date.desc())
+        )
+        results = await get_database().fetch_all(query)
+        return [Meeting(**result) for result in results]
+
     async def get_active_by_calendar_event(
         self, room: Room, calendar_event_id: str, current_time: datetime
     ) -> Meeting | None:
