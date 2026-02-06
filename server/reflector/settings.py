@@ -1,7 +1,7 @@
 from pydantic.types import PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from reflector.schemas.platform import WHEREBY_PLATFORM, Platform
+from reflector.schemas.platform import DAILY_PLATFORM, Platform
 from reflector.utils.string import NonEmptyString
 
 
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
         None  # Webhook UUID for this environment. Not used by production code
     )
     # Platform Configuration
-    DEFAULT_VIDEO_PLATFORM: Platform = WHEREBY_PLATFORM
+    DEFAULT_VIDEO_PLATFORM: Platform = DAILY_PLATFORM
 
     # Zulip integration
     ZULIP_REALM: str | None = None

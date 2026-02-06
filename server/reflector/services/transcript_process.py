@@ -15,14 +15,10 @@ from hatchet_sdk.clients.rest.exceptions import ApiException, NotFoundException
 from hatchet_sdk.clients.rest.models import V1TaskStatus
 
 from reflector.db.recordings import recordings_controller
-from reflector.db.rooms import rooms_controller
 from reflector.db.transcripts import Transcript, transcripts_controller
 from reflector.hatchet.client import HatchetClientManager
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
-from reflector.pipelines.main_multitrack_pipeline import (
-    task_pipeline_multitrack_process,
-)
 from reflector.utils.string import NonEmptyString
 
 
@@ -181,124 +177,98 @@ async def dispatch_transcript_processing(
     Returns AsyncResult for Celery tasks, None for Hatchet workflows.
     """
     if isinstance(config, MultitrackProcessingConfig):
-        use_celery = False
-        if config.room_id:
-            room = await rooms_controller.get_by_id(config.room_id)
-            use_celery = room.use_celery if room else False
-
-        use_hatchet = not use_celery
-
-        if use_celery:
-            logger.info(
-                "Room uses legacy Celery processing",
-                room_id=config.room_id,
-                transcript_id=config.transcript_id,
+        # Multitrack processing always uses Hatchet (no Celery fallback)
+        # First check if we can replay (outside transaction since it's read-only)
+        transcript = await transcripts_controller.get_by_id(config.transcript_id)
+        if transcript and transcript.workflow_run_id and not force:
+            can_replay = await HatchetClientManager.can_replay(
+                transcript.workflow_run_id
             )
-
-        if use_hatchet:
-            # First check if we can replay (outside transaction since it's read-only)
-            transcript = await transcripts_controller.get_by_id(config.transcript_id)
-            if transcript and transcript.workflow_run_id and not force:
-                can_replay = await HatchetClientManager.can_replay(
-                    transcript.workflow_run_id
+            if can_replay:
+                await HatchetClientManager.replay_workflow(transcript.workflow_run_id)
+                logger.info(
+                    "Replaying Hatchet workflow",
+                    workflow_id=transcript.workflow_run_id,
                 )
-                if can_replay:
-                    await HatchetClientManager.replay_workflow(
-                        transcript.workflow_run_id
-                    )
-                    logger.info(
-                        "Replaying Hatchet workflow",
-                        workflow_id=transcript.workflow_run_id,
-                    )
-                    return None
-                else:
-                    # Workflow can't replay (CANCELLED, COMPLETED, or 404 deleted)
-                    # Log and proceed to start new workflow
-                    try:
-                        status = await HatchetClientManager.get_workflow_run_status(
-                            transcript.workflow_run_id
-                        )
-                        logger.info(
-                            "Old workflow not replayable, starting new",
-                            old_workflow_id=transcript.workflow_run_id,
-                            old_status=status.value,
-                        )
-                    except NotFoundException:
-                        # Workflow deleted from Hatchet but ID still in DB
-                        logger.info(
-                            "Old workflow not found in Hatchet, starting new",
-                            old_workflow_id=transcript.workflow_run_id,
-                        )
-
-            # Force: cancel old workflow if exists
-            if force and transcript and transcript.workflow_run_id:
-                try:
-                    await HatchetClientManager.cancel_workflow(
-                        transcript.workflow_run_id
-                    )
-                    logger.info(
-                        "Cancelled old workflow (--force)",
-                        workflow_id=transcript.workflow_run_id,
-                    )
-                except NotFoundException:
-                    logger.info(
-                        "Old workflow already deleted (--force)",
-                        workflow_id=transcript.workflow_run_id,
-                    )
-                await transcripts_controller.update(
-                    transcript, {"workflow_run_id": None}
-                )
-
-            # Re-fetch and check for concurrent dispatch (optimistic approach).
-            # No database lock - worst case is duplicate dispatch, but Hatchet
-            # workflows are idempotent so this is acceptable.
-            transcript = await transcripts_controller.get_by_id(config.transcript_id)
-            if transcript and transcript.workflow_run_id:
-                # Another process started a workflow between validation and now
+                return None
+            else:
+                # Workflow can't replay (CANCELLED, COMPLETED, or 404 deleted)
+                # Log and proceed to start new workflow
                 try:
                     status = await HatchetClientManager.get_workflow_run_status(
                         transcript.workflow_run_id
                     )
-                    if status in (V1TaskStatus.RUNNING, V1TaskStatus.QUEUED):
-                        logger.info(
-                            "Concurrent workflow detected, skipping dispatch",
-                            workflow_id=transcript.workflow_run_id,
-                        )
-                        return None
-                except ApiException:
-                    # Workflow might be gone (404) or API issue - proceed with new workflow
-                    pass
+                    logger.info(
+                        "Old workflow not replayable, starting new",
+                        old_workflow_id=transcript.workflow_run_id,
+                        old_status=status.value,
+                    )
+                except NotFoundException:
+                    # Workflow deleted from Hatchet but ID still in DB
+                    logger.info(
+                        "Old workflow not found in Hatchet, starting new",
+                        old_workflow_id=transcript.workflow_run_id,
+                    )
 
-            workflow_id = await HatchetClientManager.start_workflow(
-                workflow_name="DiarizationPipeline",
-                input_data={
-                    "recording_id": config.recording_id,
-                    "tracks": [{"s3_key": k} for k in config.track_keys],
-                    "bucket_name": config.bucket_name,
-                    "transcript_id": config.transcript_id,
-                    "room_id": config.room_id,
-                },
-                additional_metadata={
-                    "transcript_id": config.transcript_id,
-                    "recording_id": config.recording_id,
-                    "daily_recording_id": config.recording_id,
-                },
+        # Force: cancel old workflow if exists
+        if force and transcript and transcript.workflow_run_id:
+            try:
+                await HatchetClientManager.cancel_workflow(transcript.workflow_run_id)
+                logger.info(
+                    "Cancelled old workflow (--force)",
+                    workflow_id=transcript.workflow_run_id,
+                )
+            except NotFoundException:
+                logger.info(
+                    "Old workflow already deleted (--force)",
+                    workflow_id=transcript.workflow_run_id,
+                )
+            await transcripts_controller.update(transcript, {"workflow_run_id": None})
+
+        # Re-fetch and check for concurrent dispatch (optimistic approach).
+        # No database lock - worst case is duplicate dispatch, but Hatchet
+        # workflows are idempotent so this is acceptable.
+        transcript = await transcripts_controller.get_by_id(config.transcript_id)
+        if transcript and transcript.workflow_run_id:
+            # Another process started a workflow between validation and now
+            try:
+                status = await HatchetClientManager.get_workflow_run_status(
+                    transcript.workflow_run_id
+                )
+                if status in (V1TaskStatus.RUNNING, V1TaskStatus.QUEUED):
+                    logger.info(
+                        "Concurrent workflow detected, skipping dispatch",
+                        workflow_id=transcript.workflow_run_id,
+                    )
+                    return None
+            except ApiException:
+                # Workflow might be gone (404) or API issue - proceed with new workflow
+                pass
+
+        workflow_id = await HatchetClientManager.start_workflow(
+            workflow_name="DiarizationPipeline",
+            input_data={
+                "recording_id": config.recording_id,
+                "tracks": [{"s3_key": k} for k in config.track_keys],
+                "bucket_name": config.bucket_name,
+                "transcript_id": config.transcript_id,
+                "room_id": config.room_id,
+            },
+            additional_metadata={
+                "transcript_id": config.transcript_id,
+                "recording_id": config.recording_id,
+                "daily_recording_id": config.recording_id,
+            },
+        )
+
+        if transcript:
+            await transcripts_controller.update(
+                transcript, {"workflow_run_id": workflow_id}
             )
 
-            if transcript:
-                await transcripts_controller.update(
-                    transcript, {"workflow_run_id": workflow_id}
-                )
+        logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
+        return None
 
-            logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
-            return None
-
-        # Celery pipeline (durable workflows disabled)
-        return task_pipeline_multitrack_process.delay(
-            transcript_id=config.transcript_id,
-            bucket_name=config.bucket_name,
-            track_keys=config.track_keys,
-        )
     elif isinstance(config, FileProcessingConfig):
         return task_pipeline_file_process.delay(transcript_id=config.transcript_id)
     else:
