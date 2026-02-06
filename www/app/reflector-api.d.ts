@@ -313,6 +313,78 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/joining": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Meeting Joining
+     * @description Signal intent to join meeting. Called before WebRTC handshake starts.
+     *
+     *     This creates a pending join record that prevents the meeting from being
+     *     deactivated while the WebRTC handshake is in progress. The record expires
+     *     automatically after 30 seconds if the connection is not established.
+     */
+    post: operations["v1_meeting_joining"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/joined": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Meeting Joined
+     * @description Signal that WebRTC connection is established.
+     *
+     *     This clears the pending join record, confirming the user has successfully
+     *     connected to the meeting. Safe to call even if meeting was deactivated
+     *     during the handshake (idempotent cleanup).
+     */
+    post: operations["v1_meeting_joined"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/rooms/{room_name}/meetings/{meeting_id}/leave": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Meeting Leave
+     * @description Trigger presence recheck when user leaves meeting.
+     *
+     *     Called on tab close/navigation via sendBeacon(). Immediately queues presence
+     *     poll to detect dirty disconnects faster than 30s periodic poll.
+     *     Daily.co webhooks handle clean disconnects, but tab close/crash need this.
+     */
+    post: operations["v1_meeting_leave"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/transcripts": {
     parameters: {
       query?: never;
@@ -1497,6 +1569,52 @@ export interface components {
       /** Reason */
       reason?: string | null;
     };
+    /**
+     * JoinedRequest
+     * @description Request body for /joined endpoint (after WebRTC connection established).
+     */
+    JoinedRequest: {
+      /**
+       * Connection Id
+       * @description A non-empty string
+       */
+      connection_id: string;
+    };
+    /** JoinedResponse */
+    JoinedResponse: {
+      /**
+       * Status
+       * @constant
+       */
+      status: "ok";
+    };
+    /**
+     * JoiningRequest
+     * @description Request body for /joining endpoint (before WebRTC handshake).
+     */
+    JoiningRequest: {
+      /**
+       * Connection Id
+       * @description A non-empty string
+       */
+      connection_id: string;
+    };
+    /** JoiningResponse */
+    JoiningResponse: {
+      /**
+       * Status
+       * @constant
+       */
+      status: "ok";
+    };
+    /** LeaveResponse */
+    LeaveResponse: {
+      /**
+       * Status
+       * @constant
+       */
+      status: "ok";
+    };
     /** Meeting */
     Meeting: {
       /** Id */
@@ -2674,6 +2792,110 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Meeting"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_meeting_joining: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JoiningRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["JoiningResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_meeting_joined: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["JoinedRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["JoinedResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_meeting_leave: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        room_name: string;
+        meeting_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeaveResponse"];
         };
       };
       /** @description Validation Error */

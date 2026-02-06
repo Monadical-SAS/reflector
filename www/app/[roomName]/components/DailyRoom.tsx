@@ -27,6 +27,7 @@ import {
   useMeetingStartRecording,
   useMeetingJoining,
   useMeetingJoined,
+  buildMeetingLeaveUrl,
 } from "../../lib/apiHooks";
 import { omit } from "remeda";
 import {
@@ -251,7 +252,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
 
     const handleBeforeUnload = () => {
       // sendBeacon guarantees delivery even if tab closes mid-request
-      const url = `/v1/rooms/${roomName}/meetings/${meeting.id}/leave`;
+      const url = buildMeetingLeaveUrl(roomName, meeting.id);
       navigator.sendBeacon(url, JSON.stringify({}));
     };
 

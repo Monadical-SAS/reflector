@@ -1,9 +1,10 @@
 "use client";
 
-import { $api } from "./apiClient";
+import { createFinalURL, createQuerySerializer } from "openapi-fetch";
+import { $api, API_URL } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { components } from "../reflector-api";
+import type { components, paths } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 import { MeetingId } from "./types";
 import { NonEmptyString } from "./utils";
@@ -13,6 +14,10 @@ import { NonEmptyString } from "./utils";
  * this is either a limitation or incorrect usage of Python json schema generator
  * or, limitation or incorrect usage of .d type generator from json schema
  * */
+
+/*
+if you experience lack of expected endpoints on $api, try to regenerate
+ */
 
 export const useAuthReady = () => {
   const auth = useAuth();
@@ -807,33 +812,45 @@ export function useRoomJoinMeeting() {
   );
 }
 
-// Presence race fix endpoints (not yet in OpenAPI spec)
-// These signal join intent to prevent race conditions during WebRTC handshake
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useMeetingJoining(): any {
-  return ($api as any).useMutation(
+// Presence race fix endpoints - signal join intent to prevent race conditions during WebRTC handshake
+export function useMeetingJoining() {
+  return $api.useMutation(
     "post",
     "/v1/rooms/{room_name}/meetings/{meeting_id}/joining",
     {},
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useMeetingJoined(): any {
-  return ($api as any).useMutation(
+export function useMeetingJoined() {
+  return $api.useMutation(
     "post",
     "/v1/rooms/{room_name}/meetings/{meeting_id}/joined",
     {},
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useMeetingLeave(): any {
-  return ($api as any).useMutation(
+export function useMeetingLeave() {
+  return $api.useMutation(
     "post",
     "/v1/rooms/{room_name}/meetings/{meeting_id}/leave",
     {},
   );
+}
+
+/**
+ * Build absolute URL for /leave endpoint (for sendBeacon which can't use hooks).
+ */
+export function buildMeetingLeaveUrl(
+  roomName: string,
+  meetingId: string,
+): string {
+  return createFinalURL("/v1/rooms/{room_name}/meetings/{meeting_id}/leave", {
+    baseUrl: API_URL,
+    params: {
+      path: { room_name: roomName, meeting_id: meetingId },
+    },
+    querySerializer: createQuerySerializer(),
+  });
 }
 
 export function useRoomIcsSync() {
