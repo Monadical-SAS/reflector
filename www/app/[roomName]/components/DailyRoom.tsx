@@ -401,7 +401,9 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   }
 
   if (joinMutation.isError) {
-    const apiDetail = printApiError(joinMutation.error as ApiError);
+    const apiDetail = printApiError(
+      joinMutation.error as /*ref 095959E6-01CC-4CF0-B3A9-F65F12F046D3*/ ApiError,
+    );
     return (
       <Center width="100vw" height="100vh">
         <VStack gap={4}>
