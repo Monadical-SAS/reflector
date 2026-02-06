@@ -254,7 +254,6 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const startRecordingMutation = useMeetingStartRecording();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
   const [fatalError, setFatalError] = useState<FatalError | null>(null);
-  const fatalErrorRef = useRef<FatalError | null>(null);
 
   // Generate deterministic instanceIds so all participants use SAME IDs
   const cloudInstanceId = parseNonEmptyString(meeting.id);
@@ -302,16 +301,15 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
 
   const handleLeave = useCallback(() => {
     // If a fatal error occurred, don't redirect — let the error UI show
-    if (fatalErrorRef.current) return;
+    if (fatalError) return;
     router.push("/browse");
-  }, [router]);
+  }, [router, fatalError]);
 
   const handleError = useCallback((ev: DailyEventObjectFatalError) => {
     const error: FatalError = {
       type: ev.error?.type ?? "unknown",
       message: ev.errorMsg,
     };
-    fatalErrorRef.current = error;
     setFatalError(error);
   }, []);
 
