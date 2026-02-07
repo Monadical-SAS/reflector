@@ -9,6 +9,7 @@ import { MeetingId } from "./types";
 import { NonEmptyString } from "./utils";
 
 /*
+ * ref 095959E6-01CC-4CF0-B3A9-F65F12F046D3
  * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
  * this is either a limitation or incorrect usage of Python json schema generator
  * or, limitation or incorrect usage of .d type generator from json schema
