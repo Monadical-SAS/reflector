@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from workflows.errors import WorkflowRuntimeError, WorkflowTimeoutError
 
 from reflector.llm import LLM, LLMParseError, StructuredOutputWorkflow
+from reflector.settings import Settings
 from reflector.utils.retry import RetryException
 
 
@@ -24,6 +25,57 @@ def make_completion_response(text: str):
     response = MagicMock()
     response.text = text
     return response
+
+
+class TestLLMEnableThinking:
+    """Test that LLM_ENABLE_THINKING setting is passed through to OpenAILike"""
+
+    def test_enable_thinking_false_passed_in_extra_body(self):
+        """enable_thinking=False should be in extra_body when LLM_ENABLE_THINKING=False"""
+        settings = Settings(
+            LLM_ENABLE_THINKING=False,
+            LLM_URL="http://fake",
+            LLM_API_KEY="fake",
+        )
+
+        with (
+            patch("reflector.llm.OpenAILike") as mock_openai,
+            patch("reflector.llm.Settings"),
+        ):
+            LLM(settings=settings)
+            extra_body = mock_openai.call_args.kwargs["additional_kwargs"]["extra_body"]
+            assert extra_body["enable_thinking"] is False
+
+    def test_enable_thinking_true_passed_in_extra_body(self):
+        """enable_thinking=True should be in extra_body when LLM_ENABLE_THINKING=True"""
+        settings = Settings(
+            LLM_ENABLE_THINKING=True,
+            LLM_URL="http://fake",
+            LLM_API_KEY="fake",
+        )
+
+        with (
+            patch("reflector.llm.OpenAILike") as mock_openai,
+            patch("reflector.llm.Settings"),
+        ):
+            LLM(settings=settings)
+            extra_body = mock_openai.call_args.kwargs["additional_kwargs"]["extra_body"]
+            assert extra_body["enable_thinking"] is True
+
+    def test_enable_thinking_none_not_in_extra_body(self):
+        """enable_thinking should not be in extra_body when LLM_ENABLE_THINKING is None (default)"""
+        settings = Settings(
+            LLM_URL="http://fake",
+            LLM_API_KEY="fake",
+        )
+
+        with (
+            patch("reflector.llm.OpenAILike") as mock_openai,
+            patch("reflector.llm.Settings"),
+        ):
+            LLM(settings=settings)
+            extra_body = mock_openai.call_args.kwargs["additional_kwargs"]["extra_body"]
+            assert "enable_thinking" not in extra_body
 
 
 class TestLLMParseErrorRecovery:

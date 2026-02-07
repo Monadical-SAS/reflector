@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     LLM_URL: str | None = None
     LLM_API_KEY: str | None = None
     LLM_CONTEXT_WINDOW: int = 16000
+    LLM_ENABLE_THINKING: bool | None = None
 
     LLM_PARSE_MAX_RETRIES: int = (
         3  # Max retries for JSON/validation errors (total attempts = retries + 1)

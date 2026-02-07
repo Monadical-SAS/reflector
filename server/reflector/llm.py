@@ -206,6 +206,12 @@ class LLM:
         """Configure llamaindex Settings with OpenAILike LLM"""
         session_id = llm_session_id.get() or f"fallback-{uuid4().hex}"
 
+        extra_body: dict = {"litellm_session_id": session_id}
+        # Only send enable_thinking when explicitly set (not None/unset).
+        # Models that don't support it will ignore the param.
+        if self.settings_obj.LLM_ENABLE_THINKING is not None:
+            extra_body["enable_thinking"] = self.settings_obj.LLM_ENABLE_THINKING
+
         Settings.llm = OpenAILike(
             model=self.model_name,
             api_base=self.url,
@@ -215,7 +221,7 @@ class LLM:
             is_function_calling_model=False,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            additional_kwargs={"extra_body": {"litellm_session_id": session_id}},
+            additional_kwargs={"extra_body": extra_body},
         )
 
     async def get_response(
