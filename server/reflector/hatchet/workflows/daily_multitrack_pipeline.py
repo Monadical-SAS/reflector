@@ -45,6 +45,7 @@ from reflector.hatchet.constants import (
     TIMEOUT_SHORT,
     TaskName,
 )
+from reflector.hatchet.dag_zulip import update_dag_zulip_message
 from reflector.hatchet.workflows.models import (
     ActionItemsResult,
     ConsentResult,
@@ -238,7 +239,14 @@ def with_error_handling(
         @functools.wraps(func)
         async def wrapper(input: PipelineInput, ctx: Context) -> R:
             try:
-                return await func(input, ctx)
+                result = await func(input, ctx)
+                try:
+                    await update_dag_zulip_message(
+                        input.transcript_id, ctx.workflow_run_id
+                    )
+                except Exception:
+                    pass
+                return result
             except Exception as e:
                 logger.error(
                     f"[Hatchet] {step_name} failed",
@@ -246,6 +254,14 @@ def with_error_handling(
                     error=str(e),
                     exc_info=True,
                 )
+                try:
+                    await update_dag_zulip_message(
+                        input.transcript_id,
+                        ctx.workflow_run_id,
+                        error_message=f"{step_name} failed: {e}",
+                    )
+                except Exception:
+                    pass
                 if set_error_status:
                     await set_workflow_error_status(input.transcript_id)
                 raise
@@ -1294,6 +1310,11 @@ async def post_zulip(input: PipelineInput, ctx: Context) -> ZulipResult:
 
     async with fresh_db_connection():
         from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
+        from reflector.hatchet.dag_zulip import (  # noqa: PLC0415
+            delete_dag_zulip_message,
+        )
+
+        await delete_dag_zulip_message(input.transcript_id)
 
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if transcript:

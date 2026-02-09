@@ -161,6 +161,9 @@ class Settings(BaseSettings):
     ZULIP_REALM: str | None = None
     ZULIP_API_KEY: str | None = None
     ZULIP_BOT_EMAIL: str | None = None
+    ZULIP_DAG_STREAM: str | None = None
+    ZULIP_DAG_TOPIC: str | None = None
+    ZULIP_HOST_HEADER: str | None = None
 
     # Hatchet workflow orchestration (always enabled for multitrack processing)
     HATCHET_CLIENT_TOKEN: str | None = None

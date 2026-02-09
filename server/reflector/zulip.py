@@ -12,9 +12,16 @@ class InvalidMessageError(Exception):
     pass
 
 
+def _zulip_client() -> httpx.AsyncClient:
+    headers = {}
+    if settings.ZULIP_HOST_HEADER:
+        headers["Host"] = settings.ZULIP_HOST_HEADER
+    return httpx.AsyncClient(verify=False, headers=headers)
+
+
 async def get_zulip_topics(stream_id: int) -> list[dict]:
     try:
-        async with httpx.AsyncClient() as client:
+        async with _zulip_client() as client:
             response = await client.get(
                 f"https://{settings.ZULIP_REALM}/api/v1/users/me/{stream_id}/topics",
                 auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
@@ -29,7 +36,7 @@ async def get_zulip_topics(stream_id: int) -> list[dict]:
 
 async def get_zulip_streams() -> list[dict]:
     try:
-        async with httpx.AsyncClient() as client:
+        async with _zulip_client() as client:
             response = await client.get(
                 f"https://{settings.ZULIP_REALM}/api/v1/streams",
                 auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
@@ -44,7 +51,7 @@ async def get_zulip_streams() -> list[dict]:
 
 async def send_message_to_zulip(stream: str, topic: str, content: str):
     try:
-        async with httpx.AsyncClient() as client:
+        async with _zulip_client() as client:
             response = await client.post(
                 f"https://{settings.ZULIP_REALM}/api/v1/messages",
                 data={
@@ -66,7 +73,7 @@ async def send_message_to_zulip(stream: str, topic: str, content: str):
 
 async def update_zulip_message(message_id: int, stream: str, topic: str, content: str):
     try:
-        async with httpx.AsyncClient() as client:
+        async with _zulip_client() as client:
             response = await client.patch(
                 f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
                 data={
@@ -88,6 +95,27 @@ async def update_zulip_message(message_id: int, stream: str, topic: str, content
             return response.json()
     except httpx.RequestError as error:
         raise Exception(f"Failed to update Zulip message: {error}")
+
+
+async def delete_zulip_message(message_id: int):
+    try:
+        async with _zulip_client() as client:
+            response = await client.delete(
+                f"https://{settings.ZULIP_REALM}/api/v1/messages/{message_id}",
+                auth=(settings.ZULIP_BOT_EMAIL, settings.ZULIP_API_KEY),
+            )
+
+            if (
+                response.status_code == 400
+                and response.json()["msg"] == "Invalid message(s)"
+            ):
+                raise InvalidMessageError(f"There is no message with id: {message_id}")
+
+            response.raise_for_status()
+
+            return response.json()
+    except httpx.RequestError as error:
+        raise Exception(f"Failed to delete Zulip message: {error}")
 
 
 def get_zulip_message(transcript: Transcript, include_topics: bool):
