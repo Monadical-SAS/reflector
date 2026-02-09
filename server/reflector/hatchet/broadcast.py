@@ -15,7 +15,7 @@ from reflector.utils.string import NonEmptyString
 from reflector.ws_manager import get_ws_manager
 
 # Events that should also be sent to user room (matches Celery behavior)
-USER_ROOM_EVENTS = {"STATUS", "FINAL_TITLE", "DURATION"}
+USER_ROOM_EVENTS = {"STATUS", "FINAL_TITLE", "DURATION", "DAG_STATUS"}
 
 
 async def broadcast_event(

@@ -1,6 +1,7 @@
 """Search functionality for transcripts and other entities."""
 
 import itertools
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
@@ -172,6 +173,9 @@ class SearchResult(BaseModel):
     total_match_count: NonNegativeInt = Field(
         default=0, description="Total number of matches found in the transcript"
     )
+    dag_status: list[dict] | None = Field(
+        default=None, description="Latest DAG task status for processing transcripts"
+    )
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -328,6 +332,42 @@ class SnippetGenerator:
         return summary_snippets + webvtt_snippets, total_matches
 
 
+async def _fetch_dag_statuses(transcript_ids: list[str]) -> dict[str, list[dict]]:
+    """Fetch latest DAG_STATUS event data for given transcript IDs.
+
+    Returns dict mapping transcript_id -> tasks list from the last DAG_STATUS event.
+    """
+    if not transcript_ids:
+        return {}
+
+    db = get_database()
+    query = sqlalchemy.select(
+        [
+            transcripts.c.id,
+            transcripts.c.events,
+        ]
+    ).where(transcripts.c.id.in_(transcript_ids))
+
+    rows = await db.fetch_all(query)
+    result: dict[str, list[dict]] = {}
+
+    for row in rows:
+        events_raw = row["events"]
+        if not events_raw:
+            continue
+        # events is stored as JSON list
+        events = events_raw if isinstance(events_raw, list) else json.loads(events_raw)
+        # Find last DAG_STATUS event
+        for ev in reversed(events):
+            if isinstance(ev, dict) and ev.get("event") == "DAG_STATUS":
+                tasks = ev.get("data", {}).get("tasks")
+                if tasks:
+                    result[row["id"]] = tasks
+                break
+
+    return result
+
+
 class SearchController:
     """Controller for search operations across different entities."""
 
@@ -469,6 +509,14 @@ class SearchController:
         except Exception as e:
             logger.error(f"Error processing search results: {e}", exc_info=True)
             raise
+
+        # Enrich processing transcripts with DAG status
+        processing_ids = [r.id for r in results if r.status == "processing"]
+        if processing_ids:
+            dag_statuses = await _fetch_dag_statuses(processing_ids)
+            for r in results:
+                if r.id in dag_statuses:
+                    r.dag_status = dag_statuses[r.id]
 
         return results, total
 

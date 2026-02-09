@@ -14,6 +14,9 @@ import {
 } from "../../lib/apiHooks";
 import { NonEmptyString } from "../../lib/utils";
 
+import type { DagTask } from "../../lib/dagTypes";
+export type { DagTask, DagTaskStatus } from "../../lib/dagTypes";
+
 export type UseWebSockets = {
   transcriptTextLive: string;
   translateText: string;
@@ -24,6 +27,7 @@ export type UseWebSockets = {
   status: Status | null;
   waveform: AudioWaveform | null;
   duration: number | null;
+  dagStatus: DagTask[] | null;
 };
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
@@ -40,6 +44,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     summary: "",
   });
   const [status, setStatus] = useState<Status | null>(null);
+  const [dagStatus, setDagStatus] = useState<DagTask[] | null>(null);
   const { setError } = useError();
 
   const queryClient = useQueryClient();
@@ -431,8 +436,28 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               );
             }
             setStatus(message.data);
+            invalidateTranscript(queryClient, transcriptId as NonEmptyString);
             if (message.data.value === "ended") {
               ws.close();
+            }
+            break;
+
+          case "DAG_STATUS":
+            if (message.data?.tasks) {
+              setDagStatus(message.data.tasks);
+            }
+            break;
+
+          case "DAG_TASK_PROGRESS":
+            if (message.data) {
+              setDagStatus(
+                (prev) =>
+                  prev?.map((t) =>
+                    t.name === message.data.task_name
+                      ? { ...t, progress_pct: message.data.progress_pct }
+                      : t,
+                  ) ?? null,
+              );
             }
             break;
 
@@ -493,5 +518,6 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     status,
     waveform,
     duration,
+    dagStatus,
   };
 };

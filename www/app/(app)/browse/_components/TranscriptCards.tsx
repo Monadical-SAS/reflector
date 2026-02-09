@@ -19,6 +19,7 @@ import {
   generateTextFragment,
 } from "../../../lib/textHighlight";
 import type { components } from "../../../reflector-api";
+import type { DagTask } from "../../../lib/UserEventsProvider";
 
 type SearchResult = components["schemas"]["SearchResult"];
 type SourceKind = components["schemas"]["SourceKind"];
@@ -29,6 +30,7 @@ interface TranscriptCardsProps {
   isLoading?: boolean;
   onDelete: (transcriptId: string) => void;
   onReprocess: (transcriptId: string) => void;
+  dagStatusMap?: Map<string, DagTask[]>;
 }
 
 function highlightText(text: string, query: string): React.ReactNode {
@@ -102,11 +104,13 @@ function TranscriptCard({
   query,
   onDelete,
   onReprocess,
+  dagStatusMap,
 }: {
   result: SearchResult;
   query: string;
   onDelete: (transcriptId: string) => void;
   onReprocess: (transcriptId: string) => void;
+  dagStatusMap?: Map<string, DagTask[]>;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -137,7 +141,16 @@ function TranscriptCard({
     <Box borderWidth={1} p={4} borderRadius="md" fontSize="sm">
       <Flex justify="space-between" alignItems="flex-start" gap="2">
         <Box>
-          <TranscriptStatusIcon status={result.status} />
+          <TranscriptStatusIcon
+            status={result.status}
+            dagStatus={
+              dagStatusMap?.get(result.id) ??
+              ((result as Record<string, unknown>).dag_status as
+                | DagTask[]
+                | null) ??
+              null
+            }
+          />
         </Box>
         <Box flex="1">
           {/* Title with highlighting and text fragment for deep linking */}
@@ -284,6 +297,7 @@ export default function TranscriptCards({
   isLoading,
   onDelete,
   onReprocess,
+  dagStatusMap,
 }: TranscriptCardsProps) {
   return (
     <Box position="relative">
@@ -315,6 +329,7 @@ export default function TranscriptCards({
               query={query}
               onDelete={onDelete}
               onReprocess={onReprocess}
+              dagStatusMap={dagStatusMap}
             />
           ))}
         </Stack>

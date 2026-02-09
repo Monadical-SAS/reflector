@@ -41,13 +41,19 @@ async def transcript_events_websocket(
 
     try:
         # on first connection, send all events only to the current user
+        # Find the last DAG_STATUS to send after other historical events
+        last_dag_status = None
         for event in transcript.events:
-            # for now, do not send TRANSCRIPT or STATUS options - theses are live event
-            # not necessary to be sent to the client; but keep the rest
             name = event.event
             if name in ("TRANSCRIPT", "STATUS"):
                 continue
+            if name == "DAG_STATUS":
+                last_dag_status = event
+                continue
             await websocket.send_json(event.model_dump(mode="json"))
+        # Send only the most recent DAG_STATUS so reconnecting clients get current state
+        if last_dag_status is not None:
+            await websocket.send_json(last_dag_status.model_dump(mode="json"))
 
         # XXX if transcript is final (locked=True and status=ended)
         # XXX send a final event to the client and close the connection

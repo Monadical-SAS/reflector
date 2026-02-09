@@ -234,7 +234,7 @@ class Transcript(BaseModel):
         return dt.isoformat()
 
     def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
-        ev = TranscriptEvent(event=event, data=data.model_dump())
+        ev = TranscriptEvent(event=event, data=data.model_dump(mode="json"))
         self.events.append(ev)
         return ev
 
