@@ -13,6 +13,7 @@ import { useTranscriptGet } from "../../../../lib/apiHooks";
 import { parseNonEmptyString } from "../../../../lib/utils";
 import { useWebSockets } from "../../useWebSockets";
 import type { DagTask } from "../../useWebSockets";
+import { useDagStatusMap } from "../../../../lib/UserEventsProvider";
 import DagProgressTable from "./DagProgressTable";
 
 type TranscriptProcessing = {
@@ -29,13 +30,16 @@ export default function TranscriptProcessing(details: TranscriptProcessing) {
   const transcript = useTranscriptGet(transcriptId);
   const { status: wsStatus, dagStatus: wsDagStatus } =
     useWebSockets(transcriptId);
+  const userDagStatusMap = useDagStatusMap();
+  const userDagStatus = userDagStatusMap.get(transcriptId) ?? null;
 
   const restDagStatus: DagTask[] | null =
     ((transcript.data as Record<string, unknown>)?.dag_status as
       | DagTask[]
       | null) ?? null;
 
-  const dagStatus = wsDagStatus ?? restDagStatus;
+  // Prefer transcript room WS (most granular), then user room WS, then REST
+  const dagStatus = wsDagStatus ?? userDagStatus ?? restDagStatus;
 
   useEffect(() => {
     const status = wsStatus?.value ?? transcript.data?.status;
