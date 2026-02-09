@@ -184,7 +184,10 @@ class Loggable(Protocol):
 
 
 def make_audio_progress_logger(
-    ctx: Loggable, task_name: TaskName, interval: float = 5.0
+    ctx: Loggable,
+    task_name: TaskName,
+    interval: float = 5.0,
+    transcript_id: str | None = None,
 ) -> Callable[[float | None, float], None]:
     """Create a throttled progress logger callback for audio processing.
 
@@ -192,6 +195,7 @@ def make_audio_progress_logger(
         ctx: Object with .log() method (e.g., Hatchet Context).
         task_name: Name to prefix in log messages.
         interval: Minimum seconds between log messages.
+        transcript_id: If provided, broadcasts transient DAG_TASK_PROGRESS events.
 
     Returns:
         Callback(progress_pct, audio_position) that logs at most every `interval` seconds.
@@ -212,6 +216,27 @@ def make_audio_progress_logger(
                     f"{task_name} progress: @ {audio_position:.1f}s (elapsed: {elapsed:.1f}s)"
                 )
             last_log_time[0] = now
+
+        if transcript_id and progress_pct is not None:
+            try:
+                import asyncio  # noqa: PLC0415
+
+                from reflector.db.transcripts import TranscriptEvent  # noqa: PLC0415
+                from reflector.hatchet.broadcast import broadcast_event  # noqa: PLC0415
+
+                loop = asyncio.get_event_loop()
+                loop.create_task(
+                    broadcast_event(
+                        transcript_id,
+                        TranscriptEvent(
+                            event="DAG_TASK_PROGRESS",
+                            data={"task_name": task_name, "progress_pct": progress_pct},
+                        ),
+                        logger=logger,
+                    )
+                )
+            except Exception:
+                pass  # transient, never fail the callback
 
     return callback
 
@@ -237,8 +262,15 @@ def with_error_handling(
     ) -> Callable[[PipelineInput, Context], Coroutine[Any, Any, R]]:
         @functools.wraps(func)
         async def wrapper(input: PipelineInput, ctx: Context) -> R:
+            from reflector.hatchet.dag_progress import broadcast_dag_status  # noqa: I001, PLC0415
+
             try:
-                return await func(input, ctx)
+                result = await func(input, ctx)
+                try:
+                    await broadcast_dag_status(input.transcript_id, ctx.workflow_run_id)
+                except Exception:
+                    pass
+                return result
             except Exception as e:
                 logger.error(
                     f"[Hatchet] {step_name} failed",
@@ -246,6 +278,10 @@ def with_error_handling(
                     error=str(e),
                     exc_info=True,
                 )
+                try:
+                    await broadcast_dag_status(input.transcript_id, ctx.workflow_run_id)
+                except Exception:
+                    pass
                 if set_error_status:
                     await set_workflow_error_status(input.transcript_id)
                 raise
@@ -560,7 +596,9 @@ async def mixdown_tracks(input: PipelineInput, ctx: Context) -> MixdownResult:
         target_sample_rate,
         offsets_seconds=None,
         logger=logger,
-        progress_callback=make_audio_progress_logger(ctx, TaskName.MIXDOWN_TRACKS),
+        progress_callback=make_audio_progress_logger(
+            ctx, TaskName.MIXDOWN_TRACKS, transcript_id=input.transcript_id
+        ),
         expected_duration_sec=recording_duration if recording_duration > 0 else None,
     )
     await writer.flush()

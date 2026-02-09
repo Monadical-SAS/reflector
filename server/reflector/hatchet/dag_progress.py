@@ -187,3 +187,44 @@ def extract_dag_tasks(details: V1WorkflowRunDetails) -> list[DagTask]:
         )
 
     return result
+
+
+async def broadcast_dag_status(transcript_id: str, workflow_run_id: str) -> None:
+    """Fetch current DAG state from Hatchet and broadcast via WebSocket.
+
+    Fire-and-forget: exceptions are logged but never raised.
+    All imports are deferred for fork-safety (Hatchet workers fork processes).
+    """
+    try:
+        from reflector.db.transcripts import transcripts_controller  # noqa: I001, PLC0415
+        from reflector.hatchet.broadcast import append_event_and_broadcast  # noqa: PLC0415
+        from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
+        from reflector.hatchet.workflows.daily_multitrack_pipeline import (
+            fresh_db_connection,
+        )  # noqa: PLC0415
+        from reflector.logger import logger  # noqa: PLC0415
+
+        async with fresh_db_connection():
+            client = HatchetClientManager.get_client()
+            details = await client.runs.aio_get(workflow_run_id)
+            dag_tasks = extract_dag_tasks(details)
+            dag_status = DagStatusData(workflow_run_id=workflow_run_id, tasks=dag_tasks)
+
+            transcript = await transcripts_controller.get_by_id(transcript_id)
+            if transcript:
+                await append_event_and_broadcast(
+                    transcript_id,
+                    transcript,
+                    "DAG_STATUS",
+                    dag_status.model_dump(mode="json"),
+                    logger,
+                )
+    except Exception:
+        from reflector.logger import logger  # noqa: PLC0415
+
+        logger.warning(
+            "[DAG Progress] Failed to broadcast DAG status",
+            transcript_id=transcript_id,
+            workflow_run_id=workflow_run_id,
+            exc_info=True,
+        )

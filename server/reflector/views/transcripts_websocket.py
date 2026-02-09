@@ -45,7 +45,7 @@ async def transcript_events_websocket(
             # for now, do not send TRANSCRIPT or STATUS options - theses are live event
             # not necessary to be sent to the client; but keep the rest
             name = event.event
-            if name in ("TRANSCRIPT", "STATUS"):
+            if name in ("TRANSCRIPT", "STATUS", "DAG_STATUS"):
                 continue
             await websocket.send_json(event.model_dump(mode="json"))
 

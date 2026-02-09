@@ -267,6 +267,19 @@ async def dispatch_transcript_processing(
             )
 
         logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)
+
+        try:
+            from reflector.hatchet.dag_progress import broadcast_dag_status  # noqa: I001, PLC0415
+
+            await broadcast_dag_status(config.transcript_id, workflow_id)
+        except Exception:
+            logger.warning(
+                "[DAG Progress] Failed initial broadcast",
+                transcript_id=config.transcript_id,
+                workflow_id=workflow_id,
+                exc_info=True,
+            )
+
         return None
 
     elif isinstance(config, FileProcessingConfig):
