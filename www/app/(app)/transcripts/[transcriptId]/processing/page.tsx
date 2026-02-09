@@ -11,6 +11,9 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
 import { parseNonEmptyString } from "../../../../lib/utils";
+import { useWebSockets } from "../../useWebSockets";
+import type { DagTask } from "../../useWebSockets";
+import DagProgressTable from "./DagProgressTable";
 
 type TranscriptProcessing = {
   params: Promise<{
@@ -24,9 +27,18 @@ export default function TranscriptProcessing(details: TranscriptProcessing) {
   const router = useRouter();
 
   const transcript = useTranscriptGet(transcriptId);
+  const { status: wsStatus, dagStatus: wsDagStatus } =
+    useWebSockets(transcriptId);
+
+  const restDagStatus: DagTask[] | null =
+    ((transcript.data as Record<string, unknown>)?.dag_status as
+      | DagTask[]
+      | null) ?? null;
+
+  const dagStatus = wsDagStatus ?? restDagStatus;
 
   useEffect(() => {
-    const status = transcript.data?.status;
+    const status = wsStatus?.value ?? transcript.data?.status;
     if (!status) return;
 
     if (status === "ended" || status === "error") {
@@ -41,6 +53,7 @@ export default function TranscriptProcessing(details: TranscriptProcessing) {
       router.replace(dest);
     }
   }, [
+    wsStatus?.value,
     transcript.data?.status,
     transcript.data?.source_kind,
     router,
@@ -74,11 +87,29 @@ export default function TranscriptProcessing(details: TranscriptProcessing) {
         w={{ base: "full", md: "container.xl" }}
       >
         <Center h={"full"} w="full">
-          <VStack gap={10} bg="gray.100" p={10} borderRadius="md" maxW="500px">
-            <Spinner size="xl" color="blue.500" />
-            <Heading size={"md"} textAlign="center">
-              Processing recording
-            </Heading>
+          <VStack
+            gap={10}
+            bg="gray.100"
+            p={10}
+            borderRadius="md"
+            maxW="600px"
+            w="full"
+          >
+            {dagStatus ? (
+              <>
+                <Heading size={"md"} textAlign="center">
+                  Processing recording
+                </Heading>
+                <DagProgressTable tasks={dagStatus} />
+              </>
+            ) : (
+              <>
+                <Spinner size="xl" color="blue.500" />
+                <Heading size={"md"} textAlign="center">
+                  Processing recording
+                </Heading>
+              </>
+            )}
             <Text color="gray.600" textAlign="center">
               You can safely return to the library while your recording is being
               processed.
