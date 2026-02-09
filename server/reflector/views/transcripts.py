@@ -111,6 +111,7 @@ class GetTranscriptMinimal(BaseModel):
     room_id: str | None = None
     room_name: str | None = None
     audio_deleted: bool | None = None
+    dag_status: list[dict] | None = None
 
 
 class TranscriptParticipantWithEmail(TranscriptParticipant):
@@ -491,6 +492,13 @@ async def transcript_get(
                 )
             )
 
+    dag_status = None
+    if transcript.status == "processing" and transcript.events:
+        for ev in reversed(transcript.events):
+            if ev.event == "DAG_STATUS":
+                dag_status = ev.data.get("tasks") if isinstance(ev.data, dict) else None
+                break
+
     base_data = {
         "id": transcript.id,
         "user_id": transcript.user_id,
@@ -512,6 +520,7 @@ async def transcript_get(
         "room_id": transcript.room_id,
         "room_name": room_name,
         "audio_deleted": transcript.audio_deleted,
+        "dag_status": dag_status,
         "participants": participants,
     }
 
