@@ -5,7 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
 import { z } from "zod";
-import { invalidateTranscriptLists, TRANSCRIPT_SEARCH_URL } from "./apiHooks";
+import {
+  invalidateTranscript,
+  invalidateTranscriptLists,
+  TRANSCRIPT_SEARCH_URL,
+} from "./apiHooks";
+import type { NonEmptyString } from "./utils";
 
 import type { DagTask } from "./dagTypes";
 export type { DagTask, DagTaskStatus } from "./dagTypes";
@@ -161,6 +166,12 @@ export function UserEventsProvider({
             case "TRANSCRIPT_STATUS": {
               invalidateList().then(() => {});
               const transcriptId = fullMsg.data?.id as string | undefined;
+              if (transcriptId) {
+                invalidateTranscript(
+                  queryClient,
+                  transcriptId as NonEmptyString,
+                ).then(() => {});
+              }
               const status = fullMsg.data?.value as string | undefined;
               if (transcriptId && status && status !== "processing") {
                 setDagStatusMap((prev) => {
