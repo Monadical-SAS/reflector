@@ -145,11 +145,9 @@ function TranscriptCard({
             status={result.status}
             dagStatus={
               dagStatusMap?.get(result.id) ??
-              (
-                (result as Record<string, unknown>).dag_status as
-                  | { tasks?: DagTask[] }
-                  | undefined
-              )?.tasks ??
+              ((result as Record<string, unknown>).dag_status as
+                | DagTask[]
+                | null) ??
               null
             }
           />

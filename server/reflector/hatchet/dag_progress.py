@@ -125,7 +125,7 @@ def extract_dag_tasks(details: V1WorkflowRunDetails) -> list[DagTask]:
                 parents_by_step[child_id].append(step_to_name[s.step_id])
 
     # Join tasks by step_id
-    from hatchet_sdk.clients.rest.models import V1TaskSummary
+    from hatchet_sdk.clients.rest.models import V1TaskSummary  # noqa: PLC0415
 
     task_by_step: dict[str, V1TaskSummary] = {}
     for t in tasks:
@@ -199,9 +199,9 @@ async def broadcast_dag_status(transcript_id: str, workflow_run_id: str) -> None
         from reflector.db.transcripts import transcripts_controller  # noqa: I001, PLC0415
         from reflector.hatchet.broadcast import append_event_and_broadcast  # noqa: PLC0415
         from reflector.hatchet.client import HatchetClientManager  # noqa: PLC0415
-        from reflector.hatchet.workflows.daily_multitrack_pipeline import (
+        from reflector.hatchet.workflows.daily_multitrack_pipeline import (  # noqa: PLC0415
             fresh_db_connection,
-        )  # noqa: PLC0415
+        )
         from reflector.logger import logger  # noqa: PLC0415
 
         async with fresh_db_connection():
