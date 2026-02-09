@@ -676,8 +676,9 @@ class TestBroadcastDagStatus:
             assert call_args[0][1] is mock_transcript  # transcript
             assert call_args[0][2] == "DAG_STATUS"  # event_name
             data = call_args[0][3]
-            assert data["workflow_run_id"] == "wf-abc"
-            assert len(data["tasks"]) == 1
+            assert isinstance(data, DagStatusData)
+            assert data.workflow_run_id == "wf-abc"
+            assert len(data.tasks) == 1
 
     @pytest.mark.asyncio
     async def test_swallows_exceptions(self):

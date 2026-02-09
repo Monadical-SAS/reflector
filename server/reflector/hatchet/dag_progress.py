@@ -216,7 +216,7 @@ async def broadcast_dag_status(transcript_id: str, workflow_run_id: str) -> None
                     transcript_id,
                     transcript,
                     "DAG_STATUS",
-                    dag_status.model_dump(mode="json"),
+                    dag_status,
                     logger,
                 )
     except Exception:
