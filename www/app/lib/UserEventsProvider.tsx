@@ -1,11 +1,37 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
 import { z } from "zod";
 import { invalidateTranscriptLists, TRANSCRIPT_SEARCH_URL } from "./apiHooks";
+
+export type DagTaskStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type DagTask = {
+  name: string;
+  status: DagTaskStatus;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_seconds: number | null;
+  parents: string[];
+  error: string | null;
+  children_total: number | null;
+  children_completed: number | null;
+  progress_pct: number | null;
+};
+
+const DagStatusContext = React.createContext<Map<string, DagTask[]>>(new Map());
+
+export function useDagStatusMap() {
+  return React.useContext(DagStatusContext);
+}
 
 const UserEvent = z.object({
   event: z.string(),
@@ -95,6 +121,9 @@ export function UserEventsProvider({
   const queryClient = useQueryClient();
   const tokenRef = useRef<string | null>(null);
   const detachRef = useRef<(() => void) | null>(null);
+  const [dagStatusMap, setDagStatusMap] = useState<Map<string, DagTask[]>>(
+    new Map(),
+  );
 
   useEffect(() => {
     // Only tear down when the user is truly unauthenticated
@@ -133,19 +162,45 @@ export function UserEventsProvider({
     if (!detachRef.current) {
       const onMessage = (event: MessageEvent) => {
         try {
-          const msg = UserEvent.parse(JSON.parse(event.data));
+          const fullMsg = JSON.parse(event.data);
+          const msg = UserEvent.parse(fullMsg);
           const eventName = msg.event;
-
           const invalidateList = () => invalidateTranscriptLists(queryClient);
 
           switch (eventName) {
             case "TRANSCRIPT_CREATED":
             case "TRANSCRIPT_DELETED":
-            case "TRANSCRIPT_STATUS":
             case "TRANSCRIPT_FINAL_TITLE":
             case "TRANSCRIPT_DURATION":
               invalidateList().then(() => {});
               break;
+
+            case "TRANSCRIPT_STATUS": {
+              invalidateList().then(() => {});
+              const transcriptId = fullMsg.data?.id as string | undefined;
+              const status = fullMsg.data?.value as string | undefined;
+              if (transcriptId && status && status !== "processing") {
+                setDagStatusMap((prev) => {
+                  const next = new Map(prev);
+                  next.delete(transcriptId);
+                  return next;
+                });
+              }
+              break;
+            }
+
+            case "TRANSCRIPT_DAG_STATUS": {
+              const transcriptId = fullMsg.data?.id as string | undefined;
+              const tasks = fullMsg.data?.tasks as DagTask[] | undefined;
+              if (transcriptId && tasks) {
+                setDagStatusMap((prev) => {
+                  const next = new Map(prev);
+                  next.set(transcriptId, tasks);
+                  return next;
+                });
+              }
+              break;
+            }
 
             default:
               // Ignore other content events for list updates
@@ -176,5 +231,9 @@ export function UserEventsProvider({
     };
   }, []);
 
-  return <>{children}</>;
+  return (
+    <DagStatusContext.Provider value={dagStatusMap}>
+      {children}
+    </DagStatusContext.Provider>
+  );
 }

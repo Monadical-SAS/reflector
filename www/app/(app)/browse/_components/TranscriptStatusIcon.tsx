@@ -8,13 +8,17 @@ import {
   FaGear,
 } from "react-icons/fa6";
 import { TranscriptStatus } from "../../../lib/transcript";
+import type { DagTask } from "../../../lib/UserEventsProvider";
+import DagProgressDots from "./DagProgressDots";
 
 interface TranscriptStatusIconProps {
   status: TranscriptStatus;
+  dagStatus?: DagTask[] | null;
 }
 
 export default function TranscriptStatusIcon({
   status,
+  dagStatus,
 }: TranscriptStatusIconProps) {
   switch (status) {
     case "ended":
@@ -36,6 +40,9 @@ export default function TranscriptStatusIcon({
         </Box>
       );
     case "processing":
+      if (dagStatus && dagStatus.length > 0) {
+        return <DagProgressDots tasks={dagStatus} />;
+      }
       return (
         <Box as="span" title="Processing in progress">
           <Icon color="gray.500" as={FaGear} />

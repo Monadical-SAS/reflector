@@ -43,6 +43,7 @@ import DeleteTranscriptDialog from "./_components/DeleteTranscriptDialog";
 import { formatLocalDate } from "../../lib/time";
 import { RECORD_A_MEETING_URL } from "../../api/urls";
 import { useUserName } from "../../lib/useUserName";
+import { useDagStatusMap } from "../../lib/UserEventsProvider";
 
 const SEARCH_FORM_QUERY_INPUT_NAME = "query" as const;
 
@@ -273,6 +274,7 @@ export default function TranscriptBrowser() {
   }, [JSON.stringify(searchFilters)]);
 
   const userName = useUserName();
+  const dagStatusMap = useDagStatusMap();
   const [deletionLoading, setDeletionLoading] = useState(false);
   const cancelRef = React.useRef(null);
   const [transcriptToDeleteId, setTranscriptToDeleteId] =
@@ -408,6 +410,7 @@ export default function TranscriptBrowser() {
             isLoading={searchLoading}
             onDelete={setTranscriptToDeleteId}
             onReprocess={handleProcessTranscript}
+            dagStatusMap={dagStatusMap}
           />
 
           {!searchLoading && results.length === 0 && (
