@@ -101,4 +101,5 @@ These require external accounts and infrastructure that can't be scripted:
 
 - Step 1 (Ollama/LLM) — implemented and tested
 - Step 3 (transcript storage) — resolved: skip for live-only mode, no code changes needed
-- Steps 2, 4, 5, 6, 7 — need a separate research and implementation pass each
+- Step 4 (transcription/diarization) — in progress by another developer
+- Steps 2, 5, 6, 7 — next up: env defaults research, then unified script (see `TASKS.md`)
