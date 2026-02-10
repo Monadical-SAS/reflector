@@ -144,7 +144,18 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
         )
 
         # Network retries handled by OpenAILike (max_retries=3)
-        response = await Settings.llm.acomplete(json_prompt)
+        # response_format enables grammar-based constrained decoding on backends
+        # that support it (DMR/llama.cpp, vLLM, Ollama, OpenAI).
+        response = await Settings.llm.acomplete(
+            json_prompt,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": self.output_cls.__name__,
+                    "schema": self.output_cls.model_json_schema(),
+                },
+            },
+        )
         return ExtractionDone(output=response.text)
 
     @step

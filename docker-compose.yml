@@ -11,6 +11,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   worker:
     build:
@@ -57,6 +59,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: hatchet-worker-llm
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       hatchet:
         condition: service_healthy
@@ -127,6 +131,44 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama-gpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    profiles: ["ollama-cpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ollama_data:
 
 networks:
   default:
