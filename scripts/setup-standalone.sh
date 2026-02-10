@@ -69,13 +69,11 @@ env_set() {
 }
 
 compose_cmd() {
+    local compose_files="-f $ROOT_DIR/docker-compose.yml -f $ROOT_DIR/docker-compose.standalone.yml"
     if [[ "$OS" == "Linux" ]] && [[ -n "${OLLAMA_PROFILE:-}" ]]; then
-        docker compose -f "$ROOT_DIR/docker-compose.yml" \
-                        -f "$ROOT_DIR/docker-compose.standalone.yml" \
-                        --profile "$OLLAMA_PROFILE" \
-                        "$@"
+        docker compose $compose_files --profile "$OLLAMA_PROFILE" "$@"
     else
-        docker compose -f "$ROOT_DIR/docker-compose.yml" "$@"
+        docker compose $compose_files "$@"
     fi
 }
 
@@ -177,8 +175,7 @@ AUTH_BACKEND=none
 # --- Transcription (local whisper) ---
 TRANSCRIPT_BACKEND=whisper
 
-# --- Storage (local disk, no S3) ---
-# TRANSCRIPT_STORAGE_BACKEND is intentionally unset — audio stays on local disk
+# --- Storage (set by step_storage, Garage S3-compatible) ---
 
 # --- Diarization (disabled, no backend available) ---
 DIARIZATION_ENABLED=false
@@ -201,10 +198,67 @@ ENVEOF
 }
 
 # =========================================================
-# Step 3: Generate www/.env.local
+# Step 3: Object storage (Garage)
+# =========================================================
+step_storage() {
+    info "Step 3: Object storage (Garage)"
+
+    # Generate garage.toml from template (fill in RPC secret)
+    GARAGE_TOML="$ROOT_DIR/scripts/garage.toml"
+    GARAGE_TOML_RUNTIME="$ROOT_DIR/data/garage.toml"
+    if [[ ! -f "$GARAGE_TOML_RUNTIME" ]]; then
+        mkdir -p "$ROOT_DIR/data"
+        RPC_SECRET=$(openssl rand -hex 32)
+        sed "s|__GARAGE_RPC_SECRET__|${RPC_SECRET}|" "$GARAGE_TOML" > "$GARAGE_TOML_RUNTIME"
+    fi
+
+    compose_cmd up -d garage
+
+    wait_for_url "http://localhost:3903/health" "Garage admin API"
+    echo ""
+
+    # Layout: get node ID, assign, apply (skip if already applied)
+    NODE_ID=$(compose_cmd exec -T garage /garage node id -q 2>/dev/null | tr -d '[:space:]')
+    LAYOUT_STATUS=$(compose_cmd exec -T garage /garage layout show 2>&1 || true)
+    if echo "$LAYOUT_STATUS" | grep -q "No nodes"; then
+        compose_cmd exec -T garage /garage layout assign "$NODE_ID" -c 1G -z dc1
+        compose_cmd exec -T garage /garage layout apply --version 1
+    fi
+
+    # Create bucket (idempotent — skip if exists)
+    if ! compose_cmd exec -T garage /garage bucket info reflector-media &>/dev/null; then
+        compose_cmd exec -T garage /garage bucket create reflector-media
+    fi
+
+    # Create key (idempotent — skip if exists)
+    KEY_OUTPUT=$(compose_cmd exec -T garage /garage key info --name reflector 2>&1 || true)
+    if echo "$KEY_OUTPUT" | grep -q "not found"; then
+        KEY_OUTPUT=$(compose_cmd exec -T garage /garage key create --name reflector)
+    fi
+
+    # Parse key ID and secret from output
+    KEY_ID=$(echo "$KEY_OUTPUT" | grep -i "key id" | awk '{print $NF}')
+    KEY_SECRET=$(echo "$KEY_OUTPUT" | grep -i "secret" | awk '{print $NF}')
+
+    # Grant bucket permissions (idempotent)
+    compose_cmd exec -T garage /garage bucket allow reflector-media --read --write --key reflector
+
+    # Set env vars
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_BACKEND" "aws"
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL" "http://garage:3900"
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_AWS_BUCKET_NAME" "reflector-media"
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_AWS_REGION" "garage"
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID" "$KEY_ID"
+    env_set "$SERVER_ENV" "TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY" "$KEY_SECRET"
+
+    ok "Object storage ready (Garage)"
+}
+
+# =========================================================
+# Step 4: Generate www/.env.local
 # =========================================================
 step_www_env() {
-    info "Step 3: Generating www/.env.local"
+    info "Step 4: Generating www/.env.local"
 
     if [[ -f "$WWW_ENV" ]]; then
         ok "www/.env.local already exists — skipping"
@@ -232,22 +286,22 @@ ENVEOF
 }
 
 # =========================================================
-# Step 4: Start all services
+# Step 5: Start all services
 # =========================================================
 step_services() {
-    info "Step 4: Starting Docker services"
+    info "Step 5: Starting Docker services"
 
     # server runs alembic migrations on startup automatically (see runserver.sh)
-    compose_cmd up -d postgres redis server worker beat web
+    compose_cmd up -d postgres redis garage server worker beat web
     ok "Containers started"
     info "Server is running migrations (alembic upgrade head)..."
 }
 
 # =========================================================
-# Step 5: Health checks
+# Step 6: Health checks
 # =========================================================
 step_health() {
-    info "Step 5: Health checks"
+    info "Step 6: Health checks"
 
     wait_for_url "http://localhost:1250/health" "Server API" 60 3
     echo ""
@@ -291,6 +345,8 @@ main() {
     step_llm
     echo ""
     step_server_env
+    echo ""
+    step_storage
     echo ""
     step_www_env
     echo ""

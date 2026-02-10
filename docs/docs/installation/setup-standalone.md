@@ -59,20 +59,28 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 
 If env files already exist, the script only updates LLM vars — it won't overwrite your customizations.
 
-### 3. Transcript storage (skip for standalone)
+### 3. Object storage (Garage)
 
-Production uses AWS S3 to persist processed audio. **Not needed for standalone live/WebRTC mode.**
+Standalone uses [Garage](https://garagehq.deuxfleurs.fr/) — a lightweight S3-compatible object store running in Docker. The setup script starts Garage, initializes the layout, creates a bucket and access key, and writes the credentials to `server/.env`.
 
-When `TRANSCRIPT_STORAGE_BACKEND` is unset (the default):
-- Audio stays on local disk at `DATA_DIR/{transcript_id}/audio.mp3`
-- The live pipeline skips the S3 upload step gracefully
-- Audio playback endpoint serves directly from disk
-- Post-processing (LLM summary, topics, title) works entirely from DB text
-- Diarization (speaker ID) is skipped — already disabled in standalone config (`DIARIZATION_ENABLED=false`)
+**`server/.env`** — storage settings added by the script:
 
-> **Future**: if file upload or audio persistence across restarts is needed, implement a filesystem storage backend (`storage_local.py`) using the existing `Storage` plugin architecture in `reflector/storage/base.py`. No MinIO required.
+| Variable | Value | Why |
+|----------|-------|-----|
+| `TRANSCRIPT_STORAGE_BACKEND` | `aws` | Uses the S3-compatible storage driver |
+| `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` | `http://garage:3900` | Docker-internal Garage S3 API |
+| `TRANSCRIPT_STORAGE_AWS_BUCKET_NAME` | `reflector-media` | Created by the script |
+| `TRANSCRIPT_STORAGE_AWS_REGION` | `garage` | Must match Garage config |
+| `TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID` | *(auto-generated)* | Created by `garage key create` |
+| `TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY` | *(auto-generated)* | Created by `garage key create` |
 
-### 4. Transcription and diarization
+The `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` setting enables S3-compatible backends. When set, the storage driver uses path-style addressing and routes all requests to the custom endpoint. When unset (production AWS), behavior is unchanged.
+
+Garage config lives at `scripts/garage.toml` (mounted read-only into the container). Single-node, `replication_factor=1`.
+
+> **Note**: Presigned URLs embed the Garage Docker hostname (`http://garage:3900`). This is fine — the server proxies S3 responses to the browser. Modal GPU workers cannot reach internal Garage, but standalone doesn't use Modal.
+
+### 4. Transcription and diarization (NOT YET IMPLEMENTED)
 
 Standalone uses `TRANSCRIPT_BACKEND=whisper` for local CPU-based transcription. Diarization is disabled.
 
@@ -81,10 +89,10 @@ Standalone uses `TRANSCRIPT_BACKEND=whisper` for local CPU-based transcription. 
 ### 5. Docker services
 
 ```bash
-docker compose up -d postgres redis server worker beat web
+docker compose up -d postgres redis garage server worker beat web
 ```
 
-All services start in a single command. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
+All services start in a single command. Garage is already started by step 3 but is included for idempotency. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
 
 ### 6. Database migrations
 
@@ -105,6 +113,7 @@ Verifies:
 | `web` | 3000 | Next.js frontend |
 | `postgres` | 5432 | PostgreSQL database |
 | `redis` | 6379 | Cache + Celery broker |
+| `garage` | 3900, 3903 | S3-compatible object storage (S3 API + admin API) |
 | `worker` | — | Celery worker (live pipeline post-processing) |
 | `beat` | — | Celery beat (scheduled tasks) |
 
@@ -121,7 +130,7 @@ These require external accounts and infrastructure that can't be scripted:
 
 - Step 1 (Ollama/LLM) — implemented
 - Step 2 (environment files) — implemented
-- Step 3 (transcript storage) — resolved: skip for live-only mode
+- Step 3 (object storage / Garage) — implemented (`docker-compose.standalone.yml` + `setup-standalone.sh`)
 - Step 4 (transcription/diarization) — in progress by another developer
 - Steps 5-7 (Docker, migrations, health) — implemented
 - **Unified script**: `scripts/setup-standalone.sh`
