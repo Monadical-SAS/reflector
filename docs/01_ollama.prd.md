@@ -4,7 +4,7 @@
 
 Reflector currently uses a remote LLM endpoint (configurable via `LLM_URL`) for all post-transcription intelligence: topic detection, title generation, subject extraction, summarization, action item identification. The default model is `microsoft/phi-4`.
 
-**Goal**: Run all LLM inference locally on developer machines (and optionally in self-hosted production), eliminating dependence on external LLM API providers. Zero cloud LLM costs, full data privacy, offline-capable development. One setup script, then `docker compose up` works.
+**Goal**: Let users run Reflector locally for demo/evaluation purposes without requiring cloud LLM API keys. A single setup script provisions a local LLM via Ollama, so the full post-transcription pipeline (topics, summaries, titles, etc.) works out of the box on a user's machine.
 
 ---
 
@@ -28,7 +28,7 @@ All LLM calls go through one `LLM` class wrapping LlamaIndex's `OpenAILike` clie
 ### Call flow
 
 ```
-Hatchet workflows / Legacy processors
+Hatchet workflows / Celery processors
   -> LLM.get_response() or LLM.get_structured_response()
     -> LlamaIndex TreeSummarize + StructuredOutputWorkflow
       -> OpenAILike client (is_chat_model=True, is_function_calling_model=False)
