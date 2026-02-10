@@ -720,7 +720,6 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
                 chunk_text=chunk["text"],
                 timestamp=chunk["timestamp"],
                 duration=chunk["duration"],
-                words=chunk["words"],
             )
         )
         for chunk in chunks
@@ -732,31 +731,41 @@ async def detect_topics(input: PipelineInput, ctx: Context) -> TopicsResult:
         TopicChunkResult(**result[TaskName.DETECT_CHUNK_TOPIC]) for result in results
     ]
 
+    # Build index-to-words map from local chunks (words not in child workflow results)
+    chunks_by_index = {chunk["index"]: chunk["words"] for chunk in chunks}
+
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
         if not transcript:
             raise ValueError(f"Transcript {input.transcript_id} not found")
 
+        # Clear topics for idempotency on retry (each topic gets a fresh UUID,
+        # so upsert_topic would append duplicates without this)
+        await transcripts_controller.update(transcript, {"topics": []})
+
         for chunk in topic_chunks:
+            chunk_words = chunks_by_index[chunk.chunk_index]
             topic = TranscriptTopic(
                 title=chunk.title,
                 summary=chunk.summary,
                 timestamp=chunk.timestamp,
-                transcript=" ".join(w.text for w in chunk.words),
-                words=chunk.words,
+                transcript=" ".join(w.text for w in chunk_words),
+                words=chunk_words,
             )
             await transcripts_controller.upsert_topic(transcript, topic)
             await append_event_and_broadcast(
                 input.transcript_id, transcript, "TOPIC", topic, logger=logger
             )
 
+    # Words omitted from TopicsResult — already persisted to DB above.
+    # Downstream tasks that need words refetch from DB.
     topics_list = [
         TitleSummary(
             title=chunk.title,
             summary=chunk.summary,
             timestamp=chunk.timestamp,
             duration=chunk.duration,
-            transcript=TranscriptType(words=chunk.words),
+            transcript=TranscriptType(words=[]),
         )
         for chunk in topic_chunks
     ]
@@ -842,9 +851,8 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
     ctx.log(f"extract_subjects: starting for transcript_id={input.transcript_id}")
 
     topics_result = ctx.task_output(detect_topics)
-    topics = topics_result.topics
 
-    if not topics:
+    if not topics_result.topics:
         ctx.log("extract_subjects: no topics, returning empty subjects")
         return SubjectsResult(
             subjects=[],
@@ -857,11 +865,13 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
     # sharing DB connections and LLM HTTP pools across forks
     from reflector.db.transcripts import transcripts_controller  # noqa: PLC0415
     from reflector.llm import LLM  # noqa: PLC0415
+    from reflector.processors.types import words_to_segments  # noqa: PLC0415
 
     async with fresh_db_connection():
         transcript = await transcripts_controller.get_by_id(input.transcript_id)
 
-        # Build transcript text from topics (same logic as TranscriptFinalSummaryProcessor)
+        # Build transcript text from DB topics (words omitted from task output
+        # to reduce Hatchet payload size — refetch from DB where they were persisted)
         speakermap = {}
         if transcript and transcript.participants:
             speakermap = {
@@ -871,8 +881,8 @@ async def extract_subjects(input: PipelineInput, ctx: Context) -> SubjectsResult
             }
 
         text_lines = []
-        for topic in topics:
-            for segment in topic.transcript.as_segments():
+        for db_topic in transcript.topics:
+            for segment in words_to_segments(db_topic.words):
                 name = speakermap.get(segment.speaker, f"Speaker {segment.speaker}")
                 text_lines.append(f"{name}: {segment.text}")
 
