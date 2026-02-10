@@ -45,11 +45,20 @@ The script would copy `.env` templates if not present and fill defaults suitable
 
 > The exact set of env defaults and whether the script patches an existing `.env` or only creates from template has not been decided yet. A follow-up research pass can determine what's safe to auto-fill vs. what needs user input.
 
-### 3. Transcript storage
+### 3. Transcript storage (resolved — skip for standalone)
 
-Production uses AWS S3. Local dev needs an alternative.
+Production uses AWS S3 to persist processed audio. **Not needed for standalone live/WebRTC mode.**
 
-> Options include MinIO in docker-compose (S3-compatible, zero config), a filesystem-backed storage backend (if one exists in the codebase), or skipping storage for dev if the pipeline can function without it. This depends on what `TRANSCRIPT_STORAGE_BACKEND` supports beyond `aws` — needs investigation.
+When `TRANSCRIPT_STORAGE_BACKEND` is unset (the default):
+- Audio stays on local disk at `DATA_DIR/{transcript_id}/audio.mp3`
+- The live pipeline skips the S3 upload step gracefully
+- Audio playback endpoint serves directly from disk
+- Post-processing (LLM summary, topics, title) works entirely from DB text
+- Diarization (speaker ID) is skipped — already disabled in standalone config (`DIARIZATION_ENABLED=false`)
+
+The script ensures `TRANSCRIPT_STORAGE_BACKEND` is left unset in `server/.env`.
+
+> **Future**: if file upload or audio persistence across restarts is needed, implement a filesystem storage backend (`storage_local.py`) using the existing `Storage` plugin architecture in `reflector/storage/base.py`. No MinIO required.
 
 ### 4. Transcription and diarization
 
@@ -90,4 +99,6 @@ These require external accounts and infrastructure that can't be scripted:
 
 ## Current status
 
-Step 1 (Ollama/LLM) is implemented and tested. Steps 2-7 need a separate research and implementation pass each.
+- Step 1 (Ollama/LLM) — implemented and tested
+- Step 3 (transcript storage) — resolved: skip for live-only mode, no code changes needed
+- Steps 2, 4, 5, 6, 7 — need a separate research and implementation pass each
