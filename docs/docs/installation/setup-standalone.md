@@ -10,7 +10,7 @@ title: Standalone Local Setup
 ```bash
 git clone https://github.com/monadical-sas/reflector.git
 cd reflector
-./scripts/setup-local-dev.sh
+./scripts/setup-standalone.sh
 ```
 
 The script is idempotent — safe to re-run at any time. It detects what's already set up and skips completed steps.
@@ -124,4 +124,4 @@ These require external accounts and infrastructure that can't be scripted:
 - Step 3 (transcript storage) — resolved: skip for live-only mode
 - Step 4 (transcription/diarization) — in progress by another developer
 - Steps 5-7 (Docker, migrations, health) — implemented
-- **Unified script**: `scripts/setup-local-dev.sh`
+- **Unified script**: `scripts/setup-standalone.sh`
