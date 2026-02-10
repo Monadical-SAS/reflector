@@ -69,8 +69,10 @@ case "$OS" in
             LLM_URL="http://ollama-cpu:$OLLAMA_PORT/v1"
         fi
 
+        COMPOSE="docker compose -f docker-compose.yml -f docker-compose.standalone.yml"
+
         echo "Starting Ollama container..."
-        docker compose --profile "$PROFILE" up -d
+        $COMPOSE --profile "$PROFILE" up -d
 
         # Determine container name
         if [ "$PROFILE" = "ollama-gpu" ]; then
@@ -82,7 +84,7 @@ case "$OS" in
         wait_for_ollama "http://localhost:$OLLAMA_PORT"
 
         echo "Pulling model $MODEL..."
-        docker compose exec "$SVC" ollama pull "$MODEL"
+        $COMPOSE exec "$SVC" ollama pull "$MODEL"
 
         echo ""
         echo "Done. Add to server/.env:"
@@ -90,7 +92,7 @@ case "$OS" in
         echo "  LLM_MODEL=$MODEL"
         echo "  LLM_API_KEY=not-needed"
         echo ""
-        echo "Then: docker compose --profile $PROFILE up -d"
+        echo "Then: $COMPOSE --profile $PROFILE up -d"
         ;;
 
     *)

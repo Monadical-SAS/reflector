@@ -27,7 +27,7 @@ The script is idempotent — safe to re-run at any time. It detects what's alrea
 
 **Mac**: starts Ollama natively (Metal GPU acceleration). Pulls the LLM model. Docker containers reach it via `host.docker.internal:11434`.
 
-**Linux**: starts containerized Ollama via docker-compose profile (`ollama-gpu` with NVIDIA, `ollama-cpu` without). Pulls model inside the container.
+**Linux**: starts containerized Ollama via `docker-compose.standalone.yml` profile (`ollama-gpu` with NVIDIA, `ollama-cpu` without). Pulls model inside the container.
 
 Configures `server/.env`:
 ```

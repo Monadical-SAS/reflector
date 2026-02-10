@@ -190,52 +190,30 @@ LLM_API_KEY=not-needed
 LLM_CONTEXT_WINDOW=16000
 ```
 
-### Docker Compose additions
+### Docker Compose changes
 
+**`docker-compose.yml`** — `extra_hosts` added to `server` and `hatchet-worker-llm` so containers can reach host Ollama on Mac:
 ```yaml
+  hatchet-worker-llm:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+**`docker-compose.standalone.yml`** — Ollama services for Linux (not in main compose, only used with `-f`):
+```yaml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.standalone.yml --profile ollama-gpu up -d
 services:
   ollama:
     image: ollama/ollama:latest
     profiles: ["ollama-gpu"]
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+    # ... NVIDIA GPU passthrough
   ollama-cpu:
     image: ollama/ollama:latest
     profiles: ["ollama-cpu"]
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  hatchet-worker-llm:
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-volumes:
-  ollama_data:
+    # ... CPU-only fallback
 ```
+
+Mac devs never touch `docker-compose.standalone.yml` — Ollama runs natively. The standalone file is for Linux deployment and will grow to include other local-only services (e.g. MinIO for S3) as the standalone story expands.
 
 ### Known gotchas
 

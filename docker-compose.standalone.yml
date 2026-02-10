@@ -1,0 +1,45 @@
+# Standalone services for fully local deployment (no external dependencies).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d
+#
+# On Linux with NVIDIA GPU, also pass: --profile ollama-gpu
+# On Linux without GPU:                --profile ollama-cpu
+# On Mac: Ollama runs natively (Metal GPU) — no profile needed, services here unused.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama-gpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    profiles: ["ollama-cpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ollama_data:
