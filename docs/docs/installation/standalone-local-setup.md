@@ -1,9 +1,9 @@
 ---
 sidebar_position: 2
-title: Local Development Setup
+title: Standalone Local Setup
 ---
 
-# Local Development Setup
+# Standalone Local Setup
 
 **The goal**: a clueless user clones the repo, runs one script, and has a working Reflector instance locally. No cloud accounts, no API keys, no manual env file editing.
 
@@ -38,7 +38,6 @@ LLM_API_KEY=not-needed
 
 The current standalone script for this step is `scripts/setup-local-llm.sh`. It will be folded into the unified `setup-local-dev.sh` once the other steps are implemented.
 
-See [Ollama PRD](../../01_ollama.prd.md) for architecture, why Ollama over Docker Model Runner, and model comparison.
 
 ### 2. Environment files
 
