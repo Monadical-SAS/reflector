@@ -1,0 +1,314 @@
+#!/usr/bin/env bash
+#
+# Standalone local development setup for Reflector.
+# Takes a fresh clone to a working instance — no cloud accounts, no API keys.
+#
+# Usage:
+#   ./scripts/setup-local-dev.sh
+#
+# Idempotent — safe to re-run at any time.
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+SERVER_ENV="$ROOT_DIR/server/.env"
+WWW_ENV="$ROOT_DIR/www/.env.local"
+
+MODEL="${LLM_MODEL:-qwen2.5:14b}"
+OLLAMA_PORT="${OLLAMA_PORT:-11434}"
+
+OS="$(uname -s)"
+
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+info()  { echo -e "${CYAN}==>${NC} $*"; }
+ok()    { echo -e "${GREEN}  ✓${NC} $*"; }
+warn()  { echo -e "${YELLOW}  !${NC} $*"; }
+err()   { echo -e "${RED}  ✗${NC} $*" >&2; }
+
+# --- Helpers ---
+
+wait_for_url() {
+    local url="$1" label="$2" retries="${3:-30}" interval="${4:-2}"
+    for i in $(seq 1 "$retries"); do
+        if curl -sf "$url" > /dev/null 2>&1; then
+            return 0
+        fi
+        echo -ne "\r  Waiting for $label... ($i/$retries)"
+        sleep "$interval"
+    done
+    echo ""
+    err "$label not responding at $url after $retries attempts"
+    return 1
+}
+
+env_has_key() {
+    local file="$1" key="$2"
+    grep -q "^${key}=" "$file" 2>/dev/null
+}
+
+env_set() {
+    local file="$1" key="$2" value="$3"
+    if env_has_key "$file" "$key"; then
+        # Replace existing value (portable sed)
+        if [[ "$OS" == "Darwin" ]]; then
+            sed -i '' "s|^${key}=.*|${key}=${value}|" "$file"
+        else
+            sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+        fi
+    else
+        echo "${key}=${value}" >> "$file"
+    fi
+}
+
+compose_cmd() {
+    if [[ "$OS" == "Linux" ]] && [[ -n "${OLLAMA_PROFILE:-}" ]]; then
+        docker compose -f "$ROOT_DIR/docker-compose.yml" \
+                        -f "$ROOT_DIR/docker-compose.standalone.yml" \
+                        --profile "$OLLAMA_PROFILE" \
+                        "$@"
+    else
+        docker compose -f "$ROOT_DIR/docker-compose.yml" "$@"
+    fi
+}
+
+# =========================================================
+# Step 1: LLM / Ollama
+# =========================================================
+step_llm() {
+    info "Step 1: LLM setup (Ollama + $MODEL)"
+
+    case "$OS" in
+        Darwin)
+            if ! command -v ollama &> /dev/null; then
+                err "Ollama not found. Install it:"
+                err "  brew install ollama"
+                err "  # or https://ollama.com/download"
+                exit 1
+            fi
+
+            # Start if not running
+            if ! curl -sf "http://localhost:$OLLAMA_PORT/api/tags" > /dev/null 2>&1; then
+                info "Starting Ollama..."
+                ollama serve &
+                disown
+            fi
+
+            wait_for_url "http://localhost:$OLLAMA_PORT/api/tags" "Ollama"
+            echo ""
+
+            # Pull model if not already present
+            if ollama list 2>/dev/null | grep -q "$MODEL"; then
+                ok "Model $MODEL already pulled"
+            else
+                info "Pulling model $MODEL (this may take a while)..."
+                ollama pull "$MODEL"
+            fi
+
+            LLM_URL_VALUE="http://host.docker.internal:$OLLAMA_PORT/v1"
+            ;;
+
+        Linux)
+            if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
+                ok "NVIDIA GPU detected — using ollama-gpu profile"
+                OLLAMA_PROFILE="ollama-gpu"
+                OLLAMA_SVC="ollama"
+                LLM_URL_VALUE="http://ollama:$OLLAMA_PORT/v1"
+            else
+                warn "No NVIDIA GPU — using ollama-cpu profile"
+                OLLAMA_PROFILE="ollama-cpu"
+                OLLAMA_SVC="ollama-cpu"
+                LLM_URL_VALUE="http://ollama-cpu:$OLLAMA_PORT/v1"
+            fi
+
+            info "Starting Ollama container..."
+            compose_cmd up -d
+
+            wait_for_url "http://localhost:$OLLAMA_PORT/api/tags" "Ollama"
+            echo ""
+
+            # Pull model inside container
+            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | grep -q "$MODEL"; then
+                ok "Model $MODEL already pulled"
+            else
+                info "Pulling model $MODEL inside container (this may take a while)..."
+                compose_cmd exec "$OLLAMA_SVC" ollama pull "$MODEL"
+            fi
+            ;;
+
+        *)
+            err "Unsupported OS: $OS"
+            exit 1
+            ;;
+    esac
+
+    ok "LLM ready ($MODEL via Ollama)"
+}
+
+# =========================================================
+# Step 2: Generate server/.env
+# =========================================================
+step_server_env() {
+    info "Step 2: Generating server/.env"
+
+    if [[ -f "$SERVER_ENV" ]]; then
+        ok "server/.env already exists — checking key vars"
+    else
+        cat > "$SERVER_ENV" << 'ENVEOF'
+# Generated by setup-local-dev.sh — standalone local development
+# Source of truth for settings: server/reflector/settings.py
+
+# --- Database (Docker internal hostnames) ---
+DATABASE_URL=postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
+REDIS_HOST=redis
+CELERY_BROKER_URL=redis://redis:6379/1
+CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+# --- Auth (disabled for standalone) ---
+AUTH_BACKEND=none
+
+# --- Transcription (local whisper) ---
+TRANSCRIPT_BACKEND=whisper
+
+# --- Storage (local disk, no S3) ---
+# TRANSCRIPT_STORAGE_BACKEND is intentionally unset — audio stays on local disk
+
+# --- Diarization (disabled, no backend available) ---
+DIARIZATION_ENABLED=false
+
+# --- Translation (passthrough, no Modal) ---
+TRANSLATION_BACKEND=passthrough
+
+# --- LLM (set below by setup script) ---
+LLM_API_KEY=not-needed
+ENVEOF
+        ok "Created server/.env"
+    fi
+
+    # Ensure LLM vars are set (may differ per OS/re-run)
+    env_set "$SERVER_ENV" "LLM_URL" "$LLM_URL_VALUE"
+    env_set "$SERVER_ENV" "LLM_MODEL" "$MODEL"
+    env_set "$SERVER_ENV" "LLM_API_KEY" "not-needed"
+
+    ok "LLM vars set (LLM_URL=$LLM_URL_VALUE)"
+}
+
+# =========================================================
+# Step 3: Generate www/.env.local
+# =========================================================
+step_www_env() {
+    info "Step 3: Generating www/.env.local"
+
+    if [[ -f "$WWW_ENV" ]]; then
+        ok "www/.env.local already exists — skipping"
+        return
+    fi
+
+    cat > "$WWW_ENV" << 'ENVEOF'
+# Generated by setup-local-dev.sh — standalone local development
+
+SITE_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=standalone-dev-secret-not-for-production
+
+# Browser-side URLs (localhost, outside Docker)
+API_URL=http://localhost:1250
+WEBSOCKET_URL=ws://localhost:1250
+
+# Server-side (SSR) URL (Docker internal)
+SERVER_API_URL=http://server:1250
+
+# Auth disabled for standalone
+FEATURE_REQUIRE_LOGIN=false
+ENVEOF
+    ok "Created www/.env.local"
+}
+
+# =========================================================
+# Step 4: Start all services
+# =========================================================
+step_services() {
+    info "Step 4: Starting Docker services"
+
+    # server runs alembic migrations on startup automatically (see runserver.sh)
+    compose_cmd up -d postgres redis server worker beat web
+    ok "Containers started"
+    info "Server is running migrations (alembic upgrade head)..."
+}
+
+# =========================================================
+# Step 5: Health checks
+# =========================================================
+step_health() {
+    info "Step 5: Health checks"
+
+    wait_for_url "http://localhost:1250/health" "Server API" 60 3
+    echo ""
+    ok "Server API healthy"
+
+    wait_for_url "http://localhost:3000" "Frontend" 90 3
+    echo ""
+    ok "Frontend responding"
+
+    # Check LLM reachability from inside a container
+    if docker compose -f "$ROOT_DIR/docker-compose.yml" exec -T server \
+        curl -sf "$LLM_URL_VALUE/models" > /dev/null 2>&1; then
+        ok "LLM reachable from containers"
+    else
+        warn "LLM not reachable from containers at $LLM_URL_VALUE"
+        warn "Summaries/topics/titles won't work until LLM is accessible"
+    fi
+}
+
+# =========================================================
+# Main
+# =========================================================
+main() {
+    echo ""
+    echo "=========================================="
+    echo " Reflector — Standalone Local Setup"
+    echo "=========================================="
+    echo ""
+
+    # Ensure we're in the repo root
+    if [[ ! -f "$ROOT_DIR/docker-compose.yml" ]]; then
+        err "docker-compose.yml not found in $ROOT_DIR"
+        err "Run this script from the repo root: ./scripts/setup-local-dev.sh"
+        exit 1
+    fi
+
+    # LLM_URL_VALUE is set by step_llm, used by later steps
+    LLM_URL_VALUE=""
+    OLLAMA_PROFILE=""
+
+    step_llm
+    echo ""
+    step_server_env
+    echo ""
+    step_www_env
+    echo ""
+    step_services
+    echo ""
+    step_health
+
+    echo ""
+    echo "=========================================="
+    echo -e " ${GREEN}Reflector is running!${NC}"
+    echo "=========================================="
+    echo ""
+    echo "  Frontend:  http://localhost:3000"
+    echo "  API:       http://localhost:1250"
+    echo ""
+    echo "  To stop:   docker compose down"
+    echo "  To re-run: ./scripts/setup-local-dev.sh"
+    echo ""
+}
+
+main "$@"

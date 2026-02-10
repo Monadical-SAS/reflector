@@ -20,32 +20,46 @@ The script is idempotent — safe to re-run at any time. It detects what's alrea
 - Docker / OrbStack / Docker Desktop (any)
 - Mac (Apple Silicon) or Linux
 - 16GB+ RAM (32GB recommended for 14B LLM models)
+- **Mac only**: [Ollama](https://ollama.com/download) installed (`brew install ollama`)
 
 ## What the script does
 
-### 1. LLM inference via Ollama (implemented)
+### 1. LLM inference via Ollama
 
 **Mac**: starts Ollama natively (Metal GPU acceleration). Pulls the LLM model. Docker containers reach it via `host.docker.internal:11434`.
 
 **Linux**: starts containerized Ollama via `docker-compose.standalone.yml` profile (`ollama-gpu` with NVIDIA, `ollama-cpu` without). Pulls model inside the container.
 
-Configures `server/.env`:
-```
-LLM_URL=http://host.docker.internal:11434/v1
-LLM_MODEL=qwen2.5:14b
-LLM_API_KEY=not-needed
-```
-
-The current standalone script for this step is `scripts/setup-local-llm.sh`. It will be folded into the unified `setup-local-dev.sh` once the other steps are implemented.
-
-
 ### 2. Environment files
 
-The script would copy `.env` templates if not present and fill defaults suitable for local dev (localhost postgres, redis, no auth, etc.).
+Generates `server/.env` and `www/.env.local` with standalone defaults:
 
-> The exact set of env defaults and whether the script patches an existing `.env` or only creates from template has not been decided yet. A follow-up research pass can determine what's safe to auto-fill vs. what needs user input.
+**`server/.env`** — key settings:
 
-### 3. Transcript storage (resolved — skip for standalone)
+| Variable | Value | Why |
+|----------|-------|-----|
+| `DATABASE_URL` | `postgresql+asyncpg://...@postgres:5432/reflector` | Docker-internal hostname |
+| `REDIS_HOST` | `redis` | Docker-internal hostname |
+| `CELERY_BROKER_URL` | `redis://redis:6379/1` | Docker-internal hostname |
+| `AUTH_BACKEND` | `none` | No Authentik in standalone |
+| `TRANSCRIPT_BACKEND` | `whisper` | Local transcription |
+| `DIARIZATION_ENABLED` | `false` | No diarization backend |
+| `TRANSLATION_BACKEND` | `passthrough` | No Modal |
+| `LLM_URL` | `http://host.docker.internal:11434/v1` (Mac) | Ollama endpoint |
+
+**`www/.env.local`** — key settings:
+
+| Variable | Value |
+|----------|-------|
+| `API_URL` | `http://localhost:1250` |
+| `SERVER_API_URL` | `http://server:1250` |
+| `WEBSOCKET_URL` | `ws://localhost:1250` |
+| `FEATURE_REQUIRE_LOGIN` | `false` |
+| `NEXTAUTH_SECRET` | `standalone-dev-secret-not-for-production` |
+
+If env files already exist, the script only updates LLM vars — it won't overwrite your customizations.
+
+### 3. Transcript storage (skip for standalone)
 
 Production uses AWS S3 to persist processed audio. **Not needed for standalone live/WebRTC mode.**
 
@@ -56,38 +70,43 @@ When `TRANSCRIPT_STORAGE_BACKEND` is unset (the default):
 - Post-processing (LLM summary, topics, title) works entirely from DB text
 - Diarization (speaker ID) is skipped — already disabled in standalone config (`DIARIZATION_ENABLED=false`)
 
-The script ensures `TRANSCRIPT_STORAGE_BACKEND` is left unset in `server/.env`.
-
 > **Future**: if file upload or audio persistence across restarts is needed, implement a filesystem storage backend (`storage_local.py`) using the existing `Storage` plugin architecture in `reflector/storage/base.py`. No MinIO required.
 
 ### 4. Transcription and diarization
 
-Production uses Modal.com (cloud GPU) or self-hosted GPU servers.
+Standalone uses `TRANSCRIPT_BACKEND=whisper` for local CPU-based transcription. Diarization is disabled.
 
-> The codebase has a `TRANSCRIPT_BACKEND=whisper` option for local Whisper. Whether this runs acceptably on CPU for short dev recordings, and whether diarization has a local fallback, is unknown. For a minimal local setup, it may be sufficient to skip transcription and only test the LLM pipeline against already-transcribed data.
+> Another developer is working on optimizing the local transcription experience. For now, local Whisper works for short recordings but is slow on CPU.
 
 ### 5. Docker services
 
 ```bash
-docker compose up -d postgres redis server hatchet hatchet-worker-cpu hatchet-worker-llm web
+docker compose up -d postgres redis server worker beat web
 ```
 
-Frontend included in compose (`web` service). Everything comes up in one command.
+All services start in a single command. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
 
 ### 6. Database migrations
 
-```bash
-docker compose exec server uv run alembic upgrade head
-```
-
-Idempotent (alembic tracks applied migrations).
+Run automatically by the `server` container on startup (`runserver.sh` calls `alembic upgrade head`). No manual step needed.
 
 ### 7. Health check
 
 Verifies:
 - Server responds at `http://localhost:1250/health`
-- LLM endpoint reachable from inside containers
 - Frontend serves at `http://localhost:3000`
+- LLM endpoint reachable from inside containers
+
+## Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| `server` | 1250 | FastAPI backend (runs migrations on start) |
+| `web` | 3000 | Next.js frontend |
+| `postgres` | 5432 | PostgreSQL database |
+| `redis` | 6379 | Cache + Celery broker |
+| `worker` | — | Celery worker (live pipeline post-processing) |
+| `beat` | — | Celery beat (scheduled tasks) |
 
 ## What's NOT covered
 
@@ -95,11 +114,14 @@ These require external accounts and infrastructure that can't be scripted:
 
 - **Live meeting rooms** — requires Daily.co account, S3 bucket, IAM roles
 - **Authentication** — requires Authentik deployment and OAuth configuration
+- **Hatchet workflows** — requires separate Hatchet setup for multitrack processing
 - **Production deployment** — see [Deployment Guide](./overview)
 
 ## Current status
 
-- Step 1 (Ollama/LLM) — implemented and tested
-- Step 3 (transcript storage) — resolved: skip for live-only mode, no code changes needed
+- Step 1 (Ollama/LLM) — implemented
+- Step 2 (environment files) — implemented
+- Step 3 (transcript storage) — resolved: skip for live-only mode
 - Step 4 (transcription/diarization) — in progress by another developer
-- Steps 2, 5, 6, 7 — next up: env defaults research, then unified script (see `TASKS.md`)
+- Steps 5-7 (Docker, migrations, health) — implemented
+- **Unified script**: `scripts/setup-local-dev.sh`
