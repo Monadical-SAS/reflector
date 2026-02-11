@@ -6,7 +6,7 @@ Reference: https://docs.daily.co/reference/rest-api/webhooks
 
 from typing import Annotated, Any, Dict, Literal, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from reflector.utils.string import NonEmptyString
 
@@ -41,6 +41,8 @@ class DailyTrack(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/recordings
     """
 
+    model_config = ConfigDict(extra="ignore")
+
     type: Literal["audio", "video"]
     s3Key: NonEmptyString = Field(description="S3 object key for the track file")
     size: int = Field(description="File size in bytes")
@@ -53,6 +55,8 @@ class DailyWebhookEvent(BaseModel):
 
     Reference: https://docs.daily.co/reference/rest-api/webhooks
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     version: NonEmptyString = Field(
         description="Represents the version of the event. This uses semantic versioning to inform a consumer if the payload has introduced any breaking changes"
@@ -82,7 +86,13 @@ class ParticipantJoinedPayload(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/webhooks/events/participant-joined
     """
 
-    room_name: NonEmptyString | None = Field(None, description="Daily.co room name")
+    model_config = ConfigDict(extra="ignore")
+
+    room_name: NonEmptyString | None = Field(
+        None,
+        description="Daily.co room name",
+        validation_alias=AliasChoices("room_name", "room"),
+    )
     session_id: NonEmptyString = Field(description="Daily.co session identifier")
     user_id: NonEmptyString = Field(description="User identifier (may be encoded)")
     user_name: NonEmptyString | None = Field(None, description="User display name")
@@ -100,7 +110,13 @@ class ParticipantLeftPayload(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/webhooks/events/participant-left
     """
 
-    room_name: NonEmptyString | None = Field(None, description="Daily.co room name")
+    model_config = ConfigDict(extra="ignore")
+
+    room_name: NonEmptyString | None = Field(
+        None,
+        description="Daily.co room name",
+        validation_alias=AliasChoices("room_name", "room"),
+    )
     session_id: NonEmptyString = Field(description="Daily.co session identifier")
     user_id: NonEmptyString = Field(description="User identifier (may be encoded)")
     user_name: NonEmptyString | None = Field(None, description="User display name")
@@ -112,6 +128,9 @@ class ParticipantLeftPayload(BaseModel):
     _normalize_joined_at = field_validator("joined_at", mode="before")(
         normalize_timestamp_to_int
     )
+    _normalize_duration = field_validator("duration", mode="before")(
+        normalize_timestamp_to_int
+    )
 
 
 class RecordingStartedPayload(BaseModel):
@@ -120,6 +139,8 @@ class RecordingStartedPayload(BaseModel):
 
     Reference: https://docs.daily.co/reference/rest-api/webhooks/events/recording-started
     """
+
+    model_config = ConfigDict(extra="ignore")
 
     room_name: NonEmptyString | None = Field(None, description="Daily.co room name")
     recording_id: NonEmptyString = Field(description="Recording identifier")
@@ -138,7 +159,9 @@ class RecordingReadyToDownloadPayload(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/webhooks/events/recording-ready-to-download
     """
 
-    type: Literal["cloud", "raw-tracks"] = Field(
+    model_config = ConfigDict(extra="ignore")
+
+    type: Literal["cloud", "cloud-audio-only", "raw-tracks"] = Field(
         description="The type of recording that was generated"
     )
     recording_id: NonEmptyString = Field(
@@ -153,8 +176,9 @@ class RecordingReadyToDownloadPayload(BaseModel):
     status: Literal["finished"] = Field(
         description="The status of the given recording (always 'finished' in ready-to-download webhook, see RecordingStatus in responses.py for full API statuses)"
     )
-    max_participants: int = Field(
-        description="The number of participants on the call that were recorded"
+    max_participants: int | None = Field(
+        None,
+        description="The number of participants on the call that were recorded (optional; Daily may omit it in some webhook versions)",
     )
     duration: int = Field(description="The duration in seconds of the call")
     s3_key: NonEmptyString = Field(
@@ -180,6 +204,8 @@ class RecordingErrorPayload(BaseModel):
     Reference: https://docs.daily.co/reference/rest-api/webhooks/events/recording-error
     """
 
+    model_config = ConfigDict(extra="ignore")
+
     action: Literal["clourd-recording-err", "cloud-recording-error"] = Field(
         description="A string describing the event that was emitted (both variants are documented)"
     )
@@ -200,6 +226,8 @@ class RecordingErrorPayload(BaseModel):
 
 
 class ParticipantJoinedEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     version: NonEmptyString
     type: Literal["participant.joined"]
     id: NonEmptyString
@@ -212,6 +240,8 @@ class ParticipantJoinedEvent(BaseModel):
 
 
 class ParticipantLeftEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     version: NonEmptyString
     type: Literal["participant.left"]
     id: NonEmptyString
@@ -224,6 +254,8 @@ class ParticipantLeftEvent(BaseModel):
 
 
 class RecordingStartedEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     version: NonEmptyString
     type: Literal["recording.started"]
     id: NonEmptyString
@@ -236,6 +268,8 @@ class RecordingStartedEvent(BaseModel):
 
 
 class RecordingReadyEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     version: NonEmptyString
     type: Literal["recording.ready-to-download"]
     id: NonEmptyString
@@ -248,6 +282,8 @@ class RecordingReadyEvent(BaseModel):
 
 
 class RecordingErrorEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     version: NonEmptyString
     type: Literal["recording.error"]
     id: NonEmptyString
