@@ -146,6 +146,8 @@ class DailyApiClient:
             )
             raise DailyApiError(operation, response)
 
+        if not response.content:
+            return {}
         return response.json()
 
     # ============================================================================
