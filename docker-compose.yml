@@ -79,6 +79,7 @@ services:
     volumes:
       - ./www:/app/
       - /app/node_modules
+      - next_cache:/app/.next
     env_file:
       - ./www/.env.local
     environment:
@@ -131,6 +132,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+volumes:
+  next_cache:
 
 networks:
   default:

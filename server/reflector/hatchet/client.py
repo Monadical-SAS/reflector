@@ -12,7 +12,9 @@ import threading
 
 from hatchet_sdk import ClientConfig, Hatchet
 from hatchet_sdk.clients.rest.models import V1TaskStatus
+from hatchet_sdk.rate_limit import RateLimitDuration
 
+from reflector.hatchet.constants import LLM_RATE_LIMIT_KEY, LLM_RATE_LIMIT_PER_SECOND
 from reflector.logger import logger
 from reflector.settings import settings
 
@@ -113,3 +115,26 @@ class HatchetClientManager:
         """Reset the client instance (for testing)."""
         with cls._lock:
             cls._instance = None
+
+    @classmethod
+    async def ensure_rate_limit(cls) -> None:
+        """Ensure the LLM rate limit exists in Hatchet.
+
+        Uses the Hatchet SDK rate_limits client (aio_put). See:
+        https://docs.hatchet.run/sdks/python/feature-clients/rate_limits
+        """
+        logger.info(
+            "[Hatchet] Ensuring rate limit exists",
+            rate_limit_key=LLM_RATE_LIMIT_KEY,
+            limit=LLM_RATE_LIMIT_PER_SECOND,
+        )
+        client = cls.get_client()
+        await client.rate_limits.aio_put(
+            key=LLM_RATE_LIMIT_KEY,
+            limit=LLM_RATE_LIMIT_PER_SECOND,
+            duration=RateLimitDuration.SECOND,
+        )
+        logger.info(
+            "[Hatchet] Rate limit put successfully",
+            rate_limit_key=LLM_RATE_LIMIT_KEY,
+        )
