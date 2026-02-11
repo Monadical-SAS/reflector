@@ -63,14 +63,16 @@ services:
   server:
     environment:
       TRANSCRIPT_BACKEND: modal
-      TRANSCRIPT_URL: http://cpu:8000
+      TRANSCRIPT_URL: http://localhost:8100
+      TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
-      DIARIZATION_URL: http://cpu:8000
+      DIARIZATION_URL: http://localhost:8100
 
   worker:
     environment:
       TRANSCRIPT_BACKEND: modal
       TRANSCRIPT_URL: http://cpu:8000
+      TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
       DIARIZATION_URL: http://cpu:8000
 
@@ -78,6 +80,8 @@ services:
     build:
       context: ./gpu/self_hosted
       dockerfile: Dockerfile.cpu
+    ports:
+      - "8100:8000"
     volumes:
       - gpu_cache:/root/.cache
     restart: unless-stopped
