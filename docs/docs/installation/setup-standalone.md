@@ -168,6 +168,8 @@ If the frontend or backend behaves unexpectedly (e.g., env vars seem ignored, ch
 lsof -i :3000   # frontend
 lsof -i :1250   # backend
 lsof -i :5432   # postgres
+lsof -i :3900   # Garage S3 API
+lsof -i :6379   # Redis
 
 # Kill stale processes on a port
 lsof -ti :3000 | xargs kill
@@ -175,9 +177,13 @@ lsof -ti :3000 | xargs kill
 
 Common causes:
 - A stale `next dev` or `pnpm dev` process from another terminal/worktree
-- Another Docker Compose project (different worktree) with containers on the same ports
+- Another Docker Compose project (different worktree) with containers on the same ports — the setup script only manages its own project; containers from other projects must be stopped manually (`docker ps` to find them, `docker stop` to kill them)
 
-The setup script checks for port conflicts before starting services.
+The setup script checks ports 3000, 1250, 5432, 6379, 3900, 3903 for conflicts before starting services. It ignores OrbStack/Docker Desktop port forwarding processes (which always bind these ports but are not real conflicts).
+
+### OrbStack false port-conflict warnings (Mac)
+
+If you use OrbStack as your Docker runtime, `lsof` will show OrbStack binding ports like 3000, 1250, etc. even when no containers are running. This is OrbStack's port forwarding mechanism — not a real conflict. The setup script filters these out automatically.
 
 ### Re-enabling authentication
 

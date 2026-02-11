@@ -113,7 +113,7 @@ step_llm() {
             echo ""
 
             # Pull model if not already present
-            if ollama list 2>/dev/null | grep -q "$MODEL"; then
+            if ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL (this may take a while)..."
@@ -143,7 +143,7 @@ step_llm() {
             echo ""
 
             # Pull model inside container
-            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | grep -q "$MODEL"; then
+            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL inside container (this may take a while)..."
@@ -290,16 +290,23 @@ ENVEOF
 step_services() {
     info "Step 5: Starting Docker services"
 
-    # Check for port conflicts — stale processes silently shadow Docker port mappings
+    # Check for port conflicts — stale processes silently shadow Docker port mappings.
+    # OrbStack/Docker Desktop bind ports for forwarding; ignore those PIDs.
     local ports_ok=true
-    for port in 3000 1250; do
-        local pid
-        pid=$(lsof -ti :"$port" 2>/dev/null || true)
-        if [[ -n "$pid" ]]; then
-            warn "Port $port already in use by PID $pid"
+    for port in 3000 1250 5432 6379 3900 3903; do
+        local pids
+        pids=$(lsof -ti :"$port" 2>/dev/null || true)
+        for pid in $pids; do
+            local pname
+            pname=$(ps -p "$pid" -o comm= 2>/dev/null || true)
+            # OrbStack and Docker Desktop own port forwarding — not real conflicts
+            if [[ "$pname" == *"OrbStack"* ]] || [[ "$pname" == *"com.docker"* ]] || [[ "$pname" == *"vpnkit"* ]]; then
+                continue
+            fi
+            warn "Port $port already in use by PID $pid ($pname)"
             warn "Kill it with: lsof -ti :$port | xargs kill"
             ports_ok=false
-        fi
+        done
     done
     if [[ "$ports_ok" == "false" ]]; then
         warn "Port conflicts detected — Docker containers may not be reachable"
