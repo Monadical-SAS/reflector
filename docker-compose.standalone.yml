@@ -63,18 +63,18 @@ services:
   server:
     environment:
       TRANSCRIPT_BACKEND: modal
-      TRANSCRIPT_URL: http://gpu:8000
+      TRANSCRIPT_URL: http://cpu:8000
       DIARIZATION_BACKEND: modal
-      DIARIZATION_URL: http://gpu:8000
+      DIARIZATION_URL: http://cpu:8000
 
   worker:
     environment:
       TRANSCRIPT_BACKEND: modal
-      TRANSCRIPT_URL: http://gpu:8000
+      TRANSCRIPT_URL: http://cpu:8000
       DIARIZATION_BACKEND: modal
-      DIARIZATION_URL: http://gpu:8000
+      DIARIZATION_URL: http://cpu:8000
 
-  gpu:
+  cpu:
     build:
       context: ./gpu/self_hosted
       dockerfile: Dockerfile.cpu
