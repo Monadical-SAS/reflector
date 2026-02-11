@@ -58,7 +58,59 @@ services:
       timeout: 5s
       retries: 5
 
+  # Override server/worker/beat to use self-hosted GPU service for transcription+diarization.
+  # compose `environment:` overrides values from `env_file:` — no need to edit server/.env.
+  server:
+    environment:
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://cpu:8000
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://cpu:8000
+
+  worker:
+    environment:
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://cpu:8000
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://cpu:8000
+
+  cpu:
+    build:
+      context: ./gpu/self_hosted
+      dockerfile: Dockerfile.cpu
+    volumes:
+      - gpu_cache:/root/.cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  gpu-nvidia:
+    build:
+      context: ./gpu/self_hosted
+    profiles: ["gpu-nvidia"]
+    volumes:
+      - gpu_cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
 volumes:
   garage_data:
   garage_meta:
   ollama_data:
+  gpu_cache:

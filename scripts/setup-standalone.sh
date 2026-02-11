@@ -184,8 +184,10 @@ ENVEOF
     env_set "$SERVER_ENV" "CELERY_BROKER_URL" "redis://redis:6379/1"
     env_set "$SERVER_ENV" "CELERY_RESULT_BACKEND" "redis://redis:6379/1"
     env_set "$SERVER_ENV" "AUTH_BACKEND" "none"
-    env_set "$SERVER_ENV" "TRANSCRIPT_BACKEND" "whisper"
-    env_set "$SERVER_ENV" "DIARIZATION_ENABLED" "false"
+    env_set "$SERVER_ENV" "PUBLIC_MODE" "true"
+    # TRANSCRIPT_BACKEND, TRANSCRIPT_URL, DIARIZATION_BACKEND, DIARIZATION_URL
+    # are set via docker-compose.standalone.yml `environment:` overrides — not written here
+    # so we don't clobber the user's server/.env for non-standalone use.
     env_set "$SERVER_ENV" "TRANSLATION_BACKEND" "passthrough"
     env_set "$SERVER_ENV" "LLM_URL" "$LLM_URL_VALUE"
     env_set "$SERVER_ENV" "LLM_MODEL" "$MODEL"
@@ -305,7 +307,7 @@ step_services() {
     fi
 
     # server runs alembic migrations on startup automatically (see runserver.sh)
-    compose_cmd up -d postgres redis garage server worker beat web
+    compose_cmd up -d postgres redis garage cpu server worker beat web
     ok "Containers started"
     info "Server is running migrations (alembic upgrade head)..."
 }
@@ -315,6 +317,26 @@ step_services() {
 # =========================================================
 step_health() {
     info "Step 6: Health checks"
+
+    # CPU service may take a while on first start (model download + load).
+    # No host port exposed — check via docker exec.
+    info "Waiting for CPU service (first start downloads ~1GB of models)..."
+    local cpu_ok=false
+    for i in $(seq 1 120); do
+        if compose_cmd exec -T cpu curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
+            cpu_ok=true
+            break
+        fi
+        echo -ne "\r  Waiting for CPU service... ($i/120)"
+        sleep 5
+    done
+    echo ""
+    if [[ "$cpu_ok" == "true" ]]; then
+        ok "CPU service healthy (transcription + diarization)"
+    else
+        warn "CPU service not ready yet — it will keep loading in the background"
+        warn "Check with: docker compose logs cpu"
+    fi
 
     wait_for_url "http://localhost:1250/health" "Server API" 60 3
     echo ""
@@ -355,6 +377,10 @@ main() {
     # LLM_URL_VALUE is set by step_llm, used by later steps
     LLM_URL_VALUE=""
     OLLAMA_PROFILE=""
+
+    # docker-compose.yml may reference env_files that don't exist yet;
+    # touch them so compose_cmd works before the steps that populate them.
+    touch "$SERVER_ENV" "$WWW_ENV"
 
     step_llm
     echo ""

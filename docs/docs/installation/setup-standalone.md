@@ -42,8 +42,10 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 | `REDIS_HOST` | `redis` | Docker-internal hostname |
 | `CELERY_BROKER_URL` | `redis://redis:6379/1` | Docker-internal hostname |
 | `AUTH_BACKEND` | `none` | No Authentik in standalone |
-| `TRANSCRIPT_BACKEND` | `whisper` | Local transcription |
-| `DIARIZATION_ENABLED` | `false` | No diarization backend |
+| `TRANSCRIPT_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
+| `TRANSCRIPT_URL` | `http://cpu:8000` | Docker-internal CPU service |
+| `DIARIZATION_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
+| `DIARIZATION_URL` | `http://cpu:8000` | Docker-internal CPU service |
 | `TRANSLATION_BACKEND` | `passthrough` | No Modal |
 | `LLM_URL` | `http://host.docker.internal:11434/v1` (Mac) | Ollama endpoint |
 
@@ -80,19 +82,23 @@ Garage config template lives at `scripts/garage.toml`. The setup script generate
 
 > **Note**: Presigned URLs embed the Garage Docker hostname (`http://garage:3900`). This is fine — the server proxies S3 responses to the browser. Modal GPU workers cannot reach internal Garage, but standalone doesn't use Modal.
 
-### 4. Transcription and diarization (NOT YET IMPLEMENTED)
+### 4. Transcription and diarization
 
-Standalone uses `TRANSCRIPT_BACKEND=whisper` for local CPU-based transcription. Diarization is disabled.
+Standalone runs the self-hosted ML service (`gpu/self_hosted/`) in a CPU-only Docker container named `cpu`. This is the same FastAPI service used for Modal.com GPU deployments, but built with `Dockerfile.cpu` (no NVIDIA CUDA dependencies). The compose service is named `cpu` (not `gpu`) to make clear it runs without GPU acceleration; the source code lives in `gpu/self_hosted/` because it's shared with the GPU deployment.
 
-> Another developer is working on optimizing the local transcription experience. For now, local Whisper works for short recordings but is slow on CPU.
+The `modal` backend name is reused — it just means "HTTP API client". Setting `TRANSCRIPT_URL` / `DIARIZATION_URL` to `http://cpu:8000` routes requests to the local container instead of Modal.com.
+
+On first start, the service downloads pyannote speaker diarization models (~1GB) from a public S3 bundle. Models are cached in a Docker volume (`gpu_cache`) so subsequent starts are fast. No HuggingFace token or API key needed.
+
+> **Performance**: CPU-only transcription and diarization work but are slow (~15 min for a 3 min file). For faster processing on Linux with NVIDIA GPU, use `--profile gpu-nvidia` instead (see `docker-compose.standalone.yml`).
 
 ### 5. Docker services
 
 ```bash
-docker compose up -d postgres redis garage server worker beat web
+docker compose up -d postgres redis garage cpu server worker beat web
 ```
 
-All services start in a single command. Garage is already started by step 3 but is included for idempotency. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
+All services start in a single command. Garage and `cpu` are already started by earlier steps but included for idempotency. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
 
 ### 6. Database migrations
 
@@ -101,6 +107,7 @@ Run automatically by the `server` container on startup (`runserver.sh` calls `al
 ### 7. Health check
 
 Verifies:
+- CPU service responds (transcription + diarization ready)
 - Server responds at `http://localhost:1250/health`
 - Frontend serves at `http://localhost:3000`
 - LLM endpoint reachable from inside containers
@@ -114,8 +121,41 @@ Verifies:
 | `postgres` | 5432 | PostgreSQL database |
 | `redis` | 6379 | Cache + Celery broker |
 | `garage` | 3900, 3903 | S3-compatible object storage (S3 API + admin API) |
+| `cpu` | — | Self-hosted transcription + diarization (CPU-only) |
 | `worker` | — | Celery worker (live pipeline post-processing) |
 | `beat` | — | Celery beat (scheduled tasks) |
+
+## Testing programmatically
+
+After the setup script completes, verify the full pipeline (upload, transcription, diarization, LLM summary) via the API:
+
+```bash
+# 1. Create a transcript
+TRANSCRIPT_ID=$(curl -s -X POST 'http://localhost:1250/v1/transcripts' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test-upload"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "Created: $TRANSCRIPT_ID"
+
+# 2. Upload an audio file (single-chunk upload)
+curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}/record/upload?chunk_number=0&total_chunks=1" \
+  -X POST -F "chunk=@/path/to/audio.mp3"
+
+# 3. Poll until processing completes (status: ended or error)
+while true; do
+  STATUS=$(curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+  echo "Status: $STATUS"
+  case "$STATUS" in ended|error) break;; esac
+  sleep 10
+done
+
+# 4. Check the result
+curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}" | python3 -m json.tool
+```
+
+Expected result: status `ended`, auto-generated `title`, `short_summary`, `long_summary`, and `transcript` text with `Speaker 0` / `Speaker 1` labels.
+
+CPU-only processing is slow (~15 min for a 3 min audio file). Diarization finishes in ~3 min, transcription takes the rest.
 
 ## Troubleshooting
 
@@ -158,9 +198,11 @@ These require external accounts and infrastructure that can't be scripted:
 
 ## Current status
 
+All steps implemented. The setup script handles everything end-to-end:
+
 - Step 1 (Ollama/LLM) — implemented
 - Step 2 (environment files) — implemented
-- Step 3 (object storage / Garage) — implemented (`docker-compose.standalone.yml` + `setup-standalone.sh`)
-- Step 4 (transcription/diarization) — in progress by another developer
+- Step 3 (object storage / Garage) — implemented
+- Step 4 (transcription/diarization) — implemented (self-hosted GPU service)
 - Steps 5-7 (Docker, migrations, health) — implemented
 - **Unified script**: `scripts/setup-standalone.sh`

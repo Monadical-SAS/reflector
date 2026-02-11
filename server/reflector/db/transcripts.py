@@ -406,7 +406,7 @@ class TranscriptController:
             query = query.where(
                 or_(transcripts.c.user_id == user_id, rooms.c.is_shared)
             )
-        else:
+        elif not settings.PUBLIC_MODE:
             query = query.where(rooms.c.is_shared)
 
         if source_kind:
