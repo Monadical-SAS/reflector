@@ -291,7 +291,12 @@ async def test_validation_idle_transcript_with_recording_allowed():
         recording_id="test-recording-id",
     )
 
-    result = await validate_transcript_for_processing(mock_transcript)
+    with patch(
+        "reflector.services.transcript_process.task_is_scheduled_or_active"
+    ) as mock_celery_check:
+        mock_celery_check.return_value = False
+
+        result = await validate_transcript_for_processing(mock_transcript)
 
     assert isinstance(result, ValidationOk)
     assert result.recording_id == "test-recording-id"
