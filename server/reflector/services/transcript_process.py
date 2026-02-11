@@ -97,8 +97,11 @@ async def validate_transcript_for_processing(
     if transcript.locked:
         return ValidationLocked(detail="Recording is locked")
 
-    # Check if recording is ready for processing
-    if transcript.status == "idle" and not transcript.workflow_run_id:
+    if (
+        transcript.status == "idle"
+        and not transcript.workflow_run_id
+        and not transcript.recording_id
+    ):
         return ValidationNotReady(detail="Recording is not ready for processing")
 
     # Check Celery tasks
