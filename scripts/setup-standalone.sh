@@ -307,7 +307,7 @@ step_services() {
     fi
 
     # server runs alembic migrations on startup automatically (see runserver.sh)
-    compose_cmd up -d postgres redis garage gpu server worker beat web
+    compose_cmd up -d postgres redis garage cpu server worker beat web
     ok "Containers started"
     info "Server is running migrations (alembic upgrade head)..."
 }
@@ -318,24 +318,24 @@ step_services() {
 step_health() {
     info "Step 6: Health checks"
 
-    # GPU service may take a while on first start (model download + load).
+    # CPU service may take a while on first start (model download + load).
     # No host port exposed — check via docker exec.
-    info "Waiting for GPU service (first start downloads ~1GB of models)..."
-    local gpu_ok=false
+    info "Waiting for CPU service (first start downloads ~1GB of models)..."
+    local cpu_ok=false
     for i in $(seq 1 120); do
-        if compose_cmd exec -T gpu curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
-            gpu_ok=true
+        if compose_cmd exec -T cpu curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
+            cpu_ok=true
             break
         fi
-        echo -ne "\r  Waiting for GPU service... ($i/120)"
+        echo -ne "\r  Waiting for CPU service... ($i/120)"
         sleep 5
     done
     echo ""
-    if [[ "$gpu_ok" == "true" ]]; then
-        ok "GPU service healthy (transcription + diarization)"
+    if [[ "$cpu_ok" == "true" ]]; then
+        ok "CPU service healthy (transcription + diarization)"
     else
-        warn "GPU service not ready yet — it will keep loading in the background"
-        warn "Check with: docker compose logs gpu"
+        warn "CPU service not ready yet — it will keep loading in the background"
+        warn "Check with: docker compose logs cpu"
     fi
 
     wait_for_url "http://localhost:1250/health" "Server API" 60 3
