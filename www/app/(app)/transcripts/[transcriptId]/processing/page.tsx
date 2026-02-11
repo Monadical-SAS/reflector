@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranscriptGet } from "../../../../lib/apiHooks";
 import { parseNonEmptyString } from "../../../../lib/utils";
+import { useWebSockets } from "../../useWebSockets";
 
 type TranscriptProcessing = {
   params: Promise<{
@@ -24,6 +25,7 @@ export default function TranscriptProcessing(details: TranscriptProcessing) {
   const router = useRouter();
 
   const transcript = useTranscriptGet(transcriptId);
+  useWebSockets(transcriptId);
 
   useEffect(() => {
     const status = transcript.data?.status;

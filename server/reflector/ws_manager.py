@@ -48,7 +48,15 @@ class RedisPubSubManager:
         if not self.redis_connection:
             await self.connect()
         message = json.dumps(message)
-        await self.redis_connection.publish(room_id, message)
+        try:
+            await self.redis_connection.publish(room_id, message)
+        except RuntimeError:
+            # Celery workers run each task in a new event loop (asyncio.run),
+            # which closes the previous loop. Cached Redis connection is dead.
+            # Reconnect on the current loop and retry.
+            self.redis_connection = None
+            await self.connect()
+            await self.redis_connection.publish(room_id, message)
 
     async def subscribe(self, room_id: str) -> redis.Redis:
         await self.pubsub.subscribe(room_id)
