@@ -1,0 +1,39 @@
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1
+
+WORKDIR /tmp
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+ --mount=type=cache,target=/var/lib/apt,sharing=locked \
+ apt-get update \
+ && apt-get install -y \
+    ffmpeg \
+    curl \
+    ca-certificates \
+    gnupg \
+    wget
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
+
+RUN mkdir -p /app
+WORKDIR /app
+COPY pyproject.toml uv.lock /app/
+
+
+COPY ./app /app/app
+COPY ./main.py /app/
+COPY ./runserver.sh /app/
+
+# prevent uv failing with too many open files on big cpus
+ENV UV_CONCURRENT_INSTALLS=16
+
+# first install
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --compile-bytecode --locked
+
+EXPOSE 8000
+
+CMD ["sh", "/app/runserver.sh"]

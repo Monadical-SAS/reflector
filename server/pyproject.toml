@@ -68,7 +68,6 @@ evaluation = [
     "pydantic>=2.1.1",
 ]
 local = [
-    "pyannote-audio>=3.3.2",
     "faster-whisper>=0.10.0",
 ]
 silero-vad = [

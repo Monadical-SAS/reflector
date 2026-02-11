@@ -26,6 +26,7 @@ from reflector.db.rooms import rooms
 from reflector.db.transcripts import SourceKind, TranscriptStatus, transcripts
 from reflector.db.utils import is_postgresql
 from reflector.logger import logger
+from reflector.settings import settings
 from reflector.utils.string import NonEmptyString, try_parse_non_empty_string
 
 DEFAULT_SEARCH_LIMIT = 20
@@ -396,7 +397,7 @@ class SearchController:
                     transcripts.c.user_id == params.user_id, rooms.c.is_shared
                 )
             )
-        else:
+        elif not settings.PUBLIC_MODE:
             base_query = base_query.where(rooms.c.is_shared)
         if params.room_id:
             base_query = base_query.where(transcripts.c.room_id == params.room_id)
