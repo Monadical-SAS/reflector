@@ -431,6 +431,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               );
             }
             setStatus(message.data);
+            invalidateTranscript(queryClient, transcriptId as NonEmptyString);
             if (message.data.value === "ended") {
               ws.close();
             }
