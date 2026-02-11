@@ -11,6 +11,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: server
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -24,6 +26,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: worker
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
 
   beat:
     build:
@@ -46,6 +50,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: hatchet-worker-cpu
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
     depends_on:
       hatchet:
         condition: service_healthy
@@ -59,6 +65,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: hatchet-worker-llm
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
