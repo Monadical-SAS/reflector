@@ -117,6 +117,36 @@ Verifies:
 | `worker` | — | Celery worker (live pipeline post-processing) |
 | `beat` | — | Celery beat (scheduled tasks) |
 
+## Troubleshooting
+
+### Port conflicts (most common issue)
+
+If the frontend or backend behaves unexpectedly (e.g., env vars seem ignored, changes don't take effect), **check for port conflicts first**:
+
+```bash
+# Check what's listening on key ports
+lsof -i :3000   # frontend
+lsof -i :1250   # backend
+lsof -i :5432   # postgres
+
+# Kill stale processes on a port
+lsof -ti :3000 | xargs kill
+```
+
+Common causes:
+- A stale `next dev` or `pnpm dev` process from another terminal/worktree
+- Another Docker Compose project (different worktree) with containers on the same ports
+
+The setup script checks for port conflicts before starting services.
+
+### Re-enabling authentication
+
+Standalone runs without authentication (`FEATURE_REQUIRE_LOGIN=false`, `AUTH_BACKEND=none`). To re-enable:
+
+1. In `www/.env.local`: set `FEATURE_REQUIRE_LOGIN=true`, uncomment `AUTHENTIK_ISSUER` and `AUTHENTIK_REFRESH_TOKEN_URL`
+2. In `server/.env`: set `AUTH_BACKEND=authentik` (or your backend), configure `AUTH_JWT_AUDIENCE`
+3. Restart: `docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d --force-recreate web server`
+
 ## What's NOT covered
 
 These require external accounts and infrastructure that can't be scripted:

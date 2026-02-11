@@ -288,6 +288,22 @@ ENVEOF
 step_services() {
     info "Step 5: Starting Docker services"
 
+    # Check for port conflicts — stale processes silently shadow Docker port mappings
+    local ports_ok=true
+    for port in 3000 1250; do
+        local pid
+        pid=$(lsof -ti :"$port" 2>/dev/null || true)
+        if [[ -n "$pid" ]]; then
+            warn "Port $port already in use by PID $pid"
+            warn "Kill it with: lsof -ti :$port | xargs kill"
+            ports_ok=false
+        fi
+    done
+    if [[ "$ports_ok" == "false" ]]; then
+        warn "Port conflicts detected — Docker containers may not be reachable"
+        warn "Continuing anyway (services will start but may be shadowed)"
+    fi
+
     # server runs alembic migrations on startup automatically (see runserver.sh)
     compose_cmd up -d postgres redis garage server worker beat web
     ok "Containers started"
