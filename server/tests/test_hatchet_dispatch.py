@@ -255,7 +255,7 @@ async def test_validation_locked_transcript():
 @pytest.mark.usefixtures("setup_database")
 @pytest.mark.asyncio
 async def test_validation_idle_transcript():
-    """Test that validation rejects idle transcripts (not ready)."""
+    """Test that validation rejects idle transcripts without recording (file upload not ready)."""
     from reflector.services.transcript_process import (
         ValidationNotReady,
         validate_transcript_for_processing,
@@ -272,6 +272,34 @@ async def test_validation_idle_transcript():
 
     assert isinstance(result, ValidationNotReady)
     assert "not ready" in result.detail.lower()
+
+
+@pytest.mark.usefixtures("setup_database")
+@pytest.mark.asyncio
+async def test_validation_idle_transcript_with_recording_allowed():
+    """Test that validation allows idle transcripts with recording_id (multitrack ready/retry)."""
+    from reflector.services.transcript_process import (
+        ValidationOk,
+        validate_transcript_for_processing,
+    )
+
+    mock_transcript = Transcript(
+        id="test-transcript-id",
+        name="Test",
+        status="idle",
+        source_kind="room",
+        recording_id="test-recording-id",
+    )
+
+    with patch(
+        "reflector.services.transcript_process.task_is_scheduled_or_active"
+    ) as mock_celery_check:
+        mock_celery_check.return_value = False
+
+        result = await validate_transcript_for_processing(mock_transcript)
+
+    assert isinstance(result, ValidationOk)
+    assert result.recording_id == "test-recording-id"
 
 
 @pytest.mark.usefixtures("setup_database")

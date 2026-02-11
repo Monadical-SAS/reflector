@@ -319,3 +319,51 @@ def test_aws_storage_constructor_rejects_mixed_auth():
             aws_secret_access_key="test-secret",
             aws_role_arn="arn:aws:iam::123456789012:role/test-role",
         )
+
+
+@pytest.mark.asyncio
+async def test_aws_storage_custom_endpoint_url():
+    """Test that custom endpoint_url configures path-style addressing and passes endpoint to client."""
+    storage = AwsStorage(
+        aws_bucket_name="reflector-media",
+        aws_region="garage",
+        aws_access_key_id="GKtest",
+        aws_secret_access_key="secret",
+        aws_endpoint_url="http://garage:3900",
+    )
+    assert storage._endpoint_url == "http://garage:3900"
+    assert storage.boto_config.s3["addressing_style"] == "path"
+    assert storage.base_url == "http://garage:3900/reflector-media/"
+    # retries config preserved (merge, not replace)
+    assert storage.boto_config.retries["max_attempts"] == 3
+
+    mock_client = AsyncMock()
+    mock_client.put_object = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.generate_presigned_url = AsyncMock(
+        return_value="http://garage:3900/reflector-media/test.txt"
+    )
+
+    with patch.object(
+        storage.session, "client", return_value=mock_client
+    ) as mock_session_client:
+        await storage.put_file("test.txt", b"data")
+        mock_session_client.assert_called_with(
+            "s3", config=storage.boto_config, endpoint_url="http://garage:3900"
+        )
+
+
+@pytest.mark.asyncio
+async def test_aws_storage_none_endpoint_url():
+    """Test that None endpoint preserves current AWS behavior."""
+    storage = AwsStorage(
+        aws_bucket_name="reflector-bucket",
+        aws_region="us-east-1",
+        aws_access_key_id="AKIAtest",
+        aws_secret_access_key="secret",
+    )
+    assert storage._endpoint_url is None
+    assert storage.base_url == "https://reflector-bucket.s3.amazonaws.com/"
+    # No s3 addressing_style override — boto_config should only have retries
+    assert not hasattr(storage.boto_config, "s3") or storage.boto_config.s3 is None

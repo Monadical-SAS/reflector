@@ -1,0 +1,120 @@
+# Standalone services for fully local deployment (no external dependencies).
+# Usage: docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d
+#
+# On Linux with NVIDIA GPU, also pass: --profile ollama-gpu
+# On Linux without GPU:                --profile ollama-cpu
+# On Mac: Ollama runs natively (Metal GPU) — no profile needed, services here unused.
+
+services:
+  garage:
+    image: dxflrs/garage:v1.1.0
+    ports:
+      - "3900:3900"   # S3 API
+      - "3903:3903"   # Admin API
+    volumes:
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+      - ./data/garage.toml:/etc/garage.toml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/garage", "stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama-gpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    profiles: ["ollama-cpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Override server/worker/beat to use self-hosted GPU service for transcription+diarization.
+  # compose `environment:` overrides values from `env_file:` — no need to edit server/.env.
+  server:
+    environment:
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://localhost:8100
+      TRANSCRIPT_MODAL_API_KEY: local
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://localhost:8100
+
+  worker:
+    environment:
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://cpu:8000
+      TRANSCRIPT_MODAL_API_KEY: local
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://cpu:8000
+
+  cpu:
+    build:
+      context: ./gpu/self_hosted
+      dockerfile: Dockerfile.cpu
+    ports:
+      - "8100:8000"
+    volumes:
+      - gpu_cache:/root/.cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  gpu-nvidia:
+    build:
+      context: ./gpu/self_hosted
+    profiles: ["gpu-nvidia"]
+    volumes:
+      - gpu_cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+volumes:
+  garage_data:
+  garage_meta:
+  ollama_data:
+  gpu_cache:

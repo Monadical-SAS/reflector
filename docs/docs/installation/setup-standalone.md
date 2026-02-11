@@ -1,0 +1,214 @@
+---
+sidebar_position: 2
+title: Standalone Local Setup
+---
+
+# Standalone Local Setup
+
+**The goal**: a clueless user clones the repo, runs one script, and has a working Reflector instance locally. No cloud accounts, no API keys, no manual env file editing.
+
+```bash
+git clone https://github.com/monadical-sas/reflector.git
+cd reflector
+./scripts/setup-standalone.sh
+```
+
+The script is idempotent — safe to re-run at any time. It detects what's already set up and skips completed steps.
+
+## Prerequisites
+
+- Docker / OrbStack / Docker Desktop (any)
+- Mac (Apple Silicon) or Linux
+- 16GB+ RAM (32GB recommended for 14B LLM models)
+- **Mac only**: [Ollama](https://ollama.com/download) installed (`brew install ollama`)
+
+## What the script does
+
+### 1. LLM inference via Ollama
+
+**Mac**: starts Ollama natively (Metal GPU acceleration). Pulls the LLM model. Docker containers reach it via `host.docker.internal:11434`.
+
+**Linux**: starts containerized Ollama via `docker-compose.standalone.yml` profile (`ollama-gpu` with NVIDIA, `ollama-cpu` without). Pulls model inside the container.
+
+### 2. Environment files
+
+Generates `server/.env` and `www/.env.local` with standalone defaults:
+
+**`server/.env`** — key settings:
+
+| Variable | Value | Why |
+|----------|-------|-----|
+| `DATABASE_URL` | `postgresql+asyncpg://...@postgres:5432/reflector` | Docker-internal hostname |
+| `REDIS_HOST` | `redis` | Docker-internal hostname |
+| `CELERY_BROKER_URL` | `redis://redis:6379/1` | Docker-internal hostname |
+| `AUTH_BACKEND` | `none` | No Authentik in standalone |
+| `TRANSCRIPT_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
+| `TRANSCRIPT_URL` | `http://cpu:8000` | Docker-internal CPU service |
+| `DIARIZATION_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
+| `DIARIZATION_URL` | `http://cpu:8000` | Docker-internal CPU service |
+| `TRANSLATION_BACKEND` | `passthrough` | No Modal |
+| `LLM_URL` | `http://host.docker.internal:11434/v1` (Mac) | Ollama endpoint |
+
+**`www/.env.local`** — key settings:
+
+| Variable | Value |
+|----------|-------|
+| `API_URL` | `http://localhost:1250` |
+| `SERVER_API_URL` | `http://server:1250` |
+| `WEBSOCKET_URL` | `ws://localhost:1250` |
+| `FEATURE_REQUIRE_LOGIN` | `false` |
+| `NEXTAUTH_SECRET` | `standalone-dev-secret-not-for-production` |
+
+If env files already exist (including symlinks from worktree setup), the script resolves symlinks and ensures all standalone-critical vars are set. Existing vars not related to standalone are preserved.
+
+### 3. Object storage (Garage)
+
+Standalone uses [Garage](https://garagehq.deuxfleurs.fr/) — a lightweight S3-compatible object store running in Docker. The setup script starts Garage, initializes the layout, creates a bucket and access key, and writes the credentials to `server/.env`.
+
+**`server/.env`** — storage settings added by the script:
+
+| Variable | Value | Why |
+|----------|-------|-----|
+| `TRANSCRIPT_STORAGE_BACKEND` | `aws` | Uses the S3-compatible storage driver |
+| `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` | `http://garage:3900` | Docker-internal Garage S3 API |
+| `TRANSCRIPT_STORAGE_AWS_BUCKET_NAME` | `reflector-media` | Created by the script |
+| `TRANSCRIPT_STORAGE_AWS_REGION` | `garage` | Must match Garage config |
+| `TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID` | *(auto-generated)* | Created by `garage key create` |
+| `TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY` | *(auto-generated)* | Created by `garage key create` |
+
+The `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` setting enables S3-compatible backends. When set, the storage driver uses path-style addressing and routes all requests to the custom endpoint. When unset (production AWS), behavior is unchanged.
+
+Garage config template lives at `scripts/garage.toml`. The setup script generates `data/garage.toml` (gitignored) with a random RPC secret and mounts it read-only into the container. Single-node, `replication_factor=1`.
+
+> **Note**: Presigned URLs embed the Garage Docker hostname (`http://garage:3900`). This is fine — the server proxies S3 responses to the browser. Modal GPU workers cannot reach internal Garage, but standalone doesn't use Modal.
+
+### 4. Transcription and diarization
+
+Standalone runs the self-hosted ML service (`gpu/self_hosted/`) in a CPU-only Docker container named `cpu`. This is the same FastAPI service used for Modal.com GPU deployments, but built with `Dockerfile.cpu` (no NVIDIA CUDA dependencies). The compose service is named `cpu` (not `gpu`) to make clear it runs without GPU acceleration; the source code lives in `gpu/self_hosted/` because it's shared with the GPU deployment.
+
+The `modal` backend name is reused — it just means "HTTP API client". Setting `TRANSCRIPT_URL` / `DIARIZATION_URL` to `http://cpu:8000` routes requests to the local container instead of Modal.com.
+
+On first start, the service downloads pyannote speaker diarization models (~1GB) from a public S3 bundle. Models are cached in a Docker volume (`gpu_cache`) so subsequent starts are fast. No HuggingFace token or API key needed.
+
+> **Performance**: CPU-only transcription and diarization work but are slow (~15 min for a 3 min file). For faster processing on Linux with NVIDIA GPU, use `--profile gpu-nvidia` instead (see `docker-compose.standalone.yml`).
+
+### 5. Docker services
+
+```bash
+docker compose up -d postgres redis garage cpu server worker beat web
+```
+
+All services start in a single command. Garage and `cpu` are already started by earlier steps but included for idempotency. No Hatchet in standalone mode — LLM processing (summaries, topics, titles) runs via Celery tasks.
+
+### 6. Database migrations
+
+Run automatically by the `server` container on startup (`runserver.sh` calls `alembic upgrade head`). No manual step needed.
+
+### 7. Health check
+
+Verifies:
+- CPU service responds (transcription + diarization ready)
+- Server responds at `http://localhost:1250/health`
+- Frontend serves at `http://localhost:3000`
+- LLM endpoint reachable from inside containers
+
+## Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| `server` | 1250 | FastAPI backend (runs migrations on start) |
+| `web` | 3000 | Next.js frontend |
+| `postgres` | 5432 | PostgreSQL database |
+| `redis` | 6379 | Cache + Celery broker |
+| `garage` | 3900, 3903 | S3-compatible object storage (S3 API + admin API) |
+| `cpu` | — | Self-hosted transcription + diarization (CPU-only) |
+| `worker` | — | Celery worker (live pipeline post-processing) |
+| `beat` | — | Celery beat (scheduled tasks) |
+
+## Testing programmatically
+
+After the setup script completes, verify the full pipeline (upload, transcription, diarization, LLM summary) via the API:
+
+```bash
+# 1. Create a transcript
+TRANSCRIPT_ID=$(curl -s -X POST 'http://localhost:1250/v1/transcripts' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"test-upload"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "Created: $TRANSCRIPT_ID"
+
+# 2. Upload an audio file (single-chunk upload)
+curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}/record/upload?chunk_number=0&total_chunks=1" \
+  -X POST -F "chunk=@/path/to/audio.mp3"
+
+# 3. Poll until processing completes (status: ended or error)
+while true; do
+  STATUS=$(curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}" \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+  echo "Status: $STATUS"
+  case "$STATUS" in ended|error) break;; esac
+  sleep 10
+done
+
+# 4. Check the result
+curl -s "http://localhost:1250/v1/transcripts/${TRANSCRIPT_ID}" | python3 -m json.tool
+```
+
+Expected result: status `ended`, auto-generated `title`, `short_summary`, `long_summary`, and `transcript` text with `Speaker 0` / `Speaker 1` labels.
+
+CPU-only processing is slow (~15 min for a 3 min audio file). Diarization finishes in ~3 min, transcription takes the rest.
+
+## Troubleshooting
+
+### Port conflicts (most common issue)
+
+If the frontend or backend behaves unexpectedly (e.g., env vars seem ignored, changes don't take effect), **check for port conflicts first**:
+
+```bash
+# Check what's listening on key ports
+lsof -i :3000   # frontend
+lsof -i :1250   # backend
+lsof -i :5432   # postgres
+lsof -i :3900   # Garage S3 API
+lsof -i :6379   # Redis
+
+# Kill stale processes on a port
+lsof -ti :3000 | xargs kill
+```
+
+Common causes:
+- A stale `next dev` or `pnpm dev` process from another terminal/worktree
+- Another Docker Compose project (different worktree) with containers on the same ports — the setup script only manages its own project; containers from other projects must be stopped manually (`docker ps` to find them, `docker stop` to kill them)
+
+The setup script checks ports 3000, 1250, 5432, 6379, 3900, 3903 for conflicts before starting services. It ignores OrbStack/Docker Desktop port forwarding processes (which always bind these ports but are not real conflicts).
+
+### OrbStack false port-conflict warnings (Mac)
+
+If you use OrbStack as your Docker runtime, `lsof` will show OrbStack binding ports like 3000, 1250, etc. even when no containers are running. This is OrbStack's port forwarding mechanism — not a real conflict. The setup script filters these out automatically.
+
+### Re-enabling authentication
+
+Standalone runs without authentication (`FEATURE_REQUIRE_LOGIN=false`, `AUTH_BACKEND=none`). To re-enable:
+
+1. In `www/.env.local`: set `FEATURE_REQUIRE_LOGIN=true`, uncomment `AUTHENTIK_ISSUER` and `AUTHENTIK_REFRESH_TOKEN_URL`
+2. In `server/.env`: set `AUTH_BACKEND=authentik` (or your backend), configure `AUTH_JWT_AUDIENCE`
+3. Restart: `docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d --force-recreate web server`
+
+## What's NOT covered
+
+These require external accounts and infrastructure that can't be scripted:
+
+- **Live meeting rooms** — requires Daily.co account, S3 bucket, IAM roles
+- **Authentication** — requires Authentik deployment and OAuth configuration
+- **Hatchet workflows** — requires separate Hatchet setup for multitrack processing
+- **Production deployment** — see [Deployment Guide](./overview)
+
+## Current status
+
+All steps implemented. The setup script handles everything end-to-end:
+
+- Step 1 (Ollama/LLM) — implemented
+- Step 2 (environment files) — implemented
+- Step 3 (object storage / Garage) — implemented
+- Step 4 (transcription/diarization) — implemented (self-hosted GPU service)
+- Steps 5-7 (Docker, migrations, health) — implemented
+- **Unified script**: `scripts/setup-standalone.sh`

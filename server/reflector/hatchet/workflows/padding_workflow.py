@@ -49,11 +49,13 @@ async def pad_track(input: PaddingInput, ctx: Context) -> PadTrackResult:
         from reflector.settings import settings  # noqa: PLC0415
         from reflector.storage.storage_aws import AwsStorage  # noqa: PLC0415
 
+        # TODO: replace direct AwsStorage construction with get_transcripts_storage() factory
         storage = AwsStorage(
             aws_bucket_name=settings.TRANSCRIPT_STORAGE_AWS_BUCKET_NAME,
             aws_region=settings.TRANSCRIPT_STORAGE_AWS_REGION,
             aws_access_key_id=settings.TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY,
+            aws_endpoint_url=settings.TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL,
         )
 
         source_url = await storage.get_file_url(

@@ -2,8 +2,7 @@ services:
   server:
     build:
       context: server
-    ports:
-      - 1250:1250
+    network_mode: host
     volumes:
       - ./server/:/app/
       - /app/.venv
@@ -11,6 +10,12 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: server
+      DATABASE_URL: postgresql+asyncpg://reflector:reflector@localhost:5432/reflector
+      REDIS_HOST: localhost
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/1
+      HATCHET_CLIENT_SERVER_URL: http://localhost:8889
+      HATCHET_CLIENT_HOST_PORT: localhost:7078
 
   worker:
     build:
@@ -22,6 +27,11 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: worker
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
+    depends_on:
+      redis:
+        condition: service_started
 
   beat:
     build:
@@ -33,6 +43,9 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: beat
+    depends_on:
+      redis:
+        condition: service_started
 
   hatchet-worker-cpu:
     build:
@@ -44,6 +57,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: hatchet-worker-cpu
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
     depends_on:
       hatchet:
         condition: service_healthy
@@ -57,6 +72,8 @@ services:
       - ./server/.env
     environment:
       ENTRYPOINT: hatchet-worker-llm
+      HATCHET_CLIENT_SERVER_URL: http://hatchet:8888
+      HATCHET_CLIENT_HOST_PORT: hatchet:7077
     depends_on:
       hatchet:
         condition: service_healthy
@@ -75,10 +92,16 @@ services:
     volumes:
       - ./www:/app/
       - /app/node_modules
+      - next_cache:/app/.next
     env_file:
       - ./www/.env.local
     environment:
       - NODE_ENV=development
+      - SERVER_API_URL=http://host.docker.internal:1250
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - server
 
   postgres:
     image: postgres:17
@@ -94,13 +117,14 @@ services:
       - ./server/docker/init-hatchet-db.sql:/docker-entrypoint-initdb.d/init-hatchet-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d reflector -U reflector"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   hatchet:
     image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest
+    restart: on-failure
     ports:
       - "8889:8888"
       - "7078:7077"
@@ -108,7 +132,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://reflector:reflector@postgres:5432/hatchet?sslmode=disable"
+      DATABASE_URL: "postgresql://reflector:reflector@postgres:5432/hatchet?sslmode=disable&connect_timeout=30"
       SERVER_AUTH_COOKIE_DOMAIN: localhost
       SERVER_AUTH_COOKIE_INSECURE: "t"
       SERVER_GRPC_BIND_ADDRESS: "0.0.0.0"
@@ -128,6 +152,5 @@ services:
       retries: 5
       start_period: 30s
 
-networks:
-  default:
-    attachable: true
+volumes:
+  next_cache:

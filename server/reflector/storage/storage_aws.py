@@ -53,6 +53,7 @@ class AwsStorage(Storage):
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,
         aws_role_arn: str | None = None,
+        aws_endpoint_url: str | None = None,
     ):
         if not aws_bucket_name:
             raise ValueError("Storage `aws_storage` require `aws_bucket_name`")
@@ -73,17 +74,26 @@ class AwsStorage(Storage):
         self._access_key_id = aws_access_key_id
         self._secret_access_key = aws_secret_access_key
         self._role_arn = aws_role_arn
+        self._endpoint_url = aws_endpoint_url
 
         self.aws_folder = ""
         if "/" in aws_bucket_name:
             self._bucket_name, self.aws_folder = aws_bucket_name.split("/", 1)
-        self.boto_config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
+
+        config_kwargs: dict = {"retries": {"max_attempts": 3, "mode": "adaptive"}}
+        if aws_endpoint_url:
+            config_kwargs["s3"] = {"addressing_style": "path"}
+        self.boto_config = Config(**config_kwargs)
+
         self.session = aioboto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=aws_region,
         )
-        self.base_url = f"https://{self._bucket_name}.s3.amazonaws.com/"
+        if aws_endpoint_url:
+            self.base_url = f"{aws_endpoint_url}/{self._bucket_name}/"
+        else:
+            self.base_url = f"https://{self._bucket_name}.s3.amazonaws.com/"
 
     # Implement credential properties
     @property
@@ -139,7 +149,9 @@ class AwsStorage(Storage):
         s3filename = f"{folder}/{filename}" if folder else filename
         logger.info(f"Uploading {filename} to S3 {actual_bucket}/{folder}")
 
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             if isinstance(data, bytes):
                 await client.put_object(Bucket=actual_bucket, Key=s3filename, Body=data)
             else:
@@ -162,7 +174,9 @@ class AwsStorage(Storage):
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             presigned_url = await client.generate_presigned_url(
                 operation,
                 Params={"Bucket": actual_bucket, "Key": s3filename},
@@ -177,7 +191,9 @@ class AwsStorage(Storage):
         folder = self.aws_folder
         logger.info(f"Deleting {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             await client.delete_object(Bucket=actual_bucket, Key=s3filename)
 
     @handle_s3_client_errors("download")
@@ -186,7 +202,9 @@ class AwsStorage(Storage):
         folder = self.aws_folder
         logger.info(f"Downloading {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
             return await response["Body"].read()
 
@@ -201,7 +219,9 @@ class AwsStorage(Storage):
         logger.info(f"Listing objects from S3 {actual_bucket} with prefix '{s3prefix}'")
 
         keys = []
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             paginator = client.get_paginator("list_objects_v2")
             async for page in paginator.paginate(Bucket=actual_bucket, Prefix=s3prefix):
                 if "Contents" in page:
@@ -227,7 +247,9 @@ class AwsStorage(Storage):
         folder = self.aws_folder
         logger.info(f"Streaming {filename} from S3 {actual_bucket}/{folder}")
         s3filename = f"{folder}/{filename}" if folder else filename
-        async with self.session.client("s3", config=self.boto_config) as client:
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
             await client.download_fileobj(
                 Bucket=actual_bucket, Key=s3filename, Fileobj=fileobj
             )

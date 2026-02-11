@@ -23,7 +23,16 @@ const useWebRTC = (
     let p: Peer;
 
     try {
-      p = new Peer({ initiator: true, stream: stream });
+      p = new Peer({
+        initiator: true,
+        stream: stream,
+        // Disable trickle ICE: single SDP exchange (offer + answer) with all candidates.
+        // Required for HTTP-based signaling; trickle needs WebSocket for candidate exchange.
+        trickle: false,
+        config: {
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        },
+      });
     } catch (error) {
       setError(error as Error, "Error creating WebRTC");
       return;

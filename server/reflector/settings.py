@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     TRANSCRIPT_STORAGE_AWS_REGION: str = "us-east-1"
     TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID: str | None = None
     TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY: str | None = None
+    TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL: str | None = None
 
     # Platform-specific recording storage (follows {PREFIX}_STORAGE_AWS_{CREDENTIAL} pattern)
     # Whereby storage configuration
@@ -84,9 +85,7 @@ class Settings(BaseSettings):
     )
 
     # Diarization
-    # backends:
-    #   - pyannote: in-process model loading (no HTTP, runs in same process)
-    #   - modal: HTTP API client (works with Modal.com OR self-hosted gpu/self_hosted/)
+    # backend: modal — HTTP API client (works with Modal.com OR self-hosted gpu/self_hosted/)
     DIARIZATION_ENABLED: bool = True
     DIARIZATION_BACKEND: str = "modal"
     DIARIZATION_URL: str | None = None
@@ -94,9 +93,6 @@ class Settings(BaseSettings):
 
     # Diarization: modal backend
     DIARIZATION_MODAL_API_KEY: str | None = None
-
-    # Diarization: local pyannote.audio
-    DIARIZATION_PYANNOTE_AUTH_TOKEN: str | None = None
 
     # Audio Padding (Modal.com backend)
     PADDING_URL: str | None = None

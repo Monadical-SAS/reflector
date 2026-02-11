@@ -80,7 +80,14 @@ async def webhook(request: Request):
     try:
         event = event_adapter.validate_python(body_json)
     except Exception as e:
-        logger.error("Failed to parse webhook event", error=str(e), body=body.decode())
+        err_detail = str(e)
+        if hasattr(e, "errors"):
+            err_detail = f"{err_detail}; errors={e.errors()!r}"
+        logger.error(
+            "Failed to parse webhook event",
+            error=err_detail,
+            body=body.decode(),
+        )
         raise HTTPException(status_code=422, detail="Invalid event format")
 
     match event:

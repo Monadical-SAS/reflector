@@ -22,6 +22,8 @@ def asynctask(f):
                 await database.disconnect()
 
         coro = run_with_db()
+        if current_task:
+            return asyncio.run(coro)
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:

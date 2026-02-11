@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from reflector.auth.auth_jwt import JWTAuth  # type: ignore
 from reflector.db.users import user_controller
@@ -60,6 +60,8 @@ async def user_events_websocket(websocket: WebSocket):
     try:
         while True:
             await websocket.receive()
+    except (RuntimeError, WebSocketDisconnect):
+        pass
     finally:
         if room_id:
             await ws_manager.remove_user_from_room(room_id, websocket)

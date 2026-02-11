@@ -99,7 +99,7 @@ def extract_room_name(event: DailyWebhookEvent) -> str | None:
         >>> event = DailyWebhookEvent(**webhook_payload)
         >>> room_name = extract_room_name(event)
     """
-    room = event.payload.get("room_name")
+    room = event.payload.get("room_name") or event.payload.get("room")
     # Ensure we return a string, not any falsy value that might be in payload
     return room if isinstance(room, str) else None
 
