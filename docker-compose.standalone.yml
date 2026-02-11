@@ -17,7 +17,7 @@ services:
       - ./data/garage.toml:/etc/garage.toml:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:3903/health"]
+      test: ["CMD", "/garage", "stats"]
       interval: 10s
       timeout: 5s
       retries: 5
