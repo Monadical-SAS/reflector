@@ -357,6 +357,10 @@ main() {
     LLM_URL_VALUE=""
     OLLAMA_PROFILE=""
 
+    # docker-compose.yml may reference env_files that don't exist yet;
+    # touch them so compose_cmd works before the steps that populate them.
+    touch "$SERVER_ENV" "$WWW_ENV"
+
     step_llm
     echo ""
     step_server_env
