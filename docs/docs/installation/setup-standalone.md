@@ -57,7 +57,7 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 | `FEATURE_REQUIRE_LOGIN` | `false` |
 | `NEXTAUTH_SECRET` | `standalone-dev-secret-not-for-production` |
 
-If env files already exist, the script only updates LLM vars — it won't overwrite your customizations.
+If env files already exist (including symlinks from worktree setup), the script resolves symlinks and ensures all standalone-critical vars are set. Existing vars not related to standalone are preserved.
 
 ### 3. Object storage (Garage)
 
@@ -76,7 +76,7 @@ Standalone uses [Garage](https://garagehq.deuxfleurs.fr/) — a lightweight S3-c
 
 The `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` setting enables S3-compatible backends. When set, the storage driver uses path-style addressing and routes all requests to the custom endpoint. When unset (production AWS), behavior is unchanged.
 
-Garage config lives at `scripts/garage.toml` (mounted read-only into the container). Single-node, `replication_factor=1`.
+Garage config template lives at `scripts/garage.toml`. The setup script generates `data/garage.toml` (gitignored) with a random RPC secret and mounts it read-only into the container. Single-node, `replication_factor=1`.
 
 > **Note**: Presigned URLs embed the Garage Docker hostname (`http://garage:3900`). This is fine — the server proxies S3 responses to the browser. Modal GPU workers cannot reach internal Garage, but standalone doesn't use Modal.
 
