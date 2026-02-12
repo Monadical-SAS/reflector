@@ -76,6 +76,15 @@ services:
       DIARIZATION_BACKEND: modal
       DIARIZATION_URL: http://cpu:8000
 
+  web:
+    image: reflector-frontend-standalone
+    build:
+      context: ./www
+    command: ["node", "server.js"]
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+
   cpu:
     build:
       context: ./gpu/self_hosted
