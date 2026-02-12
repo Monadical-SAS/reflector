@@ -500,6 +500,13 @@ main() {
         exit 1
     fi
 
+    # Dockerfiles use RUN --mount which requires BuildKit.
+    # Docker Desktop/OrbStack bundle it; Colima/bare engine need docker-buildx.
+    if ! docker buildx version &>/dev/null; then
+        err "Docker BuildKit (buildx) not found."
+        err "Install Docker Desktop, OrbStack, or: brew install docker-buildx"
+        exit 1
+    fi
 
     # LLM_URL_VALUE is set by step_llm, used by later steps
     LLM_URL_VALUE=""
