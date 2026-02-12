@@ -58,15 +58,31 @@ services:
       timeout: 5s
       retries: 5
 
-  # Override server/worker/beat to use self-hosted GPU service for transcription+diarization.
-  # compose `environment:` overrides values from `env_file:` — no need to edit server/.env.
+  # Override server to use standard compose networking instead of network_mode:host.
+  # host mode breaks on macOS Docker Desktop and prevents Docker DNS resolution.
   server:
+    network_mode: !reset null
+    ports:
+      - "1250:1250"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
+      # Override base compose's localhost URLs with Docker DNS names
+      DATABASE_URL: postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      # Self-hosted transcription/diarization via CPU service
       TRANSCRIPT_BACKEND: modal
-      TRANSCRIPT_URL: http://localhost:8100
+      TRANSCRIPT_URL: http://cpu:8000
       TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
-      DIARIZATION_URL: http://localhost:8100
+      DIARIZATION_URL: http://cpu:8000
 
   worker:
     environment:

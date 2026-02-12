@@ -35,6 +35,41 @@ err()   { echo -e "${RED}  ✗${NC} $*" >&2; }
 
 # --- Helpers ---
 
+dump_diagnostics() {
+    local failed_svc="${1:-}"
+    echo ""
+    err "========== DIAGNOSTICS =========="
+
+    err "Container status:"
+    compose_cmd ps -a --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
+    echo ""
+
+    # Show logs for any container that exited
+    local stopped
+    stopped=$(compose_cmd ps -a --format '{{.Name}}\t{{.Status}}' 2>/dev/null \
+        | grep -iv 'up\|running' | awk -F'\t' '{print $1}' || true)
+    for c in $stopped; do
+        err "--- Logs for $c (exited/unhealthy) ---"
+        docker logs --tail 30 "$c" 2>&1 || true
+        echo ""
+    done
+
+    # If a specific service failed, always show its logs
+    if [[ -n "$failed_svc" ]]; then
+        err "--- Logs for $failed_svc (last 40) ---"
+        compose_cmd logs "$failed_svc" --tail 40 2>&1 || true
+        echo ""
+        # Try health check from inside the container as extra signal
+        err "--- Internal health check ($failed_svc) ---"
+        compose_cmd exec -T "$failed_svc" \
+            curl -sf http://localhost:1250/health 2>&1 || echo "(not reachable internally either)"
+    fi
+
+    err "================================="
+}
+
+trap 'dump_diagnostics' ERR
+
 wait_for_url() {
     local url="$1" label="$2" retries="${3:-30}" interval="${4:-2}"
     for i in $(seq 1 "$retries"); do
@@ -316,6 +351,18 @@ step_services() {
     # server runs alembic migrations on startup automatically (see runserver.sh)
     compose_cmd up -d postgres redis garage cpu server worker beat web
     ok "Containers started"
+
+    # Quick sanity check — catch containers that exit immediately (bad image, missing file, etc.)
+    sleep 3
+    local exited
+    exited=$(compose_cmd ps -a --format '{{.Name}} {{.Status}}' 2>/dev/null \
+        | grep -i 'exit' || true)
+    if [[ -n "$exited" ]]; then
+        warn "Some containers exited immediately:"
+        echo "$exited" | while read -r line; do warn "  $line"; done
+        dump_diagnostics
+    fi
+
     info "Server is running migrations (alembic upgrade head)..."
 }
 
@@ -345,9 +392,36 @@ step_health() {
         warn "Check with: docker compose logs cpu"
     fi
 
-    wait_for_url "http://localhost:1250/health" "Server API" 60 3
+    # Server may take a long time on first run — alembic migrations run before uvicorn starts.
+    # Use docker exec so this works regardless of network_mode or port mapping.
+    info "Waiting for Server API (first run includes database migrations)..."
+    local server_ok=false
+    for i in $(seq 1 90); do
+        # Check if container is still running
+        local svc_status
+        svc_status=$(compose_cmd ps server --format '{{.Status}}' 2>/dev/null || true)
+        if [[ -z "$svc_status" ]] || echo "$svc_status" | grep -qi 'exit'; then
+            echo ""
+            err "Server container exited unexpectedly"
+            dump_diagnostics server
+            exit 1
+        fi
+        # Health check from inside container (avoids host networking issues)
+        if compose_cmd exec -T server curl -sf http://localhost:1250/health > /dev/null 2>&1; then
+            server_ok=true
+            break
+        fi
+        echo -ne "\r  Waiting for Server API... ($i/90)"
+        sleep 5
+    done
     echo ""
-    ok "Server API healthy"
+    if [[ "$server_ok" == "true" ]]; then
+        ok "Server API healthy"
+    else
+        err "Server API not ready after ~7 minutes"
+        dump_diagnostics server
+        exit 1
+    fi
 
     wait_for_url "http://localhost:3000" "Frontend" 90 3
     echo ""
