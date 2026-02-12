@@ -491,8 +491,10 @@ main() {
         exit 1
     fi
 
-    # Ensure Docker Compose V2 plugin is available
-    if ! docker compose version &>/dev/null; then
+    # Ensure Docker Compose V2 plugin is available.
+    # Check output for "Compose" — without the plugin, `docker compose version`
+    # may still exit 0 (falling through to `docker version`).
+    if ! docker compose version 2>/dev/null | grep -qi compose; then
         err "Docker Compose plugin not found."
         err "Install Docker Desktop, OrbStack, or: brew install docker-compose"
         exit 1
