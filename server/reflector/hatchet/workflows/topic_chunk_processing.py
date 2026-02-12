@@ -20,7 +20,6 @@ from reflector.hatchet.constants import LLM_RATE_LIMIT_KEY, TIMEOUT_MEDIUM
 from reflector.hatchet.workflows.models import TopicChunkResult
 from reflector.logger import logger
 from reflector.processors.prompts import TOPIC_PROMPT
-from reflector.processors.types import Word
 
 
 class TopicChunkInput(BaseModel):
@@ -30,7 +29,6 @@ class TopicChunkInput(BaseModel):
     chunk_text: str
     timestamp: float
     duration: float
-    words: list[Word]
 
 
 hatchet = HatchetClientManager.get_client()
@@ -99,5 +97,4 @@ async def detect_chunk_topic(input: TopicChunkInput, ctx: Context) -> TopicChunk
         summary=response.summary,
         timestamp=input.timestamp,
         duration=input.duration,
-        words=input.words,
     )

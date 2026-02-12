@@ -95,7 +95,6 @@ class TopicChunkResult(BaseModel):
     summary: str
     timestamp: float
     duration: float
-    words: list[Word]
 
 
 class TopicsResult(BaseModel):
