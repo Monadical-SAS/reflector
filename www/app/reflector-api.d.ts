@@ -1974,29 +1974,6 @@ export interface components {
       /** Translation */
       translation: string | null;
     };
-    /** TranscriptTopic */
-    TranscriptTopic: {
-      /** Id */
-      id?: string;
-      /** Title */
-      title: string;
-      /** Summary */
-      summary: string;
-      /** Timestamp */
-      timestamp: number;
-      /**
-       * Duration
-       * @default 0
-       */
-      duration: number | null;
-      /** Transcript */
-      transcript?: string | null;
-      /**
-       * Words
-       * @default []
-       */
-      words: components["schemas"]["Word"][];
-    };
     /** TranscriptWaveform */
     TranscriptWaveform: {
       /** Waveform */
@@ -2077,7 +2054,7 @@ export interface components {
        * @enum {string}
        */
       event: "TOPIC";
-      data: components["schemas"]["TranscriptTopic"];
+      data: components["schemas"]["GetTranscriptTopic"];
     };
     /** TranscriptWsTranscript */
     TranscriptWsTranscript: {

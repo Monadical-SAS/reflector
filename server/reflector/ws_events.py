@@ -16,9 +16,9 @@ from reflector.db.transcripts import (
     TranscriptFinalTitle,
     TranscriptStatus,
     TranscriptText,
-    TranscriptTopic,
     TranscriptWaveform,
 )
+from reflector.views.transcripts import GetTranscriptTopic
 
 # ---------------------------------------------------------------------------
 # Transcript-level event name literal
@@ -48,7 +48,7 @@ class TranscriptWsTranscript(BaseModel):
 
 class TranscriptWsTopic(BaseModel):
     event: Literal["TOPIC"] = "TOPIC"
-    data: TranscriptTopic
+    data: GetTranscriptTopic
 
 
 class TranscriptWsStatusData(BaseModel):

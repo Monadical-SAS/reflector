@@ -380,8 +380,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
             case "TOPIC":
               setTopics((prevTopics) => {
-                // WS sends TranscriptTopic (words), frontend Topic uses segments — works at runtime
-                const topic = message.data as unknown as Topic;
+                const topic = message.data;
                 const index = prevTopics.findIndex(
                   (prevTopic) => prevTopic.id === topic.id,
                 );

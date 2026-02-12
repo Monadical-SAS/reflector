@@ -62,6 +62,7 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.views.transcripts import GetTranscriptTopic
 from reflector.ws_events import TranscriptEventName
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
@@ -249,13 +250,14 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         )
         if isinstance(data, TitleSummaryWithIdProcessorType):
             topic.id = data.id
+        get_topic = GetTranscriptTopic.from_transcript_topic(topic)
         async with self.transaction():
             transcript = await self.get_transcript()
             await transcripts_controller.upsert_topic(transcript, topic)
             return await transcripts_controller.append_event(
                 transcript=transcript,
                 event="TOPIC",
-                data=topic,
+                data=get_topic,
             )
 
     @broadcast_to_sockets
