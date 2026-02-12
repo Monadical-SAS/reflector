@@ -491,6 +491,13 @@ main() {
         exit 1
     fi
 
+    # Ensure Docker Compose V2 plugin is available
+    if ! docker compose version &>/dev/null; then
+        err "Docker Compose plugin not found."
+        err "Install Docker Desktop, OrbStack, or: brew install docker-compose"
+        exit 1
+    fi
+
 
     # LLM_URL_VALUE is set by step_llm, used by later steps
     LLM_URL_VALUE=""
