@@ -77,6 +77,9 @@ services:
       REDIS_HOST: redis
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      # Standalone doesn't run Hatchet — blank out localhost URLs inherited from base
+      HATCHET_CLIENT_SERVER_URL: ""
+      HATCHET_CLIENT_HOST_PORT: ""
       # Self-hosted transcription/diarization via CPU service
       TRANSCRIPT_BACKEND: modal
       TRANSCRIPT_URL: http://cpu:8000

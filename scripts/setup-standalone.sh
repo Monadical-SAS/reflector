@@ -70,6 +70,40 @@ dump_diagnostics() {
 
 trap 'dump_diagnostics' ERR
 
+# Get the image ID for a compose service (works even when containers are not running).
+svc_image_id() {
+    local svc="$1"
+    # Extract image name from compose config YAML, fall back to <project>-<service>
+    local img_name
+    img_name=$(compose_cmd config 2>/dev/null \
+        | sed -n "/^  ${svc}:/,/^  [a-z]/p" | grep '^\s*image:' | awk '{print $2}')
+    img_name="${img_name:-reflector-$svc}"
+    docker images -q "$img_name" 2>/dev/null | head -1
+}
+
+# Ensure images with build contexts are up-to-date.
+# Docker layer cache makes this fast (~seconds) when source hasn't changed.
+rebuild_images() {
+    local svc
+    for svc in web cpu; do
+        local old_id
+        old_id=$(svc_image_id "$svc")
+        old_id="${old_id:-<none>}"
+
+        info "Building $svc..."
+        compose_cmd build "$svc"
+
+        local new_id
+        new_id=$(svc_image_id "$svc")
+
+        if [[ "$old_id" == "$new_id" ]]; then
+            ok "$svc unchanged (${new_id:0:12})"
+        else
+            ok "$svc rebuilt (${old_id:0:12} -> ${new_id:0:12})"
+        fi
+    done
+}
+
 wait_for_url() {
     local url="$1" label="$2" retries="${3:-30}" interval="${4:-2}"
     for i in $(seq 1 "$retries"); do
@@ -148,7 +182,7 @@ step_llm() {
             echo ""
 
             # Pull model if not already present
-            if ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+            if ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL (this may take a while)..."
@@ -178,7 +212,7 @@ step_llm() {
             echo ""
 
             # Pull model inside container
-            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL inside container (this may take a while)..."
@@ -347,6 +381,9 @@ step_services() {
         warn "Port conflicts detected — Docker containers may not be reachable"
         warn "Continuing anyway (services will start but may be shadowed)"
     fi
+
+    # Rebuild images if source has changed (Docker layer cache makes this fast when unchanged)
+    rebuild_images
 
     # server runs alembic migrations on startup automatically (see runserver.sh)
     compose_cmd up -d postgres redis garage cpu server worker beat web
