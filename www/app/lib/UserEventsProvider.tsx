@@ -5,10 +5,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
 import { z } from "zod";
-import { invalidateTranscriptLists, TRANSCRIPT_SEARCH_URL } from "./apiHooks";
+import {
+  invalidateTranscript,
+  invalidateTranscriptLists,
+  TRANSCRIPT_SEARCH_URL,
+} from "./apiHooks";
+import { NonEmptyString } from "./utils";
 
 const UserEvent = z.object({
   event: z.string(),
+  data: z.object({ id: z.string() }).passthrough().optional(),
 });
 
 type UserEvent = z.TypeOf<typeof UserEvent>;
@@ -145,6 +151,12 @@ export function UserEventsProvider({
             case "TRANSCRIPT_FINAL_TITLE":
             case "TRANSCRIPT_DURATION":
               invalidateList().then(() => {});
+              if (msg.data?.id) {
+                invalidateTranscript(
+                  queryClient,
+                  msg.data.id as NonEmptyString,
+                ).then(() => {});
+              }
               break;
 
             default:

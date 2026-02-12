@@ -1,6 +1,9 @@
-from typing import Annotated, List, Optional
+from typing import TYPE_CHECKING, Annotated, List, Optional
 
 from fastapi import Depends, HTTPException
+
+if TYPE_CHECKING:
+    from fastapi import WebSocket
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -124,3 +127,20 @@ async def current_user_optional(
     jwtauth: JWTAuth = Depends(),
 ):
     return await _authenticate_user(jwt_token, api_key, jwtauth)
+
+
+def parse_ws_bearer_token(
+    websocket: "WebSocket",
+) -> tuple[Optional[str], Optional[str]]:
+    raw = websocket.headers.get("sec-websocket-protocol") or ""
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if len(parts) >= 2 and parts[0].lower() == "bearer":
+        return parts[1], "bearer"
+    return None, None
+
+
+async def current_user_ws_optional(websocket: "WebSocket") -> Optional[UserInfo]:
+    token, _ = parse_ws_bearer_token(websocket)
+    if not token:
+        return None
+    return await _authenticate_user(token, None, JWTAuth())
