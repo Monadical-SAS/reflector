@@ -84,6 +84,21 @@ services:
     volumes: !reset []
     environment:
       NODE_ENV: production
+      # Browser-facing URLs (host-accessible ports)
+      API_URL: http://localhost:1250
+      WEBSOCKET_URL: ws://localhost:1250
+      SITE_URL: http://localhost:3000
+      # Server-side URLs (docker-network internal)
+      SERVER_API_URL: http://server:1250
+      KV_URL: redis://redis:6379
+      KV_USE_TLS: "false"
+      # Standalone: no external auth provider
+      FEATURE_REQUIRE_LOGIN: "false"
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: standalone-local-secret
+      # Nullify partial auth vars inherited from base env_file
+      AUTHENTIK_ISSUER: ""
+      AUTHENTIK_REFRESH_TOKEN_URL: ""
 
   cpu:
     build:
