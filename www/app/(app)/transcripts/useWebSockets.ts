@@ -379,6 +379,21 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
             }
 
             case "TOPIC":
+              setTopics((prevTopics) => {
+                // WS sends TranscriptTopic (words), frontend Topic uses segments — works at runtime
+                const topic = message.data as unknown as Topic;
+                const index = prevTopics.findIndex(
+                  (prevTopic) => prevTopic.id === topic.id,
+                );
+                if (index >= 0) {
+                  prevTopics[index] = topic;
+                  return prevTopics;
+                }
+                setAccumulatedText((prevText) =>
+                  prevText.slice(topic.transcript?.length ?? 0),
+                );
+                return [...prevTopics, topic];
+              });
               console.debug("TOPIC event:", message.data);
               invalidateTranscriptTopics(queryClient, tsId);
               break;
