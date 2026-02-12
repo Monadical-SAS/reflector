@@ -12,10 +12,11 @@ import structlog
 
 from reflector.db.transcripts import Transcript, TranscriptEvent, transcripts_controller
 from reflector.utils.string import NonEmptyString
+from reflector.ws_events import TranscriptEventName
 from reflector.ws_manager import get_ws_manager
 
 # Events that should also be sent to user room (matches Celery behavior)
-USER_ROOM_EVENTS = {"STATUS", "FINAL_TITLE", "DURATION"}
+USER_ROOM_EVENTS: set[TranscriptEventName] = {"STATUS", "FINAL_TITLE", "DURATION"}
 
 
 async def broadcast_event(
@@ -81,8 +82,7 @@ async def set_status_and_broadcast(
 async def append_event_and_broadcast(
     transcript_id: NonEmptyString,
     transcript: Transcript,
-    event_name: NonEmptyString,
-    # TODO proper dictionary event => type
+    event_name: TranscriptEventName,
     data: Any,
     logger: structlog.BoundLogger,
 ) -> TranscriptEvent:

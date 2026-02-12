@@ -4,20 +4,12 @@ import React, { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { WEBSOCKET_URL } from "./apiClient";
 import { useAuth } from "./AuthProvider";
-import { z } from "zod";
-import {
-  invalidateTranscript,
-  invalidateTranscriptLists,
-  TRANSCRIPT_SEARCH_URL,
-} from "./apiHooks";
-import { NonEmptyString } from "./utils";
+import { invalidateTranscript, invalidateTranscriptLists } from "./apiHooks";
+import { parseNonEmptyString } from "./utils";
+import type { operations } from "../reflector-api";
 
-const UserEvent = z.object({
-  event: z.string(),
-  data: z.object({ id: z.string() }).passthrough().optional(),
-});
-
-type UserEvent = z.TypeOf<typeof UserEvent>;
+type UserWsEvent =
+  operations["v1_user_get_websocket_events"]["responses"][200]["content"]["application/json"];
 
 class UserEventsStore {
   private socket: WebSocket | null = null;
@@ -139,29 +131,26 @@ export function UserEventsProvider({
     if (!detachRef.current) {
       const onMessage = (event: MessageEvent) => {
         try {
-          const msg = UserEvent.parse(JSON.parse(event.data));
-          const eventName = msg.event;
+          const msg: UserWsEvent = JSON.parse(event.data);
 
-          const invalidateList = () => invalidateTranscriptLists(queryClient);
-
-          switch (eventName) {
+          switch (msg.event) {
             case "TRANSCRIPT_CREATED":
             case "TRANSCRIPT_DELETED":
             case "TRANSCRIPT_STATUS":
             case "TRANSCRIPT_FINAL_TITLE":
             case "TRANSCRIPT_DURATION":
-              invalidateList().then(() => {});
-              if (msg.data?.id) {
-                invalidateTranscript(
-                  queryClient,
-                  msg.data.id as NonEmptyString,
-                ).then(() => {});
-              }
+              invalidateTranscriptLists(queryClient).then(() => {});
+              invalidateTranscript(
+                queryClient,
+                parseNonEmptyString(msg.data.id),
+              ).then(() => {});
               break;
-
-            default:
-              // Ignore other content events for list updates
-              break;
+            default: {
+              const _exhaustive: never = msg;
+              console.warn(
+                `Unknown user event: ${(_exhaustive as UserWsEvent).event}`,
+              );
+            }
           }
         } catch (err) {
           console.warn("Invalid user event message", event.data);

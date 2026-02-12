@@ -8,12 +8,18 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 import reflector.auth as auth
 from reflector.db.transcripts import transcripts_controller
+from reflector.ws_events import TranscriptWsEvent
 from reflector.ws_manager import get_ws_manager
 
 router = APIRouter()
 
 
-@router.get("/transcripts/{transcript_id}/events")
+@router.get(
+    "/transcripts/{transcript_id}/events",
+    response_model=TranscriptWsEvent,
+    summary="Transcript WebSocket event schema",
+    description="Stub exposing the discriminated union of all transcript-level WS events for OpenAPI type generation. Real events are delivered over the WebSocket at the same path.",
+)
 async def transcript_get_websocket_events(transcript_id: str):
     pass
 

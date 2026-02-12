@@ -62,6 +62,7 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.ws_events import TranscriptEventName
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
     get_zulip_message,
@@ -89,7 +90,11 @@ def broadcast_to_sockets(func):
         if transcript and transcript.user_id:
             # Emit only relevant events to the user room to avoid noisy updates.
             # Allowed: STATUS, FINAL_TITLE, DURATION. All are prefixed with TRANSCRIPT_
-            allowed_user_events = {"STATUS", "FINAL_TITLE", "DURATION"}
+            allowed_user_events: set[TranscriptEventName] = {
+                "STATUS",
+                "FINAL_TITLE",
+                "DURATION",
+            }
             if resp.event in allowed_user_events:
                 await self.ws_manager.send_json(
                     room_id=f"user:{transcript.user_id}",

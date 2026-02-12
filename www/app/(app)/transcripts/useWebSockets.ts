@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
-import type { components } from "../../reflector-api";
+import type { components, operations } from "../../reflector-api";
 type AudioWaveform = components["schemas"]["AudioWaveform"];
 type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
-import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
+import { WEBSOCKET_URL } from "../../lib/apiClient";
 import {
   invalidateTranscript,
   invalidateTranscriptTopics,
   invalidateTranscriptWaveform,
 } from "../../lib/apiHooks";
 import { useAuth } from "../../lib/AuthProvider";
-import { NonEmptyString } from "../../lib/utils";
+import { parseNonEmptyString } from "../../lib/utils";
+
+type TranscriptWsEvent =
+  operations["v1_transcript_get_websocket_events"]["responses"][200]["content"]["application/json"];
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -333,6 +336,7 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
 
     if (!transcriptId) return;
+    const tsId = parseNonEmptyString(transcriptId);
 
     const MAX_RETRIES = 10;
     const url = `${WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
@@ -353,11 +357,11 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
       };
 
       ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
+        const message: TranscriptWsEvent = JSON.parse(event.data);
 
         try {
           switch (message.event) {
-            case "TRANSCRIPT":
+            case "TRANSCRIPT": {
               const newText = (message.data.text ?? "").trim();
               const newTranslation = (message.data.translation ?? "").trim();
 
@@ -372,28 +376,11 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
 
               setAccumulatedText((prevText) => prevText + " " + newText);
               break;
+            }
 
             case "TOPIC":
-              setTopics((prevTopics) => {
-                const topic = message.data as Topic;
-                const index = prevTopics.findIndex(
-                  (prevTopic) => prevTopic.id === topic.id,
-                );
-                if (index >= 0) {
-                  prevTopics[index] = topic;
-                  return prevTopics;
-                }
-                setAccumulatedText((prevText) =>
-                  prevText.slice(topic.transcript.length),
-                );
-
-                return [...prevTopics, topic];
-              });
               console.debug("TOPIC event:", message.data);
-              invalidateTranscriptTopics(
-                queryClient,
-                transcriptId as NonEmptyString,
-              );
+              invalidateTranscriptTopics(queryClient, tsId);
               break;
 
             case "FINAL_SHORT_SUMMARY":
@@ -401,24 +388,14 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
               break;
 
             case "FINAL_LONG_SUMMARY":
-              if (message.data) {
-                setFinalSummary(message.data);
-                invalidateTranscript(
-                  queryClient,
-                  transcriptId as NonEmptyString,
-                );
-              }
+              setFinalSummary({ summary: message.data.long_summary });
+              invalidateTranscript(queryClient, tsId);
               break;
 
             case "FINAL_TITLE":
               console.debug("FINAL_TITLE event:", message.data);
-              if (message.data) {
-                setTitle(message.data.title);
-                invalidateTranscript(
-                  queryClient,
-                  transcriptId as NonEmptyString,
-                );
-              }
+              setTitle(message.data.title);
+              invalidateTranscript(queryClient, tsId);
               break;
 
             case "WAVEFORM":
@@ -426,19 +403,13 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 "WAVEFORM event length:",
                 message.data.waveform.length,
               );
-              if (message.data) {
-                setWaveForm(message.data.waveform);
-                invalidateTranscriptWaveform(
-                  queryClient,
-                  transcriptId as NonEmptyString,
-                );
-              }
+              setWaveForm({ data: message.data.waveform });
+              invalidateTranscriptWaveform(queryClient, tsId);
               break;
+
             case "DURATION":
               console.debug("DURATION event:", message.data);
-              if (message.data) {
-                setDuration(message.data.duration);
-              }
+              setDuration(message.data.duration);
               break;
 
             case "STATUS":
@@ -450,17 +421,24 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
                 );
               }
               setStatus(message.data);
-              invalidateTranscript(queryClient, transcriptId as NonEmptyString);
+              invalidateTranscript(queryClient, tsId);
               if (message.data.value === "ended") {
                 intentionalClose = true;
                 ws?.close();
               }
               break;
 
-            default:
-              setError(
-                new Error(`Received unknown WebSocket event: ${message.event}`),
+            case "ACTION_ITEMS":
+              console.debug("ACTION_ITEMS event:", message.data);
+              invalidateTranscript(queryClient, tsId);
+              break;
+
+            default: {
+              const _exhaustive: never = message;
+              console.warn(
+                `Received unknown WebSocket event: ${(_exhaustive as TranscriptWsEvent).event}`,
               );
+            }
           }
         } catch (error) {
           setError(error);
