@@ -7,6 +7,7 @@ import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 import { MeetingId } from "./types";
 import { NonEmptyString } from "./utils";
+import type { TranscriptStatus } from "./transcript";
 
 /*
  * XXX error types returned from the hooks are not always correct; declared types are ValidationError but real type could be string or any other
@@ -104,6 +105,12 @@ export function useTranscriptProcess() {
   });
 }
 
+const ACTIVE_TRANSCRIPT_STATUSES = new Set<TranscriptStatus>([
+  "processing",
+  "uploaded",
+  "recording",
+]);
+
 export function useTranscriptGet(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",
@@ -117,6 +124,10 @@ export function useTranscriptGet(transcriptId: NonEmptyString | null) {
     },
     {
       enabled: !!transcriptId,
+      refetchInterval: (query) => {
+        const status = query.state.data?.status;
+        return status && ACTIVE_TRANSCRIPT_STATUSES.has(status) ? 5000 : false;
+      },
     },
   );
 }

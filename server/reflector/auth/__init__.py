@@ -12,3 +12,5 @@ AccessTokenInfo = auth_module.AccessTokenInfo
 authenticated = auth_module.authenticated
 current_user = auth_module.current_user
 current_user_optional = auth_module.current_user_optional
+parse_ws_bearer_token = auth_module.parse_ws_bearer_token
+current_user_ws_optional = auth_module.current_user_ws_optional

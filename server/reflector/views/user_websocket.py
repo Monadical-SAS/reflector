@@ -4,9 +4,21 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from reflector.auth.auth_jwt import JWTAuth  # type: ignore
 from reflector.db.users import user_controller
+from reflector.ws_events import UserWsEvent
 from reflector.ws_manager import get_ws_manager
 
 router = APIRouter()
+
+
+@router.get(
+    "/events",
+    response_model=UserWsEvent,
+    summary="User WebSocket event schema",
+    description="Stub exposing the discriminated union of all user-level WS events for OpenAPI type generation. Real events are delivered over the WebSocket at the same path.",
+)
+async def user_get_websocket_events():
+    pass
+
 
 # Close code for unauthorized WebSocket connections
 UNAUTHORISED = 4401

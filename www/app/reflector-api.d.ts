@@ -568,7 +568,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Transcript Get Websocket Events */
+    /**
+     * Transcript WebSocket event schema
+     * @description Stub exposing the discriminated union of all transcript-level WS events for OpenAPI type generation. Real events are delivered over the WebSocket at the same path.
+     */
     get: operations["v1_transcript_get_websocket_events"];
     put?: never;
     post?: never;
@@ -659,6 +662,26 @@ export interface paths {
     post?: never;
     /** Delete Api Key */
     delete: operations["v1_delete_api_key"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * User WebSocket event schema
+     * @description Stub exposing the discriminated union of all user-level WS events for OpenAPI type generation. Real events are delivered over the WebSocket at the same path.
+     */
+    get: operations["v1_user_get_websocket_events"];
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -1877,6 +1900,33 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** TranscriptActionItems */
+    TranscriptActionItems: {
+      /** Action Items */
+      action_items: {
+        [key: string]: unknown;
+      };
+    };
+    /** TranscriptDuration */
+    TranscriptDuration: {
+      /** Duration */
+      duration: number;
+    };
+    /** TranscriptFinalLongSummary */
+    TranscriptFinalLongSummary: {
+      /** Long Summary */
+      long_summary: string;
+    };
+    /** TranscriptFinalShortSummary */
+    TranscriptFinalShortSummary: {
+      /** Short Summary */
+      short_summary: string;
+    };
+    /** TranscriptFinalTitle */
+    TranscriptFinalTitle: {
+      /** Title */
+      title: string;
+    };
     /** TranscriptParticipant */
     TranscriptParticipant: {
       /** Id */
@@ -1916,6 +1966,113 @@ export interface components {
       start: number;
       /** End */
       end: number;
+    };
+    /** TranscriptText */
+    TranscriptText: {
+      /** Text */
+      text: string;
+      /** Translation */
+      translation: string | null;
+    };
+    /** TranscriptWaveform */
+    TranscriptWaveform: {
+      /** Waveform */
+      waveform: number[];
+    };
+    /** TranscriptWsActionItems */
+    TranscriptWsActionItems: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "ACTION_ITEMS";
+      data: components["schemas"]["TranscriptActionItems"];
+    };
+    /** TranscriptWsDuration */
+    TranscriptWsDuration: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "DURATION";
+      data: components["schemas"]["TranscriptDuration"];
+    };
+    /** TranscriptWsFinalLongSummary */
+    TranscriptWsFinalLongSummary: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "FINAL_LONG_SUMMARY";
+      data: components["schemas"]["TranscriptFinalLongSummary"];
+    };
+    /** TranscriptWsFinalShortSummary */
+    TranscriptWsFinalShortSummary: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "FINAL_SHORT_SUMMARY";
+      data: components["schemas"]["TranscriptFinalShortSummary"];
+    };
+    /** TranscriptWsFinalTitle */
+    TranscriptWsFinalTitle: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "FINAL_TITLE";
+      data: components["schemas"]["TranscriptFinalTitle"];
+    };
+    /** TranscriptWsStatus */
+    TranscriptWsStatus: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "STATUS";
+      data: components["schemas"]["TranscriptWsStatusData"];
+    };
+    /** TranscriptWsStatusData */
+    TranscriptWsStatusData: {
+      /**
+       * Value
+       * @enum {string}
+       */
+      value:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
+    };
+    /** TranscriptWsTopic */
+    TranscriptWsTopic: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TOPIC";
+      data: components["schemas"]["GetTranscriptTopic"];
+    };
+    /** TranscriptWsTranscript */
+    TranscriptWsTranscript: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT";
+      data: components["schemas"]["TranscriptText"];
+    };
+    /** TranscriptWsWaveform */
+    TranscriptWsWaveform: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "WAVEFORM";
+      data: components["schemas"]["TranscriptWaveform"];
     };
     /** UpdateParticipant */
     UpdateParticipant: {
@@ -1986,6 +2143,82 @@ export interface components {
       sub: string;
       /** Email */
       email: string | null;
+    };
+    /** UserTranscriptCreatedData */
+    UserTranscriptCreatedData: {
+      /** Id */
+      id: string;
+    };
+    /** UserTranscriptDeletedData */
+    UserTranscriptDeletedData: {
+      /** Id */
+      id: string;
+    };
+    /** UserTranscriptDurationData */
+    UserTranscriptDurationData: {
+      /** Id */
+      id: string;
+      /** Duration */
+      duration: number;
+    };
+    /** UserTranscriptFinalTitleData */
+    UserTranscriptFinalTitleData: {
+      /** Id */
+      id: string;
+      /** Title */
+      title: string;
+    };
+    /** UserTranscriptStatusData */
+    UserTranscriptStatusData: {
+      /** Id */
+      id: string;
+      /** Value */
+      value: string;
+    };
+    /** UserWsTranscriptCreated */
+    UserWsTranscriptCreated: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT_CREATED";
+      data: components["schemas"]["UserTranscriptCreatedData"];
+    };
+    /** UserWsTranscriptDeleted */
+    UserWsTranscriptDeleted: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT_DELETED";
+      data: components["schemas"]["UserTranscriptDeletedData"];
+    };
+    /** UserWsTranscriptDuration */
+    UserWsTranscriptDuration: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT_DURATION";
+      data: components["schemas"]["UserTranscriptDurationData"];
+    };
+    /** UserWsTranscriptFinalTitle */
+    UserWsTranscriptFinalTitle: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT_FINAL_TITLE";
+      data: components["schemas"]["UserTranscriptFinalTitleData"];
+    };
+    /** UserWsTranscriptStatus */
+    UserWsTranscriptStatus: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      event: "TRANSCRIPT_STATUS";
+      data: components["schemas"]["UserTranscriptStatusData"];
     };
     /** ValidationError */
     ValidationError: {
@@ -3423,7 +3656,16 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": unknown;
+          "application/json":
+            | components["schemas"]["TranscriptWsTranscript"]
+            | components["schemas"]["TranscriptWsTopic"]
+            | components["schemas"]["TranscriptWsStatus"]
+            | components["schemas"]["TranscriptWsFinalTitle"]
+            | components["schemas"]["TranscriptWsFinalLongSummary"]
+            | components["schemas"]["TranscriptWsFinalShortSummary"]
+            | components["schemas"]["TranscriptWsActionItems"]
+            | components["schemas"]["TranscriptWsDuration"]
+            | components["schemas"]["TranscriptWsWaveform"];
         };
       };
       /** @description Validation Error */
@@ -3603,6 +3845,31 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_user_get_websocket_events: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json":
+            | components["schemas"]["UserWsTranscriptCreated"]
+            | components["schemas"]["UserWsTranscriptDeleted"]
+            | components["schemas"]["UserWsTranscriptStatus"]
+            | components["schemas"]["UserWsTranscriptFinalTitle"]
+            | components["schemas"]["UserWsTranscriptDuration"];
         };
       };
     };

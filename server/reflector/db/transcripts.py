@@ -5,7 +5,10 @@ import shutil
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Sequence
+
+if TYPE_CHECKING:
+    from reflector.ws_events import TranscriptEventName
 
 import sqlalchemy
 from fastapi import HTTPException
@@ -184,7 +187,7 @@ class TranscriptWaveform(BaseModel):
 
 
 class TranscriptEvent(BaseModel):
-    event: str
+    event: str  # Typed at call sites via ws_events.TranscriptEventName; str here for DB compat
     data: dict
 
 
@@ -233,7 +236,9 @@ class Transcript(BaseModel):
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
 
-    def add_event(self, event: str, data: BaseModel) -> TranscriptEvent:
+    def add_event(
+        self, event: "TranscriptEventName", data: BaseModel
+    ) -> TranscriptEvent:
         ev = TranscriptEvent(event=event, data=data.model_dump())
         self.events.append(ev)
         return ev
@@ -688,7 +693,7 @@ class TranscriptController:
     async def append_event(
         self,
         transcript: Transcript,
-        event: str,
+        event: "TranscriptEventName",
         data: Any,
     ) -> TranscriptEvent:
         """

@@ -62,6 +62,8 @@ from reflector.processors.types import (
 from reflector.processors.types import Transcript as TranscriptProcessorType
 from reflector.settings import settings
 from reflector.storage import get_transcripts_storage
+from reflector.views.transcripts import GetTranscriptTopic
+from reflector.ws_events import TranscriptEventName
 from reflector.ws_manager import WebsocketManager, get_ws_manager
 from reflector.zulip import (
     get_zulip_message,
@@ -89,7 +91,11 @@ def broadcast_to_sockets(func):
         if transcript and transcript.user_id:
             # Emit only relevant events to the user room to avoid noisy updates.
             # Allowed: STATUS, FINAL_TITLE, DURATION. All are prefixed with TRANSCRIPT_
-            allowed_user_events = {"STATUS", "FINAL_TITLE", "DURATION"}
+            allowed_user_events: set[TranscriptEventName] = {
+                "STATUS",
+                "FINAL_TITLE",
+                "DURATION",
+            }
             if resp.event in allowed_user_events:
                 await self.ws_manager.send_json(
                     room_id=f"user:{transcript.user_id}",
@@ -244,13 +250,14 @@ class PipelineMainBase(PipelineRunner[PipelineMessage], Generic[PipelineMessage]
         )
         if isinstance(data, TitleSummaryWithIdProcessorType):
             topic.id = data.id
+        get_topic = GetTranscriptTopic.from_transcript_topic(topic)
         async with self.transaction():
             transcript = await self.get_transcript()
             await transcripts_controller.upsert_topic(transcript, topic)
             return await transcripts_controller.append_event(
                 transcript=transcript,
                 event="TOPIC",
-                data=topic,
+                data=get_topic,
             )
 
     @broadcast_to_sockets

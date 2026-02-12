@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
 import { Topic, FinalSummary, Status } from "./webSocketTypes";
 import { useError } from "../../(errors)/errorContext";
-import type { components } from "../../reflector-api";
+import type { components, operations } from "../../reflector-api";
 type AudioWaveform = components["schemas"]["AudioWaveform"];
 type GetTranscriptSegmentTopic =
   components["schemas"]["GetTranscriptSegmentTopic"];
 import { useQueryClient } from "@tanstack/react-query";
-import { $api, WEBSOCKET_URL } from "../../lib/apiClient";
+import { WEBSOCKET_URL } from "../../lib/apiClient";
 import {
   invalidateTranscript,
   invalidateTranscriptTopics,
   invalidateTranscriptWaveform,
 } from "../../lib/apiHooks";
-import { NonEmptyString } from "../../lib/utils";
+import { useAuth } from "../../lib/AuthProvider";
+import { parseNonEmptyString } from "../../lib/utils";
+
+type TranscriptWsEvent =
+  operations["v1_transcript_get_websocket_events"]["responses"][200]["content"]["application/json"];
 
 export type UseWebSockets = {
   transcriptTextLive: string;
@@ -27,6 +31,7 @@ export type UseWebSockets = {
 };
 
 export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
+  const auth = useAuth();
   const [transcriptTextLive, setTranscriptTextLive] = useState<string>("");
   const [translateText, setTranslateText] = useState<string>("");
   const [title, setTitle] = useState<string>("");
@@ -331,156 +336,168 @@ export const useWebSockets = (transcriptId: string | null): UseWebSockets => {
     };
 
     if (!transcriptId) return;
+    const tsId = parseNonEmptyString(transcriptId);
 
+    const MAX_RETRIES = 10;
     const url = `${WEBSOCKET_URL}/v1/transcripts/${transcriptId}/events`;
-    let ws = new WebSocket(url);
+    let ws: WebSocket | null = null;
+    let retryCount = 0;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let intentionalClose = false;
 
-    ws.onopen = () => {
-      console.debug("WebSocket connection opened");
-    };
+    const connect = () => {
+      const subprotocols = auth.accessToken
+        ? ["bearer", auth.accessToken]
+        : undefined;
+      ws = new WebSocket(url, subprotocols);
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+      ws.onopen = () => {
+        console.debug("WebSocket connection opened");
+        retryCount = 0;
+      };
 
-      try {
-        switch (message.event) {
-          case "TRANSCRIPT":
-            const newText = (message.data.text ?? "").trim();
-            const newTranslation = (message.data.translation ?? "").trim();
+      ws.onmessage = (event) => {
+        const message: TranscriptWsEvent = JSON.parse(event.data);
 
-            if (!newText) break;
+        try {
+          switch (message.event) {
+            case "TRANSCRIPT": {
+              const newText = (message.data.text ?? "").trim();
+              const newTranslation = (message.data.translation ?? "").trim();
 
-            console.debug("TRANSCRIPT event:", newText);
-            setTextQueue((prevQueue) => [...prevQueue, newText]);
-            setTranslationQueue((prevQueue) => [...prevQueue, newTranslation]);
+              if (!newText) break;
 
-            setAccumulatedText((prevText) => prevText + " " + newText);
-            break;
+              console.debug("TRANSCRIPT event:", newText);
+              setTextQueue((prevQueue) => [...prevQueue, newText]);
+              setTranslationQueue((prevQueue) => [
+                ...prevQueue,
+                newTranslation,
+              ]);
 
-          case "TOPIC":
-            setTopics((prevTopics) => {
-              const topic = message.data as Topic;
-              const index = prevTopics.findIndex(
-                (prevTopic) => prevTopic.id === topic.id,
-              );
-              if (index >= 0) {
-                prevTopics[index] = topic;
-                return prevTopics;
-              }
-              setAccumulatedText((prevText) =>
-                prevText.slice(topic.transcript.length),
-              );
-
-              return [...prevTopics, topic];
-            });
-            console.debug("TOPIC event:", message.data);
-            // Invalidate topics query to sync with WebSocket data
-            invalidateTranscriptTopics(
-              queryClient,
-              transcriptId as NonEmptyString,
-            );
-            break;
-
-          case "FINAL_SHORT_SUMMARY":
-            console.debug("FINAL_SHORT_SUMMARY event:", message.data);
-            break;
-
-          case "FINAL_LONG_SUMMARY":
-            if (message.data) {
-              setFinalSummary(message.data);
-              // Invalidate transcript query to sync summary
-              invalidateTranscript(queryClient, transcriptId as NonEmptyString);
+              setAccumulatedText((prevText) => prevText + " " + newText);
+              break;
             }
-            break;
 
-          case "FINAL_TITLE":
-            console.debug("FINAL_TITLE event:", message.data);
-            if (message.data) {
+            case "TOPIC":
+              setTopics((prevTopics) => {
+                const topic = message.data;
+                const index = prevTopics.findIndex(
+                  (prevTopic) => prevTopic.id === topic.id,
+                );
+                if (index >= 0) {
+                  prevTopics[index] = topic;
+                  return prevTopics;
+                }
+                setAccumulatedText((prevText) =>
+                  prevText.slice(topic.transcript?.length ?? 0),
+                );
+                return [...prevTopics, topic];
+              });
+              console.debug("TOPIC event:", message.data);
+              invalidateTranscriptTopics(queryClient, tsId);
+              break;
+
+            case "FINAL_SHORT_SUMMARY":
+              console.debug("FINAL_SHORT_SUMMARY event:", message.data);
+              break;
+
+            case "FINAL_LONG_SUMMARY":
+              setFinalSummary({ summary: message.data.long_summary });
+              invalidateTranscript(queryClient, tsId);
+              break;
+
+            case "FINAL_TITLE":
+              console.debug("FINAL_TITLE event:", message.data);
               setTitle(message.data.title);
-              // Invalidate transcript query to sync title
-              invalidateTranscript(queryClient, transcriptId as NonEmptyString);
-            }
-            break;
+              invalidateTranscript(queryClient, tsId);
+              break;
 
-          case "WAVEFORM":
-            console.debug(
-              "WAVEFORM event length:",
-              message.data.waveform.length,
-            );
-            if (message.data) {
-              setWaveForm(message.data.waveform);
-              invalidateTranscriptWaveform(
-                queryClient,
-                transcriptId as NonEmptyString,
+            case "WAVEFORM":
+              console.debug(
+                "WAVEFORM event length:",
+                message.data.waveform.length,
               );
-            }
-            break;
-          case "DURATION":
-            console.debug("DURATION event:", message.data);
-            if (message.data) {
+              setWaveForm({ data: message.data.waveform });
+              invalidateTranscriptWaveform(queryClient, tsId);
+              break;
+
+            case "DURATION":
+              console.debug("DURATION event:", message.data);
               setDuration(message.data.duration);
-            }
-            break;
+              break;
 
-          case "STATUS":
-            console.log("STATUS event:", message.data);
-            if (message.data.value === "error") {
-              setError(
-                Error("Websocket error status"),
-                "There was an error processing this meeting.",
+            case "STATUS":
+              console.log("STATUS event:", message.data);
+              if (message.data.value === "error") {
+                setError(
+                  Error("Websocket error status"),
+                  "There was an error processing this meeting.",
+                );
+              }
+              setStatus(message.data);
+              invalidateTranscript(queryClient, tsId);
+              if (message.data.value === "ended") {
+                intentionalClose = true;
+                ws?.close();
+              }
+              break;
+
+            case "ACTION_ITEMS":
+              console.debug("ACTION_ITEMS event:", message.data);
+              invalidateTranscript(queryClient, tsId);
+              break;
+
+            default: {
+              const _exhaustive: never = message;
+              console.warn(
+                `Received unknown WebSocket event: ${(_exhaustive as TranscriptWsEvent).event}`,
               );
             }
-            setStatus(message.data);
-            invalidateTranscript(queryClient, transcriptId as NonEmptyString);
-            if (message.data.value === "ended") {
-              ws.close();
-            }
-            break;
-
-          default:
-            setError(
-              new Error(`Received unknown WebSocket event: ${message.event}`),
-            );
+          }
+        } catch (error) {
+          setError(error);
         }
-      } catch (error) {
-        setError(error);
-      }
-    };
+      };
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setError(new Error("A WebSocket error occurred."));
-    };
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
 
-    ws.onclose = (event) => {
-      console.debug("WebSocket connection closed");
-      switch (event.code) {
-        case 1000: // Normal Closure:
-          break;
-        case 1005: // Closure by client FF
-          break;
-        case 1001: // Navigate away
-          break;
-        case 1006: // Closed by client Chrome
-          console.warn(
-            "WebSocket closed by client, likely duplicated connection in react dev mode",
+      ws.onclose = (event) => {
+        console.debug("WebSocket connection closed, code:", event.code);
+        if (intentionalClose) return;
+
+        const normalCodes = [1000, 1001, 1005];
+        if (normalCodes.includes(event.code)) return;
+
+        if (retryCount < MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          console.log(
+            `WebSocket reconnecting in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`,
           );
-          break;
-        default:
+          if (retryCount === 0) {
+            setError(
+              new Error("WebSocket connection lost"),
+              "Connection lost. Reconnecting...",
+            );
+          }
+          retryCount++;
+          retryTimeout = setTimeout(connect, delay);
+        } else {
           setError(
             new Error(`WebSocket closed unexpectedly with code: ${event.code}`),
             "Disconnected from the server. Please refresh the page.",
           );
-          console.log(
-            "Socket is closed. Reconnect will be attempted in 1 second.",
-            event.reason,
-          );
-        // todo handle reconnect with socket.io
-      }
+        }
+      };
     };
 
+    connect();
+
     return () => {
-      ws.close();
+      intentionalClose = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
+      ws?.close();
     };
   }, [transcriptId]);
 
