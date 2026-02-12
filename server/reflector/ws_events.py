@@ -18,6 +18,7 @@ from reflector.db.transcripts import (
     TranscriptText,
     TranscriptWaveform,
 )
+from reflector.utils.string import NonEmptyString
 from reflector.views.transcripts import GetTranscriptTopic
 
 # ---------------------------------------------------------------------------
@@ -123,25 +124,25 @@ UserEventName = Literal[
 
 
 class UserTranscriptCreatedData(BaseModel):
-    id: str
+    id: NonEmptyString
 
 
 class UserTranscriptDeletedData(BaseModel):
-    id: str
+    id: NonEmptyString
 
 
 class UserTranscriptStatusData(BaseModel):
-    id: str
-    value: str
+    id: NonEmptyString
+    value: TranscriptStatus
 
 
 class UserTranscriptFinalTitleData(BaseModel):
-    id: str
-    title: str
+    id: NonEmptyString
+    title: NonEmptyString
 
 
 class UserTranscriptDurationData(BaseModel):
-    id: str
+    id: NonEmptyString
     duration: float
 
 
