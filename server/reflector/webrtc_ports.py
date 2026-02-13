@@ -91,10 +91,13 @@ def patch_aioice_port_range(min_port: int, max_port: int) -> None:
 
 
 def resolve_webrtc_host(host: str) -> str:
-    """Resolve a hostname (e.g. 'host.docker.internal') to an IP address."""
+    """Resolve a hostname or IP to an IP address for ICE candidate rewriting."""
     try:
-        return socket.gethostbyname(host)
+        ip = socket.gethostbyname(host)
+        logger.info("Resolved WEBRTC_HOST", host=host, ip=ip)
+        return ip
     except socket.gaierror:
+        logger.warning("Could not resolve WEBRTC_HOST, using as-is", host=host)
         return host
 
 

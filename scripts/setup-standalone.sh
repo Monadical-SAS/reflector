@@ -104,6 +104,29 @@ rebuild_images() {
     done
 }
 
+detect_lan_ip() {
+    # Returns the host's LAN IP — used for WebRTC ICE candidate rewriting.
+    case "$OS" in
+        Darwin)
+            # Try common interfaces: en0 (Wi-Fi), en1 (Ethernet)
+            for iface in en0 en1 en2 en3; do
+                local ip
+                ip=$(ipconfig getifaddr "$iface" 2>/dev/null || true)
+                if [[ -n "$ip" ]]; then
+                    echo "$ip"
+                    return
+                fi
+            done
+            ;;
+        Linux)
+            ip route get 1.1.1.1 2>/dev/null | sed -n 's/.*src \([^ ]*\).*/\1/p'
+            return
+            ;;
+    esac
+    # Fallback — empty means "not detected"
+    echo ""
+}
+
 wait_for_url() {
     local url="$1" label="$2" retries="${3:-30}" interval="${4:-2}"
     for i in $(seq 1 "$retries"); do
@@ -261,6 +284,17 @@ ENVEOF
     env_set "$SERVER_ENV" "LLM_URL" "$LLM_URL_VALUE"
     env_set "$SERVER_ENV" "LLM_MODEL" "$MODEL"
     env_set "$SERVER_ENV" "LLM_API_KEY" "not-needed"
+
+    # WebRTC: detect LAN IP for ICE candidate rewriting (bridge networking)
+    local lan_ip
+    lan_ip=$(detect_lan_ip)
+    if [[ -n "$lan_ip" ]]; then
+        env_set "$SERVER_ENV" "WEBRTC_HOST" "$lan_ip"
+        ok "WebRTC host IP: $lan_ip"
+    else
+        warn "Could not detect LAN IP — WebRTC recording from other devices may not work"
+        warn "Set WEBRTC_HOST=<your-lan-ip> in server/.env manually"
+    fi
 
     ok "Standalone vars set (LLM_URL=$LLM_URL_VALUE)"
 }
