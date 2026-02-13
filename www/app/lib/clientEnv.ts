@@ -75,9 +75,7 @@ export const getClientEnvServer = (): ClientEnvCommon => {
   if (isBuildPhase) {
     return {
       API_URL: getNextEnvVar("API_URL"),
-      WEBSOCKET_URL: parseMaybeNonEmptyString(
-        process.env.WEBSOCKET_URL ?? "",
-      ),
+      WEBSOCKET_URL: parseMaybeNonEmptyString(process.env.WEBSOCKET_URL ?? ""),
       ...features,
     };
   }
