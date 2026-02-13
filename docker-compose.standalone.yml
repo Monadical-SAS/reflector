@@ -14,9 +14,12 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./scripts/standalone/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - web
+      - server
 
   server:
     build:
@@ -123,19 +126,18 @@ services:
     ports:
       - "3000:3000"
     command: ["node", "server.js"]
+    env_file:
+      - ./www/.env.local
     environment:
       NODE_ENV: production
-      # Browser-facing URLs (host-accessible ports)
-      API_URL: /server-api
-      WEBSOCKET_URL: auto
-      SITE_URL: http://localhost:3000
+      # API_URL, WEBSOCKET_URL, SITE_URL, NEXTAUTH_URL from www/.env.local (allows HTTPS)
       # Server-side URLs (docker-network internal)
       SERVER_API_URL: http://server:1250
       KV_URL: redis://redis:6379
       KV_USE_TLS: "false"
       # Standalone: no external auth provider
       FEATURE_REQUIRE_LOGIN: "false"
-      NEXTAUTH_URL: http://localhost:3000
+      FEATURE_ROOMS: "false"
       NEXTAUTH_SECRET: standalone-local-secret
       # Nullify partial auth vars inherited from base env_file
       AUTHENTIK_ISSUER: ""

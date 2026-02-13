@@ -308,15 +308,24 @@ step_storage() {
     # Generate garage.toml from template (fill in RPC secret)
     GARAGE_TOML="$ROOT_DIR/scripts/garage.toml"
     GARAGE_TOML_RUNTIME="$ROOT_DIR/data/garage.toml"
+    mkdir -p "$ROOT_DIR/data"
+    if [[ -d "$GARAGE_TOML_RUNTIME" ]]; then
+        rm -rf "$GARAGE_TOML_RUNTIME"
+    fi
     if [[ ! -f "$GARAGE_TOML_RUNTIME" ]]; then
-        mkdir -p "$ROOT_DIR/data"
         RPC_SECRET=$(openssl rand -hex 32)
         sed "s|__GARAGE_RPC_SECRET__|${RPC_SECRET}|" "$GARAGE_TOML" > "$GARAGE_TOML_RUNTIME"
     fi
 
     compose_cmd up -d garage
 
-    wait_for_url "http://localhost:3903/health" "Garage admin API"
+    # Use /metrics for readiness — /health returns 503 until layout is applied
+    if ! wait_for_url "http://localhost:3903/metrics" "Garage admin API"; then
+        echo ""
+        err "Garage container logs:"
+        compose_cmd logs garage --tail 30 2>&1 || true
+        exit 1
+    fi
     echo ""
 
     # Layout: get node ID, assign, apply (skip if already applied)
@@ -376,11 +385,17 @@ ENVEOF
         ok "Created www/.env.local"
     fi
 
-    env_set "$WWW_ENV" "SITE_URL" "http://localhost:3000"
-    env_set "$WWW_ENV" "NEXTAUTH_URL" "http://localhost:3000"
+    # Caddyfile.standalone.example serves API at /v1, /health — use base URL
+    if [[ -n "${PRIMARY_IP:-}" ]]; then
+        BASE_URL="https://$PRIMARY_IP:3043"
+    else
+        BASE_URL="https://localhost:3043"
+    fi
+    env_set "$WWW_ENV" "SITE_URL" "$BASE_URL"
+    env_set "$WWW_ENV" "NEXTAUTH_URL" "$BASE_URL"
     env_set "$WWW_ENV" "NEXTAUTH_SECRET" "standalone-dev-secret-not-for-production"
-    env_set "$WWW_ENV" "API_URL" "http://localhost:1250"
-    env_set "$WWW_ENV" "WEBSOCKET_URL" "ws://localhost:1250"
+    env_set "$WWW_ENV" "API_URL" "$BASE_URL"
+    env_set "$WWW_ENV" "WEBSOCKET_URL" "auto"
     env_set "$WWW_ENV" "SERVER_API_URL" "http://server:1250"
     env_set "$WWW_ENV" "FEATURE_REQUIRE_LOGIN" "false"
 
@@ -533,21 +548,38 @@ main() {
         exit 1
     fi
 
-    # Ensure Docker Compose V2 plugin is available.
-    # Check output for "Compose" — without the plugin, `docker compose version`
-    # may still exit 0 (falling through to `docker version`).
-    if ! docker compose version 2>/dev/null | grep -qi compose; then
-        err "Docker Compose plugin not found."
-        err "Install Docker Desktop, OrbStack, or: brew install docker-compose"
-        exit 1
-    fi
+    # Docker: Compose plugin, buildx, and daemon. On Ubuntu, auto-install if missing.
+    docker_ready() {
+        docker compose version 2>/dev/null | grep -qi compose \
+            && docker buildx version &>/dev/null \
+            && docker info &>/dev/null
+    }
 
-    # Dockerfiles use RUN --mount which requires BuildKit.
-    # Docker Desktop/OrbStack bundle it; Colima/bare engine need docker-buildx.
-    if ! docker buildx version &>/dev/null; then
-        err "Docker BuildKit (buildx) not found."
-        err "Install Docker Desktop, OrbStack, or: brew install docker-buildx"
-        exit 1
+    if ! docker_ready; then
+        RAN_INSTALL=false
+        if [[ "$OS" == "Linux" ]] && [[ -f /etc/os-release ]] && (source /etc/os-release 2>/dev/null; [[ "${ID:-}" == "ubuntu" || "${ID_LIKE:-}" == *"ubuntu"* ]]); then
+            info "Docker not ready. Running install-docker-ubuntu.sh..."
+            "$SCRIPT_DIR/install-docker-ubuntu.sh" || true
+            RAN_INSTALL=true
+            [[ -d /run/systemd/system ]] && command -v systemctl &>/dev/null && systemctl start docker 2>/dev/null || true
+            sleep 2
+        fi
+        if ! docker_ready; then
+            # Docker may be installed but current shell lacks docker group (needs newgrp)
+            if [[ "$RAN_INSTALL" == "true" ]] && [[ $(id -u) -ne 0 ]] && command -v sg &>/dev/null && getent group docker &>/dev/null; then
+                info "Re-running with docker group..."
+                exec sg docker -c "$(printf '%q' "$0" && printf ' %q' "$@")"
+            fi
+            if [[ "$OS" == "Darwin" ]]; then
+                err "Docker not ready. Install Docker Desktop or OrbStack."
+            elif [[ "$OS" == "Linux" ]]; then
+                err "Docker not ready. Run: ./scripts/install-docker-ubuntu.sh"
+                err "Then run: newgrp docker   (or log out and back in), then run this script again."
+            else
+                err "Docker not ready. Install Docker with Compose V2 and buildx."
+            fi
+            exit 1
+        fi
     fi
 
     # LLM_URL_VALUE is set by step_llm, used by later steps
@@ -557,6 +589,57 @@ main() {
     # docker-compose.yml may reference env_files that don't exist yet;
     # touch them so compose_cmd works before the steps that populate them.
     touch "$SERVER_ENV" "$WWW_ENV"
+
+    # Ensure garage.toml exists before any compose up (step_llm starts all services including garage)
+    GARAGE_TOML="$ROOT_DIR/scripts/garage.toml"
+    GARAGE_TOML_RUNTIME="$ROOT_DIR/data/garage.toml"
+    mkdir -p "$ROOT_DIR/data"
+    if [[ -d "$GARAGE_TOML_RUNTIME" ]]; then
+        rm -rf "$GARAGE_TOML_RUNTIME"
+    fi
+    if [[ ! -f "$GARAGE_TOML_RUNTIME" ]]; then
+        RPC_SECRET=$(openssl rand -hex 32)
+        sed "s|__GARAGE_RPC_SECRET__|${RPC_SECRET}|" "$GARAGE_TOML" > "$GARAGE_TOML_RUNTIME"
+    fi
+
+    # Remove containers that may have bad mounts (was directory); force recreate
+    compose_cmd rm -f -s garage caddy 2>/dev/null || true
+
+    # Detect primary IP for droplet (used for Caddyfile, step_www_env, success message)
+    PRIMARY_IP=""
+    if [[ "$OS" == "Linux" ]]; then
+        PRIMARY_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+        if [[ "$PRIMARY_IP" == "127."* ]] || [[ -z "$PRIMARY_IP" ]]; then
+            PRIMARY_IP=$(ip -4 route get 1 2>/dev/null | sed -n 's/.*src \([0-9.]*\).*/\1/p' || true)
+        fi
+    fi
+
+    # Ensure Caddyfile exists before any compose up (step_llm starts caddy)
+    # On droplet: explicit IP + localhost so Caddy provisions cert at startup (avoids on_demand/SNI issues)
+    CADDYFILE="$ROOT_DIR/Caddyfile"
+    if [[ -d "$CADDYFILE" ]]; then
+        rm -rf "$CADDYFILE"
+    fi
+    if [[ -n "$PRIMARY_IP" ]]; then
+        cat > "$CADDYFILE" << CADDYEOF
+# Generated by setup-standalone.sh — explicit IP for droplet (provisions cert at startup)
+https://$PRIMARY_IP, localhost {
+    tls internal
+    handle /v1/* {
+        reverse_proxy server:1250
+    }
+    handle /health {
+        reverse_proxy server:1250
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+}
+CADDYEOF
+        ok "Created Caddyfile for $PRIMARY_IP and localhost"
+    elif [[ ! -f "$CADDYFILE" ]]; then
+        cp "$ROOT_DIR/Caddyfile.standalone.example" "$CADDYFILE"
+    fi
 
     step_llm
     echo ""
@@ -575,8 +658,14 @@ main() {
     echo -e " ${GREEN}Reflector is running!${NC}"
     echo "=========================================="
     echo ""
-    echo "  App:       https://localhost:3043  (accept self-signed cert in browser)"
-    echo "  API:       https://localhost:3043/server-api"
+    if [[ -n "$PRIMARY_IP" ]]; then
+        echo "  App:       https://$PRIMARY_IP:3043  (accept self-signed cert in browser)"
+        echo "  API:       https://$PRIMARY_IP:3043/v1/"
+        echo "  Local:     https://localhost:3043"
+    else
+        echo "  App:       https://localhost:3043  (accept self-signed cert in browser)"
+        echo "  API:       https://localhost:3043/v1/"
+    fi
     echo ""
     echo "  To stop:   docker compose down"
     echo "  To re-run: ./scripts/setup-standalone.sh"
