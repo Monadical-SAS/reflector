@@ -10,8 +10,7 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "3043:443"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -138,6 +137,7 @@ services:
       KV_USE_TLS: "false"
       # Standalone: no external auth provider
       FEATURE_REQUIRE_LOGIN: "false"
+      FEATURE_ROOMS: "false"
       NEXTAUTH_SECRET: standalone-local-secret
       # Nullify partial auth vars inherited from base env_file
       AUTHENTIK_ISSUER: ""

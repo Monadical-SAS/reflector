@@ -387,9 +387,9 @@ ENVEOF
 
     # Caddyfile.standalone.example serves API at /v1, /health — use base URL
     if [[ -n "${PRIMARY_IP:-}" ]]; then
-        BASE_URL="https://$PRIMARY_IP"
+        BASE_URL="https://$PRIMARY_IP:3043"
     else
-        BASE_URL="https://localhost"
+        BASE_URL="https://localhost:3043"
     fi
     env_set "$WWW_ENV" "SITE_URL" "$BASE_URL"
     env_set "$WWW_ENV" "NEXTAUTH_URL" "$BASE_URL"
@@ -411,7 +411,7 @@ step_services() {
     # Check for port conflicts — stale processes silently shadow Docker port mappings.
     # OrbStack/Docker Desktop bind ports for forwarding; ignore those PIDs.
     local ports_ok=true
-    for port in 80 443 3000 1250 5432 6379 3900 3903; do
+    for port in 3043 3000 1250 5432 6379 3900 3903; do
         local pids
         pids=$(lsof -ti :"$port" 2>/dev/null || true)
         for pid in $pids; do
@@ -514,10 +514,10 @@ step_health() {
     ok "Frontend responding"
 
     # Caddy reverse proxy (self-signed TLS — curl needs -k)
-    if curl -sfk "https://localhost" > /dev/null 2>&1; then
-        ok "Caddy proxy healthy (https://localhost)"
+    if curl -sfk "https://localhost:3043" > /dev/null 2>&1; then
+        ok "Caddy proxy healthy (https://localhost:3043)"
     else
-        warn "Caddy proxy not responding on https://localhost"
+        warn "Caddy proxy not responding on https://localhost:3043"
         warn "Check with: docker compose logs caddy"
     fi
 
@@ -659,12 +659,12 @@ CADDYEOF
     echo "=========================================="
     echo ""
     if [[ -n "$PRIMARY_IP" ]]; then
-        echo "  App:       https://$PRIMARY_IP  (accept self-signed cert in browser)"
-        echo "  API:       https://$PRIMARY_IP/v1/"
-        echo "  Local:     https://localhost"
+        echo "  App:       https://$PRIMARY_IP:3043  (accept self-signed cert in browser)"
+        echo "  API:       https://$PRIMARY_IP:3043/v1/"
+        echo "  Local:     https://localhost:3043"
     else
-        echo "  App:       https://localhost  (accept self-signed cert in browser)"
-        echo "  API:       https://localhost/v1/"
+        echo "  App:       https://localhost:3043  (accept self-signed cert in browser)"
+        echo "  API:       https://localhost:3043/v1/"
     fi
     echo ""
     echo "  To stop:   docker compose down"

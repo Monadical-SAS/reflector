@@ -2,10 +2,11 @@
 # Copy to Caddyfile: cp Caddyfile.standalone.example Caddyfile
 # Run: docker compose -f docker-compose.standalone.yml --profile ollama-cpu up -d
 #
-# :443 = catch-all for all HTTPS on port 443 (works with IP or domain)
+# :443 = catch-all inside container; Docker maps host port 3043 → container 443
 # on_demand = generate self-signed cert for IP/SNI on first request (required for bare IP access)
 # Browser will warn. Click Advanced → Proceed.
-# Update www/.env.local with: API_URL=https://YOUR_IP, WEBSOCKET_URL=wss://YOUR_IP, SITE_URL=https://YOUR_IP, NEXTAUTH_URL=https://YOUR_IP
+# Access at https://localhost:3043 (or https://YOUR_IP:3043 on droplet)
+# Update www/.env.local with: API_URL=https://YOUR_IP:3043, WEBSOCKET_URL=wss://YOUR_IP:3043, SITE_URL=https://YOUR_IP:3043, NEXTAUTH_URL=https://YOUR_IP:3043
 
 :443 {
     tls internal {

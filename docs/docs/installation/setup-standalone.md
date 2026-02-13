@@ -65,7 +65,7 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 
 | Variable                | Value                                      |
 | ----------------------- | ------------------------------------------ |
-| `API_URL`               | `https://localhost` or `https://YOUR_IP` (Linux) |
+| `API_URL`               | `https://localhost:3043` or `https://YOUR_IP:3043` (Linux) |
 | `SERVER_API_URL`        | `http://server:1250`                       |
 | `WEBSOCKET_URL`         | `auto`                                    |
 | `FEATURE_REQUIRE_LOGIN` | `false`                                    |
@@ -122,14 +122,14 @@ Verifies:
 
 - CPU service responds (transcription + diarization ready)
 - Server responds at `http://localhost:1250/health`
-- Frontend serves at `http://localhost:3000` (or via Caddy at `https://localhost`)
+- Frontend serves at `http://localhost:3000` (or via Caddy at `https://localhost:3043`)
 - LLM endpoint reachable from inside containers
 
 ## Services
 
 | Service    | Port       | Purpose                                            |
 | ---------- | ---------- | -------------------------------------------------- |
-| `caddy`    | 80, 443    | Reverse proxy (HTTPS, self-signed cert)            |
+| `caddy`    | 3043       | Reverse proxy (HTTPS, self-signed cert)            |
 | `server`   | 1250       | FastAPI backend (runs migrations on start)         |
 | `web`      | 3000       | Next.js frontend                                   |
 | `postgres` | 5432       | PostgreSQL database                                |
@@ -175,17 +175,17 @@ CPU-only processing is slow (~15 min for a 3 min audio file). Diarization finish
 
 To serve Reflector over HTTPS on a droplet accessed by IP (self-signed certificate):
 
-1. **Copy the Caddyfile** (no edits needed — `:443` catches all HTTPS):
+1. **Copy the Caddyfile** (no edits needed — `:443` catches all HTTPS inside container, mapped to host port 3043):
    ```bash
    cp Caddyfile.standalone.example Caddyfile
    ```
 
-2. **Update `www/.env.local`** with HTTPS URLs:
+2. **Update `www/.env.local`** with HTTPS URLs (port 3043):
    ```env
-   API_URL=https://YOUR_IP
-   WEBSOCKET_URL=wss://YOUR_IP
-   SITE_URL=https://YOUR_IP
-   NEXTAUTH_URL=https://YOUR_IP
+   API_URL=https://YOUR_IP:3043
+   WEBSOCKET_URL=wss://YOUR_IP:3043
+   SITE_URL=https://YOUR_IP:3043
+   NEXTAUTH_URL=https://YOUR_IP:3043
    ```
 
 3. **Restart services**:
@@ -194,23 +194,22 @@ To serve Reflector over HTTPS on a droplet accessed by IP (self-signed certifica
    ```
    (Use `ollama-gpu` instead of `ollama-cpu` if you have an NVIDIA GPU.)
 
-4. **Access** at `https://YOUR_IP` (port 443). The browser will warn about the self-signed cert — click **Advanced** → **Proceed to YOUR_IP (unsafe)**. All traffic (page, API, WebSocket) uses the same origin, so accepting once is enough.
+4. **Access** at `https://YOUR_IP:3043`. The browser will warn about the self-signed cert — click **Advanced** → **Proceed to YOUR_IP (unsafe)**. All traffic (page, API, WebSocket) uses the same origin, so accepting once is enough.
 
 ## Troubleshooting
 
 ### ERR_SSL_PROTOCOL_ERROR when accessing https://YOUR_IP
 
-You do **not** need a domain — the setup works with an IP address. This error usually means Caddy isn't serving TLS on 443. Check in order:
+You do **not** need a domain — the setup works with an IP address. This error usually means Caddy isn't serving TLS on port 3043. Check in order:
 
-1. **Caddyfile** — must use the `:443` catch-all (not localhost-only):
+1. **Caddyfile** — must use the `:443` catch-all (container-internal; Docker maps host 3043 → container 443):
    ```bash
    cp Caddyfile.standalone.example Caddyfile
    ```
 
-2. **Firewall** — allow 80 and 443 (common on DigitalOcean):
+2. **Firewall** — allow port 3043 (common on DigitalOcean):
    ```bash
-   sudo ufw allow 80
-   sudo ufw allow 443
+   sudo ufw allow 3043
    sudo ufw status
    ```
 
@@ -223,7 +222,7 @@ You do **not** need a domain — the setup works with an IP address. This error 
 
 4. **Test from the droplet** — if this works, the issue is external (firewall, network):
    ```bash
-   curl -vk https://localhost
+   curl -vk https://localhost:3043
    ```
 
 5. **localhost works but external IP fails** — Re-run the setup script; it generates a Caddyfile with your droplet IP explicitly, so Caddy provisions the cert at startup:
@@ -249,7 +248,7 @@ You do **not** need a domain — the setup works with an IP address. This error 
        handle { reverse_proxy web:3000 }
    }
    ```
-   Update `www/.env.local`: `API_URL=http://YOUR_IP`, `WEBSOCKET_URL=ws://YOUR_IP`, `SITE_URL=http://YOUR_IP`, `NEXTAUTH_URL=http://YOUR_IP`. Restart, then access `http://YOUR_IP`.
+   Update `www/.env.local`: `API_URL=http://YOUR_IP:3043`, `WEBSOCKET_URL=ws://YOUR_IP:3043`, `SITE_URL=http://YOUR_IP:3043`, `NEXTAUTH_URL=http://YOUR_IP:3043`. Restart, then access `http://YOUR_IP:3043`.
 
 ### Docker not ready
 
