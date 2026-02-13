@@ -191,7 +191,7 @@ Standalone runs without authentication (`FEATURE_REQUIRE_LOGIN=false`, `AUTH_BAC
 
 1. In `www/.env.local`: set `FEATURE_REQUIRE_LOGIN=true`, uncomment `AUTHENTIK_ISSUER` and `AUTHENTIK_REFRESH_TOKEN_URL`
 2. In `server/.env`: set `AUTH_BACKEND=authentik` (or your backend), configure `AUTH_JWT_AUDIENCE`
-3. Restart: `docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d --force-recreate web server`
+3. Restart: `docker compose -f docker-compose.standalone.yml up -d --force-recreate web server`
 
 ## What's NOT covered
 
