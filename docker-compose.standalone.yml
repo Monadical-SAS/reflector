@@ -23,6 +23,7 @@ services:
       context: server
     ports:
       - "1250:1250"
+      - "50000-50100:50000-50100/udp"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -48,6 +49,9 @@ services:
       DIARIZATION_URL: http://cpu:8000
       # Caddy reverse proxy prefix
       ROOT_PATH: /server-api
+      # WebRTC: fixed UDP port range for ICE candidates (mapped above).
+      # WEBRTC_HOST is set by setup-standalone.sh in server/.env (LAN IP detection).
+      WEBRTC_PORT_RANGE: "50000-50100"
     depends_on:
       postgres:
         condition: service_healthy
