@@ -37,6 +37,13 @@ try:
 except ImportError:
     sentry_sdk = None
 
+# Patch aioice port range if configured (must happen before any RTCPeerConnection)
+if settings.WEBRTC_PORT_RANGE:
+    from reflector.webrtc_ports import parse_port_range, patch_aioice_port_range
+
+    _min, _max = parse_port_range(settings.WEBRTC_PORT_RANGE)
+    patch_aioice_port_range(_min, _max)
+
 
 # lifespan events
 @asynccontextmanager

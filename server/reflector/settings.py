@@ -14,6 +14,15 @@ class Settings(BaseSettings):
 
     ROOT_PATH: str = "/"
 
+    # WebRTC port range for ICE candidates (e.g. "50000-50100").
+    # When set, monkey-patches aioice to bind UDP sockets within this range,
+    # allowing Docker port mapping instead of network_mode: host.
+    WEBRTC_PORT_RANGE: str | None = None
+    # Host IP or hostname to advertise in ICE candidates instead of the
+    # container's internal IP. Use "host.docker.internal" in Docker with
+    # extra_hosts, or a specific LAN IP. Resolved at connection time.
+    WEBRTC_HOST: str | None = None
+
     # CORS
     UI_BASE_URL: str = "http://localhost:3000"
     CORS_ORIGIN: str = "*"
