@@ -148,7 +148,7 @@ resolve_symlink() {
 }
 
 compose_cmd() {
-    local compose_files="-f $ROOT_DIR/docker-compose.yml -f $ROOT_DIR/docker-compose.standalone.yml"
+    local compose_files="-f $ROOT_DIR/docker-compose.standalone.yml"
     if [[ "$OS" == "Linux" ]] && [[ -n "${OLLAMA_PROFILE:-}" ]]; then
         docker compose $compose_files --profile "$OLLAMA_PROFILE" "$@"
     else

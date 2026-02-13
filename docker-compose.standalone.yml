@@ -1,83 +1,31 @@
-# Standalone services for fully local deployment (no external dependencies).
-# Usage: docker compose -f docker-compose.yml -f docker-compose.standalone.yml up -d
+# Self-contained standalone compose for fully local deployment (no external dependencies).
+# Usage: docker compose -f docker-compose.standalone.yml up -d
 #
 # On Linux with NVIDIA GPU, also pass: --profile ollama-gpu
 # On Linux without GPU:                --profile ollama-cpu
 # On Mac: Ollama runs natively (Metal GPU) — no profile needed, services here unused.
 
 services:
-  garage:
-    image: dxflrs/garage:v1.1.0
-    ports:
-      - "3900:3900"   # S3 API
-      - "3903:3903"   # Admin API
-    volumes:
-      - garage_data:/var/lib/garage/data
-      - garage_meta:/var/lib/garage/meta
-      - ./data/garage.toml:/etc/garage.toml:ro
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "/garage", "stats"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
-  ollama:
-    image: ollama/ollama:latest
-    profiles: ["ollama-gpu"]
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  ollama-cpu:
-    image: ollama/ollama:latest
-    profiles: ["ollama-cpu"]
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Override server to use standard compose networking instead of network_mode:host.
-  # host mode breaks on macOS Docker Desktop and prevents Docker DNS resolution.
   server:
-    network_mode: !reset null
+    build:
+      context: server
     ports:
       - "1250:1250"
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
     environment:
-      # Override base compose's localhost URLs with Docker DNS names
+      ENTRYPOINT: server
+      # Docker DNS names instead of localhost
       DATABASE_URL: postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
       REDIS_HOST: redis
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/1
-      # Standalone doesn't run Hatchet — blank out localhost URLs inherited from base
+      # Standalone doesn't run Hatchet
       HATCHET_CLIENT_SERVER_URL: ""
       HATCHET_CLIENT_HOST_PORT: ""
       # Self-hosted transcription/diarization via CPU service
@@ -86,21 +34,77 @@ services:
       TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
       DIARIZATION_URL: http://cpu:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   worker:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
     environment:
+      ENTRYPOINT: worker
+      HATCHET_CLIENT_SERVER_URL: ""
+      HATCHET_CLIENT_HOST_PORT: ""
       TRANSCRIPT_BACKEND: modal
       TRANSCRIPT_URL: http://cpu:8000
       TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
       DIARIZATION_URL: http://cpu:8000
+    depends_on:
+      redis:
+        condition: service_started
+
+  beat:
+    build:
+      context: server
+    volumes:
+      - ./server/:/app/
+      - /app/.venv
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: beat
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7.2
+    ports:
+      - 6379:6379
+
+  postgres:
+    image: postgres:17
+    command: postgres -c 'max_connections=200'
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d reflector -U reflector"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   web:
     image: reflector-frontend-standalone
     build:
       context: ./www
+    ports:
+      - "3000:3000"
     command: ["node", "server.js"]
-    volumes: !reset []
     environment:
       NODE_ENV: production
       # Browser-facing URLs (host-accessible ports)
@@ -118,6 +122,23 @@ services:
       # Nullify partial auth vars inherited from base env_file
       AUTHENTIK_ISSUER: ""
       AUTHENTIK_REFRESH_TOKEN_URL: ""
+
+  garage:
+    image: dxflrs/garage:v1.1.0
+    ports:
+      - "3900:3900"   # S3 API
+      - "3903:3903"   # Admin API
+    volumes:
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+      - ./data/garage.toml:/etc/garage.toml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/garage", "stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   cpu:
     build:
@@ -155,6 +176,41 @@ services:
       timeout: 5s
       retries: 10
       start_period: 120s
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama-gpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    profiles: ["ollama-cpu"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   garage_data:
