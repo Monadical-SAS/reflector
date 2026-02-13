@@ -18,9 +18,7 @@ def parse_port_range(range_str: str) -> tuple[int, int]:
     """Parse a 'min-max' string into (min_port, max_port)."""
     parts = range_str.split("-")
     if len(parts) != 2:
-        raise ValueError(
-            f"WEBRTC_PORT_RANGE must be 'min-max', got: {range_str!r}"
-        )
+        raise ValueError(f"WEBRTC_PORT_RANGE must be 'min-max', got: {range_str!r}")
     min_port, max_port = int(parts[0]), int(parts[1])
     if not (1024 <= min_port <= max_port <= 65535):
         raise ValueError(
@@ -43,9 +41,7 @@ def patch_aioice_port_range(min_port: int, max_port: int) -> None:
     _original = _ice.Connection.get_component_candidates
     _state = {"next_port": min_port}
 
-    async def _patched_get_component_candidates(
-        self, component, addresses, timeout=5
-    ):
+    async def _patched_get_component_candidates(self, component, addresses, timeout=5):
         loop = asyncio.get_event_loop()
         _orig_create = loop.create_datagram_endpoint
 
