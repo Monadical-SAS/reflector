@@ -59,7 +59,7 @@ else:
     logger.info("Sentry disabled")
 
 # build app
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, root_path=settings.ROOT_PATH)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=settings.CORS_ALLOW_CREDENTIALS or False,

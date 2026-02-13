@@ -6,6 +6,18 @@
 # On Mac: Ollama runs natively (Metal GPU) — no profile needed, services here unused.
 
 services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "3043:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./scripts/standalone/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
   garage:
     image: dxflrs/garage:v1.1.0
     ports:
@@ -67,6 +79,7 @@ services:
       TRANSCRIPT_MODAL_API_KEY: local
       DIARIZATION_BACKEND: modal
       DIARIZATION_URL: http://localhost:8100
+      ROOT_PATH: /server-api
 
   worker:
     environment:
@@ -85,8 +98,8 @@ services:
     environment:
       NODE_ENV: production
       # Browser-facing URLs (host-accessible ports)
-      API_URL: http://localhost:1250
-      WEBSOCKET_URL: ws://localhost:1250
+      API_URL: /server-api
+      WEBSOCKET_URL: auto
       SITE_URL: http://localhost:3000
       # Server-side URLs (docker-network internal)
       SERVER_API_URL: http://server:1250
@@ -142,3 +155,5 @@ volumes:
   garage_meta:
   ollama_data:
   gpu_cache:
+  caddy_data:
+  caddy_config:

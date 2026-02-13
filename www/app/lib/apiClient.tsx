@@ -13,9 +13,33 @@ export const API_URL = !isBuildPhase
   ? getClientEnv().API_URL
   : "http://localhost";
 
-export const WEBSOCKET_URL = !isBuildPhase
-  ? getClientEnv().WEBSOCKET_URL || "ws://127.0.0.1:1250"
-  : "ws://localhost";
+/**
+ * Derive a WebSocket URL from the API_URL.
+ * Handles full URLs (http://host/api, https://host/api) and relative paths (/api).
+ * For full URLs, ws/wss is derived from the URL's own protocol.
+ * For relative URLs, ws/wss is derived from window.location.protocol.
+ */
+const deriveWebSocketUrl = (apiUrl: string): string => {
+  if (typeof window === "undefined") {
+    return "ws://localhost";
+  }
+  const parsed = new URL(apiUrl, window.location.origin);
+  const wsProtocol = parsed.protocol === "https:" ? "wss:" : "ws:";
+  // Normalize: remove trailing slash from pathname
+  const pathname = parsed.pathname.replace(/\/+$/, "");
+  return `${wsProtocol}//${parsed.host}${pathname}`;
+};
+
+const resolveWebSocketUrl = (): string => {
+  if (isBuildPhase) return "ws://localhost";
+  const raw = getClientEnv().WEBSOCKET_URL;
+  if (!raw || raw === "auto") {
+    return deriveWebSocketUrl(API_URL);
+  }
+  return raw;
+};
+
+export const WEBSOCKET_URL = resolveWebSocketUrl();
 
 export const client = createClient<paths>({
   baseUrl: API_URL,
