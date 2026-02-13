@@ -12,6 +12,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    ROOT_PATH: str = "/"
+
     # CORS
     UI_BASE_URL: str = "http://localhost:3000"
     CORS_ORIGIN: str = "*"

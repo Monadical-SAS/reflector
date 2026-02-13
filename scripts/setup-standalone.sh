@@ -148,7 +148,7 @@ resolve_symlink() {
 }
 
 compose_cmd() {
-    local compose_files="-f $ROOT_DIR/docker-compose.yml -f $ROOT_DIR/docker-compose.standalone.yml"
+    local compose_files="-f $ROOT_DIR/docker-compose.standalone.yml"
     if [[ "$OS" == "Linux" ]] && [[ -n "${OLLAMA_PROFILE:-}" ]]; then
         docker compose $compose_files --profile "$OLLAMA_PROFILE" "$@"
     else
@@ -362,7 +362,7 @@ step_services() {
     # Check for port conflicts — stale processes silently shadow Docker port mappings.
     # OrbStack/Docker Desktop bind ports for forwarding; ignore those PIDs.
     local ports_ok=true
-    for port in 3000 1250 5432 6379 3900 3903; do
+    for port in 3043 3000 1250 5432 6379 3900 3903; do
         local pids
         pids=$(lsof -ti :"$port" 2>/dev/null || true)
         for pid in $pids; do
@@ -386,7 +386,7 @@ step_services() {
     rebuild_images
 
     # server runs alembic migrations on startup automatically (see runserver.sh)
-    compose_cmd up -d postgres redis garage cpu server worker beat web
+    compose_cmd up -d postgres redis garage cpu server worker beat web caddy
     ok "Containers started"
 
     # Quick sanity check — catch containers that exit immediately (bad image, missing file, etc.)
@@ -464,6 +464,14 @@ step_health() {
     echo ""
     ok "Frontend responding"
 
+    # Caddy reverse proxy (self-signed TLS — curl needs -k)
+    if curl -sfk "https://localhost:3043" > /dev/null 2>&1; then
+        ok "Caddy proxy healthy (https://localhost:3043)"
+    else
+        warn "Caddy proxy not responding on https://localhost:3043"
+        warn "Check with: docker compose logs caddy"
+    fi
+
     # Check LLM reachability from inside a container
     if compose_cmd exec -T server \
         curl -sf "$LLM_URL_VALUE/models" > /dev/null 2>&1; then
@@ -533,8 +541,8 @@ main() {
     echo -e " ${GREEN}Reflector is running!${NC}"
     echo "=========================================="
     echo ""
-    echo "  Frontend:  http://localhost:3000"
-    echo "  API:       http://localhost:1250"
+    echo "  App:       https://localhost:3043  (accept self-signed cert in browser)"
+    echo "  API:       https://localhost:3043/server-api"
     echo ""
     echo "  To stop:   docker compose down"
     echo "  To re-run: ./scripts/setup-standalone.sh"

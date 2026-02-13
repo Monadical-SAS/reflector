@@ -2,6 +2,7 @@ import {
   assertExists,
   assertExistsAndNonEmptyString,
   NonEmptyString,
+  parseMaybeNonEmptyString,
   parseNonEmptyString,
 } from "./utils";
 import { isBuildPhase } from "./next";
@@ -74,14 +75,14 @@ export const getClientEnvServer = (): ClientEnvCommon => {
   if (isBuildPhase) {
     return {
       API_URL: getNextEnvVar("API_URL"),
-      WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+      WEBSOCKET_URL: parseMaybeNonEmptyString(process.env.WEBSOCKET_URL ?? ""),
       ...features,
     };
   }
 
   clientEnv = {
     API_URL: getNextEnvVar("API_URL"),
-    WEBSOCKET_URL: getNextEnvVar("WEBSOCKET_URL"),
+    WEBSOCKET_URL: parseMaybeNonEmptyString(process.env.WEBSOCKET_URL ?? ""),
     ...features,
   };
   return clientEnv;
