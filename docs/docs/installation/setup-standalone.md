@@ -13,14 +13,26 @@ cd reflector
 ./scripts/setup-standalone.sh
 ```
 
+On Ubuntu, the setup script installs Docker automatically if missing.
+
 The script is idempotent — safe to re-run at any time. It detects what's already set up and skips completed steps.
 
 ## Prerequisites
 
-- Docker / OrbStack / Docker Desktop (any)
+- Docker with Compose V2 plugin (Docker Desktop, OrbStack, or Docker Engine + compose plugin)
 - Mac (Apple Silicon) or Linux
 - 16GB+ RAM (32GB recommended for 14B LLM models)
 - **Mac only**: [Ollama](https://ollama.com/download) installed (`brew install ollama`)
+
+### Installing Docker (if not already installed)
+
+**Ubuntu**: The setup script runs `install-docker-ubuntu.sh` automatically when Docker is missing. Or run it manually:
+
+```bash
+./scripts/install-docker-ubuntu.sh
+```
+
+**Mac**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev/).
 
 ## What the script does
 
@@ -36,28 +48,28 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 
 **`server/.env`** — key settings:
 
-| Variable | Value | Why |
-|----------|-------|-----|
-| `DATABASE_URL` | `postgresql+asyncpg://...@postgres:5432/reflector` | Docker-internal hostname |
-| `REDIS_HOST` | `redis` | Docker-internal hostname |
-| `CELERY_BROKER_URL` | `redis://redis:6379/1` | Docker-internal hostname |
-| `AUTH_BACKEND` | `none` | No Authentik in standalone |
-| `TRANSCRIPT_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
-| `TRANSCRIPT_URL` | `http://cpu:8000` | Docker-internal CPU service |
-| `DIARIZATION_BACKEND` | `modal` | HTTP API to self-hosted CPU service |
-| `DIARIZATION_URL` | `http://cpu:8000` | Docker-internal CPU service |
-| `TRANSLATION_BACKEND` | `passthrough` | No Modal |
-| `LLM_URL` | `http://host.docker.internal:11434/v1` (Mac) | Ollama endpoint |
+| Variable              | Value                                              | Why                                 |
+| --------------------- | -------------------------------------------------- | ----------------------------------- |
+| `DATABASE_URL`        | `postgresql+asyncpg://...@postgres:5432/reflector` | Docker-internal hostname            |
+| `REDIS_HOST`          | `redis`                                            | Docker-internal hostname            |
+| `CELERY_BROKER_URL`   | `redis://redis:6379/1`                             | Docker-internal hostname            |
+| `AUTH_BACKEND`        | `none`                                             | No Authentik in standalone          |
+| `TRANSCRIPT_BACKEND`  | `modal`                                            | HTTP API to self-hosted CPU service |
+| `TRANSCRIPT_URL`      | `http://cpu:8000`                                  | Docker-internal CPU service         |
+| `DIARIZATION_BACKEND` | `modal`                                            | HTTP API to self-hosted CPU service |
+| `DIARIZATION_URL`     | `http://cpu:8000`                                  | Docker-internal CPU service         |
+| `TRANSLATION_BACKEND` | `passthrough`                                      | No Modal                            |
+| `LLM_URL`             | `http://host.docker.internal:11434/v1` (Mac)       | Ollama endpoint                     |
 
 **`www/.env.local`** — key settings:
 
-| Variable | Value |
-|----------|-------|
-| `API_URL` | `http://localhost:1250` |
-| `SERVER_API_URL` | `http://server:1250` |
-| `WEBSOCKET_URL` | `ws://localhost:1250` |
-| `FEATURE_REQUIRE_LOGIN` | `false` |
-| `NEXTAUTH_SECRET` | `standalone-dev-secret-not-for-production` |
+| Variable                | Value                                      |
+| ----------------------- | ------------------------------------------ |
+| `API_URL`               | `https://localhost` or `https://YOUR_IP` (Linux) |
+| `SERVER_API_URL`        | `http://server:1250`                       |
+| `WEBSOCKET_URL`         | `auto`                                    |
+| `FEATURE_REQUIRE_LOGIN` | `false`                                    |
+| `NEXTAUTH_SECRET`       | `standalone-dev-secret-not-for-production` |
 
 If env files already exist (including symlinks from worktree setup), the script resolves symlinks and ensures all standalone-critical vars are set. Existing vars not related to standalone are preserved.
 
@@ -67,14 +79,14 @@ Standalone uses [Garage](https://garagehq.deuxfleurs.fr/) — a lightweight S3-c
 
 **`server/.env`** — storage settings added by the script:
 
-| Variable | Value | Why |
-|----------|-------|-----|
-| `TRANSCRIPT_STORAGE_BACKEND` | `aws` | Uses the S3-compatible storage driver |
-| `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` | `http://garage:3900` | Docker-internal Garage S3 API |
-| `TRANSCRIPT_STORAGE_AWS_BUCKET_NAME` | `reflector-media` | Created by the script |
-| `TRANSCRIPT_STORAGE_AWS_REGION` | `garage` | Must match Garage config |
-| `TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID` | *(auto-generated)* | Created by `garage key create` |
-| `TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY` | *(auto-generated)* | Created by `garage key create` |
+| Variable                                   | Value                | Why                                   |
+| ------------------------------------------ | -------------------- | ------------------------------------- |
+| `TRANSCRIPT_STORAGE_BACKEND`               | `aws`                | Uses the S3-compatible storage driver |
+| `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL`      | `http://garage:3900` | Docker-internal Garage S3 API         |
+| `TRANSCRIPT_STORAGE_AWS_BUCKET_NAME`       | `reflector-media`    | Created by the script                 |
+| `TRANSCRIPT_STORAGE_AWS_REGION`            | `garage`             | Must match Garage config              |
+| `TRANSCRIPT_STORAGE_AWS_ACCESS_KEY_ID`     | _(auto-generated)_   | Created by `garage key create`        |
+| `TRANSCRIPT_STORAGE_AWS_SECRET_ACCESS_KEY` | _(auto-generated)_   | Created by `garage key create`        |
 
 The `TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL` setting enables S3-compatible backends. When set, the storage driver uses path-style addressing and routes all requests to the custom endpoint. When unset (production AWS), behavior is unchanged.
 
@@ -107,23 +119,25 @@ Run automatically by the `server` container on startup (`runserver.sh` calls `al
 ### 7. Health check
 
 Verifies:
+
 - CPU service responds (transcription + diarization ready)
 - Server responds at `http://localhost:1250/health`
-- Frontend serves at `http://localhost:3000`
+- Frontend serves at `http://localhost:3000` (or via Caddy at `https://localhost`)
 - LLM endpoint reachable from inside containers
 
 ## Services
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| `server` | 1250 | FastAPI backend (runs migrations on start) |
-| `web` | 3000 | Next.js frontend |
-| `postgres` | 5432 | PostgreSQL database |
-| `redis` | 6379 | Cache + Celery broker |
-| `garage` | 3900, 3903 | S3-compatible object storage (S3 API + admin API) |
-| `cpu` | — | Self-hosted transcription + diarization (CPU-only) |
-| `worker` | — | Celery worker (live pipeline post-processing) |
-| `beat` | — | Celery beat (scheduled tasks) |
+| Service    | Port       | Purpose                                            |
+| ---------- | ---------- | -------------------------------------------------- |
+| `caddy`    | 80, 443    | Reverse proxy (HTTPS, self-signed cert)            |
+| `server`   | 1250       | FastAPI backend (runs migrations on start)         |
+| `web`      | 3000       | Next.js frontend                                   |
+| `postgres` | 5432       | PostgreSQL database                                |
+| `redis`    | 6379       | Cache + Celery broker                              |
+| `garage`   | 3900, 3903 | S3-compatible object storage (S3 API + admin API)  |
+| `cpu`      | —          | Self-hosted transcription + diarization (CPU-only) |
+| `worker`   | —          | Celery worker (live pipeline post-processing)      |
+| `beat`     | —          | Celery beat (scheduled tasks)                      |
 
 ## Testing programmatically
 
@@ -157,7 +171,89 @@ Expected result: status `ended`, auto-generated `title`, `short_summary`, `long_
 
 CPU-only processing is slow (~15 min for a 3 min audio file). Diarization finishes in ~3 min, transcription takes the rest.
 
+## Enabling HTTPS (droplet via IP)
+
+To serve Reflector over HTTPS on a droplet accessed by IP (self-signed certificate):
+
+1. **Copy the Caddyfile** (no edits needed — `:443` catches all HTTPS):
+   ```bash
+   cp Caddyfile.standalone.example Caddyfile
+   ```
+
+2. **Update `www/.env.local`** with HTTPS URLs:
+   ```env
+   API_URL=https://YOUR_IP
+   WEBSOCKET_URL=wss://YOUR_IP
+   SITE_URL=https://YOUR_IP
+   NEXTAUTH_URL=https://YOUR_IP
+   ```
+
+3. **Restart services**:
+   ```bash
+   docker compose -f docker-compose.standalone.yml --profile ollama-cpu up -d
+   ```
+   (Use `ollama-gpu` instead of `ollama-cpu` if you have an NVIDIA GPU.)
+
+4. **Access** at `https://YOUR_IP` (port 443). The browser will warn about the self-signed cert — click **Advanced** → **Proceed to YOUR_IP (unsafe)**. All traffic (page, API, WebSocket) uses the same origin, so accepting once is enough.
+
 ## Troubleshooting
+
+### ERR_SSL_PROTOCOL_ERROR when accessing https://YOUR_IP
+
+You do **not** need a domain — the setup works with an IP address. This error usually means Caddy isn't serving TLS on 443. Check in order:
+
+1. **Caddyfile** — must use the `:443` catch-all (not localhost-only):
+   ```bash
+   cp Caddyfile.standalone.example Caddyfile
+   ```
+
+2. **Firewall** — allow 80 and 443 (common on DigitalOcean):
+   ```bash
+   sudo ufw allow 80
+   sudo ufw allow 443
+   sudo ufw status
+   ```
+
+3. **Caddy running** — verify and restart:
+   ```bash
+   docker compose -f docker-compose.standalone.yml ps
+   docker compose -f docker-compose.standalone.yml logs caddy --tail 20
+   docker compose -f docker-compose.standalone.yml --profile ollama-cpu up -d
+   ```
+
+4. **Test from the droplet** — if this works, the issue is external (firewall, network):
+   ```bash
+   curl -vk https://localhost
+   ```
+
+5. **localhost works but external IP fails** — Re-run the setup script; it generates a Caddyfile with your droplet IP explicitly, so Caddy provisions the cert at startup:
+   ```bash
+   ./scripts/setup-standalone.sh
+   ```
+   Or manually create `Caddyfile` with your IP (replace 138.197.162.116):
+   ```
+   https://138.197.162.116, localhost {
+       tls internal
+       handle /v1/* { reverse_proxy server:1250 }
+       handle /health { reverse_proxy server:1250 }
+       handle { reverse_proxy web:3000 }
+   }
+   ```
+   Then restart: `docker compose -f docker-compose.standalone.yml --profile ollama-cpu up -d`
+
+6. **Still failing?** Try HTTP (no TLS) — create `Caddyfile`:
+   ```
+   :80 {
+       handle /v1/* { reverse_proxy server:1250 }
+       handle /health { reverse_proxy server:1250 }
+       handle { reverse_proxy web:3000 }
+   }
+   ```
+   Update `www/.env.local`: `API_URL=http://YOUR_IP`, `WEBSOCKET_URL=ws://YOUR_IP`, `SITE_URL=http://YOUR_IP`, `NEXTAUTH_URL=http://YOUR_IP`. Restart, then access `http://YOUR_IP`.
+
+### Docker not ready
+
+If setup fails with "Docker not ready", on Ubuntu run `./scripts/install-docker-ubuntu.sh`. If Docker is installed but you're not root, run `newgrp docker` then run the setup script again.
 
 ### Port conflicts (most common issue)
 
@@ -176,6 +272,7 @@ lsof -ti :3000 | xargs kill
 ```
 
 Common causes:
+
 - A stale `next dev` or `pnpm dev` process from another terminal/worktree
 - Another Docker Compose project (different worktree) with containers on the same ports — the setup script only manages its own project; containers from other projects must be stopped manually (`docker ps` to find them, `docker stop` to kill them)
 

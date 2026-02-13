@@ -1,0 +1,41 @@
+# Reflector standalone — HTTPS via Caddy (droplet / IP access)
+# Copy to Caddyfile: cp Caddyfile.standalone.example Caddyfile
+# Run: docker compose -f docker-compose.standalone.yml --profile ollama-cpu up -d
+#
+# :443 = catch-all for all HTTPS on port 443 (works with IP or domain)
+# on_demand = generate self-signed cert for IP/SNI on first request (required for bare IP access)
+# Browser will warn. Click Advanced → Proceed.
+# Update www/.env.local with: API_URL=https://YOUR_IP, WEBSOCKET_URL=wss://YOUR_IP, SITE_URL=https://YOUR_IP, NEXTAUTH_URL=https://YOUR_IP
+
+:443 {
+    tls internal {
+        on_demand
+    }
+    handle /v1/* {
+        reverse_proxy server:1250
+    }
+    handle /health {
+        reverse_proxy server:1250
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+}
+
+# Option B: localhost (comment Option A, uncomment this)
+# app.localhost {
+#     tls internal
+#     reverse_proxy web:3000
+# }
+# api.localhost {
+#     tls internal
+#     reverse_proxy server:1250
+# }
+
+# Option C: Real domain (uncomment and replace example.com)
+# app.example.com {
+#     reverse_proxy web:3000
+# }
+# api.example.com {
+#     reverse_proxy server:1250
+# }
