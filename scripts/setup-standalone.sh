@@ -35,6 +35,75 @@ err()   { echo -e "${RED}  ✗${NC} $*" >&2; }
 
 # --- Helpers ---
 
+dump_diagnostics() {
+    local failed_svc="${1:-}"
+    echo ""
+    err "========== DIAGNOSTICS =========="
+
+    err "Container status:"
+    compose_cmd ps -a --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
+    echo ""
+
+    # Show logs for any container that exited
+    local stopped
+    stopped=$(compose_cmd ps -a --format '{{.Name}}\t{{.Status}}' 2>/dev/null \
+        | grep -iv 'up\|running' | awk -F'\t' '{print $1}' || true)
+    for c in $stopped; do
+        err "--- Logs for $c (exited/unhealthy) ---"
+        docker logs --tail 30 "$c" 2>&1 || true
+        echo ""
+    done
+
+    # If a specific service failed, always show its logs
+    if [[ -n "$failed_svc" ]]; then
+        err "--- Logs for $failed_svc (last 40) ---"
+        compose_cmd logs "$failed_svc" --tail 40 2>&1 || true
+        echo ""
+        # Try health check from inside the container as extra signal
+        err "--- Internal health check ($failed_svc) ---"
+        compose_cmd exec -T "$failed_svc" \
+            curl -sf http://localhost:1250/health 2>&1 || echo "(not reachable internally either)"
+    fi
+
+    err "================================="
+}
+
+trap 'dump_diagnostics' ERR
+
+# Get the image ID for a compose service (works even when containers are not running).
+svc_image_id() {
+    local svc="$1"
+    # Extract image name from compose config YAML, fall back to <project>-<service>
+    local img_name
+    img_name=$(compose_cmd config 2>/dev/null \
+        | sed -n "/^  ${svc}:/,/^  [a-z]/p" | grep '^\s*image:' | awk '{print $2}')
+    img_name="${img_name:-reflector-$svc}"
+    docker images -q "$img_name" 2>/dev/null | head -1
+}
+
+# Ensure images with build contexts are up-to-date.
+# Docker layer cache makes this fast (~seconds) when source hasn't changed.
+rebuild_images() {
+    local svc
+    for svc in web cpu; do
+        local old_id
+        old_id=$(svc_image_id "$svc")
+        old_id="${old_id:-<none>}"
+
+        info "Building $svc..."
+        compose_cmd build "$svc"
+
+        local new_id
+        new_id=$(svc_image_id "$svc")
+
+        if [[ "$old_id" == "$new_id" ]]; then
+            ok "$svc unchanged (${new_id:0:12})"
+        else
+            ok "$svc rebuilt (${old_id:0:12} -> ${new_id:0:12})"
+        fi
+    done
+}
+
 wait_for_url() {
     local url="$1" label="$2" retries="${3:-30}" interval="${4:-2}"
     for i in $(seq 1 "$retries"); do
@@ -79,7 +148,7 @@ resolve_symlink() {
 }
 
 compose_cmd() {
-    local compose_files="-f $ROOT_DIR/docker-compose.yml -f $ROOT_DIR/docker-compose.standalone.yml"
+    local compose_files="-f $ROOT_DIR/docker-compose.standalone.yml"
     if [[ "$OS" == "Linux" ]] && [[ -n "${OLLAMA_PROFILE:-}" ]]; then
         docker compose $compose_files --profile "$OLLAMA_PROFILE" "$@"
     else
@@ -113,7 +182,7 @@ step_llm() {
             echo ""
 
             # Pull model if not already present
-            if ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+            if ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL (this may take a while)..."
@@ -143,7 +212,7 @@ step_llm() {
             echo ""
 
             # Pull model inside container
-            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+            if compose_cmd exec "$OLLAMA_SVC" ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$MODEL"; then
                 ok "Model $MODEL already pulled"
             else
                 info "Pulling model $MODEL inside container (this may take a while)..."
@@ -293,7 +362,7 @@ step_services() {
     # Check for port conflicts — stale processes silently shadow Docker port mappings.
     # OrbStack/Docker Desktop bind ports for forwarding; ignore those PIDs.
     local ports_ok=true
-    for port in 3000 1250 5432 6379 3900 3903; do
+    for port in 3043 3000 1250 5432 6379 3900 3903; do
         local pids
         pids=$(lsof -ti :"$port" 2>/dev/null || true)
         for pid in $pids; do
@@ -313,9 +382,24 @@ step_services() {
         warn "Continuing anyway (services will start but may be shadowed)"
     fi
 
+    # Rebuild images if source has changed (Docker layer cache makes this fast when unchanged)
+    rebuild_images
+
     # server runs alembic migrations on startup automatically (see runserver.sh)
-    compose_cmd up -d postgres redis garage cpu server worker beat web
+    compose_cmd up -d postgres redis garage cpu server worker beat web caddy
     ok "Containers started"
+
+    # Quick sanity check — catch containers that exit immediately (bad image, missing file, etc.)
+    sleep 3
+    local exited
+    exited=$(compose_cmd ps -a --format '{{.Name}} {{.Status}}' 2>/dev/null \
+        | grep -i 'exit' || true)
+    if [[ -n "$exited" ]]; then
+        warn "Some containers exited immediately:"
+        echo "$exited" | while read -r line; do warn "  $line"; done
+        dump_diagnostics
+    fi
+
     info "Server is running migrations (alembic upgrade head)..."
 }
 
@@ -345,13 +429,48 @@ step_health() {
         warn "Check with: docker compose logs cpu"
     fi
 
-    wait_for_url "http://localhost:1250/health" "Server API" 60 3
+    # Server may take a long time on first run — alembic migrations run before uvicorn starts.
+    # Use docker exec so this works regardless of network_mode or port mapping.
+    info "Waiting for Server API (first run includes database migrations)..."
+    local server_ok=false
+    for i in $(seq 1 90); do
+        # Check if container is still running
+        local svc_status
+        svc_status=$(compose_cmd ps server --format '{{.Status}}' 2>/dev/null || true)
+        if [[ -z "$svc_status" ]] || echo "$svc_status" | grep -qi 'exit'; then
+            echo ""
+            err "Server container exited unexpectedly"
+            dump_diagnostics server
+            exit 1
+        fi
+        # Health check from inside container (avoids host networking issues)
+        if compose_cmd exec -T server curl -sf http://localhost:1250/health > /dev/null 2>&1; then
+            server_ok=true
+            break
+        fi
+        echo -ne "\r  Waiting for Server API... ($i/90)"
+        sleep 5
+    done
     echo ""
-    ok "Server API healthy"
+    if [[ "$server_ok" == "true" ]]; then
+        ok "Server API healthy"
+    else
+        err "Server API not ready after ~7 minutes"
+        dump_diagnostics server
+        exit 1
+    fi
 
     wait_for_url "http://localhost:3000" "Frontend" 90 3
     echo ""
     ok "Frontend responding"
+
+    # Caddy reverse proxy (self-signed TLS — curl needs -k)
+    if curl -sfk "https://localhost:3043" > /dev/null 2>&1; then
+        ok "Caddy proxy healthy (https://localhost:3043)"
+    else
+        warn "Caddy proxy not responding on https://localhost:3043"
+        warn "Check with: docker compose logs caddy"
+    fi
 
     # Check LLM reachability from inside a container
     if compose_cmd exec -T server \
@@ -380,6 +499,22 @@ main() {
         exit 1
     fi
 
+    # Ensure Docker Compose V2 plugin is available.
+    # Check output for "Compose" — without the plugin, `docker compose version`
+    # may still exit 0 (falling through to `docker version`).
+    if ! docker compose version 2>/dev/null | grep -qi compose; then
+        err "Docker Compose plugin not found."
+        err "Install Docker Desktop, OrbStack, or: brew install docker-compose"
+        exit 1
+    fi
+
+    # Dockerfiles use RUN --mount which requires BuildKit.
+    # Docker Desktop/OrbStack bundle it; Colima/bare engine need docker-buildx.
+    if ! docker buildx version &>/dev/null; then
+        err "Docker BuildKit (buildx) not found."
+        err "Install Docker Desktop, OrbStack, or: brew install docker-buildx"
+        exit 1
+    fi
 
     # LLM_URL_VALUE is set by step_llm, used by later steps
     LLM_URL_VALUE=""
@@ -406,8 +541,8 @@ main() {
     echo -e " ${GREEN}Reflector is running!${NC}"
     echo "=========================================="
     echo ""
-    echo "  Frontend:  http://localhost:3000"
-    echo "  API:       http://localhost:1250"
+    echo "  App:       https://localhost:3043  (accept self-signed cert in browser)"
+    echo "  API:       https://localhost:3043/server-api"
     echo ""
     echo "  To stop:   docker compose down"
     echo "  To re-run: ./scripts/setup-standalone.sh"
