@@ -5,7 +5,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from reflector.asynctask import asynctask
-from reflector.db.calendar_events import calendar_events_controller
+from reflector.db.calendar_events import CalendarEvent, calendar_events_controller
 from reflector.db.meetings import meetings_controller
 from reflector.db.rooms import Room, rooms_controller
 from reflector.redis_cache import RedisAsyncLock
@@ -83,15 +83,29 @@ def _should_sync(room) -> bool:
     return time_since_sync.total_seconds() >= room.ics_fetch_interval
 
 
-MEETING_DEFAULT_DURATION = timedelta(hours=1)
-
-
-async def create_upcoming_meetings_for_event(event, create_window, room: Room):
+async def create_upcoming_meetings_for_event(
+    event: CalendarEvent, create_window: datetime, room: Room
+):
     if event.start_time <= create_window:
         return
     existing_meeting = await meetings_controller.get_by_calendar_event(event.id, room)
 
     if existing_meeting:
+        return
+
+    # Prevent duplicate meetings from aggregated calendar feeds
+    # (e.g. same event appears with different UIDs from Cal.com and Google Calendar)
+    end_date = event.end_time
+    existing_by_time = await meetings_controller.get_by_room_and_time_window(
+        room, event.start_time, end_date
+    )
+    if existing_by_time:
+        logger.info(
+            "Skipping duplicate calendar event - meeting already exists for this time window",
+            room_id=room.id,
+            event_id=event.id,
+            existing_meeting_id=existing_by_time.id,
+        )
         return
 
     logger.info(
@@ -102,8 +116,6 @@ async def create_upcoming_meetings_for_event(event, create_window, room: Room):
     )
 
     try:
-        end_date = event.end_time or (event.start_time + MEETING_DEFAULT_DURATION)
-
         client = create_platform_client(room.platform)
 
         meeting_data = await client.create_meeting(
