@@ -17,6 +17,7 @@ from hatchet_sdk.clients.rest.models import V1TaskStatus
 from reflector.db.recordings import recordings_controller
 from reflector.db.transcripts import Transcript, transcripts_controller
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.dag_zulip import create_dag_zulip_message
 from reflector.logger import logger
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.utils.string import NonEmptyString
@@ -267,6 +268,16 @@ async def dispatch_transcript_processing(
         if transcript:
             await transcripts_controller.update(
                 transcript, {"workflow_run_id": workflow_id}
+            )
+
+        try:
+            await create_dag_zulip_message(config.transcript_id, workflow_id)
+        except Exception:
+            logger.warning(
+                "[DAG Zulip] Failed to create DAG message at dispatch",
+                transcript_id=config.transcript_id,
+                workflow_id=workflow_id,
+                exc_info=True,
             )
 
         logger.info("Hatchet workflow dispatched", workflow_id=workflow_id)

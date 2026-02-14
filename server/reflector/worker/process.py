@@ -25,6 +25,7 @@ from reflector.db.transcripts import (
     transcripts_controller,
 )
 from reflector.hatchet.client import HatchetClientManager
+from reflector.hatchet.dag_zulip import create_dag_zulip_message
 from reflector.pipelines.main_file_pipeline import task_pipeline_file_process
 from reflector.pipelines.main_live_pipeline import asynctask
 from reflector.pipelines.topic_processing import EmptyPipeline
@@ -371,6 +372,16 @@ async def _process_multitrack_recording_inner(
     )
 
     await transcripts_controller.update(transcript, {"workflow_run_id": workflow_id})
+
+    try:
+        await create_dag_zulip_message(transcript.id, workflow_id)
+    except Exception:
+        logger.warning(
+            "[DAG Zulip] Failed to create DAG message at dispatch",
+            transcript_id=transcript.id,
+            workflow_id=workflow_id,
+            exc_info=True,
+        )
 
 
 @shared_task
@@ -1078,6 +1089,16 @@ async def reprocess_failed_daily_recordings():
             await transcripts_controller.update(
                 transcript, {"workflow_run_id": workflow_id}
             )
+
+            try:
+                await create_dag_zulip_message(transcript.id, workflow_id)
+            except Exception:
+                logger.warning(
+                    "[DAG Zulip] Failed to create DAG message at reprocess dispatch",
+                    transcript_id=transcript.id,
+                    workflow_id=workflow_id,
+                    exc_info=True,
+                )
 
             logger.info(
                 "Queued Daily recording for Hatchet reprocessing",
