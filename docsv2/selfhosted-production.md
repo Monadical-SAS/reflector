@@ -46,7 +46,10 @@ Deploy Reflector on a single server with everything running in Docker. Transcrip
 git clone https://github.com/Monadical-SAS/reflector.git
 cd reflector
 
-# GPU + local Ollama LLM + local Garage storage + Caddy SSL:
+# GPU + local Ollama LLM + local Garage storage + Caddy SSL (with domain):
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --domain reflector.example.com
+
+# Same but without a domain (self-signed cert, access via IP):
 ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
 
 # CPU-only (same, but slower):
@@ -114,11 +117,16 @@ Browse all available models at https://ollama.com/library.
 | Flag | What it does |
 |------|-------------|
 | `--garage` | Starts Garage (local S3-compatible storage). Auto-configures bucket, keys, and env vars. |
-| `--caddy` | Starts Caddy reverse proxy on ports 80/443 with auto-SSL. |
+| `--caddy` | Starts Caddy reverse proxy on ports 80/443 with self-signed cert. |
+| `--domain DOMAIN` | Use a real domain with Let's Encrypt auto-HTTPS (implies `--caddy`). Requires DNS A record pointing to this server and ports 80/443 open. |
 
 Without `--garage`, you **must** provide S3-compatible credentials (the script will prompt interactively or you can pre-fill `server/.env`).
 
-Without `--caddy`, no ports are exposed. Point your own reverse proxy at `web:3000` (frontend) and `server:1250` (API).
+Without `--caddy` or `--domain`, no ports are exposed. Point your own reverse proxy at `web:3000` (frontend) and `server:1250` (API).
+
+**Using a domain (recommended for production):** Point a DNS A record at your server's IP, then pass `--domain your.domain.com`. Caddy will automatically obtain and renew a Let's Encrypt certificate. Ports 80 and 443 must be open.
+
+**Without a domain:** `--caddy` alone uses a self-signed certificate. Browsers will show a security warning that must be accepted.
 
 ## What the Script Does
 
