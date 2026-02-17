@@ -351,3 +351,9 @@ The setup script is idempotent — it won't overwrite existing secrets or env va
 ```
 
 All services communicate over Docker's internal network. Only Caddy (if enabled) exposes ports to the internet.
+
+# GPU server, everything local — the "batteries included" option
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
+
+# Same but CPU-only (no NVIDIA GPU needed, slower transcription)
+./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy

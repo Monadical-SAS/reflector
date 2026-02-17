@@ -246,6 +246,9 @@ services:
     image: dxflrs/garage:v1.1.0
     profiles: [garage]
     restart: unless-stopped
+    ports:
+      - "3900:3900"   # S3 API
+      - "3903:3903"   # Admin API
     volumes:
       - garage_data:/var/lib/garage/data
       - garage_meta:/var/lib/garage/meta
