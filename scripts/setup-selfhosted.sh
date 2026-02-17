@@ -4,24 +4,26 @@
 # Single script to configure and launch everything on one server.
 #
 # Usage:
-#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--garage] [--caddy]
+#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy]
 #
 # Specialized models (pick ONE — required):
-#   --gpu          NVIDIA GPU for transcription/diarization/translation
-#   --cpu          CPU-only for transcription/diarization/translation (slower)
+#   --gpu              NVIDIA GPU for transcription/diarization/translation
+#   --cpu              CPU-only for transcription/diarization/translation (slower)
 #
 # Local LLM (optional — for summarization & topic detection):
-#   --ollama-gpu   Local Ollama with NVIDIA GPU acceleration
-#   --ollama-cpu   Local Ollama on CPU only
+#   --ollama-gpu       Local Ollama with NVIDIA GPU acceleration
+#   --ollama-cpu       Local Ollama on CPU only
+#   --llm-model MODEL  Ollama model to use (default: qwen2.5:14b)
 #   (If omitted, configure an external OpenAI-compatible LLM in server/.env)
 #
 # Optional flags:
-#   --garage       Use Garage for local S3-compatible storage
-#   --caddy        Enable Caddy reverse proxy with auto-SSL
+#   --garage           Use Garage for local S3-compatible storage
+#   --caddy            Enable Caddy reverse proxy with auto-SSL
 #
 # Examples:
 #   ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
 #   ./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy
+#   ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model mistral --garage --caddy
 #   ./scripts/setup-selfhosted.sh --gpu --garage --caddy
 #   ./scripts/setup-selfhosted.sh --cpu
 #
@@ -36,7 +38,7 @@ COMPOSE_FILE="$ROOT_DIR/docker-compose.selfhosted.yml"
 SERVER_ENV="$ROOT_DIR/server/.env"
 WWW_ENV="$ROOT_DIR/www/.env"
 
-OLLAMA_MODEL="${LLM_MODEL:-llama3.1}"
+OLLAMA_MODEL="qwen2.5:14b"
 OS="$(uname -s)"
 
 # --- Colors ---
@@ -157,7 +159,14 @@ OLLAMA_MODE=""      # ollama-gpu or ollama-cpu (optional)
 USE_GARAGE=false
 USE_CADDY=false
 
-for arg in "$@"; do
+SKIP_NEXT=false
+ARGS=("$@")
+for i in "${!ARGS[@]}"; do
+    if [[ "$SKIP_NEXT" == "true" ]]; then
+        SKIP_NEXT=false
+        continue
+    fi
+    arg="${ARGS[$i]}"
     case "$arg" in
         --gpu)
             [[ -n "$MODEL_MODE" ]] && { err "Cannot combine --gpu and --cpu. Pick one."; exit 1; }
@@ -171,11 +180,19 @@ for arg in "$@"; do
         --ollama-cpu)
             [[ -n "$OLLAMA_MODE" ]] && { err "Cannot combine --ollama-gpu and --ollama-cpu. Pick one."; exit 1; }
             OLLAMA_MODE="ollama-cpu" ;;
+        --llm-model)
+            next_i=$((i + 1))
+            if [[ $next_i -ge ${#ARGS[@]} ]] || [[ "${ARGS[$next_i]}" == --* ]]; then
+                err "--llm-model requires a model name (e.g. --llm-model mistral)"
+                exit 1
+            fi
+            OLLAMA_MODEL="${ARGS[$next_i]}"
+            SKIP_NEXT=true ;;
         --garage)       USE_GARAGE=true ;;
         --caddy)        USE_CADDY=true ;;
         *)
             err "Unknown argument: $arg"
-            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--garage] [--caddy]"
+            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy]"
             exit 1
             ;;
     esac
@@ -184,16 +201,17 @@ done
 if [[ -z "$MODEL_MODE" ]]; then
     err "No model mode specified. You must choose --gpu or --cpu."
     err ""
-    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--garage] [--caddy]"
+    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy]"
     err ""
     err "Specialized models (required):"
-    err "  --gpu          NVIDIA GPU for transcription/diarization/translation"
-    err "  --cpu          CPU-only (slower but works without GPU)"
+    err "  --gpu              NVIDIA GPU for transcription/diarization/translation"
+    err "  --cpu              CPU-only (slower but works without GPU)"
     err ""
     err "Local LLM (optional):"
-    err "  --ollama-gpu   Local Ollama with GPU (for summarization/topics)"
-    err "  --ollama-cpu   Local Ollama on CPU (for summarization/topics)"
-    err "  (omit for external OpenAI-compatible LLM)"
+    err "  --ollama-gpu       Local Ollama with GPU (for summarization/topics)"
+    err "  --ollama-cpu       Local Ollama on CPU (for summarization/topics)"
+    err "  --llm-model MODEL  Ollama model to download (default: qwen2.5:14b)"
+    err "  (omit --ollama-* for external OpenAI-compatible LLM)"
     exit 1
 fi
 
@@ -283,8 +301,6 @@ step_secrets() {
     else
         NEXTAUTH_SECRET=$(openssl rand -hex 32)
     fi
-
-    GPU_APIKEY=$(openssl rand -hex 16)
 
     ok "Secrets ready"
 }

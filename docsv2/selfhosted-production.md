@@ -72,12 +72,40 @@ Optionally add `--ollama-gpu` or `--ollama-cpu` for a **local Ollama instance** 
 |------|-------------|----------|
 | `--ollama-gpu` | Local Ollama with NVIDIA GPU acceleration | NVIDIA GPU |
 | `--ollama-cpu` | Local Ollama on CPU only | Nothing extra |
+| `--llm-model MODEL` | Choose which Ollama model to download (default: `qwen2.5:14b`) | `--ollama-gpu` or `--ollama-cpu` |
 | *(omitted)* | User configures external LLM (OpenAI, Anthropic, etc.) | LLM API key |
+
+### Choosing an Ollama model
+
+The default model is `qwen2.5:14b` (~9GB download, good multilingual support and summary quality). Override with `--llm-model`:
+
+```bash
+# Default (qwen2.5:14b)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
+
+# Mistral — good balance of speed and quality (~4.1GB)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model mistral --garage --caddy
+
+# Phi-4 — smaller and faster (~9.1GB)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model phi4 --garage --caddy
+
+# Llama 3.3 70B — best quality, needs 48GB+ RAM or GPU VRAM (~43GB)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model llama3.3:70b --garage --caddy
+
+# Gemma 2 9B (~5.4GB)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model gemma2 --garage --caddy
+
+# DeepSeek R1 8B — reasoning model, verbose but thorough summaries (~4.9GB)
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model deepseek-r1:8b --garage --caddy
+```
+
+Browse all available models at https://ollama.com/library.
 
 ### Recommended combinations
 
 - **`--gpu --ollama-gpu`**: Best for servers with NVIDIA GPU. Fully self-contained, no external API keys needed.
 - **`--cpu --ollama-cpu`**: No GPU available but want everything self-contained. Slower but works.
+- **`--gpu --ollama-cpu`**: GPU for transcription, CPU for LLM. Saves GPU VRAM for ML models.
 - **`--gpu`**: Have NVIDIA GPU but prefer a cloud LLM (faster/better summaries with GPT-4, Claude, etc.).
 - **`--cpu`**: No GPU, prefer cloud LLM. Slowest transcription but best summary quality.
 
@@ -116,7 +144,7 @@ Without `--caddy`, no ports are exposed. Point your own reverse proxy at `web:30
 | `TRANSCRIPT_URL` | Specialized model endpoint | `http://transcription:8000` |
 | `LLM_URL` | OpenAI-compatible LLM endpoint | Auto-set for Ollama modes |
 | `LLM_API_KEY` | LLM API key | `not-needed` for Ollama |
-| `LLM_MODEL` | LLM model name | `llama3.1` for Ollama |
+| `LLM_MODEL` | LLM model name | `qwen2.5:14b` for Ollama (override with `--llm-model`) |
 | `TRANSCRIPT_STORAGE_BACKEND` | Storage backend | `aws` |
 | `TRANSCRIPT_STORAGE_AWS_*` | S3 credentials | Auto-set for Garage |
 
