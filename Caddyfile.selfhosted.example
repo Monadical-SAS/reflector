@@ -1,0 +1,25 @@
+# Reflector self-hosted production — HTTPS via Caddy reverse proxy
+# Copy to Caddyfile: cp Caddyfile.selfhosted.example Caddyfile
+# Run: ./scripts/setup-selfhosted.sh --ollama-gpu --garage --caddy
+#
+# DOMAIN defaults to localhost (self-signed cert).
+# Set to your real domain for automatic Let's Encrypt:
+#   export DOMAIN=reflector.example.com
+#
+# TLS_MODE defaults to "internal" (self-signed).
+# Set to "" for automatic Let's Encrypt (requires real domain + ports 80/443 open):
+#   export TLS_MODE=""
+
+{$DOMAIN:localhost} {
+    tls {$TLS_MODE:internal}
+
+    handle /v1/* {
+        reverse_proxy server:1250
+    }
+    handle /health {
+        reverse_proxy server:1250
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+}
