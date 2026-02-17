@@ -487,10 +487,10 @@ step_garage() {
     # Start garage container only
     compose_garage_cmd up -d garage
 
-    # Wait for admin API (port 3903 is internal-only, so check via docker exec)
+    # Wait for admin API (port 3903 exposed to host for health checks)
     local garage_ready=false
     for i in $(seq 1 30); do
-        if compose_garage_cmd exec -T garage curl -sf http://localhost:3903/metrics > /dev/null 2>&1; then
+        if curl -sf http://localhost:3903/metrics > /dev/null 2>&1; then
             garage_ready=true
             break
         fi
@@ -676,7 +676,7 @@ step_health() {
     info "Waiting for $model_svc service (first start downloads ~1GB of models)..."
     local model_ok=false
     for i in $(seq 1 120); do
-        if compose_cmd exec -T "$model_svc" curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
+        if curl -sf http://localhost:8000/docs > /dev/null 2>&1; then
             model_ok=true
             break
         fi
@@ -696,7 +696,7 @@ step_health() {
         info "Waiting for Ollama service..."
         local ollama_ok=false
         for i in $(seq 1 60); do
-            if compose_cmd exec -T "$OLLAMA_SVC" curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+            if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
                 ollama_ok=true
                 break
             fi
@@ -732,7 +732,7 @@ step_health() {
             dump_diagnostics server
             exit 1
         fi
-        if compose_cmd exec -T server curl -sf http://localhost:1250/health > /dev/null 2>&1; then
+        if curl -sf http://localhost:1250/health > /dev/null 2>&1; then
             server_ok=true
             break
         fi
@@ -752,7 +752,7 @@ step_health() {
     info "Waiting for Frontend..."
     local web_ok=false
     for i in $(seq 1 30); do
-        if compose_cmd exec -T web curl -sf http://localhost:3000 > /dev/null 2>&1; then
+        if curl -sf http://localhost:3000 > /dev/null 2>&1; then
             web_ok=true
             break
         fi
