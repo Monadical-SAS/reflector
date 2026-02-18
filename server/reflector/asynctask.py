@@ -4,8 +4,9 @@ from uuid import uuid4
 
 from celery import current_task
 
-from reflector.db import get_database
+from reflector.db import get_database, _database_context
 from reflector.llm import llm_session_id
+from reflector.ws_manager import reset_ws_manager
 
 
 def asynctask(f):
@@ -20,6 +21,14 @@ def asynctask(f):
                 return await f(*args, **kwargs)
             finally:
                 await database.disconnect()
+                _database_context.set(None)
+
+        if current_task:
+            # Reset cached connections before each Celery task.
+            # Each asyncio.run() creates a new event loop, making connections
+            # from previous tasks stale ("Future attached to a different loop").
+            _database_context.set(None)
+            reset_ws_manager()
 
         coro = run_with_db()
         if current_task:

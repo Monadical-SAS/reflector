@@ -4,7 +4,7 @@
 # Single script to configure and launch everything on one server.
 #
 # Usage:
-#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN]
+#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]
 #
 # Specialized models (pick ONE — required):
 #   --gpu              NVIDIA GPU for transcription/diarization/translation
@@ -22,6 +22,7 @@
 #   --domain DOMAIN    Use a real domain for Caddy (enables Let's Encrypt auto-HTTPS)
 #                      Requires: DNS pointing to this server + ports 80/443 open
 #                      Without --domain: Caddy uses self-signed cert for IP access
+#   --build            Build backend and frontend images from source instead of pulling
 #
 # Examples:
 #   ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
@@ -163,6 +164,7 @@ OLLAMA_MODE=""      # ollama-gpu or ollama-cpu (optional)
 USE_GARAGE=false
 USE_CADDY=false
 CUSTOM_DOMAIN=""    # optional domain for Let's Encrypt HTTPS
+BUILD_IMAGES=false  # build backend/frontend from source
 
 SKIP_NEXT=false
 ARGS=("$@")
@@ -195,6 +197,7 @@ for i in "${!ARGS[@]}"; do
             SKIP_NEXT=true ;;
         --garage)       USE_GARAGE=true ;;
         --caddy)        USE_CADDY=true ;;
+        --build)        BUILD_IMAGES=true ;;
         --domain)
             next_i=$((i + 1))
             if [[ $next_i -ge ${#ARGS[@]} ]] || [[ "${ARGS[$next_i]}" == --* ]]; then
@@ -206,7 +209,7 @@ for i in "${!ARGS[@]}"; do
             SKIP_NEXT=true ;;
         *)
             err "Unknown argument: $arg"
-            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN]"
+            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]"
             exit 1
             ;;
     esac
@@ -215,7 +218,7 @@ done
 if [[ -z "$MODEL_MODE" ]]; then
     err "No model mode specified. You must choose --gpu or --cpu."
     err ""
-    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN]"
+    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]"
     err ""
     err "Specialized models (required):"
     err "  --gpu              NVIDIA GPU for transcription/diarization/translation"
@@ -231,6 +234,7 @@ if [[ -z "$MODEL_MODE" ]]; then
     err "  --garage           Local S3-compatible storage (Garage)"
     err "  --caddy            Caddy reverse proxy with self-signed cert"
     err "  --domain DOMAIN    Use a real domain with Let's Encrypt HTTPS (implies --caddy)"
+    err "  --build            Build backend/frontend images from source instead of pulling"
     exit 1
 fi
 
@@ -344,6 +348,7 @@ step_server_env() {
     env_set "$SERVER_ENV" "CELERY_RESULT_BACKEND" "redis://redis:6379/1"
     env_set "$SERVER_ENV" "SECRET_KEY" "$SECRET_KEY"
     env_set "$SERVER_ENV" "AUTH_BACKEND" "none"
+    env_set "$SERVER_ENV" "PUBLIC_MODE" "true"
 
     # Public-facing URLs
     local server_base_url
@@ -683,11 +688,21 @@ CADDYEOF
 step_services() {
     info "Step 6: Starting Docker services"
 
-    # Build GPU/CPU image from source
+    # Build GPU/CPU image from source (always needed — no prebuilt image)
     local build_svc="$MODEL_MODE"
     info "Building $build_svc image (first build downloads ML models, may take a while)..."
     compose_cmd build "$build_svc"
     ok "$build_svc image built"
+
+    # Optionally build backend and frontend from source
+    if [[ "$BUILD_IMAGES" == "true" ]]; then
+        info "Building backend image from source (server, worker, beat)..."
+        compose_cmd build server worker beat
+        ok "Backend image built"
+        info "Building frontend image from source..."
+        compose_cmd build web
+        ok "Frontend image built"
+    fi
 
     # Start all services
     compose_cmd up -d
@@ -848,6 +863,7 @@ main() {
     echo "  Garage:  $USE_GARAGE"
     echo "  Caddy:   $USE_CADDY"
     [[ -n "$CUSTOM_DOMAIN" ]] && echo "  Domain:  $CUSTOM_DOMAIN"
+    [[ "$BUILD_IMAGES" == "true" ]] && echo "  Build:   from source"
     echo ""
 
     # Detect primary IP

@@ -25,6 +25,9 @@ services:
   # ===========================================================
 
   server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
     pull_policy: always
@@ -61,6 +64,9 @@ services:
       - server_data:/app/data
 
   worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
     pull_policy: always
@@ -90,6 +96,9 @@ services:
       - server_data:/app/data
 
   beat:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
     pull_policy: always
@@ -108,6 +117,9 @@ services:
         condition: service_started
 
   web:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
     image: monadicalsas/reflector-frontend:latest
     restart: unless-stopped
     pull_policy: always
