@@ -2,6 +2,8 @@
 
 Deploy Reflector on a single server with everything running in Docker. Transcription, diarization, and translation use specialized ML models (Whisper/Parakeet, Pyannote); only summarization and topic detection require an LLM.
 
+> For a detailed walkthrough of how the setup script and infrastructure work under the hood, see [How the Self-Hosted Setup Works](selfhosted-architecture.md).
+
 ## Prerequisites
 
 ### Hardware
@@ -54,6 +56,9 @@ cd reflector
 
 # CPU-only (same, but slower):
 ./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy
+
+# Build from source instead of pulling prebuilt images:
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --build
 ```
 
 That's it. The script generates env files, secrets, starts all containers, waits for health checks, and prints the URL.
@@ -119,6 +124,7 @@ Browse all available models at https://ollama.com/library.
 | `--garage` | Starts Garage (local S3-compatible storage). Auto-configures bucket, keys, and env vars. |
 | `--caddy` | Starts Caddy reverse proxy on ports 80/443 with self-signed cert. |
 | `--domain DOMAIN` | Use a real domain with Let's Encrypt auto-HTTPS (implies `--caddy`). Requires DNS A record pointing to this server and ports 80/443 open. |
+| `--build` | Build backend (server, worker, beat) and frontend (web) Docker images from source instead of pulling prebuilt images from the registry. Useful for development or when running a version with local changes. |
 
 Without `--garage`, you **must** provide S3-compatible credentials (the script will prompt interactively or you can pre-fill `server/.env`).
 
@@ -132,12 +138,14 @@ Without `--caddy` or `--domain`, no ports are exposed. Point your own reverse pr
 
 1. **Prerequisites check** — Docker, NVIDIA GPU (if needed), compose file exists
 2. **Generate secrets** — `SECRET_KEY`, `NEXTAUTH_SECRET` via `openssl rand`
-3. **Generate `server/.env`** — From template, sets infrastructure defaults, configures LLM based on mode
+3. **Generate `server/.env`** — From template, sets infrastructure defaults, configures LLM based on mode, enables `PUBLIC_MODE`
 4. **Generate `www/.env`** — Auto-detects server IP, sets URLs
 5. **Storage setup** — Either initializes Garage (bucket, keys, permissions) or prompts for external S3 credentials
-6. **Caddyfile** — Generates with server IP if on Linux, copies template otherwise
-7. **Build & start** — Builds GPU/CPU image from source, starts all containers
+6. **Caddyfile** — Generates domain-specific (Let's Encrypt) or IP-specific (self-signed) configuration
+7. **Build & start** — Always builds GPU/CPU model image from source. With `--build`, also builds backend and frontend from source; otherwise pulls prebuilt images from the registry
 8. **Health checks** — Waits for each service, pulls Ollama model if needed, warns about missing LLM config
+
+> For a deeper dive into each step, see [How the Self-Hosted Setup Works](selfhosted-architecture.md).
 
 ## Configuration Reference
 
@@ -149,6 +157,8 @@ Without `--caddy` or `--domain`, no ports are exposed. Point your own reverse pr
 | `REDIS_HOST` | Redis hostname | Auto-set (`redis`) |
 | `SECRET_KEY` | App secret | Auto-generated |
 | `AUTH_BACKEND` | Authentication method | `none` |
+| `PUBLIC_MODE` | Allow unauthenticated access | `true` |
+| `WEBRTC_HOST` | IP advertised in WebRTC ICE candidates | Auto-detected (server IP) |
 | `TRANSCRIPT_URL` | Specialized model endpoint | `http://transcription:8000` |
 | `LLM_URL` | OpenAI-compatible LLM endpoint | Auto-set for Ollama modes |
 | `LLM_API_KEY` | LLM API key | `not-needed` for Ollama |
@@ -309,15 +319,17 @@ docker compose -f docker-compose.selfhosted.yml exec gpu curl http://localhost:8
 ## Updating
 
 ```bash
-# Pull latest images
-docker compose -f docker-compose.selfhosted.yml pull
-
-# Rebuild GPU/CPU image (picks up model updates)
-docker compose -f docker-compose.selfhosted.yml build gpu  # or cpu
-
-# Restart
+# Option A: Pull latest prebuilt images and restart
 docker compose -f docker-compose.selfhosted.yml down
 ./scripts/setup-selfhosted.sh <same-flags-as-before>
+
+# Option B: Build from source (after git pull) and restart
+git pull
+docker compose -f docker-compose.selfhosted.yml down
+./scripts/setup-selfhosted.sh <same-flags-as-before> --build
+
+# Rebuild only the GPU/CPU model image (picks up model updates)
+docker compose -f docker-compose.selfhosted.yml build gpu  # or cpu
 ```
 
 The setup script is idempotent — it won't overwrite existing secrets or env vars that are already set.
@@ -359,9 +371,3 @@ The setup script is idempotent — it won't overwrite existing secrets or env va
 ```
 
 All services communicate over Docker's internal network. Only Caddy (if enabled) exposes ports to the internet.
-
-# GPU server, everything local — the "batteries included" option
-./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --domain selfhost.reflector.media
-
-# Same but CPU-only (no NVIDIA GPU needed, slower transcription)
-./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy
