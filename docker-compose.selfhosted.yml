@@ -30,7 +30,6 @@ services:
       dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
-    pull_policy: always
     ports:
       - "127.0.0.1:1250:1250"
       - "50000-50100:50000-50100/udp"
@@ -69,7 +68,6 @@ services:
       dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
-    pull_policy: always
     env_file:
       - ./server/.env
     environment:
@@ -101,7 +99,6 @@ services:
       dockerfile: Dockerfile
     image: monadicalsas/reflector-backend:latest
     restart: unless-stopped
-    pull_policy: always
     env_file:
       - ./server/.env
     environment:
@@ -122,7 +119,6 @@ services:
       dockerfile: Dockerfile
     image: monadicalsas/reflector-frontend:latest
     restart: unless-stopped
-    pull_policy: always
     ports:
       - "127.0.0.1:3000:3000"
     env_file:

@@ -694,7 +694,7 @@ step_services() {
     compose_cmd build "$build_svc"
     ok "$build_svc image built"
 
-    # Optionally build backend and frontend from source
+    # Build or pull backend and frontend images
     if [[ "$BUILD_IMAGES" == "true" ]]; then
         info "Building backend image from source (server, worker, beat)..."
         compose_cmd build server worker beat
@@ -702,6 +702,9 @@ step_services() {
         info "Building frontend image from source..."
         compose_cmd build web
         ok "Frontend image built"
+    else
+        info "Pulling latest backend and frontend images..."
+        compose_cmd pull server web || warn "Pull failed — using cached images"
     fi
 
     # Start all services
