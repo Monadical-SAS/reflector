@@ -360,7 +360,7 @@ The backend uses Celery for all background work, with Redis as the message broke
 
 - **`worker`** — picks up tasks from the Redis queue and executes them
 - **`beat`** — schedules periodic tasks (cron-like) by pushing them onto the queue
-- **Redis** — acts as both message broker and result backend
+- **`Redis`** — acts as both message broker and result backend
 
 ### The Audio Processing Pipeline
 
