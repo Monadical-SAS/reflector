@@ -23,3 +23,5 @@ www/.env.production
 docs/pnpm-lock.yaml
 .secrets
 opencode.json
+
+vibedocs/

@@ -1,0 +1,315 @@
+# Self-hosted production Docker Compose — single file for everything.
+#
+# Usage: ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy
+#   or:  docker compose -f docker-compose.selfhosted.yml --profile gpu [--profile ollama-gpu] [--profile garage] [--profile caddy] up -d
+#
+# Specialized models (pick ONE — required):
+#   --profile gpu          NVIDIA GPU for transcription/diarization/translation
+#   --profile cpu          CPU-only for transcription/diarization/translation
+#
+# Local LLM (optional — for summarization/topics):
+#   --profile ollama-gpu   Local Ollama with NVIDIA GPU
+#   --profile ollama-cpu   Local Ollama on CPU only
+#
+# Other optional services:
+#   --profile garage       Local S3-compatible storage (Garage)
+#   --profile caddy        Reverse proxy with auto-SSL
+#
+# Prerequisites:
+#   1. Run ./scripts/setup-selfhosted.sh to generate env files and secrets
+#   2. Or manually create server/.env and www/.env from the .selfhosted.example templates
+
+services:
+  # ===========================================================
+  # Always-on core services (no profile required)
+  # ===========================================================
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: monadicalsas/reflector-backend:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1250:1250"
+      - "50000-50100:50000-50100/udp"
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: server
+      # Docker-internal overrides (always correct inside compose network)
+      DATABASE_URL: postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      HATCHET_CLIENT_SERVER_URL: ""
+      HATCHET_CLIENT_HOST_PORT: ""
+      # Specialized models via gpu/cpu container (aliased as "transcription")
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://transcription:8000
+      TRANSCRIPT_MODAL_API_KEY: selfhosted
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://transcription:8000
+      TRANSLATION_BACKEND: modal
+      TRANSLATE_URL: http://transcription:8000
+      # WebRTC: fixed UDP port range for ICE candidates (mapped above)
+      WEBRTC_PORT_RANGE: "50000-50100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - server_data:/app/data
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: monadicalsas/reflector-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: worker
+      DATABASE_URL: postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      HATCHET_CLIENT_SERVER_URL: ""
+      HATCHET_CLIENT_HOST_PORT: ""
+      TRANSCRIPT_BACKEND: modal
+      TRANSCRIPT_URL: http://transcription:8000
+      TRANSCRIPT_MODAL_API_KEY: selfhosted
+      DIARIZATION_BACKEND: modal
+      DIARIZATION_URL: http://transcription:8000
+      TRANSLATION_BACKEND: modal
+      TRANSLATE_URL: http://transcription:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - server_data:/app/data
+
+  beat:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: monadicalsas/reflector-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      ENTRYPOINT: beat
+      DATABASE_URL: postgresql+asyncpg://reflector:reflector@postgres:5432/reflector
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
+    image: monadicalsas/reflector-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ./www/.env
+    environment:
+      NODE_ENV: production
+      SERVER_API_URL: http://server:1250
+      KV_URL: redis://redis:6379
+      KV_USE_TLS: "false"
+      AUTHENTIK_ISSUER: ""
+      AUTHENTIK_REFRESH_TOKEN_URL: ""
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: reflector
+      POSTGRES_PASSWORD: reflector
+      POSTGRES_DB: reflector
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reflector"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # ===========================================================
+  # Specialized model containers (transcription, diarization, translation)
+  # Both gpu and cpu get alias "transcription" so server config never changes.
+  # ===========================================================
+
+  gpu:
+    build:
+      context: ./gpu/self_hosted
+      dockerfile: Dockerfile
+    profiles: [gpu]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - gpu_cache:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      default:
+        aliases:
+          - transcription
+
+  cpu:
+    build:
+      context: ./gpu/self_hosted
+      dockerfile: Dockerfile.cpu
+    profiles: [cpu]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - gpu_cache:/root/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    networks:
+      default:
+        aliases:
+          - transcription
+
+  # ===========================================================
+  # Ollama — local LLM for summarization & topic detection
+  # Only started with --ollama-gpu or --ollama-cpu modes.
+  # ===========================================================
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: [ollama-gpu]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    profiles: [ollama-cpu]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================
+  # Garage — local S3-compatible object storage (optional)
+  # ===========================================================
+
+  garage:
+    image: dxflrs/garage:v1.1.0
+    profiles: [garage]
+    restart: unless-stopped
+    ports:
+      - "3900:3900"   # S3 API
+      - "3903:3903"   # Admin API
+    volumes:
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+      - ./data/garage.toml:/etc/garage.toml:ro
+    healthcheck:
+      test: ["CMD", "/garage", "stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ===========================================================
+  # Caddy — reverse proxy with automatic SSL (optional)
+  # Maps 80:80 and 443:443 — only exposed ports in the stack.
+  # ===========================================================
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [caddy]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - server
+
+volumes:
+  postgres_data:
+  redis_data:
+  server_data:
+  gpu_cache:
+  garage_data:
+  garage_meta:
+  ollama_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    attachable: true
