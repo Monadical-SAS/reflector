@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from celery import current_task
 
-from reflector.db import get_database, _database_context
+from reflector.db import _database_context, get_database
 from reflector.llm import llm_session_id
 from reflector.ws_manager import reset_ws_manager
 
