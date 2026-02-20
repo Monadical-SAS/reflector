@@ -71,7 +71,7 @@ async def detect_chunk_topic(input: TopicChunkInput, ctx: Context) -> TopicChunk
     from reflector.settings import settings  # noqa: PLC0415
     from reflector.utils.text import clean_title  # noqa: PLC0415
 
-    llm = LLM(settings=settings, temperature=0.9, max_tokens=500)
+    llm = LLM(settings=settings, temperature=0.9)
 
     prompt = TOPIC_PROMPT.format(text=input.chunk_text)
     response = await llm.get_structured_response(

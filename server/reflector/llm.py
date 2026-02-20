@@ -202,7 +202,9 @@ class StructuredOutputWorkflow(Workflow, Generic[OutputT]):
 
 
 class LLM:
-    def __init__(self, settings, temperature: float = 0.4, max_tokens: int = 2048):
+    def __init__(
+        self, settings, temperature: float = 0.4, max_tokens: int | None = None
+    ):
         self.settings_obj = settings
         self.model_name = settings.LLM_MODEL
         self.url = settings.LLM_URL
