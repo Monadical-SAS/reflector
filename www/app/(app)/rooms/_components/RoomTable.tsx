@@ -14,11 +14,7 @@ import {
 import { LuLink, LuRefreshCw } from "react-icons/lu";
 import { FaCalendarAlt } from "react-icons/fa";
 import type { components } from "../../../reflector-api";
-import {
-  useRoomActiveMeetings,
-  useRoomUpcomingMeetings,
-  useRoomIcsSync,
-} from "../../../lib/apiHooks";
+import { useRoomIcsSync, BulkMeetingStatusMap } from "../../../lib/apiHooks";
 
 type Room = components["schemas"]["Room"];
 type Meeting = components["schemas"]["Meeting"];
@@ -62,6 +58,8 @@ interface RoomTableProps {
   onEdit: (roomId: string, roomData: any) => void;
   onDelete: (roomId: string) => void;
   loading?: boolean;
+  meetingStatusMap: BulkMeetingStatusMap;
+  meetingStatusLoading: boolean;
 }
 
 const getRoomModeDisplay = (mode: string): string => {
@@ -104,14 +102,16 @@ const getZulipDisplay = (
   return "Enabled";
 };
 
-function MeetingStatus({ roomName }: { roomName: string }) {
-  const activeMeetingsQuery = useRoomActiveMeetings(roomName);
-  const upcomingMeetingsQuery = useRoomUpcomingMeetings(roomName);
-
-  const activeMeetings = activeMeetingsQuery.data || [];
-  const upcomingMeetings = upcomingMeetingsQuery.data || [];
-
-  if (activeMeetingsQuery.isLoading || upcomingMeetingsQuery.isLoading) {
+function MeetingStatus({
+  activeMeetings,
+  upcomingMeetings,
+  isLoading,
+}: {
+  activeMeetings: Meeting[];
+  upcomingMeetings: CalendarEventResponse[];
+  isLoading: boolean;
+}) {
+  if (isLoading) {
     return <Spinner size="sm" />;
   }
 
@@ -176,6 +176,8 @@ export function RoomTable({
   onEdit,
   onDelete,
   loading,
+  meetingStatusMap,
+  meetingStatusLoading,
 }: RoomTableProps) {
   const [syncingRooms, setSyncingRooms] = useState<Set<NonEmptyString>>(
     new Set(),
@@ -252,7 +254,15 @@ export function RoomTable({
                   <Link href={`/${room.name}`}>{room.name}</Link>
                 </Table.Cell>
                 <Table.Cell>
-                  <MeetingStatus roomName={room.name} />
+                  <MeetingStatus
+                    activeMeetings={
+                      meetingStatusMap[room.name]?.active_meetings ?? []
+                    }
+                    upcomingMeetings={
+                      meetingStatusMap[room.name]?.upcoming_events ?? []
+                    }
+                    isLoading={meetingStatusLoading}
+                  />
                 </Table.Cell>
                 <Table.Cell>
                   {getZulipDisplay(

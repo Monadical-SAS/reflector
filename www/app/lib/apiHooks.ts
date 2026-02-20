@@ -1,8 +1,8 @@
 "use client";
 
-import { $api } from "./apiClient";
+import { $api, client } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
 import { MeetingId } from "./types";
@@ -652,16 +652,21 @@ export function useMeetingDeactivate() {
       setError(error as Error, "Failed to end meeting");
     },
     onSuccess: () => {
-      return queryClient.invalidateQueries({
-        predicate: (query) => {
-          const key = query.queryKey;
-          return key.some(
-            (k) =>
-              typeof k === "string" &&
-              !!MEETING_LIST_PATH_PARTIALS.find((e) => k.includes(e)),
-          );
-        },
-      });
+      return Promise.all([
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey;
+            return key.some(
+              (k) =>
+                typeof k === "string" &&
+                !!MEETING_LIST_PATH_PARTIALS.find((e) => k.includes(e)),
+            );
+          },
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["bulk-meeting-status"],
+        }),
+      ]);
     },
   });
 }
@@ -717,6 +722,9 @@ export function useRoomsCreateMeeting() {
               },
             },
           ).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["bulk-meeting-status"],
         }),
       ]);
     },
@@ -781,6 +789,32 @@ export function useRoomActiveMeetings(roomName: string | null) {
       enabled: !!roomName,
     },
   );
+}
+
+type RoomMeetingStatus = components["schemas"]["RoomMeetingStatus"];
+
+export type BulkMeetingStatusMap = Partial<Record<string, RoomMeetingStatus>>;
+
+export function useRoomsBulkMeetingStatus(roomNames: string[]) {
+  const { isAuthenticated } = useAuthReady();
+  const sortedNames = [...roomNames].sort();
+
+  return useQuery({
+    queryKey: ["bulk-meeting-status", sortedNames],
+    queryFn: async (): Promise<BulkMeetingStatusMap> => {
+      const { data, error } = await client.POST(
+        "/v1/rooms/meetings/bulk-status",
+        { body: { room_names: roomNames } },
+      );
+      if (error || !data) {
+        throw new Error(
+          `bulk-status fetch failed: ${JSON.stringify(error ?? "no data")}`,
+        );
+      }
+      return data;
+    },
+    enabled: sortedNames.length > 0 && isAuthenticated,
+  });
 }
 
 export function useRoomGetMeeting(
