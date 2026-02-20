@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Box, Spinner, Center, Text } from "@chakra-ui/react";
+import { Box, Spinner, Center, Text, Button, VStack } from "@chakra-ui/react";
 import { useRouter, useParams } from "next/navigation";
 import DailyIframe, {
   DailyCall,
@@ -16,10 +16,13 @@ import DailyIframe, {
   DailyCustomTrayButton,
   DailyCustomTrayButtons,
   DailyEventObjectCustomButtonClick,
+  DailyEventObjectFatalError,
+  DailyFatalErrorType,
   DailyFactoryOptions,
   DailyParticipantsObject,
 } from "@daily-co/daily-js";
 import type { components } from "../../reflector-api";
+import { printApiError, ApiError } from "../../api/_error";
 import { useAuth } from "../../lib/AuthProvider";
 import { useConsentDialog } from "../../lib/consent";
 import {
@@ -44,6 +47,63 @@ const RAW_TRACKS_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 const RECORDING_START_DELAY_MS = 2000;
 const RECORDING_START_MAX_RETRIES = 5;
+
+const FATAL_ERROR_MESSAGES: Partial<
+  Record<DailyFatalErrorType, { message: string; rejoinable?: boolean }>
+> = {
+  "connection-error": {
+    message: "Connection lost. Please check your network.",
+    rejoinable: true,
+  },
+  "exp-room": { message: "The meeting time has ended." },
+  "exp-token": { message: "Your session has expired.", rejoinable: true },
+  ejected: { message: "You were removed from this meeting." },
+  "meeting-full": { message: "This meeting is full." },
+  "not-allowed": { message: "You are not allowed to join this meeting." },
+  "nbf-room": { message: "This meeting hasn't started yet." },
+  "nbf-token": { message: "This meeting hasn't started yet." },
+  "no-room": { message: "This room does not exist." },
+  "end-of-life": { message: "This meeting room is no longer available." },
+};
+
+function FatalErrorScreen({
+  error,
+  roomName,
+}: {
+  error: FatalError;
+  roomName: string;
+}) {
+  const router = useRouter();
+  const info =
+    error.type !== "unknown" ? FATAL_ERROR_MESSAGES[error.type] : undefined;
+  const message = info?.message ?? `Something went wrong: ${error.message}`;
+  const rejoinable = info?.rejoinable ?? false;
+
+  return (
+    <Center width="100vw" height="100vh">
+      <VStack gap={4}>
+        <Text color="red.500">{message}</Text>
+        {rejoinable ? (
+          <>
+            <Button onClick={() => window.location.reload()}>
+              Try Rejoining
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/${roomName}`)}
+            >
+              Leave
+            </Button>
+          </>
+        ) : (
+          <Button onClick={() => router.push(`/${roomName}`)}>
+            Back to Room
+          </Button>
+        )}
+      </VStack>
+    </Center>
+  );
+}
 
 type Meeting = components["schemas"]["Meeting"];
 type Room = components["schemas"]["RoomDetails"];
@@ -82,6 +142,8 @@ const USE_FRAME_INIT_STATE = {
   joined: false as boolean,
 } as const;
 
+type FatalError = { type: DailyFatalErrorType | "unknown"; message: string };
+
 // Daily js and not Daily react used right now because daily-js allows for prebuild interface vs. -react is customizable but has no nice defaults
 const useFrame = (
   container: HTMLDivElement | null,
@@ -89,6 +151,7 @@ const useFrame = (
     onLeftMeeting: () => void;
     onCustomButtonClick: (ev: DailyEventObjectCustomButtonClick) => void;
     onJoinMeeting: () => void;
+    onError: (ev: DailyEventObjectFatalError) => void;
   },
 ) => {
   const [{ frame, joined }, setState] = useState(USE_FRAME_INIT_STATE);
@@ -134,6 +197,7 @@ const useFrame = (
     if (!frame) return;
     frame.on("left-meeting", cbs.onLeftMeeting);
     frame.on("custom-button-click", cbs.onCustomButtonClick);
+    frame.on("error", cbs.onError);
     const joinCb = () => {
       if (!frame) {
         console.error("frame is null in joined-meeting callback");
@@ -145,6 +209,7 @@ const useFrame = (
     return () => {
       frame.off("left-meeting", cbs.onLeftMeeting);
       frame.off("custom-button-click", cbs.onCustomButtonClick);
+      frame.off("error", cbs.onError);
       frame.off("joined-meeting", joinCb);
     };
   }, [frame, cbs]);
@@ -188,6 +253,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const joinMutation = useRoomJoinMeeting();
   const startRecordingMutation = useMeetingStartRecording();
   const [joinedMeeting, setJoinedMeeting] = useState<Meeting | null>(null);
+  const [fatalError, setFatalError] = useState<FatalError | null>(null);
 
   // Generate deterministic instanceIds so all participants use SAME IDs
   const cloudInstanceId = parseNonEmptyString(meeting.id);
@@ -234,8 +300,18 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   const roomUrl = joinedMeeting?.room_url;
 
   const handleLeave = useCallback(() => {
+    // If a fatal error occurred, don't redirect — let the error UI show
+    if (fatalError) return;
     router.push("/browse");
-  }, [router]);
+  }, [router, fatalError]);
+
+  const handleError = useCallback((ev: DailyEventObjectFatalError) => {
+    const error: FatalError = {
+      type: ev.error?.type ?? "unknown",
+      message: ev.errorMsg,
+    };
+    setFatalError(error);
+  }, []);
 
   const handleCustomButtonClick = useCallback(
     (ev: DailyEventObjectCustomButtonClick) => {
@@ -324,6 +400,7 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
     onLeftMeeting: handleLeave,
     onCustomButtonClick: handleCustomButtonClick,
     onJoinMeeting: handleFrameJoinMeeting,
+    onError: handleError,
   });
 
   useEffect(() => {
@@ -380,11 +457,25 @@ export default function DailyRoom({ meeting, room }: DailyRoomProps) {
   }
 
   if (joinMutation.isError) {
+    const apiDetail = printApiError(
+      joinMutation.error as /*ref 095959E6-01CC-4CF0-B3A9-F65F12F046D3*/ ApiError,
+    );
     return (
       <Center width="100vw" height="100vh">
-        <Text color="red.500">Failed to join meeting. Please try again.</Text>
+        <VStack gap={4}>
+          <Text color="red.500">
+            {apiDetail ?? "Failed to join meeting. Please try again."}
+          </Text>
+          <Button onClick={() => router.push(`/${roomName}`)}>
+            Back to Room
+          </Button>
+        </VStack>
       </Center>
     );
+  }
+
+  if (fatalError) {
+    return <FatalErrorScreen error={fatalError} roomName={roomName} />;
   }
 
   if (!roomUrl) {
