@@ -38,7 +38,7 @@ The script is idempotent — safe to re-run at any time. It detects what's alrea
 
 ### 1. LLM inference via Ollama
 
-**Mac**: starts Ollama natively (Metal GPU acceleration). Pulls the LLM model. Docker containers reach it via `host.docker.internal:11434`.
+**Mac**: starts Ollama natively (Metal GPU acceleration). Pulls the LLM model. Docker containers reach it via `host.docker.internal:11435`.
 
 **Linux**: starts containerized Ollama via `docker-compose.standalone.yml` profile (`ollama-gpu` with NVIDIA, `ollama-cpu` without). Pulls model inside the container.
 
@@ -59,7 +59,7 @@ Generates `server/.env` and `www/.env.local` with standalone defaults:
 | `DIARIZATION_BACKEND` | `modal`                                            | HTTP API to self-hosted CPU service |
 | `DIARIZATION_URL`     | `http://cpu:8000`                                  | Docker-internal CPU service         |
 | `TRANSLATION_BACKEND` | `passthrough`                                      | No Modal                            |
-| `LLM_URL`             | `http://host.docker.internal:11434/v1` (Mac)       | Ollama endpoint                     |
+| `LLM_URL`             | `http://host.docker.internal:11435/v1` (Mac)       | Ollama endpoint                     |
 
 **`www/.env.local`** — key settings:
 

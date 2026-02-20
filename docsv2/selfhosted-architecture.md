@@ -52,6 +52,8 @@ Creates cryptographic secrets needed by the backend and frontend:
 
 Secrets are only generated if they don't already exist or are still set to the placeholder value `changeme`. This is what makes the script idempotent for secrets.
 
+If `--password` is passed, this step also generates a PBKDF2-SHA256 password hash from the provided password. The hash is computed using Python's stdlib (`hashlib.pbkdf2_hmac`) with 100,000 iterations and a random 16-byte salt, producing a hash in the format `pbkdf2:sha256:100000$<salt_hex>$<hash_hex>`.
+
 ### Step 2: Generate `server/.env`
 
 Creates or updates the backend environment file from `server/.env.selfhosted.example`. Sets:
@@ -63,6 +65,7 @@ Creates or updates the backend environment file from `server/.env.selfhosted.exa
 - **HuggingFace token** — prompts interactively for pyannote model access; writes to root `.env` so Docker Compose can inject it into GPU/CPU containers
 - **LLM** — if `--ollama-*` is used, configures `LLM_URL` pointing to the Ollama container. Otherwise, warns that the user needs to configure an external LLM
 - **Public mode** — sets `PUBLIC_MODE=true` so the app is accessible without authentication by default
+- **Password auth** — if `--password` is passed, sets `AUTH_BACKEND=password`, `PUBLIC_MODE=false`, `ADMIN_EMAIL=admin@localhost`, and `ADMIN_PASSWORD_HASH` (the hash generated in Step 1). The admin user is provisioned in the database on container startup via `runserver.sh`
 
 The script uses `env_set` for each variable, which either updates an existing line or appends a new one. This means re-running the script updates values in-place without duplicating keys.
 
@@ -75,6 +78,7 @@ Creates or updates the frontend environment file from `www/.env.selfhosted.examp
 - **`SERVER_API_URL`** — always `http://server:1250` (Docker-internal, used for server-side rendering)
 - **`KV_URL`** — Redis URL for Next.js caching
 - **`FEATURE_REQUIRE_LOGIN`** — `false` by default (matches `PUBLIC_MODE=true` on the backend)
+- **Password auth** — if `--password` is passed, sets `FEATURE_REQUIRE_LOGIN=true` and `AUTH_PROVIDER=credentials`, which tells the frontend to use a local email/password login form instead of Authentik OAuth
 
 ### Step 4: Storage Setup
 
@@ -125,7 +129,7 @@ Waits for each service in order, with generous timeouts:
 | Service | Check | Timeout | Notes |
 |---------|-------|---------|-------|
 | GPU/CPU models | `curl http://localhost:8000/docs` | 10 min (120 x 5s) | First start downloads ~1GB of models |
-| Ollama | `curl http://localhost:11434/api/tags` | 3 min (60 x 3s) | Then pulls the selected model |
+| Ollama | `curl http://localhost:11435/api/tags` | 3 min (60 x 3s) | Then pulls the selected model |
 | Server API | `curl http://localhost:1250/health` | 7.5 min (90 x 5s) | First start runs database migrations |
 | Frontend | `curl http://localhost:3000` | 1.5 min (30 x 3s) | Next.js build on first start |
 | Caddy | `curl -k https://localhost` | Quick check | After other services are up |
@@ -202,7 +206,7 @@ Both the `gpu` and `cpu` services define a Docker network alias of `transcriptio
       ┌─────┴─────┐     ┌─────────┐
       │  ollama   │     │ garage  │
       │(optional) │     │(optional│
-      │ :11434    │     │  S3)    │
+      │ :11435    │     │  S3)    │
       └───────────┘     └─────────┘
 ```
 
@@ -410,7 +414,7 @@ All services communicate over Docker's default bridge network. Only specific por
 | 3900 | Garage | `0.0.0.0:3900` | S3 API (for admin/debug access) |
 | 3903 | Garage | `0.0.0.0:3903` | Garage admin API |
 | 8000 | GPU/CPU | `127.0.0.1:8000` | ML model API (localhost only) |
-| 11434 | Ollama | `127.0.0.1:11434` | Ollama API (localhost only) |
+| 11435 | Ollama | `127.0.0.1:11435` | Ollama API (localhost only) |
 | 50000-50100/udp | Server | `0.0.0.0:50000-50100` | WebRTC ICE candidates |
 
 Services bound to `127.0.0.1` are only accessible from the host itself (not from the network). Caddy is the only service exposed to the internet on standard HTTP/HTTPS ports.

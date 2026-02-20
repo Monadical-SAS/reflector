@@ -78,7 +78,10 @@ const useMp3 = (transcriptId: string, waiting?: boolean): Mp3Response => {
 
     // Audio is not deleted, proceed to load it
     audioElement = document.createElement("audio");
-    audioElement.src = `${API_URL}/v1/transcripts/${transcriptId}/audio/mp3`;
+    const audioUrl = `${API_URL}/v1/transcripts/${transcriptId}/audio/mp3`;
+    audioElement.src = accessTokenInfo
+      ? `${audioUrl}?token=${encodeURIComponent(accessTokenInfo)}`
+      : audioUrl;
     audioElement.crossOrigin = "anonymous";
     audioElement.preload = "auto";
 

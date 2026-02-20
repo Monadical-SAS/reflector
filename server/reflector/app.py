@@ -8,6 +8,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 import reflector.auth  # noqa
 import reflector.db  # noqa
+from reflector.auth import router as auth_router
 from reflector.events import subscribers_shutdown, subscribers_startup
 from reflector.logger import logger
 from reflector.metrics import metrics_init
@@ -105,6 +106,8 @@ app.include_router(user_ws_router, prefix="/v1")
 app.include_router(zulip_router, prefix="/v1")
 app.include_router(whereby_router, prefix="/v1")
 app.include_router(daily_router, prefix="/v1/daily")
+if auth_router:
+    app.include_router(auth_router, prefix="/v1")
 add_pagination(app)
 
 # prepare celery

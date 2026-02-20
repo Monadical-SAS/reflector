@@ -4,7 +4,7 @@
 # Single script to configure and launch everything on one server.
 #
 # Usage:
-#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]
+#   ./scripts/setup-selfhosted.sh <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--password PASSWORD] [--build]
 #
 # Specialized models (pick ONE — required):
 #   --gpu              NVIDIA GPU for transcription/diarization/translation
@@ -22,6 +22,7 @@
 #   --domain DOMAIN    Use a real domain for Caddy (enables Let's Encrypt auto-HTTPS)
 #                      Requires: DNS pointing to this server + ports 80/443 open
 #                      Without --domain: Caddy uses self-signed cert for IP access
+#   --password PASS    Enable password auth with admin@localhost user
 #   --build            Build backend and frontend images from source instead of pulling
 #
 # Examples:
@@ -29,6 +30,7 @@
 #   ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --domain reflector.example.com
 #   ./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy
 #   ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --llm-model mistral --garage --caddy
+#   ./scripts/setup-selfhosted.sh --gpu --garage --caddy --password mysecretpass
 #   ./scripts/setup-selfhosted.sh --gpu --garage --caddy
 #   ./scripts/setup-selfhosted.sh --cpu
 #
@@ -165,6 +167,7 @@ USE_GARAGE=false
 USE_CADDY=false
 CUSTOM_DOMAIN=""    # optional domain for Let's Encrypt HTTPS
 BUILD_IMAGES=false  # build backend/frontend from source
+ADMIN_PASSWORD=""   # optional admin password for password auth
 
 SKIP_NEXT=false
 ARGS=("$@")
@@ -198,6 +201,14 @@ for i in "${!ARGS[@]}"; do
         --garage)       USE_GARAGE=true ;;
         --caddy)        USE_CADDY=true ;;
         --build)        BUILD_IMAGES=true ;;
+        --password)
+            next_i=$((i + 1))
+            if [[ $next_i -ge ${#ARGS[@]} ]] || [[ "${ARGS[$next_i]}" == --* ]]; then
+                err "--password requires a password value (e.g. --password mysecretpass)"
+                exit 1
+            fi
+            ADMIN_PASSWORD="${ARGS[$next_i]}"
+            SKIP_NEXT=true ;;
         --domain)
             next_i=$((i + 1))
             if [[ $next_i -ge ${#ARGS[@]} ]] || [[ "${ARGS[$next_i]}" == --* ]]; then
@@ -209,7 +220,7 @@ for i in "${!ARGS[@]}"; do
             SKIP_NEXT=true ;;
         *)
             err "Unknown argument: $arg"
-            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]"
+            err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--password PASS] [--build]"
             exit 1
             ;;
     esac
@@ -218,7 +229,7 @@ done
 if [[ -z "$MODEL_MODE" ]]; then
     err "No model mode specified. You must choose --gpu or --cpu."
     err ""
-    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--build]"
+    err "Usage: $0 <--gpu|--cpu> [--ollama-gpu|--ollama-cpu] [--llm-model MODEL] [--garage] [--caddy] [--domain DOMAIN] [--password PASS] [--build]"
     err ""
     err "Specialized models (required):"
     err "  --gpu              NVIDIA GPU for transcription/diarization/translation"
@@ -234,6 +245,7 @@ if [[ -z "$MODEL_MODE" ]]; then
     err "  --garage           Local S3-compatible storage (Garage)"
     err "  --caddy            Caddy reverse proxy with self-signed cert"
     err "  --domain DOMAIN    Use a real domain with Let's Encrypt HTTPS (implies --caddy)"
+    err "  --password PASS    Enable password auth (admin@localhost) instead of public mode"
     err "  --build            Build backend/frontend images from source instead of pulling"
     exit 1
 fi
@@ -325,6 +337,18 @@ step_secrets() {
         NEXTAUTH_SECRET=$(openssl rand -hex 32)
     fi
 
+    # Generate admin password hash if --password was provided
+    if [[ -n "$ADMIN_PASSWORD" ]]; then
+        # Note: $$ escapes are required because docker-compose interprets $ in .env files
+        ADMIN_PASSWORD_HASH=$(python3 -c "
+import hashlib, os
+salt = os.urandom(16).hex()
+dk = hashlib.pbkdf2_hmac('sha256', '''${ADMIN_PASSWORD}'''.encode('utf-8'), salt.encode('utf-8'), 100000)
+print(f'pbkdf2:sha256:100000\$\$' + salt + '\$\$' + dk.hex())
+")
+        ok "Admin password hash generated"
+    fi
+
     ok "Secrets ready"
 }
 
@@ -346,9 +370,28 @@ step_server_env() {
     env_set "$SERVER_ENV" "REDIS_HOST" "redis"
     env_set "$SERVER_ENV" "CELERY_BROKER_URL" "redis://redis:6379/1"
     env_set "$SERVER_ENV" "CELERY_RESULT_BACKEND" "redis://redis:6379/1"
+    env_set "$SERVER_ENV" "CELERY_BEAT_POLL_INTERVAL" "300"
     env_set "$SERVER_ENV" "SECRET_KEY" "$SECRET_KEY"
-    env_set "$SERVER_ENV" "AUTH_BACKEND" "none"
-    env_set "$SERVER_ENV" "PUBLIC_MODE" "true"
+
+    # Auth configuration
+    if [[ -n "$ADMIN_PASSWORD" ]]; then
+        env_set "$SERVER_ENV" "AUTH_BACKEND" "password"
+        env_set "$SERVER_ENV" "PUBLIC_MODE" "false"
+        env_set "$SERVER_ENV" "ADMIN_EMAIL" "admin@localhost"
+        env_set "$SERVER_ENV" "ADMIN_PASSWORD_HASH" "$ADMIN_PASSWORD_HASH"
+        ok "Password auth configured (admin@localhost)"
+    else
+        local current_auth_backend=""
+        if env_has_key "$SERVER_ENV" "AUTH_BACKEND"; then
+            current_auth_backend=$(env_get "$SERVER_ENV" "AUTH_BACKEND")
+        fi
+        if [[ "$current_auth_backend" != "jwt" ]]; then
+            env_set "$SERVER_ENV" "AUTH_BACKEND" "none"
+            env_set "$SERVER_ENV" "PUBLIC_MODE" "true"
+        else
+            ok "Keeping existing auth backend: $current_auth_backend"
+        fi
+    fi
 
     # Public-facing URLs
     local server_base_url
@@ -413,7 +456,7 @@ step_server_env() {
     # LLM configuration
     if [[ "$USES_OLLAMA" == "true" ]]; then
         local llm_host="$OLLAMA_SVC"
-        env_set "$SERVER_ENV" "LLM_URL" "http://${llm_host}:11434/v1"
+        env_set "$SERVER_ENV" "LLM_URL" "http://${llm_host}:11435/v1"
         env_set "$SERVER_ENV" "LLM_MODEL" "$OLLAMA_MODEL"
         env_set "$SERVER_ENV" "LLM_API_KEY" "not-needed"
         ok "LLM configured for local Ollama ($llm_host, model=$OLLAMA_MODEL)"
@@ -474,7 +517,23 @@ step_www_env() {
     env_set "$WWW_ENV" "WEBSOCKET_URL" "auto"
     env_set "$WWW_ENV" "SERVER_API_URL" "http://server:1250"
     env_set "$WWW_ENV" "KV_URL" "redis://redis:6379"
-    env_set "$WWW_ENV" "FEATURE_REQUIRE_LOGIN" "false"
+
+    # Auth configuration
+    if [[ -n "$ADMIN_PASSWORD" ]]; then
+        env_set "$WWW_ENV" "FEATURE_REQUIRE_LOGIN" "true"
+        env_set "$WWW_ENV" "AUTH_PROVIDER" "credentials"
+        ok "Frontend configured for password auth"
+    else
+        local current_auth_provider=""
+        if env_has_key "$WWW_ENV" "AUTH_PROVIDER"; then
+            current_auth_provider=$(env_get "$WWW_ENV" "AUTH_PROVIDER")
+        fi
+        if [[ "$current_auth_provider" != "authentik" ]]; then
+            env_set "$WWW_ENV" "FEATURE_REQUIRE_LOGIN" "false"
+        else
+            ok "Keeping existing auth provider: $current_auth_provider"
+        fi
+    fi
 
     ok "www/.env ready (URL=$base_url)"
 }
@@ -755,7 +814,7 @@ step_health() {
         info "Waiting for Ollama service..."
         local ollama_ok=false
         for i in $(seq 1 60); do
-            if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+            if curl -sf http://localhost:11435/api/tags > /dev/null 2>&1; then
                 ollama_ok=true
                 break
             fi

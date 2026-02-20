@@ -228,6 +228,7 @@ class LLM:
             is_function_calling_model=False,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            timeout=self.settings_obj.LLM_REQUEST_TIMEOUT,
             additional_kwargs={"extra_body": {"litellm_session_id": session_id}},
         )
 

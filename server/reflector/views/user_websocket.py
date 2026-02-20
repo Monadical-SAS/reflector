@@ -2,8 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from reflector.auth.auth_jwt import JWTAuth  # type: ignore
-from reflector.db.users import user_controller
+import reflector.auth as auth
 from reflector.ws_events import UserWsEvent
 from reflector.ws_manager import get_ws_manager
 
@@ -26,41 +25,23 @@ UNAUTHORISED = 4401
 
 @router.websocket("/events")
 async def user_events_websocket(websocket: WebSocket):
-    # Browser can't send Authorization header for WS; use subprotocol: ["bearer", token]
-    raw_subprotocol = websocket.headers.get("sec-websocket-protocol") or ""
-    parts = [p.strip() for p in raw_subprotocol.split(",") if p.strip()]
-    token: Optional[str] = None
-    negotiated_subprotocol: Optional[str] = None
-    if len(parts) >= 2 and parts[0].lower() == "bearer":
-        negotiated_subprotocol = "bearer"
-        token = parts[1]
+    token, negotiated_subprotocol = auth.parse_ws_bearer_token(websocket)
 
-    user_id: Optional[str] = None
     if not token:
         await websocket.close(code=UNAUTHORISED)
         return
 
     try:
-        payload = JWTAuth().verify_token(token)
-        authentik_uid = payload.get("sub")
-
-        if authentik_uid:
-            user = await user_controller.get_by_authentik_uid(authentik_uid)
-            if user:
-                user_id = user.id
-            else:
-                await websocket.close(code=UNAUTHORISED)
-                return
-        else:
-            await websocket.close(code=UNAUTHORISED)
-            return
+        user = await auth.current_user_ws_optional(websocket)
     except Exception:
         await websocket.close(code=UNAUTHORISED)
         return
 
-    if not user_id:
+    if not user:
         await websocket.close(code=UNAUTHORISED)
         return
+
+    user_id: Optional[str] = user.sub if hasattr(user, "sub") else user["sub"]
 
     room_id = f"user:{user_id}"
     ws_manager = get_ws_manager()

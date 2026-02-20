@@ -1,5 +1,6 @@
 import { AuthOptions } from "next-auth";
 import AuthentikProvider from "next-auth/providers/authentik";
+import CredentialsProvider from "next-auth/providers/credentials";
 import type { JWT } from "next-auth/jwt";
 import { JWTWithAccessToken, CustomSession } from "./types";
 import {
@@ -52,7 +53,7 @@ const TOKEN_CACHE_TTL = REFRESH_ACCESS_TOKEN_BEFORE;
 const getAuthentikClientId = () => getNextEnvVar("AUTHENTIK_CLIENT_ID");
 const getAuthentikClientSecret = () => getNextEnvVar("AUTHENTIK_CLIENT_SECRET");
 const getAuthentikRefreshTokenUrl = () =>
-  getNextEnvVar("AUTHENTIK_REFRESH_TOKEN_URL");
+  getNextEnvVar("AUTHENTIK_REFRESH_TOKEN_URL").replace(/\/+$/, "");
 
 const getAuthentikIssuer = () => {
   const stringUrl = getNextEnvVar("AUTHENTIK_ISSUER");
@@ -61,113 +62,194 @@ const getAuthentikIssuer = () => {
   } catch (e) {
     throw new Error("AUTHENTIK_ISSUER is not a valid URL: " + stringUrl);
   }
-  return stringUrl;
+  return stringUrl.replace(/\/+$/, "");
 };
 
-export const authOptions = (): AuthOptions =>
-  featureEnabled("requireLogin")
-    ? {
-        providers: [
-          AuthentikProvider({
-            ...(() => {
-              const [clientId, clientSecret, issuer] = sequenceThrows(
-                getAuthentikClientId,
-                getAuthentikClientSecret,
-                getAuthentikIssuer,
-              );
-              return {
-                clientId,
-                clientSecret,
-                issuer,
-              };
-            })(),
-            authorization: {
-              params: {
-                scope: "openid email profile offline_access",
-              },
-            },
-          }),
-        ],
-        session: {
-          strategy: "jwt",
+export const authOptions = (): AuthOptions => {
+  if (!featureEnabled("requireLogin")) {
+    return { providers: [] };
+  }
+
+  const authProvider = process.env.AUTH_PROVIDER;
+
+  if (authProvider === "credentials") {
+    return credentialsAuthOptions();
+  }
+
+  return authentikAuthOptions();
+};
+
+function credentialsAuthOptions(): AuthOptions {
+  return {
+    providers: [
+      CredentialsProvider({
+        name: "Password",
+        credentials: {
+          email: { label: "Email", type: "email" },
+          password: { label: "Password", type: "password" },
         },
-        callbacks: {
-          async jwt({ token, account, user }) {
-            if (account && !account.access_token) {
+        async authorize(credentials) {
+          if (!credentials?.email || !credentials?.password) return null;
+          const apiUrl = getNextEnvVar("SERVER_API_URL");
+          const response = await fetch(`${apiUrl}/v1/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
+          if (!response.ok) return null;
+          const data = await response.json();
+          return {
+            id: "pending",
+            email: credentials.email,
+            accessToken: data.access_token,
+            expiresIn: data.expires_in,
+          };
+        },
+      }),
+    ],
+    session: { strategy: "jwt" },
+    pages: {
+      signIn: "/login",
+    },
+    callbacks: {
+      async jwt({ token, user }) {
+        if (user) {
+          // First login - user comes from authorize()
+          const typedUser = user as any;
+          token.accessToken = typedUser.accessToken;
+          token.accessTokenExpires = Date.now() + typedUser.expiresIn * 1000;
+
+          // Resolve actual user ID from backend
+          const userId = await getUserId(typedUser.accessToken);
+          if (userId) {
+            token.sub = userId;
+          }
+          token.email = typedUser.email;
+        }
+        return token;
+      },
+      async session({ session, token }) {
+        const extendedToken = token as JWTWithAccessToken;
+        return {
+          ...session,
+          accessToken: extendedToken.accessToken,
+          accessTokenExpires: extendedToken.accessTokenExpires,
+          error: extendedToken.error,
+          user: {
+            id: assertExistsAndNonEmptyString(token.sub, "User ID required"),
+            name: extendedToken.name,
+            email: extendedToken.email,
+          },
+        } satisfies CustomSession;
+      },
+    },
+  };
+}
+
+function authentikAuthOptions(): AuthOptions {
+  return {
+    providers: [
+      AuthentikProvider({
+        ...(() => {
+          const [clientId, clientSecret, issuer] = sequenceThrows(
+            getAuthentikClientId,
+            getAuthentikClientSecret,
+            getAuthentikIssuer,
+          );
+          return {
+            clientId,
+            clientSecret,
+            issuer,
+          };
+        })(),
+        authorization: {
+          params: {
+            scope: "openid email profile offline_access",
+          },
+        },
+      }),
+    ],
+    session: {
+      strategy: "jwt",
+    },
+    callbacks: {
+      async jwt({ token, account, user }) {
+        if (account && !account.access_token) {
+          await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+        }
+
+        if (account && user) {
+          // called only on first login
+          // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
+          if (account.access_token) {
+            const expiresAtS = assertExists(account.expires_at);
+            const expiresAtMs = expiresAtS * 1000;
+            const jwtToken: JWTWithAccessToken = {
+              ...token,
+              accessToken: account.access_token,
+              accessTokenExpires: expiresAtMs,
+              refreshToken: account.refresh_token,
+            };
+            if (jwtToken.error) {
               await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
+            } else {
+              assertNotExists(
+                jwtToken.error,
+                `panic! trying to cache token with error in jwt: ${jwtToken.error}`,
+              );
+              await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
+                token: jwtToken,
+                timestamp: Date.now(),
+              });
+              return jwtToken;
             }
+          }
+        }
 
-            if (account && user) {
-              // called only on first login
-              // XXX account.expires_in used in example is not defined for authentik backend, but expires_at is
-              if (account.access_token) {
-                const expiresAtS = assertExists(account.expires_at);
-                const expiresAtMs = expiresAtS * 1000;
-                const jwtToken: JWTWithAccessToken = {
-                  ...token,
-                  accessToken: account.access_token,
-                  accessTokenExpires: expiresAtMs,
-                  refreshToken: account.refresh_token,
-                };
-                if (jwtToken.error) {
-                  await deleteTokenCache(tokenCacheRedis, `token:${token.sub}`);
-                } else {
-                  assertNotExists(
-                    jwtToken.error,
-                    `panic! trying to cache token with error in jwt: ${jwtToken.error}`,
-                  );
-                  await setTokenCache(tokenCacheRedis, `token:${token.sub}`, {
-                    token: jwtToken,
-                    timestamp: Date.now(),
-                  });
-                  return jwtToken;
-                }
-              }
-            }
+        const currentToken = await getTokenCache(
+          tokenCacheRedis,
+          `token:${token.sub}`,
+        );
+        console.debug(
+          "currentToken from cache",
+          JSON.stringify(currentToken, null, 2),
+          "will be returned?",
+          currentToken &&
+            !shouldRefreshToken(currentToken.token.accessTokenExpires),
+        );
+        if (
+          currentToken &&
+          !shouldRefreshToken(currentToken.token.accessTokenExpires)
+        ) {
+          return currentToken.token;
+        }
 
-            const currentToken = await getTokenCache(
-              tokenCacheRedis,
-              `token:${token.sub}`,
-            );
-            console.debug(
-              "currentToken from cache",
-              JSON.stringify(currentToken, null, 2),
-              "will be returned?",
-              currentToken &&
-                !shouldRefreshToken(currentToken.token.accessTokenExpires),
-            );
-            if (
-              currentToken &&
-              !shouldRefreshToken(currentToken.token.accessTokenExpires)
-            ) {
-              return currentToken.token;
-            }
+        // access token has expired, try to update it
+        return await lockedRefreshAccessToken(token);
+      },
+      async session({ session, token }) {
+        const extendedToken = token as JWTWithAccessToken;
+        console.log("extendedToken", extendedToken);
+        const userId = await getUserId(extendedToken.accessToken);
 
-            // access token has expired, try to update it
-            return await lockedRefreshAccessToken(token);
+        return {
+          ...session,
+          accessToken: extendedToken.accessToken,
+          accessTokenExpires: extendedToken.accessTokenExpires,
+          error: extendedToken.error,
+          user: {
+            id: assertExistsAndNonEmptyString(userId, "User ID required"),
+            name: extendedToken.name,
+            email: extendedToken.email,
           },
-          async session({ session, token }) {
-            const extendedToken = token as JWTWithAccessToken;
-            console.log("extendedToken", extendedToken);
-            const userId = await getUserId(extendedToken.accessToken);
-
-            return {
-              ...session,
-              accessToken: extendedToken.accessToken,
-              accessTokenExpires: extendedToken.accessTokenExpires,
-              error: extendedToken.error,
-              user: {
-                id: assertExistsAndNonEmptyString(userId, "User ID required"),
-                name: extendedToken.name,
-                email: extendedToken.email,
-              },
-            } satisfies CustomSession;
-          },
-        },
-      }
-    : {
-        providers: [],
-      };
+        } satisfies CustomSession;
+      },
+    },
+  };
+}
 
 async function lockedRefreshAccessToken(
   token: JWT,

@@ -125,11 +125,11 @@ services:
       - ./www/.env
     environment:
       NODE_ENV: production
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
       SERVER_API_URL: http://server:1250
       KV_URL: redis://redis:6379
       KV_USE_TLS: "false"
-      AUTHENTIK_ISSUER: ""
-      AUTHENTIK_REFRESH_TOKEN_URL: ""
+      NEXTAUTH_URL_INTERNAL: http://localhost:3000
     depends_on:
       - redis
 
@@ -227,9 +227,12 @@ services:
     profiles: [ollama-gpu]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:11434:11434"
+      - "127.0.0.1:11435:11435"
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11435"
+      OLLAMA_KEEP_ALIVE: "24h"
     deploy:
       resources:
         reservations:
@@ -238,7 +241,7 @@ services:
               count: all
               capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://localhost:11435/api/tags"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -248,11 +251,14 @@ services:
     profiles: [ollama-cpu]
     restart: unless-stopped
     ports:
-      - "127.0.0.1:11434:11434"
+      - "127.0.0.1:11435:11435"
     volumes:
       - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11435"
+      OLLAMA_KEEP_ALIVE: "24h"         # keep model loaded to avoid reload delays
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://localhost:11435/api/tags"]
       interval: 10s
       timeout: 5s
       retries: 5
