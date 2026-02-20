@@ -39,7 +39,7 @@ class TranscriptFinalTitleProcessor(Processor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.chunks: list[TitleSummary] = []
-        self.llm = LLM(settings=settings, temperature=0.5, max_tokens=200)
+        self.llm = LLM(settings=settings, temperature=0.5)
 
     async def _push(self, data: TitleSummary):
         self.chunks.append(data)
