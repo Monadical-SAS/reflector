@@ -1,7 +1,7 @@
 """add password_hash to user table
 
-Revision ID: 20260219000000
-Revises: 3aa20b96d963
+Revision ID: e1f093f7f124
+Revises: 623af934249a
 Create Date: 2026-02-19 00:00:00.000000
 
 """
@@ -11,8 +11,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "20260219000000"
-down_revision: Union[str, None] = "3aa20b96d963"
+revision: str = "e1f093f7f124"
+down_revision: Union[str, None] = "623af934249a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
