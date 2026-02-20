@@ -17,7 +17,7 @@ SERVER_ENV="$ROOT_DIR/server/.env"
 WWW_ENV="$ROOT_DIR/www/.env.local"
 
 MODEL="${LLM_MODEL:-qwen2.5:14b}"
-OLLAMA_PORT="${OLLAMA_PORT:-11434}"
+OLLAMA_PORT="${OLLAMA_PORT:-11435}"
 
 OS="$(uname -s)"
 

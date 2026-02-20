@@ -23,7 +23,7 @@ export default function UserInfo() {
       className="font-light px-2"
       onClick={(e) => {
         e.preventDefault();
-        auth.signIn("authentik");
+        auth.signIn();
       }}
     >
       Log in

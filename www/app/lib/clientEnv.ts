@@ -28,10 +28,13 @@ export type EnvFeaturePartial = {
   [key in FeatureEnvName]: boolean | null;
 };
 
+export type AuthProviderType = "authentik" | "credentials" | null;
+
 // CONTRACT: isomorphic with JSON.stringify
 export type ClientEnvCommon = EnvFeaturePartial & {
   API_URL: NonEmptyString;
   WEBSOCKET_URL: NonEmptyString | null;
+  AUTH_PROVIDER: AuthProviderType;
 };
 
 let clientEnv: ClientEnvCommon | null = null;
@@ -59,6 +62,12 @@ const parseBooleanString = (str: string | undefined): boolean | null => {
   return str === "true";
 };
 
+const parseAuthProvider = (): AuthProviderType => {
+  const val = process.env.AUTH_PROVIDER;
+  if (val === "authentik" || val === "credentials") return val;
+  return null;
+};
+
 export const getClientEnvServer = (): ClientEnvCommon => {
   if (typeof window !== "undefined") {
     throw new Error(
@@ -76,6 +85,7 @@ export const getClientEnvServer = (): ClientEnvCommon => {
     return {
       API_URL: getNextEnvVar("API_URL"),
       WEBSOCKET_URL: parseMaybeNonEmptyString(process.env.WEBSOCKET_URL ?? ""),
+      AUTH_PROVIDER: parseAuthProvider(),
       ...features,
     };
   }
@@ -83,6 +93,7 @@ export const getClientEnvServer = (): ClientEnvCommon => {
   clientEnv = {
     API_URL: getNextEnvVar("API_URL"),
     WEBSOCKET_URL: parseMaybeNonEmptyString(process.env.WEBSOCKET_URL ?? ""),
+    AUTH_PROVIDER: parseAuthProvider(),
     ...features,
   };
   return clientEnv;

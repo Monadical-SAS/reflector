@@ -57,6 +57,9 @@ cd reflector
 # CPU-only (same, but slower):
 ./scripts/setup-selfhosted.sh --cpu --ollama-cpu --garage --caddy
 
+# With password authentication (single admin user):
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --password mysecretpass
+
 # Build from source instead of pulling prebuilt images:
 ./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --build
 ```
@@ -124,6 +127,7 @@ Browse all available models at https://ollama.com/library.
 | `--garage` | Starts Garage (local S3-compatible storage). Auto-configures bucket, keys, and env vars. |
 | `--caddy` | Starts Caddy reverse proxy on ports 80/443 with self-signed cert. |
 | `--domain DOMAIN` | Use a real domain with Let's Encrypt auto-HTTPS (implies `--caddy`). Requires DNS A record pointing to this server and ports 80/443 open. |
+| `--password PASS` | Enable password authentication with an `admin@localhost` user. Sets `AUTH_BACKEND=password`, `PUBLIC_MODE=false`. See [Enabling Password Authentication](#enabling-password-authentication). |
 | `--build` | Build backend (server, worker, beat) and frontend (web) Docker images from source instead of pulling prebuilt images from the registry. Useful for development or when running a version with local changes. |
 
 Without `--garage`, you **must** provide S3-compatible credentials (the script will prompt interactively or you can pre-fill `server/.env`).
@@ -156,13 +160,16 @@ Without `--caddy` or `--domain`, no ports are exposed. Point your own reverse pr
 | `DATABASE_URL` | PostgreSQL connection | Auto-set (Docker internal) |
 | `REDIS_HOST` | Redis hostname | Auto-set (`redis`) |
 | `SECRET_KEY` | App secret | Auto-generated |
-| `AUTH_BACKEND` | Authentication method | `none` |
+| `AUTH_BACKEND` | Authentication method (`none`, `password`, `jwt`) | `none` |
 | `PUBLIC_MODE` | Allow unauthenticated access | `true` |
+| `ADMIN_EMAIL` | Admin email for password auth | *(unset)* |
+| `ADMIN_PASSWORD_HASH` | PBKDF2 hash for password auth | *(unset)* |
 | `WEBRTC_HOST` | IP advertised in WebRTC ICE candidates | Auto-detected (server IP) |
 | `TRANSCRIPT_URL` | Specialized model endpoint | `http://transcription:8000` |
 | `LLM_URL` | OpenAI-compatible LLM endpoint | Auto-set for Ollama modes |
 | `LLM_API_KEY` | LLM API key | `not-needed` for Ollama |
 | `LLM_MODEL` | LLM model name | `qwen2.5:14b` for Ollama (override with `--llm-model`) |
+| `CELERY_BEAT_POLL_INTERVAL` | Override all worker polling intervals (seconds). `0` = use individual defaults | `300` (selfhosted), `0` (other) |
 | `TRANSCRIPT_STORAGE_BACKEND` | Storage backend | `aws` |
 | `TRANSCRIPT_STORAGE_AWS_*` | S3 credentials | Auto-set for Garage |
 
@@ -175,6 +182,7 @@ Without `--caddy` or `--domain`, no ports are exposed. Point your own reverse pr
 | `SERVER_API_URL` | API URL (server-side) | `http://server:1250` |
 | `NEXTAUTH_SECRET` | Auth secret | Auto-generated |
 | `FEATURE_REQUIRE_LOGIN` | Require authentication | `false` |
+| `AUTH_PROVIDER` | Auth provider (`authentik` or `credentials`) | *(unset)* |
 
 ## Storage Options
 
@@ -207,7 +215,109 @@ TRANSCRIPT_STORAGE_AWS_REGION=us-east-1
 TRANSCRIPT_STORAGE_AWS_ENDPOINT_URL=http://minio:9000
 ```
 
+## What Authentication Enables
+
+By default, Reflector runs in **public mode** (`AUTH_BACKEND=none`, `PUBLIC_MODE=true`) — anyone can create and view transcripts without logging in. Transcripts are anonymous (not linked to any user) and cannot be edited or deleted after creation.
+
+Enabling authentication (either password or Authentik) unlocks:
+
+| Feature | Public mode (no auth) | With authentication |
+|---------|----------------------|---------------------|
+| Create transcripts (record/upload) | Yes (anonymous, unowned) | Yes (owned by user) |
+| View transcripts | All transcripts visible | Own transcripts + shared rooms |
+| Edit/delete transcripts | No | Yes (owner only) |
+| Privacy controls (private/semi-private/public) | No (everything public) | Yes (owner can set share mode) |
+| Speaker reassignment and merging | No | Yes (owner only) |
+| Participant management (add/edit/delete) | Read-only | Full CRUD (owner only) |
+| Create rooms | No | Yes |
+| Edit/delete rooms | No | Yes (owner only) |
+| Room calendar (ICS) sync | No | Yes (owner only) |
+| API key management | No | Yes |
+| Post to Zulip | No | Yes (owner only) |
+| Real-time WebSocket notifications | No (connection closed) | Yes (transcript create/delete events) |
+| Meeting host access (Daily.co token) | No | Yes (room owner) |
+
+In short: public mode is "demo-friendly" — great for trying Reflector out. Authentication adds **ownership, privacy, and management** of your data.
+
+## Authentication Options
+
+Reflector supports three authentication backends:
+
+| Backend | `AUTH_BACKEND` | Use case |
+|---------|---------------|----------|
+| `none` | `none` | Public/demo mode, no login required |
+| `password` | `password` | Single-user self-hosted, simple email/password login |
+| `jwt` | `jwt` | Multi-user via Authentik (OAuth2/OIDC) |
+
+## Enabling Password Authentication
+
+The simplest way to add authentication. Creates a single admin user with email/password login — no external identity provider needed.
+
+### Quick setup (recommended)
+
+Pass `--password` to the setup script:
+
+```bash
+./scripts/setup-selfhosted.sh --gpu --ollama-gpu --garage --caddy --password mysecretpass
+```
+
+This automatically:
+- Sets `AUTH_BACKEND=password` and `PUBLIC_MODE=false` in `server/.env`
+- Creates an `admin@localhost` user with the given password
+- Sets `FEATURE_REQUIRE_LOGIN=true` and `AUTH_PROVIDER=credentials` in `www/.env`
+- Provisions the admin user in the database on container startup
+
+### Manual setup
+
+If you prefer to configure manually or want to change the admin email:
+
+1. Generate a password hash:
+   ```bash
+   cd server
+   uv run python -m reflector.tools.create_admin --hash-only --password yourpassword
+   ```
+
+2. Update `server/.env`:
+   ```env
+   AUTH_BACKEND=password
+   PUBLIC_MODE=false
+   ADMIN_EMAIL=admin@yourdomain.com
+   ADMIN_PASSWORD_HASH=pbkdf2:sha256:100000$<salt>$<hash>
+   ```
+
+3. Update `www/.env`:
+   ```env
+   FEATURE_REQUIRE_LOGIN=true
+   AUTH_PROVIDER=credentials
+   ```
+
+4. Restart:
+   ```bash
+   docker compose -f docker-compose.selfhosted.yml down
+   ./scripts/setup-selfhosted.sh <same-flags>
+   ```
+
+### How it works
+
+- The backend issues HS256 JWTs (signed with `SECRET_KEY`) on successful login via `POST /v1/auth/login`
+- Tokens expire after 24 hours; the user must log in again after expiry
+- The frontend shows a login page at `/login` with email and password fields
+- A rate limiter blocks IPs after 10 failed login attempts within 5 minutes
+- The admin user is provisioned automatically on container startup from `ADMIN_EMAIL` and `ADMIN_PASSWORD_HASH` environment variables
+- Passwords are hashed with PBKDF2-SHA256 (100,000 iterations) — no additional dependencies required
+
+### Changing the admin password
+
+```bash
+cd server
+uv run python -m reflector.tools.create_admin --email admin@localhost --password newpassword
+```
+
+Or update `ADMIN_PASSWORD_HASH` in `server/.env` and restart the containers.
+
 ## Enabling Authentication (Authentik)
+
+For multi-user deployments with SSO. Requires an external Authentik instance.
 
 By default, authentication is disabled (`AUTH_BACKEND=none`, `FEATURE_REQUIRE_LOGIN=false`). To enable:
 
@@ -221,6 +331,7 @@ By default, authentication is disabled (`AUTH_BACKEND=none`, `FEATURE_REQUIRE_LO
 4. Update `www/.env`:
    ```env
    FEATURE_REQUIRE_LOGIN=true
+   AUTH_PROVIDER=authentik
    AUTHENTIK_ISSUER=https://authentik.example.com/application/o/reflector
    AUTHENTIK_REFRESH_TOKEN_URL=https://authentik.example.com/application/o/token/
    AUTHENTIK_CLIENT_ID=your-client-id
@@ -272,6 +383,41 @@ By default, Caddy uses self-signed certificates. For a real domain:
    API_URL=https://reflector.example.com
    ```
 5. Restart Caddy: `docker compose -f docker-compose.selfhosted.yml restart caddy web`
+
+## Worker Polling Frequency
+
+The selfhosted setup defaults all background worker polling intervals to **300 seconds (5 minutes)** to reduce CPU and memory usage. This controls how often the beat scheduler triggers tasks like recording discovery, meeting reconciliation, and calendar sync.
+
+To change the interval, edit `server/.env`:
+
+```env
+# Poll every 60 seconds (more responsive, uses more resources)
+CELERY_BEAT_POLL_INTERVAL=60
+
+# Poll every 5 minutes (default for selfhosted)
+CELERY_BEAT_POLL_INTERVAL=300
+
+# Use individual per-task defaults (production SaaS behavior)
+CELERY_BEAT_POLL_INTERVAL=0
+```
+
+After changing, restart the beat and worker containers:
+
+```bash
+docker compose -f docker-compose.selfhosted.yml restart beat worker
+```
+
+**Affected tasks when `CELERY_BEAT_POLL_INTERVAL` is set:**
+
+| Task | Default (no override) | With override |
+|------|-----------------------|---------------|
+| SQS message polling | 60s | Override value |
+| Daily.co recording discovery | 15s (no webhook) / 180s (webhook) | Override value |
+| Meeting reconciliation | 30s | Override value |
+| ICS calendar sync | 60s | Override value |
+| Upcoming meeting creation | 30s | Override value |
+
+> **Note:** Daily crontab tasks (failed recording reprocessing at 05:00 UTC, public data cleanup at 03:00 UTC) and healthcheck pings (10 min) are **not** affected by this setting.
 
 ## Troubleshooting
 
@@ -366,7 +512,7 @@ The setup script is idempotent — it won't overwrite existing secrets or env va
     ┌─────┴─────┐     ┌─────────┐
     │  ollama   │     │ garage  │
     │ (optional)│     │(optional│
-    │ :11434    │     │ S3)     │
+    │ :11435    │     │ S3)     │
     └───────────┘     └─────────┘
 ```
 

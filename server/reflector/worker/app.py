@@ -8,8 +8,21 @@ from reflector.settings import settings
 logger = structlog.get_logger(__name__)
 
 # Polling intervals (seconds)
+# CELERY_BEAT_POLL_INTERVAL overrides all sub-5-min intervals (e.g. 300 for selfhosted)
+_override = (
+    float(settings.CELERY_BEAT_POLL_INTERVAL)
+    if settings.CELERY_BEAT_POLL_INTERVAL > 0
+    else 0
+)
+
 # Webhook-aware: 180s when webhook configured (backup mode), 15s when no webhook (primary discovery)
-POLL_DAILY_RECORDINGS_INTERVAL_SEC = 180.0 if settings.DAILY_WEBHOOK_SECRET else 15.0
+POLL_DAILY_RECORDINGS_INTERVAL_SEC = _override or (
+    180.0 if settings.DAILY_WEBHOOK_SECRET else 15.0
+)
+SQS_POLL_INTERVAL = _override or float(settings.SQS_POLLING_TIMEOUT_SECONDS)
+RECONCILIATION_INTERVAL = _override or 30.0
+ICS_SYNC_INTERVAL = _override or 60.0
+UPCOMING_MEETINGS_INTERVAL = _override or 30.0
 
 if celery.current_app.main != "default":
     logger.info(f"Celery already configured ({celery.current_app})")
@@ -33,11 +46,11 @@ else:
     app.conf.beat_schedule = {
         "process_messages": {
             "task": "reflector.worker.process.process_messages",
-            "schedule": float(settings.SQS_POLLING_TIMEOUT_SECONDS),
+            "schedule": SQS_POLL_INTERVAL,
         },
         "process_meetings": {
             "task": "reflector.worker.process.process_meetings",
-            "schedule": float(settings.SQS_POLLING_TIMEOUT_SECONDS),
+            "schedule": SQS_POLL_INTERVAL,
         },
         "reprocess_failed_recordings": {
             "task": "reflector.worker.process.reprocess_failed_recordings",
@@ -53,15 +66,15 @@ else:
         },
         "trigger_daily_reconciliation": {
             "task": "reflector.worker.process.trigger_daily_reconciliation",
-            "schedule": 30.0,  # Every 30 seconds (queues poll tasks for all active meetings)
+            "schedule": RECONCILIATION_INTERVAL,
         },
         "sync_all_ics_calendars": {
             "task": "reflector.worker.ics_sync.sync_all_ics_calendars",
-            "schedule": 60.0,  # Run every minute to check which rooms need sync
+            "schedule": ICS_SYNC_INTERVAL,
         },
         "create_upcoming_meetings": {
             "task": "reflector.worker.ics_sync.create_upcoming_meetings",
-            "schedule": 30.0,  # Run every 30 seconds to create upcoming meetings
+            "schedule": UPCOMING_MEETINGS_INTERVAL,
         },
     }
 

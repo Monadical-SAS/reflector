@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     LLM_URL: str | None = None
     LLM_API_KEY: str | None = None
     LLM_CONTEXT_WINDOW: int = 16000
+    LLM_REQUEST_TIMEOUT: float = 300.0  # HTTP request timeout for LLM calls (seconds)
 
     LLM_PARSE_MAX_RETRIES: int = (
         3  # Max retries for JSON/validation errors (total attempts = retries + 1)
@@ -112,13 +113,17 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: str | None = None
 
-    # User authentication (none, jwt)
+    # User authentication (none, jwt, password)
     AUTH_BACKEND: str = "none"
 
     # User authentication using JWT
     AUTH_JWT_ALGORITHM: str = "RS256"
     AUTH_JWT_PUBLIC_KEY: str | None = "authentik.monadical.com_public.pem"
     AUTH_JWT_AUDIENCE: str | None = None
+
+    # User authentication using password (selfhosted)
+    ADMIN_EMAIL: str | None = None
+    ADMIN_PASSWORD_HASH: str | None = None
 
     PUBLIC_MODE: bool = False
     PUBLIC_DATA_RETENTION_DAYS: PositiveInt = 7
@@ -153,6 +158,9 @@ class Settings(BaseSettings):
     WHEREBY_WEBHOOK_SECRET: str | None = None
     AWS_PROCESS_RECORDING_QUEUE_URL: str | None = None
     SQS_POLLING_TIMEOUT_SECONDS: int = 60
+    CELERY_BEAT_POLL_INTERVAL: int = (
+        0  # 0 = use individual defaults; set e.g. 300 for 5-min polling
+    )
 
     # Daily.co integration
     DAILY_API_KEY: str | None = None
