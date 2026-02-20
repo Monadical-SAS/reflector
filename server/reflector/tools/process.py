@@ -25,7 +25,7 @@ from reflector.pipelines.main_live_pipeline import (
 )
 from reflector.storage import Storage
 from reflector.worker.app import (
-    app as celery_app,  # noqa: F401 — ensure Celery uses Redis broker
+    app as celery_app,  # noqa: F401 - ensure Celery uses Redis broker
 )
 
 
