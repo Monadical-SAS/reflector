@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.34.0](https://github.com/Monadical-SAS/reflector/compare/v0.33.0...v0.34.0) (2026-02-20)
+
+
+### Features
+
+* add Caddy reverse proxy with auto HTTPS for LAN access and auto-derive WebSocket URL ([#863](https://github.com/Monadical-SAS/reflector/issues/863)) ([7f2a401](https://github.com/Monadical-SAS/reflector/commit/7f2a4013cbb3d3ee3e76885f28d73331dcaf325c))
+* add change_seq to transcripts for ingestion support ([#868](https://github.com/Monadical-SAS/reflector/issues/868)) ([d4cc6be](https://github.com/Monadical-SAS/reflector/commit/d4cc6be1fed56ea7fba06acb8d50c9de43b26b07))
+* local llm support + standalone-script doc/draft ([#856](https://github.com/Monadical-SAS/reflector/issues/856)) ([b468427](https://github.com/Monadical-SAS/reflector/commit/b468427f1bb12634f5840990e9d64b2c145d7c1a))
+* remove network_mode host for standalone WebRTC ([#864](https://github.com/Monadical-SAS/reflector/issues/864)) ([9dbf155](https://github.com/Monadical-SAS/reflector/commit/9dbf155be4de7c059035a75f90c7bf0845344b74))
+* standalone frontend uses production build instead of dev server ([#862](https://github.com/Monadical-SAS/reflector/issues/862)) ([5bca925](https://github.com/Monadical-SAS/reflector/commit/5bca92510a5c33f8baeeaac2c346fb1978366ac8))
+
+
+### Bug Fixes
+
+* auto-rebuild standalone images and blank Hatchet vars ([3d13e5d](https://github.com/Monadical-SAS/reflector/commit/3d13e5d42fc53ce3c005841265ed1e8735a61518))
+* check compose version output, not just exit code ([e57c618](https://github.com/Monadical-SAS/reflector/commit/e57c6186f92d66e4525786e56b018c08cf792d2f))
+* check for Docker BuildKit (buildx) before building images ([14a8b58](https://github.com/Monadical-SAS/reflector/commit/14a8b5808e5aed860e55aaed35a0fdf8b2f4afa3))
+* check for Docker Compose plugin before running standalone setup ([36a8dae](https://github.com/Monadical-SAS/reflector/commit/36a8daee61c2b7a0937fd0914d51fb4ea8212ae7))
+* live flow real-time updates during processing ([#861](https://github.com/Monadical-SAS/reflector/issues/861)) ([972a52d](https://github.com/Monadical-SAS/reflector/commit/972a52d22f989f9e2c6f52362b3f1a4e17773663))
+* remove max_tokens cap to support thinking models (Kimi-K2.5) ([#869](https://github.com/Monadical-SAS/reflector/issues/869)) ([527a069](https://github.com/Monadical-SAS/reflector/commit/527a069ba9eff6717ccd4bb1e839674edebffceb))
+* standalone on ubuntu ([#865](https://github.com/Monadical-SAS/reflector/issues/865)) ([a8ad237](https://github.com/Monadical-SAS/reflector/commit/a8ad237d8571d5ef5c78fb4427c538592d6a7b43))
+* standalone server networking and setup diagnostics ([695f3c4](https://github.com/Monadical-SAS/reflector/commit/695f3c49285254869f6a6cbd5f860d1169fa4daa))
+
 ## [0.33.0](https://github.com/Monadical-SAS/reflector/compare/v0.32.2...v0.33.0) (2026-02-05)
 
 
