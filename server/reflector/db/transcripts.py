@@ -35,6 +35,8 @@ class SourceKind(enum.StrEnum):
     FILE = enum.auto()
 
 
+transcript_change_seq = sqlalchemy.Sequence("transcript_change_seq", metadata=metadata)
+
 transcripts = sqlalchemy.Table(
     "transcript",
     metadata,
@@ -89,6 +91,12 @@ transcripts = sqlalchemy.Table(
     sqlalchemy.Column("webvtt", sqlalchemy.Text),
     # Hatchet workflow run ID for resumption of failed workflows
     sqlalchemy.Column("workflow_run_id", sqlalchemy.String),
+    sqlalchemy.Column(
+        "change_seq",
+        sqlalchemy.BigInteger,
+        transcript_change_seq,
+        server_default=transcript_change_seq.next_value(),
+    ),
     sqlalchemy.Index("idx_transcript_recording_id", "recording_id"),
     sqlalchemy.Index("idx_transcript_user_id", "user_id"),
     sqlalchemy.Index("idx_transcript_created_at", "created_at"),
@@ -229,6 +237,7 @@ class Transcript(BaseModel):
     audio_deleted: bool | None = None
     webvtt: str | None = None
     workflow_run_id: str | None = None  # Hatchet workflow run ID for resumption
+    change_seq: int | None = None
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -381,6 +390,7 @@ class TranscriptController:
         source_kind: SourceKind | None = None,
         room_id: str | None = None,
         search_term: str | None = None,
+        change_seq_from: int | None = None,
         return_query: bool = False,
         exclude_columns: list[str] = [
             "topics",
@@ -401,6 +411,7 @@ class TranscriptController:
         - `filter_recording`: filter out transcripts that are currently recording
         - `room_id`: filter transcripts by room ID
         - `search_term`: filter transcripts by search term
+        - `change_seq_from`: filter transcripts with change_seq > this value
         """
 
         query = transcripts.select().join(
@@ -423,6 +434,9 @@ class TranscriptController:
         if search_term:
             query = query.where(transcripts.c.title.ilike(f"%{search_term}%"))
 
+        if change_seq_from is not None:
+            query = query.where(transcripts.c.change_seq > change_seq_from)
+
         # Exclude heavy JSON columns from list queries
         transcript_columns = [
             col for col in transcripts.c if col.name not in exclude_columns
@@ -436,9 +450,10 @@ class TranscriptController:
         )
 
         if order_by is not None:
-            field = getattr(transcripts.c, order_by[1:])
             if order_by.startswith("-"):
-                field = field.desc()
+                field = getattr(transcripts.c, order_by[1:]).desc()
+            else:
+                field = getattr(transcripts.c, order_by)
             query = query.order_by(field)
 
         if filter_empty:

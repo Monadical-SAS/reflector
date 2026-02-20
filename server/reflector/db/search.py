@@ -151,6 +151,7 @@ class SearchResultDB(BaseModel):
     title: str | None = None
     source_kind: SourceKind
     room_id: str | None = None
+    change_seq: int | None = None
     rank: float = Field(..., ge=0, le=1)
 
 
@@ -173,6 +174,7 @@ class SearchResult(BaseModel):
     total_match_count: NonNegativeInt = Field(
         default=0, description="Total number of matches found in the transcript"
     )
+    change_seq: int | None = None
 
     @field_serializer("created_at", when_used="json")
     def serialize_datetime(self, dt: datetime) -> str:
@@ -356,6 +358,7 @@ class SearchController:
             transcripts.c.user_id,
             transcripts.c.room_id,
             transcripts.c.source_kind,
+            transcripts.c.change_seq,
             transcripts.c.webvtt,
             transcripts.c.long_summary,
             sqlalchemy.case(
