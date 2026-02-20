@@ -35,7 +35,7 @@ class TranscriptTopicDetectorProcessor(Processor):
         super().__init__(**kwargs)
         self.transcript = None
         self.min_transcript_length = min_transcript_length
-        self.llm = LLM(settings=settings, temperature=0.9, max_tokens=500)
+        self.llm = LLM(settings=settings, temperature=0.9)
 
     async def _push(self, data: Transcript):
         if self.transcript is None:
