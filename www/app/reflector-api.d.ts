@@ -1032,6 +1032,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
     };
     /** GetTranscriptSegmentTopic */
     GetTranscriptSegmentTopic: {
@@ -1178,6 +1180,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
       /** Participants */
       participants:
         | components["schemas"]["TranscriptParticipantWithEmail"][]
@@ -1241,6 +1245,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
       /** Participants */
       participants:
         | components["schemas"]["TranscriptParticipantWithEmail"][]
@@ -1305,6 +1311,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
       /** Participants */
       participants:
         | components["schemas"]["TranscriptParticipantWithEmail"][]
@@ -1376,6 +1384,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
       /** Participants */
       participants:
         | components["schemas"]["TranscriptParticipantWithEmail"][]
@@ -1449,6 +1459,8 @@ export interface components {
       room_name?: string | null;
       /** Audio Deleted */
       audio_deleted?: boolean | null;
+      /** Change Seq */
+      change_seq?: number | null;
       /** Participants */
       participants:
         | components["schemas"]["TranscriptParticipantWithEmail"][]
@@ -1834,6 +1846,8 @@ export interface components {
        * @default 0
        */
       total_match_count: number;
+      /** Change Seq */
+      change_seq?: number | null;
     };
     /**
      * SourceKind
@@ -2146,34 +2160,61 @@ export interface components {
     };
     /** UserTranscriptCreatedData */
     UserTranscriptCreatedData: {
-      /** Id */
+      /**
+       * Id
+       * @description A non-empty string
+       */
       id: string;
     };
     /** UserTranscriptDeletedData */
     UserTranscriptDeletedData: {
-      /** Id */
+      /**
+       * Id
+       * @description A non-empty string
+       */
       id: string;
     };
     /** UserTranscriptDurationData */
     UserTranscriptDurationData: {
-      /** Id */
+      /**
+       * Id
+       * @description A non-empty string
+       */
       id: string;
       /** Duration */
       duration: number;
     };
     /** UserTranscriptFinalTitleData */
     UserTranscriptFinalTitleData: {
-      /** Id */
+      /**
+       * Id
+       * @description A non-empty string
+       */
       id: string;
-      /** Title */
+      /**
+       * Title
+       * @description A non-empty string
+       */
       title: string;
     };
     /** UserTranscriptStatusData */
     UserTranscriptStatusData: {
-      /** Id */
+      /**
+       * Id
+       * @description A non-empty string
+       */
       id: string;
-      /** Value */
-      value: string;
+      /**
+       * Value
+       * @enum {string}
+       */
+      value:
+        | "idle"
+        | "uploaded"
+        | "recording"
+        | "processing"
+        | "error"
+        | "ended";
     };
     /** UserWsTranscriptCreated */
     UserWsTranscriptCreated: {
@@ -2926,6 +2967,8 @@ export interface operations {
         source_kind?: components["schemas"]["SourceKind"] | null;
         room_id?: string | null;
         search_term?: string | null;
+        change_seq_from?: number | null;
+        sort_by?: ("created_at" | "change_seq") | null;
         /** @description Page number */
         page?: number;
         /** @description Page size */

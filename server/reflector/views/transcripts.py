@@ -111,6 +111,7 @@ class GetTranscriptMinimal(BaseModel):
     room_id: str | None = None
     room_name: str | None = None
     audio_deleted: bool | None = None
+    change_seq: int | None = None
 
 
 class TranscriptParticipantWithEmail(TranscriptParticipant):
@@ -266,11 +267,21 @@ async def transcripts_list(
     source_kind: SourceKind | None = None,
     room_id: str | None = None,
     search_term: str | None = None,
+    change_seq_from: int | None = None,
+    sort_by: Literal["created_at", "change_seq"] | None = None,
 ):
     if not user and not settings.PUBLIC_MODE:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = user["sub"] if user else None
+
+    # Default behavior preserved: sort_by=None → "-created_at"
+    if sort_by == "change_seq":
+        order_by = "change_seq"  # ASC (ascending for checkpoint-based polling)
+    elif sort_by == "created_at":
+        order_by = "-created_at"  # DESC (newest first, same as current default)
+    else:
+        order_by = "-created_at"  # default, backward compatible
 
     return await apaginate(
         get_database(),
@@ -279,7 +290,8 @@ async def transcripts_list(
             source_kind=SourceKind(source_kind) if source_kind else None,
             room_id=room_id,
             search_term=search_term,
-            order_by="-created_at",
+            order_by=order_by,
+            change_seq_from=change_seq_from,
             return_query=True,
         ),
     )
@@ -512,6 +524,7 @@ async def transcript_get(
         "room_id": transcript.room_id,
         "room_name": room_name,
         "audio_deleted": transcript.audio_deleted,
+        "change_seq": transcript.change_seq,
         "participants": participants,
     }
 
