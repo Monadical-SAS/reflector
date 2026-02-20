@@ -2,9 +2,10 @@
 
 import { $api } from "./apiClient";
 import { useError } from "../(errors)/errorContext";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../reflector-api";
 import { useAuth } from "./AuthProvider";
+import { meetingStatusBatcher } from "./meetingStatusBatcher";
 import { MeetingId } from "./types";
 import { NonEmptyString } from "./utils";
 import type { TranscriptStatus } from "./transcript";
@@ -708,15 +709,7 @@ export function useRoomsCreateMeeting() {
           queryKey: $api.queryOptions("get", "/v1/rooms").queryKey,
         }),
         queryClient.invalidateQueries({
-          queryKey: $api.queryOptions(
-            "get",
-            "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
-            {
-              params: {
-                path: { room_name: roomName },
-              },
-            },
-          ).queryKey,
+          queryKey: meetingStatusKeys.active(roomName),
         }),
       ]);
     },
@@ -745,42 +738,39 @@ export function useRoomGetByName(roomName: string | null) {
 export function useRoomUpcomingMeetings(roomName: string | null) {
   const { isAuthenticated } = useAuthReady();
 
-  return $api.useQuery(
-    "get",
-    "/v1/rooms/{room_name}/meetings/upcoming" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_UPCOMING_PATH_PARTIAL}`,
-    {
-      params: {
-        path: { room_name: roomName! },
-      },
+  return useQuery({
+    queryKey: meetingStatusKeys.upcoming(roomName!),
+    queryFn: async () => {
+      const result = await meetingStatusBatcher.fetch(roomName!);
+      return result.upcoming_events;
     },
-    {
-      enabled: !!roomName && isAuthenticated,
-    },
-  );
+    enabled: !!roomName && isAuthenticated,
+  });
 }
 
-const MEETINGS_PATH_PARTIAL = "meetings" as const;
-const MEETINGS_ACTIVE_PATH_PARTIAL = `${MEETINGS_PATH_PARTIAL}/active` as const;
-const MEETINGS_UPCOMING_PATH_PARTIAL =
-  `${MEETINGS_PATH_PARTIAL}/upcoming` as const;
-const MEETING_LIST_PATH_PARTIALS = [
-  MEETINGS_ACTIVE_PATH_PARTIAL,
-  MEETINGS_UPCOMING_PATH_PARTIAL,
-];
+// Query keys reuse $api.queryOptions so cache identity matches the original
+// per-room GET endpoints. The actual fetch goes through the batcher, but the
+// keys stay consistent with the rest of the codebase.
+const meetingStatusKeys = {
+  active: (roomName: string) =>
+    $api.queryOptions("get", "/v1/rooms/{room_name}/meetings/active", {
+      params: { path: { room_name: roomName } },
+    }).queryKey,
+  upcoming: (roomName: string) =>
+    $api.queryOptions("get", "/v1/rooms/{room_name}/meetings/upcoming", {
+      params: { path: { room_name: roomName } },
+    }).queryKey,
+};
 
 export function useRoomActiveMeetings(roomName: string | null) {
-  return $api.useQuery(
-    "get",
-    "/v1/rooms/{room_name}/meetings/active" satisfies `/v1/rooms/{room_name}/${typeof MEETINGS_ACTIVE_PATH_PARTIAL}`,
-    {
-      params: {
-        path: { room_name: roomName! },
-      },
+  return useQuery({
+    queryKey: meetingStatusKeys.active(roomName!),
+    queryFn: async () => {
+      const result = await meetingStatusBatcher.fetch(roomName!);
+      return result.active_meetings;
     },
-    {
-      enabled: !!roomName,
-    },
-  );
+    enabled: !!roomName,
+  });
 }
 
 export function useRoomGetMeeting(

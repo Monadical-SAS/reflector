@@ -1,8 +1,22 @@
 module.exports = {
-  preset: "ts-jest",
-  testEnvironment: "node",
+  testEnvironment: "jest-environment-jsdom",
   roots: ["<rootDir>/app"],
-  testMatch: ["**/__tests__/**/*.test.ts"],
-  collectCoverage: true,
-  collectCoverageFrom: ["app/**/*.ts", "!app/**/*.d.ts"],
+  testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
+  collectCoverage: false,
+  transform: {
+    "^.+\\.[jt]sx?$": [
+      "ts-jest",
+      {
+        tsconfig: {
+          jsx: "react-jsx",
+          module: "esnext",
+          moduleResolution: "bundler",
+          esModuleInterop: true,
+          strict: true,
+          downlevelIteration: true,
+          lib: ["dom", "dom.iterable", "esnext"],
+        },
+      },
+    ],
+  },
 };

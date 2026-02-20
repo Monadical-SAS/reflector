@@ -13,6 +13,9 @@ on:
 jobs:
   test-next-server:
     runs-on: ubuntu-latest
+    concurrency:
+      group: test-next-server-${{ github.ref }}
+      cancel-in-progress: true
 
     defaults:
       run:
@@ -21,17 +24,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
     - name: Install pnpm
       uses: pnpm/action-setup@v4
       with:
-        version: 8
+        package_json_file: './www/package.json'
 
-    - name: Setup Node.js cache
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
