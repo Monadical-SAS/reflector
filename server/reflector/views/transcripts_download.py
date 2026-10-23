@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 import reflector.auth as auth
@@ -33,15 +33,15 @@ async def transcript_download_zip(
     transcript = await transcripts_controller.get_by_id_for_http(
         transcript_id, user_id=user_id
     )
-    if not transcripts_controller.user_can_mutate(transcript, user_id):
-        raise HTTPException(status_code=403, detail="Not authorized")
+    # Raw tracks and cloud video stay owner-only.
+    is_owner = transcripts_controller.user_can_mutate(transcript, user_id)
 
     recording = None
-    if transcript.recording_id:
+    if is_owner and transcript.recording_id:
         recording = await recordings_controller.get_by_id(transcript.recording_id)
 
     meeting = None
-    if transcript.meeting_id:
+    if is_owner and transcript.meeting_id:
         meeting = await meetings_controller.get_by_id(transcript.meeting_id)
 
     truncated_id = str(transcript.id).split("-")[0]
