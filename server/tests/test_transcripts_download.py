@@ -197,6 +197,7 @@ async def test_downloads_member_lists_everything(
     ]
     assert all(t["filename"].endswith(".webm") for t in tracks)
     assert _by_kind(entries, "cloud_video")[0]["size"] == len(b"cloud-video")
+    assert all(e["size"] > 0 for e in entries[:3])
 
     presigned_keys = {key for key, _, _ in source_storage.presigned}
     assert _track(ALICE, "screen-video") in presigned_keys

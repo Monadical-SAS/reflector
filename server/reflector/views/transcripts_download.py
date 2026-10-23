@@ -86,6 +86,10 @@ class _Source:
     media_type: str = "application/octet-stream"
     sort_key: tuple = ()
 
+    def __post_init__(self):
+        if self.content is not None:
+            self.size = len(self.content)
+
 
 def _create_token(transcript_id: str, user_id: str | None) -> str:
     payload = {
