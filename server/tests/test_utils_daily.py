@@ -81,6 +81,7 @@ def test_parse_daily_track_filename(key, track_type):
     parsed = parse_daily_track_filename(
         f"room/1763152299562-12f0b87c-97d4-4dd3-a65c-cee1f854a79c-{key}-1763152314582"
     )
+    assert parsed.recording_start_ts == 1763152299562
     assert parsed.participant_id == "12f0b87c-97d4-4dd3-a65c-cee1f854a79c"
     assert parsed.track_type == track_type
 

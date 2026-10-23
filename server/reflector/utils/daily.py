@@ -63,11 +63,12 @@ def parse_daily_recording_filename(filename: str) -> DailyRecordingFilename:
 DailyTrackType = Literal["cam-audio", "cam-video", "screen-audio", "screen-video"]
 
 _TRACK_FILENAME_PATTERN = re.compile(
-    r"\d{13,}-([0-9a-fA-F-]{36})-(cam-audio|cam-video|screen-audio|screen-video)-\d{13,}"
+    r"(\d{13,})-([0-9a-fA-F-]{36})-(cam-audio|cam-video|screen-audio|screen-video)-\d{13,}"
 )
 
 
 class DailyTrackFilename(NamedTuple):
+    recording_start_ts: int
     participant_id: str
     track_type: DailyTrackType
 
@@ -77,7 +78,11 @@ def parse_daily_track_filename(filename: str) -> DailyTrackFilename:
     match = _TRACK_FILENAME_PATTERN.search(os.path.basename(filename))
     if not match:
         raise ValueError(f"Invalid Daily.co track filename: {filename}")
-    return DailyTrackFilename(participant_id=match.group(1), track_type=match.group(2))
+    return DailyTrackFilename(
+        recording_start_ts=int(match.group(1)),
+        participant_id=match.group(2),
+        track_type=match.group(3),
+    )
 
 
 def recording_lock_key(recording_id: NonEmptyString) -> NonEmptyString:
