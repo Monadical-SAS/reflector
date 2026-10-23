@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import BinaryIO, Union
+from typing import AsyncIterator, BinaryIO, Union
 
 import aioboto3
 from botocore.config import Config
@@ -7,6 +7,8 @@ from botocore.exceptions import ClientError
 
 from reflector.logger import logger
 from reflector.storage.base import FileResult, Storage, StoragePermissionError
+
+ITER_CHUNK_SIZE = 1024 * 1024
 
 
 def handle_s3_client_errors(operation_name: str):
@@ -215,17 +217,23 @@ class AwsStorage(Storage):
             response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
             return await response["Body"].read()
 
-    @handle_s3_client_errors("list_objects")
     async def _list_objects(
         self, prefix: str = "", *, bucket: str | None = None
     ) -> list[str]:
+        objects = await self._list_objects_with_size(prefix, bucket=bucket)
+        return [key for key, _ in objects]
+
+    @handle_s3_client_errors("list_objects")
+    async def _list_objects_with_size(
+        self, prefix: str = "", *, bucket: str | None = None
+    ) -> list[tuple[str, int]]:
         actual_bucket = bucket or self._bucket_name
         folder = self.aws_folder
         # Combine folder and prefix
         s3prefix = f"{folder}/{prefix}" if folder else prefix
         logger.info(f"Listing objects from S3 {actual_bucket} with prefix '{s3prefix}'")
 
-        keys = []
+        objects = []
         async with self.session.client(
             "s3", config=self.boto_config, endpoint_url=self._endpoint_url
         ) as client:
@@ -241,9 +249,23 @@ class AwsStorage(Storage):
                             elif key == folder:
                                 # Skip folder marker itself
                                 continue
-                        keys.append(key)
+                        objects.append((key, obj.get("Size", 0)))
 
-        return keys
+        return objects
+
+    async def _iter_file(
+        self, filename: str, *, bucket: str | None = None
+    ) -> AsyncIterator[bytes]:
+        actual_bucket = bucket or self._bucket_name
+        folder = self.aws_folder
+        logger.info(f"Reading {filename} in chunks from S3 {actual_bucket}/{folder}")
+        s3filename = f"{folder}/{filename}" if folder else filename
+        async with self.session.client(
+            "s3", config=self.boto_config, endpoint_url=self._endpoint_url
+        ) as client:
+            response = await client.get_object(Bucket=actual_bucket, Key=s3filename)
+            async for chunk in response["Body"].iter_chunks(ITER_CHUNK_SIZE):
+                yield chunk
 
     @handle_s3_client_errors("stream")
     async def _stream_to_fileobj(

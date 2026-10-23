@@ -1,5 +1,5 @@
 import importlib
-from typing import BinaryIO, Union
+from typing import AsyncIterator, BinaryIO, Union
 
 from pydantic import BaseModel
 
@@ -150,6 +150,28 @@ class Storage:
     async def _list_objects(
         self, prefix: str = "", *, bucket: str | None = None
     ) -> list[str]:
+        raise NotImplementedError
+
+    async def list_objects_with_size(
+        self, prefix: str = "", *, bucket: str | None = None
+    ) -> list[tuple[str, int]]:
+        """List (key, size in bytes). bucket: override instance default if provided."""
+        return await self._list_objects_with_size(prefix, bucket=bucket)
+
+    async def _list_objects_with_size(
+        self, prefix: str = "", *, bucket: str | None = None
+    ) -> list[tuple[str, int]]:
+        raise NotImplementedError
+
+    def iter_file(
+        self, filename: str, *, bucket: str | None = None
+    ) -> AsyncIterator[bytes]:
+        """Yield file content in chunks. bucket: override instance default if provided."""
+        return self._iter_file(filename, bucket=bucket)
+
+    def _iter_file(
+        self, filename: str, *, bucket: str | None = None
+    ) -> AsyncIterator[bytes]:
         raise NotImplementedError
 
     async def stream_to_fileobj(

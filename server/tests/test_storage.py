@@ -754,3 +754,67 @@ def test_all_factories_coexist_selfhosted_scenario():
         assert source_storage._access_key_id == "AKIA-daily-worker"
         assert source_storage._role_arn is None
         assert source_storage._endpoint_url is None
+
+
+def _aws_storage(bucket_name="test-bucket"):
+    return AwsStorage(
+        aws_bucket_name=bucket_name,
+        aws_region="us-east-1",
+        aws_access_key_id="test-key",
+        aws_secret_access_key="test-secret",
+    )
+
+
+def _mock_client(**attrs):
+    mock_client = AsyncMock()
+    for name, value in attrs.items():
+        setattr(mock_client, name, value)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    return mock_client
+
+
+@pytest.mark.asyncio
+async def test_aws_storage_list_objects_with_size_strips_folder():
+    storage = _aws_storage("test-bucket/recordings")
+    mock_paginator = MagicMock()
+
+    async def mock_paginate(Bucket, Prefix):
+        assert Bucket == "other-bucket"
+        assert Prefix == "recordings/room/"
+        yield {
+            "Contents": [
+                {"Key": "recordings/room/a.webm", "Size": 10},
+                {"Key": "recordings/room/b.json", "Size": 2},
+            ]
+        }
+        yield {}
+
+    mock_paginator.paginate = mock_paginate
+    mock_client = _mock_client(get_paginator=MagicMock(return_value=mock_paginator))
+
+    with patch.object(storage.session, "client", return_value=mock_client):
+        result = await storage.list_objects_with_size("room/", bucket="other-bucket")
+
+    assert result == [("room/a.webm", 10), ("room/b.json", 2)]
+
+
+@pytest.mark.asyncio
+async def test_aws_storage_iter_file_yields_chunks():
+    storage = _aws_storage("test-bucket/recordings")
+
+    async def iter_chunks(chunk_size):
+        yield b"chunk1"
+        yield b"chunk2"
+
+    body = MagicMock()
+    body.iter_chunks = iter_chunks
+    mock_client = _mock_client(get_object=AsyncMock(return_value={"Body": body}))
+
+    with patch.object(storage.session, "client", return_value=mock_client):
+        chunks = [c async for c in storage.iter_file("a.webm", bucket="other-bucket")]
+
+    assert chunks == [b"chunk1", b"chunk2"]
+    mock_client.get_object.assert_called_once_with(
+        Bucket="other-bucket", Key="recordings/a.webm"
+    )
