@@ -52,8 +52,6 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const updateTranscriptMutation = useTranscriptUpdate();
   const auth = useAuth();
   const accessToken = auth.status === "authenticated" ? auth.accessToken : null;
-  const userId = auth.status === "authenticated" ? auth.user?.id : null;
-  const isOwner = !!(userId && userId === props.transcript?.user_id);
 
   const handleDownloadZip = async () => {
     if (!props.transcriptId || downloading) return;
@@ -77,6 +75,15 @@ const TranscriptTitle = (props: TranscriptTitle) => {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Failed to download zip:", err);
+      toaster.create({
+        duration: 3000,
+        render: () => (
+          <Box bg="red.500" color="white" px={4} py={3} borderRadius="md">
+            <Text fontWeight="bold">Error</Text>
+            <Text fontSize="sm">Failed to download transcript</Text>
+          </Box>
+        ),
+      });
     } finally {
       setDownloading(false);
     }
@@ -222,7 +229,7 @@ const TranscriptTitle = (props: TranscriptTitle) => {
               >
                 <LuCopy />
               </IconButton>
-              {isOwner && (
+              {auth.status === "authenticated" && (
                 <IconButton
                   aria-label="Download Transcript Zip"
                   size="sm"
