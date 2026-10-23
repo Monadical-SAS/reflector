@@ -413,6 +413,25 @@ export function useTranscriptMP3(transcriptId: NonEmptyString | null) {
   );
 }
 
+export function useTranscriptDownloads(
+  transcriptId: NonEmptyString | null,
+  enabled: boolean,
+) {
+  return $api.useQuery(
+    "get",
+    "/v1/transcripts/{transcript_id}/downloads",
+    {
+      params: {
+        path: { transcript_id: transcriptId! },
+      },
+    },
+    {
+      enabled: !!transcriptId && enabled,
+      gcTime: 0,
+    },
+  );
+}
+
 export function useTranscriptTopics(transcriptId: NonEmptyString | null) {
   return $api.useQuery(
     "get",

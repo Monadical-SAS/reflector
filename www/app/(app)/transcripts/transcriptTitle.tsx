@@ -16,7 +16,6 @@ import {
   Input,
   Flex,
   Spacer,
-  Spinner,
   Box,
   Text,
 } from "@chakra-ui/react";
@@ -24,8 +23,7 @@ import { LuPen, LuCopy, LuCheck, LuDownload, LuVideo } from "react-icons/lu";
 import ShareAndPrivacy from "./shareAndPrivacy";
 import { buildTranscriptWithTopics } from "./buildTranscriptWithTopics";
 import { toaster } from "../../components/ui/toaster";
-import { useAuth } from "../../lib/AuthProvider";
-import { API_URL } from "../../lib/apiClient";
+import DownloadsDialog from "./downloadsDialog";
 
 type TranscriptTitle = {
   title: string;
@@ -48,39 +46,8 @@ const TranscriptTitle = (props: TranscriptTitle) => {
   const [displayedTitle, setDisplayedTitle] = useState(props.title);
   const [preEditTitle, setPreEditTitle] = useState(props.title);
   const [isEditing, setIsEditing] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
   const updateTranscriptMutation = useTranscriptUpdate();
-  const auth = useAuth();
-  const accessToken = auth.status === "authenticated" ? auth.accessToken : null;
-  const userId = auth.status === "authenticated" ? auth.user?.id : null;
-  const isOwner = !!(userId && userId === props.transcript?.user_id);
-
-  const handleDownloadZip = async () => {
-    if (!props.transcriptId || downloading) return;
-    setDownloading(true);
-    try {
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-      }
-      const resp = await fetch(
-        `${API_URL}/v1/transcripts/${props.transcriptId}/download/zip`,
-        { headers },
-      );
-      if (!resp.ok) throw new Error("Download failed");
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `transcript_${props.transcriptId.split("-")[0]}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Failed to download zip:", err);
-    } finally {
-      setDownloading(false);
-    }
-  };
   const participantsQuery = useTranscriptParticipants(
     props.transcript?.id ? parseMaybeNonEmptyString(props.transcript.id) : null,
   );
@@ -222,17 +189,19 @@ const TranscriptTitle = (props: TranscriptTitle) => {
               >
                 <LuCopy />
               </IconButton>
-              {isOwner && (
-                <IconButton
-                  aria-label="Download Transcript Zip"
-                  size="sm"
-                  variant="subtle"
-                  onClick={handleDownloadZip}
-                  disabled={downloading}
-                >
-                  {downloading ? <Spinner size="sm" /> : <LuDownload />}
-                </IconButton>
-              )}
+              <IconButton
+                aria-label="Downloads"
+                size="sm"
+                variant="subtle"
+                onClick={() => setDownloadsOpen(true)}
+              >
+                <LuDownload />
+              </IconButton>
+              <DownloadsDialog
+                transcriptId={props.transcriptId}
+                open={downloadsOpen}
+                onClose={() => setDownloadsOpen(false)}
+              />
               {props.hasCloudVideo && props.onVideoToggle && (
                 <Box position="relative" display="inline-flex">
                   <IconButton

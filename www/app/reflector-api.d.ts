@@ -636,6 +636,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/transcripts/{transcript_id}/downloads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Transcript Get Downloads */
+    get: operations["v1_transcript_get_downloads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/transcripts/{transcript_id}/download/file/{entry_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Transcript Download File */
+    get: operations["v1_transcript_download_file"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/v1/transcripts/{transcript_id}/download/zip": {
     parameters: {
       query?: never;
@@ -1168,6 +1202,32 @@ export interface components {
     DeletionStatus: {
       /** Status */
       status: string;
+    };
+    /** DownloadEntry */
+    DownloadEntry: {
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | "text"
+        | "subtitles"
+        | "summary"
+        | "audio"
+        | "cloud_video"
+        | "track";
+      /** Label */
+      label: string;
+      /** Participant Name */
+      participant_name?: string | null;
+      /** Filename */
+      filename: string;
+      /** Size */
+      size?: number | null;
+      /** Url */
+      url: string;
     };
     /** GetTranscriptMinimal */
     GetTranscriptMinimal: {
@@ -2198,6 +2258,13 @@ export interface components {
       action_items: {
         [key: string]: unknown;
       };
+    };
+    /** TranscriptDownloads */
+    TranscriptDownloads: {
+      /** Entries */
+      entries: components["schemas"]["DownloadEntry"][];
+      /** Zip Url */
+      zip_url: string;
     };
     /** TranscriptDuration */
     TranscriptDuration: {
@@ -4132,9 +4199,77 @@ export interface operations {
       };
     };
   };
-  v1_transcript_download_zip: {
+  v1_transcript_get_downloads: {
     parameters: {
       query?: never;
+      header?: never;
+      path: {
+        transcript_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TranscriptDownloads"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_transcript_download_file: {
+    parameters: {
+      query: {
+        token: string;
+      };
+      header?: never;
+      path: {
+        transcript_id: string;
+        entry_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  v1_transcript_download_zip: {
+    parameters: {
+      query: {
+        token: string;
+        ids: string[];
+      };
       header?: never;
       path: {
         transcript_id: string;
