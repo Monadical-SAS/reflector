@@ -1,6 +1,6 @@
 import os
 import re
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from reflector.utils.string import NonEmptyString
 
@@ -58,6 +58,26 @@ def parse_daily_recording_filename(filename: str) -> DailyRecordingFilename:
         participant_id=participant_id,
         track_start_ts=track_start_ts,
     )
+
+
+DailyTrackType = Literal["cam-audio", "cam-video", "screen-audio", "screen-video"]
+
+_TRACK_FILENAME_PATTERN = re.compile(
+    r"\d{13,}-([0-9a-fA-F-]{36})-(cam-audio|cam-video|screen-audio|screen-video)-\d{13,}"
+)
+
+
+class DailyTrackFilename(NamedTuple):
+    participant_id: str
+    track_type: DailyTrackType
+
+
+def parse_daily_track_filename(filename: str) -> DailyTrackFilename:
+    """Parse participant ID and track type from any Daily.co raw-tracks filename."""
+    match = _TRACK_FILENAME_PATTERN.search(os.path.basename(filename))
+    if not match:
+        raise ValueError(f"Invalid Daily.co track filename: {filename}")
+    return DailyTrackFilename(participant_id=match.group(1), track_type=match.group(2))
 
 
 def recording_lock_key(recording_id: NonEmptyString) -> NonEmptyString:

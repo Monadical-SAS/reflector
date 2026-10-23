@@ -1,6 +1,10 @@
 import pytest
 
-from reflector.utils.daily import extract_base_room_name, parse_daily_recording_filename
+from reflector.utils.daily import (
+    extract_base_room_name,
+    parse_daily_recording_filename,
+    parse_daily_track_filename,
+)
 
 
 @pytest.mark.parametrize(
@@ -62,3 +66,25 @@ def test_parse_daily_recording_filename_invalid():
 
     with pytest.raises(ValueError, match="Invalid Daily.co recording filename"):
         parse_daily_recording_filename("123-not-a-uuid-cam-audio-456")
+
+
+@pytest.mark.parametrize(
+    "key,track_type",
+    [
+        ("cam-audio", "cam-audio"),
+        ("cam-video", "cam-video"),
+        ("screen-audio", "screen-audio"),
+        ("screen-video", "screen-video"),
+    ],
+)
+def test_parse_daily_track_filename(key, track_type):
+    parsed = parse_daily_track_filename(
+        f"room/1763152299562-12f0b87c-97d4-4dd3-a65c-cee1f854a79c-{key}-1763152314582"
+    )
+    assert parsed.participant_id == "12f0b87c-97d4-4dd3-a65c-cee1f854a79c"
+    assert parsed.track_type == track_type
+
+
+def test_parse_daily_track_filename_rejects_other_files():
+    with pytest.raises(ValueError):
+        parse_daily_track_filename("room/manifest.json")
